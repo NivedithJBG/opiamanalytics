@@ -6,6 +6,10 @@ RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
 
+# Serve existing directories via DirectoryIndex (e.g. /back/)
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
 # Serve static files from production/web/ if they exist there
 RewriteCond %{DOCUMENT_ROOT}/production/web%{REQUEST_URI} -f
 RewriteRule ^(.+)$ production/web/$1 [L,QSA]
