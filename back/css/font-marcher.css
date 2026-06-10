@@ -1,0 +1,23 @@
+@font-face {
+  font-family: 'marcher-regular';
+  src:  url('fonts/Marcher-Regular.eot?ms3c7d');
+  src:  url('fonts/Marcher-Regular.eot?ms3c7d#iefix') format('embedded-opentype'),
+    url('fonts/Marcher-Regular.ttf?ms3c7d') format('truetype'),
+    url('fonts/Marcher-Regular.woff?ms3c7d') format('woff'),
+    url('fonts/Marcher-Regular.woff2?ms3c7d') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
+
+@font-face {
+  font-family: 'marcher-extrabold';
+  src:  url('fonts/Marcher-ExtraBold.eot?ms3c7d');
+  src:  url('fonts/Marcher-ExtraBold.eot?ms3c7d#iefix') format('embedded-opentype'),
+    url('fonts/Marcher-ExtraBold.ttf?ms3c7d') format('truetype'),
+    url('fonts/Marcher-ExtraBold.woff?ms3c7d') format('woff'),
+    url('fonts/Marcher-ExtraBold.woff2?ms3c7d') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+}
+

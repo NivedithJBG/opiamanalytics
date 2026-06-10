@@ -1,0 +1,1296 @@
+.opiamnav {
+    font-family: marcher-regular;
+    font-size: 11.4px;
+    text-transform: uppercase;
+	letter-spacing:.5px;
+}
+.opiamnav a {
+    color: #fff !important;
+    font-weight: 600;
+}
+
+h1, h2, h3, h4, h5, h6, h7{
+	font-family: 'marcher-extrabold';
+	text-transform:uppercase;
+	font-weight:'800'
+}
+
+
+
+body.homedd, section.banner-and-nav {
+    background: #004d80;
+	padding-top:90px;
+	    padding-bottom: 90px
+}
+.container.banner {
+    display: flex;
+    justify-content: center;
+}
+
+.home nav.bg-white{
+	background:transparent !important;
+}
+.opiamnav .nav-item + .nav-item {
+    margin-left: 8px;
+}
+.banner{
+	/*min-height:565px;*/
+}
+
+.banner-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.banner-content h1 {
+    /*text-transform: uppercase;*/
+    font-weight: 800;
+    font-family: 'marcher-extrabold';
+	font-size:50px;
+	margin-top: 50px;
+	line-height: 76px;
+	position:relative;
+}
+.banner-content h1 + span{
+	
+    width: 100px;
+    height: 5px;
+    background: #07b0dd;
+    display: block;
+    margin: 0 auto;
+    margin-top: 13px;
+}
+.banner-picture img {
+    /*margin-top: 69px;*/
+}
+.headernav  .nav-link {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-family: 'marcher-regular';
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    padding: 6px 14px !important;
+    border-radius: 31px;
+    position: relative;
+    transition: all .2s linear;
+    -o-transition: all .2s linear;
+    -moz-transition: all .2s linear;
+    -webkit-transition: all .2s linear;
+}
+.btn-opiam, .btn-opiam.nav-link {
+    background: #4c667f;
+    border: none;
+    color: #fff;
+    font-family: 'marcher-regular';
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    padding: 15px 23px !important;
+    padding-right: 46px  !important;
+    border-radius: 31px;
+    position: relative;
+	transition: all .2s linear;
+    -o-transition: all .2s linear;
+    -moz-transition: all .2s linear;
+    -webkit-transition: all .2s linear;
+}
+.btn-opiam.nav-link {
+	background:#729bb8;
+}
+
+.btn-opiam.nav-link span{
+	background: #01c7fc;
+}
+
+
+.btn-opiam span {
+    background: #fff;
+    position: absolute;
+    padding: 3px;
+    font-size: 18px;
+    border-radius: 50%;
+    top: 12px;
+    right: 11px;
+    color: #4c667f;
+}
+
+.btn-opiam.btn-showme-opiam span {
+    background: #01c7fc;
+    color: #fff;
+}
+
+.btn-opiam.btn-showme-opiam {
+    background: #1a598c;
+}
+.banner-content p {
+    margin-bottom: 38px;
+}
+.btn-opiam:hover {
+    /*background: #40a1ce;*/
+	background: rgb(7 51 86) !important;
+    color: #fff;
+	box-shadow: 0 0 0 0.2rem rgb(1 199 252);
+}
+.navbar-light .navbar-nav .nav-link:hover {
+    background: rgb(26 89 140 / 70%) !important;
+	/*box-shadow: 0 0 0 0.2rem rgb(1 199 252);*/
+	    
+}
+.navbar-light .navbar-nav .nav-link.btn-opiam.showme-opiam:hover {
+	border: 2px solid rgb(255 255 255 / 0%) !important;
+}
+
+ul.navbar-nav.headernav {
+    display: flex;
+    align-items: center;
+}
+.btn-opiam.btn-watch-video {
+    margin-right: 8px;
+}
+a.navbar-brand {
+    position: relative;
+}
+
+a.navbar-brand:after {
+    content: "Enhancing Perception - Organised Project Information and Management";
+    font-size: 7px;
+    color: #fff;
+    text-transform: capitalize;
+    position: absolute;
+    width: 171px;
+    display: block;
+    white-space: pre-wrap;
+    bottom: 0px;
+    line-height: 8px;
+    left: 73px;
+}
+
+.container.banner-sub-para p {margin-top: 40px;padding-left: 100px;padding-right: 100px;}
+
+.container.banner-devider hr {
+    margin-top: 40px;
+}
+
+.container.banner-devider img {
+    position: absolute;
+    bottom: -20px;
+}
+
+.text-upppercase {
+    /*text-transform: uppercase;*/
+    font-weight: 800;
+    font-family: 'marcher-extrabold';
+	position:relative;
+}
+.top-border-img {
+    border-top: 5px solid #31dac8;
+	margin-bottom:30px;
+	margin-top:30px;
+}
+.bottom-border-img {
+    border-bottom: 5px solid #31dac8;
+	margin-bottom:30px;
+	margin-top:30px;
+}
+h2.text-upppercase:after{
+	content:"";
+	height: 6px;
+	background: #31dac8;
+	width: 100px;
+	display: flex;
+	margin-top: 18px;
+	margin-bottom: 18px;
+}
+
+.text-upppercase.text-center:after{
+	margin-left:auto;
+	margin-right:auto;
+	
+}
+
+section.home-sections {
+    padding: 100px 0;
+}
+.icons-column {
+    padding-left: 142px;
+	position:relative;
+}
+img.iconOne {
+    position: absolute;
+    left: 0;
+}
+img {
+    max-width: 100%;
+}
+img.curved-image {
+    border-radius: 42px;
+}
+
+section.home-sections.processof-opiam {
+    background: url(../images/video-secton-bg.jpg);
+    background-size: cover;
+}
+section.home-sections.opiam-enables-do-right-things {
+    background: url(../images/video-secton2-bg.jpg);
+    background-size: cover;
+}
+
+.video-thumb a, .video-thumb {
+    width: 689px;
+    height: 429px;
+	margin: 50px auto;
+	position:relative;
+    border-radius: 42px;
+    overflow: hidden;
+}
+
+.video-thumb a {
+    display: block;
+}
+
+.video-thumb:after {content: "";position: absolute;left: 0;right: 0;top: 0;bottom: 0;background: rgb(0 0 0 / 40%);}
+
+.video-thumb span.icon-play_arrow {
+    z-index: 1;
+    font-size: 82px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin-left: -41px;
+    margin-top: -101px;
+	transition: all .2s linear;
+    -o-transition: all .2s linear;
+    -moz-transition: all .2s linear;
+    -webkit-transition: all .2s linear;
+	color:#01c7fc;
+}
+
+.video-thumb span.icon-play_arrow:hover {
+    color: #fff;
+	font-size: 92px;
+}
+.paddingLeft112{
+	padding-left:112px;
+}
+.opiam-projectmanagement h2 {
+    margin-top: 40px;
+    margin-bottom: 29px;
+}
+
+.opiam-projectmanagement p {
+    padding-left: 60px;
+    padding-right: 60px;
+    margin-bottom: 30px;
+}
+
+section.home-sections.about-opiam {
+    background: #eceff1;
+}
+
+.about-opiam img.card-img-top {
+    width: 112px;
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    margin-left: -56px;
+}
+
+.about-opiam .card {
+    background: transparent;
+    border: none;
+	position:relative;
+	margin-top: 110px;
+}
+
+.about-opiam .card-body {
+    background: #fff;
+    border-radius: 19px;
+    box-shadow: 0 0 80px rgb(0 0 0 / 7%);
+	padding-top:50px;
+	
+}
+
+.about-opiam .card-body h4 {
+    font-size: 16px;
+}
+
+.about-opiam .card-body p {
+    font-size: 13px;
+    opacity: .8;
+}
+.about-opiam .card:after {
+    content: "";
+    height: 3px;
+    width: 40px;
+    background: #01c7fc;
+    left: 50%;
+    position: absolute;
+    bottom: 0;
+    margin-left: -20px;
+}
+.client-logo-list {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 50px;
+    margin-bottom: 30px;
+}
+.heighlighted-content {
+    background-image: linear-gradient(to right bottom, #4b657e, #4c7797, #498ab0, #3f9ec9, #28b2e1);
+    padding: 70px;
+    border-radius: 50px;
+    color: #fff;
+    margin-top: 60px;
+	background:#283845;
+}
+
+.heighlighted-content h2 {
+    font-weight: 700;
+    margin-bottom: 17px;
+    padding-left: 40px;
+    padding-right: 40px;
+}
+
+.heighlighted-content p {
+    margin-bottom: 29px;
+    padding-left: 50px;
+    padding-right: 50px;
+}
+footer {
+    background: #465365;
+	background:#283845;
+    padding: 50px 0;
+	padding-bottom: 0;
+}
+footer a.navbar-brand:after {
+    color: #fff;
+}
+address {
+    color: #fff;
+    font-size: 12px;
+    margin-left: 73px;
+    margin-top: 19px;
+}
+.call-us {
+    display: flex;
+    justify-content: flex-start;
+    color: #fff;
+    align-items: center;
+    padding-left: 15px;
+}
+
+.callnumber {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    top: -13px;
+    margin-left: 8px;
+	margin-top: 20px;
+}
+
+.call-us a {
+    color: #fff;
+    font-size: 25px;
+    font-weight: 700;
+}
+
+.call-us .icon-phone1 {
+    background: #fff;
+    width: 43px;
+    height: 43px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    border-radius: 50%;
+    color: #465365;
+}
+
+.callnumber span {
+    position: relative;
+    top: 7px;
+    left: 6px;
+    font-size: 13px;
+}
+ul.navbar-nav.footernav {
+    color: #fff;
+}
+
+ul.navbar-nav.footernav a {
+    color: #fff;
+    font-size: 12px;
+}
+
+ul.navbar-nav.footernav strong {
+    margin-bottom: 10px;
+    display: block;
+}
+footer .col-md-8 {
+    padding-top: 40px;
+}
+
+footer .col-md-8 .col-md-3 {
+    border-left: 1px solid #6b7584;
+}
+
+.social-showme-opiam {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #fff;
+    padding-top: 14px;
+    border-top: 1px solid #6b7584;
+    margin-top: 20px;
+}
+
+.social-showme-opiam strong {
+    font-size: 12px;
+    margin-right: 7px;
+}
+
+.social-showme-opiam .social-icons a {
+    background: #fff;
+    width: 29px;
+    height: 29px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    color: #465365;
+}
+.footer-copy {
+    background: #303e51;
+	background:#182530;
+    color: #fff;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    min-height: 70px;
+    align-items: center;
+	margin-top:30px;
+}
+.footer-copy .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.social-showme-opiam .social-icons a.icon-linkedin2:before {
+    position: relative;
+    top: -2px;
+    left: 1px;
+}
+
+.is-hidden {
+    opacity: 0;
+    transition: all .2s linear;
+    -o-transition: all .2s linear;
+    -moz-transition: all .2s linear;
+    -webkit-transition: all .2s linear;
+    position: relative;
+    z-index: -1;
+    position: fixed;
+	border-bottom-right-radius: 30px;
+    border-bottom-left-radius: 30px;
+}
+
+.is-visible {
+    background: rgba(255, 255, 255, 0);
+    transition: all .2s linear;
+    -o-transition: all .2s linear;
+    -moz-transition: all .2s linear;
+    -webkit-transition: all .2s linear;
+	border-bottom-right-radius: 30px;
+    border-bottom-left-radius: 30px;
+}
+.bg-white {
+    background-color: #fff!important;
+	transition: all .2s linear;
+    -o-transition: all .2s linear;
+    -moz-transition: all .2s linear;
+    -webkit-transition: all .2s linear;
+}
+.home nav.bg-white.scrolling.is-hidden{
+	background:transparent !important;
+}
+.home nav.bg-white.scrolling.is-visible{
+	background: #004d80 !important;
+    border-bottom-right-radius: 0px;
+    border-bottom-left-radius: 0px;
+    box-shadow: 0 10px 10px rgb(0 0 0 / 10%);
+}
+.btn-opiam.btn-learnmore {
+    background: #f9f9f9;
+    border: 1px solid #ebebeb;
+    color: #333;
+    text-transform: capitalize;
+}
+
+.btn-opiam.btn-learnmore span {
+    background: #01c7fc!important;
+    color: #fff;
+}
+section.home-sections.opiam-projectmanagement {
+    background: #c1d4e6;
+}
+
+.btn-opiam.btn-learnmore:hover {
+    background: rgb(230 230 230 / 40%) !important;
+	background:#fff !important;
+	box-shadow: 0 0 0 0.2rem rgb(1 199 252);
+}
+.banner-content h1 {
+    color: #fff;
+}
+.banner-content h1 span{
+	display:inline-block;
+}
+section.home-sections.video {
+    padding: 0px;
+}
+.big-bold {
+    font-size: 50px;
+    color: #fff;
+}
+.future-workplace{
+	/*background: #0d455e url(..//images/businessman-pressing-automation-with-his-index-finger.jpg) no-repeat right center;
+    color: #fff;*/
+}
+section.home-sections.video {
+    background: #f7f7f7;
+}
+.future-workplace .content{
+	background: #0d455e 
+}
+
+.home-sections.future-workplace {
+    margin-top: 80px;
+}
+.home-sections.no-more-overhead {
+    padding-bottom: 30px;
+	background:#eee;
+}
+.no-more-overhead h2 {
+    color: #000 !important;
+}
+.home-sections.no-more-overhead h2 {
+    text-align: center;
+}
+section.home-sections.no-more-overhead h2 {
+    color: #005d84;
+}
+section.home-sections.no-more-overhead-content {
+    padding-top: 50px;
+    padding-bottom: 50px;
+    background: #002236;
+    color: #fff;
+    margin-top: -6px;
+}
+.waste {
+    color: #fff;
+}
+.heighlighted-words {
+    padding: 70px 100px;
+    border-radius: 20px;
+    
+    /*background-image: linear-gradient(to right bottom, #4b657e, #4c7797, #498ab0, #3f9ec9, #28b2e1);*/
+    padding: 70px;
+	
+    border-radius: 50px;
+    
+    /*background: #0d455e;*/
+}
+.navbar a.nav-link.btn-opiam.showme-opiam {
+    background: transparent;
+    border: 2px solid rgb(255 255 255 / 15%);
+	
+}
+section.home-sections.Visibility.enhances {
+    background: #eee;
+    padding: 0;
+	margin-top: -10px;
+}
+.anything-connot-bed .anything-bg2-wrpr {
+    padding-bottom: 0;
+}
+.brings-out-that-visibility-pic-bg .brings-out-content {
+    padding-bottom: 0;
+}
+.video-content{
+	    display: flex;
+    align-items: center;
+}
+
+.heighlighted-words h3 {
+    font-weight: 800;
+    text-align: center;
+    font-size: 41px;
+}
+
+.banner-para {
+    font-size: 18px;
+    font-weight: 500;
+    color: #f77807;
+    margin-top: 15px;
+}
+.home-sections.process-flow {
+    background: #283845;
+    color: #fff;
+}
+.home-sections.process-flow {
+    padding-bottom: 0px;
+}
+.process-flow h2 {
+    margin-bottom: 30px;
+}
+.process-flow-btns .btn-sm {
+    border: 1px solid #ffffff !important;
+    margin-right: 10px;
+}
+.heighlighted-words p {
+    margin-bottom: 40px;
+}
+
+.chart-wrpr{
+	display:flex;
+	justify-content:center;
+	padding:80px 0;
+	
+}
+.anim-dotted-line{
+	position:relative;
+	width:837px;
+}
+.chart-points.cloud{
+	position: absolute;
+    top: -39px;
+    left: 50%;
+    margin-left: -73px;
+}
+.chart-points.boq {
+    position: absolute;
+    top: 30%;
+    left: -6%;
+}
+.chart-points.iow {
+    position: absolute;
+    top: 30%;
+    left: 40%;
+}
+.chart-points.parametric {
+    position: absolute;
+    bottom: -13%;
+    left: -6%;
+}
+.chart-points.cost {
+    position: absolute;
+    bottom: -13%;
+    left: 40%;
+}
+.chart-points.analysis {
+    position: absolute;
+    bottom: -13%;
+    right: -6%;
+}
+.chart-points.activity {
+    position: absolute;
+    top: 30%;
+    right: -7%;
+}
+
+.anim-dotted-line path {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: dash 20s linear alternate infinite;
+   stroke-dasharray: 6;
+   fill:none;
+   stroke: #ffffff;
+}
+
+
+@keyframes dash {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+
+.brings-out-that-visibility-pic-bg {
+    /*background: url(../images/brings-out-that-visibility-pic.jpg);
+	background:url('../images/d-rendering-robot-working-notebook-factory-robot-factory-108809488.jpg') center ;
+	background-size:cover;*/
+	background:#fff;
+}
+
+
+.brings-out-content {
+    background: #fff;
+    /*padding: 58px;*/
+    position: relative;
+    /*top: -100px;
+    box-shadow: 0 2px 3px rgb(0 0 0 / 30%);*/
+}
+.btn-simple-learnmore {
+    background: transparent !important;
+    border: none !important;
+    padding-left:0px !important;
+	color: #000;
+	text-transform: capitalize;
+}
+.btn-simple-learnmore:hover{
+    background: transparent !important;
+	color: #000;
+}
+.btn-opiam.btn-learnmore.btn-simple-learnmore span
+ {
+    background: transparent !important;
+    color:#3158a0;
+}
+
+.heading-decor {
+    position: relative;
+}
+
+/*.heading-decor:before {
+   content: "";
+    width: 6px;
+    height: 60px;
+    background: #f29559;
+    display: inline-block;
+    left: -19px;
+    position: absolute;
+    top: 1px;
+}*/
+
+.heading-decor:after {
+   content: "";
+    height: 6px;
+    background: #31dac8;
+    width: 100px;
+    display: flex;
+    margin-top: 18px;
+    margin-bottom: 18px;
+}
+
+
+
+.anything-bg {
+    background: url(../images/anything-that-connotbe-measured-pic2.jpg);
+	background-size:cover;
+	padding-top:80px;
+	padding-bottom:80px;
+    background-position: center;
+}
+.anything-bg2 {
+    background: url(../images/anything-that-connotbe-measured-pic3.jpg);
+	background-size:cover;
+	color:#fff;
+}
+.home-sections.anything-connot-be {
+    padding: 0;
+}
+.anything-bg2-wrpr {
+    padding: 70px 43px;
+}
+.btn-simple-learnmore span {
+    background: transparent;
+}
+.card-wrapper {
+    display: flex;
+}
+.card-cntnt-wrpr p {
+    padding-left: 0;
+    padding-right: 0;
+    text-align: left;
+}
+section.home-sections.anything-connot-bed {
+    background: #f7f7f7;
+	background:#eee;
+}
+.card-cntnt-wrpr h2 {
+    text-align: left;
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 0;
+    margin-bottom: 11px;
+}
+
+.card-cntnt-wrpr {
+}
+
+.card-wrapper .card {
+    background: #283845;
+    color: #fff;
+    border: none;
+    border-radius: 11px;
+    overflow: hidden;
+	position:relative;
+	
+	transition: all .2s linear;
+    -o-transition: all .2s linear;
+    -moz-transition: all .2s linear;
+    -webkit-transition: all .2s linear;
+	
+	
+}
+.card-wrapper .card:hover{
+	
+	
+}
+
+
+
+.card-wrapper .flip-card + .flip-card {
+    margin-left: 10px;
+}
+.card-cntnt-wrpr img {
+    position: absolute;
+    top: 121px;
+    border-radius: 50%;
+}
+.card-wrapper .card:hover .card-cntnt-wrpr img {
+    box-shadow: 0 0 0 4px #f29559;
+}
+
+.card-cntnt-wrpr {
+    padding-top: 26px;
+}
+.card .btn-simple-learnmore {
+    font-size: 10px !important;
+}
+
+.opiam-projectmanagement h2.text-upppercase {
+    margin-bottom: 60px !important;
+    margin-top: 0 !important;
+}
+.card-wrapper {
+    margin-bottom: 40px;
+}
+.card-wrapper .card .card-body {
+    border-top: 3px solid #f29559;
+}
+.home-sections.pad-btm0{
+	padding-bottom:0px;
+}
+
+.swiper-wrapper{
+  -webkit-transition-timing-function:linear!important;    transition-timing-function:linear!important; 
+  position: relative;
+}
+.card.black {
+    background: #000;
+	color:#fff;
+}
+.card.violet {
+    background: #5059c9;
+	color:#fff;
+}
+.card.green {
+    background: #0f9d58;
+	color:#fff;
+}
+.card.red {
+    background: #c9493b;
+	color:#fff;
+}
+.card.blue {
+    background: #0f82f5;
+	color:#fff;
+}
+.marqee-card-wrpr h4 {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.marqee-card-wrpr p {
+    font-size: 12px;
+}
+.marqee-card-wrpr .card {
+    border-radius: 12px;
+}
+.marqee-card-wrpr .card-body{
+	padding:15px;
+}
+img.card-pic {
+    width: 63px;
+    margin-left: 15px;
+    margin-top: 15px;
+    border-radius: 5px;
+}
+.col-md-12.moving-cards {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+
+
+/* The flip card container - set the width and height to whatever you want. We have added the border property to demonstrate that the flip itself goes out of the box on hover (remove perspective if you don't want the 3D effect */
+.flip-card {
+  background-color: transparent;
+  width: 261px;
+  height: 400px;
+  border: 0px solid #f1f1f1;
+  perspective: 1000px; /* Remove this if you don't want the 3D effect */
+}
+.card-wrapper .flip-card-back .card {
+    background: dodgerblue;
+}
+.card-wrapper .flip-card-back .card-body {
+    border:none;
+}
+
+/* This container is needed to position the front and back side */
+.flip-card-inner {
+  position: relative;
+  width: 261px;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+}
+
+/* Do an horizontal flip when you move the mouse over the flip box container */
+.flip-card:hover .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+/* Position the front and back side */
+.flip-card-front, .flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden; /* Safari */
+  backface-visibility: hidden;
+}
+
+/* Style the front side (fallback if image is missing) */
+.flip-card-front {
+  background-color: #bbb;
+  color: black;
+  border-radius: 11px;
+  overflow:hidden;
+}
+
+/* Style the back side */
+.flip-card-back {
+  background-color: dodgerblue;
+  color: white;
+  transform: rotateY(180deg);
+  border-radius: 11px;
+  overflow:hidden;
+}
+.flip-card-back a span {
+    color: #fff;
+    font-size: 15px;
+}
+.banner-img-wrpr{
+	margin-top: 69px;
+	position:relative;
+}
+.box-anim-one {
+    position: absolute;
+    background:transparent;
+    top: 30px;
+    right: 72px;
+    width: 380px;
+    height: 142px;
+    border-radius: 22px;
+	display:flex;
+}
+.piechart-box {
+    width: 120px;
+    padding: 10px;
+    padding-top: 24px;
+    padding-left: 12px;
+}
+
+.piechart-box2 {
+    width: 99px;
+    padding: 10px;
+    padding-top: 21px;
+    padding-left: 19px;
+}
+.linecharts-box2 {
+    background: transparent;
+    height: 92px;
+    width: 80px;
+    padding: 22px;
+    padding-left: 5px;
+   
+}
+
+.linecharts-box {
+    background: transparent;
+    height: 142px;
+    width: 260px;
+}
+.anim-line-wrpr {
+    background: #b9d6fe;
+    border-radius: 2px;
+}
+.anim-line-one {
+    width: 10px;
+    height: 10px;
+    background: #4aafff;
+    border-radius: 2px;
+	animation-name: lineOne;
+	animation-duration: 4s;
+	animation-fill-mode: forwards;
+}
+
+
+@keyframes lineOne {
+  from {width:10px;}
+  to {width:230px;}
+}
+.anim-line-two {
+    width: 10px;
+    height: 10px;
+    background: #1a598c;
+    border-radius: 2px;
+	margin-top:6px;
+	animation-name: lineTwo;
+	animation-duration: 4s;
+	animation-delay:1s;
+	animation-fill-mode: forwards;
+}
+@keyframes lineTwo {
+  from {width:10px;}
+  to {width:130px;}
+}
+.anim-line-wrpr {
+    background: #b9d6fe;
+    border-radius: 7px;
+}
+.anim-line-one_2 {
+    width: 10px;
+    height: 10px;
+    background: #4aafff;
+    border-radius: 7px;
+	animation-name: lineOne_2;
+	animation-duration: 4s;
+	animation-fill-mode: forwards;
+}
+
+@keyframes lineOne_2 {
+  from {width:10px;}
+  to {width:30px;}
+}
+
+.anim-line-two_2 {
+    width: 10px;
+    height: 10px;
+    background: #4aafff;
+    border-radius: 7px;
+	animation-name: lineTwo_2;
+	animation-duration: 4s;
+	animation-fill-mode: forwards;
+}
+
+@keyframes lineTwo_2 {
+  from {width:10px;}
+  to {width:50px;}
+}
+.anim-line-three_2 {
+    width: 10px;
+    height: 10px;
+    background: #4aafff;
+    border-radius: 7px;
+	animation-name: lineThree_2;
+	animation-duration: 4s;
+	animation-fill-mode: forwards;
+}
+
+@keyframes lineThree_2 {
+  from {width:10px;}
+  to {width:40px;}
+}
+.hline-chart-box1 {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    height: 51px
+}
+
+
+.hline-chart-box {
+    padding: 20px 8px;
+}
+.anim-vline-wrpr {
+    background: #e0e0e0;
+    width: 9px;
+    height: 59px;
+    border-radius: 2px;
+	display: flex;
+    align-items: flex-end;
+}
+.vline-chart-box {
+    padding: 10px;
+    padding-top: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+	
+}
+.anim-vline-one,
+.anim-vline-two,
+.anim-vline-three,
+.anim-vline-four,
+.anim-vline-five{
+	
+	width: 9px;
+	height: 0px;
+	background:#ff6559;
+	animation-name: vlineOne;
+	animation-duration: 3s;
+	animation-fill-mode: forwards;
+}
+.anim-vline-two{
+	animation-name: vlineTwo;
+}
+.anim-vline-three{
+	animation-name: vlineThree;
+}
+.anim-vline-four{
+	animation-name: vlineFour;
+}
+.anim-vline-five{
+	animation-name: vlineFive;
+}
+@keyframes vlineOne {
+  from {height: 0px;}
+  to {height: 59px;}
+}
+@keyframes vlineTwo {
+  from {height: 0px;}
+  to {height: 49px;}
+}
+@keyframes vlineThree {
+  from {height: 0px;}
+  to {height: 39px;}
+}
+@keyframes vlineFour {
+  from {height: 0px;}
+  to {height: 20px;}
+}
+@keyframes vlineFive {
+  from {height: 0px;}
+  to {height: 25px;}
+}
+.piechart-box circle,
+.piechart-box2 circle  {
+  fill: #4aafff;
+  stroke: #0074d9;
+  stroke-width: 50;
+  stroke-dasharray: 0 158;
+  transition: stroke-dasharray 3s ease;
+}
+
+.piechart-box svg,
+.piechart-box2 svg {
+  margin: 0 auto;
+  transform: rotate(-90deg);
+  background: #4aafff;
+  border-radius: 50%;
+  display: block;
+}
+
+.box-anim-two {
+    position: absolute;
+    top: 179px;
+    left: 115px;
+    width: 240px;
+    height: 220px;
+    border-radius: 22px;
+    display: flex;
+	justify-content: space-between;
+}
+.future-workplace a.btn.btn-light.btn-simple-learnmore {
+    color: #fff;
+}
+
+.future-workplace a.btn.btn-light.btn-simple-learnmore:hover {
+    background: transparent !important;
+}
+.future-workplace a.btn.btn-light.btn-simple-learnmore span:before {
+    color: #fff !important;
+}
+/*Apr 20 2021*/
+
+section.home-sections.opiam-projectmanagement2 {
+    background-image: linear-gradient(to right top, #091e3c, #182e4b, #273e5b, #374f6a, #47617a);
+    color: #fff;
+}
+
+.opiam-projectmanagement2 img {
+    border-radius: 50%;
+}
+
+.opiam-projectmanagement2 h3 {
+    font-size: 20px;
+}
+
+.opiam-projectmanagement2 p {
+    font-size: 16px;
+}
+.opiam-projectmanagement2 h2 {
+   /* font-size: 28px;*/
+    margin-bottom: 59px;
+    position: relative;
+}
+
+.opiam-projectmanagement2 h2:after {
+    content: "";
+    width: 100px;
+    height: 5px;
+    background: #07b0dd;
+    display: block;
+    margin: 0 auto;
+    margin-top: 13px;
+}
+span.img-wrpr {
+    width: 134px;
+    height: 134px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    background: #fff;
+    border-radius: 50%;
+}
+section h2 {
+    font-size: 36px;
+}
+section.home-sections.video .col-md-12 {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+section.home-sections.video .col-md-12 img {
+    width: 100%;
+}
+nav.footer-nav a {
+    position: relative;
+    display: inline-block;
+}
+
+nav.footer-nav a:after {content: "";position: absolute;width: 0px;height: 1px;background: #01c7fc;left: 0;bottom: 4px;display: inline-block;transition: all .2s linear;-o-transition: all .2s linear;-moz-transition: all .2s linear;-webkit-transition: all .2s linear;}
+
+nav.footer-nav a:hover:after {
+    width: 100%;
+}
+.heading-decor.small-line:before {
+    height: 31px;
+}
+
+
+
+
+
+@media{
+	
+}

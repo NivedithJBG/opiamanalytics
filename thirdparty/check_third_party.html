@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Third-Party Domain</title>
+  <script>
+    function checkThirdPartyCookie() {
+      var cookieValue = document.cookie
+        .split(';')
+        .find(cookie => cookie.trim().startsWith('test_cookie='));
+
+      if (cookieValue) {
+        alert("Third-party cookies are enabled!");
+      } else {
+        alert("Third-party cookies are disabled!");
+      }
+    }
+  </script>
+</head>
+<body>
+  <h1>Third-Party Domain</h1>
+  <button onclick="checkThirdPartyCookie()">Check Third-Party Cookie</button>
+</body>
+</html>

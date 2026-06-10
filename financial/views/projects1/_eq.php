@@ -1,0 +1,1 @@
+<h2 class="acc_trigger" id="eq"><a href="javascript:void(0)">6. Eq</a></h2>

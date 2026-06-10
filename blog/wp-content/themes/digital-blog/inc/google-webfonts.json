@@ -1,0 +1,100 @@
+[
+    {
+        "family": "Sora",
+        "variants": [
+            "100",
+            "200",
+            "300",
+            "regular",
+            "500",
+            "600",
+            "700",
+            "800"
+        ],
+        "subsets": [
+            "latin",
+            "latin-ext"
+        ],
+        "version": "v3",
+        "lastModified": "2021-01-21",
+        "files": {
+            "100": "http://fonts.gstatic.com/s/sora/v3/xMQOuFFYT72X5wkB_18qmnndmSdSn3-KIwNhBti0.ttf",
+            "200": "http://fonts.gstatic.com/s/sora/v3/xMQOuFFYT72X5wkB_18qmnndmSfSnn-KIwNhBti0.ttf",
+            "300": "http://fonts.gstatic.com/s/sora/v3/xMQOuFFYT72X5wkB_18qmnndmScMnn-KIwNhBti0.ttf",
+            "regular": "http://fonts.gstatic.com/s/sora/v3/xMQOuFFYT72X5wkB_18qmnndmSdSnn-KIwNhBti0.ttf",
+            "500": "http://fonts.gstatic.com/s/sora/v3/xMQOuFFYT72X5wkB_18qmnndmSdgnn-KIwNhBti0.ttf",
+            "600": "http://fonts.gstatic.com/s/sora/v3/xMQOuFFYT72X5wkB_18qmnndmSeMmX-KIwNhBti0.ttf",
+            "700": "http://fonts.gstatic.com/s/sora/v3/xMQOuFFYT72X5wkB_18qmnndmSe1mX-KIwNhBti0.ttf",
+            "800": "http://fonts.gstatic.com/s/sora/v3/xMQOuFFYT72X5wkB_18qmnndmSfSmX-KIwNhBti0.ttf"
+        },
+        "category": "sans-serif",
+        "kind": "webfonts#webfont"
+    },
+    {
+        "family": "Comfortaa",
+        "variants": [
+            "300",
+            "regular",
+            "500",
+            "600",
+            "700"
+        ],
+        "subsets": [
+            "cyrillic",
+            "cyrillic-ext",
+            "greek",
+            "latin",
+            "latin-ext",
+            "vietnamese"
+        ],
+        "version": "v30",
+        "lastModified": "2021-01-30",
+        "files": {
+            "300": "http://fonts.gstatic.com/s/comfortaa/v30/1Pt_g8LJRfWJmhDAuUsSQamb1W0lwk4S4TbMPrQVIT9c2c8.ttf",
+            "regular": "http://fonts.gstatic.com/s/comfortaa/v30/1Pt_g8LJRfWJmhDAuUsSQamb1W0lwk4S4WjMPrQVIT9c2c8.ttf",
+            "500": "http://fonts.gstatic.com/s/comfortaa/v30/1Pt_g8LJRfWJmhDAuUsSQamb1W0lwk4S4VrMPrQVIT9c2c8.ttf",
+            "600": "http://fonts.gstatic.com/s/comfortaa/v30/1Pt_g8LJRfWJmhDAuUsSQamb1W0lwk4S4bbLPrQVIT9c2c8.ttf",
+            "700": "http://fonts.gstatic.com/s/comfortaa/v30/1Pt_g8LJRfWJmhDAuUsSQamb1W0lwk4S4Y_LPrQVIT9c2c8.ttf"
+        },
+        "category": "display",
+        "kind": "webfonts#webfont"
+    },
+    {
+        "family": "Inter",
+        "variants": [
+            "100",
+            "200",
+            "300",
+            "regular",
+            "500",
+            "600",
+            "700",
+            "800",
+            "900"
+        ],
+        "subsets": [
+            "cyrillic",
+            "cyrillic-ext",
+            "greek",
+            "greek-ext",
+            "latin",
+            "latin-ext",
+            "vietnamese"
+        ],
+        "version": "v3",
+        "lastModified": "2021-01-30",
+        "files": {
+            "100": "http://fonts.gstatic.com/s/inter/v3/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyeMZhrib2Bg-4.ttf",
+            "200": "http://fonts.gstatic.com/s/inter/v3/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuDyfMZhrib2Bg-4.ttf",
+            "300": "http://fonts.gstatic.com/s/inter/v3/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuOKfMZhrib2Bg-4.ttf",
+            "regular": "http://fonts.gstatic.com/s/inter/v3/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfMZhrib2Bg-4.ttf",
+            "500": "http://fonts.gstatic.com/s/inter/v3/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuI6fMZhrib2Bg-4.ttf",
+            "600": "http://fonts.gstatic.com/s/inter/v3/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYMZhrib2Bg-4.ttf",
+            "700": "http://fonts.gstatic.com/s/inter/v3/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYMZhrib2Bg-4.ttf",
+            "800": "http://fonts.gstatic.com/s/inter/v3/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuDyYMZhrib2Bg-4.ttf",
+            "900": "http://fonts.gstatic.com/s/inter/v3/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuBWYMZhrib2Bg-4.ttf"
+        },
+        "category": "sans-serif",
+        "kind": "webfonts#webfont"
+    }
+]

@@ -1,0 +1,22 @@
+.error{
+    color: #f00;
+}
+
+.project-card .card{
+    cursor: pointer;
+}
+
+.card-title{
+    font-size: 17px;
+}
+.text-xl {
+    font-size: 17px;
+}
+
+.text-center{
+    text-align: center;
+}
+
+.holidayFaded span{
+   background: #ffdada !important;
+}

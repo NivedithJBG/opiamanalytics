@@ -1,0 +1,1424 @@
+body{
+    background:#252c3e;
+}
+.jumbotron {
+    background: #252c3e;
+    color:#fff;
+    min-height: 700px;
+}
+#project_progress svg defs + rect {
+    fill: #1e202c !important;
+    width: 514px;
+}
+
+.prjctactivity-cost{
+    margin-left: 30px;
+}
+
+#prjct-complete{
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: -180px;
+}
+
+.all-list-table{
+    border: 1px solid white;
+    width: 100%;
+    background-color: #1e202c;
+}
+
+.all-list-table td, .all-list-table th {
+  border: 1px solid #636363;
+  padding: 8px;
+  text-align: left;
+  color: white;
+}
+
+.all-list-table th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.iowtable {
+    padding-top: 35px;
+}
+
+.prj-allchart svg g > text[fill='#222222'] {
+    fill: #ffffff !important;
+    font-family: Montserrat;
+    font-size: 10.5px;
+}
+
+.prj-allchart svg g > text[fill='#9e9e9e'] {
+    font-size: 10.5px;
+}
+
+.mainlistback, .firstlistback, .firstlistbackchart2, .mainproclistback, .mainproclistback1{
+    float: right;
+}
+
+/*#iow-cost svg g > text[text-anchor=start],
+#iow-cost svg g > text[text-anchor=middle],
+#iow-cost svg g > text[text-anchor=end] {
+    fill: #ffffff !important;
+    font-family: Montserrat;
+    font-size: 12.5px;
+}*/
+
+#restyp-resource svg g > text[text-anchor=middle]{
+    fill: #ffffff !important;
+    font-family: Montserrat;
+}
+
+.resource-barchart svg g > text[text-anchor=middle]{
+    fill: #ffffff !important;
+    font-family: Montserrat;
+}
+
+#project_progress svg g > text[text-anchor=middle],
+#project_progress svg g > text[text-anchor=end]{
+    fill: #ffffff !important;
+    font-family: Montserrat;
+    font-size: 12.5px;
+}
+#project_progress svg rect[fill='#cccccc'],
+#project_progress svg rect[fill='#ebebeb']{
+    fill:#2a2c38;
+}
+
+#capactyutz_chart, #chartpopup_10 {
+    margin-left: 5px;
+}
+
+#projectdetails .legend {
+    
+    margin: 0 auto !important;
+    max-width: 200px  !important;
+    margin-top: 10px  !important;
+    display: block  !important;
+}
+
+#project_progress {
+    /*width: 524px !important;
+    width: 443px !important;
+    height: 420px !important;*/
+    width: 330px !important;
+    height: 400px !important;
+    background: #1e202c;
+    padding: 10px;
+    border-radius: 5px;
+}
+#findprojectdash {
+    font-size: 13px;
+    font-family: Montserrat;
+}
+div#reportchart1 svg g text[text-anchor='middle'] {
+    fill: #fff;
+    font-family:Montserrat;
+    font-size:11px;
+}
+div#roi_chart svg g text[text-anchor='middle'] {
+    fill: #fff;
+    font-family:Montserrat;
+    font-size:11px;
+}
+div#chartpopup_9 svg g text[text-anchor='middle'] {
+    fill: #fff;
+    font-family:Montserrat;
+    font-size:11px;
+}
+div#reportchart1 svg g text[text-anchor='end'] {
+    fill: #fff;
+    font-family:Montserrat;
+    font-size:11px;
+}
+div#prjctend_chart svg g text[text-anchor='start'] {
+    fill: #fff;
+    font-family:Montserrat;
+    font-size:11px;
+    display:none;
+}
+div#prjctend_chart svg g text[text-anchor='middle'] {
+    fill: #fff;
+    font-family:Montserrat;
+    font-size:11px;
+    display:none;
+}
+div#prjctend_chart svg g text[text-anchor='end'] {
+    fill: #fff;
+    font-family:Montserrat;
+    font-size:11px;
+    display:none;
+}
+div#chartpopup_5 svg g text[text-anchor='start'] {
+    fill: #fff;
+    font-family:Montserrat;
+    font-size:11px;
+    display:none;
+}
+div#chartpopup_5 svg g text[text-anchor='middle'] {
+    fill: #fff;
+    font-family:Montserrat;
+    font-size:11px;
+    display:none;
+}
+div#chartpopup_5 svg g text[text-anchor='end'] {
+    fill: #fff;
+    font-family:Montserrat;
+    font-size:11px;
+    display:none;
+}
+div#yield_chart svg g text[text-anchor='middle'] {
+    fill: white;
+    stroke:none
+}
+div#chartpopup_3 svg g text[text-anchor='middle'] {
+    fill: white;
+    stroke:none
+}
+div.datesinfo {
+    margin-top: -300px;
+}
+div.delayed {
+    margin-top: -375px;
+    font-size: 12px;
+}
+div#chartModal_5 .delayed {
+    margin-top: -225px;
+    font-size: 12px;
+}
+div.datesinfo1 {
+    text-align: left;
+    padding-left: 0px;
+    font-size: 12px;
+}
+div.datesinfo2 {
+    font-size: 12px;
+}
+div.datesinfo3 {
+    text-align: right;
+    font-size: 12px;
+    padding-right: 0px;
+}
+div.delaydays {
+    text-align: right;
+}
+div#chartModal_5 .datesinfo {
+    margin-top: -150px;
+}
+#reportchart1 b {
+    text-align: left;
+    display: block;
+    margin-bottom: 10px;
+    font-family: Montserrat;
+    font-weight: 400;
+}
+#ongoingactivity, #overdueactivity, #duethisweek {
+    background: #1e202c;
+    padding: 10px;
+    border-radius: 5px;
+    /*height: 200px !important;*/
+    margin-bottom: 25px;
+}
+.reportchart1 rect[stroke='#9a9a9a'] {
+    stroke: rgb(30, 32, 44);
+}
+.reportchart1 rect[fill='#ffffff'],
+.reportchart1 rect[fill='#e6e6e6']{
+    fill: #1e202c;
+}
+.reportchart1 path[stroke='#e6e6e6'] {
+    stroke: #3a3e53;
+}
+.reportchart1 text[fill='#4d4d4d'] {
+    fill: #fff;
+}
+.reportchart1 path[stroke='#ffffff'] {
+    stroke: #3a3e53 !important;
+}
+.reportchart1 path[stroke='#b7b7b7'] {
+    stroke: #3a3e53 !important;
+}
+.projectProgress_wrpr {
+    display: block;
+    background: #1e202c;
+    max-width: 621px;
+    margin: 0 auto;
+    border-radius: 6px;
+}
+.projectProgress_wrpr h1 {
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 0;
+    margin: 0;
+    position: relative;
+    top: 20px;
+    text-align: left;
+    margin-left: 15px;
+}
+
+.chartDetails-chart-wrpr {
+    border-right: 0px solid #353742;
+    margin-left: 46px;
+}
+
+.chartDetails-chart-wrpr h1 {
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 0;
+    margin: 0;
+    position: relative;
+    top: 20px;
+    text-align: left;
+    margin-left: -30px;
+    margin-top: -7px;
+}
+
+.chartDetails-chart-wrpr .projectgoing {
+    justify-content: center;
+}
+
+.twocol-cntnr {
+    background: #1e202c;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    padding-top: 10px;
+    height: 452px;
+    border-radius: 6px;
+}
+.twocol-costcomp {
+    height: 447px;
+}
+.twocol-cntnr #projectgoing tr {
+    background-color: #1e202c;
+}
+
+#projectgoing svg circle {
+    stroke: none;
+    fill: #fff;
+}
+.chart-cntnr #projectgoing circle:nth-child(2) {
+  fill: #1e202c;
+  stroke: #ddd;
+  stroke-width: 0;
+}
+
+.chart-cntnr #projectgoing circle:nth-child(1) {
+  stroke-width: 0;
+  stroke: none;
+  fill: #1e202c;
+}
+
+.chart-cntnr  #projectgoing text {
+  fill: #f9f9f9;
+  /*font-family: 'Comfortaa';*/
+   font-size:12px;
+}
+
+.chart-cntnr #projectgoing path {
+  stroke: transparent;
+}
+
+#projectgoing g > g path {
+    fill: #bcbdc0;
+    stroke: #bcbdc0;
+}
+
+#projectgoing g > g text[text-anchor="middle"] {
+    fill: #fff;
+}
+
+.twocol-cntnr #costcomp_chart tr {
+    background-color: #1e202c;
+}
+
+#costcomp_chart svg circle {
+    stroke: none;
+    fill: #fff;
+}
+.chart-cntnr #costcomp_chart circle:nth-child(2) {
+  fill: #1e202c;
+  stroke: #ddd;
+  stroke-width: 0;
+}
+
+.chart-cntnr #costcomp_chart circle:nth-child(1) {
+  stroke-width: 0;
+  stroke: none;
+  fill: #1e202c;
+}
+
+.chart-cntnr  #costcomp_chart text {
+  fill: #f9f9f9;
+  /*font-family: 'Comfortaa';*/
+   font-size:12px;
+}
+
+.chart-cntnr #costcomp_chart path {
+  stroke: transparent;
+}
+
+#costcomp_chart g > g path {
+    fill: #bcbdc0;
+    stroke: #bcbdc0;
+}
+
+#costcomp_chart g > g text[text-anchor="middle"] {
+    /*fill: #fff;*/
+    fill: transparent;
+}
+
+.actualcostname{
+    margin-top: -50px;
+    position: relative;
+}
+
+#projectProgress_wrpr .chart-cntnr {
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   flex-direction: column;
+   /*width: 440px;*/
+   width: 300px;
+}
+
+#projectProgress_wrpr .gauge_chart {
+   width: 315px;
+}
+
+#projectProgress_wrpr  .legend {
+   display:flex;
+   justify-content:flex-start;
+   width:100%;
+   margin-right: 110px;
+}
+
+#projectProgress_wrpr text[text-anchor='start'] {
+   stroke: #1e202c;
+  }
+
+#projectProgress_wrpr text[text-anchor='start'] + text {
+   fill: #fff;
+}
+
+#ongoingactivity text[text-anchor=start] {
+    fill: white;
+}
+
+.chart_4 , .chart_5 , .chart_6, .chart_7, .chart_9 {
+    display: block;
+    background: #1e202c;
+    max-width: 621px;
+    margin: 0 auto;
+    border-radius: 6px;
+    height: 447px;
+    padding-top: 40px;
+}
+
+.chart_3 {
+    display: block;
+    background: #1e202c;
+    max-width: 621px;
+    margin: 0 auto;
+    border-radius: 6px;
+    height: 452px;
+    padding-top: 40px;
+}
+
+.chart_8 {
+    display: block;
+    background: #1e202c;
+    max-width: 621px;
+    margin: 0 auto;
+    border-radius: 6px;
+    height: 435px;
+    padding-top: 40px;
+}
+
+.iowyieldchartlist {
+    display: block;
+    /*background: #1e202c;*/
+    margin: 0 auto;
+    border-radius: 6px;
+    height: 447px;
+    padding-top: 40px;
+}
+.capactyutzres_chart {
+    display: block;
+    /*background: #1e202c;*/
+    margin: 0 auto;
+    border-radius: 6px;
+    height: 447px;
+}
+.activityyieldchartlist {
+    display: block;
+    /*background: #1e202c;*/
+    margin: 0 auto;
+    border-radius: 6px;
+    height: 447px;
+    padding-top: 40px;
+}
+.iowheading, .activityheading, .cpctyutzheading {
+    margin-top: -20px;
+    float: right;
+    background: rgb(30, 32, 44);
+    border: 2px;  
+}
+div.iowyieldchartlist svg g text[text-anchor='middle'] {
+    fill: white;
+    stroke: none;
+}
+div.activityyieldchartlist svg g text[text-anchor='middle'] {
+    fill: white;
+    stroke: none;
+}
+#yield_chart rect[fill="#ffffff"] {
+    fill: #1e202c;
+}
+#yield_chart line[stroke="#9E9E9E"] {
+    stroke: #2a2c38;
+}
+
+#yield_chart line[stroke="#E0E0E0"] {
+    stroke: #2a2c38;
+}
+#yield_chart text[fill="#757575"] {
+    fill: white;
+}
+#yield_chart text[fill="#424242"] {
+    fill: white;
+}
+#yield_chart svg {
+    margin-top: 40px;
+}
+
+.chart-headings, .chart-headings2 {
+    /*margin-bottom: 40px;*/
+    background: #1e202c;
+    padding: 13px;
+    color: #fff;
+    margin-bottom: -3px;
+    /*display: flex;*/
+    justify-content: space-between;
+}
+
+/* popup css start */
+
+#chartpopup_3 rect[fill="#ffffff"] {
+    fill: #1e202c;
+}
+#chartpopup_3 line[stroke="#9E9E9E"] {
+    stroke: #2a2c38;
+}
+
+#chartpopup_3 line[stroke="#E0E0E0"] {
+    stroke: #2a2c38;
+}
+#chartpopup_3 text[fill="#757575"] {
+    fill: white;
+}
+#chartpopup_3 text[fill="#424242"] {
+    fill: white;
+}
+#chartpopup_3 svg {
+    margin-top: 40px;
+}
+
+#chartpopup_5 svg {
+    /*margin-left: 25px;*/
+}
+
+#chartpopup_1 {
+    height: 360px;
+}
+
+#chartpopup_1 tr {
+    background-color: #1e202c;
+}
+
+#chartpopup_1 svg circle {
+    stroke: none;
+    fill: #fff;
+}
+#chartpopup_1 circle:nth-child(2) {
+  fill: #1e202c;
+  stroke: #ddd;
+  stroke-width: 0;
+}
+
+#chartpopup_1 circle:nth-child(1) {
+  stroke-width: 0;
+  stroke: none;
+  fill: #1e202c;
+}
+
+#chartpopup_1 text {
+  fill: #f9f9f9;
+  /*font-family: 'Comfortaa';*/
+   font-size:12px;
+}
+
+#chartpopup_1 path {
+  stroke: transparent;
+}
+
+#chartpopup_1 g > g path {
+    fill: #bcbdc0;
+    stroke: #bcbdc0;
+}
+
+#chartpopup_1 g > g text[text-anchor="middle"] {
+    fill: #fff;
+}
+
+#chartpopup_8 tr {
+    background-color: #1e202c;
+}
+
+#chartpopup_8 svg circle {
+    stroke: none;
+    fill: #fff;
+}
+#chartpopup_8 circle:nth-child(2) {
+  fill: #1e202c;
+  stroke: #ddd;
+  stroke-width: 0;
+}
+
+#chartpopup_8 circle:nth-child(1) {
+  stroke-width: 0;
+  stroke: none;
+  fill: #1e202c;
+}
+
+#chartpopup_8 text {
+  fill: #f9f9f9;
+  /*font-family: 'Comfortaa';*/
+   font-size:12px;
+}
+
+#chartpopup_8 path {
+  stroke: transparent;
+}
+
+#chartpopup_8 g > g path {
+    fill: #bcbdc0;
+    stroke: #bcbdc0;
+}
+
+#chartpopup_8 g > g text[text-anchor="middle"] {
+    /*fill: #fff;*/
+    fill: transparent;
+}
+
+.chartincost {
+    margin-top: -50px;
+    position: relative;
+}
+
+#prjctend_chart svg rect {
+    height: 35px;
+    stroke-width: 0;
+    y: 3;
+}
+
+#chartpopup_5 svg rect {
+    height: 35px;
+    stroke-width: 0;
+    y: 3;
+}
+
+#chartpopup_2 svg defs + rect {
+    fill: #1e202c !important;
+    width: 514px;
+}
+
+#chartpopup_2 svg g > text[text-anchor=middle],
+#chartpopup_2 svg g > text[text-anchor=end]{
+    fill: #ffffff !important;
+    font-family: Montserrat;
+    font-size: 12.5px;
+}
+#chartpopup_2 svg rect[fill='#cccccc'],
+#chartpopup_2 svg rect[fill='#ebebeb']{
+    fill:#2a2c38;
+}
+
+#chartpopup_2 text[text-anchor='start'] {
+   stroke: #1e202c;
+  }
+
+#chartpopup_2 text[text-anchor='start'] + text {
+   fill: #fff;
+}
+
+.chart-cntnrpopup {
+   justify-content: center;
+   align-items: center;
+   flex-direction: column;
+}
+
+.chart-cntnrpopup .legend {
+   display:flex;
+   justify-content:flex-start;
+   width:100%;
+   margin-right: 110px;
+}
+
+.zoomchart {
+    position: absolute;
+    right: 11px;
+    top: -37px;
+}
+
+.chartpop_3, .chartpop_4, .chartpop_5, .chartpop_6, .chartpop_7, .chartpop_8, .chartpop_9, .chartpop_10 {
+    position: absolute;
+    right: 11px;
+    /*top: 10px;*/
+}
+
+a.zoomchart.icon-popout {
+    font-size: 25px;
+    color: #8d8e94;
+    text-decoration: none;
+}
+
+a.zoomchart.icon-popout:hover {
+    color: #fff;
+}
+
+.projectProgress_wrpr a.zoomchart.icon-popout {
+    /*top: 11px;*/
+    right: 12px;
+}
+
+.projectProgress_wrpr {
+    position: relative;
+}
+
+.chart_3 a.zoomchart.icon-popout {
+    /*top: 11px;*/
+    right: 13px;
+}
+
+.chart_3, .chart_4, .chart_5, .chart_6, .chart_7, .chart_9 {
+    position: relative;
+}
+.twocol-cntnr {
+    position: relative;
+}
+
+.modal.fade:not(.in).left .modal-dialog {
+    -webkit-transform: translate3d(-25%, 0, 0);
+    transform: translate3d(-25%, 0, 0);
+}
+.modal.fade:not(.in).right .modal-dialog {
+    -webkit-transform: translate3d(25%, 0, 0);
+    transform: translate3d(25%, 0, 0);
+}
+.modal.fade:not(.in).bottom .modal-dialog {
+    -webkit-transform: translate3d(0, 25%, 0);
+    transform: translate3d(0, 25%, 0);
+}
+
+/* Alternative Angles */
+.modal.fade:not(.in).top-left .modal-dialog {
+    -webkit-transform: translate3d(-25%, -25%, 0);
+    transform: translate3d(-25%, -25%, 0);
+}
+.modal.fade:not(.in).top-right .modal-dialog {
+    -webkit-transform: translate3d(25%, -25%, 0);
+    transform: translate3d(25%, -25%, 0);
+}
+.modal.fade:not(.in).bottom-left .modal-dialog {
+    -webkit-transform: translate3d(-25%, 25%, 0);
+    transform: translate3d(-25%, 25%, 0);
+}
+.modal.fade:not(.in).bottom-right .modal-dialog {
+    -webkit-transform: translate3d(25%, 25%, 0);
+    transform: translate3d(25%, 25%, 0);
+}
+
+
+/* custom chart start */
+
+.custom-bar-chart-wrpr{
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        height:100%;
+        padding: 30px;
+        padding-top: 0px;
+        
+    }
+    .custom-bar-chart{
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: flex-end;
+        
+        width: 550px;
+        height: 300px;
+        position: relative;
+        
+    }
+    .bar-wrpr {
+        /*background: #FF5722;*/
+        height: 32px;
+        width: 100%;
+        position:relative;
+    }
+    .bar-wrpr:before {
+            content: "";
+            position: absolute;
+            width: 1px;
+            height: 50px;
+            /*background: rgb(37 44 62);*/
+            background: #a5a5a5;
+            bottom: -50px;
+            left: 0;
+    }
+    .bar-wrpr:after {
+        content: "";
+        position: absolute;
+        width: 1px;
+        height: 200px;
+        /*background: rgb(37 44 62);*/
+        background: #a5a5a5;
+        bottom: 0;
+        right: 0;
+    }
+.chart-bar {
+    height: 32px;
+    /*background: #03A9F4;
+    background-image: linear-gradient(to left, #03a9f4, #0097ee, #0084e5, #0071db, #045dcf);*/
+    position: relative;
+}
+.chart-bar:after {
+    content: "";
+    position: absolute;
+    width: 1px;
+    height: 150px;
+    /*background: rgb(37 44 62);*/
+    background: #a5a5a5;
+    bottom: 0;
+    right: 0;
+}
+.bottom-label-wrpr {
+    position: absolute;
+    top: 0px;
+    left: 0;
+    right: 0;
+    padding-right: 10px;
+    font-family: Montserrat;
+    font-size: 12px;
+    height: 100%
+}
+.bottom-label-wrpr .labl-1 {
+    position: absolute;
+    top: 100px;
+    right: -25px;
+    padding-right: 10px;
+    font-family: Montserrat;
+    font-size: 9px;
+    width: 210px;
+    font-weight: 500;
+}
+.bottom-label-wrpr .labl-2 {
+    position: absolute;
+    top: 170px;
+    padding-right: 10px;
+    font-family: Montserrat;
+    font-size: 9px;
+    font-weight: 500;
+    width: 118px;
+    text-align: right;
+}
+.bottom-label-wrpr .labl-3 {
+    position: absolute;
+    bottom: -35px;
+    right: 0px;
+    left: 5px;
+    padding-right: 10px;
+    font-family: Montserrat;
+    font-size: 9px;
+    text-align: right;
+    width: 100%;
+    font-weight:500;
+}
+.bottom-label-wrpr .labl-4 {
+    position: absolute;
+    bottom: -55px;
+    right: 0px;
+    left: 10px;
+    padding-right: 10px;
+    font-family: Montserrat;
+    font-size: 9px;
+    text-align: left;
+    width: 170px;
+    font-weight:500;
+}
+
+.date-wrpr {
+    font-family: Montserrat;
+    font-size: 12px;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -90px;
+}
+
+.date-wrpr .datelabl-1 {
+    position: absolute;
+    left: 0;
+    font-size: 9px;
+    font-family: Montserrat;
+    font-weight: 500;
+}
+
+.date-wrpr .datelabl-3 {
+    position: absolute;
+    right: 0;
+    font-size: 9px;
+    font-family: Montserrat;
+    font-weight: 500;
+}
+
+.date-wrpr .datelabl-2 {
+    position: absolute;
+    font-weight: 500;
+    font-family: Montserrat;
+    font-size: 9px;
+    
+}
+
+/* custom chart end */
+
+.prjct_statustext {
+    color: #8d8e94;   
+}
+
+.prjct_statusval {
+    font-size: 20px;
+    font-weight: bold; 
+}
+
+.valuecashimage {
+    margin-top: -85px;
+}
+
+#prjctend_status {
+    width: 350px; 
+    margin-left:auto; 
+    margin-right:auto;
+    margin-top: 80px;
+}
+
+#measure_chart {
+    width: 380px; 
+    height: 405px;
+    margin-left:auto; 
+    margin-right:auto;
+}
+
+#roi_chart {
+    width: 380px; 
+    height: 405px;
+    margin-left:auto; 
+    margin-right:auto;
+}
+
+#capactyutz_chart {
+    width: 370px; 
+    height: 380px;
+}
+
+#chartpopup_6{
+    margin-top: 85px;
+}
+
+#chartpopup_7{
+    height: 450px;
+}
+
+.actname, .iowname{
+    min-height: 55px;
+}
+
+.space-between{
+    padding-bottom: 0% !important;
+    padding-left: 3px !important;
+    padding-right: 3px !important;
+    padding-top: 3px !important;
+}
+
+.dashboard-chart .jumbotron {
+    padding: 0px !important;
+}
+
+.dashboard-chart .row {
+    margin-left: 0px; 
+    margin-right: 0px;
+}
+
+.dashboard-chart .header {
+    margin-bottom: 5px;
+}
+
+.dashboard-chart .row .col-md-4 {
+    padding: 0px;
+}
+
+.dashboard-chart .container-fluid {
+    padding-left: 0px;
+    padding-right: 0px;
+}
+
+.prjct-gauge svg circle {
+    stroke: none;
+    fill: #fff;
+}
+.chart-cntnr .prjct-gauge circle:nth-child(2) {
+  fill: #1e202c;
+  stroke: #ddd;
+  stroke-width: 0;
+}
+
+.chart-cntnr .prjct-gauge circle:nth-child(1) {
+  stroke-width: 0;
+  stroke: none;
+  fill: #1e202c;
+}
+
+.chart-cntnr .prjct-gauge text {
+  fill: #f9f9f9;
+  /*font-family: 'Comfortaa';*/
+   font-size:12px;
+}
+
+.chart-cntnr .prjct-gauge path {
+  stroke: transparent;
+}
+
+.prjct-gauge g > g path {
+    fill: #bcbdc0;
+    stroke: #bcbdc0;
+}
+
+.prjct-gauge g > g text[text-anchor="middle"] {
+    fill: #fff;
+}
+
+.prjct-gauge{
+    width: 380px; 
+    height: 380px;
+    margin-left: -25px;
+    
+}
+
+#avgresrate-cost g > g text[text-anchor="middle"] {
+    /* fill: #fff; */
+    fill: transparent;
+}
+
+#avgresqty-cost g > g text[text-anchor="middle"] {
+    /* fill: #fff; */
+    fill: transparent;
+}
+
+.allchartunit {
+    margin-top: -50px;
+    position: relative;
+    color: white;
+}
+
+#restyp-resource {
+    width: 100% !important;
+}
+
+.resource-barchart {
+    width: 100% !important;
+}
+
+/* Procurement dial gauge style start */
+
+.twocol-cntnr .activityconsudialchart tr {
+    background-color: #1e202c;
+}
+
+.activityconsudialchart svg circle {
+    stroke: none;
+    fill: #fff;
+}
+.chart-cntnr .activityconsudialchart circle:nth-child(2) {
+  fill: #1e202c;
+  stroke: #ddd;
+  stroke-width: 0;
+}
+
+.chart-cntnr .activityconsudialchart circle:nth-child(1) {
+  stroke-width: 0;
+  stroke: none;
+  fill: #1e202c;
+}
+
+.chart-cntnr  .activityconsudialchart text {
+  fill: #f9f9f9;
+  /*font-family: 'Comfortaa';*/
+   font-size:12px;
+}
+
+.chart-cntnr .activityconsudialchart path {
+  stroke: transparent;
+}
+
+.activityconsudialchart g > g path {
+    fill: #bcbdc0;
+    stroke: #bcbdc0;
+}
+
+.activityconsudialchart g > g text[text-anchor="middle"] {
+    fill: #fff;
+}
+
+/* Procurement dial gauge style end */
+
+/* popup css end */
+
+/*Media query start here...*/
+@media only screen and (max-device-width: 1024px) and (min-device-width: 481px){
+    .projectProgress_wrpr h1 {
+        font-size: 19px;
+    }
+
+    .prjct-gauge{
+        width: 300px; 
+        height: 300px;
+        margin-left: -45px;       
+    }
+
+    .dashboard-chart .container-fluid {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    
+    .zoomchart {
+        right: 6px;
+        /*top: 6px;*/
+    }
+    .chart_3 a.zoomchart.icon-popout {
+        /*top: 5px;*/
+        right: 5px;
+    }
+    .projectProgress_wrpr a.zoomchart.icon-popout {
+        /*top: 5px;*/
+        right: 7px;
+    }
+    
+    #projectProgress_wrpr{
+        /*max-width:935px;*/
+    }
+    
+    #project_progress svg g > text[text-anchor=middle], #project_progress svg g > text[text-anchor=end] {
+        font-size: 10.5px;
+    }
+
+    #projectgoing {
+        /*width: 370px !important;
+        height: 300px !important;*/
+        width: 180px !important;
+        height: 180px !important;
+    }
+
+    .activityconsudialchart{
+        width: 250px !important;
+        height: 250px !important;
+    }
+
+    #costcomp_chart {
+        /*width: 370px !important;
+        height: 300px !important;*/
+        width: 250px !important;
+        height: 250px !important;
+    }
+
+    #project_progress {
+        /*width: 350px !important;
+        height: 350px !important;*/
+        width: 280px !important;
+        height: 270px !important;
+    }
+
+    #yield_chart {
+        /*width: 350px !important;
+        height: 350px !important;*/
+        width: 230px !important;
+        height: 230px !important;
+    }
+
+    .twocol-cntnr {
+        /*height: 405px !important;
+        width: 325px !important;*/
+        height: 330px !important;
+    }
+
+    .twocol-costcomp {
+        /*height: 405px !important;
+        width: 325px !important;*/
+        height: 330px !important;
+    }
+
+    .projectProgress_wrpr {
+        /*height: 405px !important;*/
+        /*width: 325px !important;*/
+        height: 330px !important;
+    }
+
+    .chart_3 {
+        /*height: 405px !important;*/
+        height: 330px !important;
+    }
+
+    #qtyvartn_chart {
+        /*height: 405px !important;*/
+        width: 270px !important;
+        height: 270px !important;
+    }
+
+    #restyp-materials {
+        /*height: 405px !important;*/
+        width: 270px !important;
+        height: 270px !important;
+    }
+
+    #restyp-resource {
+        /*height: 405px !important;
+        width: 500px !important;*/
+        height: 270px !important;
+    }
+
+    #roi_chart {
+        /*height: 405px !important;*/
+        width: 270px !important;
+        height: 270px !important;
+    }
+
+    #capactyutz_chart {
+        /*height: 405px !important;*/
+        width: 260px !important;
+        height: 270px !important;
+    }
+
+    #prjctend_chart {
+        /*height: 405px !important;*/
+        width: 285px !important;
+        height: 230px !important;
+        margin-top: -75px !important;
+        /*margin-top: 100px !important;*/
+    }
+
+    #prjctend_status {
+        /*height: 405px !important;*/
+        width: 285px !important;
+        height: 230px !important;
+        margin-top: 0px !important;
+    }
+
+    .iowyieldchartlist {
+        height: 350px !important;
+    }
+
+    .capactyutzres_chart {
+        height: 350px !important;
+    }
+
+    .activityyieldchartlist {
+        height: 350px !important;
+    }
+
+    #prjctend_status .valuecashimage {
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+
+    #chartpopup_6 .valuecashimage {
+        margin-top: 0px;
+        margin-bottom: 10px;
+    }
+    .statusrow{
+        text-align: center;
+    }
+
+    #prjctend_status .prjct_statusval {
+        font-size: 14px;
+        font-weight: bold;
+    }
+
+    #prjctend_status .prjct_statustext {
+        color: #8d8e94;
+        font-size: 12px;
+    }
+
+    .bottom-label-wrpr .labl-1{
+        top: 125px;
+    }
+
+    .bar-wrpr:after{
+        height: 178px;
+    }
+
+    .bottom-label-wrpr .labl-2{
+        top: 185px;
+    }
+
+    .chart-bar:after{
+        height: 116px;
+    }
+
+    .bottom-label-wrpr .labl-3{
+        bottom: -25px;
+    }
+
+    .date-wrpr{
+        bottom: -80px;
+    }
+
+    .chart_4, .chart_5, .chart_6, .chart_7, .chart_9 {
+        /*height: 405px !important;
+        width: 300px !important;*/
+        height: 330px !important;
+        padding-top: 5px;
+    }
+
+    .chart_3 {
+        padding-top: 1px;
+    }
+
+    .chart_8 {
+        /*height: 405px !important;
+        width: 300px !important;*/
+        height: 320px !important;
+    }
+
+    #projectProgress_wrpr .chart-cntnr {
+        /*width: 370px;*/
+        width: 300px;
+    }
+
+    /*.chart-headings2 {
+        margin-top: 30px;
+    }*/
+
+    /* popup start */
+
+    .modal-header{
+        text-align: center;
+    }
+
+    /* popup end */
+
+    div#prjctend_chart svg g text[text-anchor='start'] {
+        fill: #fff;
+        font-family:Montserrat;
+        font-size:9px;
+    }
+    div#prjctend_chart svg g text[text-anchor='middle'] {
+        fill: #fff;
+        font-family:Montserrat;
+        font-size:9px;
+    }
+    div#prjctend_chart svg g text[text-anchor='end'] {
+        fill: #fff;
+        font-family:Montserrat;
+        font-size:9px;
+    }
+    #prjctend_chart svg rect {
+        height: 28px;
+        stroke-width: 0;
+        y: 3;
+    }
+
+    div.datesinfo {
+        margin-top: -192px;
+    }
+    div.datesinfo1 {
+        text-align: left;
+        font-size: 9px;
+    }
+    div.datesinfo2 {
+        font-size: 9px;
+    }
+    div.datesinfo3 {
+        text-align: right;
+        font-size: 9px;
+    }
+
+    div#chartModal_5 .datesinfo {
+        margin-top: -150px;
+    }
+    div#chartModal_5 .datesinfo1 {
+        text-align: left;
+        font-size: 12px;
+    }
+    div#chartModal_5 .datesinfo2 {
+        font-size: 12px;
+    }
+    div#chartModal_5 .datesinfo3 {
+        text-align: right;
+        font-size: 12px;
+    }
+
+    div.delayed {
+        margin-top: -252px;
+        font-size: 9px;
+    }
+    div#chartModal_5 .delayed {
+        margin-top: -225px;
+        font-size: 12px;
+    }
+
+    div#chartModal_5 .delaydays {
+        text-align: right;
+    }
+
+    #chartpopup_6{
+        margin-top: 25px;
+    }
+
+    #measure_chart {
+        width: 260px; 
+        height: 290px;
+        margin-left:auto; 
+        margin-right:auto;
+    }
+
+    .chart-headingslong{
+        text-align: left;
+        font-size: 13px;
+    }
+
+    .prjctactivity-cost{
+        width: 325px; 
+        margin-left: 0px;
+    }
+
+    #prjct-complete{
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: -200px;
+    }
+    
+}
+
+
+ @media only screen 
+  and (min-device-width: 1024px) 
+  and (max-device-width: 1366px) 
+  and (-webkit-min-device-pixel-ratio: 2) 
+  and (orientation: landscape){
+   
+      
+  }

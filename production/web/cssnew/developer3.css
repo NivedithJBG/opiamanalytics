@@ -1,0 +1,2458 @@
+/*Thasleema*/
+/*stockreport*/
+.selectedreqstto{
+    float: right;
+}
+.selectedappr{
+    float: right;
+}
+.detailedstock h2 {
+    font-size: 18px;
+    background: #eceef7;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+.detailedstock h3 {
+    font-size: 16px;
+    margin-bottom: 17px;
+}
+
+.detailedstock table thead {
+    background: rgb(236 238 247 / 0.4);
+    font-size: 12px;
+}
+
+.report-list-wrprs {
+		margin-left: 15px;
+		margin-right: 15px;
+	}
+.report-list-wrprs .card span {
+    font-weight: 600;
+}
+.report-list-wrprs .col-md-3 {
+    min-height: 110px;
+    padding: 10px;
+}
+.report-list-wrprs .card {
+		box-shadow: 0 0 10px rgb(0 0 0 / 0.2);
+	}
+.report-list-wrprs .card-body {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+span.number.indent-number {
+    position: relative;
+    
+}
+span.number.vendor-number {
+    position: relative;
+}
+span.number.order-number {
+    position: relative;
+    left: 22px;
+}
+span.number.confirm-number {
+    position: relative;
+}
+span.number.despatch-number {
+    position: relative;
+    
+}
+tr.firstroow {
+    background:#f7f6f6;
+}
+.icon-groups a {
+    color: white !important;
+}
+.project-boq .col-md-6 {
+    display: flex;
+    align-items: center;
+    position: relative;
+    top: 3px;
+    justify-content: center;
+}
+
+.project-boq .col-md-6 label {
+    margin-bottom: 0px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.project-boq .col-md-4 {
+   display: flex;
+    align-items: center;
+    position: relative;
+    top: 3px;
+    justify-content: center; 
+}
+.project-boq .col-md-4 label {
+    display: flex;
+    align-items: center;
+    position: relative;
+    top: 3px;
+    justify-content: center;
+    margin-right: -200px;
+}
+.alloc-activity-title .col-md-6 {
+    position: relative;
+    display: flex;
+    align-items: center;
+    /*top: 3px;*/
+    justify-content: center;
+}
+
+.alloc-activity-title .col-md-6 label {
+    /*margin-bottom: 0px;*/
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.alloc-activity-title .col-md-4 {
+    position: relative;
+    display: flex;
+    align-items: center;
+    top: 3px;
+    justify-content: center;
+}
+
+
+
+.alloc-activity-title .col-md-4 label {
+    margin-bottom: 0px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: -217px;
+}
+.btn.cancel{
+   /* margin-left: -15px;*/
+}
+.col-md-12.type.project-boq.proj {
+    align-items: center;
+    position: relative;
+    display: flex;
+    top: 3px;
+    justify-content: center;
+}
+
+.col-md-12.type.project-boq.proj label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+input#projectsearch {
+    min-width: 90%;
+}
+input#searchestworktypename {
+    min-width: 90%;
+}
+input#searchactivitytypename {
+    min-width: 90%;
+}
+input#searchestactivityname {
+    min-width: 90%;
+}
+.num label {
+    margin-left: -6px;
+}
+div#listworkgroup-data {
+    margin-top: 32px;
+}
+.hash label {
+    margin-left: -7px;
+}
+.datass .icon-groups{
+    min-height: unset;
+}
+.datslis .icon-groups{
+    min-height: 42px;
+    border-right: 1px solid #f7f3f3;
+}
+tr.fontzz {
+    font-size: 14px;
+    background-color: #f7f8fc;
+}
+
+.resource-list {
+    margin-left: 19px;
+    margin-top: 30px;
+    margin-right: 10px;
+}
+.table.indent-table td {
+    padding: 12px;
+    /*vertical-align: middle;*/
+}
+.widthdate{
+    width: 10%;
+}
+.widthres{
+    width: 10%;
+}
+.indent-table thead th {
+    height: 50px;
+    vertical-align: middle !important;
+}
+.vendor-table thead th {
+    height: 50px;
+    vertical-align: middle !important;
+}
+.table.vendor-table td {
+    padding: 12px;
+    vertical-align: middle;
+}
+tr.fontzzc {
+    font-size: 14px;
+    background-color: #f7f8fc;
+}
+.confirmlists {
+    margin-left: 31px;
+    margin-right: 31px;
+    margin-top: 27px;
+    margin-bottom: 32px;
+}
+
+
+.table.confrm-table td {
+    padding: 16px;
+    /*vertical-align: middle !important;*/
+}
+.despatchlist {
+    margin-bottom: 20px;
+    margin-left: 32px;
+    margin-right: 32px;
+    margin-top: 29px;
+}
+.despatch-table thead th {
+    height: 50px;
+    vertical-align: middle; 
+    width: 217px
+}
+.table.despatch-table td {
+    padding: 19px;
+    vertical-align: middle !important;
+}
+.confrm-table thead th {
+    width: 217px;
+}
+
+td.icon-groups.icon-order {
+    display: flex;
+}
+.content-history {
+    justify-content: flex-end;
+    display: flex;
+}
+
+div#createnew-jobcard {
+    margin-top: 11px;
+}
+span.number.job-number {
+    margin-top: -5px;
+}
+.listing .icon-groups {
+    min-height: unset;
+}
+/*.slno{
+    width: 55px;
+}
+.iows{
+    width: 510px;
+}
+.datez{
+    width: 101px;
+}
+.act{
+    width: 602px;
+}
+.res{
+    width: 527px;
+}
+.lastz{
+    width: 134px;
+}
+.firsts{
+    width: 55px;
+}*/
+.bank-book-list-wrpr .type span {
+    font-weight: normal;
+}
+.cash-book-list-wrpr .type span {
+    font-weight: normal;
+}
+.menu5-popup-cntnr.active {
+    z-index: 1000;
+    opacity: 1;
+    transform: translateY(0px);
+}
+.menu5-popup-cntnr {
+     position: fixed;
+    background: #eceef7;
+    top: 86px;
+    bottom: 0;
+    overflow: auto;
+    left: 0;
+    right: 0;
+    z-index: -1;
+    opacity: 0;
+    transition: all .3s linear;
+    -o-transition: all .3s linear;
+    -moz-transition: all .3s linear;
+    -webkit-transition: all .3s linear;
+    transform:translateY(100px)
+    
+}
+.chart-popup-cntnrr {
+        position: fixed;
+    background: #252c3e;
+    top: 0;
+    bottom: 0;
+    overflow: auto;
+    overflow-x: hidden;
+    left: 0;
+    right: 0;
+    z-index: -1;
+    opacity: 0;
+    transition: all .3s linear;
+    -o-transition: all .3s linear;
+    -moz-transition: all .3s linear;
+    -webkit-transition: all .3s linear;
+    transform:translateY(100px)
+   }
+ .chart-popup-cntnrr.active{
+       z-index: 1000;
+      opacity:1;
+       transform:translateY(0px)
+   }
+ .chart-popup-cntnrr.active .chart-contnt-wrpr{
+      display:block;
+  }
+
+.tripzz {
+    width: 113px;
+}
+
+.actv {
+    width: 512px;
+}
+
+.lastt {
+    width: 71px;
+}
+
+.midz {
+    width: 113px;
+}
+
+.equip {
+    width: 212px;
+}
+
+.datez1 {
+    width: 212px;
+}
+.untz{
+    width: 314px;
+}
+.dieslz{
+    width: 314px;
+}
+tr.tabrow th {
+     font-weight: 400 !important;
+    color: black;
+}
+div.datass .col-md-1, div.datass .col-md-11,div.datass .col-md-2, div.datass .col-md-8 {
+    border-left: 1px solid #f7f3f3 !important;
+    padding:8px ;
+    
+}
+.datass .col-md-8 {
+    border-right: 1px solid #f7f3f3;
+}
+.datass +.datass {
+    border-top: 1px solid #f7f3f3;
+    padding: 0px;
+}
+
+
+.datass {
+    padding: 0px !important;
+}
+
+.datass .col-md-8.icon-groups {
+    padding-top: 5px;
+}
+
+input#datejobcard {
+    max-width: 136px;
+    display: initial;
+}
+div#raisedate {
+    margin-left: 55px;
+}
+.datass .row {
+    padding: 0px;
+}
+
+.datass span.unitlist {
+    min-height: 26px;
+    display: inline-block;
+}
+
+div#listworkgroup-data.row {
+    margin-left: 0px;
+    margin-right: 0px;
+}
+.col-md-6.qntittys {
+    border-bottom: 1px solid #f7f3f3;
+}
+
+.col-md-6.lines {
+    border-bottom: 1px solid #f7f3f3;
+}
+span.prjctlist {
+    min-height: 30px;
+    display: inline-block;
+}
+
+span.qnthtylist {
+    min-height: 30px;
+    display: inline-block;
+}
+div.datslis .col-md-1, div.datslis .col-md-7,.div.datslis .col-md-4 {
+    border-right: 1px solid #bbb !important;
+    padding: 8px;
+}
+
+.datslis {
+    padding: 0px !important;
+    border-left: 1px solid #bbb;
+    font-size: 15px;
+}
+
+span.schedul {
+    min-height: 26px;
+    display: inline-block;
+}
+.datslis .row {
+    padding: 0px;
+}
+
+.col-md-1.hash {
+    border-bottom: 1px solid #aaa;
+}
+
+.col-md-7.all {
+    border-bottom: 1px solid #aaa;
+}
+div#listworkgroup-Schedul-data.row {
+    margin-left: 0px;
+    margin-right: 0px;
+}
+
+.col-md-4.lin {
+    border-bottom: 1px solid #aaa;
+}
+
+.scheduleitemheader > .row {
+    padding-bottom: 0px;
+}
+
+.scheduleitemcontent {
+    border-bottom: 1px solid #aaa;
+}
+
+div.cash-book-list .col-md-2,div.cash-book-list .col-md-3 {
+    border-right: 1px solid #dfdfdf;
+
+}
+
+div.activitiess .col-md-1,div.activitiess .col-md-4,div.activitiess .col-md-2 {
+    border-right: 1px solid #f7f3f3;
+    padding: 8px;
+}
+
+.activitiess {
+     border-left: 1px solid #f7f3f3;
+    padding: 0px !important;
+}
+.aname {
+    min-height: 44px;
+    display: inline-block;
+}
+.anarrtn{
+    min-height: 44px;
+    display: inline-block;
+}
+.ramnt{
+    min-height: 44px;
+    display: inline-block;
+}
+.pamnt{
+    min-height: 44px;
+    display: inline-block;
+}
+.utss {
+    min-height: 61px;
+}
+
+.qtyssss {
+    min-height: 61px;
+}
+
+.drtn {
+    min-height: 61px;
+}
+
+.srdte {
+    min-height: 61px;
+}
+span.activityvertical {
+    min-height: 23px;
+    display: inline-block;
+}
+
+span.quantityvertical {
+    min-height: 23px;
+    display: inline-block;
+}
+
+span.unitvertical {
+    min-height: 22px;
+    display: inline-block;
+}
+
+span.durationvertical {
+    min-height: 23px;
+    display: inline-block;
+}
+
+span.startvertical {
+    min-height: 23px;
+    display: inline-block;
+}
+div.actwbs .col-md-1, div.actwbs .col-md-2, div.actwbs .col-md-6 {
+    
+    border-top: 1px solid #dfdfdf;
+}
+.actwbs {
+    padding: 0px !important;
+}
+.col-md-12.activitycontent {
+    border-bottom: 1px solid #dfdfdf;
+}
+.col-md-1.nums {
+    min-height: 62px;
+}
+
+span.enddatevertical {
+    min-height: 45px;
+    display: inline-block;
+}
+
+.row.disptab .col-md-2{
+    display: table-cell;
+}
+.row.disptab {
+    display: flex;
+    flex-wrap: wrap;
+}
+div.estlist .col-md-1,div.estlist .col-md-3, div.estlist .col-md-2 {
+    border-left: 1px solid #f7f3f3;
+}
+.estlist .col-md-2 {
+    border-right: 1px solid #f7f3f3;
+}
+.row.estlist {
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+
+.row.estlist .col-md-1, .row.estlist .col-md-3, .row.estlist .col-md-2 {
+    padding-top: 15px;
+    padding-bottom: 15px;
+    /*min-height: 89px;*/
+}
+
+.estimationaddedallocation .vendor-column {
+    margin-bottom: 0px;
+}
+/*.vendor-column .row .col-md-3 {
+    min-height: 89px;
+}*/
+
+.purchseitem {
+    justify-content: center;
+    display: flex;
+    
+}
+
+/*receive materials*/
+div.lists .col-md-1,div.lists .col-md-2,div.lists .col-md-4,div.lists .col-md-5,div.lists .col-md-3 {
+    border-right: 1px solid #f7f3f3;
+    padding: 8px;
+}
+
+.lists {
+    padding: 0px !important;
+}
+.purchaselist.col-md-12 {
+    border-bottom: 1px solid #dfdfdf;
+    font-size: 14px;
+}
+div.lists {
+    border-bottom: 1px solid #dfdfdf;
+}
+
+.row.purchases {
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+
+span.date {
+    min-height: 44px;
+    display: inline-block;
+}
+
+
+/*span {
+    min-height: 21px;
+    display: inline-block;
+}*/
+
+span.vendorname {
+    min-height: 45px;
+    display: inline-block;
+}
+
+span.purchaseamount {
+    min-height: 45px;
+    display: inline-block;
+}
+
+span.purchasestatus {
+    min-height: 41px;
+    display: inline-block;
+}
+
+
+
+/*.col-md-1 {
+    min-height: -16px;
+    display: inline-block;
+}*/
+.row.orderpadding{
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+.col-md-1.numbersss {
+    min-height: 61px;
+}
+/*receive materials End */
+
+/*activity report */
+
+div.tasklistbody .col-md-1, div.tasklistbody .col-md-3, div.tasklistbody .col-md-2 {
+    border-right: 1px solid #f7f3f3;
+    
+}
+
+.col-md-1.sub-list {
+    min-height: 57px;
+    display: inline-block;
+}
+
+.tasklistbody {
+    padding: 0px !important;
+}
+span.actactivity {
+    min-height: 34px;
+    display: inline-block;
+}
+
+span.actunit {
+    min-height: 34px;
+    display: inline-block;
+}
+
+span.cumulatewty {
+    min-height: 34px;
+    display: inline-block;
+}
+
+span.crrntqty {
+    min-height: 34px;
+    display: inline-block;
+}
+span.updatedlast {
+    min-height: 30px;
+    display: inline-block;
+}
+
+/*activity report End*/
+
+/*progress report */
+/*div.taskprogress .col-md-1,div.taskprogress .col-md-4,div.taskprogress .col-md-2,div.taskprogress .col-md-3 {
+    border-right: 1px solid #dfdfdf;
+}
+
+.taskprogress {
+    padding: 0px !important;
+}
+
+span.schact {
+    min-height: 38px;
+    display: inline-block;
+}
+
+span.schunit {
+    min-height: 38px;
+    display: inline-block;
+}
+
+span.schqty {
+    min-height: 38px;
+    display: inline-block;
+}
+
+span.schupto {
+    min-height: 16px;
+    display: inline-block;
+}
+
+span.schtody {
+    min-height: 38px;
+    display: inline-block;
+}
+
+span.schlast {
+    min-height: 34px;
+    display: inline-block;
+}
+.col-md-1.subpro {
+    min-height: 61px;
+    display: inline-block;
+}
+.col-md-3.schstrt {
+    min-height: 61px;
+    display: inline-block;
+}*/
+/*progress report End*/
+
+/*contract- workorder */
+.col-md-12.listdatas {
+    border-bottom: 1px solid #dfdfdf;
+}
+div.listdata .col-md-1,div.listdata .col-md-2,div.listdata .col-md-3,div.listdata .col-md-4 {
+    border-right: 1px solid #f7f3f3;
+    padding: 8px;
+}
+
+.listdata {
+    padding: 0px !important;
+}
+
+.row.workorders {
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+.workprderlist.col-md-12 {
+    border-bottom: 1px solid #dfdfdf;
+    font-size: 14px;
+}
+span.dateend {
+    min-height: 60px;
+    display: inline-block;
+}
+.col-md-1.frtnumbs {
+    min-height: 77px;
+    display: inline-block;
+}
+
+span.workvendorname {
+    min-height: 61px;
+    display: inline-block;
+}
+
+span.wrkamnt {
+    min-height: 61px;
+    display: inline-block;
+}
+
+span.wrkstats {
+    min-height: 57px;
+    display: inline-block;
+}
+/*contract- workorder End */
+
+
+/* Invoice leased equipments */
+div.leaseilist .col-md-1,div.leaseilist .col-md-3,div.leaseilist .col-md-4,div.leaseilist .col-md-2 {
+    border-right: 1px solid #f7f3f3;
+    padding: 8px;
+}
+.row.leastitem {
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+.leaseilist {
+    padding: 0px !important;
+}
+.col-md-1.numsfst {
+    min-height: 61px;
+    display: inline-block;
+}
+
+span.date.endsdt {
+    min-height: 44px;
+    display: inline-block;
+}
+
+span.leasevendor {
+    min-height: 45px;
+    display: inline-block;
+}
+
+span.leaseamnt {
+    min-height: 45px;
+    display: inline-block;
+}
+
+
+span.leasestatus {
+    min-height: 41px;
+    display: inline-block;
+}
+.col-md-12.leaselist {
+    border-bottom: 1px solid #dfdfdf;
+    font-size: 14px;
+}
+.restpeheads.row {
+    background: #ecedef;
+    height: 44px;
+    font-size: 15px;
+    border-radius: 5px;
+    margin-top: 24px;
+    margin-bottom: 20px;
+    margin-left: -10px;
+    margin-right: -10px;
+    /* align-items: center; */
+    /* display: flex; */
+}
+thead.vendhead {
+    padding: 0px !important;
+    background: #ecedef;
+    height: 55px;
+    font-size: 15px;
+    border-radius: 5px;
+    margin-top: 24px;
+    margin-bottom: 24px;
+    margin-left: 8px;
+    margin-right: 8px;
+    align-items: center;
+    /* display: flex; */
+}
+.vendhead {
+    border-radius: 15px;
+    border: #dddddd;
+    /* box-shadow: 0 7px 7px rgb(0 0 0 / 10%); */
+    /* overflow-x: hidden; */
+}
+.terhead.row {
+    padding: 0px !important;
+    background: #ecedef;
+    height: 39px;
+    font-size: 15px;
+    margin-bottom: 24px;
+    margin-left: 8px;
+    margin-right: 8px;
+    align-items: center;
+    display: flex;
+}
+/* Invoice leased equipments End */
+/* log equipment usage */
+div.engindespatch .col-md-1,div.engindespatch .col-md-8 {
+    border-right: 1px solid #f7f3f3;
+    padding: 8px;
+}
+
+.engindespatch {
+    padding: 0px !important;
+}
+.col-md-1.despatchnum {
+    min-height: 62px;
+    display: inline-block;
+}
+
+span.machine {
+    min-height: 24px;
+    display: inline-block;
+}
+/* log equipment usageEnd */
+
+.issuedate{
+    width: 129px;
+}
+.issueiow{
+    width: 329px;
+}
+.issueact{
+    width: 280px;
+}
+.issueresource{
+    width: 224px;
+}
+.issueqty{
+    width: 100px;
+}
+.issueunit{
+    width: 100px;
+}
+button#historys {
+    background-color: #072c47;
+    border-color: #072c47;
+}
+.created{
+    display: flex;
+    justify-content: center;
+}
+div#raiesd {
+    margin-top: 30px;
+}
+.backend{
+    margin-right: 12px;
+    text-align: right;
+}
+.issueicon{
+    bottom: 6px;
+}
+/* spacing project */
+.data-content-list > .row {
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+.search-and-actions-wrpr.row {
+    padding-right: 32px;
+    padding-left: 32px;
+}
+.search-and-actions-wrpr.row.heads {
+    padding-right: 76px;
+    padding-left: 76px;
+}
+.search-and-actions-wrpr.row.head1{
+    padding-right: 58px;
+    padding-left: 58px;
+}
+.allocation-list-items-cntnr {
+    padding-left: 32px;
+    padding-right: 32px;
+}
+div#ScheduleActivity-main-body > .row {
+    padding-left: 12px;
+    padding-right: 12px;
+}
+.data-content-list {
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+.search-and-actions-wrpr.heads3 {
+    padding-left: 47px;
+    padding-right: 47px;
+}
+/* spacing End  */
+
+ /* spacing operations */
+.search-and-content-wrpr.jobhead {
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+.col-md-6.text-right.historyhead {
+    padding-left: 32px;
+    padding-right: 32px;
+}
+ /* spacing operations End */
+.content-action-wrpr.billhead.col-md-5.col-sm-5 {
+    padding-right: 32px;
+    padding-left: 32px;
+}
+.row.orderpadding {
+    margin-left: 0px !important;
+    margin-right: 0px !important;
+}
+
+.purchaselist > .row.orderpadding {
+    margin-right: -30px !important;
+}
+.row.movehead{
+    margin-left: 0px !important;
+    margin-right: 0px !important;
+}
+div.leaseilist {
+    margin-left: 0px !important;
+    margin-right: 0px !important;
+}
+.row.progresshead {
+    margin-left: 0px !important;
+    margin-right: 0px !important;
+}
+.workgroupitem.text-center {
+    padding-bottom: 13px;
+}
+.activityitem.text-center {
+    background: whitesmoke;
+    padding: 8px 20px;
+    margin-left: 0px;
+    margin-right: 0px;
+    border: 1px solid #dfdfdf;
+    border-radius: 6px;
+    margin-top: 14px;
+    margin-bottom: 0px;
+    box-shadow: none;
+    font-size: 13px;
+    display: inline-block;
+    width: auto;
+    min-width: 140px;
+}
+thead.esthead {
+    background: #555;
+    font-size: 13px;
+}
+thead.esthead th {
+    color: #fff;
+    font-weight: bold;
+    border: 1px solid #444 !important;
+    padding: 10px 12px;
+    white-space: nowrap;
+}
+thead.esthead label {
+    color: #fff;
+    font-weight: bold;
+    margin-bottom: 0;
+}
+#procresourcetable tbody tr {
+    font-size: 13px;
+}
+#procresourcetable tbody tr:hover {
+    background-color: #f9f9f9;
+}
+   
+.row.reshds {
+    padding: 0px !important;
+    background: #ecedef;
+    height: 46px;
+    font-size: 14px;
+    border-radius: 5px;
+    margin-top: 24px;
+   /* margin-bottom: 24px;*/
+    margin-left: -2px;
+    margin-right: -2px;
+    align-items: center;
+    display: flex;
+}
+.col-md-3.headfrst .row {
+    /*padding: 0px !important;*/
+    padding-left: 15px !important;
+}
+.frstrw{
+    padding: 0px !important;
+}
+.scndrow{
+    padding: 0px !important;
+}
+.ledger-book-list-wrpr .type span {
+    font-weight: normal;
+}
+.row.bankhead {
+    padding: 0px !important;
+}
+.row.cashhead {
+    padding: 0px !important;
+}
+.col-md-3.headfrst {
+    padding: 0px;
+}
+
+div.voucherss .col-md-1,div.voucherss .col-md-2,div.voucherss .col-md-3 {
+    border-right: 1px solid #f7f3f3;
+    padding-top: 3px;
+}
+
+.voucherss {
+    padding: 0px !important;
+}
+
+.numsl {
+    min-height: 62px;
+    display: inline-block;
+}
+span.prpse {
+    min-height: 58px;
+    display: inline-block;
+}
+.tooltips {
+    min-height: 62px;
+    display: inline-block;
+}
+
+span.voucheramnt {
+    display: inline-block;
+    min-height: 62px;
+}
+
+div.bankss .col-md-1,div.bankss .col-md-2,div.bankss .col-md-3,div.bankss .col-md-4 {
+    border-right: 1px solid #f7f3f3;
+    padding: 8px;
+}
+
+.bankss {
+    padding: 0px !important;
+}
+
+div.bankss {
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+.banknum {
+    min-height: 61px;
+    display: inline-block;
+}
+
+.bankuser {
+    min-height: 61px;
+    display: inline-block;
+}
+
+
+
+span.purp {
+    min-height: 60px;
+    display: inline-block;
+}
+
+span.bankamn {
+    min-height: 60px;
+    display: inline-block;
+}
+
+
+div.journalss .col-md-1,div.journalss .col-md-2,div.journalss .col-md-3 {
+    border-right: 1px solid #f7f3f3;
+    padding: 8px;
+}
+
+.journalss {
+    padding: 0px !important;
+}
+.journnum {
+    min-height: 61px;
+    display: inline-grid;
+}
+
+.tooltipjournal {
+    min-height: 61px;
+    display: inline-block;
+}
+
+span.journprpse {
+    min-height: 45px;
+    display: inline-block;
+}
+
+span.journamnt {
+    min-height: 45px;
+    display: inline-block;
+}
+
+.resourcess {
+    padding-top: 14px;
+}
+button.editvendorsbutton {
+    border: none;
+    background: none;
+}
+
+
+
+
+/*Resouces tab procurement master */
+
+    #procresourceitems .panel-heading {
+    background: #ededed;
+    border-radius: 8px;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0;
+}
+
+#procresourceitems .panel-heading a {
+    color: #333;
+}
+
+#procresourceitems {
+    margin: 11px;
+}
+
+#procresourceitems .panel-heading a::after {
+    top: 3px;
+    right: 0px;
+}
+
+#procresourceitems .panel.panel-default {
+}
+
+#procresourceitems .panel-body {
+    padding: 9px !important;
+}
+
+#procresourceitems .panel-body .table {
+    margin-top: 11px;
+}
+
+/*Resouces tab procurement master */
+
+
+
+div.listcruserrole .col-md-1, div.listcruserrole .col-md-4 {
+    border-right: 1px solid #f7f3f3;
+    padding: 8px;
+}
+.listiserss .listcruserrole.row + .row {
+    border-top: none;
+}
+.listiserss .listcruserrole.row {
+    border: 1px solid #dadada;
+}
+.listiserss{
+    padding: 60px;
+}
+.firstrowss{
+    border-top: 1px solid #f7f3f3;
+    height: 40px;
+    border-left: 1px solid #f7f3f3;
+    border-right: 1px solid #f7f3f3;
+}
+
+div.listuserrole .col-md-1, div.listuserrole .col-md-6, div.listuserrole .col-md-2 {
+    border-right: 1px solid #f7f3f3;
+    padding: 8px;
+}
+
+.listuserrole {
+    padding: 0px !important;
+}
+
+.rolenumb {
+    /*min-height: 78px;*/
+    display: inline-block;
+}
+
+span.rolename {
+    /*min-height: 62px;*/
+    display: inline-block;
+}
+
+span.roleactive {
+    /*min-height: 62px;*/
+    display: inline-block;
+}
+
+.userrole-list-wrpr.data-content-list .listuserrole.row .row {
+    display: flex;
+    justify-content: center;
+}
+
+.userrole-list-wrpr.data-content-list .listuserrole.row .icon-groups {
+    min-height: unset;
+}
+
+.userrole-list-wrpr.data-content-list .listuserrole.row {
+    border: 1px solid #dadada;
+}
+
+.userrole-list-wrpr.data-content-list .listuserrole.row:last-child {
+    border-bottom: 1px solid #dadada;
+}
+
+.userrole-list-wrpr.data-content-list .listuserrole.row + .row {border-top: none;}
+
+.listuserrole.row:nth-child(2) .col-md-12 {
+    border-top: 1px solid #dadada;
+}
+#editprojectform {
+    padding: 20px;
+}
+
+
+
+.directunit {
+    display: flex;
+    height: 34px;
+    align-items: center;
+}
+.dirrate {
+    display: flex;
+    height: 34px;
+    align-items: center;
+}
+.dirotrates {
+    display: flex;
+    height: 34px;
+    align-items: center;
+}
+.noofworkerss {
+    display: flex;
+    height: 34px;
+    align-items: center;
+}
+.noofdayss {
+    display: flex;
+    height: 34px;
+    align-items: center;
+}
+.totalamt {
+    display: flex;
+    height: 34px;
+    align-items: center;
+}
+.journalalign{
+    display: flex;
+    justify-content: center;
+}
+#cnfrmhistorys{
+    padding: 15px;
+    padding-left: 33px;
+    padding-right: 33px;
+}
+#historiescnfrm{
+    padding-left: 55px;
+    padding-right: 55px;
+}
+#deshistorys{
+     padding: 15px;
+     padding-left: 33px;
+     padding-right: 33px;
+}
+#historiesdsptch {
+    padding-left: 55px;
+    padding-right: 55px;
+}
+#addprjfrm{
+    margin-left: -39px;
+    padding: 11px;
+}
+.editunitbuttons {
+    border: none;
+    background: none;
+}
+.unitres {
+    display: flex;
+}
+
+
+.ledger-book-list-wrpr .list-head {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: 0px;
+    margin-right: 0px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    /*padding-top: 31px;*/
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+}
+
+.journal-book-list-wrpr .list-head {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: 0px;
+    margin-right: 0px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 31px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+}
+
+.bank-book-list-wrpr .list-head {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: 0px;
+    margin-right: 0px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 31px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+}
+.cash-book-list-wrpr .list-head{
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: 0px;
+    margin-right: 0px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 31px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+}
+.cashbook_headings{
+    background: #f5f5f5;
+    
+    height: 30px;
+    display: flex;
+    align-items: center;
+   /* margin-left: 0px;
+    margin-right: 0px;*/
+}
+.bankbook_headings{
+    background: #f5f5f5;
+    
+    height: 30px;
+    display: flex;
+    align-items: center;
+    /*margin-left: 0px;
+    margin-right: 0px;*/
+}
+.journalbook_headings{
+    background: #f5f5f5;
+    
+    height: 30px;
+    display: flex;
+    align-items: center;
+    margin-left: 0px;
+    margin-right: 0px;
+}
+.ledger_headings{
+    background: #f5f5f5;
+    
+    height: 30px;
+    display: flex;
+    align-items: center;
+   /* margin-left: 0px;
+    margin-right: 0px;*/
+}
+.cashhead{
+    background: #f5f5f5;
+    
+}
+.bankhead{
+    background: #f5f5f5;
+   
+}
+.col-md-3.ordertyps {
+    display: flex;
+}
+
+.col-md-3.ordertyps h6 {
+    margin-left: 10px;
+}
+.purchaselist {
+    background: #f5f5f5;
+    font-size: 13px;
+    height: 40px;
+    display: inline-grid;
+    align-items: center;
+    margin-left: 0px;
+    margin-right: 0px;
+}
+.workprderlist {
+    background: #f5f5f5;
+    font-size: 13px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    margin-left: 0px;
+    margin-right: 0px;
+}
+.drctwrkordr{
+    background: #f5f5f5;
+    font-size: 14px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    margin-left: 0px;
+    margin-right: 0px;
+}
+.leaselist {
+    background: #f5f5f5;
+    font-size: 13px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    margin-left: 0px;
+    margin-right: 0px;
+}
+.clientcls{
+    background: #f5f5f5;
+    font-size: 15px;
+    height: 40px;
+    /* display: flex; */
+    align-items: center;
+    margin-left: 0px;
+    margin-right: 0px;
+}
+
+.toprws {
+    padding-left: 36px;
+    padding-right: 72px;
+}
+.journal-book-list-wrpr .type span {
+    font-weight: normal;
+}
+
+.content-wrpr .group-heading {
+    background: whitesmoke;
+    padding: 15px;
+    margin-left: 12px;
+    margin-right: 12px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 20px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+}
+
+.row.sbgrp {
+    padding: 0px !important;
+    background: #ecedef;
+    height: 55px;
+    font-size: 15px;
+    border-radius: 5px;
+    margin-top: 24px;
+    margin-bottom: 24px;
+    margin-left: 8px;
+    margin-right: 8px;
+    align-items: center;
+    display: flex;
+}
+
+.iconss.icon-groups a:after {
+    content: unset;
+}
+
+.iconss.icon-groups a {
+    display: flex;
+    justify-content: center;
+    background: none;
+    color: #465365 !important;
+    min-width: 20px !important;
+}
+
+.iconss.icon-groups {
+    position: absolute;
+    top: -13px;
+    right: 30px;
+}
+
+.panel-heading {
+    position: relative;
+}
+
+.iconss.icon-groups button {
+    padding: 0px;
+    width: 38px; 
+}
+
+.iconss.icon-groups button:nth-child(2) a {
+    position: relative;
+    left: 3px !important;
+    top: 2px;
+   
+}
+.row.planthead {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: 15px;
+    margin-right: 15px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 20px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+}
+.row.wrkhead {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: -15px;
+    margin-right: -15px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 20px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+}
+.row.drcthead {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: 15px;
+    margin-right: 15px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 20px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+}
+.row.leaseheadss {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: -15px;
+    margin-right: -15px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 20px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+}
+.row.actheads {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: 15px;
+    margin-right: 15px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 20px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+}
+.row.prgheads {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: 15px;
+    margin-right: 15px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 20px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+}
+.row.clntheads {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: 32px;
+    margin-right: 32px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 20px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+}
+.row.purhead {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: -15px;
+    margin-right: -15px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 20px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+}
+.row.prjtpehead {
+    /* padding: 0px !important; */
+    background: #ecedef;
+    height: 40px;
+    font-size: 14px;
+    border-radius: 5px;
+    margin-top: 17px;
+    margin-bottom: 0px;
+    margin-left: -19px;
+    margin-right: -19px;
+    align-items: center;
+    display: flex;
+}
+.row.actsheads {background: #ecedef;
+    height: 40px;
+    font-size: 14px;
+    border-radius: 5px;
+    margin-top: 17px;
+    margin-bottom: 0px;
+    margin-left: -19px;
+    margin-right: -19px;
+    align-items: center;
+    display: flex;
+}
+.row.estheads {
+    
+    background: #ecedef;
+    height: 40px;
+    font-size: 14px;
+    border-radius: 5px;
+    margin-top: 17px;
+    margin-bottom: -12px;
+    margin-left: -16px;
+    margin-right: -16px;
+    align-items: center;
+    display: flex;
+}
+thead.boqhds {
+    padding: 0px !important;
+    background: #ecedef;
+    /* height: 64px; */
+    font-size: 15px;
+    border-radius: 5px;
+    margin-top: 24px;
+    margin-bottom: 24px;
+    margin-left: 8px;
+    margin-right: 8px;
+    align-items: center;
+    /* display: flex; */
+}
+.row.wbsheads {
+    padding: 0px !important;
+    background: #ecedef;
+    height: 37px;
+    font-size: 14px;
+    border-radius: 5px;
+    /* margin-top: 24px; */
+    /* margin-bottom: 24px; */
+     margin-left: -16px; 
+     margin-right: -16px; 
+    align-items: center;
+    display: flex;
+}
+.wbhds {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: 0px;
+    margin-right: 0px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 20px;
+    margin-top: 20px;
+    margin-bottom: 32px;
+    box-shadow: none;
+    font-size: 16px;
+}
+.row.wbsheadsss label {
+    color: #fff;
+    font-weight: bold;
+    margin-bottom: 0;
+}
+.row.wbsheadsss {
+    padding: 0px !important;
+    background: #555;
+    color: #fff;
+    height: 40px;
+    font-size: 14px;
+    border-radius: 5px;
+    margin-top: 60px;
+    margin-left: -15px;
+    margin-right: -15px;
+    align-items: center;
+    display: flex;
+}
+.schdhead {
+    background: #555;
+    color: #fff;
+    font-size: 15px;
+    border-radius: 5px;
+    margin-top: 24px;
+    margin-bottom: 16px;
+    align-items: center;
+}
+.schdhead label {
+    color: #fff;
+    font-weight: bold;
+    margin-bottom: 0;
+}
+.schdheads {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: 0px;
+    margin-right: 0px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 20px;
+    font-size: 16px;
+}
+.scactheads {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: 47px;
+    margin-right: 47px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 20px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    font-size: 16px;
+}
+.row.sacthds {
+    background: #ecedef;
+    height: 40px;
+    font-size: 14px;
+    border-radius: 5px;  
+    margin-bottom: 0px;
+    align-items: center;
+    display: flex;
+    margin-right: -15px;
+    margin-left: -15px;
+}
+.row.relheads {
+    /* padding: 0px !important; */
+    background: #ecedef;
+    height: 48px;
+    font-size: 14px;
+    border-radius: 5px;
+    margin-top: 24px;
+    margin-bottom: 1px;
+    margin-left: -6px;
+    margin-right: -6px;
+    align-items: center;
+    display: flex;
+}
+.row.alrshead {
+    background: #ecedef;
+    height: 35px;
+    font-size: 14px;
+    border-radius: 5px;
+    margin-top: 24px;
+    margin-bottom: 0px;
+    margin-left: -2px;
+    margin-right: -2px;
+    align-items: center;
+    display: flex;
+    padding: 0px !important;
+}
+div.esttypesort .col-md-1, div.esttypesort .col-md-2, div.esttypesort .col-md-4 {
+    border-left: 1px solid #f7f3f3;
+    padding-left: -2px;
+    
+}
+
+.esttypesort +.esttypesort {
+    border-top: 1px solid #f7f3f3;
+    padding:0px;
+}
+.esttypesort .col-md-4 {
+    border-right: 1px solid #f7f3f3;
+}
+
+.frstnm {
+    min-height: 61px;
+    top: 11px;
+    padding-top: 9px;
+}
+
+.acvtnamss {
+    min-height: 61px;
+     top: 11px;
+    padding-top: 9px;
+}
+
+.unactv {
+    min-height: 61px;
+    top: 11px;
+    padding-top: 9px;
+}
+
+.ratact {
+    min-height: 61px;
+    top: 11px;
+    padding-top: 9px;
+}
+div.prjactivityss .col-md-2, div.prjactivityss .col-md-3, div.prjactivityss .col-md-8, div.prjactivityss .col-md-10 {
+    border-right: 1px solid #f7f3f3;
+}
+.prjactivityss {
+    border-left: 1px solid #f7f3f3;
+}
+.prjactivityss +.prjactivityss {
+    border-top: 1px solid #f7f3f3;
+}
+.frstnmm {
+    min-height: 61px;
+}
+
+.bqactnme {
+    min-height: 61px;
+}
+
+.boqnmm {
+    min-height: 61px;
+}
+
+.boqunut {
+    min-height: 61px;
+}
+
+.boqamnttt {
+    min-height: 61px;
+}
+/*div.estlist .col-md-1,div.estlist .col-md-2,div.estlist .col-md-3 {
+    border-right: 1px solid #f7f3f3;
+}*/
+.estlist +.estlist {
+    border-top: 1px solid #f7f3f3;
+}
+.numvert {
+    min-height: 61px;
+}
+
+.renam {
+    min-height: 61px;
+}
+.actrat {
+    min-height: 61px;
+}
+
+.actqtty {
+    min-height: 61px;
+}
+
+.actamnnnt {
+    min-height: 61px;
+}
+.added-activity-list-wrpr {
+    overflow-x: hidden;
+}
+
+div.resmasterss .col-md-1,div.resmasterss .col-md-3,div.resmasterss .col-md-2 {
+    /*padding: 0px;*/
+    border-right: 1px solid #f7f3f3;
+}
+.resmasterss +.resmasterss {
+    border-top: 1px solid #f7f3f3;
+}
+.resmasterss  .col-md-1 {
+    border-left: 1px solid #f7f3f3;
+}
+.resmasterss {
+    padding: 0px !important;
+}
+
+.resmstrfrst {
+    min-height: 46px;
+    padding-top: 8px;
+}
+
+.rsnamemastr {
+    min-height: 46px;
+    padding-top: 8px;
+}
+.colmastr {
+    padding: 0px;
+    margin-bottom: 0px !important;
+}
+
+.rsmstrunt {
+    min-height: 46px;
+    padding-top: 8px;
+}
+
+.resmstrqty {
+    min-height: 46px;
+    padding-top: 8px;
+}
+
+.resmstrrte {
+    min-height: 46px;
+    padding-top: 8px;
+}
+
+.resmstrsmnt {
+    min-height: 46px;
+    padding-top: 8px;
+}
+.resmstrgrps {
+    min-height: 46px !important;
+    padding-top: 8px;
+}
+.row.scacvts {
+    padding: 0px !important;
+    background: #ecedef;
+    height: 38px;
+    font-size: 14px;
+    border-radius: 5px;
+    margin-top: 24px;
+   /* margin-bottom: 24px;*/
+    margin-left: 0px;
+    margin-right: 0px;
+    align-items: center;
+    display: flex;
+}
+
+div.added-item .col-md-1, div.added-item .col-md-4,div.added-item .col-md-6 {
+    border-right: 1px solid #f7f3f3;
+    padding: 0px;
+}
+.added-item {
+    border-left: 1px solid #f7f3f3;
+}
+.added-item +.added-item {
+    border-top: 1px solid #f7f3f3;
+}
+.srnoact {
+    min-height: 70px;
+    padding-top: 10px !important;
+    padding-left: 9px !important;
+}
+
+.rsnmee {
+    min-height: 70px;
+    padding-top: 10px !important;
+    padding-left: 9px !important;
+}
+
+.reavil {
+    min-height: 70px;
+    padding-top: 10px !important;
+    padding-left: 9px !important;
+}
+
+.rshrs {
+    min-height: 70px;
+    padding-top: 10px !important;
+    padding-left: 9px !important;
+}
+.grpsicnss {
+    min-height: 70px !important;
+}
+.actvnmee {
+    min-height: 57px;
+}
+
+.acctunss {
+    min-height: 57px;
+}
+
+.qmqtyy {
+    min-height: 57px;
+}
+
+.crntqtyy {
+    min-height: 57px;
+}
+
+.lstupdts {
+    min-height: 57px;
+}
+div .taskprogress .col-md-1,div .taskprogress .col-md-2,div .taskprogress .col-md-3,div .taskprogress .col-md-4 {
+    border-right: 1px solid #f7f3f3;
+    padding: 0px;
+}
+
+.acprg {
+    min-height: 57px;
+    padding-left: 11px !important;
+}
+
+.prgunt {
+    min-height: 57px;
+    padding-left: 11px !important;
+}
+
+.prgbwty {
+    min-height: 57px;
+    padding-left: 11px !important;
+}
+
+.prgstrtdt {
+    min-height: 57px;
+    padding-left: 11px !important;
+    padding-right: 11px !important;
+}
+
+
+}
+
+.uptdte {
+    min-height: 57px;
+    padding-left: 11px !important;
+}
+.uptdte {
+    min-height: 57px;
+}
+.tdysprgrs {
+    min-height: 57px;
+    padding-left: 11px !important;
+    padding-right: 11px !important;
+
+}
+
+.lstupdtdd {
+    min-height: 57px;
+    padding-left: 11px !important;
+}
+.icnss {
+    min-height: 57px !important;
+    border-right: none !important;
+}
+span.styleclass {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+}
+.savevenresdespcart .icon-save {
+    background-color: #5cb85c;
+}
+
+/*orders style*/
+thead.thdorders {
+    background: #ecedef;
+    font-size: 15px;
+}
+
+.table-wrpr-orders {
+        padding: 20px;
+        margin-left: 10px;
+        margin-right: 10px;
+        border: 1px solid #f2f2f2;
+        border-radius: 8px;
+        padding-top: 25px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 -4px 26px rgb(0 0 0 / 0.1);
+}
+.headngstyle {
+    padding-left: 26px;
+    padding-right: 17px;
+    padding-top: 10px;
+    font-size: 14px;
+    font-weight: 500;
+}
+.orders-wrpr {
+    padding-left: 40px;
+    padding-right: 40px;
+}
+.orders-wrpr .order-head {
+    background: whitesmoke;
+    padding: 20px;
+    margin-left: 0px;
+    margin-right: 0px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 20px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.order-head {
+    text-align: center;
+}
+
+.order-head a {
+    margin: 0 10px;
+    color: #2c3e50;
+    text-decoration: none;
+    display: inline-block;
+    position: relative;
+}
+
+.order-head a.active:after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -20px;
+    height: 3px;
+    background: #2c3e50;
+}
+.table > thead > tr > th,
+.table > tbody > tr > th,
+.table > tfoot > tr > th,
+.table > thead > tr > td,
+.table > tbody > tr > td,
+.table > tfoot > tr > td {
+  padding: 5px;
+  line-height: 1.42857143;
+  vertical-align: top;
+  
+}
+.purchase-list-wrpr .table thead th {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+
+
+.choosevendor-cntnt-wrpr .padLRzero {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.choosevendor-cntnt-wrpr {
+    background: #fff;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+.choosevendor-cntnt-wrpr label {
+    font-weight: normal;
+    opacity: .6;
+    font-size: 12px;
+}
+
+.choosevendor-cntnt-wrpr em {
+    /*font-weight: 600;*/
+    font-style: normal;
+}
+.sml-input{
+    width: 100%;
+    /*max-width: 81px;*/
+    border: 1px solid #dadada;
+    border-radius: 3px;
+    padding-left: 4px;
+}
+/*.rq-eq-and-amount .padLRzero,.rq-eq-and-amount .padLRzero {
+    padding-left: 0;
+    padding-right: 0;
+}*/
+.choosevendor-cntnt-wrpr + .choosevendor-cntnt-wrpr {
+    border-top: 1px solid #f2f2f2;
+}
+.choosevendor-second-row {
+    margin-top: 12px;
+    margin-bottom: 12px;
+}
+.cartlabel{
+    min-height: 36px;
+}
+.purchase-list-wrpr .table-wrpr-orders {
+    border: none;
+    margin-left: 0px;
+    margin-right: 0px;
+    box-shadow: none;
+}
+
+.splitvendor {
+    margin-right: 6px;
+}
+
+#placeorder_new {
+    background: #337ab7 !important;
+    border-color: #337ab7 !important;
+}
+.numpur{
+    left: 5px !important;
+}
+
+.cartitems-expanded > tr:not([aria-expanded=true]) {
+    display: none;
+}
+.cartitems-expanded .firstroow{
+    display: table-row !important;
+}
+.cartitems-expanded tr.aria-parent{
+    display:table-row !important;
+}
+a.icon-trash1.cleartaskp {
+    border: none;
+    background: none;
+    color: #465365 !important;
+    font-size: 20px;
+}
+#placeorder_wrkorder{
+    background: #337ab7 !important;
+    border-color: #337ab7 !important;
+}
+#placeorder_dirwrkorder{
+    background: #337ab7 !important;
+    border-color: #337ab7 !important;
+}
+#placeorder_leaseorder{
+    background: #337ab7 !important;
+    border-color: #337ab7 !important;   
+}
+#placeorder_desporder{
+    background: #337ab7 !important;
+    border-color: #337ab7 !important;
+}
+#replaceorder_new{
+    background: #337ab7 !important;
+    border-color: #337ab7 !important;
+}
+.frstcol{
+    width: 88px;
+}
+/* .vnname{
+    width: 739px; 
+} */
+.vendtott{
+    width: 214px;
+}
+.tooltiptable {
+    height: 100px;
+    overflow: hidden;
+    overflow-y: auto;
+}
+/*orders style End*/
+.row.wrkbillhead{
+background: whitesmoke;
+    padding: 20px;
+    margin-left: -15px;
+    margin-right: -15px;
+    border: 1px solid #dfdfdf;
+    border-radius: 8px;
+    padding-top: 20px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    box-shadow: none;
+}
+.showdeta {
+    background: #f5f5f5;
+    height: 40px;
+    align-items: center;
+    /* justify-content: center; */
+    display: flex;
+}
+/*.highlight {
+    box-shadow: 0 0 15px hsl(0deg 2% 5% / 20%);
+}*/
+
+/*Media query start here...*/
+@media only screen and (max-device-width: 1024px) and (min-device-width: 481px)
+        and (max-device-width: 1366px) 
+        and (-webkit-min-device-pixel-ratio: 2){
+
+    .alloc-activity-title .col-md-4 label {
+        margin-right: -200px;
+    }
+    button[data-target='#changeVendorpopou'] {
+        font-size: 11px;
+        height: 30px;
+        text-align: center;
+        padding: 5px;
+    }
+
+}
+
+@media screen and (orientation:portrait){
+    button[data-target='#changeVendorpopou'] {
+        font-size: 11px;
+        height: 30px;
+        text-align: center;
+        padding: 5px;
+    }
+    
+       /* .ipad .slno{
+            width: 55px;
+        }
+        .ipad .datez{
+            width: 60px;
+        }
+        .ipad .act{
+            width: 288px;
+        }
+        .ipad .lastz{
+            width: 108px;
+        }
+        .ipad .firsts {
+             width: 55px;
+        }
+        .ipad .ent{
+            width: 60px;
+        }
+        .ipad .res{
+            width: unset;
+        }
+        
+        .ipad .un{
+            width: 144px;
+        }
+        .ipad .prp{
+            width: 144px;
+        }*/
+        
+        /*.ipad .lastt{
+            width: 60px;
+        }*/
+        .ipad .tabend{
+            width: 60px;
+        }
+        .ipad .lastt{
+            width: 60px;
+        }
+        .ipad .tripzz{
+            width: 79px;
+        }
+        .ipad .midz{
+            width: 79px;
+        }
+        .ipad .strt{
+            width: 169px;
+        }
+        .ipad .equip {
+             width: 169px;
+        }
+        .ipad .endzz{
+            width: 169px;
+        }
+        .ipad .datez1{
+             width: 169px;
+        }
+        .ipad .untz{
+             width: 238px;
+        }
+        .ipad .dieslz{
+            width: 238px;
+        }
+        .ipad .actv{
+            width: 402px;
+        }
+        .ipad .netread{
+            width: 74px;
+        }
+
+
+        .ipad .content-search-wrpr#ledgerhead select[name='ledgerplace'] ,
+        .ipad .content-search-wrpr#ledgerhead select[name='projectid'],
+        .ipad .content-search-wrpr#ledgerhead select[name='accounthead']{
+                width:150px;
+        }
+        .ipad .content-search-wrpr#journal_bookhead select[name='journalproject'] ,
+        .ipad .content-search-wrpr#journal_bookhead select[name='accounthead'] {
+            width:250px;
+        }
+
+        .ipad .content-search-wrpr#cash_bookhead select[name='bankproject'] ,
+        .ipad .content-search-wrpr#cash_bookhead select[name='bankbookproject'],
+        .ipad .content-search-wrpr#cash_bookhead select[name='bank']{
+            width: 131px;
+
+        }
+        .ipad .content-search-wrpr#cash_bookhead select[name='accounthead']{
+            width: 170px;
+        }
+        .ipad .content-search-wrpr#bank_bookhead select[name='bank'] , 
+        .ipad .content-search-wrpr#bank_bookhead select[name='accounthead'] {
+            width:200px;
+        }   
+        .ipad .ledgerwrpr{
+        flex-wrap: wrap;
+        }
+        .ipad .shwnpad {
+        margin-left: 73px;
+        }
+}
+
+
+
+
+
+
+
+/*Thasleema css End*/

@@ -1,0 +1,15 @@
+<?php
+// Copy this file to db.php and fill in real credentials.
+// db.php is git-ignored because it contains live database passwords.
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$dbname   = 'opiam_prod';
+$username = 'root';
+$password = '';
+
+return [
+    'class' => 'yii\db\Connection',
+    'dsn' => "mysql:host=localhost;dbname=$dbname",
+    'username' => $username,
+    'password' => $password,
+    'charset' => 'utf8',
+];

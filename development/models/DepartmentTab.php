@@ -1,0 +1,100 @@
+<?php
+
+namespace app\models;
+
+use Yii;
+/**
+ * This is the model class for table "department_tab".
+ *
+ * The followings are the available columns in table 'department_tab':
+ * @property integer $tab_id
+ * @property integer $dep_id
+ * @property string $name
+ * @property string $tabname
+ */
+class DepartmentTab extends \yii\db\ActiveRecord
+{
+	/**
+	 * Returns the static model of the specified AR class.
+	 * @return DepartmentTab the static model class
+	 */
+	public static function model($className=__CLASS__)
+	{
+		return parent::model($className);
+	}
+
+	/**
+	 * @return string the associated database table name
+	 */
+	public static function tableName()
+	{
+		return 'department_tab';
+	}
+
+	/**
+	 * @return array validation rules for model attributes.
+	 */
+	public function rules()
+	{
+		// NOTE: you should only define rules for those attributes that
+		// will receive user inputs.
+		return array(
+			array('dep_id, name', 'required'),
+			array('dep_id', 'numerical', 'integerOnly'=>true),
+			array('name', 'length', 'max'=>255),
+			// The following rule is used by search().
+			// Please remove those attributes that should not be searched.
+			array('tab_id, dep_id, name', 'safe', 'on'=>'search'),
+		);
+	}
+
+	/**
+	 * @return array relational rules.
+	 */
+	public function relations()
+	{
+		// NOTE: you may need to adjust the relation name and the related
+		// class name for the relations automatically generated below.
+		return array(
+		);
+	}
+
+	/**
+	 * @return array customized attribute labels (name=>label)
+	 */
+	public function attributeLabels()
+	{
+		return array(
+			'tab_id' => 'Tab',
+			'dep_id' => 'Dep',
+			'name' => 'Name',
+		);
+	}
+
+	/**
+	 * Retrieves a list of models based on the current search/filter conditions.
+	 * @return CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
+	 */
+	public function search()
+	{
+		// Warning: Please modify the following code to remove attributes that
+		// should not be searched.
+
+		$criteria=new CDbCriteria;
+
+		$criteria->compare('tab_id',$this->tab_id);
+		$criteria->compare('dep_id',$this->dep_id);
+		$criteria->compare('name',$this->name,true);
+
+		return new CActiveDataProvider(get_class($this), array(
+			'criteria'=>$criteria,
+		));
+	}
+	public function behaviors()
+    {
+        return [
+            'bedezign\yii2\audit\AuditTrailBehavior'
+        ];
+    }
+
+}

@@ -1,0 +1,25 @@
+    @font-face {
+    font-family: 'Optima';
+    font-style: normal;
+    font-weight: normal;
+    src: local('Optima'), url('fonts/OPTIMA.woff') format('woff');
+    }
+    
+
+ 
+    
+
+    @font-face {
+    font-family: 'Optima Medium';
+    font-style: normal;
+    font-weight: normal;
+    src: local('Optima Medium'), url('fonts/Optima Medium.woff') format('woff');
+    }
+    
+
+    @font-face {
+    font-family: 'Optima Bold';
+    font-style: normal;
+    font-weight: normal;
+    src: local('Optima Bold'), url('fonts/OPTIMA_B.woff') format('woff');
+    }

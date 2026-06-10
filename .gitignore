@@ -1,0 +1,83 @@
+# Vendor directories (Composer) — all Yii2 instances
+production/vendor/
+production/_vendor/
+development/vendor/
+development/_vendor/
+financial/vendor/
+financial/_vendor/
+quality/vendor/
+quality/_vendor/
+
+# Yii2 runtime (logs, cache, temp files)
+production/runtime/
+development/runtime/
+financial/runtime/
+quality/runtime/
+
+# Yii2 published assets cache (regenerated automatically)
+production/web/assets/
+development/web/assets/
+financial/web/assets/
+quality/web/assets/
+
+# User uploaded files
+production/web/uploads/
+development/web/uploads/
+financial/web/uploads/
+quality/web/uploads/
+
+# SECRETS — DB credentials (contains live Hostinger passwords)
+production/config/db.php
+development/config/db.php
+financial/config/db.php
+quality/config/db.php
+
+# SECRETS — app config (cookie validation key, SMTP password)
+production/config/web.php
+development/config/web.php
+financial/config/web.php
+quality/config/web.php
+
+# SECRETS — WordPress config (DB credentials, auth salts)
+blog/wp-config.php
+
+# Archive / large binary files
+*.zip
+*.tar.gz
+*.rar
+
+# Database dumps (can be very large)
+*.sql
+
+# Backup directories (large SQL dumps + site copies)
+Other Backups/
+domains/
+
+# Backup / temporary files
+*_old.php
+*_old.js
+*.php_b
+*.php_
+*.bak
+*.tmp
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude Code settings
+.claude/
+CLAUDE.md
+
+# App-instance upload folders (project data files)
+production/uploads/
+development/uploads/
+financial/uploads/
+quality/uploads/

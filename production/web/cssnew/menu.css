@@ -1,0 +1,113 @@
+
+.mainMenu {
+	display:block;
+	position:relative;
+	width:100%;
+	margin:0;
+	padding:0;
+	text-align: center;
+	line-height:1.4;
+	float:left;
+	border-bottom:1px solid #ccc;
+    top: -30px;
+
+	}
+	
+#toggleMenu, .toggleMenu { 
+	display: none;
+	}
+
+.toggleMenu { 
+	display: block; 
+	position: relative; 
+	cursor: pointer; 
+	-webkit-touch-callout: none; 
+	-webkit-user-select: none; 
+	user-select: none; 
+	}
+	
+#toggleMenu:checked ~ .menu {  
+	max-height:800px; 
+	opacity:1;position: absolute;
+	}
+	
+.menu {
+	width:100%;
+	margin:0;
+	padding:0;
+	list-style:none;
+	float:left;
+    overflow-y: hidden;
+	text-align:center;
+	max-height:0;
+	}
+	
+.menu li {
+	margin:0;
+	padding:0;
+	border-top:1px solid #ccc;
+	white-space:nowrap;
+	display:block;
+	width:100%;
+	}
+	
+.menu li:hover {
+	background-color:#eee;
+	cursor:pointer;
+	}
+	
+.menu a, .menu a:visited {
+	color:#333;
+	text-decoration:none;
+	display:block;
+	width:94%;
+	padding:5px 3%;
+	}
+
+.menu li:first-child {
+	border-left:0;
+	}	
+
+.menu a:hover {
+	color:#666;
+	}
+	
+label.menuTitle {
+	text-align:left;
+	font-size:20px;
+height: 33px;
+	padding:6px 3%;
+	margin:0;
+	width:100%;background-color: red !important;
+	display:block;
+	font-weight:bold;
+	cursor:pointer;
+	background:url(../images/menu.svg) no-repeat 97% 10px;
+	background:url(../images/menu.png) no-repeat 97% 10px;
+	background-size: 24px 19px; 
+	}
+	
+@media screen and (min-width:768px) {
+	label.menuTitle {
+		text-align:right;
+height: 33px;
+	padding:6px 8%;line-height: 22px;
+font-size: 14px;
+
+	}
+	
+	
+.mainMenu {
+display: block;
+position: relative;
+width: 100%;
+margin: 0;
+padding: 0;
+text-align: center;
+line-height: 1.4;
+float: left;
+border-bottom: 1px solid #ccc;
+top: -48px;
+
+	}
+	}

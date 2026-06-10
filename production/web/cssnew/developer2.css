@@ -1,0 +1,566 @@
+/* Oct 7 2020 * by Vishnu start ----PLEASE DONT TOUCH---- */
+/*#ui-datepicker-div {
+    z-index: 100 !important;
+}*/
+.tds-sgst-cgst-igst-wrpr {
+    display: flex;
+}
+
+.tds-sgst-cgst-igst-wrpr label {
+    font-size: 11px;
+}
+
+.tds-sgst-cgst-igst-wrpr .form-groups {
+    margin-left: 10px !important;
+}
+#fundrequestform label {
+    font-size: 12px;
+}
+.error{
+color:red !important;
+}
+.content-search-wrpr-new {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.content-search-wrpr-new input {
+	border-radius: 20px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    max-width: 650px;
+}
+.content-search-wrpr-new button {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    min-height: 34px;
+    position: relative;
+    left: -21px;
+    min-width: 60px;
+    border-radius: 20px;
+	background: #072c47;
+    border-color: #072c47;
+}
+.custom-padding-activity-new{
+    padding-left: 30px;
+    padding-right: 30px;
+}
+
+.detailedworkers h2 {
+    font-size: 18px;
+    background: #eceef7;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+.detailedworkers h3 {
+    font-size: 16px;
+    margin-bottom: 17px;
+}
+
+.detailedworkers table thead {
+    background: rgb(236 238 247 / 0.4);
+    font-size: 12px;
+}
+
+.text-button {
+    background: #072c47 !important;
+    border-color: #072c47 !important;
+}
+/* Oct 7 2020 * by Vishnu end -----PLEASE DONT TOUCH----*/
+
+/*Dec 02 2020 start*/
+.menu-popup-cntnr {
+    position: fixed;
+    background: #eceef7;
+    top: 86px;
+    bottom: 0;
+    overflow: auto;
+    left: 0;
+    right: 0;
+    z-index: -1;
+	opacity:0;
+	transition: all .3s linear;
+    -o-transition: all .3s linear;
+    -moz-transition: all .3s linear;
+    -webkit-transition: all .3s linear;
+	transform:translateY(100px)
+}
+.menu-popup-cntnr.active{
+	z-index: 1000;
+	opacity:1;
+	transform:translateY(0px)
+}
+.menu-popup-cntnr.active .menu-cntnt-wrpr{
+	display:block;
+}
+.menu-cntnt-wrpr{
+	display:none;
+}
+.menu-win-close {
+    font-size: 22px;
+    position: absolute;
+    right: 7px;
+    top: 9px;
+    color: #fff;
+}
+.btn-secondary {
+    color: #fff;
+    background-color: #444;
+    border-color: #444;
+}
+
+.close-resource-list-btn1 {
+    border-radius: 41px;
+	display:none;
+}
+.add-allocation-list-active .resource-list-btn1{
+	display:none;
+}
+.add-allocation-list-active .close-resource-list-btn1{
+	display:inline-block;
+}
+
+.close-resource-list-btn2 {
+    border-radius: 41px;
+	display:none;
+}
+.add-allocation-list-active .resource-list-btn2{
+	display:none;
+}
+.add-allocation-list-active .close-resource-list-btn2{
+	display:inline-block;
+}
+
+/*Dec 02 2020 end*/
+
+/*Dec 07 2020 start*/
+.menu1-popup-cntnr {
+    position: fixed;
+    background: #eceef7;
+    top: 86px;
+    bottom: 0;
+    overflow: auto;
+    left: 0;
+    right: 0;
+    z-index: -1;
+	opacity:0;
+	transition: all .3s linear;
+    -o-transition: all .3s linear;
+    -moz-transition: all .3s linear;
+    -webkit-transition: all .3s linear;
+	transform:translateY(100px)
+}
+.menu1-popup-cntnr.active{
+	z-index: 1000;
+	opacity:1;
+	transform:translateY(0px)
+}
+.menu1-popup-cntnr.active .menu1-cntnt-wrpr{
+	display:block;
+}
+.menu1-cntnt-wrpr{
+	display:none;
+}
+.menu1-win-close {
+    font-size: 22px;
+    position: absolute;
+    right: 7px;
+    top: 9px;
+    color: #fff;
+}
+
+.add-project-activities-btnnew {
+    border-radius: 31px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 8px;
+    position: relative;
+    top: -3px;
+}
+
+.finmenu-popup-cntnr {
+    position: fixed;
+    background: #eceef7;
+    top: 86px;
+    bottom: 0;
+    overflow: auto;
+    left: 0;
+    right: 0;
+    z-index: -1;
+	opacity:0;
+	transition: all .3s linear;
+    -o-transition: all .3s linear;
+    -moz-transition: all .3s linear;
+    -webkit-transition: all .3s linear;
+	transform:translateY(100px)
+}
+.finmenu-popup-cntnr.active{
+	z-index: 1000;
+	opacity:1;
+	transform:translateY(0px)
+}
+.finmenu-popup-cntnr.active .finmenu-cntnt-wrpr{
+	display:block;
+}
+.finmenu-cntnt-wrpr{
+	display:none;
+}
+.finmenu-win-close {
+    font-size: 22px;
+    position: absolute;
+    right: 7px;
+    top: 9px;
+    color: #fff;
+}
+
+.table {
+    font-size: 13px;
+}
+
+.type span, .acc-sub-group span {
+    font-size: 13px;
+}
+
+/*Dec 07 2020 end*/
+
+/*Dec 09 2020 start*/
+.menu4-popup-cntnr {
+    position: fixed;
+    background: #eceef7;
+    top: 86px;
+    bottom: 0;
+    overflow: auto;
+    left: 0;
+    right: 0;
+    z-index: -1;
+	opacity:0;
+	transition: all .3s linear;
+    -o-transition: all .3s linear;
+    -moz-transition: all .3s linear;
+    -webkit-transition: all .3s linear;
+	transform:translateY(100px)
+}
+.menu4-popup-cntnr.active{
+	z-index: 1000;
+	opacity:1;
+	transform:translateY(0px)
+}
+.menu4-popup-cntnr.active .menu4-cntnt-wrpr{
+	display:block;
+}
+.menu4-cntnt-wrpr{
+	display:none;
+}
+.menu4-win-close {
+    font-size: 22px;
+    position: absolute;
+    right: 7px;
+    top: 9px;
+    color: #fff;
+}
+/*.table {
+    font-size: 13px;
+}
+.type span, .acc-sub-group span {
+    font-size: 13px;
+}
+
+.type span, .acc-sub-group span {
+    font-size: 13px;
+}*/
+
+/*.table {
+    font-size: 13px !important;
+}*/
+
+/*.navbar-header {
+    height: 86px;
+    background: #132861;
+}*/
+
+.navbar-header {
+    height: 86px;
+    background: #dcdddf; 
+}
+
+/*.leftside .navbar.navbar-default {
+    background: #132861;
+    height: 86px;
+}*/
+
+.leftside .navbar.navbar-default {
+    background: #dcdddf;
+    height: 86px;
+    border-radius: 0;
+}
+
+
+#assetregisteritems .row .col-md-12 + .col-md-12 {
+    border-top: 1px solid #dfdfdf;
+}
+/*Dec 09 2020 end*/
+
+/* Project Documents panel */
+.menu8-popup-cntnr {
+    position: fixed;
+    background: #eceef7;
+    top: 86px;
+    bottom: 0;
+    overflow: auto;
+    left: 0;
+    right: 0;
+    z-index: -1;
+    opacity: 0;
+    transition: all .3s linear;
+    -o-transition: all .3s linear;
+    -moz-transition: all .3s linear;
+    -webkit-transition: all .3s linear;
+    transform: translateY(100px)
+}
+.menu8-popup-cntnr.active { z-index: 1000; opacity: 1; transform: translateY(0px); }
+.menu8-popup-cntnr.active .menu8-cntnt-wrpr { display: block; }
+.menu8-cntnt-wrpr { display: none; }
+.menu8-cntnt-wrpr .form-control { color: #000 !important; }
+
+/* Project Correspondence panel */
+.menu9-popup-cntnr {
+    position: fixed;
+    background: #eceef7;
+    top: 86px;
+    bottom: 0;
+    overflow: auto;
+    left: 0;
+    right: 0;
+    z-index: -1;
+    opacity: 0;
+    transition: all .3s linear;
+    -o-transition: all .3s linear;
+    -moz-transition: all .3s linear;
+    -webkit-transition: all .3s linear;
+    transform: translateY(100px)
+}
+.menu9-popup-cntnr.active { z-index: 1000; opacity: 1; transform: translateY(0px); }
+.menu9-popup-cntnr.active .menu9-cntnt-wrpr { display: block; }
+.menu9-cntnt-wrpr { display: none; }
+
+/* ── Navbar icon colours ── */
+/* Each icon gets a distinct light background + matching text so it's easy to spot */
+
+/* Shared round shape for all top-panel icon buttons */
+.navbar-nav .overNow, .navbar-nav .overNow1, .navbar-nav .overNow2,
+.navbar-nav .overNow4, .navbar-nav .overNow5, .navbar-nav .overNow6,
+.navbar-nav .overNow8, .navbar-nav .overNow9,
+.navbar-nav .icon-dashboard, .navbar-nav .icon-flickr, .navbar-nav .icon-moneybag,
+.navbar-nav .icon-chart3, .navbar-nav .icon-calendar, .navbar-nav .icon-graph,
+.navbar-nav .icon-pie-chart, .navbar-nav .MyAccountNAV, .navbar-nav .menuNAV,
+.navbar-nav .duplicateProject, .navbar-nav .perf-dashboard-btn {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    cursor: pointer !important;
+}
+
+/* Activity Library – soft teal */
+.navbar-nav .overNow4 {
+    background: #d0f0ec !important;
+    color: #1a7a6e !important;
+    border-radius: 50%;
+}
+.navbar-nav .overNow4:hover, .navbar-nav .overNow4.active {
+    background: #1a7a6e !important;
+    color: #fff !important;
+}
+
+/* Resource Library – soft amber */
+.navbar-nav .overNow {
+    background: #fef3cd !important;
+    color: #856404 !important;
+    border-radius: 50%;
+}
+.navbar-nav .overNow:hover, .navbar-nav .overNow.active {
+    background: #856404 !important;
+    color: #fff !important;
+}
+
+/* Project Documents – soft lavender */
+.navbar-nav .overNow8 {
+    background: #e8e0f7 !important;
+    color: #5a3fa0 !important;
+    border-radius: 50%;
+}
+.navbar-nav .overNow8:hover, .navbar-nav .overNow8.active {
+    background: #5a3fa0 !important;
+    color: #fff !important;
+}
+
+/* Project Correspondence – soft rose */
+.navbar-nav .overNow9 {
+    background: #fde8ef !important;
+    color: #a0234e !important;
+    border-radius: 50%;
+}
+.navbar-nav .overNow9:hover, .navbar-nav .overNow9.active {
+    background: #a0234e !important;
+    color: #fff !important;
+}
+
+/* Dashboard icons – soft sky blue */
+.navbar-nav .icon-dashboard {
+    background: #d6eef8 !important;
+    color: #0b5c8a !important;
+    border-radius: 50%;
+}
+.navbar-nav .icon-dashboard:hover, .navbar-nav .icon-dashboard.active {
+    background: #0b5c8a !important;
+    color: #fff !important;
+}
+
+/* Finance/Report icon (icon-flickr) – soft mint */
+.navbar-nav .icon-flickr {
+    background: #d4f5e2 !important;
+    color: #1b6b3a !important;
+    border-radius: 50%;
+}
+.navbar-nav .icon-flickr:hover, .navbar-nav .icon-flickr.active {
+    background: #1b6b3a !important;
+    color: #fff !important;
+}
+
+/* Asset Library (icon-moneybag) – soft peach */
+.navbar-nav .icon-moneybag {
+    background: #fde8d8 !important;
+    color: #a04a0b !important;
+    border-radius: 50%;
+}
+.navbar-nav .icon-moneybag:hover, .navbar-nav .icon-moneybag.active {
+    background: #a04a0b !important;
+    color: #fff !important;
+}
+
+/* Finance Masters (overNow2) – soft orange */
+.navbar-nav .overNow2 {
+    background: #ffe8d0 !important;
+    color: #8a3c00 !important;
+    border-radius: 50%;
+}
+.navbar-nav .overNow2:hover, .navbar-nav .overNow2.active {
+    background: #8a3c00 !important;
+    color: #fff !important;
+}
+
+/* User Masters (overNow6) – soft steel blue */
+.navbar-nav .overNow6 {
+    background: #dce9f5 !important;
+    color: #1a4a7a !important;
+    border-radius: 50%;
+}
+.navbar-nav .overNow6:hover, .navbar-nav .overNow6.active {
+    background: #1a4a7a !important;
+    color: #fff !important;
+}
+
+/* My Account – soft sage green */
+.navbar-nav .MyAccountNAV {
+    background: #dff0e0 !important;
+    color: #2a5c2a !important;
+    border-radius: 50%;
+}
+.navbar-nav .MyAccountNAV:hover {
+    background: #2a5c2a !important;
+    color: #fff !important;
+}
+
+/* Menu hamburger (menuNAV) – soft slate */
+.navbar-nav .menuNAV {
+    background: #e8eaf0 !important;
+    color: #3c4068 !important;
+    border-radius: 50%;
+}
+.navbar-nav .menuNAV:hover {
+    background: #3c4068 !important;
+    color: #fff !important;
+}
+
+/* Gantt Chart (icon-chart3) – soft warm gold */
+.navbar-nav .icon-chart3 {
+    background: #fdf5d0 !important;
+    color: #6a5200 !important;
+    border-radius: 50%;
+}
+.navbar-nav .icon-chart3:hover {
+    background: #6a5200 !important;
+    color: #fff !important;
+}
+
+/* Holidays (icon-calendar) – soft coral */
+.navbar-nav .icon-calendar {
+    background: #ffddd5 !important;
+    color: #8a2a1a !important;
+    border-radius: 50%;
+}
+.navbar-nav .icon-calendar:hover {
+    background: #8a2a1a !important;
+    color: #fff !important;
+}
+
+/* Duplicate Project (duplicateProject) – soft cyan */
+.navbar-nav .duplicateProject {
+    background: #d0f0f5 !important;
+    color: #1a6a7a !important;
+    border-radius: 50%;
+}
+.navbar-nav .duplicateProject:hover {
+    background: #1a6a7a !important;
+    color: #fff !important;
+}
+
+/* Performance Dashboard (icon-graph) – soft violet */
+.navbar-nav .icon-graph {
+    background: #ede0f8 !important;
+    color: #5a1a8a !important;
+    border-radius: 50%;
+}
+.navbar-nav .icon-graph:hover {
+    background: #5a1a8a !important;
+    color: #fff !important;
+}
+
+/* Dashboards dropdown (icon-pie-chart) – soft warm honey */
+.navbar-nav .icon-pie-chart {
+    background: #f5efd0 !important;
+    color: #5a4800 !important;
+    border-radius: 50%;
+}
+.navbar-nav .icon-pie-chart:hover {
+    background: #5a4800 !important;
+    color: #fff !important;
+}
+
+/* Slightly blue tab headings (inactive state) */
+.procu-accordion .panel-heading {
+    background: #f8fafc;
+}
+
+/* Black text for all listed items in master library panels and project lists */
+.menu4-popup-cntnr tbody td,
+.menu-popup-cntnr tbody td,
+.menu1-popup-cntnr tbody td,
+.menu2-popup-cntnr tbody td,
+.menu5-popup-cntnr tbody td,
+.menu8-popup-cntnr tbody td,
+.menu9-popup-cntnr tbody td,
+.finmenu-popup-cntnr tbody td,
+#wbs-list-table tbody td,
+#act-list-table tbody td,
+#scheduleactivityitems tbody td,
+span.prjctlist {
+    color: #000 !important;
+}

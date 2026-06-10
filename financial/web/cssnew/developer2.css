@@ -1,0 +1,304 @@
+/* Oct 7 2020 * by Vishnu start ----PLEASE DONT TOUCH---- */
+#ui-datepicker-div {
+    z-index: 100 !important;
+}
+.tds-sgst-cgst-igst-wrpr {
+    display: flex;
+}
+
+.tds-sgst-cgst-igst-wrpr label {
+    font-size: 11px;
+}
+
+.tds-sgst-cgst-igst-wrpr .form-groups {
+    margin-left: 10px !important;
+}
+#fundrequestform label {
+    font-size: 12px;
+}
+.error{
+color:red;
+}
+.content-search-wrpr-new {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.content-search-wrpr-new input {
+	border-radius: 20px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    max-width: 650px;
+}
+.content-search-wrpr-new button {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    min-height: 34px;
+    position: relative;
+    left: -21px;
+    min-width: 60px;
+    border-radius: 20px;
+	background: #072c47;
+    border-color: #072c47;
+}
+.custom-padding-activity-new{
+    padding-left: 30px;
+    padding-right: 30px;
+}
+
+.detailedworkers h2 {
+    font-size: 18px;
+    background: #eceef7;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+.detailedworkers h3 {
+    font-size: 16px;
+    margin-bottom: 17px;
+}
+
+.detailedworkers table thead {
+    background: rgb(236 238 247 / 0.4);
+    font-size: 12px;
+}
+
+.text-button {
+    background: #072c47 !important;
+    border-color: #072c47 !important;
+}
+/* Oct 7 2020 * by Vishnu end -----PLEASE DONT TOUCH----*/
+
+/*Dec 02 2020 start*/
+.menu-popup-cntnr {
+    position: fixed;
+    background: #eceef7;
+    top: 86px;
+    bottom: 0;
+    overflow: auto;
+    left: 0;
+    right: 0;
+    z-index: -1;
+	opacity:0;
+	transition: all .3s linear;
+    -o-transition: all .3s linear;
+    -moz-transition: all .3s linear;
+    -webkit-transition: all .3s linear;
+	transform:translateY(100px)
+}
+.menu-popup-cntnr.active{
+	z-index: 1000;
+	opacity:1;
+	transform:translateY(0px)
+}
+.menu-popup-cntnr.active .menu-cntnt-wrpr{
+	display:block;
+}
+.menu-cntnt-wrpr{
+	display:none;
+}
+.menu-win-close {
+    font-size: 22px;
+    position: absolute;
+    right: 7px;
+    top: 9px;
+    color: #fff;
+}
+.btn-secondary {
+    color: #fff;
+    background-color: #444;
+    border-color: #444;
+}
+
+.close-resource-list-btn1 {
+    border-radius: 41px;
+	display:none;
+}
+.add-allocation-list-active .resource-list-btn1{
+	display:none;
+}
+.add-allocation-list-active .close-resource-list-btn1{
+	display:inline-block;
+}
+
+.close-resource-list-btn2 {
+    border-radius: 41px;
+	display:none;
+}
+.add-allocation-list-active .resource-list-btn2{
+	display:none;
+}
+.add-allocation-list-active .close-resource-list-btn2{
+	display:inline-block;
+}
+
+/*Dec 02 2020 end*/
+
+/*Dec 07 2020 start*/
+.menu1-popup-cntnr {
+    position: fixed;
+    background: #eceef7;
+    top: 86px;
+    bottom: 0;
+    overflow: auto;
+    left: 0;
+    right: 0;
+    z-index: -1;
+	opacity:0;
+	transition: all .3s linear;
+    -o-transition: all .3s linear;
+    -moz-transition: all .3s linear;
+    -webkit-transition: all .3s linear;
+	transform:translateY(100px)
+}
+.menu1-popup-cntnr.active{
+	z-index: 1000;
+	opacity:1;
+	transform:translateY(0px)
+}
+.menu1-popup-cntnr.active .menu1-cntnt-wrpr{
+	display:block;
+}
+.menu1-cntnt-wrpr{
+	display:none;
+}
+.menu1-win-close {
+    font-size: 22px;
+    position: absolute;
+    right: 7px;
+    top: 9px;
+    color: #fff;
+}
+
+.add-project-activities-btnnew {
+    border-radius: 31px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 8px;
+    position: relative;
+    top: -3px;
+}
+
+.finmenu-popup-cntnr {
+    position: fixed;
+    background: #eceef7;
+    top: 86px;
+    bottom: 0;
+    overflow: auto;
+    left: 0;
+    right: 0;
+    z-index: -1;
+	opacity:0;
+	transition: all .3s linear;
+    -o-transition: all .3s linear;
+    -moz-transition: all .3s linear;
+    -webkit-transition: all .3s linear;
+	transform:translateY(100px)
+}
+.finmenu-popup-cntnr.active{
+	z-index: 1000;
+	opacity:1;
+	transform:translateY(0px)
+}
+.finmenu-popup-cntnr.active .finmenu-cntnt-wrpr{
+	display:block;
+}
+.finmenu-cntnt-wrpr{
+	display:none;
+}
+.finmenu-win-close {
+    font-size: 22px;
+    position: absolute;
+    right: 7px;
+    top: 9px;
+    color: #fff;
+}
+
+.table {
+    font-size: 13px;
+}
+
+.type span, .acc-sub-group span {
+    font-size: 13px;
+}
+
+/*Dec 07 2020 end*/
+
+/*Dec 09 2020 start*/
+.menu4-popup-cntnr {
+    position: fixed;
+    background: #eceef7;
+    top: 86px;
+    bottom: 0;
+    overflow: auto;
+    left: 0;
+    right: 0;
+    z-index: -1;
+	opacity:0;
+	transition: all .3s linear;
+    -o-transition: all .3s linear;
+    -moz-transition: all .3s linear;
+    -webkit-transition: all .3s linear;
+	transform:translateY(100px)
+}
+.menu4-popup-cntnr.active{
+	z-index: 1000;
+	opacity:1;
+	transform:translateY(0px)
+}
+.menu4-popup-cntnr.active .menu4-cntnt-wrpr{
+	display:block;
+}
+.menu4-cntnt-wrpr{
+	display:none;
+}
+.menu4-win-close {
+    font-size: 22px;
+    position: absolute;
+    right: 7px;
+    top: 9px;
+    color: #fff;
+}
+/*.table {
+    font-size: 13px;
+}
+.type span, .acc-sub-group span {
+    font-size: 13px;
+}
+
+.type span, .acc-sub-group span {
+    font-size: 13px;
+}*/
+
+/*.table {
+    font-size: 13px !important;
+}*/
+
+/*.navbar-header {
+    height: 86px;
+    background: #132861;
+}*/
+
+.navbar-header {
+    height: 86px;
+    background: #dcdddf; 
+}
+
+/*.leftside .navbar.navbar-default {
+    background: #132861;
+    height: 86px;
+}*/
+
+.leftside .navbar.navbar-default {
+    background: #dcdddf;
+    height: 86px;
+    border-radius: 0;
+}
+
+
+#assetregisteritems .row .col-md-12 + .col-md-12 {
+    border-top: 1px solid #dfdfdf;
+}
+/*Dec 09 2020 end*/

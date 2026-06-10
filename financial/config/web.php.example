@@ -1,0 +1,224 @@
+<?php
+
+use kartik\mpdf\Pdf;
+use \yii\web\Request;
+
+$params = require __DIR__ . '/params.php';
+$db = require __DIR__ . '/db.php';
+
+//$urlManager = Yii::$app->urlManager;
+//$spBaseUrl = $urlManager->getHostInfo() . $urlManager->getBaseUrl();
+
+//$spBaseUrl = (new Request)->getBaseUrl();
+
+$spBaseUrl = 'https://'.$_SERVER['HTTP_HOST'].(new Request)->getBaseUrl();
+
+//$spBaseUrl = (new Request)->getHostInfo().(new Request)->getBaseUrl();
+
+//$spBaseUrl = 'https://localhost/git/opiamnew/web';
+
+//echo $spBaseUrl; exit;
+
+$config = [
+    'id' => 'basic',
+    'basePath' => dirname(__DIR__),
+    'bootstrap' => ['log'],
+    'aliases' => [
+        '@bower' => '@vendor/bower-asset',
+        '@npm'   => '@vendor/npm-asset',
+    ],
+    'components' => [
+        'saml' => [
+            'class' => 'asasmoyo\yii2saml\Saml',
+            'config' => [
+                'sp' => [
+                    'entityId' => $spBaseUrl.'/saml/metadata',
+                    'assertionConsumerService' => [
+                        'url' => $spBaseUrl.'/saml/acs',
+                    ],
+                    'singleLogoutService' => [
+                        'url' => $spBaseUrl.'/saml/sls',
+                    ],
+                    'NameIDFormat' => 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress',
+                ],
+                'idp' => [
+                    'entityId' => 'https://app.onelogin.com/saml/metadata/880daadd-4ff5-413f-9f34-8cb42a4045ac',
+                    'singleSignOnService' => [
+                        'url' => 'https://solminds.onelogin.com/trust/saml2/http-post/sso/880daadd-4ff5-413f-9f34-8cb42a4045ac',
+                    ],
+                    'singleLogoutService' => [
+                        'url' => 'https://solminds.onelogin.com/trust/saml2/http-redirect/slo/1591646',
+                    ],
+                    'x509cert' => 'MIIEGjCCAwKgAwIBAgIUILErDxvoqwXID1RhE1+oDGdwHcYwDQYJKoZIhvcNAQEL
+                                    BQAwWTELMAkGA1UEBhMCVVMxETAPBgNVBAoMCHNvbG1pbmRzMRUwEwYDVQQLDAxP
+                                    bmVMb2dpbiBJZFAxIDAeBgNVBAMMF09uZUxvZ2luIEFjY291bnQgMTk5OTcyMB4X
+                                    DTIxMTExMTA1NDcxNVoXDTI2MTExMTA1NDcxNVowWTELMAkGA1UEBhMCVVMxETAP
+                                    BgNVBAoMCHNvbG1pbmRzMRUwEwYDVQQLDAxPbmVMb2dpbiBJZFAxIDAeBgNVBAMM
+                                    F09uZUxvZ2luIEFjY291bnQgMTk5OTcyMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A
+                                    MIIBCgKCAQEA9RIcblxR2O8Y+pBfXsk2V3Njys6Nv5SP//YAHUd0FMCryZ/SDICc
+                                    qQ5RteBvewp6R6q5mEjtr7c+l+UKUaJm+9DeBWLL6HMRodWSaMgOnQB+2U4IH/Wv
+                                    r2znq9TsNfcQPbAmxO8i5lg1XnGCapDkW08X5vYCbhrFuyaMqd/ZldphLNzpj9uc
+                                    jLNUmC75lBpKjlq/lLRyOq/8qHtOsxwWezZ3tu40ose+5gXwEZoRAsHMPXRP0NxV
+                                    X6bXQSUwqX5G+0BkKA1gXfvlKhQrUO32hO40rGNRTwgPeSskF55nK2pOgDojX2Yy
+                                    WKBf0ks9rIkdfEGIKK3w09JKI7Yt1xP3SQIDAQABo4HZMIHWMAwGA1UdEwEB/wQC
+                                    MAAwHQYDVR0OBBYEFPCphg4NrICiSssPdifZGpt5Nj61MIGWBgNVHSMEgY4wgYuA
+                                    FPCphg4NrICiSssPdifZGpt5Nj61oV2kWzBZMQswCQYDVQQGEwJVUzERMA8GA1UE
+                                    CgwIc29sbWluZHMxFTATBgNVBAsMDE9uZUxvZ2luIElkUDEgMB4GA1UEAwwXT25l
+                                    TG9naW4gQWNjb3VudCAxOTk5NzKCFCCxKw8b6KsFyA9UYRNfqAxncB3GMA4GA1Ud
+                                    DwEB/wQEAwIHgDANBgkqhkiG9w0BAQsFAAOCAQEAG3rIMRzIYhpDibHbuR+GD7kP
+                                    J3RUVnfjBQF3pBwUvoJxXIeAqJ0kRL8p0Y7KF49p1Yn6qLifWJ8GvFQ8UJPVep8v
+                                    S/qYzAfAGhkFhu4GNleiujjTbf5Dj5HauqSMweUUimEip7D+06UMReXlq3vZs9T1
+                                    NwWcWuT9YlCuOLGUODwgYWX6oheQeTKkuZhrp0PrVeANocqPKQqopqP+1+sf3dms
+                                    j732QmVMi8Zq5SO1Xa4oewy5BpKS/7IkV8CUPhNcjR5Qss2iZtq+2joNrSzcpWpv
+                                    aDVIfafFRh/QTfI+I+HCatuFYEfVzS1TtAKb+rGXc5cRWQlVvkFFoLtXDF2oFw==',
+                ],
+            ],
+        ],
+        'request' => [
+            // !!! insert a secret key in the following (if it is empty) - this is required by cookie validation
+            'cookieValidationKey' => 'INSERT-RANDOM-SECRET-KEY',
+            'baseUrl'=> '',
+        ],
+        'cache' => [
+            'class' => 'yii\caching\FileCache',
+        ],
+        /*'user' => [
+            'identityClass' => 'app\models\User',
+            'enableAutoLogin' => true,
+        ],*/
+        'errorHandler' => [
+            // web error handler
+            'class' => '\bedezign\yii2\audit\components\web\ErrorHandler',
+            // console error handler
+            //'class' => '\bedezign\yii2\audit\components\console\ErrorHandler',
+        ],
+        'session' => [
+            //'class' => 'yii\web\Session',
+            //'cookieParams' => ['lifetime' => 2592000]
+            'class' => 'yii\web\CacheSession',
+            'cookieparams' => ['httponly' => true, 'lifetime' => 2592000], 
+            'timeout' => 2592000,
+            'useCookies' => true,
+        ],
+        'user' => [
+            'class' => 'amnah\yii2\user\components\User',
+            'enableSession' => true,
+            'autoRenewCookie' => true,
+            'authTimeout' => 2592000,
+            'enableAutoLogin' => false,
+        ],
+        'errorHandler' => [
+            'errorAction' => 'site/error',
+        ],
+        'mailer' => [
+            'class' => 'yii\swiftmailer\Mailer',
+            //'viewPath' => 'app\mail',
+            // send all mails to a file by default. You have to set
+            // 'useFileTransport' to false and configure a transport
+            // for the mailer to send real emails.
+            'useFileTransport' => false,
+            'transport' => [
+                'class' => 'Swift_SmtpTransport',
+                'host' => 'smtp.zoho.com',
+                'username' => 'procurement@geotech.net.in',
+                'password' => 'YOUR-SMTP-PASSWORD',
+                'port' => '587',
+                'encryption' => 'tls',
+            ],
+        ],
+
+         'pdf' => [
+                 'class' => Pdf::classname(),
+                 'format' => Pdf::FORMAT_A4,
+                 'orientation' => Pdf::ORIENT_PORTRAIT,
+                 'destination' => Pdf::DEST_BROWSER,
+                 //'options' => ['shrink_tables_to_fit' => 1],
+                // refer settings section for all configuration options
+               ],
+       
+        
+
+        'log' => [
+            'traceLevel' => YII_DEBUG ? 3 : 0,
+            'targets' => [
+                [
+                    'class' => 'yii\log\FileTarget',
+                    'levels' => ['error', 'warning'],
+                ],
+            ],
+        ],
+        'db' => $db,
+        
+        'urlManager' => [
+            'enablePrettyUrl' => true,
+            'showScriptName' => false,
+            'rules' => [
+            ],
+        ],
+        
+    ],
+    'modules' => [
+        'user' => [
+            'class' => 'amnah\yii2\user\Module',
+            // set custom module properties here ...
+        ],
+        //'audit' => 'bedezign\yii2\audit\Audit',
+        /*'audit' => [
+            'class' => 'bedezign\yii2\audit\Audit',
+            'panels' => [
+                'audit/db',
+                'audit/error',
+                'audit/trail',
+                'audit/javascript',
+               
+            ],
+        ],*/
+
+        'audit' => [
+            'class' => 'bedezign\yii2\audit\Audit',
+            // the layout that should be applied for views within this module
+            'layout' => 'main',
+            // Name of the component to use for database access
+            'db' => 'db', 
+            // List of actions to track. '*' is allowed as the last character to use as wildcard
+            'trackActions' => ['*'], 
+            // Actions to ignore. '*' is allowed as the last character to use as wildcard (eg 'debug/*')
+            'ignoreActions' => ['audit/*', 'debug/*'],
+          
+            'compressData' => true,
+            // The callback to use to convert a user id into an identifier (username, email, ...). Can also be html.
+            'userIdentifierCallback' => ['app\models\User', 'userIdentifierCallback'],
+            // If the value is a simple string, it is the identifier of an internal to activate (with default settings)
+            // If the entry is a '<key>' => '<string>|<array>' it is a new panel. It can optionally override a core panel or add a new one.
+            'panels' => [
+                'audit/request',
+                'audit/db',
+                'audit/error',
+                'audit/trail',
+                'audit/javascript',
+                
+            ],
+        ],
+
+    ],
+    'params' => $params,
+];
+
+if (YII_ENV_DEV) {
+    // configuration adjustments for 'dev' environment
+    $config['bootstrap'][] = 'debug';
+    $config['modules']['debug'] = [
+        'class' => 'yii\debug\Module',
+        // uncomment the following to add your IP if you are not connecting from localhost.
+        //'allowedIPs' => ['127.0.0.1', '::1'],
+    ];
+
+    $config['bootstrap'][] = 'gii';
+    $config['modules']['gii'] = [
+        'class' => 'yii\gii\Module',
+        // uncomment the following to add your IP if you are not connecting from localhost.
+        //'allowedIPs' => ['127.0.0.1', '::1'],
+    ];
+}
+
+return $config;

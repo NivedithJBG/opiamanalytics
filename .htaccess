@@ -1,0 +1,18 @@
+Options -Indexes
+DirectoryIndex index.php index.html
+RewriteEngine On
+
+# Serve existing static files directly (but NOT directory index — handled by DirectoryIndex above)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Serve static files from production/web/ if they exist there
+RewriteCond %{DOCUMENT_ROOT}/production/web%{REQUEST_URI} -f
+RewriteRule ^(.+)$ production/web/$1 [L,QSA]
+
+# Everything else to Yii2 front controller
+RewriteRule ^ index.php [L]
+
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php82 .php .php7 .phtml
+</IfModule>

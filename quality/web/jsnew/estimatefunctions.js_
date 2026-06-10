@@ -1,0 +1,335 @@
+$(document).on( "click", ".viewestimate", function(){
+    $('.estimate').hide();
+    $('.estimateworkgroup').hide();
+    //$('.acc_container').slideUp();
+    $('#project').removeClass('active').next().slideUp(); //Remove all .acc_trigger classes and slide up the immediate next container
+    //$(this).toggleClass('active').next().slideDown();
+    $('#Estimate').addClass('active').next('.acc_container').slideDown();
+    var id= $(this).val();
+    $('#proddispprojectname').html(getProjectname(id));
+    $('#selectedProjectId').val(id);
+
+});
+$(document).on( "click", "#Estimate", function(){
+    if($('#selectedProjectId').val()!=''){
+        //$('.acc_container').slideUp();
+        $('.acc_trigger').removeClass('active').next().slideUp(); //Remove all .acc_trigger classes and slide up the immediate next container
+        //$(this).toggleClass('active').next().slideDown();
+        $('.estimate').hide();
+        $('.estimateworkgroup').hide();
+        $('#Estimate').addClass('active').next('.acc_container').slideDown();
+        $('#proddispprojectname').html(getProjectname($('#selectedProjectId').val()));
+        $('#selectedProjectId').val($('#selectedProjectId').val());
+
+    }
+});
+$(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+})
+$(function(){
+
+$('#estimatelistproduct').click(function(){
+    //$('#productaddsection').slideUp('slow');// slide down the project listing div
+    $('.estimate').hide();
+    $('.estimateworkgroup').hide();
+    $('#estimateproductlistsection').slideDown('slow');// slide down the project listing div
+    //$('#listproduct').removeClass('btn-danger').addClass('btn-success');
+    //$('#addproduct').removeClass('btn-success').addClass('btn-danger');
+    $.ajax({
+        type: 'POST',
+        url: '../products/estimateproducts',
+        beforeSend : function(){
+            $('.preloader').show();
+        },
+        dataType: "json",
+        data: {productname:$('#searchproductname').val(),projectid:$('#selectedProjectId').val()},
+        success: function(data){
+            if(data.error=='No')
+            {
+                $('#estimateproductitems').html(data.result);
+                $('#estimateproducttable').show();
+            }
+            else
+            {
+                alert(data.errortext);
+            }
+            $('.preloader').hide();
+        }
+    });
+});
+    $('#estimatelistlogistics').click(function(){
+        //$('#productaddsection').slideUp('slow');// slide down the project listing div
+        $('.estimate').hide();
+        $('.estimateworkgroup').hide();
+        $('#estimatelogisticslistsection').slideDown('slow');// slide down the project listing div
+        //$('#listproduct').removeClass('btn-danger').addClass('btn-success');
+        //$('#addproduct').removeClass('btn-success').addClass('btn-danger');
+        $.ajax({
+            type: 'POST',
+            url: '../logistics/estimatelogistics',
+            beforeSend : function(){
+                $('.preloader').show();
+            },
+            dataType: "json",
+            data: {productname:$('#searchproductname').val(),projectid:$('#selectedProjectId').val()},
+            success: function(data){
+                if(data.error=='No')
+                {
+                    $('#estimatelogisticsitems').html(data.result);
+                    $('#estimatelogisticstable').show();
+                }
+                else
+                {
+                    alert(data.errortext);
+                }
+                $('.preloader').hide();
+            }
+        });
+    });
+    $('#estimatelistpurchasedinputs').click(function(){
+        //$('#productaddsection').slideUp('slow');// slide down the project listing div
+        $('.estimate').hide();
+        $('.estimateworkgroup').hide();
+        $('#estimatepilistsection').slideDown('slow');// slide down the project listing div
+        //$('#listproduct').removeClass('btn-danger').addClass('btn-success');
+        //$('#addproduct').removeClass('btn-success').addClass('btn-danger');
+        $.ajax({
+            type: 'POST',
+            url: '../purchasedinputs/estimatepi',
+            beforeSend : function(){
+                $('.preloader').show();
+            },
+            dataType: "json",
+            data: {productname:$('#searchproductname').val(),projectid:$('#selectedProjectId').val()},
+            success: function(data){
+                if(data.error=='No')
+                {
+                    $('#estimatepiitems').html(data.result);
+                    $('#estimatepitable').show();
+                }
+                else
+                {
+                    alert(data.errortext);
+                }
+                $('.preloader').hide();
+            }
+        });
+    });
+
+    $('#estimatelistiow').click(function(){
+        $('.estimate').hide();
+        $('.estimateworkgroup').show();
+        $('#estimateiowlistsection').slideDown('slow');// slide down the project listing div
+        $('#estimateworkgrouplist').html(getEstimateWorkgrouplist($('#selectedProjectId').val()));
+        $.ajax({
+            type: 'POST',
+            url: '../projects/costingiows',
+            beforeSend : function(){
+                $('.preloader').show();
+            },
+            dataType: "json",
+            data: {workgroupid:$('#costingworkgroups').val()},
+            success: function(data){
+                if(data.error=='No')
+                {
+                    $('#estimateiowlist').html(data.result);
+                    $('#estimateiowtable').show();
+                }
+                else
+                {
+                    alert(data.errortext);
+                }
+                $('.preloader').hide();
+            }
+        });
+
+    });
+    $(document).on('change','#costingworkgroups',function(){
+        $.ajax({
+            type: 'POST',
+            url: '../projects/costingiows',
+            beforeSend : function(){
+                $('.preloader').show();
+            },
+            dataType: "json",
+            data: {workgroupid:$(this).val()},
+            success: function(data){
+                if(data.error=='No')
+                {
+                    $('#estimateiowlist').html(data.result);
+                }
+                else
+                {
+                    alert(data.errortext);
+                }
+                $('.preloader').hide();
+            }
+        });
+    });
+    $(document).ready(function(){
+        $('#costingworkgroups').change(function(){
+            $.ajax({
+                type: 'POST',
+                url: '../projects/costingiows',
+                beforeSend : function(){
+                    $('.preloader').show();
+                },
+                dataType: "json",
+                data: {workgroupid:$(this).val()},
+                success: function(data){
+                    if(data.error=='No')
+                    {
+                        $('#estimateiowlist').html(data.result);
+                    }
+                    else
+                    {
+                        alert(data.errortext);
+                    }
+                    $('.preloader').hide();
+                }
+            });
+        })
+
+    });
+
+});
+$(function(){
+    // function to search resources
+    $('#resourcesearch').click(function(){
+        var toshow=$('#selecttype').val();
+        var searchval=$('#searchname').val();
+        $.ajax({
+            type: 'POST',
+            url: '../itemofworks/resourcesearch',
+            beforeSend : function(){
+                $('#resourcesearch').attr("disabled", true);
+                $('.preloader').show();
+            },
+            dataType: "json",
+            data: {resourcetype:toshow,resourcename:searchval},
+            success: function(data){
+                if(data.error=='No')
+                {
+                    $('#resourceitems').html(data.result);
+                    $('#resourcetable').show();
+
+                }
+                else
+                {
+                    alert(data.errortext);
+                }
+
+                $('#resourcesearch').attr("disabled", false);
+                $('.preloader').hide();
+            }
+        });
+    });
+});
+$(document).on( "click", ".addresource", function(){
+    var resid=$(this).val()
+    var error=0;
+
+    $('.error').hide();
+    if(!$.isNumeric($('#resourcequantity'+resid).val()))
+    {
+        $('#resourcequantity'+resid).next("span").html('Enter Valid Quantity').show('slow');
+        error=1;
+    }
+    if(error==0)
+    {
+        var price=$('#resourceprice'+resid).val()
+        var sprice=$('#specificrate'+resid).val();
+        var quantity=$('#resourcequantity'+resid).val()
+        $.ajax({
+            type:'POST',
+            url:'../itemofworks/addresourcetemp',
+            beforeSend:function(){
+                $('#addresourcebutton'+resid).attr("disabled",true);
+                $('.preloaderitems').show();
+            },
+            dataType:"json",
+            data:{iow_id:$('#IowId').val(),resid:resid,rate:price,srate:sprice,quantity:quantity,action:$('#pageaction').val()},
+            success:function(data){
+                $('#addedresources').html(data.result);
+                $('#addresourcebutton'+resid).attr("disabled",false);
+                $('#resourcequantity'+resid).val('')
+                $('.preloaderitems').hide();
+                $('#resourcerow'+resid).remove();
+                $('#iowratetotal').val(data.price);
+                $('#amount').val(data.amount);
+            }
+        });
+    }
+});
+$(document).on( "click", ".removeresourceitem", function(){
+    var resid=$(this).val();
+    $.ajax({
+        type:'POST',
+        url:'../itemofworks/deleteresourcetemp',
+        beforeSend:function(){
+            $('#removeresourceitem'+resid).attr("disabled",true);
+            $('.preloaderitems').show();
+        },
+        dataType:"json",
+        data:{resid:resid,action:$('#pageaction').val()},
+        success:function(data){
+            $('#addedresources').html(data.result);
+            $('#iowratetotal').val(data.price);
+            $('#amount').val(data.amount);
+            $('#removeresourceitem'+resid).attr("disabled",false);
+            $('.preloaderitems').hide();
+        }
+    });
+});
+$(document).on('click','#updateiow',function(){
+    var error=0;
+    $('.error').hide();
+    if($('#Name').val()=='')
+    {
+        $('#Name').next("span").html('Enter Name').show('slow');
+        error=1;
+    }
+
+    if($('#Unit').val()=='')
+    {
+        $('#Unit').next("span").html('Enter Unit').show('slow');
+        error=1;
+    }
+    if(error==1)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+});
+function getProjectname(id)
+{
+    var retval;
+    $.ajax({
+        type: 'POST',
+        url: '../projects/Getname',
+        async:false,
+        data: {id:id},
+        success: function(data){
+            retval=data;
+        }
+    });
+    return retval;
+}
+
+function getEstimateWorkgrouplist(id)
+{
+    var retval;
+    $.ajax({
+        type: 'POST',
+        url: '../projects/GetWorkgroupsCosting',
+        async:false,
+        data: {id:id},
+        success: function(data){
+            retval=data;
+        }
+    });
+    return retval;
+}

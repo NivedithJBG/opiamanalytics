@@ -1,0 +1,567 @@
+/**
+* Custom Css for backend 
+*
+* @package Sensational Blog
+*/
+
+/**
+* Custom Css for backend 
+*
+* Repeater Text 
+* 
+*/
+.customize-control select[multiple] {
+  height: 300px !important;
+}
+.customize-control-repeater-text .repeater-text-fields .set {
+    margin-bottom: 5px;
+    padding-right: 15px;
+    position: relative;
+}
+
+.customize-control-repeater-text .repeater-text-fields input {
+    margin-bottom: 5px!important;
+}
+
+.customize-control-repeater-text .btn-remove-field {
+    color: red;
+    position: absolute;
+    right: -7px;
+    top: 3px;
+}
+
+.customize-control-repeater-text .btn-remove-field span {
+    text-decoration: none;
+}
+
+.customize-control-repeater-text .btn-remove-field:active,
+.customize-control-repeater-text .btn-remove-field:focus {
+    outline: none;
+    -webkit-box-shadow: none;
+    box-shadow: none;
+}
+
+/* Custom CSS */
+.customize-control-range input[type="range"] {
+    -webkit-appearance: none;
+    width: 90%;
+    height: 5px;
+    border-radius: 5px;
+    background: #d3d3d3;
+    outline: none;
+    -webkit-transition: .2s;
+    transition: opacity .2s;
+    opacity: 0.7;
+}
+.customize-control-range input[type="range"]:hover {
+    opacity: 1;
+}
+.customize-control-range input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #3498D9;
+    cursor: pointer;
+}
+.customize-control-range input[type="range"]::-moz-range-thumb {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #3498D9;
+    cursor: pointer;
+}
+/**
+ * SWITCH CONTROL *
+ */
+.onoffswitch {
+    position: relative;
+    width: 100px;
+    margin-right: 15px;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.onoffswitch-inner {
+    width: 200%;
+    margin-left: -100%;
+    -moz-transition: margin .3s ease-in 0s;
+    -webkit-transition: margin .3s ease-in 0s;
+    -o-transition: margin .3s ease-in 0s;
+    transition: margin .3s ease-in 0s
+}
+
+.onoffswitch-inner > div {
+    float: left;
+    position: relative;
+    width: 50%;
+    height: 24px;
+    padding: 0;
+    line-height: 24px;
+    font-size: 12px;
+    color: #fff;
+    font-weight: 700;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box
+}
+
+.onoffswitch-inner .onoffswitch-active {
+    background-color: #d4d4d4;
+    color: #FFF
+}
+
+.onoffswitch-inner .onoffswitch-inactive {
+    background-color: #d4d4d4;
+    color: #FFF;
+    text-align: right
+}
+
+.onoffswitch-switch {
+    width: 50px;
+    margin: 0;
+    text-align: center;
+    border: 0 solid #999;
+    border-radius: 0;
+    position: absolute;
+    top: 0;
+    bottom: 0
+}
+
+.onoffswitch-active .onoffswitch-switch {
+    background: #6caf17;
+    left: 0
+}
+
+.onoffswitch-inactive .onoffswitch-switch {
+    background: #7D7D7D;
+    right: 0
+}
+.switch-on .onoffswitch-inner {
+    margin-left: 0
+}
+
+/*************** 10. Multi fields ***************/
+.customize_multi_fields .set{
+    margin-bottom: 5px;
+    padding-right: 15px;
+    position: relative;
+}
+
+.customize_multi_fields input{
+    margin-bottom: 5px!important;
+}
+
+.customize_multi_remove_field{
+    color: red;
+    position: absolute;
+    right: -7px;
+    top: 3px;
+}
+
+.customize_multi_remove_field span{
+    text-decoration: none;
+}
+
+.customize_multi_remove_field:active,
+.customize_multi_remove_field:focus{
+    outline: none;
+    -webkit-box-shadow: none;
+    box-shadow: none;
+}
+
+/* Range */
+
+.range-slider {
+    width: 100%;
+}
+
+.range-slider__range {
+    -webkit-appearance: none;
+    width: calc(100% - (95px)) !important;
+    height: 4px;
+    border-radius: 5px;
+    background: #94c481;
+    outline: none;
+    padding: 0;
+    margin: 0;
+}
+
+.range-slider__range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #6caf17;
+    cursor: pointer;
+    -webkit-transition: background .15s ease-in-out;
+    transition: background .15s ease-in-out;
+}
+
+.range-slider__range::-webkit-slider-thumb:hover {
+    background: #6caf17;
+}
+
+.range-slider__range:active::-webkit-slider-thumb {
+    background: #6caf17;
+}
+
+.range-slider__range::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    border: 0;
+    border-radius: 50%;
+    background: #6caf17;
+    cursor: pointer;
+    -webkit-transition: background .15s ease-in-out;
+    transition: background .15s ease-in-out;
+}
+
+.range-slider__range::-moz-range-thumb:hover {
+    background: #6caf17;
+}
+
+.range-slider__range:active::-moz-range-thumb {
+    background: #6caf17;
+}
+
+.range-slider__value {
+    display: inline-block;
+    position: relative;
+    width: 50px;
+    color: #fff;
+    line-height: 20px;
+    text-align: center;
+    border-radius: 3px;
+    background: #6caf17;
+    padding: 0;
+    margin-left: 8px;
+}
+#sensational-blog-img-container .sensational-blog-radio-img-selected{
+    border: 3px solid;
+    padding: 2px;
+}
+#sensational-blog-img-container .sensational-blog-radio-img-img {
+    border: 3px solid;
+    border-color: transparent;
+    padding: 2px;
+}
+.customize-control-radio-image input.stylish-radio-image:checked + span {
+    border: 2px solid #333;
+}
+.customize-panel-back:focus, 
+.customize-panel-back:hover, 
+.customize-section-back:focus, 
+.customize-section-back:hover,
+#customize-controls .control-section .accordion-section-title:focus, 
+#customize-controls .control-section .accordion-section-title:hover, 
+#customize-controls .control-section.open .accordion-section-title, 
+#customize-controls .control-section:hover > .accordion-section-title{
+    color: #6caf17;
+    border-color: #6caf17;
+}
+a,
+.wp-core-ui .wp-full-overlay .collapse-sidebar:focus, 
+.wp-core-ui .wp-full-overlay .collapse-sidebar:hover,
+#customize-outer-theme-controls .control-section .accordion-section-title:focus::after, 
+#customize-outer-theme-controls .control-section .accordion-section-title:hover::after, 
+#customize-outer-theme-controls .control-section.open .accordion-section-title::after, 
+#customize-outer-theme-controls .control-section:hover > .accordion-section-title::after, 
+#customize-theme-controls .control-section .accordion-section-title:focus::after, 
+#customize-theme-controls .control-section .accordion-section-title:hover::after, 
+#customize-theme-controls .control-section.open .accordion-section-title::after, 
+#customize-theme-controls .control-section:hover > .accordion-section-title::after,
+.wp-full-overlay-footer .devices button:focus::before, 
+.wp-full-overlay-footer .devices button:hover::before,
+.wp-core-ui select:hover,
+.wp-core-ui select:focus,
+.control-panel-themes .customize-themes-section-title:focus, 
+.control-panel-themes .customize-themes-section-title:hover,
+.control-panel-themes .customize-themes-section-title.selected,
+.customize-controls-close:focus, 
+.customize-controls-close:hover, 
+.customize-controls-preview-toggle:focus, 
+.customize-controls-preview-toggle:hover,
+.wp-core-ui .button-secondary:focus, 
+.wp-core-ui .button.focus, 
+.wp-core-ui .button:focus,
+#customize-controls .customize-info .customize-help-toggle:focus, 
+#customize-controls .customize-info .customize-help-toggle:hover, 
+#customize-controls .customize-info.open .customize-help-toggle,
+.wp-core-ui .button-link{
+    color: #6caf17;
+}
+
+.media-router .media-menu-item:active, 
+.media-router .media-menu-item:hover, 
+.media-router .media-menu-item:focus,
+.media-frame a,
+.media-modal-close:active, 
+.media-modal-close:hover, 
+.media-modal-close:focus{
+    color: #6caf17;
+}
+.media-modal-close:focus,
+.media-frame input[type="email"]:focus, 
+.media-frame input[type="number"]:focus, 
+.media-frame input[type="password"]:focus, 
+.media-frame input[type="search"]:focus, 
+.media-frame input[type="text"]:focus, 
+.media-frame input[type="url"]:focus, 
+.media-frame select:focus, .media-frame textarea:focus,
+.media-router .media-menu-item:focus{
+    border-color:#6caf17 ;
+    box-shadow: 0 0 1px #6caf17;
+}
+.wp-core-ui .attachment.details .check, 
+.wp-core-ui .attachment.selected .check:focus, 
+.wp-core-ui .media-frame.mode-grid .attachment.selected .check{
+    background-color: #6caf17;
+    box-shadow: 0 0 0 1px #fff,0 0 0 2px #6caf17;
+}
+.media-progress-bar div,
+.control-panel-themes .theme-section .customize-themes-section-title.selected::after,
+input[type="radio"]:checked::before{
+    background-color: #6caf17;
+}
+.customize-partial-edit-shortcut button, 
+.widget .customize-partial-edit-shortcut button{
+    background: #6caf17 !important;
+}
+.media-frame a:active, 
+.media-frame a:hover{
+    color:#529e14;
+}
+input[type="checkbox"]{
+    position: relative;
+    border-radius: 50%;
+}
+.wp-core-ui .attachment.details,
+.wp-core-ui .attachment.details:focus, 
+.wp-core-ui .attachment:focus, 
+.wp-core-ui .selected.attachment:focus{
+    box-shadow: inset 0 0 0 3px #fff,inset 0 0 0 7px #6caf17;
+}
+input[type="checkbox"]:checked::before{
+    content: '';
+    background-color: #6caf17 !important;
+    border-radius: 50%;
+    width: 11px;
+    height: 11px;
+    position: absolute;
+    top: 5px;
+    right: 1px;
+}
+
+input[type="checkbox"]:hover, 
+input[type="color"]:hover, 
+input[type="date"]:hover, 
+input[type="datetime-local"]:hover, 
+input[type="datetime"]:hover, 
+input[type="email"]:hover, 
+input[type="month"]:hover, 
+input[type="number"]:hover, 
+input[type="password"]:hover, 
+input[type="radio"]:hover, 
+input[type="search"]:hover, 
+input[type="tel"]:hover, 
+input[type="text"]:hover, 
+input[type="time"]:hover, 
+input[type="url"]:hover, 
+input[type="week"]:hover, 
+select:hover, 
+textarea:hover,
+input[type="checkbox"]:focus, 
+input[type="color"]:focus, 
+input[type="date"]:focus, 
+input[type="datetime-local"]:focus, 
+input[type="datetime"]:focus, 
+input[type="email"]:focus, 
+input[type="month"]:focus, 
+input[type="number"]:focus, 
+input[type="password"]:focus, 
+input[type="radio"]:focus, 
+input[type="search"]:focus, 
+input[type="tel"]:focus, 
+input[type="text"]:focus, 
+input[type="time"]:focus, 
+input[type="url"]:focus, 
+input[type="week"]:focus, 
+select:focus, 
+textarea:focus{
+    border-color: #6caf17;
+    box-shadow: 0 0 0 1px #6caf17;
+}
+.customize-partial-edit-shortcut button, 
+.widget .customize-partial-edit-shortcut button{
+    background-color: #6caf17 !important;
+    text-shadow: 0 -1px 1px #6caf17,1px 0 1px #6caf17,0 1px 1px #6caf17,-1px 0 1px #6caf17;
+}
+.wp-core-ui select:focus,
+.wp-full-overlay-footer .devices button.active:hover, 
+.wp-full-overlay-footer .devices button:focus,
+input[type="radio"]:checked,
+input[type="checkbox"]:checked,
+#sensational-blog-img-container .sensational-blog-radio-img-selected,
+.control-panel-themes .customize-themes-section-title:focus, 
+.control-panel-themes .customize-themes-section-title:hover,
+.customize-controls-close:focus, 
+.customize-controls-close:hover, 
+.customize-controls-preview-toggle:focus, 
+.customize-controls-preview-toggle:hover,
+.wp-core-ui .button-secondary:focus, 
+.wp-core-ui .button.focus, 
+.wp-core-ui .button:focus{
+    border-color: #6caf17;
+}
+.wp-core-ui .button-secondary:focus, 
+.wp-core-ui .button.focus, 
+.wp-core-ui .button:focus,
+.wp-core-ui select:focus,
+.customize-control .attachment-media-view .button-add-media:focus,
+.wp-full-overlay .collapse-sidebar:focus .collapse-sidebar-arrow, 
+.wp-full-overlay .collapse-sidebar:hover .collapse-sidebar-arrow,
+#available-menu-items .item-add:focus::before, 
+#customize-controls .customize-info .customize-help-toggle:focus::before, 
+.customize-screen-options-toggle:focus::before, 
+.menu-delete:focus, 
+.menu-item-bar .item-delete:focus::before, 
+.wp-customizer .menu-item .submitbox .submitdelete:focus, 
+.wp-customizer button:focus .toggle-indicator::before,
+.customize-partial-edit-shortcut button, 
+.widget .customize-partial-edit-shortcut button{
+    box-shadow: 0 0 0 1px #6caf17;
+}
+
+
+.wp-core-ui .button, 
+.wp-core-ui .button-secondary{
+    color: #fff;
+    border-color: #6caf17;
+    background-color: #6caf17;;
+}
+.wp-core-ui .button-secondary:hover, 
+.wp-core-ui .button-secondary:focus, 
+.wp-core-ui .button.hover,
+.wp-core-ui .button.focus, 
+.wp-core-ui .button:focus, 
+.wp-core-ui .button:hover{
+    background-color: #529e14;
+    border-color: #529e14;
+    color: #fff;
+}
+.customize-control-header button.new, 
+.customize-control-header button.remove{
+    font-size: 14px;
+    font-weight: 400;
+    margin-bottom: 10px;
+    margin-top: 10px;
+    background-color: #6caf17;
+    padding: 4px;
+    border-radius: 5px;
+    text-align: center;
+    color: #fff;
+}
+.customize-control .attachment-media-view .button-add-media{
+    border-radius: 5px;
+}
+
+/*.customize-control .attachment-media-view .default-button, 
+.customize-control .attachment-media-view .remove-button, 
+.customize-control .attachment-media-view .upload-button{
+    color: #333;
+    background-color: #fff;
+    border-radius: 5px;
+    border-color: #6caf17;
+}*/
+/*.customize-control .attachment-media-view .default-button:hover, 
+.customize-control .attachment-media-view .default-button:focus, 
+.customize-control .attachment-media-view .remove-button:hover,
+.customize-control .attachment-media-view .upload-button:hover, 
+.customize-control .attachment-media-view .remove-button:focus,
+.customize-control .attachment-media-view .upload-button:focus{
+    color: #fff;
+    background-color: #6caf17;
+}*/
+#customize-control-header_image label span,
+.customize-control-title{
+    background-color: transparent;
+    color: #111;
+    font-weight: bold;
+    text-align: left;
+    margin: 0 0 5px;
+    line-height: 1;
+}
+.customize-control{
+    margin-bottom: 20px;
+}
+.customize-control .attachment-media-view .button-add-media:focus,
+.customize-control .attachment-media-view .button-add-media:hover {
+  background-color: #fff;
+  color: #6caf17;
+  border: 1px solid #6caf17;
+}
+/* cusomizer Media */
+
+
+
+/*Sortable*/
+/*ul.sensational-blog-sortable-list .sensational-blog-drag-handle{
+    float: right;
+    cursor: move;
+    margin-top: 0px;
+}
+ul.sensational-blog-sortable-list li{
+    padding: 7px;
+    border: 1px solid #e5e5e5;
+    background: #fafafa;
+}
+.sortable-hideme{
+    display: none !important;
+}
+.sortable-span{
+    border: none;
+    cursor: default !important;
+
+}
+
+.sortable-span:hover{
+    color:#000;
+}
+
+.sensational-blog-edit:hover {
+    cursor: pointer;
+}
+
+i.dashicons.dashicons-edit.sensational-blog-edit {
+    float: right;
+    margin-right: 15px;
+}*/
+/*Sortable*/
+ul.sensational-blog-sortable-list .sensational-blog-drag-handle{
+    float: right;
+    cursor: move;
+    margin-top: 0px;
+}
+ul.sensational-blog-sortable-list li{
+    padding: 7px;
+    border: 1px solid #e5e5e5;
+    background: #fafafa;
+}s
+.sortable-hideme{
+    display: none !important;
+}
+.sortable-span{
+    border: none;
+    cursor: default !important;
+
+}
+.sortable-span:hover{
+    color:#000;
+}
+#accordion-section-section_home_layout,
+#customize-control-theme_options-homepage_design_layout_options{
+    display: none !important;
+}

@@ -1,0 +1,83 @@
+
+
+.tooltip-content {
+    display: none;
+    position: absolute;
+    background: white;
+    padding: 10px;
+    border: 1px solid #dadada;
+    min-width: 350px;
+    box-shadow: 0px 5px 12px rgb(0 0 0 / 0.2);
+    z-index: -1;
+    left: 30px;
+    top: -25px;
+}
+
+.procu-accordion .panel-body .tooltip-user .icon-user3 {
+    padding: 0;
+    background: white;
+    color: black;
+    margin-left: 5px;
+    font-size: 16px;
+}
+
+.procu-accordion .panel-body .tooltip-user .icon-user3:hover + .tooltip-content {
+    display: block;
+    z-index: 10;
+}
+
+.tooltip-user {
+    position: relative;
+}
+
+.procu-accordion .panel-body .tooltip-content .username {font-weight: 700;text-transform: capitalize;}
+
+.newres{
+	width: 27%;
+}
+
+.newdates{
+	   width: 17%;
+ }
+
+ .newrestype{
+ 	width: 18%;
+ }
+
+ span.dark1 {
+    opacity: 5.5;
+}
+
+.placeorder-list {
+    margin-left: 19px;
+    margin-top: 30px;
+    margin-right: 10px;
+}
+
+.placeorder-list {
+    padding: 0px 15px;
+    /*margin-left: -15px;
+    margin-right: -15px;*/
+}
+
+/*td.placeorder-number .number {
+    left: 0;
+}*/
+
+.text-centers {
+    text-align: center;
+}
+
+
+.total-row2{
+    border-bottom: 2px solid #46536526;
+    background: rgb(236 238 247 / 29%);
+}
+
+
+.emaildata {
+    white-space: pre-wrap !important;
+    word-break: break-word;
+}
+
+
