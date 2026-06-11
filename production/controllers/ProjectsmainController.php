@@ -307,12 +307,12 @@ class ProjectsmainController extends Controller
                     COALESCE(DATEDIFF(MAX(sa.end_date), MIN(sa.start_date)) + 1, 0) AS scheduled,
                     COALESCE(SUM(sa.delay),0) AS delay
              FROM iow_groups g
-             LEFT JOIN workgroups_new wn ON wn.iowGroupid = g.id
-                                         AND wn.Project_Id = $pid AND wn.Status = 0
+             JOIN workgroups_new wn ON wn.iowGroupid = g.id
+                                    AND wn.Project_Id = $pid AND wn.Status = 0
              LEFT JOIN wbsscheduleitems w  ON w.wbsid = wn.Workgroup_Id AND w.status = 0
              LEFT JOIN scheduleactivities sa ON sa.scheduleitem_id = w.scheduleitem_id
                                              AND sa.projectId = $pid AND sa.status = 0
-             WHERE g.project_id = $pid AND g.status = 0
+             WHERE g.status = 0
              GROUP BY g.id, g.name
              ORDER BY g.id ASC"
         )->queryAll();
@@ -2880,7 +2880,7 @@ class ProjectsmainController extends Controller
 
             // Cycle time
             $form .= '<div style="text-align:right;margin:8px 0;padding-right:14%;">
-                <strong>Cycle Time:</strong>&nbsp;<span id="cyclebud" style="font-size:15px;">'.number_format($btime, 2).'</span>&nbsp;Days
+                <strong>Cycle Time:</strong>&nbsp;<span id="cyclebud" style="font-size:15px;">'.number_format($btime, 4).'</span>&nbsp;Days
             </div>';
 
             // Buttons
@@ -3046,7 +3046,7 @@ class ProjectsmainController extends Controller
         if ($cycleTime == 0) {
             $cycleTime = isset($_POST['totalbudget']) ? (float)$_POST['totalbudget'] : 0;
         }
-        $cycleTime = round($cycleTime, 2);
+        $cycleTime = round($cycleTime, 4);
 
         if ($cycleTime > 0) {
             $activityQty   = (float)$wrk->quantity > 0 ? (float)$wrk->quantity : 1;
@@ -3799,7 +3799,7 @@ class ProjectsmainController extends Controller
             "SELECT COALESCE(SUM(Budgeted_Duration), 0) AS total FROM schedule_task_new WHERE activity_Id = :id AND status = 0",
             [':id' => (int)$activity1->id]
         )->queryOne();
-        $cycleTime = $cycleRow ? round((float)$cycleRow['total'], 2) : 0;
+        $cycleTime = $cycleRow ? round((float)$cycleRow['total'], 4) : 0;
 
         if ($cycleTime > 0) {
             $actQty   = (float)$activity1->quantity > 0 ? (float)$activity1->quantity : 1;

@@ -68,7 +68,7 @@ class ProcurementController extends Controller
                 LEFT JOIN store_indents si ON si.resource_id = r.Resource_Id
                                           AND si.project_id  = :pid3
                 WHERE p.project_id      = :pid
-                  AND p.resourcetype_Id IN (2, 6)
+                  AND rt.Name IN ('Materials', 'Consumables', 'Purchased Inputs')
                   AND p.pricing_status  = 0
                 ORDER BY rt.Name, resource_name";
 
@@ -214,7 +214,9 @@ class ProcurementController extends Controller
 
         if ($resourceId) {
             $rows = $db->createCommand(
-                'SELECT Vendor_Id, Name FROM vendors WHERE Status = 0 AND resource_id = :rid ORDER BY Name',
+                'SELECT DISTINCT v.Vendor_Id, v.Name FROM vendors v
+                 JOIN vendor_resources vr ON vr.vendor_id = v.Vendor_Id
+                 WHERE v.Status = 0 AND vr.resource_id = :rid ORDER BY v.Name',
                 [':rid' => $resourceId]
             )->queryAll();
         } elseif ($context === 'po') {
@@ -1269,11 +1271,6 @@ class ProcurementController extends Controller
             if ($actIdx > 0) {
                 $itemsHtml .= '<tr><td colspan="6" style="padding:0;height:10px;border:none;background:#f0f0f0;"></td></tr>';
             }
-
-            // Dark grey "ACTIVITY" label row
-            $itemsHtml .= '<tr style="background:#555;">'
-                . '<td colspan="6" style="padding:6px 12px;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.8px;border:1px solid #444;">Activity</td>'
-                . '</tr>';
 
             // Activity detail row
             $itemsHtml .= '<tr style="background:#e8ecf0;">'

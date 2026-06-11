@@ -732,7 +732,7 @@
                 + '<td class="num" style="background:#e6e6e6;color:#333;">' + parseFloat(r.purchased_quantity || 0).toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
                 + '<td class="num" style="background:#e6e6e6;color:#333;">' + parseFloat(r.purchased_value || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>'
                 + '<td style="padding:2px 4px;text-align:right;' + alertTd + '">'
-                + '<input type="text" inputmode="decimal" autocomplete="off" class="form-control input-sm po-stock-input" data-id="' + rid + '" placeholder="0" value="' + stockVal + '" style="' + alertInp + '">'
+                + '<input type="text" inputmode="decimal" autocomplete="off" class="form-control input-sm po-stock-input" data-id="' + rid + '" placeholder="0" value="' + stockVal + '" readonly tabindex="-1" style="' + alertInp + (hasIndent ? '' : 'background:#f0f0f0;') + 'cursor:default;">'
                 + '</td>'
                 + '<td style="padding:2px 4px;text-align:right;' + alertTd + '">'
                 + '<input type="text" inputmode="decimal" autocomplete="off" class="form-control input-sm po-reorder-input" data-id="' + rid + '" data-rate="' + rate + '" placeholder="0" value="' + reorderVal + '" style="' + alertInp + '">'

@@ -106,13 +106,39 @@ class StorekeeperController extends Controller
             return json_encode(['error' => 'Yes', 'errortext' => 'No items selected.']);
         }
 
-        $saved = 0;
+        $saved   = 0;
+        $blocked = [];
         foreach ($items as $item) {
             $rid     = (int)($item['id']      ?? 0);
             $stock   = (float)($item['stock']   ?? 0);
             $reorder = (float)($item['reorder'] ?? 0);
 
             if (!$rid) continue;
+
+            // Gate: every ongoing activity using this resource must have a progress report today,
+            // since stock at site is derived from reported consumption
+            $unreported = $db->createCommand(
+                "SELECT DISTINCT sa.name
+                 FROM pricing_estimate_resources_new per
+                 JOIN scheduleactivities sa ON sa.activity_id = per.activity_id
+                                           AND sa.projectId   = per.project_id
+                                           AND sa.status      = 0
+                 WHERE per.project_id = :pid AND per.resource_Id = :rid AND per.pricing_status = 0
+                   AND sa.completed_status = 0
+                   AND sa.actual_start_date IS NOT NULL
+                   AND sa.actual_start_date != '0000-00-00'
+                   AND sa.actual_start_date <= CURDATE()
+                   AND NOT EXISTS (SELECT 1 FROM schedule_progress_report_log l
+                                   WHERE l.activity_id = sa.id AND l.report_date = CURDATE())",
+                [':pid' => $projectid, ':rid' => $rid]
+            )->queryColumn();
+            if (!empty($unreported)) {
+                $resName = $db->createCommand(
+                    'SELECT Name FROM resources WHERE Resource_Id = :rid', [':rid' => $rid]
+                )->queryScalar();
+                $blocked[] = ['resource' => $resName ?: ('#' . $rid), 'activities' => $unreported];
+                continue;
+            }
 
             // Skip if GRN received quantity has reached or exceeded estimated quantity
             $estimateCheck = $db->createCommand(
@@ -127,12 +153,21 @@ class StorekeeperController extends Controller
             )->queryOne();
             if ($estimateCheck && (float)$estimateCheck['received_qty'] >= (float)$estimateCheck['estimated_qty']) continue;
 
-            // Skip if already indented by resource_id
+            // Re-indent before a PO is raised → refresh the existing indent
             $exists = $db->createCommand(
                 'SELECT id FROM store_indents WHERE project_id = :pid AND resource_id = :rid',
                 [':pid' => $projectid, ':rid' => $rid]
             )->queryOne();
-            if ($exists) continue;
+            if ($exists) {
+                $db->createCommand()->update('store_indents', [
+                    'stock_at_site'    => $stock,
+                    'reorder_quantity' => $reorder,
+                    'raised_by'        => $uid,
+                    'raised_at'        => date('Y-m-d H:i:s'),
+                ], ['id' => $exists['id']])->execute();
+                $saved++;
+                continue;
+            }
 
             // Fetch resource details from resources table
             $res = $db->createCommand(
@@ -159,7 +194,7 @@ class StorekeeperController extends Controller
             $saved++;
         }
 
-        return json_encode(['error' => 'No', 'saved' => $saved]);
+        return json_encode(['error' => 'No', 'saved' => $saved, 'blocked' => $blocked]);
     }
 
     public function actionIssuedmbooks()
@@ -545,8 +580,31 @@ class StorekeeperController extends Controller
             }
         }
 
-        // Validate new entries against WO limits
         $newEntries = json_decode($entries, true) ?: [];
+
+        // Gate: each measured activity must have a progress report dated today (the send date)
+        $unreported = [];
+        foreach ($newEntries as $entry) {
+            $aid = (int)($entry['activity_id'] ?? 0);
+            $qty = (float)($entry['qty'] ?? 0);
+            if (!$aid || $qty <= 0) continue;
+            $hasReport = (int)$db->createCommand(
+                'SELECT COUNT(*) FROM scheduleactivities sa
+                 JOIN schedule_progress_report_log l ON l.activity_id = sa.id
+                 WHERE sa.activity_id = :aid AND sa.projectId = :pid AND sa.status = 0
+                   AND l.report_date = CURDATE()',
+                [':aid' => $aid, ':pid' => $projectid]
+            )->queryScalar();
+            if (!$hasReport) $unreported[] = $entry['activity_name'] ?? ('#' . $aid);
+        }
+        if (!empty($unreported)) {
+            return json_encode(['error' => 'Yes',
+                'errortext' => "Measurement Book cannot be sent — progress must be reported TODAY for:\n• "
+                               . implode("\n• ", array_unique($unreported))
+                               . "\n\nPlease report progress, then send the Measurement Book."]);
+        }
+
+        // Validate new entries against WO limits
         foreach ($newEntries as $entry) {
             $aid     = $entry['activity_id'] ?? '';
             $newQty  = (float)($entry['qty'] ?? 0);

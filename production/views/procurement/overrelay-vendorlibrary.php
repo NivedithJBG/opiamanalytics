@@ -26,7 +26,7 @@ $resourceTypes = $db->createCommand("SELECT ResourceType_Id, Name FROM resourcet
 }
 </style>
 <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/procurement/over_menu_vendorlibrary.js" type="text/javascript"></script>
-<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/procurement/vendorslib.js" type="text/javascript"></script>
+<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/procurement/vendorslib.js?v=<?php echo time(); ?>" type="text/javascript"></script>
 
 <div class="vendorlib-popup-cntnr">
     <div id="vendorlib-heading" style="background:#072c47;color:#fff;padding:10px 20px;font-size:15px;font-weight:600;letter-spacing:0.5px;">VENDOR</div>
@@ -66,9 +66,11 @@ $resourceTypes = $db->createCommand("SELECT ResourceType_Id, Name FROM resourcet
                     <div class="row">
                         <div class="col-md-1"></div>
                         <div class="col-md-2">
-                            <div class="form-group">
+                            <div class="form-group" style="position:relative;">
                                 <label>Vendor Name</label>
-                                <input type="text" class="form-control" id="vlf-name" placeholder="Vendor Name">
+                                <input type="hidden" id="vlf-vendor-id" value="">
+                                <input type="text" class="form-control" id="vlf-name" placeholder="Type to search or add new" autocomplete="off">
+                                <div id="vlf-name-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:1100;background:#fff;border:1px solid #c5ccd4;border-top:none;max-height:180px;overflow-y:auto;box-shadow:0 3px 8px rgba(0,0,0,0.15);"></div>
                                 <span class="error" style="display:none;"></span>
                             </div>
                         </div>
@@ -112,7 +114,7 @@ $resourceTypes = $db->createCommand("SELECT ResourceType_Id, Name FROM resourcet
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-2" id="vlf-resid-group">
                             <div class="form-group">
                                 <label>Resource Name</label>
                                 <select class="form-control" id="vlf-resid">

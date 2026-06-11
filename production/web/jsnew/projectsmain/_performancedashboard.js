@@ -161,7 +161,7 @@ function renderCdUnitCostOfResource(items, actName){
         var est  = +r.rate || 0;
         var act  = (r.actual_unit_cost != null) ? +r.actual_unit_cost : null;
         var col  = palette[i % palette.length];
-        var unit = r.unit ? '/' + r.unit : '';
+        var unit = r.unit ? '/' + shu(r.unit) : '';
         var isMaterial = act !== null;
 
         var barHtml = '';
@@ -220,7 +220,7 @@ function renderCdValueOfWorkDone(d){
     if (!el) return;
     var tq  = +d.schedule_qty    || 0;
     var aq  = +d.last_report_qty || 0;
-    var u   = d.unit || '';
+    var u   = shu(d.unit);
     var an  = sh(d.activity_name || '', 38);
     var pct = tq > 0 ? Math.round(aq / tq * 100) : 0;
     var f   = tq > 0 ? Math.max(0, Math.min(1, aq / tq)) : 0;
@@ -426,7 +426,7 @@ function renderCdResourceConsumption(items, actName, lastQty){
                  : val >= 1000    ? (val / 1000).toFixed(1) + 'K'
                  : val % 1 === 0  ? val.toFixed(0)
                  : val.toFixed(2);
-        var unit = r.unit ? r.unit : '';
+        var unit = r.unit ? shu(r.unit) : '';
         bars += '<div class="rescol" style="height:100%;display:flex;flex-direction:column;justify-content:flex-end;">'
               + '<div class="resb" style="height:' + barPct + ';min-height:30px;background:' + col + ';'
               +   'display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;">'
@@ -464,7 +464,8 @@ function loadAll(){
 
             // IOW Groups in pd-c1 — clicking a group loads its IOW items into pd-c3
             renderBars('pd-c1', _groups.map(function(r){
-                return {name:r.name, scheduled:+r.scheduled||0, delay:+r.delay||0, id:r.id};
+                return {name:r.name, scheduled:+r.scheduled||0, delay:+r.delay||0, id:r.id,
+                        critical:groupIsCritical(r.id)};
             }), filterByGroup);
 
             // Project-level duration bar
@@ -501,7 +502,8 @@ function filterByGroup(groupId, preselectIowId){
     // Fallback: if iowGroupid linkage is missing in DB, show all IOW items
     if (!filtered.length) filtered = _iow_items;
     renderBars('pd-c3', filtered.map(function(r){
-        return {name:r.name, scheduled:+r.scheduled||0, delay:+r.delay||0, id:r.id};
+        return {name:r.name, scheduled:+r.scheduled||0, delay:+r.delay||0, id:r.id,
+                critical:iowIsCritical(r.id)};
     }), filterByIow);
     $('#pd-c1 .brow').removeClass('brow-active');
     $('#pd-c1 .brow[data-aid="' + groupId + '"]').addClass('brow-active');
@@ -527,6 +529,23 @@ function filterByIow(iowId){
     renderBars('pd-c4', toBarItems(fOngoing));
     renderBars('pd-c5', toBarItems(fUpcoming));
     if (filtered.length) loadKpi(filtered[0].id);
+}
+
+// ── Criticality propagation: activity → IOW → IOW group ──────────────────────
+function isCriticalActivity(a){
+    return a.critical_status === 'Yes' || a.critical_status === 1 || a.critical_status === '1';
+}
+function iowIsCritical(iowId){
+    var sid = String(iowId);
+    return _all.some(function(a){
+        return String(a.scheduleitem_id) === sid && isCriticalActivity(a);
+    });
+}
+function groupIsCritical(groupId){
+    var gid = String(groupId);
+    return _iow_items.some(function(i){
+        return String(i.group_id) === gid && iowIsCritical(i.id);
+    });
 }
 
 function toBarItems(acts){
@@ -638,6 +657,35 @@ function renderActivityCostBars(containerId, items, onRowClick){
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function sh(str,n){ str=str||''; return str.length>n ? str.substring(0,n-1)+'…' : str; }
 function fm(v){ v=+v||0; return Number.isInteger(v)?v:v.toFixed(1); }
+
+// ── Unit shortener — abbreviate lengthy unit names for compact panels ─────────
+var UNIT_ABBR = {
+    'numbers':'Nos','number':'Nos','nos':'Nos','each':'Ea',
+    'cubic meter':'Cum','cubic meters':'Cum','cubic metre':'Cum','cubic metres':'Cum',
+    'square meter':'Sqm','square meters':'Sqm','square metre':'Sqm','square metres':'Sqm',
+    'square feet':'Sft','square foot':'Sft',
+    'running meter':'Rmt','running metre':'Rmt','running meters':'Rmt','running metres':'Rmt',
+    'meter':'m','meters':'m','metre':'m','metres':'m',
+    'kilogram':'kg','kilograms':'kg','kgs':'kg',
+    'metric ton':'MT','metric tons':'MT','metric tonne':'MT','metric tonnes':'MT',
+    'tonne':'MT','tonnes':'MT','ton':'MT','tons':'MT',
+    'litre':'L','litres':'L','liter':'L','liters':'L',
+    'hours':'hrs','hour':'hr',
+    'days':'d','day':'d',
+    'man days':'MD','man-days':'MD','mandays':'MD',
+    'lump sum':'LS','lumpsum':'LS',
+    'percentage':'%','percent':'%'
+};
+function shu(u){
+    u = (u || '').trim();
+    if (!u) return '';
+    var key = u.toLowerCase();
+    if (UNIT_ABBR[key]) return UNIT_ABBR[key];
+    // "No of Panels" / "Number of Panels" → "Panels"
+    var stripped = u.replace(/^(?:no\.?s?|number)\s+of\s+/i, '');
+    if (stripped !== u) return shu(stripped);
+    return u.length > 8 ? sh(u, 8) : u;
+}
 
 function niceAxis(maxVal){
     if (!maxVal) return [0];
@@ -762,7 +810,7 @@ function doWorkDone(k){
     var tq  = +k.target_qty    || 0;
     var aq  = +k.actual_qty    || 0;
     var pct = +k.work_done_pct || 0;
-    var u   = k.unit || '';
+    var u   = shu(k.unit);
     var an  = sh(k.activity_name || '', 38);
     var f   = tq > 0 ? Math.max(0, Math.min(1, aq / tq)) : 0;
     var cx=105, cy=92, r=76, sw=14;
@@ -802,7 +850,7 @@ function doTargetProduction(k){
     var tq  = +k.target_qty    || 0;   // Schedule Quantity = full arch/dial
     var aq  = +k.actual_qty    || 0;   // Last reported quantity = dark blue arc
     var dur = +k.b_duration    || 0;   // B. Duration (old_duration)
-    var u   = k.unit           || '';
+    var u   = shu(k.unit);
     var an  = sh(k.activity_name || '', 38);
 
     // Target to date = Elapsed days × (Schedule Qty / B. Duration)
@@ -850,7 +898,7 @@ function doProductivity(k) {
     if (!el) return;
     var tp  = +k.target_productivity || 0;
     var ap  = +k.actual_productivity || 0;
-    var u   = k.unit || '';
+    var u   = shu(k.unit);
     var an  = sh(k.activity_name || '', 38);
     var maxVal = tp > 0 ? tp * 2 : 1;
     var f   = Math.max(0, Math.min(1, ap / maxVal));
@@ -912,7 +960,7 @@ function pdShowTasksTip(items, anchor) {
     items.forEach(function(r, i) {
         var tgt = +(r.val) || 0, act = +(r.actual) || 0;
         var col = cols[i % cols.length];
-        var u = r.unit ? ' ' + r.unit : '';
+        var u = r.unit ? ' ' + shu(r.unit) : '';
         var segPct = function(v, tot) { return tot > 0 ? (v / tot * 100).toFixed(1) + '%' : '0%'; };
         var isOver = act > 0 && act > tgt;
         var isUnder = act > 0 && act < tgt;
@@ -1142,7 +1190,7 @@ function doTaskQty(items){
     var topRow='', bars='', labels='', vals='';
     items.forEach(function(r,i){
         var val=+(r.qty)||0;
-        var u=r.unit?' '+r.unit:'';
+        var u=r.unit?' '+shu(r.unit):'';
         var pct=(val/maxVal*100).toFixed(1)+'%';
         topRow+='<div style="flex:1;text-align:center;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#1a2540">'+fm(val)+u+'</div>';
         bars+='<div class="rescol" style="height:'+pct+'">'
@@ -1195,7 +1243,7 @@ function doRes(items){
     items.forEach(function(r,i){
         var tgt=+(r.val)||0, act=+(r.actual)||0;
         var col=cols[i%cols.length];
-        var u=r.unit?' '+r.unit:'';
+        var u=r.unit?' '+shu(r.unit):'';
         var segPct=function(v,tot){ return tot>0?(v/tot*100).toFixed(1)+'%':'0%'; };
         actRow+='<div style="flex:1;text-align:center;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#1a2540">'+(act>0?fm(act)+u:'')+'</div>';
         if(act>0 && act>tgt){

@@ -1665,6 +1665,13 @@
                     alert(data.errortext || 'Error raising indent.');
                     return;
                 }
+                if (data.blocked && data.blocked.length) {
+                    var msg = 'Indent not raised for the following — progress must be reported TODAY first:\n';
+                    $.each(data.blocked, function(i, b){
+                        msg += '\n' + b.resource + ':\n  • ' + b.activities.join('\n  • ') + '\n';
+                    });
+                    alert(msg);
+                }
                 loadIndents();
             },
             error: function() {

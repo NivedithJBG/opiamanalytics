@@ -116,13 +116,12 @@ class VendorlibraryController extends Controller
         $resId      = (int)($_POST['res_id']          ?? 0);
 
         $sql    = 'SELECT v.Vendor_Id, v.Name, v.contact_person, v.Address, v.Phone, v.Email,
-                          v.resource_type_id, v.resource_id,
+                          v.resource_type_id,
                           vt.name AS vendor_type_name, vt.vendor_type_id,
-                          rt.Name AS res_type_name, r.Name AS res_name
+                          rt.Name AS res_type_name
                    FROM vendors v
                    LEFT JOIN vendortypes vt ON v.vendor_type = vt.vendor_type_id
                    LEFT JOIN resourcetype rt ON v.resource_type_id = rt.ResourceType_Id
-                   LEFT JOIN resources r ON v.resource_id = r.Resource_Id
                    WHERE v.Status = 0';
         $params = [];
         if ($resTypeId) {
@@ -130,15 +129,32 @@ class VendorlibraryController extends Controller
             $params[':rtid'] = $resTypeId;
         }
         if ($resId) {
-            $sql .= ' AND v.resource_id = :rid';
+            $sql .= ' AND EXISTS (SELECT 1 FROM vendor_resources vrf
+                                  WHERE vrf.vendor_id = v.Vendor_Id AND vrf.resource_id = :rid)';
             $params[':rid'] = $resId;
         }
         if ($search !== '') {
             $sql .= ' AND v.Name LIKE :s';
             $params[':s'] = '%' . $search . '%';
         }
-        $sql .= ' ORDER BY rt.Name ASC, r.Name ASC, v.Name ASC';
+        $sql .= ' ORDER BY rt.Name ASC, v.Name ASC';
         $rows = $db->createCommand($sql, $params)->queryAll();
+
+        // Allocated resources per vendor (vendor_resources junction)
+        $allocMap = [];
+        $vendorIds = array_map('intval', array_column($rows, 'Vendor_Id'));
+        if ($vendorIds) {
+            $allocRows = $db->createCommand(
+                'SELECT vr.vendor_id, r.Resource_Id, r.Name
+                 FROM vendor_resources vr
+                 JOIN resources r ON r.Resource_Id = vr.resource_id
+                 WHERE vr.vendor_id IN (' . implode(',', $vendorIds) . ')
+                 ORDER BY r.Name ASC'
+            )->queryAll();
+            foreach ($allocRows as $ar) {
+                $allocMap[(int)$ar['vendor_id']][] = $ar;
+            }
+        }
 
         $tdStyle = 'style="padding:6px 10px;border:1px solid #ddd;font-size:13px;"';
 
@@ -167,10 +183,19 @@ class VendorlibraryController extends Controller
                 $id        = (int)$row['Vendor_Id'];
                 $typeId    = (int)($row['vendor_type_id']   ?? 0);
                 $rTypeId   = (int)($row['resource_type_id'] ?? 0);
-                $rId       = (int)($row['resource_id']      ?? 0);
+
+                $resCell = '';
+                foreach ($allocMap[$id] ?? [] as $ar) {
+                    $resCell .= '<span style="display:inline-block;background:#e8ecf0;border:1px solid #c5ccd4;border-radius:12px;padding:1px 8px;margin:2px 4px 2px 0;font-size:12px;white-space:nowrap;">'
+                              . htmlspecialchars($ar['Name'], ENT_QUOTES)
+                              . '<a href="javascript:void(0)" class="vlf-res-remove" data-vid="' . $id . '" data-rid="' . (int)$ar['Resource_Id'] . '" '
+                              .     'title="Remove allocation" style="color:#c0392b;font-weight:700;text-decoration:none;margin-left:5px;">&times;</a>'
+                              . '</span>';
+                }
+
                 $html .= '<tr id="vendorrow' . $id . '">'
                        . '<td ' . $tdStyle . ' style="padding:6px 10px;border:1px solid #ddd;font-size:13px;text-align:center;color:#999;">' . ($i + 1) . '</td>'
-                       . '<td ' . $tdStyle . '>' . htmlspecialchars($row['res_name'] ?? '', ENT_QUOTES) . '</td>'
+                       . '<td ' . $tdStyle . '>' . $resCell . '</td>'
                        . '<td ' . $tdStyle . '>' . htmlspecialchars($row['Name'], ENT_QUOTES) . '</td>'
                        . '<td ' . $tdStyle . '>' . htmlspecialchars($row['Address'], ENT_QUOTES) . '</td>'
                        . '<td ' . $tdStyle . '>' . htmlspecialchars($row['contact_person'], ENT_QUOTES) . '</td>'
@@ -190,7 +215,6 @@ class VendorlibraryController extends Controller
                        . '<td style="display:none;" id="vdata-phone-'   . $id . '">' . htmlspecialchars($row['Phone'], ENT_QUOTES) . '</td>'
                        . '<td style="display:none;" id="vdata-email-'   . $id . '">' . htmlspecialchars($row['Email'], ENT_QUOTES) . '</td>'
                        . '<td style="display:none;" id="vdata-restype-' . $id . '">' . $rTypeId . '</td>'
-                       . '<td style="display:none;" id="vdata-resid-'   . $id . '">' . $rId . '</td>'
                        . '</tr>';
             }
         }
@@ -206,7 +230,6 @@ class VendorlibraryController extends Controller
         $phone      = trim($_POST['vphone']   ?? '');
         $email      = trim($_POST['vemail']   ?? '');
         $resTypeId  = (int)($_POST['vrestype'] ?? 0);
-        $resId      = (int)($_POST['vresid']   ?? 0);
 
         if ($name === '') {
             return json_encode(['error' => 'Yes', 'errortext' => 'Vendor name is required.']);
@@ -222,7 +245,6 @@ class VendorlibraryController extends Controller
             'Email'            => $email,
             'vendor_type'      => 0,
             'resource_type_id' => $resTypeId,
-            'resource_id'      => $resId,
             'Added_On'         => date('Y-m-d H:i:s'),
             'Added_By'         => Yii::$app->user->id,
             'Status'           => 0,
@@ -231,7 +253,7 @@ class VendorlibraryController extends Controller
             'Brand'            => '',
         ])->execute();
 
-        return json_encode(['error' => 'No']);
+        return json_encode(['error' => 'No', 'vendor_id' => (int)$db->getLastInsertID()]);
     }
 
     public function actionUpdatevendor()
@@ -243,7 +265,6 @@ class VendorlibraryController extends Controller
         $phone     = trim($_POST['vphone']    ?? '');
         $email     = trim($_POST['vemail']    ?? '');
         $resTypeId = (int)($_POST['vrestype'] ?? 0);
-        $resId     = (int)($_POST['vresid']   ?? 0);
 
         if (!$id || $name === '') {
             return json_encode(['error' => 'Yes', 'errortext' => 'Invalid data.']);
@@ -257,9 +278,94 @@ class VendorlibraryController extends Controller
             'Email'            => $email,
             'vendor_type'      => 0,
             'resource_type_id' => $resTypeId,
-            'resource_id'      => $resId,
         ], ['Vendor_Id' => $id])->execute();
 
+        return json_encode(['error' => 'No']);
+    }
+
+    // ─── Vendor ↔ Resource allocations (many-to-many) ───────────────────────
+
+    public function actionSearchvendors()
+    {
+        $term = trim($_POST['term'] ?? '');
+        if ($term === '') {
+            return json_encode(['error' => 'No', 'vendors' => []]);
+        }
+        $rows = Yii::$app->db->createCommand(
+            'SELECT Vendor_Id, Name, contact_person, Address, Phone, Email
+             FROM vendors WHERE Status = 0 AND Name LIKE :s
+             ORDER BY Name ASC LIMIT 10',
+            [':s' => '%' . $term . '%']
+        )->queryAll();
+        return json_encode(['error' => 'No', 'vendors' => $rows]);
+    }
+
+    public function actionAddallocation()
+    {
+        $vendorId  = (int)($_POST['vendor_id'] ?? 0);
+        $name      = trim($_POST['vname']    ?? '');
+        $address   = trim($_POST['vaddress'] ?? '');
+        $contact   = trim($_POST['vcontact'] ?? '');
+        $phone     = trim($_POST['vphone']   ?? '');
+        $email     = trim($_POST['vemail']   ?? '');
+        $resTypeId = (int)($_POST['vrestype'] ?? 0);
+        $resId     = (int)($_POST['vresid']   ?? 0);
+
+        if ($name === '') {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Vendor name is required.']);
+        }
+        if ($resId <= 0) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Please select a resource to allocate.']);
+        }
+
+        $db = Yii::$app->db;
+        if ($vendorId) {
+            $db->createCommand()->update('vendors', [
+                'Name'             => $name,
+                'contact_person'   => $contact,
+                'Address'          => $address,
+                'Phone'            => $phone,
+                'Email'            => $email,
+                'resource_type_id' => $resTypeId,
+            ], ['Vendor_Id' => $vendorId])->execute();
+        } else {
+            $db->createCommand()->insert('vendors', [
+                'Name'             => $name,
+                'contact_person'   => $contact,
+                'Address'          => $address,
+                'City'             => '',
+                'Phone'            => $phone,
+                'Email'            => $email,
+                'vendor_type'      => 0,
+                'resource_type_id' => $resTypeId,
+                'Added_On'         => date('Y-m-d H:i:s'),
+                'Added_By'         => Yii::$app->user->id,
+                'Status'           => 0,
+                'account_id'       => 0,
+                'vendor_groupid'   => 0,
+                'Brand'            => '',
+            ])->execute();
+            $vendorId = (int)$db->getLastInsertID();
+        }
+
+        $db->createCommand(
+            'INSERT IGNORE INTO vendor_resources (vendor_id, resource_id) VALUES (:v, :r)',
+            [':v' => $vendorId, ':r' => $resId]
+        )->execute();
+
+        return json_encode(['error' => 'No', 'vendor_id' => $vendorId]);
+    }
+
+    public function actionRemoveallocation()
+    {
+        $vendorId = (int)($_POST['vendor_id']   ?? 0);
+        $resId    = (int)($_POST['resource_id'] ?? 0);
+        if (!$vendorId || !$resId) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Invalid data.']);
+        }
+        Yii::$app->db->createCommand()
+            ->delete('vendor_resources', ['vendor_id' => $vendorId, 'resource_id' => $resId])
+            ->execute();
         return json_encode(['error' => 'No']);
     }
 

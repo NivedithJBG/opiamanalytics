@@ -565,13 +565,13 @@ function calcTaskDuration(row) {
     var resUnits = parseFloat(row.find('.task-resource-units-val').val()) || 1;
 
     if (prod > 0 && qty > 0 && resUnits > 0) {
-        row.find('.taskduration_edit').val((qty / prod / resUnits).toFixed(2));
+        row.find('.taskduration_edit').val((qty / prod / resUnits).toFixed(4));
     }
 
     var total = 0;
     $('.taskduration_edit').each(function(){ total += parseFloat($(this).val()) || 0; });
-    $('#cyclebud').text(total.toFixed(2));
-    $('#budcycle').val(total.toFixed(2));
+    $('#cyclebud').text(total.toFixed(4));
+    $('#budcycle').val(total.toFixed(4));
 }
 
 $(document).on('input', '[name="task_qty[]"], [name="task_productivity_val[]"], [name="task_resource_units[]"]', function(){
@@ -591,7 +591,7 @@ $(document).on('click','.taskremoverow',function(){
     /*$(".eduration").each(function(){
         cycleatotale=cycleatotale+($(this).val()*1)
     });*/
-    $('#cyclebud').text(cycleatotalb);
-    $('#budcycle').val(cycleatotalb);
+    $('#cyclebud').text(cycleatotalb.toFixed(4));
+    $('#budcycle').val(cycleatotalb.toFixed(4));
 
 });
