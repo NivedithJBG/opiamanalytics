@@ -7246,40 +7246,14 @@ class ProjectsmainController extends Controller
             Yii::$app->helper->GetRelationcorrect($dependentAct1->projectId);
         }
 
-        $ActivityRelations = ActivityRelations::find()->Where(['projectId' => $dependentAct1->projectId])->andWhere(['status'=>0])->all();
-
-        $ActivityRelations1 = ActivityRelations::find()->Where(['projectId' => $dependentAct1->projectId])->andWhere(['precedent_activity' => $_POST['activityid']])->andWhere(['status'=>0])->all();
-
-        $ActivityRelations2 = ActivityRelations::find()->Where(['projectId' => $dependentAct1->projectId])->andWhere(['dependent_activity' => $_POST['activityid']])->andWhere(['status'=>0])->all();
-
-        $lastactivity = '';
-        $lastactivityenddate = '';
-
-        if(!empty($ActivityRelations1) || !empty($ActivityRelations2)):
-
-            foreach($ActivityRelations as $ActivityRelation):
-
-                $Activitylastend = Scheduleactivities::findOne($ActivityRelation->dependent_activity);
-                if($lastactivityenddate!=''){
-                    if($Activitylastend->end_date >= $lastactivityenddate){
-                        $lastactivity = $Activitylastend->id;
-                        $lastactivityenddate = $Activitylastend->end_date;
-                    }
-                }
-                else{
-                    $lastactivity = $Activitylastend->id;
-                    $lastactivityenddate = $Activitylastend->end_date;
-                }
-            endforeach;
-
-        endif;
-
-        if($lastactivity!=''){
-            $dependentAct = Scheduleactivities::findOne($lastactivity);
-        }
-        else{
-            $dependentAct = Scheduleactivities::find()->where(['projectId' => $dependentAct1->projectId])->andWhere(['status' => 0])->orderBy(['end_date' => SORT_DESC])->one();
-        }
+        // Critical path anchors on the activity with the latest projected end —
+        // end_date already reflects actual-pace (delayed) durations via GetRelationcorrect,
+        // and the project cannot finish before its latest-ending activity, related or not.
+        $dependentAct = Scheduleactivities::find()
+            ->where(['projectId' => $dependentAct1->projectId])
+            ->andWhere(['status' => 0])
+            ->orderBy(['end_date' => SORT_DESC])
+            ->one();
 
         $availableActivites = Scheduleactivities::find()
                                 ->where(['projectId' => $dependentAct->projectId])
