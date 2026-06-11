@@ -3843,6 +3843,9 @@ class ProjectsmainController extends Controller
 
 	public function GetRelationcorrect($projectid)
     {
+        // DEACTIVATED legacy — all CPM scheduling now runs through the textbook
+        // engine in HelperComponent::GetRelationcorrect(). Body below is unreachable.
+        return Yii::$app->helper->GetRelationcorrect($projectid);
 
         $scheduleactivities = Scheduleactivities::find()->where(['projectId'=>$projectid])->andWhere(['status'=> 0])->orderBy(['scheduleitem_id'=> SORT_ASC,'sortorder'=>SORT_ASC])->all();
         $connection = Yii::$app->db;
@@ -4337,7 +4340,11 @@ class ProjectsmainController extends Controller
     }
 
    public function GetRelationcorrectfinal($projectid)
-    { 
+    {
+        // DEACTIVATED legacy — superseded by the textbook CPM engine in
+        // HelperComponent::GetRelationcorrect(). Body below is unreachable.
+        return Yii::$app->helper->GetRelationcorrect($projectid);
+
         $connection = Yii::$app->db;
         $sql = "SELECT a.* FROM scheduleactivities AS a INNER JOIN wbsscheduleitems AS b ON a.scheduleitem_id=b.scheduleitem_id WHERE a.projectId=".$projectid." AND a.status=0 ORDER BY b.sortorder ASC,a.sortorder ASC";
         //echo $sql;exit;
@@ -7239,119 +7246,28 @@ class ProjectsmainController extends Controller
 
     public function actionGetcriticalpath()
     {
+        // Textbook CPM: the engine in HelperComponent::GetRelationcorrect()
+        // computes ES/EF/LS/LF, total float and critical_status for every
+        // activity (forward pass, virtual finish, backward pass). This action
+        // just runs it and reports the zero-float activities.
         $dependentAct1 = Scheduleactivities::findOne($_POST['activityid']);
-        // Recalculate relation-driven dates so actual_start_date/actual_end_date
-        // stay in sync with CPM scheduling before the Gantt loads.
-        if ($dependentAct1) {
-            Yii::$app->helper->GetRelationcorrect($dependentAct1->projectId);
+        if (!$dependentAct1) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Activity not found.']);
         }
+        Yii::$app->helper->GetRelationcorrect($dependentAct1->projectId);
 
-        // Critical path anchors on the activity with the latest projected end —
-        // end_date already reflects actual-pace (delayed) durations via GetRelationcorrect,
-        // and the project cannot finish before its latest-ending activity, related or not.
-        $dependentAct = Scheduleactivities::find()
-            ->where(['projectId' => $dependentAct1->projectId])
-            ->andWhere(['status' => 0])
-            ->orderBy(['end_date' => SORT_DESC])
-            ->one();
+        $criticalids = Scheduleactivities::find()
+            ->select('id')
+            ->where(['projectId' => $dependentAct1->projectId, 'status' => 0, 'critical_status' => 'Yes'])
+            ->column();
 
-        $availableActivites = Scheduleactivities::find()
-                                ->where(['projectId' => $dependentAct->projectId])
-                                ->andWhere(['status' => 0])
-                                ->orderBy(['end_date' => SORT_DESC])
-                                ->all();
-
-        // Backward pass: sets critical_start / critical_end on each predecessor
-        $this->Getbackwardpass($dependentAct);
-
-        if(!empty($availableActivites))
-        {
-            $Ids = array($dependentAct->id);
-
-            // Reset all to non-critical and calculate total float = start_date - critical_start
-            foreach ($availableActivites as $activity)
-            {
-                $activity->critical_status = 'No';
-                $floatDays = 0;
-                if ($activity->critical_start && $activity->critical_start != '0000-00-00'
-                    && $activity->start_date && $activity->start_date != '0000-00-00') {
-                    $floatDays = max(0, (int)round(
-                        (strtotime($activity->start_date) - strtotime($activity->critical_start)) / 86400
-                    ));
-                }
-                $activity->float_duration = $floatDays;
-                $activity->save(false);
-            }
-
-            $newarray = [];
-            $criticalProjectId = $dependentAct->projectId;
-
-            // Recursive closure: walks backward from $z through zero-float predecessors
-            $getIdFn = null;
-            $getIdFn = function($z) use (&$newarray, $criticalProjectId, &$getIdFn) {
-                $newarray[] = $z;
-
-                $allRelations1 = ActivityRelations::find()->Where(['dependent_activity' => $z])->andWhere(['projectId' => $criticalProjectId])->andWhere(['status'=>0])->all();
-                $precActArr = [];
-                foreach($allRelations1 as $relation){
-                    $precAct1 = Scheduleactivities::findOne($relation->precedent_activity);
-                    if (!$precAct1) continue;
-                    // Zero-float check: late start (critical_start) == early start (start_date)
-                    // Collect ALL zero-float predecessors — parallel critical chains must all be included
-                    if($precAct1->critical_start
-                        && $precAct1->critical_start != '0000-00-00'
-                        && $precAct1->critical_start == $precAct1->start_date){
-                        $precActArr[] = $relation->precedent_activity;
-                    }
-                }
-
-                if(!empty($precActArr)){
-                    foreach ($precActArr as $precActId) {
-                        $getIdFn($precActId);
-                    }
-                }
-
-                return $newarray;
-            };
-
-            $idarray = $getIdFn($dependentAct->id);
-
-            // Include genuinely parallel activities that share the same start and end date
-            $longestActivites = Scheduleactivities::find()
-                                ->where(['projectId' => $dependentAct->projectId])
-                                ->andWhere(['status' => 0])
-                                ->andWhere(['start_date' => $dependentAct->start_date])
-                                ->andWhere(['end_date' => $dependentAct->end_date])
-                                ->andWhere(['<>','id', $dependentAct->id])
-                                ->orderBy(['end_date' => SORT_DESC])
-                                ->all();
-            if($longestActivites){
-                foreach($longestActivites as $longestActivity):
-                    $idarray = $getIdFn($longestActivity->id);
-                endforeach;
-            }
-        }
-
-        if(isset($idarray)){
-            $criticalids1 = array_merge($Ids,$idarray);
-        }
-        else{
-            $criticalids1 = $Ids;
-        }
-
-        $criticalids=array();
-        foreach ($criticalids1 as $criticalid) {
-            $criticalids[]=(int)$criticalid;
-            $critical_act = Scheduleactivities::findOne($criticalid);
-            $critical_act->critical_status = 'Yes';
-            $critical_act->save(false);
-        }
-
-        $arr=array('error'=>'No','criticalIDs' => array_values(array_unique($criticalids)));
-        return json_encode($arr);
+        return json_encode(['error' => 'No', 'criticalIDs' => array_map('intval', $criticalids)]);
     }
 
-    public function Getbackwardpass($dependentAct)
+    /* Legacy critical-path machinery (anchor scan, recursive zero-float walk,
+       parallel-activity hack, Getbackwardpass) removed — superseded by the
+       textbook CPM engine in HelperComponent::GetRelationcorrect(). */
+    private function getbackwardpassRemoved($dependentAct)
     {
         $projectid = $dependentAct->projectId;
         $availableActivites = Scheduleactivities::find()->where(['projectId' => $projectid])->andWhere(['status' => 0])->orderBy(['end_date' => SORT_DESC])->all();

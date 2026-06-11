@@ -318,6 +318,220 @@ class HelperComponent extends Component
 
     public function GetRelationcorrect($projectid)
     {
+        // ─── Textbook CPM engine ──────────────────────────────────────────────
+        // 1. Network: every active activity is a node; relations (FS/SS/FF with
+        //    lag) are the edges. Durations are projected from actual progress
+        //    pace (getCpmProjDays), so delays drive the schedule.
+        // 2. Forward pass: Early Start / Early Finish for ALL activities.
+        // 3. Virtual finish: project completion = max(EF) over all activities.
+        // 4. Backward pass from the virtual finish: Late Start / Late Finish
+        //    for ALL activities, connected or isolated.
+        // 5. Total float = working days between ES and LS; critical = zero float.
+        $connection = Yii::$app->db;
+
+        $activities = Scheduleactivities::find()
+            ->where(['projectId' => $projectid, 'status' => 0])
+            ->all();
+        if (empty($activities)) return;
+
+        // ── 1. Build the network ─────────────────────────────────────────────
+        $ids = []; $dur = []; $anchor = []; $lag = [];
+        foreach ($activities as $act) {
+            $ids[] = $act->id;
+            $dur[$act->id] = max(1, (int)round((float)$this->getCpmProjDays($act->id, $act->quantity)));
+            $lag[$act->id] = (int)$act->lag;
+
+            $sprRow = $connection->createCommand(
+                "SELECT start_date FROM schedule_progress_report WHERE activity_id = :aid LIMIT 1",
+                [':aid' => $act->id]
+            )->queryOne();
+            if ($sprRow && $sprRow['start_date'] && $sprRow['start_date'] != '0000-00-00') {
+                $anchor[$act->id] = $sprRow['start_date'];          // actual reported start
+            } elseif ($act->act_start_date && $act->act_start_date != '0000-00-00') {
+                $anchor[$act->id] = $act->act_start_date;           // immutable baseline
+            } elseif ($act->start_date && $act->start_date != '0000-00-00') {
+                $anchor[$act->id] = $act->start_date;
+                // Capture baseline on first run so future runs use the original date
+                $connection->createCommand(
+                    "UPDATE scheduleactivities SET act_start_date = :d WHERE id = :id AND (act_start_date IS NULL OR act_start_date = '0000-00-00')",
+                    [':d' => $act->start_date, ':id' => $act->id]
+                )->execute();
+            } else {
+                $anchor[$act->id] = date('Y-m-d');
+            }
+        }
+
+        $relations = ActivityRelations::find()
+            ->where(['projectId' => $projectid, 'status' => 0])
+            ->andWhere(['in', 'precedent_activity', $ids])
+            ->andWhere(['in', 'dependent_activity', $ids])
+            ->all();
+
+        $preds = []; $succs = [];
+        foreach ($relations as $rel) {
+            if ($rel->precedent_activity == $rel->dependent_activity) continue;
+            $preds[$rel->dependent_activity][] = $rel;
+            $succs[$rel->precedent_activity][] = $rel;
+        }
+
+        // Working-day date arithmetic (holiday/week-off aware)
+        $wd = function($date, $n, $direction) use ($projectid) {
+            return date('Y-m-d', strtotime(
+                $this->getDateAfterHoliday($date, $projectid, max(0, (int)$n), $direction)
+            ));
+        };
+
+        // ── 2. Forward pass: ES/EF (iterative relaxation = topological order) ─
+        $ES = []; $EF = [];
+        $maxPasses = count($ids) + 1;
+        for ($pass = 0; $pass < $maxPasses; $pass++) {
+            $progress = false;
+            foreach ($ids as $id) {
+                if (isset($EF[$id])) continue;
+
+                $es = $anchor[$id];
+                $efFloor = null;                       // FF constrains EF directly
+                $ready = true;
+                foreach ($preds[$id] ?? [] as $rel) {
+                    $p = $rel->precedent_activity;
+                    if (!isset($EF[$p])) { $ready = false; break; }
+                    $l = $lag[$id];                    // lag is stored on the dependent
+                    if ($rel->relation_type == 2) {        // FS: ES ≥ pred.EF + lag + 1
+                        $c = $wd($EF[$p], $l + 1, 'next');
+                        if ($c > $es) $es = $c;
+                    } elseif ($rel->relation_type == 1) {  // SS: ES ≥ pred.ES + lag
+                        $c = $wd($ES[$p], $l, 'next');
+                        if ($c > $es) $es = $c;
+                    } elseif ($rel->relation_type == 3) {  // FF: EF ≥ pred.EF + lag
+                        $c = $wd($EF[$p], $l, 'next');
+                        if ($efFloor === null || $c > $efFloor) $efFloor = $c;
+                    }
+                }
+                if (!$ready) continue;
+
+                $es = $wd($es, 0, 'next');                        // never start on a holiday
+                $ef = $wd($es, $dur[$id] - 1, 'next');
+                if ($efFloor !== null && $efFloor > $ef) {        // FF pushes the activity later
+                    $ef = $efFloor;
+                    $es = $wd($ef, $dur[$id] - 1, 'previous');
+                }
+                $ES[$id] = $es;
+                $EF[$id] = $ef;
+                $progress = true;
+            }
+            if (!$progress) break;
+        }
+        // Cyclic leftovers: schedule at anchor so the run never fails
+        foreach ($ids as $id) {
+            if (!isset($EF[$id])) {
+                $ES[$id] = $wd($anchor[$id], 0, 'next');
+                $EF[$id] = $wd($ES[$id], $dur[$id] - 1, 'next');
+            }
+        }
+
+        // ── 3. Virtual finish ────────────────────────────────────────────────
+        $projectFinish = max($EF);
+
+        // ── 4. Backward pass: LS/LF from the virtual finish ──────────────────
+        $LS = []; $LF = [];
+        for ($pass = 0; $pass < $maxPasses; $pass++) {
+            $progress = false;
+            foreach ($ids as $id) {
+                if (isset($LF[$id])) continue;
+
+                if (empty($succs[$id])) {
+                    $lf = $projectFinish;              // open end ties to virtual finish
+                } else {
+                    $lf = null; $ready = true;
+                    foreach ($succs[$id] as $rel) {
+                        $s = $rel->dependent_activity;
+                        if (!isset($LS[$s])) { $ready = false; break; }
+                        $l = $lag[$s];
+                        if ($rel->relation_type == 2) {        // FS: LF ≤ succ.LS − lag − 1
+                            $c = $wd($LS[$s], $l + 1, 'previous');
+                        } elseif ($rel->relation_type == 1) {  // SS: LS ≤ succ.LS − lag
+                            $c = $wd($wd($LS[$s], $l, 'previous'), $dur[$id] - 1, 'next');
+                        } else {                               // FF: LF ≤ succ.LF − lag
+                            $c = $wd($LF[$s], $l, 'previous');
+                        }
+                        if ($lf === null || $c < $lf) $lf = $c;
+                    }
+                    if (!$ready) continue;
+                }
+                $LF[$id] = $lf;
+                $LS[$id] = $wd($lf, $dur[$id] - 1, 'previous');
+                $progress = true;
+            }
+            if (!$progress) break;
+        }
+        // Cyclic leftovers: late = early (zero float, surfaces the loop as critical)
+        foreach ($ids as $id) {
+            if (!isset($LF[$id])) { $LF[$id] = $EF[$id]; $LS[$id] = $ES[$id]; }
+        }
+
+        // ── 5+6. Total float, critical flag, persist ─────────────────────────
+        foreach ($activities as $act) {
+            $id = $act->id;
+            $float = $this->countWorkingDays($ES[$id], $LS[$id], $projectid);
+            $act->start_date      = $ES[$id];
+            $act->end_date        = $EF[$id];
+            $act->critical_start  = $LS[$id];
+            $act->critical_end    = $LF[$id];
+            $act->float_duration  = $float;
+            $act->critical_status = ($float <= 0) ? 'Yes' : 'No';
+            $act->save(false);
+
+            $connection->createCommand("
+                INSERT INTO activity_cpm_dates (activity_id, project_id, proj_duration, cpm_start, cpm_end)
+                VALUES (:aid, :pid, :dur, :start, :end)
+                ON DUPLICATE KEY UPDATE
+                    proj_duration = VALUES(proj_duration),
+                    cpm_start     = VALUES(cpm_start),
+                    cpm_end       = VALUES(cpm_end)
+            ", [':aid' => $id, ':pid' => $projectid, ':dur' => $dur[$id], ':start' => $ES[$id], ':end' => $EF[$id]])->execute();
+        }
+
+        // Activities without progress reports follow CPM dates on the Gantt;
+        // reported activities keep their report-driven bars.
+        $connection->createCommand("
+            UPDATE scheduleactivities sa
+            LEFT JOIN schedule_progress_report_log sprl ON sprl.activity_id = sa.id
+            SET sa.actual_start_date = sa.start_date,
+                sa.actual_end_date   = sa.end_date
+            WHERE sa.projectId = :pid AND sa.status = 0
+              AND sprl.activity_id IS NULL
+        ", [':pid' => $projectid])->execute();
+    }
+
+    // Working days between $from (exclusive) and $to (inclusive) — the number of
+    // working days an activity can slip. 0 when dates are equal or reversed.
+    public function countWorkingDays($from, $to, $projectId)
+    {
+        $start = strtotime($from);
+        $end   = strtotime($to);
+        if (!$start || !$end || $end <= $start) return 0;
+
+        $holiday_dates = [];
+        $holiday_weeks = [];
+        if ($holiday = Holidays::find()->where(['project_id' => $projectId])->one()) {
+            $holiday_dates = explode(',', $holiday->dates);
+            $holiday_weeks = explode(',', $holiday->weeks);
+        }
+
+        $count = 0;
+        for ($t = strtotime('+1 day', $start); $t <= $end; $t = strtotime('+1 day', $t)) {
+            $dmy = date('j-n-Y', $t);
+            if ($holiday_dates && in_array($dmy, $holiday_dates)) continue;
+            if ($holiday_weeks && in_array(date('w', $t), $holiday_weeks)) continue;
+            $count++;
+        }
+        return $count;
+    }
+
+    /** DEACTIVATED legacy forward-only pass — superseded by the textbook CPM
+     *  engine above. Never called; kept only for historical reference. */
+    private function legacyRelationcorrectDisabled($projectid)
+    {
         $connection = Yii::$app->db;
 
         // ─── PASS A: Seed projected durations and initial start dates ────────
