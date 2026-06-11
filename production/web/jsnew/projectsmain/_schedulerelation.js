@@ -206,6 +206,9 @@ $(function(){
     });
 
     $(document).on('click','.deleterelation',function(){
+        // The Gantt page's relations panel has its own handler (newganttview.php) —
+        // skip here so one click never fires two delete requests
+        if ($(this).closest('#relations-panel').length) return;
         var relationId=$(this).attr('data-v');
         var r = confirm("Are you sure you want to delete this Relation?");
         if (r == true) {

@@ -147,7 +147,22 @@
 
   // ---- Gantt loader ---------------------------------------------------------
 
+  // Exception-safe wrapper: a JS error mid-build must never leave the chart blank
   function loadGantt() {
+    try {
+      loadGanttInner();
+    } catch (err) {
+      console.error('Gantt draw failed, retrying', err);
+      try {
+        loadGanttInner();
+      } catch (err2) {
+        console.error('Gantt redraw retry failed', err2);
+        $('#gantt-status').text('Could not draw the chart — please reload the page.');
+      }
+    }
+  }
+
+  function loadGanttInner() {
     $('#gantt-container').empty();
 
     var g = new JSGantt.GanttChart(document.getElementById('gantt-container'), 'week');
@@ -587,7 +602,7 @@
         if(data.error == 'No' || data.error == 'Durerror') {
           if(data.error == 'Durerror') alert(data.errortext);
           reloadRelationsPanel();
-          loadGantt();
+          refreshCriticalPath(function(){ loadGantt(); });
         } else {
           alert(data.errortext || 'Save failed.');
         }
@@ -632,7 +647,7 @@
       success: function(data){
         if(data.error == 'No') {
           reloadRelationsPanel();
-          loadGantt();
+          refreshCriticalPath(function(){ loadGantt(); });
         } else {
           alert(data.errortext || 'Update failed.');
         }
@@ -650,7 +665,7 @@
       success: function(data){
         if(data.error == 'No') {
           reloadRelationsPanel();
-          loadGantt();
+          refreshCriticalPath(function(){ loadGantt(); });
         } else {
           alert(data.errortext || 'Delete failed.');
         }

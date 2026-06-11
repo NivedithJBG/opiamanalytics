@@ -4,7 +4,7 @@ use amnah\yii2\user\models\User;
 
 ?>
             <!--<div class="panel panel-default schedule-activity-relations-tab tab tab-wrapper acco-eight">-->
-            	<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/_schedulerelation.js" type="text/javascript"></script>
+            	<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/_schedulerelation.js?v=<?php echo time(); ?>" type="text/javascript"></script>
 			  <!--<input type="radio" id="rd5" class="act-relatn-tab" name="rd">
 				
 				<div class="panel-heading" >
