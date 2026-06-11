@@ -590,7 +590,8 @@
     $('#second_activity_error').toggle(secondActivity=='');if(secondActivity == '')   return;
     $('#relation_error').toggle(relationType == '');       if(relationType == '')     return;
 
-    $('.save_relation_new').attr('disabled', true);
+    var origText = $('.save_relation_new').first().text();
+    $('.save_relation_new').attr('disabled', true).text('Saving…');
     $.ajax({
       type: 'POST', url: '../projectsmain/saverelation', dataType: 'json',
       data: {
@@ -601,14 +602,14 @@
       success: function(data){
         if(data.error == 'No' || data.error == 'Durerror') {
           if(data.error == 'Durerror') alert(data.errortext);
-          reloadRelationsPanel();
+          reloadRelationsPanel('Relation saved — chart updated');
           refreshCriticalPath(function(){ loadGantt(); });
         } else {
           alert(data.errortext || 'Save failed.');
         }
       },
       error: function(xhr){ alert('Save failed: ' + xhr.responseText.substring(0,200)); },
-      complete: function(){ $('.save_relation_new').attr('disabled', false); }
+      complete: function(){ $('.save_relation_new').attr('disabled', false).text(origText || 'SAVE & ADD'); }
     });
   });
 
@@ -646,7 +647,7 @@
       },
       success: function(data){
         if(data.error == 'No') {
-          reloadRelationsPanel();
+          reloadRelationsPanel('Relation updated — chart updated');
           refreshCriticalPath(function(){ loadGantt(); });
         } else {
           alert(data.errortext || 'Update failed.');
@@ -664,7 +665,7 @@
       data: { relationId: id },
       success: function(data){
         if(data.error == 'No') {
-          reloadRelationsPanel();
+          reloadRelationsPanel('Relation deleted — chart updated');
           refreshCriticalPath(function(){ loadGantt(); });
         } else {
           alert(data.errortext || 'Delete failed.');
@@ -673,7 +674,7 @@
     });
   });
 
-  function reloadRelationsPanel() {
+  function reloadRelationsPanel(notice) {
     $.ajax({
       type: 'POST', url: '../projectsmain/activityrelation', dataType: 'json',
       data: { projectid: projectId },
@@ -686,6 +687,11 @@
           );
           $('#schedule_item_first-new').val(data.selecteditemone || '');
           $('#schedule_item_second-new').val(data.selecteditemtwo || '');
+          if (notice) {
+            var $n = $('<div style="background:#d4edda;color:#155724;border:1px solid #c3e6cb;border-radius:4px;padding:7px 14px;margin-bottom:10px;font-size:13px;font-weight:600;">&#10003; ' + notice + '</div>');
+            $('#relations-content').prepend($n);
+            setTimeout(function(){ $n.fadeOut(400, function(){ $n.remove(); }); }, 3000);
+          }
         }
       }
     });
