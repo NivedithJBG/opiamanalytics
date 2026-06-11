@@ -6,7 +6,7 @@ $user=User::find()->where(['id'=>Yii::$app->user->id])->one();
 ?>
 
 <div class="panel panel-default Schedule-tab tab-wrapper acco-five tab">
-	<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/_schedulelist.js" type="text/javascript"></script>
+	<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/_schedulelist.js?v=<?php echo time(); ?>" type="text/javascript"></script>
   	<!--<input type="radio" id="rd5" class="view_wbsSchedule" name="rd">-->
 	
 	<div class="panel-heading" >
