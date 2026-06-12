@@ -1384,7 +1384,7 @@ $(document).on('click', '.maptask-select', function(){
                 $b.css({ background: '#27ae60', 'border-color': '#27ae60' })
                   .attr('title', 'Mapped task: ' + data.task_name);
             } else {
-                $b.css({ background: '', 'border-color': '' }).attr('title', 'Map to Task');
+                $b.css({ background: '#e8a43d', 'border-color': '#e8a43d' }).attr('title', 'Map to Task');
             }
             $('#maptask-overlay, #maptask-popup').hide();
         },
