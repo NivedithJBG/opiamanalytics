@@ -1790,7 +1790,7 @@
         </div>
     </div>
     <div style="padding:10px 20px 16px;text-align:right;border-top:1px solid #eee;">
-        <button type="button" id="grn-cancel" style="background:#f0f4f8;border:1px solid #c5ccd4;border-radius:20px;padding:5px 18px;font-size:12px;color:#465365;cursor:pointer;margin-right:8px;">Cancel</button>
+        <button type="button" id="grn-cancel" style="background:#c0392b;border:1px solid #a93226;border-radius:20px;padding:5px 18px;font-size:12px;color:#fff;cursor:pointer;margin-right:8px;">Cancel</button>
         <button type="button" id="grn-send-btn" style="background:#072c47;color:#fff;border:none;border-radius:20px;padding:5px 22px;font-size:12px;cursor:pointer;">Send</button>
     </div>
 </div>
