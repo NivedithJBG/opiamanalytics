@@ -104,6 +104,10 @@
     return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
   }
 
+  function spanDays(s, e) {
+    return (s && e) ? Math.round((new Date(e) - new Date(s)) / 86400000) + 1 : null;
+  }
+
   function formatGanttDate(isoStr) {
     if (!isoStr) return '';
     var p = isoStr.split('-');
@@ -206,8 +210,7 @@
     var iowActDates  = {};
     var iowBDates    = {};
     var iowHashedIds = {};
-    // Project row: accumulated sum of IOW durations + min/max dates
-    var _projBDurSum = 0, _projADurSum = 0;
+    // Project row: min/max dates across all WBS items; duration = span of those dates
     var _projBStartMin = null, _projBEndMax = null;
     var _projAStartMin = null, _projAEndMax = null;
 
@@ -267,36 +270,32 @@
           _groupBDur  [_wbsHid] = _wbsBDur;
           _groupBStart[_wbsHid] = safeDate(item.start_date);
           _groupBEnd  [_wbsHid] = safeDate(item.end_date);
-          // Accumulate into project totals (sum of durations; min/max of dates)
+          // Accumulate min/max dates into project totals
           if (_wbsBDur !== null) {
-            _projBDurSum += _wbsBDur;
             var _pbs = safeDate(item.start_date), _pbe = safeDate(item.end_date);
             if (_pbs && (!_projBStartMin || _pbs < _projBStartMin)) _projBStartMin = _pbs;
             if (_pbe && (!_projBEndMax   || _pbe > _projBEndMax  )) _projBEndMax   = _pbe;
           }
           var _wbsADurEff = _wbsADur !== null ? _wbsADur : _wbsBDur;
           if (_wbsADurEff !== null) {
-            _projADurSum += _wbsADurEff;
             var _pas = _wbsAStart || safeDate(item.start_date);
             var _pae = _wbsAEnd   || safeDate(item.end_date);
             if (_pas && (!_projAStartMin || _pas < _projAStartMin)) _projAStartMin = _pas;
             if (_pae && (!_projAEndMax   || _pae > _projAEndMax  )) _projAEndMax   = _pae;
           }
           g.AddTaskItem(_wbsTi);
-          // Accumulate IOW group totals: sum of child IOW durations + min/max dates
+          // Accumulate IOW group min/max dates; group duration = span of these
           if (item.iowGroupid) {
             var _iod = iowActDates[item.iowGroupid];
-            if (!_iod) { _iod = { minStart: null, maxEnd: null, durSum: 0 }; iowActDates[item.iowGroupid] = _iod; }
+            if (!_iod) { _iod = { minStart: null, maxEnd: null }; iowActDates[item.iowGroupid] = _iod; }
             if (item.a_min_start && (!_iod.minStart || item.a_min_start < _iod.minStart)) _iod.minStart = item.a_min_start;
             if (item.a_max_end   && (!_iod.maxEnd   || item.a_max_end   > _iod.maxEnd  )) _iod.maxEnd   = item.a_max_end;
-            if (_wbsADurEff !== null) _iod.durSum += _wbsADurEff;
 
             var _ibd = iowBDates[item.iowGroupid];
-            if (!_ibd) { _ibd = { minStart: null, maxEnd: null, durSum: 0 }; iowBDates[item.iowGroupid] = _ibd; }
+            if (!_ibd) { _ibd = { minStart: null, maxEnd: null }; iowBDates[item.iowGroupid] = _ibd; }
             var _bS = safeDate(item.start_date), _bE = safeDate(item.end_date);
             if (_bS && (!_ibd.minStart || _bS < _ibd.minStart)) _ibd.minStart = _bS;
             if (_bE && (!_ibd.maxEnd   || _bE > _ibd.maxEnd  )) _ibd.maxEnd   = _bE;
-            if (_wbsBDur !== null) _ibd.durSum += _wbsBDur;
           }
 
           // Load activities for this WBS item synchronously
@@ -356,33 +355,35 @@
       }
     });
 
-    // Store project row totals (sum of IOW durations; min/max of IOW dates)
-    if (_projBDurSum > 0) {
-      _groupBDur  [_projHid] = _projBDurSum;
+    // Store project row totals (duration = span of earliest start to latest end)
+    if (_projBStartMin && _projBEndMax) {
+      _groupBDur  [_projHid] = spanDays(_projBStartMin, _projBEndMax);
       _groupBStart[_projHid] = _projBStartMin;
       _groupBEnd  [_projHid] = _projBEndMax;
     }
-    if (_projADurSum > 0) {
-      _groupActDur  [_projHid] = _projADurSum;
+    if (_projAStartMin && _projAEndMax) {
+      _groupActDur  [_projHid] = spanDays(_projAStartMin, _projAEndMax);
       _groupActStart[_projHid] = _projAStartMin;
       _groupActEnd  [_projHid] = _projAEndMax;
     }
 
-    // IOW group: sum of child IOW durations; min/max dates
+    // IOW group: duration = span of earliest child start to latest child end
     for (var _iowId in iowHashedIds) {
       var _iowHid = iowHashedIds[_iowId];
-      var _iod = iowActDates[_iowId] || { minStart: null, maxEnd: null, durSum: 0 };
-      var _ibd = iowBDates[_iowId]   || { minStart: null, maxEnd: null, durSum: 0 };
+      var _iod = iowActDates[_iowId] || { minStart: null, maxEnd: null };
+      var _ibd = iowBDates[_iowId]   || { minStart: null, maxEnd: null };
 
-      // A. columns: sum of child IOW A. durations; min/max of A. dates
+      // A. columns: span of A. dates, falling back to B. dates
       if (_iod.minStart || _ibd.minStart) {
-        _groupActDur  [_iowHid] = _iod.durSum > 0 ? _iod.durSum : (_ibd.durSum > 0 ? _ibd.durSum : null);
-        _groupActStart[_iowHid] = _iod.minStart || _ibd.minStart;
-        _groupActEnd  [_iowHid] = _iod.maxEnd   || _ibd.maxEnd;
+        var _iaS = _iod.minStart || _ibd.minStart;
+        var _iaE = _iod.maxEnd   || _ibd.maxEnd;
+        _groupActDur  [_iowHid] = spanDays(_iaS, _iaE);
+        _groupActStart[_iowHid] = _iaS;
+        _groupActEnd  [_iowHid] = _iaE;
       }
-      // B. columns: sum of child IOW B. durations; min/max of B. dates
+      // B. columns: span of B. dates
       if (_ibd.minStart) {
-        _groupBDur  [_iowHid] = _ibd.durSum > 0 ? _ibd.durSum : null;
+        _groupBDur  [_iowHid] = spanDays(_ibd.minStart, _ibd.maxEnd);
         _groupBStart[_iowHid] = _ibd.minStart;
         _groupBEnd  [_iowHid] = _ibd.maxEnd;
       }

@@ -254,13 +254,13 @@ class ProjectsmainController extends Controller
         unset($a);
 
         // Project-level duration bar — matches Gantt B./A. Duration columns exactly:
-        // B. Duration = SUM of per-WBS-item spans (using actual_start_date/actual_end_date)
-        // A. Duration = SUM of per-WBS-item actual spans (from progress report dates / projected end)
+        // B. Duration = span from earliest schedule start to latest schedule end across all WBS items
+        // A. Duration = span from earliest actual start to latest actual/projected end
         $dur_row = $connection->createCommand("
             SELECT
-                SUM(DATEDIFF(wbs.b_end, wbs.b_start) + 1) AS budgeted,
+                DATEDIFF(MAX(wbs.b_end), MIN(wbs.b_start)) + 1 AS budgeted,
                 CASE WHEN MIN(wbs.a_start) IS NOT NULL AND MAX(wbs.a_end) IS NOT NULL
-                     THEN SUM(DATEDIFF(wbs.a_end, wbs.a_start) + 1)
+                     THEN DATEDIFF(MAX(wbs.a_end), MIN(wbs.a_start)) + 1
                      ELSE NULL END AS actual,
                 MAX(wbs.b_end) AS b_end_date,
                 MAX(wbs.a_end) AS a_end_date
