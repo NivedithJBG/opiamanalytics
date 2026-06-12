@@ -609,7 +609,7 @@
           alert(data.errortext || 'Save failed.');
         }
       },
-      error: function(xhr){ alert('Save failed: ' + xhr.responseText.substring(0,200)); },
+      error: function(xhr){ alert('Save failed: ' + (xhr.responseText || '').substring(0,200)); },
       complete: function(){ $('.save_relation_new').attr('disabled', false).text(origText || 'SAVE & ADD'); }
     });
   });

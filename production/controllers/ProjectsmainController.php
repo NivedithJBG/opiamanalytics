@@ -4889,7 +4889,7 @@ class ProjectsmainController extends Controller
                                     <label>&nbsp;</label>
                                     <div class="form-group">
                                         <label>Lag/ Lead</label>
-                                        <input type="text" class="form-control lag" id="lag" name="lag" value="" placeholder="Lag/ Lead" style="display:none;">
+                                        <input type="text" class="form-control lag" id="lag" name="lag" value="" placeholder="Lag/ Lead">
                                     </div>
                                     <div class="text-center">
                                         <label>&nbsp;</label>

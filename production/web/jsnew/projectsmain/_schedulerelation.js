@@ -115,6 +115,7 @@ $(function(){
     });
 
     $(document).on('click','.saveeditrelation',function(){
+        if ($(this).closest('#relations-panel').length) return; // gantt panel handled by newganttview.php
         var idval=$(this).attr('data-v');
         var firstItem = $('#editrelationprecedentitem'+idval).val();
         var firstActivity = $('#editrelationprecedentactivity'+idval).val();
@@ -293,19 +294,12 @@ $(function(){
         $('#schedule_activity_second-new').val(scheduleactivitysecond);
     });
     $(document).on('click','.relation_type',function(){
-        var lag = $(this).val();
-        $('#relation_type-new').val(lag );
-        if(lag==1 ||lag== 2 ||lag== 3){
-        $('#lag').show();
-        }
-        else{
-        $('#lag').val(''); 
-        $('#lag').hide(); 
-        }
- 
+        $('#relation_type-new').val($(this).val());
+        $('#lag').show(); // field is rendered visible; never hide it
     });
 
     $(document).on('click','.save_relation_new',function(){
+        if ($(this).closest('#relations-panel').length) return; // gantt panel handled by newganttview.php
         // var workid=$(this).val();
         var firstItem = $('#schedule_item_first-new').val();
         var firstActivity = $('#schedule_activity_first-new').val();
