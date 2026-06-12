@@ -15,7 +15,7 @@ $(document).ready(function() {
     var actPanelUrl   = '<?= \yii\helpers\Url::to(["activity1/addiowactivities"]) ?>';
     var actAddUrl     = '<?= \yii\helpers\Url::to(["activity1/addiowactivity"]) ?>';
     var actListUrl    = '<?= \yii\helpers\Url::to(["activity1/listactivities"]) ?>';
-    var placeholderHtml = '<div style="text-align:center;padding:50px 20px;color:#c0c0c0;"><span style="font-size:32px;display:block;margin-bottom:8px;">&#9776;</span>Select a type from the left to list activities</div>';
+    var placeholderHtml = '<div style="text-align:center;padding:50px 20px;color:#c0c0c0;"><span style="font-size:32px;display:block;margin-bottom:8px;">&#9776;</span>All activities are listed &mdash; use the left panel to filter by Project Type and Activity Type</div>';
 
     function refreshTopList() {
         $.ajax({
@@ -34,8 +34,9 @@ $(document).ready(function() {
     // Replace the _activity.js addiowactivitydrop handler with one using absolute URLs
     $(document).off('click', '.addiowactivitydrop').on('click', '.addiowactivitydrop', function() {
         var actid        = $(this).attr('data-v');
-        var activitytypeid = $('#wbsactivitytypelist').val();
-        if (!activitytypeid) { alert('Please select an Activity Type first.'); return; }
+        // Each library activity carries its own type; fall back to the filter selection
+        var activitytypeid = $('#iowactivitytypeid' + actid).val() || $('#wbsactivitytypelist').val();
+        if (!activitytypeid || activitytypeid === '0') { alert('This activity has no Activity Type set in the library.'); return; }
         var $btn = $(this);
         $btn.prop('disabled', true);
         $.ajax({
@@ -72,7 +73,6 @@ $(document).ready(function() {
     function loadActPanel() {
         var typeId   = $('#wbsactivitytypelist').val();
         var workType = $('#wbsworktypelist').val();
-        if (!typeId && !workType) return;
         var $r = $('#new-act-results');
         $r.html('<div style="padding:20px;text-align:center;color:#aaa;">Loading&#8230;</div>');
         $.ajax({
@@ -89,22 +89,32 @@ $(document).ready(function() {
         });
     }
 
+    // Filter buttons toggle: click again to deselect. No selection = all activities.
     $(document).on('click', '.new-act-type-btn', function() {
+        var wasActive = $(this).hasClass('act-filter-active');
         $('.new-act-type-btn').removeClass('act-filter-active');
-        $(this).addClass('act-filter-active');
-        $('#wbsactivitytypelist').val($(this).data('typeid'));
+        $('#wbsactivitytypelist').val('');
+        if (!wasActive) {
+            $(this).addClass('act-filter-active');
+            $('#wbsactivitytypelist').val($(this).data('typeid'));
+        }
         loadActPanel();
     });
 
     $(document).on('click', '.new-proj-type-btn', function() {
+        var wasActive = $(this).hasClass('act-filter-active');
         $('.new-proj-type-btn').removeClass('act-filter-active');
-        $(this).addClass('act-filter-active');
-        $('#wbsworktypelist').val($(this).data('workid'));
+        $('#wbsworktypelist').val('');
+        if (!wasActive) {
+            $(this).addClass('act-filter-active');
+            $('#wbsworktypelist').val($(this).data('workid'));
+        }
         loadActPanel();
     });
 
     $(document).on('click', '.add-project-activities-btn', function() {
         $('#new-act-panel').slideDown(200);
+        loadActPanel();
     });
 
     $(document).on('click', '.close-activity-list-btn', function() {
@@ -210,7 +220,7 @@ $(document).ready(function() {
 														<div id="new-act-results">
 															<div style="text-align:center;padding:50px 20px;color:#c0c0c0;">
 																<span style="font-size:32px;display:block;margin-bottom:8px;">&#9776;</span>
-																Select a type from the left panel to list activities
+																All activities are listed &mdash; use the left panel to filter by Project Type and Activity Type
 															</div>
 														</div>
 													</div><!-- /results -->

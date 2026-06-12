@@ -6,7 +6,7 @@ use app\models\Resources;
 ?>
 
 <div class="panel panel-default activities-masters-tab tab-wrapper tab acco-three allocate-resource-tabss" id="estactivity">
-    <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/masters/estactivity.js" type="text/javascript"></script>
+    <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/masters/estactivity.js?v=<?php echo time(); ?>" type="text/javascript"></script>
     <script type="text/javascript">
         $(document).ready(function() {
             var max_fields      = 11; //maximum input boxes allowed
@@ -73,9 +73,9 @@ use app\models\Resources;
                     <div class="search-and-content-wrpr">
                         <div class="search-and-actions-wrpr row" id="AR-allocate-body-one-head">
 
-                    <div style="display: none;" class="col-md-3" id="searchestworktypediv" style="display: none;">
+                    <div class="col-md-3" id="searchestworktypediv">
                         <select id="searchestworktypelist" class="form-control" >
-                            <option value="0">Select Project Type</option>
+                            <option value="0">All Project Types</option>
                             <?php
                                 $typelist=EstimateWorkType::find()->orderBy(['estworktype_name'=>SORT_ASC])->all();
                            // $tabs = UserTabs::find()->where(['user_id' => $userid])->andWhere('function_id =11')->all();
@@ -93,7 +93,7 @@ use app\models\Resources;
                                 <input type="text" placeholder="Search" id="searchestactivityname" class="form-control" >
                                 <button id="estactivitysearch" class="btn btn-primary" type="button"><span class="icon-search5"></span></button>
                             </div>
-                            <div class="col-md-5 col-sm-5" id="space"></div>
+                            <div class="col-md-2 col-sm-2" id="space"></div>
                             <div class="content-action-wrpr col-md-2 col-sm-2" >
                                 <a href="#" class="btn btn-primary addForm" id="addestactivity" title="Add Activities"><span class="icon-add"></span> Add</a>
                                 <a href="#" class="btn btn-primary list-accountType" id="listestactivity"><span class="icon-th-list"></span> List</a>
@@ -106,26 +106,25 @@ use app\models\Resources;
                             <div class="add-form add-activity-form">
 
                                 <div class="row" id="estactivityaddrow">
-                                    <div class="row">
-                                        <div class="col-md-4"></div>
-                                        <div class="col-md-4" id="estworktypedivs" style="display:none; margin-top:21px;">
-                                            <select id="estworktypelistss1" data-id="1" class="form-control estworktypelistses" name="worktypeid">
-                                                <option value="0">Select Project Types</option>
-                                                <?php
-                                                $typelist=EstimateWorkType::find()->orderBy(['estworktype_name'=>SORT_ASC])->all();
-                                                foreach($typelist AS $list):
-                                                    echo "<option value='".$list->estworktype_id."'>".$list->estworktype_name."</option>";
-                                                endforeach;
-                                                ?>
-                                            </select>
-                                            <span style="color:red;"></span>
-                                        </div>
-                                        <div class="col-md-4"></div>
-                                    </div>
 
-                                    <!-- Activity Type + Name + Unit + Working Hours -->
+                                    <!-- Project Type + Activity Type + Name + Unit + Working Hours -->
                                     <div class="row" style="margin-top:10px;">
                                         <div class="col-md-1"></div>
+                                        <div class="col-md-2">
+                                            <div class="form-group">
+                                                <label>Project Type</label>
+                                                <select id="estworktypelistss1" data-id="1" class="form-control estworktypelistses" name="worktypeid">
+                                                    <option value="0">Select Project Type</option>
+                                                    <?php
+                                                    $typelist=EstimateWorkType::find()->orderBy(['estworktype_name'=>SORT_ASC])->all();
+                                                    foreach($typelist AS $list):
+                                                        echo "<option value='".$list->estworktype_id."'>".$list->estworktype_name."</option>";
+                                                    endforeach;
+                                                    ?>
+                                                </select>
+                                                <span style="color:red;"></span>
+                                            </div>
+                                        </div>
                                         <div class="col-md-2">
                                             <div class="form-group">
                                                 <label>Activity Type</label>
@@ -166,7 +165,7 @@ use app\models\Resources;
                                                 </select>
                                             </div>
                                         </div>
-                                        <div class="col-md-3"></div>
+                                        <div class="col-md-1"></div>
                                     </div>
 
                                     <!-- Tasks header -->

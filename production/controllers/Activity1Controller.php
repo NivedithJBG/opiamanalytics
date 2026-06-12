@@ -504,6 +504,7 @@ class Activity1Controller extends Controller
                                             <span id="iowactivitynamespan'.$data['activity_id'].'">'.$data['activity_name'].'</span>
                                             <input type="hidden" class="form-control" id="iowactivityname'.$data['activity_id'].'" value="'.$data['activity_name'].'">
                                             <input type="hidden" id="iowworktypeid'.$data['activity_id'].'" value="'.$data['work_type'].'">
+                                            <input type="hidden" id="iowactivitytypeid'.$data['activity_id'].'" value="'.$data['activity_type'].'">
                                             <span class="error"></span></div>
                                         <div class="col-md-2">
                                             <label>&nbsp;</label>

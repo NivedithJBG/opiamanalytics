@@ -21551,9 +21551,10 @@ public function actionActivitymusterprocess()
             }
         }
 
-        $sql = "SELECT ea.*, eat.activitytype_name
+        $sql = "SELECT ea.*, eat.activitytype_name, ewt.estworktype_name
                 FROM estimateactivities ea
                 LEFT JOIN estimateactivitytypes eat ON eat.activitytype_id = ea.activity_type
+                LEFT JOIN estimateworktypes ewt ON ewt.estworktype_id = ea.work_type
                 WHERE ea.activity_status = 0";
         if ($actTypeId > 0) {
             $sql .= " AND ea.activity_type = " . $actTypeId;
@@ -21573,6 +21574,7 @@ public function actionActivitymusterprocess()
             $html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
                   . '<thead><tr>'
                   . '<th style="background:#555;color:#fff;font-weight:bold;padding:8px 12px;border:1px solid #444;text-align:center;width:42px;">#</th>'
+                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:8px 12px;border:1px solid #444;">Project Type</th>'
                   . '<th style="background:#555;color:#fff;font-weight:bold;padding:8px 12px;border:1px solid #444;">Type</th>'
                   . '<th style="background:#555;color:#fff;font-weight:bold;padding:8px 12px;border:1px solid #444;">Activity</th>'
                   . '<th style="background:#555;color:#fff;font-weight:bold;padding:8px 12px;border:1px solid #444;text-align:center;width:70px;">Unit</th>'
@@ -21583,8 +21585,10 @@ public function actionActivitymusterprocess()
                 $safeName = htmlspecialchars($data['activity_name'], ENT_QUOTES);
                 $safeUnit = htmlspecialchars($data['activity_unit'], ENT_QUOTES);
                 $safeType = htmlspecialchars($data['activitytype_name'] ?? '—', ENT_QUOTES);
+                $safeWType = htmlspecialchars($data['estworktype_name'] ?? '—', ENT_QUOTES);
                 $html .= '<tr class="esttypesort" id="estactivityrow' . $data['activity_id'] . '" data-id="' . $data['activity_id'] . '" data-type="' . $data['activity_type'] . '">'
                        . '<td style="padding:8px 12px;border:1px solid #ddd;text-align:center;color:#999;">' . ($i + 1) . '</td>'
+                       . '<td style="padding:8px 12px;border:1px solid #ddd;font-size:12px;color:#555;">' . $safeWType . '</td>'
                        . '<td style="padding:8px 12px;border:1px solid #ddd;font-size:12px;color:#555;">' . $safeType . '</td>'
                        . '<td style="padding:8px 12px;border:1px solid #ddd;">' . $safeName
                        .     '<input type="hidden" value="' . $safeName . '" id="activity' . $data['activity_id'] . '">'
@@ -21637,6 +21641,7 @@ public function actionActivitymusterprocess()
         $workingHours = (int)($_POST['working_hours'] ?? 8);
         $connection->createCommand()->update('estimateactivities', [
             'activity_type' => (int)($_POST['activitytypeid'] ?? 0),
+            'work_type'     => (int)($_POST['worktypeid'] ?? 0),
             'activity_name' => $_POST['estactivityname'][0],
             'activity_unit' => $_POST['estactivityunit'][0],
             'working_hours' => $workingHours,

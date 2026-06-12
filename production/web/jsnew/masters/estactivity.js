@@ -36,21 +36,6 @@ $(function() {
                     $('.estactivitytypename').html(data.estactypename);
                     $('#estactivitytable').show();
                     $('.content-action-wrpr').show();
-                    
-                    if(data.displaywt=='show'){
-                      $('#searchestworktypediv').show();
-                      $('#space').removeClass('col-md-5 col-sm-5');
-                      $('#space').addClass('col-md-2 col-sm-2');
-                      $('#estworktypedivs').show();
-                      $('#estworktypedisplay').val(1);
-                    }
-                    else{
-                        $('#searchestworktypediv').hide();
-                        $('#space').removeClass('col-md-2 col-sm-2');
-                        $('#space').addClass('col-md-5 col-sm-5');
-                        $('#estworktypedivs').hide();
-                        $('#estworktypedisplay').val(0);
-                    }
                 }
 
                 if (data.error == 'No') {
@@ -123,70 +108,7 @@ $(function() {
                 error=1;
             }
         });
-        if($('#estworktypedisplay').val()==1)
-        {
-            if($('#estworktypelist').val()=='0')
-            {
-                $("#estworktypelist").next("span").html('Select Work Type').show('slow');
-                error=1;
-            }
-        }
-
-        
-
-        // if($('#estworktypelistses').val()=='0')
-        // { alert("sadsa"); 
-        //     if($('#estworktypelistses').val()=='0')
-        //     {
-        //         $("#estworktypelistss"+id).next("span").html('Select Project Type').show('slow');
-        //         error=1;
-        //     }
-        // }
-        // var el = $('.estworktypelistses');
-        // if(!$(el).is("select")) {
-        //     // the input field is not a select
-        // }else{
-
-            if(!$('#estworktypelistss1').is(':visible'))
-            {
-                
-
-            }else{ 
-
-        $('.estworktypelistses').each(function(){  
-            var ids = $('#estworktypelistss1').val();
-            if(ids==0)
-            { 
-                $("#estworktypelistss1").next("span").html('Select Project Type').show('slow');
-                error=1;
-            }
-        });
-
-      }
-
-
-        //  if($('#estworktypedisplayy').val()==1)
-        // {
-        //     if($('#estworktypelist').val()=='0')
-        //     {
-        //         $("#estworktypelist").next("span").html('Select Work Type').show('slow');
-        //         error=1;
-        //     }
-        // }
-        
-        // if($('#estactivityname').val()=='')
-        // {
-        //     $("#estactivityname").next("span").html('Enter Activity Name').show('slow');
-        //     error=1;
-        // }
-        // if($('#estactivitytypelist').val()=='none')
-        // {
-        //     $("#estactivitytypelist").next("span").html('Select Activity Type').show('slow');
-        //     error=1;
-        // }
-        //var name=$('#estactivityname').val();
-        //var activitytype=$('#searchestactivitytype').val();
-        //var worktype=$('#estworktypelist').val();
+        // Project Type is optional — activities without one list under all types
 
         if(error==0){
             var editingId = $('#editingActivityId').val();
@@ -375,6 +297,7 @@ $(document).on('click', '.editactivitybutton', function(){
         success: function(data){
             if(data.error == 'No'){
                 var act = data.activity;
+                $('#estworktypelistss1').val(act.work_type || 0);
                 $('#estactivitytypeid').val(act.activity_type);
                 $('#estactivityname1').val(act.activity_name);
                 $('#estactivityunit1').val(act.activity_unit);
