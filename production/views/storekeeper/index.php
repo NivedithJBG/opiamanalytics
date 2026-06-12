@@ -948,7 +948,8 @@
                     + '</tr></thead><tbody>';
                 $.each(data.items, function(i, item) {
                     var qty    = parseFloat(item.qty)  || 0;
-                    var rate   = parseFloat(item.rate) || 0;
+                    // Legacy GRNs saved without a rate fall back to the PO rate
+                    var rate   = parseFloat(item.rate) || parseFloat(item.po_rate) || 0;
                     var amount = (qty > 0 && rate > 0) ? (qty * rate).toFixed(2) : '—';
                     html += '<tr>'
                         + '<td style="text-align:center;">' + (i + 1) + '</td>'
@@ -1123,7 +1124,7 @@
                     + '<th>Item</th>'
                     + '<th style="text-align:center;">Unit</th>'
                     + '<th style="text-align:right;font-size:11px;">Ordered</th>'
-                    + '<th style="text-align:right;font-size:11px;background:#e8f0fb;">PO Rate</th>'
+                    + '<th style="text-align:right;font-size:11px;">PO Rate</th>'
                     + '<th style="text-align:right;font-size:11px;">Prev. Rcvd</th>'
                     + '<th style="text-align:right;font-size:11px;">Qty Received</th>'
                     + '<th style="text-align:right;font-size:11px;">Rate</th>'
@@ -1140,8 +1141,8 @@
                         + '<td>' + r.resource_name + '</td>'
                         + '<td style="text-align:center;">' + (r.unit || '') + '</td>'
                         + '<td style="text-align:right;font-size:12px;padding-right:6px;">' + ordered + '</td>'
-                        + '<td style="text-align:right;font-size:12px;padding-right:6px;background:#e8f0fb;color:#072c47;font-weight:600;">' + (poRate > 0 ? poRate.toFixed(2) : '—') + '</td>'
-                        + '<td style="text-align:right;font-size:12px;padding-right:6px;' + prevStyle + '">' + (prevRcvd || '—') + '</td>'
+                        + '<td style="text-align:right;font-size:12px;padding-right:6px;">' + (poRate > 0 ? poRate.toFixed(2) : '—') + '</td>'
+                        + '<td style="text-align:right;font-size:12px;padding-right:6px;' + prevStyle + '">' + prevRcvd + '</td>'
                         + '<td style="padding:2px 4px;">'
                         + '<input type="number" min="0" max="' + remaining + '" step="any" class="form-control input-sm grn-qty-input"'
                         + ' data-resource-id="' + r.resource_id + '"'
@@ -1163,6 +1164,8 @@
                 });
                 html += '</tbody></table>';
                 $('#grn-items-body').html(html);
+                // Initialize Amount with the prefilled PO rate (updates live as qty is typed)
+                $('#grn-items-body .grn-rate-input').trigger('input');
             }
         });
     });
