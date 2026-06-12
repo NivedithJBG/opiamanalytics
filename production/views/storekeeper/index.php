@@ -933,14 +933,13 @@
                 }
                 var html = '<table class="table table-bordered sk-table" style="margin-bottom:0;table-layout:fixed;">'
                     + '<colgroup>'
-                    + '<col style="width:28px;"><col><col style="width:46px;">'
-                    + '<col style="width:76px;"><col style="width:76px;"><col style="width:80px;">'
+                    + '<col style="width:36px;"><col>'
+                    + '<col style="width:110px;"><col style="width:100px;"><col style="width:110px;">'
                     + '</colgroup>'
                     + '<thead><tr>'
                     + '<th style="text-align:center;">#</th>'
                     + '<th>Item</th>'
-                    + '<th style="text-align:center;">Unit</th>'
-                    + '<th style="text-align:right;font-size:11px;">Qty Received</th>'
+                    + '<th style="text-align:right;font-size:11px;">Received Quantity</th>'
                     + '<th style="text-align:right;font-size:11px;">Rate</th>'
                     + '<th style="text-align:right;font-size:11px;">Amount</th>'
                     + '</tr></thead><tbody>';
@@ -952,7 +951,6 @@
                     html += '<tr>'
                         + '<td style="text-align:center;">' + (i + 1) + '</td>'
                         + '<td>' + (item.resource_name || '—') + '</td>'
-                        + '<td style="text-align:center;">' + (item.unit || '') + '</td>'
                         + '<td style="text-align:right;font-size:12px;padding-right:6px;font-weight:600;color:#072c47;">' + qty + '</td>'
                         + '<td style="text-align:right;font-size:12px;padding-right:6px;">' + (rate > 0 ? rate.toFixed(2) : '—') + '</td>'
                         + '<td style="text-align:right;font-size:12px;padding-right:6px;">' + amount + '</td>'
@@ -1080,35 +1078,24 @@
                 }
                 var html = '<table class="table table-bordered sk-table" style="margin-bottom:0;table-layout:fixed;">'
                     + '<colgroup>'
-                    + '<col style="width:28px;"><col><col style="width:46px;">'
-                    + '<col style="width:64px;"><col style="width:70px;"><col style="width:64px;"><col style="width:76px;">'
-                    + '<col style="width:76px;"><col style="width:76px;">'
+                    + '<col style="width:36px;"><col>'
+                    + '<col style="width:110px;"><col style="width:100px;"><col style="width:110px;">'
                     + '</colgroup>'
                     + '<thead><tr>'
                     + '<th style="text-align:center;">#</th>'
                     + '<th>Item</th>'
-                    + '<th style="text-align:center;">Unit</th>'
-                    + '<th style="text-align:right;font-size:11px;">Ordered</th>'
-                    + '<th style="text-align:right;font-size:11px;">PO Rate</th>'
-                    + '<th style="text-align:right;font-size:11px;">Prev. Rcvd</th>'
-                    + '<th style="text-align:right;font-size:11px;">Qty Received</th>'
+                    + '<th style="text-align:right;font-size:11px;">Received Quantity</th>'
                     + '<th style="text-align:right;font-size:11px;">Rate</th>'
                     + '<th style="text-align:right;font-size:11px;">Amount</th>'
                     + '</tr></thead><tbody>';
                 $.each(data.rows, function(i, r) {
                     var ordered   = parseFloat(r.ordered_qty) || 0;
-                    var prevRcvd  = parseFloat(r.total_received) || 0;
                     // One GRN per order, no balance carry-over: cap = this order's quantity
                     var remaining = ordered;
-                    var prevStyle = prevRcvd > 0 ? 'color:#c0392b;font-weight:600;' : 'color:#888;';
                     var poRate = parseFloat(r.po_rate) || 0;
                     html += '<tr>'
                         + '<td style="text-align:center;">' + (i + 1) + '</td>'
                         + '<td>' + r.resource_name + '</td>'
-                        + '<td style="text-align:center;">' + (r.unit || '') + '</td>'
-                        + '<td style="text-align:right;font-size:12px;padding-right:6px;">' + ordered + '</td>'
-                        + '<td style="text-align:right;font-size:12px;padding-right:6px;">' + (poRate > 0 ? poRate.toFixed(2) : '—') + '</td>'
-                        + '<td style="text-align:right;font-size:12px;padding-right:6px;' + prevStyle + '">' + prevRcvd + '</td>'
                         + '<td style="padding:2px 4px;">'
                         + '<input type="number" min="0" max="' + remaining + '" step="any" class="form-control input-sm grn-qty-input"'
                         + ' data-resource-id="' + r.resource_id + '"'
