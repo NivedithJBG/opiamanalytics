@@ -6157,7 +6157,7 @@ class ProjectsmainController extends Controller
                                             <input type="hidden" name="activityid[]" value='.$wbsactivity['activity_Id'].'>
                                             <input type="hidden" name="processid[]" value='.$wbsactivity['activitytype_id'].'>
                                             <input type="hidden" value='. $specrate . ' id='.str_replace(' ','',$processname)."rate" . $wbsactivity['id'] .' data-id=' . $wbsactivity['id'] . ' name="rate[]">
-                                            <td></td>
+                                            <td>'.$sno.'.'.($key + 1).'</td>
                                             <td><span id="Estimateiowprocess">'.$processname.'</span></td>
                                             <td><span id="Estimateiowactivityname'.$wbsactivity['id'].'">'.$activityname.'</span>
                                         <input class="form-control editEstimateiowactivityname" style="display:none;" type="text" id="editEstimateiowactivityname"'.$wbsactivity['id'].'" value="'.$activityname.'">
