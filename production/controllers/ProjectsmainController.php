@@ -2775,7 +2775,7 @@ class ProjectsmainController extends Controller
                         <td><input type="hidden" name="tasknewid[]" value="'.$task['Id'].'">
                             <input type="text" class="form-control taskname_edit" name="taskname[]" value="'.$task['task'].'" '.$disabledForm.'></td>
                         <td><input type="text" class="form-control" value="'.htmlspecialchars($task['task_unit']).'" readonly></td>
-                        <td><input type="number" step="0.001" class="form-control task-productivity-val" name="task_productivity_val[]" value="'.(!empty($sche_tasks) && $sche_tasks['task_productivity'] > 0 ? number_format((float)$sche_tasks['task_productivity'], 3) : number_format((float)$task['productivity'], 3)).'" '.$disabledForm.'></td>
+                        <td><input type="number" step="0.001" class="form-control task-productivity-val" name="task_productivity_val[]" value="'.(!empty($sche_tasks) && $sche_tasks['task_productivity'] > 0 ? number_format((float)$sche_tasks['task_productivity'], 3, '.', '') : number_format((float)$task['productivity'], 3, '.', '')).'" '.$disabledForm.'></td>
                         <td><input type="number" step="0.001" class="form-control" name="task_qty[]" value="'.(!empty($sche_tasks) && $sche_tasks['task_qty'] > 0 ? $sche_tasks['task_qty'] : '').'"></td>
                         <td><input type="number" step="0.001" min="0.001" class="form-control task-resource-units-val" name="task_resource_units[]" value="'.$savedResUnits.'"></td>
                         <td><input type="number" class="form-control taskduration_edit" name="taskduration[]" value="'.(!empty($sche_tasks) ? $sche_tasks['Budgeted_Duration'] : '').'" readonly style="background-color:#e9ecef;"></td>
