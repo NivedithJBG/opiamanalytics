@@ -366,15 +366,10 @@ class StorekeeperController extends Controller
                         WHERE por2.order_id = po.order_id AND por2.delete_status = 0
                         ORDER BY por2.order_res_id ASC LIMIT 1) AS resource_type_name,
                        (SELECT CASE WHEN EXISTS (
-                            SELECT 1 FROM purchase_order_resources por3
-                            WHERE por3.order_id = po.order_id AND por3.delete_status = 0
-                              AND COALESCE((
-                                  SELECT SUM(g.GRN_Quantity) FROM goods_received_note g
-                                  WHERE g.GRN_Purchase_Order = po.order_id
-                                    AND g.GRN_Item = por3.resource_id
-                                    AND g.GRN_Project = po.project_id
-                              ), 0) < por3.qnty
-                        ) THEN 0 ELSE 1 END) AS grn_fully_received
+                            SELECT 1 FROM goods_received_note g
+                            WHERE g.GRN_Purchase_Order = po.order_id
+                              AND g.GRN_Project = po.project_id
+                        ) THEN 1 ELSE 0 END) AS grn_fully_received
                 FROM purchase_orders po
                 JOIN vendors v ON v.Vendor_Id = po.vendor_id
                 WHERE po.project_id = :pid
@@ -747,8 +742,7 @@ class StorekeeperController extends Controller
                     por.qnty AS ordered_qty, por.rate AS po_rate,
                     COALESCE((
                         SELECT SUM(g2.GRN_Quantity) FROM goods_received_note g2
-                        WHERE g2.GRN_Purchase_Order = por.order_id
-                          AND g2.GRN_Item = por.resource_id
+                        WHERE g2.GRN_Item = por.resource_id
                           AND g2.GRN_Project = po.project_id
                     ), 0) AS total_received,
                     g.GRN_Quantity AS grn_qty, g.GRN_Rate AS grn_rate, g.grn_number
@@ -784,6 +778,17 @@ class StorekeeperController extends Controller
         $items      = json_decode(isset($_POST['items']) ? $_POST['items'] : '[]', true);
         $remarks    = trim($_POST['remarks'] ?? '');
         $grn_number = trim($_POST['grn_number'] ?? '');
+
+        // One GRN per order: any receipt (even partial) closes the order;
+        // further quantities must come through a new purchase order.
+        $grnExists = (int)$db->createCommand(
+            'SELECT COUNT(*) FROM goods_received_note WHERE GRN_Purchase_Order = :oid AND GRN_Project = :pid',
+            [':oid' => $order_id, ':pid' => $projectid]
+        )->queryScalar();
+        if ($grnExists) {
+            return json_encode(['error' => 'Yes',
+                'errortext' => 'A GRN has already been issued against this order. Receive further quantities via a new purchase order.']);
+        }
 
         if (!$order_id || empty($items)) {
             return json_encode(['error' => 'Yes', 'errortext' => 'Invalid data.']);
@@ -933,39 +938,17 @@ class StorekeeperController extends Controller
         ];
     }
 
+    // DEACTIVATED: an issued GRN is final — it cannot be cancelled or recovered.
+    // Receipt against an order is one-time; shortfalls require a new purchase order.
     public function actionCancelgrn()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $grn_number = trim($_POST['grn_number'] ?? '');
-        if (!$grn_number) return ['error' => 'Yes', 'errortext' => 'Invalid GRN number.'];
-
-        $uid      = Yii::$app->user->id;
-        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
-        if (!$projuser) return ['error' => 'Yes', 'errortext' => 'No project selected.'];
-
-        Yii::$app->db->createCommand(
-            'UPDATE goods_received_note SET delete_status = 1 WHERE grn_number = :num AND GRN_Project = :pid',
-            [':num' => $grn_number, ':pid' => $projuser->projectid]
-        )->execute();
-
-        return ['error' => 'No'];
+        return ['error' => 'Yes', 'errortext' => 'An issued GRN cannot be cancelled.'];
     }
 
     public function actionRecovergrn()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $grn_number = trim($_POST['grn_number'] ?? '');
-        if (!$grn_number) return ['error' => 'Yes', 'errortext' => 'Invalid GRN number.'];
-
-        $uid      = Yii::$app->user->id;
-        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
-        if (!$projuser) return ['error' => 'Yes', 'errortext' => 'No project selected.'];
-
-        Yii::$app->db->createCommand(
-            'UPDATE goods_received_note SET delete_status = 0 WHERE grn_number = :num AND GRN_Project = :pid',
-            [':num' => $grn_number, ':pid' => $projuser->projectid]
-        )->execute();
-
-        return ['error' => 'No'];
+        return ['error' => 'Yes', 'errortext' => 'An issued GRN cannot be cancelled or recovered.'];
     }
 }

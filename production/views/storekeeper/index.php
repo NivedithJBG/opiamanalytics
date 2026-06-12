@@ -397,7 +397,7 @@
                 : '')
                 + (cancelled || r.grn_fully_received == 1
                     ? '<button disabled style="' + btnStyle + 'background:#e0e0e0;color:#aaa;cursor:not-allowed;">'
-                      + (r.grn_fully_received == 1 ? 'Fully Received' : 'Goods Received Note')
+                      + (r.grn_fully_received == 1 ? 'GRN Issued' : 'Goods Received Note')
                       + '</button>'
                     : '<button type="button" class="sk-grn-btn"'
                       + ' data-order-id="' + r.order_id + '"'
@@ -873,17 +873,15 @@
         $.each(rows, function(i, r) {
             var cancelled  = (r.delete_status == 1 || r.delete_status === '1');
             var rowStyle   = cancelled ? 'background:#f5f5f5;color:#bbb;' : '';
+            // Issued GRNs cannot be cancelled — receipt is final; shortfalls need a new PO
             var viewBtn    = '<button type="button" class="sk-grn-view-btn" data-grn-number="' + r.grn_number + '" style="' + btnStyle + 'background:#072c47;color:#fff;">View GRN</button>';
-            var actionBtn  = cancelled
-                ? '<button type="button" class="sk-grn-recover-btn" data-grn-number="' + r.grn_number + '" style="' + btnStyle + 'background:#27ae60;color:#fff;">Recover</button>'
-                : '<button type="button" class="sk-grn-cancel-btn"  data-grn-number="' + r.grn_number + '" style="' + btnStyle + 'background:#c0392b;color:#fff;">Cancel</button>';
             html += '<tr class="' + ((i + 1) % 2 === 0 && !cancelled ? 'procu-even' : '') + '" style="' + rowStyle + '">'
                 + '<td>' + (i + 1) + '</td>'
                 + '<td style="font-weight:600;color:' + (cancelled ? '#bbb' : '#072c47') + ';">' + r.grn_number + '</td>'
                 + '<td>' + (r.GRN_Date || '—') + '</td>'
                 + '<td>' + (r.ordernumber || '—') + '</td>'
                 + '<td>' + (r.vendor_name || '—') + '</td>'
-                + '<td style="padding:3px 8px;text-align:center;">' + viewBtn + actionBtn + '</td>'
+                + '<td style="padding:3px 8px;text-align:center;">' + viewBtn + '</td>'
                 + '</tr>';
         });
         html += '</tbody></table>';
@@ -965,39 +963,6 @@
             },
             error: function() {
                 $('#grn-items-body').html('<p style="color:#c0392b;font-size:12px;">Failed to load GRN.</p>');
-            }
-        });
-    });
-
-    $(document).on('click', '.sk-grn-cancel-btn, .sk-grn-recover-btn', function(){
-        var $btn         = $(this);
-        var isCancelling = $btn.hasClass('sk-grn-cancel-btn');
-        var grnNum       = $btn.data('grn-number');
-        var url          = isCancelling ? '../storekeeper/cancelgrn' : '../storekeeper/recovergrn';
-        $btn.prop('disabled', true).text(isCancelling ? 'Cancelling...' : 'Recovering...');
-        $.ajax({
-            type: 'POST', url: url,
-            data: { grn_number: grnNum }, dataType: 'json',
-            success: function(data) {
-                if (data.error !== 'No') {
-                    $btn.prop('disabled', false).text(isCancelling ? 'Cancel' : 'Recover');
-                    alert(data.errortext || 'Error.');
-                    return;
-                }
-                var $row = $btn.closest('tr');
-                if (isCancelling) {
-                    $row.css({ background: '#f5f5f5', color: '#bbb' });
-                    $btn.removeClass('sk-grn-cancel-btn').addClass('sk-grn-recover-btn')
-                        .css('background', '#27ae60').text('Recover').prop('disabled', false);
-                } else {
-                    $row.css({ background: '', color: '' });
-                    $btn.removeClass('sk-grn-recover-btn').addClass('sk-grn-cancel-btn')
-                        .css('background', '#c0392b').text('Cancel').prop('disabled', false);
-                }
-            },
-            error: function() {
-                $btn.prop('disabled', false).text(isCancelling ? 'Cancel' : 'Recover');
-                alert('Failed. Please try again.');
             }
         });
     });
@@ -1133,7 +1098,8 @@
                 $.each(data.rows, function(i, r) {
                     var ordered   = parseFloat(r.ordered_qty) || 0;
                     var prevRcvd  = parseFloat(r.total_received) || 0;
-                    var remaining = Math.max(0, ordered - prevRcvd);
+                    // One GRN per order, no balance carry-over: cap = this order's quantity
+                    var remaining = ordered;
                     var prevStyle = prevRcvd > 0 ? 'color:#c0392b;font-weight:600;' : 'color:#888;';
                     var poRate = parseFloat(r.po_rate) || 0;
                     html += '<tr>'
