@@ -1301,11 +1301,95 @@ $(document).on('click', '.alloc-add-resource', function () {
 });
 
 $(document).on('keyup','.quantity',function(){
- 
+
     var act_qqty = $(this).val();
     var act_id = $(this).data('id');
     $('.actid'+act_id).data('qty').val(act_qqty);
 
+});
+
+// ── Resource → Task mapping popup (optional, feeds cost-dashboard metrics) ──
+function ensureMapTaskPopup(){
+    if ($('#maptask-popup').length) return;
+    $('body').append(
+        '<div id="maptask-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:9998;"></div>'
+      + '<div id="maptask-popup" style="display:none;position:fixed;z-index:9999;width:420px;max-height:70vh;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:7px;box-shadow:0 6px 28px rgba(0,0,0,0.22);overflow:hidden;">'
+      +   '<div style="background:#072c47;color:#fff;padding:10px 16px;font-size:14px;font-weight:600;display:flex;justify-content:space-between;align-items:center;">'
+      +     '<span>Map Resource to Task</span>'
+      +     '<span id="maptask-close" style="cursor:pointer;font-size:16px;opacity:0.8;">&times;</span>'
+      +   '</div>'
+      +   '<div id="maptask-body" style="padding:14px 16px;overflow-y:auto;max-height:calc(70vh - 46px);"></div>'
+      + '</div>'
+    );
+}
+
+$(document).on('click', '.maptask-res', function(){
+    var prid   = $(this).attr('data-v');
+    var itemid = $(this).attr('data-activity');
+    ensureMapTaskPopup();
+    $('#maptask-popup').data('prid', prid);
+    $('#maptask-body').html('<div style="text-align:center;color:#888;padding:14px 0;">Loading&hellip;</div>');
+    $('#maptask-overlay, #maptask-popup').show();
+    $.ajax({
+        type: 'POST', url: '../estimateprojectmain/activitytasks', dataType: 'json',
+        data: { itemid: itemid, prid: prid },
+        success: function(data){
+            if (data.error !== 'No') {
+                $('#maptask-body').html('<div style="color:red;">Could not load tasks.</div>');
+                return;
+            }
+            var rowStyle = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 4px;border-bottom:1px solid #eee;';
+            var btn = function(tid, label, active){
+                return '<button type="button" class="maptask-select" data-task="' + tid + '" '
+                     + 'style="border:none;border-radius:14px;padding:4px 16px;font-size:12px;cursor:pointer;white-space:nowrap;'
+                     + (active ? 'background:#27ae60;' : 'background:#072c47;') + 'color:#fff;">' + label + '</button>';
+            };
+            var html = '';
+            if (!data.tasks.length) {
+                html = '<div style="color:#888;padding:8px 0;">No tasks defined for this activity.</div>';
+            } else {
+                var current = parseInt(data.current, 10) || 0;
+                html += '<div style="' + rowStyle + '">'
+                      + '<span style="font-size:13px;font-style:italic;color:#888;">No task (clear mapping)</span>'
+                      + btn(0, current === 0 ? 'Selected' : 'Clear', current === 0)
+                      + '</div>';
+                $.each(data.tasks, function(i, t){
+                    var active = (current === parseInt(t.id, 10));
+                    html += '<div style="' + rowStyle + '">'
+                          + '<span style="font-size:13px;color:#1a2540;">' + $('<div>').text(t.task_name).html() + '</span>'
+                          + btn(t.id, active ? 'Selected' : 'Select', active)
+                          + '</div>';
+                });
+            }
+            $('#maptask-body').html(html);
+        },
+        error: function(){ $('#maptask-body').html('<div style="color:red;">Could not load tasks.</div>'); }
+    });
+});
+
+$(document).on('click', '#maptask-close, #maptask-overlay', function(){
+    $('#maptask-overlay, #maptask-popup').hide();
+});
+
+$(document).on('click', '.maptask-select', function(){
+    var prid   = $('#maptask-popup').data('prid');
+    var taskId = $(this).attr('data-task');
+    $.ajax({
+        type: 'POST', url: '../estimateprojectmain/maprestask', dataType: 'json',
+        data: { PRID: prid, task_id: taskId },
+        success: function(data){
+            if (data.error !== 'No') { alert(data.errortext || 'Could not save mapping.'); return; }
+            var $b = $('#maptaskres' + prid);
+            if (parseInt(data.task_id, 10) > 0) {
+                $b.css({ background: '#27ae60', 'border-color': '#27ae60' })
+                  .attr('title', 'Mapped task: ' + data.task_name);
+            } else {
+                $b.css({ background: '', 'border-color': '' }).attr('title', 'Map to Task');
+            }
+            $('#maptask-overlay, #maptask-popup').hide();
+        },
+        error: function(){ alert('Could not save mapping.'); }
+    });
 });
 
 

@@ -237,6 +237,57 @@ class EstimateprojectmainController extends Controller
     }
 
 
+    // Tasks of an activity + the row's current mapping (resource→task popup)
+    public function actionActivitytasks()
+    {
+        $itemid = (int)($_POST['itemid'] ?? 0);
+        $prid   = (int)($_POST['prid']   ?? 0);
+        $db = Yii::$app->db;
+
+        $taskActId = (int)($db->createCommand(
+            "SELECT activity_Id FROM workgroup_activities_new WHERE id = :id", [':id' => $itemid]
+        )->queryScalar() ?: 0);
+
+        $tasks = $taskActId ? $db->createCommand(
+            "SELECT id, task_name FROM activity_tasks WHERE activity_id = :aid ORDER BY sort_order ASC",
+            [':aid' => $taskActId]
+        )->queryAll() : [];
+
+        $current = 0;
+        if ($prid && ($row = PricingEstimateResourcesNew::findOne($prid))) {
+            $current = (int)$row->task_ids;
+        }
+
+        return json_encode(['error' => 'No', 'tasks' => $tasks, 'current' => $current]);
+    }
+
+    // Save (or clear, task_id = 0) the optional resource→task mapping
+    public function actionMaprestask()
+    {
+        $prid   = (int)($_POST['PRID']    ?? 0);
+        $taskId = (int)($_POST['task_id'] ?? 0);
+
+        $row = PricingEstimateResourcesNew::findOne($prid);
+        if (!$row) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Allocation not found.']);
+        }
+
+        $taskName = '';
+        if ($taskId > 0) {
+            $taskName = (string)Yii::$app->db->createCommand(
+                "SELECT task_name FROM activity_tasks WHERE id = :id", [':id' => $taskId]
+            )->queryScalar();
+            if ($taskName === '') {
+                return json_encode(['error' => 'Yes', 'errortext' => 'Task not found.']);
+            }
+        }
+
+        $row->task_ids = $taskId > 0 ? (string)$taskId : '';
+        $row->save(false);
+
+        return json_encode(['error' => 'No', 'task_id' => $taskId, 'task_name' => $taskName]);
+    }
+
     public function actionActivityresources()
     {
     	$sno=0;
@@ -586,8 +637,21 @@ class EstimateprojectmainController extends Controller
             endforeach;
         else:*/
             $estimateresources=PricingEstimateResourcesNew::find()->where(['activity_id'=>$itemid])->andWhere(['est_activity_Id'=>$_POST['activityid']])->andWhere(['project_id'=>$_POST['Project_Id']])->andWhere(['process_Id'=>$_POST['Process']])->andWhere(['pricing_status'=>0])->orderBy(['pricing_resourceid'=>SORT_DESC])->all();
-            
-            
+
+            // Tasks of this activity, for the optional resource→task mapping
+            $taskActId = (int)(Yii::$app->db->createCommand(
+                "SELECT activity_Id FROM workgroup_activities_new WHERE id = :id", [':id' => (int)$itemid]
+            )->queryScalar() ?: 0);
+            $activityTaskNames = [];
+            if ($taskActId) {
+                foreach (Yii::$app->db->createCommand(
+                    "SELECT id, task_name FROM activity_tasks WHERE activity_id = :aid ORDER BY sort_order ASC",
+                    [':aid' => $taskActId]
+                )->queryAll() as $t) {
+                    $activityTaskNames[(int)$t['id']] = $t['task_name'];
+                }
+            }
+
             //echo count($estimateresources);exit;
             $addedones.='<div class="row reshds">
                             <div class="col-md-1">
@@ -790,10 +854,13 @@ class EstimateprojectmainController extends Controller
                                             </div>
                                             
                                             
-                                            <div class="col-md-2 icon-groups">
+                                            <div class="col-md-2 icon-groups">';
+                    $mapTaskId   = (int)$estimateresource['task_ids'];
+                    $mapTaskName = ($mapTaskId && isset($activityTaskNames[$mapTaskId])) ? $activityTaskNames[$mapTaskId] : '';
+                    $addedones.='   <a href="javascript:void(0);" class="btn btn-primary maptask-res icon-link" data-v="'.$estimateresource['pricing_resourceid'].'" data-activity="'.$estimateresource['activity_id'].'" id="maptaskres'.$estimateresource['pricing_resourceid'].'" title="'.($mapTaskName !== '' ? 'Mapped task: '.htmlspecialchars($mapTaskName, ENT_QUOTES) : 'Map to Task').'"'.($mapTaskName !== '' ? ' style="background:#27ae60;border-color:#27ae60;"' : '').'></a>
                                                 <a href="javascript:void(0);" class="btn btn-primary updateallocateresourceunit icon-edit" data-v="'.$estimateresource['pricing_resourceid'].'" id="updateallocateresourceunit'.$estimateresource['pricing_resourceid'].'" title="Edit Resource"></a>
                                                 <a href="javascript:void(0);" style="display:none;" class="btn btn-primary saveallocateresourceunit icon-save" data-v="'.$estimateresource['pricing_resourceid'].'" data-activity="'.$estimateresource['activity_id'].'" id="saveallocateresourceunit'.$estimateresource['pricing_resourceid'].'" title="save"></a>
-                                                
+
                                                 <a data-id="'.$estimateresource['pricing_resourceid'].'" href="javascript:void(0);" title="Delete Resource" class="btn btn-primary rem-res-estimate icon-trash1"></a>
                                             </div>
                                         </div>';
