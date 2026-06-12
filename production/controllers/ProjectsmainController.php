@@ -7448,9 +7448,10 @@ class ProjectsmainController extends Controller
             LEFT JOIN schedule_progress_report AS spr ON spr.activity_id = sa.id
             LEFT JOIN activity_relations AS ar
                    ON ar.dependent_activity = sa.id AND ar.status = 0 AND ar.projectId = sa.projectId
+            LEFT JOIN workgroup_activities_new AS wa ON wa.id = sa.activity_id
             WHERE sa.scheduleitem_id = :itemId AND sa.status = 0
             GROUP BY sa.id
-            ORDER BY sa.sortorder ASC
+            ORDER BY COALESCE(wa.sortorder, 999999) ASC, sa.id ASC
         ", [':itemId' => $itemId])->queryAll();
         return json_encode(['result' => $rows, 'error' => 'No']);
     }
