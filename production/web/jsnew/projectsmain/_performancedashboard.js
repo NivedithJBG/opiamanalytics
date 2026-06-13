@@ -523,11 +523,8 @@ function filterByIow(iowId){
     var fUpcoming = filtered.filter(function(a){
         return !(parseInt(a.pr_report_count, 10) > 0);
     });
-    fUpcoming.sort(function(a, b){
-        return (a.start_date || '').localeCompare(b.start_date || '');
-    });
-    renderBars('pd-c4', toBarItems(fOngoing));
-    renderBars('pd-c5', toBarItems(fUpcoming));
+    renderBars('pd-c4', toBarItems(fOngoing, false));
+    renderBars('pd-c5', toBarItems(fUpcoming, true));
     if (filtered.length) loadKpi(filtered[0].id);
 }
 
@@ -548,7 +545,8 @@ function groupIsCritical(groupId){
     });
 }
 
-function toBarItems(acts){
+function toBarItems(acts, isUpcoming){
+    var today = new Date().toISOString().slice(0, 10);
     return acts.map(function(r){
         var planned  = parseFloat(r.old_duration) || 0;
         var hasActual = (r.actual_duration !== null && r.actual_duration !== undefined && r.actual_duration !== '');
@@ -567,11 +565,12 @@ function toBarItems(acts){
             dl = 0;
         }
         return {
-            name:      r.name,
-            scheduled: sc,
-            delay:     dl,
-            critical:  (r.critical_status === 'Yes' || r.critical_status === 1),
-            id:        r.id
+            name:         r.name,
+            scheduled:    sc,
+            delay:        dl,
+            critical:     (r.critical_status === 'Yes' || r.critical_status === 1),
+            id:           r.id,
+            startDelayed: !!(isUpcoming && r.start_date && r.start_date < today)
         };
     });
 }
@@ -775,6 +774,7 @@ function renderBars(containerId, items, onRowClick){
         +'<span><span class="ld" style="background:#555555"></span>Normal</span>'
         +'<span><span class="ld" style="background:#1a6fbf"></span>Critical</span>'
         +'<span><span class="ld" style="background:#FF0000"></span>Delay</span>'
+        +'<span><span class="ld" style="background:#ff9800"></span>Start Delayed</span>'
         +'</div>';
 
     items.forEach(function(r){
@@ -782,7 +782,8 @@ function renderBars(containerId, items, onRowClick){
         var scPct = (sc/maxVal*100).toFixed(1);
         var dlPct = (dl/maxVal*100).toFixed(1);
         var barCol = r.critical ? '#1a6fbf' : '#555555';
-        html += '<div class="brow" '+(r.id?'data-aid="'+r.id+'" style="cursor:pointer"':'')+'>'
+        var rowCls = 'brow' + (r.startDelayed ? ' brow-delayed' : '');
+        html += '<div class="'+rowCls+'" '+(r.id?'data-aid="'+r.id+'" style="cursor:pointer"':'')+'>'
             +'<div class="blbl" title="'+r.name+'">'+sh(r.name,30)+'</div>'
             +'<div class="btrk">'
             +(sc>0?'<div class="bs" style="width:'+scPct+'%;background:'+barCol+'">'+sc+'</div>':'')

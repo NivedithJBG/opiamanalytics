@@ -1712,7 +1712,10 @@ if($action=='login')
 #pd-grid{flex:1;min-height:0;display:flex;gap:8px;}
 #pd-left{flex:1.8;display:flex;flex-direction:column;min-height:0;gap:2px;}
 #pd-left .panel{flex:1;min-height:0;}
-#pd-left .pb{padding-right:18px;}
+#pd-left .pb{padding-right:4px;overflow-x:hidden !important;overflow-y:auto !important;}
+#pd-left .pb::-webkit-scrollbar{width:4px;}
+#pd-left .pb::-webkit-scrollbar-thumb{background:#c0c8d8;border-radius:2px;}
+#pd-left .pb::-webkit-scrollbar-track{background:transparent;}
 #pd-right{flex:2.2;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:8px;}
 /* ── Panel ────────────────────────────────────────────────────────────────── */
 .dash-modal .panel{background:#fff;border:none;border-right:1px solid #c8d0e0;overflow:hidden;display:flex;flex-direction:column;min-height:0}
@@ -1726,6 +1729,8 @@ if($action=='login')
 .dash-modal .brow{display:flex;align-items:center;margin-bottom:3px}
 .dash-modal .brow.brow-active{background:#e8f0fe;border-radius:3px}
 .dash-modal .brow.brow-active .blbl{color:#0d1f6e;font-weight:700}
+.dash-modal .brow.brow-delayed{background:#fff3e0;border-radius:3px}
+.dash-modal .brow.brow-delayed.brow-active{background:#ffe0b2}
 .dash-modal .blbl{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#4a5a72;width:160px;min-width:160px;text-align:left;padding-left:4px;padding-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dash-modal .btrk{flex:1;min-width:40px;height:17px;background:#dce3ef;border-radius:2px;display:flex;overflow:hidden}
 .dash-modal .bs{height:100%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;min-width:14px}

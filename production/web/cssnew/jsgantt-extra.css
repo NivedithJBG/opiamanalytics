@@ -5,7 +5,7 @@
  /* overflow-y: hidden; */
    /*height: 640px;*/
    /*height: 900px;*/
-   height: auto;
+   height: 100%;
 }
 
 .gmainleft {
@@ -226,7 +226,15 @@ div.gtaskbarcontainer .gtaskyellow {
 }
 
 .gchartgrid::-webkit-scrollbar {
-  display: none;
+  width: 6px;
+  height: 6px;
+}
+.gchartgrid::-webkit-scrollbar-thumb {
+  background: #aaa;
+  border-radius: 3px;
+}
+.gchartgrid::-webkit-scrollbar-track {
+  background: #f0f0f0;
 }
 
 /*Media query start here...*/

@@ -235,8 +235,9 @@ class ProjectsmainController extends Controller
                    AND por.delete_status = 0
                  GROUP BY pern.activity_id
              ) ac ON ac.activity_id = sa.id
+             LEFT JOIN workgroup_activities_new wa ON wa.id = sa.activity_id
              WHERE sa.projectId=$pid AND sa.status=0
-             ORDER BY sa.sortorder ASC"
+             ORDER BY COALESCE(wa.sortorder, 999999) ASC, sa.id ASC"
         )->queryAll();
 
         foreach ($activities as &$a) {
@@ -314,7 +315,7 @@ class ProjectsmainController extends Controller
                                              AND sa.projectId = $pid AND sa.status = 0
              WHERE g.status = 0
              GROUP BY g.id, g.name
-             ORDER BY g.id ASC"
+             ORDER BY MIN(COALESCE(wn.sortorder, 999999)) ASC, g.id ASC"
         )->queryAll();
 
         // IOW Items — carry iow_groups.id as group_id via workgroups_new
@@ -329,7 +330,7 @@ class ProjectsmainController extends Controller
                                              AND sa.projectId = $pid AND sa.status = 0
              WHERE w.projectId = $pid AND w.status = 0
              GROUP BY w.scheduleitem_id, w.name, wn.iowGroupid
-             ORDER BY w.sortorder ASC"
+             ORDER BY COALESCE(wn.sortorder, 999999) ASC, w.scheduleitem_id ASC"
         )->queryAll();
 
         // Default: first IOW item of first group

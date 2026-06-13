@@ -19,6 +19,7 @@
   border: 2px solid #000;
   overflow: hidden;
   width: 100%;
+  height: calc(100vh - 220px);
 }
 .btn-opiam {
   position: relative;
@@ -602,8 +603,8 @@
       },
       success: function(data){
         if(data.error == 'No' || data.error == 'Durerror') {
-          if(data.error == 'Durerror') alert(data.errortext);
-          reloadRelationsPanel('Relation saved — chart updated');
+          var _warn = (data.error === 'Durerror') ? data.errortext : null;
+          reloadRelationsPanel('Relation saved — chart updated', _warn);
           refreshCriticalPath(function(){ loadGantt(); });
         } else {
           alert(data.errortext || 'Save failed.');
@@ -675,7 +676,7 @@
     });
   });
 
-  function reloadRelationsPanel(notice) {
+  function reloadRelationsPanel(notice, warningText) {
     $.ajax({
       type: 'POST', url: '../projectsmain/activityrelation', dataType: 'json',
       data: { projectid: projectId },
@@ -688,6 +689,11 @@
           );
           $('#schedule_item_first-new').val(data.selecteditemone || '');
           $('#schedule_item_second-new').val(data.selecteditemtwo || '');
+          if (warningText) {
+            var $w = $('<div style="background:#fff3cd;color:#856404;border:1px solid #ffeeba;border-radius:4px;padding:7px 14px;margin-bottom:10px;font-size:13px;">&#9888; ' + warningText + '</div>');
+            $('#relations-content').prepend($w);
+            setTimeout(function(){ $w.fadeOut(400, function(){ $w.remove(); }); }, 6000);
+          }
           if (notice) {
             var $n = $('<div style="background:#d4edda;color:#155724;border:1px solid #c3e6cb;border-radius:4px;padding:7px 14px;margin-bottom:10px;font-size:13px;font-weight:600;">&#10003; ' + notice + '</div>');
             $('#relations-content').prepend($n);
