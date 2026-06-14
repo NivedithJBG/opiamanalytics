@@ -1076,8 +1076,10 @@ function pdShowTasksTip(items, anchor) {
     var tipW = 420;
     var left = Math.min(rect.left, window.innerWidth - tipW - 8);
     tip.style.display = 'block';
+    var tipH = tip.offsetHeight;
+    var top = Math.max(4, rect.top - tipH - 6);
     tip.style.left = Math.max(4, left) + 'px';
-    tip.style.top  = (rect.bottom + 6) + 'px';
+    tip.style.top  = top + 'px';
 }
 function pdHideTipSoon() {
     _pdTipTimer = setTimeout(function() {
