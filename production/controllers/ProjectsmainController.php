@@ -3771,21 +3771,30 @@ class ProjectsmainController extends Controller
         $activity1->actual_end_date= $_POST['enddate'];
         //$activity1->duration=$_POST['duration'];
         $activity1->old_duration=$_POST['duration'];
-        if($activity1->save(false)):
-        $availableActivites = Scheduleactivities::find()->where(['scheduleitem_id'=> $activity1['scheduleitem_id']])->andWhere(['status'=> 0])->orderBy(['scheduleitem_id' => SORT_ASC])->all();
-        Yii::$app->helper->GetRelationcorrect($activity1['projectId']);
-        endif;
 
-        // Sync start_date and recalculate end_date unless CPM controls this activity's start.
-        // CPM controls start only when the activity has predecessors (is a dependent).
-        // Activities with only successors are still user-editable; GetRelationcorrect() cascades downstream.
+        // Check predecessors BEFORE saving so we can set the CPM anchor correctly.
+        // GetRelationcorrect() uses act_start_date as the immutable anchor for activities
+        // without predecessors, then runs: actual_start_date = start_date via a mass UPDATE.
+        // If act_start_date still holds the old baseline, the mass UPDATE resets our new date.
         $hasPredecessors = ActivityRelations::find()
             ->where(['status' => 0])
             ->andWhere(['dependent_activity' => $activity1->id])
             ->exists();
 
         if (!$hasPredecessors) {
-            $activity1->start_date = $activity1->actual_start_date;
+            // Anchor the CPM to the new date so GetRelationcorrect() preserves it.
+            $activity1->start_date     = $activity1->actual_start_date;
+            $activity1->act_start_date = $activity1->actual_start_date;
+        }
+
+        if($activity1->save(false)):
+        $availableActivites = Scheduleactivities::find()->where(['scheduleitem_id'=> $activity1['scheduleitem_id']])->andWhere(['status'=> 0])->orderBy(['scheduleitem_id' => SORT_ASC])->all();
+        Yii::$app->helper->GetRelationcorrect($activity1['projectId']);
+        endif;
+
+        // For no-predecessor, no-task activities: recalculate end_date from new start + duration.
+        // (Task-based activities: cycleTime block below handles end_date.)
+        if (!$hasPredecessors) {
             $taskCheck = \Yii::$app->db->createCommand(
                 "SELECT COALESCE(SUM(Budgeted_Duration), 0) AS total FROM schedule_task_new WHERE activity_Id = :id AND status = 0",
                 [':id' => (int)$activity1->id]
@@ -3798,8 +3807,8 @@ class ProjectsmainController extends Controller
                 );
                 $activity1->actual_end_date = date('Y-m-d', strtotime($newEnd));
                 $activity1->end_date = $activity1->actual_end_date;
+                $activity1->save(false);
             }
-            $activity1->save(false);
         }
 
         // Recalculate duration when tasks exist (cycle time stored in schedule_task_new)
