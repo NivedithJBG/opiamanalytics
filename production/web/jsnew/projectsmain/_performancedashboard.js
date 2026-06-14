@@ -1074,7 +1074,7 @@ function pdShowTasksTip(items, anchor) {
     tip.style.width = tipW + 'px';
     tip.style.display = 'block';
     var tipH = tip.offsetHeight;
-    tip.style.left = Math.max(4, Math.round(gpRect.left)) + 'px';
+    tip.style.left = Math.max(4, Math.round(gpRect.left) - tipW) + 'px';
     tip.style.top  = Math.max(4, Math.round(gpRect.top) - tipH - 8) + 'px';
 }
 function pdHideTipSoon() {
