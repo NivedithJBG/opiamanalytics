@@ -1071,12 +1071,10 @@ function pdShowTasksTip(items, anchor) {
     var gp = anchor.closest ? anchor.closest('.gp') : null;
     var gpRect = gp ? gp.getBoundingClientRect() : anchor.getBoundingClientRect();
     var tipW = Math.round(gpRect.width * 0.82);
-    var centerX = gpRect.left + gpRect.width / 2;
-    var left = Math.max(4, Math.min(centerX - tipW / 2, window.innerWidth - tipW - 4));
     tip.style.width = tipW + 'px';
     tip.style.display = 'block';
     var tipH = tip.offsetHeight;
-    tip.style.left = left + 'px';
+    tip.style.left = Math.max(4, Math.round(gpRect.left)) + 'px';
     tip.style.top  = Math.max(4, Math.round(gpRect.top) - tipH - 8) + 'px';
 }
 function pdHideTipSoon() {
