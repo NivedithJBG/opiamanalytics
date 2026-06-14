@@ -1011,6 +1011,8 @@ function pdGetTip() {
         tip.id = 'pd-tasks-tip';
         var modal = document.getElementById('pd-modal');
         (modal || document.body).appendChild(tip);
+        tip.addEventListener('mouseenter', function() { clearTimeout(_pdTipTimer); });
+        tip.addEventListener('mouseleave', function() { pdHideTipSoon(); });
     }
     return tip;
 }

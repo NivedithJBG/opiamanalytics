@@ -1760,7 +1760,7 @@ if($action=='login')
 /* ── Tasks chip & tooltip ──────────────────────────────────────────────────── */
 .pd-tasks-chip{position:absolute;right:6px;top:6px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.6px;color:#1a2540;border:1px solid #b0bec5;border-radius:3px;padding:2px 8px;cursor:pointer;text-transform:uppercase;background:#fff;z-index:10;}
 .pd-tasks-chip:hover{background:#f0f4ff;border-color:#3461b8;color:#3461b8;}
-#pd-tasks-tip{position:fixed;z-index:10000;background:#0c1535;border:1px solid #263d6e;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.65);padding:20px 22px 18px;display:none;pointer-events:none;box-sizing:border-box;overflow-y:auto;}
+#pd-tasks-tip{position:fixed;z-index:10000;background:#0c1535;border:1px solid #263d6e;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.65);padding:20px 22px 18px;display:none;pointer-events:auto;box-sizing:border-box;overflow-y:auto;}
 #pd-tasks-tip .tip-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:#a8d4f5;text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:10px;}
 #pd-tasks-tip table{width:100%;border-collapse:collapse;}
 #pd-tasks-tip table th{font-family:'Barlow Condensed',sans-serif;font-size:15px;color:#7aafd4 !important;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding:0 14px 12px 0;}
