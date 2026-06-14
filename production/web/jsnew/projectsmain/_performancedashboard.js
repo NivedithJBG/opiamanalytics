@@ -1054,14 +1054,11 @@ function pdShowTasksTip(items, anchor) {
             + '<td style="text-align:right;font-weight:700;color:' + actCol + ';white-space:nowrap;">' + (act > 0 ? fm(act) + u : '—') + '</td>'
             + '</tr>';
     });
-    var gp = anchor.closest ? anchor.closest('.gp') : null;
-    var gpRect = gp ? gp.getBoundingClientRect() : anchor.getBoundingClientRect();
-    var barH = Math.max(50, Math.round(gpRect.height * 0.28));
     if (!items.length) {
         tip.innerHTML = '<div class="tip-title">Task Productivity</div><div style="font-size:17px;color:#aaa;padding:20px 0;text-align:center">No task data</div>';
     } else {
         tip.innerHTML = '<div class="tip-title">Task Productivity</div>'
-            + '<div style="display:flex;gap:8px;align-items:flex-end;height:' + barH + 'px;margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.12);">' + bars + '</div>'
+            + '<div style="display:flex;gap:8px;align-items:flex-end;height:90px;margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.12);">' + bars + '</div>'
             + '<table>'
             +   '<thead><tr>'
             +     '<th style="text-align:left;">Task</th>'
@@ -1071,11 +1068,16 @@ function pdShowTasksTip(items, anchor) {
             +   '<tbody>' + taskRows + '</tbody>'
             + '</table>';
     }
-    tip.style.width  = Math.round(gpRect.width) + 'px';
-    tip.style.height = Math.round(gpRect.height) + 'px';
-    tip.style.left   = Math.round(gpRect.left) + 'px';
-    tip.style.top    = Math.round(gpRect.top) + 'px';
+    var gp = anchor.closest ? anchor.closest('.gp') : null;
+    var gpRect = gp ? gp.getBoundingClientRect() : anchor.getBoundingClientRect();
+    var tipW = Math.round(gpRect.width * 0.82);
+    var centerX = gpRect.left + gpRect.width / 2;
+    var left = Math.max(4, Math.min(centerX - tipW / 2, window.innerWidth - tipW - 4));
+    tip.style.width = tipW + 'px';
     tip.style.display = 'block';
+    var tipH = tip.offsetHeight;
+    tip.style.left = left + 'px';
+    tip.style.top  = Math.max(4, Math.round(gpRect.top) - tipH - 8) + 'px';
 }
 function pdHideTipSoon() {
     _pdTipTimer = setTimeout(function() {
