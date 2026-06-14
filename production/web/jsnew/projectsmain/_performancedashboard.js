@@ -1072,15 +1072,13 @@ function pdShowTasksTip(items, anchor) {
             +   '</div>'
             + '</div>';
     }
-    var rect = anchor.getBoundingClientRect();
-    var tipW = 420;
-    var left = Math.min(rect.left, window.innerWidth - tipW - 8);
+    var gp = anchor.closest ? anchor.closest('.gp') : null;
+    var gpRect = gp ? gp.getBoundingClientRect() : anchor.getBoundingClientRect();
+    tip.style.width = Math.round(gpRect.width) + 'px';
     tip.style.display = 'block';
     var tipH = tip.offsetHeight;
-    var gp = anchor.closest ? anchor.closest('.gp') : null;
-    var gpRect = gp ? gp.getBoundingClientRect() : rect;
-    var top = Math.max(4, gpRect.bottom - tipH - 10);
-    tip.style.left = Math.max(4, left) + 'px';
+    var top = Math.max(gpRect.top + 4, gpRect.bottom - tipH - 4);
+    tip.style.left = Math.round(gpRect.left) + 'px';
     tip.style.top  = top + 'px';
 }
 function pdHideTipSoon() {
