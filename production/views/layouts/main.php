@@ -1816,9 +1816,9 @@ if($action=='login')
         <div class="panel"><div class="ph">Upcoming Activity</div><div class="pb" id="pd-c5"></div></div>
       </div>
       <div id="pd-right">
-        <div class="panel"><div class="ph">Project Duration</div><div class="pb" id="pd-c2"></div></div>
-        <div class="panel"><div class="ph">Activity Productivity</div><div class="gp" id="pd-g3"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
+        <div class="panel" style="grid-column:1/-1"><div class="ph">Project Duration</div><div class="pb" id="pd-c2"></div></div>
         <div class="panel"><div class="ph">Target Production</div><div class="gp" id="pd-g2"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
+        <div class="panel"><div class="ph">Activity Productivity</div><div class="gp" id="pd-g3"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
         <div class="panel"><div class="ph">Capacity Utilisation</div><div class="gp" id="pd-g5"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
         <div class="panel"><div class="ph">Cycle Time</div><div class="gp" id="pd-g4"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
       </div>
