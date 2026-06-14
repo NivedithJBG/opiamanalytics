@@ -1717,6 +1717,7 @@ if($action=='login')
 #pd-left .pb::-webkit-scrollbar-thumb{background:#c0c8d8;border-radius:2px;}
 #pd-left .pb::-webkit-scrollbar-track{background:transparent;}
 #pd-right{flex:2.2;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:8px;}
+#pd-tip{position:fixed;z-index:10002;background:#1a2540;color:#e8ecf4;font-family:'Barlow Condensed',sans-serif;font-size:12px;line-height:1.7;padding:7px 12px;border-radius:4px;pointer-events:none;display:none;white-space:pre;box-shadow:0 3px 10px rgba(0,0,0,.5);}
 /* ── Panel ────────────────────────────────────────────────────────────────── */
 .dash-modal .panel{background:#fff;border:none;border-right:1px solid #c8d0e0;overflow:hidden;display:flex;flex-direction:column;min-height:0}
 .dash-modal .ph{background:linear-gradient(180deg,#0c1535 0%,#05091c 100%);padding:3px 6px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;letter-spacing:.7px;text-align:center;text-transform:uppercase;color:#fff;flex-shrink:0}
@@ -1729,8 +1730,6 @@ if($action=='login')
 .dash-modal .brow{display:flex;align-items:center;margin-bottom:3px}
 .dash-modal .brow.brow-active{background:#e8f0fe;border-radius:3px}
 .dash-modal .brow.brow-active .blbl{color:#0d1f6e;font-weight:700}
-.dash-modal .brow.brow-delayed{background:#fff3e0;border-radius:3px}
-.dash-modal .brow.brow-delayed.brow-active{background:#ffe0b2}
 .dash-modal .blbl{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#4a5a72;width:160px;min-width:160px;text-align:left;padding-left:4px;padding-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dash-modal .btrk{flex:1;min-width:40px;height:17px;background:#dce3ef;border-radius:2px;display:flex;overflow:hidden}
 .dash-modal .bs{height:100%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;min-width:14px}

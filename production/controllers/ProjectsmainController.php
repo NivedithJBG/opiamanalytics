@@ -306,7 +306,10 @@ class ProjectsmainController extends Controller
         $groups_raw = $connection->createCommand(
             "SELECT g.id, g.name,
                     COALESCE(DATEDIFF(MAX(sa.end_date), MIN(sa.start_date)) + 1, 0) AS scheduled,
-                    COALESCE(SUM(sa.delay),0) AS delay
+                    COALESCE(SUM(sa.delay),0) AS delay,
+                    MIN(sa.start_date) AS start_date,
+                    MAX(sa.end_date) AS end_date,
+                    MAX(sa.actual_end_date) AS actual_end_date
              FROM iow_groups g
              JOIN workgroups_new wn ON wn.iowGroupid = g.id
                                     AND wn.Project_Id = $pid AND wn.Status = 0
@@ -322,7 +325,10 @@ class ProjectsmainController extends Controller
         $iow_items_raw = $connection->createCommand(
             "SELECT w.scheduleitem_id AS id, w.name, wn.iowGroupid AS group_id,
                     COALESCE(DATEDIFF(MAX(sa.end_date), MIN(sa.start_date)) + 1, 0) AS scheduled,
-                    COALESCE(SUM(sa.delay),0) AS delay
+                    COALESCE(SUM(sa.delay),0) AS delay,
+                    MIN(sa.start_date) AS start_date,
+                    MAX(sa.end_date) AS end_date,
+                    MAX(sa.actual_end_date) AS actual_end_date
              FROM wbsscheduleitems w
              JOIN workgroups_new wn ON wn.Workgroup_Id = w.wbsid
                                     AND wn.Project_Id = $pid AND wn.Status = 0
@@ -2373,48 +2379,28 @@ class ProjectsmainController extends Controller
                 $Relations1 = ActivityRelations::find()->where(['precedent_schedule_item' => $_POST['itemId']])->andWhere(['precedent_activity'=> $data['id']])->andWhere(['status' => 0])->all();
                 $Relations2 = ActivityRelations::find()->where(['precedent_schedule_item' => $_POST['itemId']])->andWhere(['dependent_activity'=> $data['id']])->andWhere(['status' => 0])->all();
 
-                if(count($Relations1)==0 && count($Relations2)==0 && $data['actual_start_date']!='' && $data['actual_end_date']!='' && $data['start_date']!='0000-00-00' && $data['end_date']!='0000-00-00'){
-
-                    $start_date = date("d-m-Y", strtotime($data['actual_start_date']) );
-                    $end_date = date("d-m-Y", strtotime($data['actual_end_date']) );
-
-
+                if($data['actual_start_date']!='' && $data['actual_end_date']!='' && $data['actual_start_date']!='0000-00-00' && $data['actual_end_date']!='0000-00-00'){
+                    $start_date      = date("d-m-Y", strtotime($data['actual_start_date']));
+                    $end_date        = date("d-m-Y", strtotime($data['actual_end_date']));
                     $start_date_edit = $data['actual_start_date'];
-                    $end_date_edit = $data['actual_end_date'];
+                    $end_date_edit   = $data['actual_end_date'];
+                } else {
+                    $currentDate     = Yii::$app->helper->getDateAfterHoliday(date("d-m-Y"), $projuser->projectid);
+                    $start_date      = $currentDate;
+                    $end_date        = $currentDate;
+                    $start_date_edit = $currentDate;
+                    $end_date_edit   = $currentDate;
+                }
+                // Activities with relations: CPM controls dates → lock start date
+                // Activities without relations: user controls start date → always editable
+                if (count($Relations1) > 0 || count($Relations2) > 0) {
+                    $start_date_visible = 'readonly';
+                    $end_date_visible   = 'readonly';
+                    $duration_visible   = '';
+                } else {
                     $start_date_visible = '';
-                    $end_date_visible = '';
-                    $duration_visible = '';
-                } 
-                else{
-                    if($data['actual_start_date']!='' && $data['actual_end_date']!='' && $data['actual_start_date']!='0000-00-00' && $data['actual_end_date']!='0000-00-00'){
-
-                        $start_date = date("d-m-Y", strtotime($data['actual_start_date']) );
-                        $end_date = date("d-m-Y", strtotime($data['actual_end_date']) );
-
-                        $start_date_edit = $data['actual_start_date'];
-                        $end_date_edit = $data['actual_end_date'];
-                        $reports = ProgressReport::find()->where(['activity_id' => $data['id']])->andWhere(['status' => 0])->all();
-                        if(count($reports)>0){
-                            $start_date_visible = 'readonly';
-                            $end_date_visible   = 'readonly';
-                            $duration_visible   = 'readonly';
-                        }
-                        else{
-                            $start_date_visible = '';
-                            $end_date_visible   = '';
-                            $duration_visible   = '';
-                        }
-                    }
-                    else{
-                        $currentDate        = Yii::$app->helper->getDateAfterHoliday(date("d-m-Y"), $projuser->projectid);
-                        $start_date         = $currentDate;
-                        $end_date           = $currentDate;
-                        $start_date_edit    = $currentDate;
-                        $end_date_edit      = $currentDate;
-                        $start_date_visible = '';
-                        $end_date_visible   = '';
-                        $duration_visible   = '';
-                    }
+                    $end_date_visible   = '';
+                    $duration_visible   = '';
                 }
 
                 $duration_visible = 'readonly';
@@ -3795,6 +3781,32 @@ class ProjectsmainController extends Controller
         Yii::$app->helper->GetRelationcorrect($activity1['projectId']);
         endif;
 
+        // For standalone activities (no dependency relations): sync start_date and recalculate end_date
+        $hasRelations = ActivityRelations::find()
+            ->where(['status' => 0])
+            ->andWhere(['or',
+                ['precedent_activity' => $activity1->id],
+                ['dependent_activity' => $activity1->id]
+            ])->exists();
+
+        if (!$hasRelations) {
+            $activity1->start_date = $activity1->actual_start_date;
+            $taskCheck = \Yii::$app->db->createCommand(
+                "SELECT COALESCE(SUM(Budgeted_Duration), 0) AS total FROM schedule_task_new WHERE activity_Id = :id AND status = 0",
+                [':id' => (int)$activity1->id]
+            )->queryOne();
+            if (!$taskCheck || (float)$taskCheck['total'] == 0) {
+                $newEnd = Yii::$app->helper->getDateAfterHoliday(
+                    $activity1->actual_start_date,
+                    $activity1->projectId,
+                    max(0, (int)$activity1->old_duration - 1)
+                );
+                $activity1->actual_end_date = date('Y-m-d', strtotime($newEnd));
+                $activity1->end_date = $activity1->actual_end_date;
+            }
+            $activity1->save(false);
+        }
+
         // Recalculate duration when tasks exist (cycle time stored in schedule_task_new)
         $cycleRow = \Yii::$app->db->createCommand(
             "SELECT COALESCE(SUM(Budgeted_Duration), 0) AS total FROM schedule_task_new WHERE activity_Id = :id AND status = 0",
@@ -3812,7 +3824,7 @@ class ProjectsmainController extends Controller
             Yii::$app->helper->GetRelationcorrect($activity1->projectId);
         }
 
-        $arr = array('Id' => $_POST['id'],'Name'=>$_POST['name'],'Unit'=>$_POST['unit'],'Duration'=>$activity1->old_duration,'Startdate'=>date("d-m-Y", strtotime($activity1->start_date)),'Enddate'=>date("d-m-Y", strtotime($activity1->end_date)),'Editstartdate'=>date("Y-m-d", strtotime($activity1->start_date)),'Editenddate'=>date("Y-m-d", strtotime($activity1->end_date)),'Quantity'=>$_POST['quantity'],'Resourceunits'=>$activity1->resource_units,'Lag'=>$_POST['lag'],'error'=>'No');
+        $arr = array('Id' => $_POST['id'],'Name'=>$_POST['name'],'Unit'=>$_POST['unit'],'Duration'=>$activity1->old_duration,'Startdate'=>date("d-m-Y", strtotime($activity1->actual_start_date)),'Enddate'=>date("d-m-Y", strtotime($activity1->actual_end_date)),'Editstartdate'=>date("Y-m-d", strtotime($activity1->actual_start_date)),'Editenddate'=>date("Y-m-d", strtotime($activity1->actual_end_date)),'Quantity'=>$_POST['quantity'],'Resourceunits'=>$activity1->resource_units,'Lag'=>$_POST['lag'],'error'=>'No');
         return json_encode($arr);
 	}
 

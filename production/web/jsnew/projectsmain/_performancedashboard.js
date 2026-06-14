@@ -8,6 +8,28 @@ var _groups    = [];   // iow_groups rows
 var _iow_items = [];   // wbsscheduleitems rows with group_id
 var _all       = [];   // all scheduleactivities
 
+// ── Date formatter ────────────────────────────────────────────────────────────
+var _months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtDate(d){
+    if (!d || d === '0000-00-00') return '—';
+    var p = d.split('-');
+    return p[2] + ' ' + (_months[parseInt(p[1],10)-1]||'') + ' ' + p[0];
+}
+
+// ── Floating tooltip ──────────────────────────────────────────────────────────
+$(document).on('mouseenter', '#pd-modal [data-tip]', function(e){
+    var $t = $('#pd-tip');
+    if (!$t.length) $t = $('<div id="pd-tip"></div>').appendTo('body');
+    $t.text($(this).attr('data-tip')).css({display:'block',left:e.clientX+14,top:e.clientY+14});
+}).on('mousemove', '#pd-modal [data-tip]', function(e){
+    var $t = $('#pd-tip');
+    var x = e.clientX + 14, y = e.clientY + 14;
+    if (x + $t.outerWidth() + 10 > window.innerWidth) x = e.clientX - $t.outerWidth() - 6;
+    $t.css({left:x, top:y});
+}).on('mouseleave', '#pd-modal [data-tip]', function(){
+    $('#pd-tip').hide();
+});
+
 // ── Open / Close ──────────────────────────────────────────────────────────────
 $(document).on('click', '.perf-dashboard-btn', function(e){
     e.preventDefault();
@@ -465,7 +487,10 @@ function loadAll(){
             // IOW Groups in pd-c1 — clicking a group loads its IOW items into pd-c3
             renderBars('pd-c1', _groups.map(function(r){
                 return {name:r.name, scheduled:+r.scheduled||0, delay:+r.delay||0, id:r.id,
-                        critical:groupIsCritical(r.id)};
+                        critical:groupIsCritical(r.id),
+                        start_date:r.start_date||'', end_date:r.end_date||'',
+                        actual_end_date:(r.actual_end_date&&r.actual_end_date!=='0000-00-00')?r.actual_end_date:'',
+                        duration_days:+r.scheduled||0};
             }), filterByGroup);
 
             // Project-level duration bar
@@ -503,7 +528,10 @@ function filterByGroup(groupId, preselectIowId){
     if (!filtered.length) filtered = _iow_items;
     renderBars('pd-c3', filtered.map(function(r){
         return {name:r.name, scheduled:+r.scheduled||0, delay:+r.delay||0, id:r.id,
-                critical:iowIsCritical(r.id)};
+                critical:iowIsCritical(r.id),
+                start_date:r.start_date||'', end_date:r.end_date||'',
+                actual_end_date:(r.actual_end_date&&r.actual_end_date!=='0000-00-00')?r.actual_end_date:'',
+                duration_days:+r.scheduled||0};
     }), filterByIow);
     $('#pd-c1 .brow').removeClass('brow-active');
     $('#pd-c1 .brow[data-aid="' + groupId + '"]').addClass('brow-active');
@@ -548,29 +576,55 @@ function groupIsCritical(groupId){
 function toBarItems(acts, isUpcoming){
     var today = new Date().toISOString().slice(0, 10);
     return acts.map(function(r){
-        var planned  = parseFloat(r.old_duration) || 0;
-        var hasActual = (r.actual_duration !== null && r.actual_duration !== undefined && r.actual_duration !== '');
-        var actual   = hasActual ? parseFloat(r.actual_duration) : null;
-        var sc, dl;
-        if (actual !== null) {
-            if (actual > planned && planned > 0) {
-                sc = planned;                      // grey/blue = planned portion
-                dl = Math.round(actual - planned); // red = delay
-            } else {
-                sc = actual;                       // shorter bar — ahead of schedule
-                dl = 0;
+        var planned = parseFloat(r.old_duration) || 0;
+        var sc, dl, startDelayDays = 0, projEndDate = '';
+
+        if (isUpcoming) {
+            // Upcoming: red bar extension = start delay days
+            if (r.start_date && r.start_date < today) {
+                startDelayDays = Math.round((new Date(today) - new Date(r.start_date)) / 86400000);
+            }
+            sc = planned;
+            dl = startDelayDays;
+            if (startDelayDays > 0 && r.end_date && r.end_date !== '0000-00-00') {
+                var pe = new Date(r.end_date);
+                pe.setDate(pe.getDate() + startDelayDays);
+                projEndDate = pe.toISOString().slice(0, 10);
             }
         } else {
-            sc = planned;
-            dl = 0;
+            // Ongoing: new formula — use planned start as base if activity started late
+            if (r.spr_start_date && r.spr_start_date !== '0000-00-00'
+                && r.last_report_date && +r.cumulated_qty > 0 && +r.quantity > 0) {
+                var baseDate = (r.start_date && r.start_date < r.spr_start_date)
+                               ? r.start_date : r.spr_start_date;
+                var elapsed = Math.max(1, (new Date(r.last_report_date) - new Date(baseDate)) / 86400000);
+                var projDur = Math.round(elapsed / +r.cumulated_qty * +r.quantity);
+                if (projDur > planned && planned > 0) {
+                    sc = planned;
+                    dl = projDur - planned;
+                } else {
+                    sc = projDur || planned;
+                    dl = 0;
+                }
+            } else {
+                sc = planned;
+                dl = 0;
+            }
         }
+
         return {
-            name:         r.name,
-            scheduled:    sc,
-            delay:        dl,
-            critical:     (r.critical_status === 'Yes' || r.critical_status === 1),
-            id:           r.id,
-            startDelayed: !!(isUpcoming && r.start_date && r.start_date < today)
+            name:            r.name,
+            scheduled:       sc,
+            delay:           dl,
+            critical:        (r.critical_status === 'Yes' || r.critical_status === 1),
+            id:              r.id,
+            startDelayed:    isUpcoming && startDelayDays > 0,
+            startDelayDays:  startDelayDays,
+            start_date:      r.start_date || '',
+            end_date:        r.end_date   || '',
+            actual_end_date: (r.actual_end_date && r.actual_end_date !== '0000-00-00') ? r.actual_end_date : '',
+            proj_end_date:   projEndDate,
+            duration_days:   parseFloat(r.old_duration) || parseFloat(r.duration) || sc || 0
         };
     });
 }
@@ -774,7 +828,6 @@ function renderBars(containerId, items, onRowClick){
         +'<span><span class="ld" style="background:#555555"></span>Normal</span>'
         +'<span><span class="ld" style="background:#1a6fbf"></span>Critical</span>'
         +'<span><span class="ld" style="background:#FF0000"></span>Delay</span>'
-        +'<span><span class="ld" style="background:#ff9800"></span>Start Delayed</span>'
         +'</div>';
 
     items.forEach(function(r){
@@ -782,8 +835,17 @@ function renderBars(containerId, items, onRowClick){
         var scPct = (sc/maxVal*100).toFixed(1);
         var dlPct = (dl/maxVal*100).toFixed(1);
         var barCol = r.critical ? '#1a6fbf' : '#555555';
-        var rowCls = 'brow' + (r.startDelayed ? ' brow-delayed' : '');
-        html += '<div class="'+rowCls+'" '+(r.id?'data-aid="'+r.id+'" style="cursor:pointer"':'')+'>'
+        var rowCls = 'brow';
+        var tipLines = [];
+        if (r.start_date)    tipLines.push('Planned Start:  ' + fmtDate(r.start_date));
+        if (r.end_date)      tipLines.push('Planned End:    ' + fmtDate(r.end_date));
+        if (r.proj_end_date) tipLines.push('Projected End:  ' + fmtDate(r.proj_end_date));
+        else                 tipLines.push('Actual End:     ' + (r.actual_end_date ? fmtDate(r.actual_end_date) : '—'));
+        if (r.duration_days) tipLines.push('Planned Dur:    ' + r.duration_days + ' days');
+        if (r.startDelayed)  tipLines.push('Start Delay:    ' + r.startDelayDays + ' days');
+        else if (dl > 0)     tipLines.push('Delay:          ' + dl + ' days');
+        var tipAttr = tipLines.length ? ' data-tip="' + tipLines.join('&#10;') + '"' : '';
+        html += '<div class="'+rowCls+'"'+tipAttr+' '+(r.id?'data-aid="'+r.id+'" style="cursor:pointer"':'')+'>'
             +'<div class="blbl" title="'+r.name+'">'+sh(r.name,30)+'</div>'
             +'<div class="btrk">'
             +(sc>0?'<div class="bs" style="width:'+scPct+'%;background:'+barCol+'">'+sc+'</div>':'')
