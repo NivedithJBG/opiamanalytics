@@ -1024,36 +1024,20 @@ function pdShowTasksTip(items, anchor) {
         var tgt = +(r.val) || 0, act = +(r.actual) || 0;
         var col = cols[i % cols.length];
         var u = r.unit ? ' ' + shu(r.unit) : '';
-        var segPct = function(v, tot) { return tot > 0 ? (v / tot * 100).toFixed(1) + '%' : '0%'; };
-        var isOver = act > 0 && act > tgt;
+        var isOver  = act > 0 && act > tgt;
         var isUnder = act > 0 && act < tgt;
-        var actCol = isOver ? '#2e7d32' : (isUnder ? '#c62828' : '#1a2540');
-        if (isOver) {
-            bars += '<div class="rescol" style="height:100%">'
-                + '<div style="height:' + segPct(act - tgt, act) + ';width:100%;min-height:2px;background:#43a047;border-radius:2px 2px 0 0"></div>'
-                + '<div class="resb" style="height:' + segPct(tgt, act) + ';min-height:3px;background:' + col + '"></div>'
-                + '</div>';
-        } else if (isUnder) {
-            bars += '<div class="rescol" style="height:100%">'
-                + '<div style="height:' + segPct(tgt - act, tgt) + ';width:100%;min-height:2px;background:#e53935;border-radius:2px 2px 0 0;opacity:0.55"></div>'
-                + '<div class="resb" style="height:' + segPct(act, tgt) + ';min-height:3px;background:' + col + '"></div>'
-                + '</div>';
-        } else {
-            bars += '<div class="rescol" style="height:100%">'
-                + '<div class="resb" style="height:100%;min-height:3px;background:' + col + '"></div>'
-                + '</div>';
-        }
+        var actCol  = isOver ? '#66bb6a' : (isUnder ? '#ef5350' : '#e8f0fc');
         taskRows += '<tr>'
             + '<td style="white-space:nowrap;">'
-            +   '<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:' + col + ';margin-right:8px;vertical-align:middle;flex-shrink:0;"></span>'
-            +   sh(r.name || '', 30)
+            +   '<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:' + col + ';margin-right:10px;vertical-align:middle;"></span>'
+            +   sh(r.name || '', 35)
             + '</td>'
             + '<td style="text-align:right;font-weight:700;color:#e8f0fc;white-space:nowrap;">' + fm(tgt) + u + '</td>'
             + '<td style="text-align:right;font-weight:700;color:' + actCol + ';white-space:nowrap;">' + (act > 0 ? fm(act) + u : '—') + '</td>'
             + '</tr>';
     });
     if (!items.length) {
-        tip.innerHTML = '<div class="tip-title">Task Productivity</div><div style="font-size:15px;color:#aaa;padding:16px 0;text-align:center">No task data</div>';
+        tip.innerHTML = '<div class="tip-title">Task Productivity</div><div style="font-size:17px;color:#aaa;padding:20px 0;text-align:center">No task data</div>';
     } else {
         tip.innerHTML = '<div class="tip-title">Task Productivity</div>'
             + '<table>'
@@ -1067,11 +1051,14 @@ function pdShowTasksTip(items, anchor) {
     }
     var gp = anchor.closest ? anchor.closest('.gp') : null;
     var gpRect = gp ? gp.getBoundingClientRect() : anchor.getBoundingClientRect();
-    tip.style.width = Math.round(gpRect.width) + 'px';
+    var tipW = Math.round(gpRect.width * 1.6);
+    var centerX = gpRect.left + gpRect.width / 2;
+    var left = Math.max(4, Math.min(centerX - tipW / 2, window.innerWidth - tipW - 4));
+    tip.style.width = tipW + 'px';
     tip.style.display = 'block';
     var tipH = tip.offsetHeight;
-    tip.style.left = Math.round(gpRect.left) + 'px';
-    tip.style.top  = Math.max(4, Math.round(gpRect.top) - tipH - 6) + 'px';
+    tip.style.left = left + 'px';
+    tip.style.top  = Math.max(4, Math.round(gpRect.top) - tipH - 8) + 'px';
 }
 function pdHideTipSoon() {
     _pdTipTimer = setTimeout(function() {
