@@ -1077,7 +1077,9 @@ function pdShowTasksTip(items, anchor) {
     var left = Math.min(rect.left, window.innerWidth - tipW - 8);
     tip.style.display = 'block';
     var tipH = tip.offsetHeight;
-    var top = Math.max(4, rect.top - tipH - 6);
+    var gp = anchor.closest ? anchor.closest('.gp') : null;
+    var gpRect = gp ? gp.getBoundingClientRect() : rect;
+    var top = Math.max(4, gpRect.bottom - tipH - 10);
     tip.style.left = Math.max(4, left) + 'px';
     tip.style.top  = top + 'px';
 }
