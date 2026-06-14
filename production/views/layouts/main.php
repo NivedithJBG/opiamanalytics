@@ -1760,12 +1760,12 @@ if($action=='login')
 /* ── Tasks chip & tooltip ──────────────────────────────────────────────────── */
 .pd-tasks-chip{position:absolute;right:6px;top:6px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.6px;color:#1a2540;border:1px solid #b0bec5;border-radius:3px;padding:2px 8px;cursor:pointer;text-transform:uppercase;background:#fff;z-index:10;}
 .pd-tasks-chip:hover{background:#f0f4ff;border-color:#3461b8;color:#3461b8;}
-#pd-tasks-tip{position:fixed;z-index:10000;background:#0c1535;border:1px solid #1e3060;border-radius:6px;box-shadow:0 8px 28px rgba(0,0,0,.45);padding:10px 12px 8px;width:420px;display:none;pointer-events:none;}
-#pd-tasks-tip .tip-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:#a8d4f5;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:4px;}
-#pd-tasks-tip .resbars{height:120px;border-bottom:1px solid rgba(255,255,255,.15);}
-#pd-tasks-tip .reslbl{color:#a8c4d8 !important;}
-#pd-tasks-tip table th{color:#6a8aaa !important;}
-#pd-tasks-tip table td{color:#e0eaf4 !important;}
+#pd-tasks-tip{position:fixed;z-index:10000;background:#0c1535;border:1px solid #263d6e;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.55);padding:16px 18px 14px;display:none;pointer-events:none;box-sizing:border-box;overflow-y:auto;}
+#pd-tasks-tip .tip-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#a8d4f5;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:8px;}
+#pd-tasks-tip table{width:100%;border-collapse:collapse;}
+#pd-tasks-tip table th{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#7aafd4 !important;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding:0 10px 10px 0;}
+#pd-tasks-tip table td{font-family:'Barlow Condensed',sans-serif;font-size:17px;color:#e8f0fc !important;padding:6px 10px 6px 0;border-top:1px solid rgba(255,255,255,.06);}
+#pd-tasks-tip table td:not(:first-child){text-align:right;padding-right:0;}
 </style>
 <style>
 #cd-bk{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998}

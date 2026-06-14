@@ -1044,42 +1044,34 @@ function pdShowTasksTip(items, anchor) {
                 + '</div>';
         }
         taskRows += '<tr>'
-            + '<td style="padding:3px 6px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#1a2540;white-space:nowrap;">'
-            +   '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + col + ';margin-right:5px;vertical-align:middle;"></span>'
-            +   sh(r.name || '', 22)
+            + '<td style="white-space:nowrap;">'
+            +   '<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:' + col + ';margin-right:8px;vertical-align:middle;flex-shrink:0;"></span>'
+            +   sh(r.name || '', 30)
             + '</td>'
-            + '<td style="padding:3px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">' + fm(tgt) + u + '</td>'
-            + '<td style="padding:3px 0 3px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:700;color:' + actCol + ';text-align:right;white-space:nowrap;">' + (act > 0 ? fm(act) + u : '—') + '</td>'
+            + '<td style="text-align:right;font-weight:700;color:#e8f0fc;white-space:nowrap;">' + fm(tgt) + u + '</td>'
+            + '<td style="text-align:right;font-weight:700;color:' + actCol + ';white-space:nowrap;">' + (act > 0 ? fm(act) + u : '—') + '</td>'
             + '</tr>';
     });
     if (!items.length) {
-        tip.innerHTML = '<div class="tip-title">Task Productivity</div><div style="font-size:12px;color:#aaa;padding:10px 0;text-align:center">No task data</div>';
+        tip.innerHTML = '<div class="tip-title">Task Productivity</div><div style="font-size:15px;color:#aaa;padding:16px 0;text-align:center">No task data</div>';
     } else {
         tip.innerHTML = '<div class="tip-title">Task Productivity</div>'
-            + '<div style="display:flex;gap:8px;">'
-            +   '<div style="flex:1;min-width:0;display:flex;flex-direction:column;">'
-            +     '<div class="resbars">' + bars + '</div>'
-            +   '</div>'
-            +   '<div style="flex-shrink:0;">'
-            +     '<table style="border-collapse:collapse;">'
-            +       '<thead><tr>'
-            +         '<th style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#7a8a9c;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding:0 6px 4px 0;text-align:left;">Task</th>'
-            +         '<th style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#7a8a9c;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding:0 8px 4px;text-align:right;">Target</th>'
-            +         '<th style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#7a8a9c;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding:0 0 4px 8px;text-align:right;">Actual</th>'
-            +       '</tr></thead>'
-            +       '<tbody>' + taskRows + '</tbody>'
-            +     '</table>'
-            +   '</div>'
-            + '</div>';
+            + '<table>'
+            +   '<thead><tr>'
+            +     '<th style="text-align:left;">Task</th>'
+            +     '<th style="text-align:right;">Target</th>'
+            +     '<th style="text-align:right;">Actual</th>'
+            +   '</tr></thead>'
+            +   '<tbody>' + taskRows + '</tbody>'
+            + '</table>';
     }
     var gp = anchor.closest ? anchor.closest('.gp') : null;
     var gpRect = gp ? gp.getBoundingClientRect() : anchor.getBoundingClientRect();
     tip.style.width = Math.round(gpRect.width) + 'px';
     tip.style.display = 'block';
     var tipH = tip.offsetHeight;
-    var top = Math.max(gpRect.top + 4, gpRect.bottom - tipH - 4);
     tip.style.left = Math.round(gpRect.left) + 'px';
-    tip.style.top  = top + 'px';
+    tip.style.top  = Math.max(4, Math.round(gpRect.top) - tipH - 6) + 'px';
 }
 function pdHideTipSoon() {
     _pdTipTimer = setTimeout(function() {
