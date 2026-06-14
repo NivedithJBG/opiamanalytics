@@ -17,7 +17,8 @@
 }
 #gantt-container {
   border: 2px solid #000;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   width: 100%;
   height: calc(100vh - 220px);
 }
