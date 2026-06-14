@@ -1022,6 +1022,7 @@ function pdShowTasksTip(items, anchor) {
     var tip = pdGetTip();
     var cols = ['#d4845a','#f0c419','#8fa3bc','#7c5cbf','#3461b8','#27afc4','#ec407a','#26a69a'];
     var bars = '', taskRows = '';
+    var segPct = function(v, tot) { return tot > 0 ? (v / tot * 100).toFixed(1) + '%' : '0%'; };
     items.forEach(function(r, i) {
         var tgt = +(r.val) || 0, act = +(r.actual) || 0;
         var col = cols[i % cols.length];
@@ -1029,6 +1030,21 @@ function pdShowTasksTip(items, anchor) {
         var isOver  = act > 0 && act > tgt;
         var isUnder = act > 0 && act < tgt;
         var actCol  = isOver ? '#66bb6a' : (isUnder ? '#ef5350' : '#e8f0fc');
+        if (isOver) {
+            bars += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;">'
+                + '<div style="height:' + segPct(act - tgt, act) + ';background:#66bb6a;border-radius:3px 3px 0 0;min-height:3px;"></div>'
+                + '<div style="height:' + segPct(tgt, act) + ';background:' + col + ';min-height:4px;"></div>'
+                + '</div>';
+        } else if (isUnder) {
+            bars += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;">'
+                + '<div style="height:' + segPct(tgt - act, tgt) + ';background:rgba(239,83,80,.3);border-radius:3px 3px 0 0;min-height:3px;"></div>'
+                + '<div style="height:' + segPct(act, tgt) + ';background:' + col + ';min-height:4px;"></div>'
+                + '</div>';
+        } else {
+            bars += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;">'
+                + '<div style="height:100%;background:' + col + ';border-radius:3px 3px 0 0;min-height:4px;"></div>'
+                + '</div>';
+        }
         taskRows += '<tr>'
             + '<td style="white-space:nowrap;">'
             +   '<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:' + col + ';margin-right:10px;vertical-align:middle;"></span>'
@@ -1042,6 +1058,7 @@ function pdShowTasksTip(items, anchor) {
         tip.innerHTML = '<div class="tip-title">Task Productivity</div><div style="font-size:17px;color:#aaa;padding:20px 0;text-align:center">No task data</div>';
     } else {
         tip.innerHTML = '<div class="tip-title">Task Productivity</div>'
+            + '<div style="display:flex;gap:12px;align-items:flex-end;height:100px;margin-bottom:14px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.12);">' + bars + '</div>'
             + '<table>'
             +   '<thead><tr>'
             +     '<th style="text-align:left;">Task</th>'
