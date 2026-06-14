@@ -1716,7 +1716,7 @@ if($action=='login')
 #pd-left .pb::-webkit-scrollbar{width:4px;}
 #pd-left .pb::-webkit-scrollbar-thumb{background:#c0c8d8;border-radius:2px;}
 #pd-left .pb::-webkit-scrollbar-track{background:transparent;}
-#pd-right{flex:2.2;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:8px;}
+#pd-right{flex:2.2;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(4,1fr);gap:8px;}
 #pd-tip{position:fixed;z-index:10002;background:#1a2540;color:#e8ecf4;font-family:'Barlow Condensed',sans-serif;font-size:12px;line-height:1.7;padding:7px 12px;border-radius:4px;pointer-events:none;display:none;white-space:pre;box-shadow:0 3px 10px rgba(0,0,0,.5);}
 /* ── Panel ────────────────────────────────────────────────────────────────── */
 .dash-modal .panel{background:#fff;border:none;border-right:1px solid #c8d0e0;overflow:hidden;display:flex;flex-direction:column;min-height:0}
@@ -1758,7 +1758,7 @@ if($action=='login')
 .dash-modal .reslbl{flex:1;font-family:'Barlow Condensed',sans-serif;font-size:10px;color:#4a5a72;text-align:center;line-height:1.2;overflow:hidden}
 .dash-modal .resfoot{text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#5a6e8c;margin-top:2px;flex-shrink:0}
 /* ── Tasks chip & tooltip ──────────────────────────────────────────────────── */
-.pd-tasks-chip{position:absolute;right:6px;top:6px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.6px;color:#1a2540;border:1px solid #b0bec5;border-radius:3px;padding:2px 8px;cursor:pointer;text-transform:uppercase;background:#fff;z-index:10;}
+.pd-tasks-chip{position:absolute;left:6px;top:6px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.6px;color:#1a2540;border:1px solid #b0bec5;border-radius:3px;padding:2px 8px;cursor:pointer;text-transform:uppercase;background:#fff;z-index:10;}
 .pd-tasks-chip:hover{background:#f0f4ff;border-color:#3461b8;color:#3461b8;}
 #pd-tasks-tip{position:fixed;z-index:10000;background:#0c1535;border:1px solid #263d6e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.6);padding:14px 16px 12px;display:none;pointer-events:auto;box-sizing:border-box;overflow-y:auto;}
 #pd-tasks-tip .tip-title{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:#a8d4f5;text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:7px;}
@@ -1817,10 +1817,11 @@ if($action=='login')
       </div>
       <div id="pd-right">
         <div class="panel" style="grid-column:1/-1"><div class="ph">Project Duration</div><div class="pb" id="pd-c2"></div></div>
-        <div class="panel"><div class="ph">Target Production</div><div class="gp" id="pd-g2"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
-        <div class="panel"><div class="ph">Activity Productivity</div><div class="gp" id="pd-g3"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
-        <div class="panel"><div class="ph">Capacity Utilisation</div><div class="gp" id="pd-g5"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
-        <div class="panel"><div class="ph">Cycle Time</div><div class="gp" id="pd-g4"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
+        <div class="panel" style="grid-column:1"><div class="ph">Target Production</div><div class="gp" id="pd-g2"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
+        <div class="panel" style="grid-column:2"><div class="ph">Activity Duration</div><div class="gp" id="pd-g6"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
+        <div class="panel" style="grid-column:1"><div class="ph">Capacity Utilisation</div><div class="gp" id="pd-g5"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
+        <div class="panel" style="grid-column:2"><div class="ph">Activity Productivity</div><div class="gp" id="pd-g3"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
+        <div class="panel" style="grid-column:2"><div class="ph">Cycle Time</div><div class="gp" id="pd-g4"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
       </div>
     </div>
   </div>
