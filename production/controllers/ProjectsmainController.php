@@ -2376,9 +2376,6 @@ class ProjectsmainController extends Controller
                 else{
                     $cumulatedQty = 0;
                 }
-                $Relations1 = ActivityRelations::find()->where(['precedent_schedule_item' => $_POST['itemId']])->andWhere(['precedent_activity'=> $data['id']])->andWhere(['status' => 0])->all();
-                $Relations2 = ActivityRelations::find()->where(['precedent_schedule_item' => $_POST['itemId']])->andWhere(['dependent_activity'=> $data['id']])->andWhere(['status' => 0])->all();
-
                 if($data['actual_start_date']!='' && $data['actual_end_date']!='' && $data['actual_start_date']!='0000-00-00' && $data['actual_end_date']!='0000-00-00'){
                     $start_date      = date("d-m-Y", strtotime($data['actual_start_date']));
                     $end_date        = date("d-m-Y", strtotime($data['actual_end_date']));
@@ -2391,17 +2388,15 @@ class ProjectsmainController extends Controller
                     $start_date_edit = $currentDate;
                     $end_date_edit   = $currentDate;
                 }
-                // Activities with relations: CPM controls dates → lock start date
-                // Activities without relations: user controls start date → always editable
-                if (count($Relations1) > 0 || count($Relations2) > 0) {
-                    $start_date_visible = 'readonly';
-                    $end_date_visible   = 'readonly';
-                    $duration_visible   = '';
-                } else {
-                    $start_date_visible = '';
-                    $end_date_visible   = '';
-                    $duration_visible   = '';
-                }
+                // Lock start date only when this activity has predecessors (CPM controls when it can start).
+                // Having only successors is fine — GetRelationcorrect() cascades date changes downstream.
+                $hasPredecessors = ActivityRelations::find()
+                    ->where(['status' => 0])
+                    ->andWhere(['dependent_activity' => $data['id']])
+                    ->exists();
+                $start_date_visible = $hasPredecessors ? 'readonly' : '';
+                $end_date_visible   = '';
+                $duration_visible   = '';
 
                 $duration_visible = 'readonly';
 
@@ -3781,15 +3776,15 @@ class ProjectsmainController extends Controller
         Yii::$app->helper->GetRelationcorrect($activity1['projectId']);
         endif;
 
-        // For standalone activities (no dependency relations): sync start_date and recalculate end_date
-        $hasRelations = ActivityRelations::find()
+        // Sync start_date and recalculate end_date unless CPM controls this activity's start.
+        // CPM controls start only when the activity has predecessors (is a dependent).
+        // Activities with only successors are still user-editable; GetRelationcorrect() cascades downstream.
+        $hasPredecessors = ActivityRelations::find()
             ->where(['status' => 0])
-            ->andWhere(['or',
-                ['precedent_activity' => $activity1->id],
-                ['dependent_activity' => $activity1->id]
-            ])->exists();
+            ->andWhere(['dependent_activity' => $activity1->id])
+            ->exists();
 
-        if (!$hasRelations) {
+        if (!$hasPredecessors) {
             $activity1->start_date = $activity1->actual_start_date;
             $taskCheck = \Yii::$app->db->createCommand(
                 "SELECT COALESCE(SUM(Budgeted_Duration), 0) AS total FROM schedule_task_new WHERE activity_Id = :id AND status = 0",
