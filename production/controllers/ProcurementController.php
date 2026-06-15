@@ -780,7 +780,7 @@ class ProcurementController extends Controller
                 ON  wdq.activity_id = wa.id
                 AND wdq.project_id  = :pid4
             WHERE wa.pricing_status = 0
-            ORDER BY wn.Name ASC, eat.sortorder ASC, wa.sortorder ASC
+            ORDER BY COALESCE(wn.sortorder, 999999) ASC, COALESCE(wa.sortorder, 999999) ASC, sa.id ASC
         ";
 
         $rows = $db->createCommand($sql, [':pid' => $projectid, ':pid2' => $projectid, ':pid3' => $projectid, ':pid4' => $projectid, ':pid5' => $projectid])->queryAll();
