@@ -1203,9 +1203,8 @@ function doActivityDuration(k) {
     bar += '<div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(elapsed) + ';background:#0d3b8e;opacity:0.55;pointer-events:none"></div>';
     bar += '</div>';
 
-    // Wrap in a full-width column so .gp's align-items:center doesn't collapse it
     el.innerHTML =
-        '<div style="display:flex;flex-direction:column;width:100%;height:100%;padding:6px 10px;box-sizing:border-box">'
+        '<div style="display:flex;flex-direction:column;justify-content:center;height:100%;padding:6px 10px;box-sizing:border-box">'
         + bar
         + '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:11px;color:#5a6e8c;margin-top:3px">'
         + '<span>Planned: <b style="color:#1a2540">' + bDur + ' d</b></span>'
