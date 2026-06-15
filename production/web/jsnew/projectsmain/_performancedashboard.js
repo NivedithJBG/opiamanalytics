@@ -1179,27 +1179,46 @@ function doActivityDuration(k) {
     var isOver    = aDur > bDur;
     var isUnder   = bDur > aDur;
     var pct = function(v){ return (Math.min(Math.max(v, 0), maxDur) / maxDur * 100).toFixed(2) + '%'; };
-    var diffLeft  = isOver  ? pct(bDur) : pct(aDur);
-    var diffW     = pct(Math.abs(aDur - bDur));
-    var diffCol   = isOver  ? '#ef5350' : '#ffd54f';
 
     var fam = "font-family:'Barlow Condensed',sans-serif;";
-    var row = function(lbl, val, col) {
-        return '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:13px;color:#334;padding:2px 4px">'
-            + '<span>' + lbl + '</span>'
-            + '<span style="font-weight:700;color:' + (col || '#1a2540') + '">' + val + '</span>'
+    var barH = 'height:14px;border-radius:2px;overflow:hidden;position:relative;background:#dde3ee;margin:1px 4px;';
+    var lbl  = function(t){ return '<div style="' + fam + 'font-size:10px;color:#6e7e94;padding:3px 4px 0;font-weight:600">' + t + '</div>'; };
+    var row  = function(l, v, col) {
+        return '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:12px;color:#334;padding:1px 4px">'
+            + '<span>' + l + '</span>'
+            + '<span style="font-weight:700;color:' + (col || '#1a2540') + '">' + v + '</span>'
             + '</div>';
     };
     var divider = '<div style="border-top:1px solid #d0d8e8;margin:3px 4px"></div>';
 
-    el.innerHTML =
-        '<div style="position:relative;height:20px;border-radius:3px;overflow:hidden;background:#dde3ee;margin:6px 4px 4px">'
+    // Planned bar: solid steel-blue, full planned width
+    var plannedBar =
+        lbl('Planned')
+        + '<div style="' + barH + '">'
+        + '<div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(bDur) + ';background:#4a7fc1"></div>'
+        + '</div>';
+
+    // Projected bar: elapsed (dark blue) + remaining (light blue) + overrun/slack diff
+    var projBar =
+        lbl('Projected')
+        + '<div style="' + barH + '">'
         + '<div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(aDur) + ';background:#7baacf"></div>'
-        + (isOver || isUnder
-            ? '<div style="position:absolute;left:' + diffLeft + ';top:0;bottom:0;width:' + diffW + ';background:' + diffCol + '"></div>'
-            : '')
+        + (isOver  ? '<div style="position:absolute;left:' + pct(bDur) + ';top:0;bottom:0;width:' + pct(aDur - bDur) + ';background:#ef5350"></div>' : '')
+        + (isUnder ? '<div style="position:absolute;left:' + pct(aDur) + ';top:0;bottom:0;width:' + pct(bDur - aDur) + ';background:#ffd54f"></div>' : '')
         + '<div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(elapsed) + ';background:#1565c0"></div>'
+        + '</div>';
+
+    el.innerHTML =
+        plannedBar
+        + projBar
+        + '<div style="margin:4px 4px 2px;' + fam + 'font-size:9px;color:#8a99b0;display:flex;gap:8px">'
+        + '<span><span style="display:inline-block;width:8px;height:8px;background:#4a7fc1;border-radius:1px;margin-right:2px"></span>Planned</span>'
+        + '<span><span style="display:inline-block;width:8px;height:8px;background:#1565c0;border-radius:1px;margin-right:2px"></span>Elapsed</span>'
+        + '<span><span style="display:inline-block;width:8px;height:8px;background:#7baacf;border-radius:1px;margin-right:2px"></span>Remaining</span>'
+        + (isOver  ? '<span><span style="display:inline-block;width:8px;height:8px;background:#ef5350;border-radius:1px;margin-right:2px"></span>Overrun</span>' : '')
+        + (isUnder ? '<span><span style="display:inline-block;width:8px;height:8px;background:#ffd54f;border-radius:1px;margin-right:2px"></span>Slack</span>' : '')
         + '</div>'
+        + divider
         + row('Planned',        bDur + ' days', '#1a2540')
         + row('Projected',      aDur + ' days', isOver ? '#ef5350' : (isUnder ? '#27ae60' : '#1a2540'))
         + (isOver  ? row('Overrun', (aDur - bDur) + ' days', '#ef5350') : '')
