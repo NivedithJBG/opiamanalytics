@@ -1226,22 +1226,6 @@ function doActivityDuration(k) {
 function doKpi(k){
     var u = k.unit||'', an = sh(k.activity_name||'',38);
 
-    // pd-c2: Project Duration panel — show selected activity's planned vs projected
-    var projEnd = '';
-    if (k.act_start_date && +k.projected_duration > 0) {
-        var pd = new Date(k.act_start_date);
-        pd.setDate(pd.getDate() + (+k.projected_duration));
-        projEnd = pd.toISOString().slice(0, 10);
-    }
-    renderProjectBar(
-        document.getElementById('pd-c2'),
-        +k.b_duration || 0,
-        +k.projected_duration || 0,
-        k.project_name || '',
-        k.planned_end_date || '',
-        projEnd
-    );
-
     doActivityDuration(k);
     doWorkDone(k);
     doTargetProduction(k);
