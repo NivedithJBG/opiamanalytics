@@ -411,6 +411,10 @@ class ProjectsmainController extends Controller
         if (!$act) return null;
         $actid = (int)$act['id'];
 
+        // Project name
+        $proj = $connection->createCommand("SELECT Name FROM projects WHERE id=$pid")->queryOne();
+        $project_name = $proj ? ($proj['Name'] ?? '') : '';
+
         // schedule_activity_new data
         $san = $connection->createCommand(
             "SELECT progress, cycle_qty, Workhours, Cycles, Resourceunits,
@@ -569,6 +573,7 @@ class ProjectsmainController extends Controller
             'projected_duration'   => $projected_duration,
             'planned_end_date'     => ($act['end_date'] ?? ''),
             'critical'             => (($act['critical_status'] ?? '') === 'Yes'),
+            'project_name'         => $project_name,
         ];
     }
 

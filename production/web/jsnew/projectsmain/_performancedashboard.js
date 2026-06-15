@@ -1237,7 +1237,7 @@ function doKpi(k){
         document.getElementById('pd-c2'),
         +k.b_duration || 0,
         +k.projected_duration || 0,
-        k.activity_name || '',
+        k.project_name || '',
         k.planned_end_date || '',
         projEnd
     );
