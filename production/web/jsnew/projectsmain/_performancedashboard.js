@@ -1204,8 +1204,10 @@ function doActivityDuration(k) {
     bar += '<div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(elapsed) + ';background:#0d3b8e;opacity:0.55;pointer-events:none"></div>';
     bar += '</div>';
 
+    var actName = k.activity_name || '';
     el.innerHTML =
         '<div style="display:flex;flex-direction:column;justify-content:center;height:100%;padding:6px 10px;box-sizing:border-box">'
+        + (actName ? '<div style="' + fam + 'font-size:12px;font-weight:700;color:#1a2540;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + actName + '</div>' : '')
         + bar
         + '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:11px;color:#5a6e8c;margin-top:3px">'
         + '<span>Planned: <b style="color:#1a2540">' + bDur + ' d</b></span>'
