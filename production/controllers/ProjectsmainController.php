@@ -400,7 +400,7 @@ class ProjectsmainController extends Controller
         $pid = (int)$projuser->projectid;
         $connection = \Yii::$app->db;
         $act = $connection->createCommand(
-            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, actual_start_date, actual_end_date, resource_units
+            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, actual_start_date, actual_end_date, end_date, resource_units
              FROM scheduleactivities WHERE id=$actid AND projectId=$pid"
         )->queryOne();
         return json_encode(['error'=>'No', 'kpi' => $this->_buildKpi($act, $pid, $connection)]);
@@ -507,6 +507,9 @@ class ProjectsmainController extends Controller
             $cap_max  = round($elapsed * $wh, 2);
             $cap_used = round(max(0, $cap_max - $cum_break), 2);
         }
+        $projected_duration = ($actual_qty > 0 && $elapsed > 0)
+            ? (int)round($elapsed / $actual_qty * $target_qty)
+            : 0;
 
         // Tasks for Resource Productivity panel
         $sa_act = $connection->createCommand(
@@ -562,6 +565,9 @@ class ProjectsmainController extends Controller
             'cause_of_delay'       => $cause_of_delay,
             'resources'            => $res_rows,
             'tasks'                => $tasks,
+            'elapsed'              => (int)round($elapsed),
+            'projected_duration'   => $projected_duration,
+            'planned_end_date'     => ($act['end_date'] ?? ''),
         ];
     }
 

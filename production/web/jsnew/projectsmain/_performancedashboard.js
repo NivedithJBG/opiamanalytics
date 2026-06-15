@@ -1158,10 +1158,81 @@ function doCapacity(k) {
     el.innerHTML = svg;
 }
 
+// ── Activity Duration bar (pd-g6) ─────────────────────────────────────────────
+function doActivityDuration(k) {
+    var el = document.getElementById('pd-g6');
+    if (!el) return;
+    var bDur    = +k.b_duration          || 0;
+    var aDur    = +k.projected_duration  || 0;
+    var elapsed = +k.elapsed             || 0;
+    var wDone   = +(+k.work_done_pct || 0).toFixed(1);
+    var wRemain = Math.max(0, +(100 - wDone).toFixed(1));
+
+    if (!bDur && !aDur) {
+        el.innerHTML = '<div style="font-size:11px;color:#aaa;text-align:center;padding-top:20px">No duration data</div>';
+        return;
+    }
+    if (!aDur) aDur = bDur;
+
+    var maxDur    = Math.max(bDur, aDur, 1);
+    var remaining = Math.max(0, aDur - elapsed);
+    var isOver    = aDur > bDur;
+    var isUnder   = bDur > aDur;
+    var pct = function(v){ return (Math.min(Math.max(v, 0), maxDur) / maxDur * 100).toFixed(2) + '%'; };
+    var diffLeft  = isOver  ? pct(bDur) : pct(aDur);
+    var diffW     = pct(Math.abs(aDur - bDur));
+    var diffCol   = isOver  ? '#ef5350' : '#ffd54f';
+
+    var fam = "font-family:'Barlow Condensed',sans-serif;";
+    var row = function(lbl, val, col) {
+        return '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:13px;color:#334;padding:2px 4px">'
+            + '<span>' + lbl + '</span>'
+            + '<span style="font-weight:700;color:' + (col || '#1a2540') + '">' + val + '</span>'
+            + '</div>';
+    };
+    var divider = '<div style="border-top:1px solid #d0d8e8;margin:3px 4px"></div>';
+
+    el.innerHTML =
+        '<div style="position:relative;height:20px;border-radius:3px;overflow:hidden;background:#dde3ee;margin:6px 4px 4px">'
+        + '<div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(aDur) + ';background:#7baacf"></div>'
+        + (isOver || isUnder
+            ? '<div style="position:absolute;left:' + diffLeft + ';top:0;bottom:0;width:' + diffW + ';background:' + diffCol + '"></div>'
+            : '')
+        + '<div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(elapsed) + ';background:#1565c0"></div>'
+        + '</div>'
+        + row('Planned',        bDur + ' days', '#1a2540')
+        + row('Projected',      aDur + ' days', isOver ? '#ef5350' : (isUnder ? '#27ae60' : '#1a2540'))
+        + (isOver  ? row('Overrun', (aDur - bDur) + ' days', '#ef5350') : '')
+        + (isUnder ? row('Slack',   (bDur - aDur) + ' days', '#f0c419') : '')
+        + divider
+        + row('Elapsed',        elapsed   + ' days', '#1565c0')
+        + row('Remaining',      remaining + ' days', '#546e7a')
+        + divider
+        + row('Work done',      wDone   + '%', '#27ae60')
+        + row('Remaining work', wRemain + '%', '#e67e22');
+}
+
 // ── KPI render ────────────────────────────────────────────────────────────────
 function doKpi(k){
     var u = k.unit||'', an = sh(k.activity_name||'',38);
 
+    // pd-c2: Project Duration panel — show selected activity's planned vs projected
+    var projEnd = '';
+    if (k.act_start_date && +k.projected_duration > 0) {
+        var pd = new Date(k.act_start_date);
+        pd.setDate(pd.getDate() + (+k.projected_duration));
+        projEnd = pd.toISOString().slice(0, 10);
+    }
+    renderProjectBar(
+        document.getElementById('pd-c2'),
+        +k.b_duration || 0,
+        +k.projected_duration || 0,
+        k.activity_name || '',
+        k.planned_end_date || '',
+        projEnd
+    );
+
+    doActivityDuration(k);
     doWorkDone(k);
     doTargetProduction(k);
     doProductivity(k);
