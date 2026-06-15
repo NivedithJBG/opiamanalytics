@@ -703,6 +703,7 @@
             + '</tr></thead><tbody>';
         var rowNum = 0;
         var currentType = null;
+        var totalEVal = 0;
         $.each(rows, function(i, r) {
             if (r.resource_type !== currentType) {
                 currentType = r.resource_type;
@@ -716,6 +717,7 @@
             var rid    = r.resource_id;
             var rate   = parseFloat(r.rate) || 0;
             var eVal   = parseFloat(r.amount) || 0;
+            totalEVal += eVal;
             var inp    = 'width:65px;height:24px;padding:1px 4px;text-align:right;font-size:11px;margin-left:auto;';
             var hasIndent  = (r.indent_stock  !== null && r.indent_stock  !== undefined && r.indent_stock  !== '')
                           || (r.indent_reorder !== null && r.indent_reorder !== undefined && r.indent_reorder !== '');
@@ -749,10 +751,12 @@
                 + '</td>'
                 + '</tr>';
         });
-        html += '<tr style="background:#f0f0f0;font-weight:700;" id="po-total-row">'
-            + '<td colspan="10" style="text-align:right;padding:6px 10px;border:1px solid #c8d4e0;">Total</td>'
-            + '<td class="num" id="po-grand-total" style="border:1px solid #c8d4e0;">0.00</td>'
-            + '<td colspan="2" style="border:1px solid #c8d4e0;"></td>'
+        html += '<tr style="background:#d0d8e8;font-weight:700;font-size:13px;" id="po-total-row">'
+            + '<td colspan="4" style="text-align:right;padding:7px 10px;border:1px solid #b0b8c8;letter-spacing:0.3px;">Total</td>'
+            + '<td class="num" style="background:#c4cfe0;color:#1a2540;border:1px solid #b0b8c8;">' + totalEVal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>'
+            + '<td colspan="5" style="border:1px solid #b0b8c8;"></td>'
+            + '<td class="num" id="po-grand-total" style="background:#c4cfe0;color:#1a2540;border:1px solid #b0b8c8;">0.00</td>'
+            + '<td colspan="2" style="border:1px solid #b0b8c8;"></td>'
             + '</tr>';
         html += '</tbody></table>';
         $('#po-body').html(html);
