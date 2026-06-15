@@ -681,7 +681,16 @@
             $('#po-body').html('<p class="procu-empty">No matching resources found.</p>');
             return;
         }
-        var html = '<div style="padding:10px 0 12px;text-align:right;">'
+        var projLabel = '';
+        if (window._poProjectName) {
+            var projText = window._poProjectName;
+            if (window._poProjectLocation) projText += ' — ' + window._poProjectLocation;
+            projLabel = '<div style="padding:10px 20px 0;font-size:12px;font-weight:600;color:#465365;letter-spacing:0.3px;">'
+                + '<span style="background:#e8edf3;border-radius:4px;padding:3px 10px;">'
+                + '<span style="color:#888;font-weight:400;">Project: </span>' + projText
+                + '</span></div>';
+        }
+        var html = projLabel + '<div style="padding:10px 0 12px;text-align:right;">'
             + '<button type="button" id="po-issued-orders-btn" style="background:#465365;color:#fff;border:none;border-radius:20px;padding:7px 24px;font-size:13px;font-weight:600;cursor:pointer;margin-right:10px;">Issued Orders</button>'
             + '<button type="button" id="po-raise-all-btn" style="background:#072c47;color:#fff;border:none;border-radius:20px;padding:7px 24px;font-size:13px;font-weight:600;cursor:pointer;">Raise Purchase Orders</button>'
             + '</div>'
@@ -2133,11 +2142,17 @@
             btn.classList.add('active');
             document.getElementById('procu-tab-' + tab).classList.add('active');
             if (tab === 'WO') loadWorkOrders();
+            else if (tab === 'PO') loadPurchaseOrders();
         });
     });
 
 
     // Auto-load Purchase Orders on page ready
     $(document).ready(function(){ loadPurchaseOrders(); });
+
+    // Reload PO data if page is restored from browser bfcache (back/forward navigation)
+    window.addEventListener('pageshow', function(e) {
+        if (e.persisted) loadPurchaseOrders();
+    });
 })();
 </script>
