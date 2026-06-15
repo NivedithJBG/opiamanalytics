@@ -412,7 +412,7 @@ class ProjectsmainController extends Controller
         $actid = (int)$act['id'];
 
         // Project name
-        $proj = $connection->createCommand("SELECT Name FROM projects WHERE id=$pid")->queryOne();
+        $proj = $connection->createCommand("SELECT Name FROM projects WHERE Project_Id=$pid")->queryOne();
         $project_name = $proj ? ($proj['Name'] ?? '') : '';
 
         // schedule_activity_new data
