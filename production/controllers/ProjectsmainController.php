@@ -400,7 +400,7 @@ class ProjectsmainController extends Controller
         $pid = (int)$projuser->projectid;
         $connection = \Yii::$app->db;
         $act = $connection->createCommand(
-            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, actual_start_date, actual_end_date, end_date, resource_units
+            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, actual_start_date, actual_end_date, end_date, resource_units, critical_status
              FROM scheduleactivities WHERE id=$actid AND projectId=$pid"
         )->queryOne();
         return json_encode(['error'=>'No', 'kpi' => $this->_buildKpi($act, $pid, $connection)]);
@@ -568,6 +568,7 @@ class ProjectsmainController extends Controller
             'elapsed'              => (int)round($elapsed),
             'projected_duration'   => $projected_duration,
             'planned_end_date'     => ($act['end_date'] ?? ''),
+            'critical'             => (($act['critical_status'] ?? '') === 'Yes'),
         ];
     }
 

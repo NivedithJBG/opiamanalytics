@@ -1162,14 +1162,15 @@ function doCapacity(k) {
 function doActivityDuration(k) {
     var el = document.getElementById('pd-g6');
     if (!el) return;
-    var bDur    = +k.b_duration || +k.duration || 0;   // old_duration, fall back to duration
-    var aDur    = +k.projected_duration || 0;
-    var elapsed = +k.elapsed            || 0;
-    var wDone   = +(+k.work_done_pct || 0).toFixed(1);
-    var wRemain = Math.max(0, +(100 - wDone).toFixed(1));
+    var bDur     = +k.b_duration || +k.duration || 0;   // old_duration, fall back to duration
+    var aDur     = +k.projected_duration || 0;
+    var elapsed  = +k.elapsed            || 0;
+    var wDone    = +(+k.work_done_pct || 0).toFixed(1);
+    var wRemain  = Math.max(0, +(100 - wDone).toFixed(1));
+    var baseCol  = k.critical ? '#1a6fbf' : '#555555';  // blue if critical, dark grey otherwise
 
     if (!bDur) {
-        el.innerHTML = '<div style="width:100%;font-size:11px;color:#aaa;text-align:center;padding-top:20px">No duration data</div>';
+        el.innerHTML = '<div style="font-size:11px;color:#aaa;text-align:center;padding-top:20px">No duration data</div>';
         return;
     }
     if (!aDur) aDur = bDur;
@@ -1189,16 +1190,16 @@ function doActivityDuration(k) {
     };
     var divider = '<div style="border-top:1px solid #d0d8e8;margin:3px 4px"></div>';
 
-    // Single bar: planned (blue) + overrun (red) or slack (yellow), dark-blue elapsed overlay
+    // Single bar: base colour (grey or blue) + overrun (red) or slack (yellow), dark overlay for elapsed
     var bar = '<div style="position:relative;display:flex;align-items:stretch;height:22px;border-radius:3px;overflow:hidden;">';
     if (isOver) {
-        bar += '<div style="width:' + (bDur/maxDur*100).toFixed(1) + '%;background:#1a6fbf;min-width:3px;' + seg + ';color:#fff">' + bDur + ' d</div>';
+        bar += '<div style="width:' + (bDur/maxDur*100).toFixed(1) + '%;background:' + baseCol + ';min-width:3px;' + seg + ';color:#fff">' + bDur + ' d</div>';
         bar += '<div style="width:' + ((aDur-bDur)/maxDur*100).toFixed(1) + '%;background:#e53935;min-width:3px;' + seg + ';color:#fff">+' + (aDur-bDur) + ' d</div>';
     } else if (isUnder) {
-        bar += '<div style="width:' + (aDur/maxDur*100).toFixed(1) + '%;background:#1a6fbf;min-width:3px;' + seg + ';color:#fff">' + aDur + ' d</div>';
+        bar += '<div style="width:' + (aDur/maxDur*100).toFixed(1) + '%;background:' + baseCol + ';min-width:3px;' + seg + ';color:#fff">' + aDur + ' d</div>';
         bar += '<div style="width:' + ((bDur-aDur)/maxDur*100).toFixed(1) + '%;background:#f0c419;min-width:3px;' + seg + ';color:#1a2540">-' + (bDur-aDur) + ' d</div>';
     } else {
-        bar += '<div style="width:100%;background:#1a6fbf;' + seg + ';color:#fff">' + bDur + ' d</div>';
+        bar += '<div style="width:100%;background:' + baseCol + ';' + seg + ';color:#fff">' + bDur + ' d</div>';
     }
     bar += '<div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(elapsed) + ';background:#0d3b8e;opacity:0.55;pointer-events:none"></div>';
     bar += '</div>';
