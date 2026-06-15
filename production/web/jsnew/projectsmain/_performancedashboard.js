@@ -1178,12 +1178,11 @@ function doActivityDuration(k) {
     var remaining = Math.max(0, aDur - elapsed);
     var isOver    = aDur > bDur;
     var isUnder   = bDur > aDur;
+    var lbl = 'font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:0 4px';
     var pct = function(v){ return (Math.min(Math.max(v, 0), maxDur) / maxDur * 100).toFixed(2) + '%'; };
 
     var fam = "font-family:'Barlow Condensed',sans-serif;";
-    var barH = 'height:14px;border-radius:2px;overflow:hidden;position:relative;background:#dde3ee;margin:1px 4px;';
-    var lbl  = function(t){ return '<div style="' + fam + 'font-size:10px;color:#6e7e94;padding:3px 4px 0;font-weight:600">' + t + '</div>'; };
-    var row  = function(l, v, col) {
+    var row = function(l, v, col) {
         return '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:12px;color:#334;padding:1px 4px">'
             + '<span>' + l + '</span>'
             + '<span style="font-weight:700;color:' + (col || '#1a2540') + '">' + v + '</span>'
@@ -1191,40 +1190,33 @@ function doActivityDuration(k) {
     };
     var divider = '<div style="border-top:1px solid #d0d8e8;margin:3px 4px"></div>';
 
-    // Planned bar: solid steel-blue, full planned width
-    var plannedBar =
-        lbl('Planned')
-        + '<div style="' + barH + '">'
-        + '<div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(bDur) + ';background:#4a7fc1"></div>'
-        + '</div>';
-
-    // Projected bar: elapsed (dark blue) + remaining (light blue) + overrun/slack diff
-    var projBar =
-        lbl('Projected')
-        + '<div style="' + barH + '">'
-        + '<div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(aDur) + ';background:#7baacf"></div>'
-        + (isOver  ? '<div style="position:absolute;left:' + pct(bDur) + ';top:0;bottom:0;width:' + pct(aDur - bDur) + ';background:#ef5350"></div>' : '')
-        + (isUnder ? '<div style="position:absolute;left:' + pct(aDur) + ';top:0;bottom:0;width:' + pct(bDur - aDur) + ';background:#ffd54f"></div>' : '')
-        + '<div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(elapsed) + ';background:#1565c0"></div>'
-        + '</div>';
+    // Single bar: planned (blue) + overrun (red) or slack (yellow), then dark-blue elapsed overlay
+    var bar = '<div style="position:relative;display:flex;align-items:stretch;height:22px;border-radius:3px;overflow:hidden;margin:6px 10px 4px">';
+    if (isOver) {
+        var bPct = (bDur / maxDur * 100).toFixed(1);
+        var rPct = ((aDur - bDur) / maxDur * 100).toFixed(1);
+        bar += '<div style="width:' + bPct + '%;background:#1a6fbf;min-width:3px;' + lbl + ';color:#fff">' + bDur + ' d</div>';
+        bar += '<div style="width:' + rPct + '%;background:#e53935;min-width:3px;' + lbl + ';color:#fff">+' + (aDur - bDur) + ' d</div>';
+    } else if (isUnder) {
+        var aPct = (aDur / maxDur * 100).toFixed(1);
+        var yPct = ((bDur - aDur) / maxDur * 100).toFixed(1);
+        bar += '<div style="width:' + aPct + '%;background:#1a6fbf;min-width:3px;' + lbl + ';color:#fff">' + aDur + ' d</div>';
+        bar += '<div style="width:' + yPct + '%;background:#f0c419;min-width:3px;' + lbl + ';color:#1a2540">-' + (bDur - aDur) + ' d</div>';
+    } else {
+        bar += '<div style="width:100%;background:#1a6fbf;' + lbl + ';color:#fff">' + bDur + ' d</div>';
+    }
+    // Dark-blue elapsed overlay on top
+    bar += '<div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(elapsed) + ';background:#0d3b8e;opacity:0.55;pointer-events:none"></div>';
+    bar += '</div>';
 
     el.innerHTML =
-        plannedBar
-        + projBar
-        + '<div style="margin:4px 4px 2px;' + fam + 'font-size:9px;color:#8a99b0;display:flex;gap:8px">'
-        + '<span><span style="display:inline-block;width:8px;height:8px;background:#4a7fc1;border-radius:1px;margin-right:2px"></span>Planned</span>'
-        + '<span><span style="display:inline-block;width:8px;height:8px;background:#1565c0;border-radius:1px;margin-right:2px"></span>Elapsed</span>'
-        + '<span><span style="display:inline-block;width:8px;height:8px;background:#7baacf;border-radius:1px;margin-right:2px"></span>Remaining</span>'
-        + (isOver  ? '<span><span style="display:inline-block;width:8px;height:8px;background:#ef5350;border-radius:1px;margin-right:2px"></span>Overrun</span>' : '')
-        + (isUnder ? '<span><span style="display:inline-block;width:8px;height:8px;background:#ffd54f;border-radius:1px;margin-right:2px"></span>Slack</span>' : '')
+        bar
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin:0 10px 4px;' + fam + 'font-size:11px;color:#5a6e8c">'
+        + '<span>Planned: <b style="color:#1a2540">' + bDur + ' d</b></span>'
+        + (aDur !== bDur ? '<span>Projected: <b style="color:' + (isOver ? '#e53935' : '#27ae60') + '">' + aDur + ' d</b></span>' : '')
         + '</div>'
         + divider
-        + row('Planned',        bDur + ' days', '#1a2540')
-        + row('Projected',      aDur + ' days', isOver ? '#ef5350' : (isUnder ? '#27ae60' : '#1a2540'))
-        + (isOver  ? row('Overrun', (aDur - bDur) + ' days', '#ef5350') : '')
-        + (isUnder ? row('Slack',   (bDur - aDur) + ' days', '#f0c419') : '')
-        + divider
-        + row('Elapsed',        elapsed   + ' days', '#1565c0')
+        + row('Elapsed',        elapsed   + ' days', '#0d3b8e')
         + row('Remaining',      remaining + ' days', '#546e7a')
         + divider
         + row('Work done',      wDone   + '%', '#27ae60')
