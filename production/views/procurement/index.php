@@ -1426,6 +1426,8 @@
             + '</tr></thead><tbody>';
         var rowNum = 0;
         var currentIow = null;
+        var totalEstValue = 0;
+        var totalWdValue  = 0;
         $.each(rows, function(i, r) {
             if (r.workgroup_name !== currentIow) {
                 currentIow = r.workgroup_name;
@@ -1441,6 +1443,8 @@
             var mbWdq    = parseFloat(r.mb_work_done_qty) || 0;
             var impliedRate = estQty > 0 ? estValue / estQty : 0;
             var wdValue  = mbWdq * impliedRate;
+            totalEstValue += estValue;
+            totalWdValue  += wdValue;
             html += '<tr class="' + (rowNum % 2 === 0 ? 'procu-even' : '') + '">'
                 + '<td>' + rowNum + '</td>'
                 + '<td style="font-size:11px;color:#555;">' + (r.activity_type || '') + '</td>'
@@ -1473,7 +1477,15 @@
                 + '</td>'
                 + '</tr>';
         });
-        html += '</tbody></table>';
+        html += '</tbody>'
+            + '<tfoot><tr style="background:#d0d8e8;font-weight:700;font-size:13px;">'
+            + '<td colspan="5" style="text-align:right;padding:7px 10px;border:1px solid #b0b8c8;letter-spacing:0.3px;">Total</td>'
+            + '<td class="num" style="background:#c4cfe0;color:#1a2540;border:1px solid #b0b8c8;">' + totalEstValue.toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
+            + '<td class="num" style="background:#d8ead8;color:#1a2540;border:1px solid #b0b8c8;"></td>'
+            + '<td class="num" style="background:#d8ead8;color:#1a2540;border:1px solid #b0b8c8;">' + (totalWdValue ? totalWdValue.toLocaleString(undefined, {maximumFractionDigits:2}) : '&mdash;') + '</td>'
+            + '<td colspan="2" style="border:1px solid #b0b8c8;"></td>'
+            + '</tr></tfoot>'
+            + '</table>';
         $('#wo-body').html(html);
     }
 
