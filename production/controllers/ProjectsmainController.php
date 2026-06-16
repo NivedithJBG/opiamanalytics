@@ -333,11 +333,37 @@ class ProjectsmainController extends Controller
         $proj_b_end_date  = $dur_row['b_end_date'] ?? '';
         $proj_a_end_date  = $dur_row['a_end_date'] ?? '';
 
+        // Per-activity overrun (projected_duration - old_duration, floored at 0) using the
+        // canonical start anchor (earlier of planned start and reported start) — reused by
+        // both IOW Groups and IOW Items below so their "delay" matches the per-activity figure
+        // shown in the Ongoing bar list instead of the legacy scheduleactivities.delay column.
+        $anchorOverrunExpr = "
+            GREATEST(0, ROUND(
+                CASE
+                    WHEN rpt.cumulated_qty > 0 AND sa.quantity > 0
+                         AND (
+                             (sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00')
+                             OR (spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00')
+                         )
+                    THEN (
+                        (DATEDIFF(rpt.last_report_date,
+                            CASE WHEN sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                                      AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                 THEN LEAST(sa.start_date, spr.start_date)
+                                 WHEN spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                 THEN spr.start_date
+                                 ELSE sa.start_date END
+                        ) + 1) / rpt.cumulated_qty * sa.quantity
+                    ) - sa.old_duration
+                    ELSE 0
+                END
+            ))";
+
         // IOW Groups — route through workgroups_new (bridge: iow_groups → workgroups_new → wbsscheduleitems)
         $groups_raw = $connection->createCommand(
             "SELECT g.id, g.name,
                     COALESCE(DATEDIFF(MAX(sa.end_date), MIN(sa.start_date)) + 1, 0) AS scheduled,
-                    COALESCE(SUM(sa.delay),0) AS delay,
+                    COALESCE(SUM($anchorOverrunExpr),0) AS delay,
                     MIN(sa.start_date) AS start_date,
                     MAX(sa.end_date) AS end_date,
                     MAX(sa.actual_end_date) AS actual_end_date
@@ -347,6 +373,12 @@ class ProjectsmainController extends Controller
              LEFT JOIN wbsscheduleitems w  ON w.wbsid = wn.Workgroup_Id AND w.status = 0
              LEFT JOIN scheduleactivities sa ON sa.scheduleitem_id = w.scheduleitem_id
                                              AND sa.projectId = $pid AND sa.status = 0
+             LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
+             LEFT JOIN (
+                 SELECT activity_id, MAX(report_date) AS last_report_date, SUM(currentqty) AS cumulated_qty
+                 FROM schedule_progress_report_log
+                 GROUP BY activity_id
+             ) rpt ON rpt.activity_id = sa.id
              WHERE g.status = 0
              GROUP BY g.id, g.name
              ORDER BY MIN(COALESCE(wn.sortorder, 999999)) ASC, g.id ASC"
@@ -356,7 +388,7 @@ class ProjectsmainController extends Controller
         $iow_items_raw = $connection->createCommand(
             "SELECT w.scheduleitem_id AS id, w.name, wn.iowGroupid AS group_id,
                     COALESCE(DATEDIFF(MAX(sa.end_date), MIN(sa.start_date)) + 1, 0) AS scheduled,
-                    COALESCE(SUM(sa.delay),0) AS delay,
+                    COALESCE(SUM($anchorOverrunExpr),0) AS delay,
                     MIN(sa.start_date) AS start_date,
                     MAX(sa.end_date) AS end_date,
                     MAX(sa.actual_end_date) AS actual_end_date
@@ -365,6 +397,12 @@ class ProjectsmainController extends Controller
                                     AND wn.Project_Id = $pid AND wn.Status = 0
              LEFT JOIN scheduleactivities sa ON sa.scheduleitem_id = w.scheduleitem_id
                                              AND sa.projectId = $pid AND sa.status = 0
+             LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
+             LEFT JOIN (
+                 SELECT activity_id, MAX(report_date) AS last_report_date, SUM(currentqty) AS cumulated_qty
+                 FROM schedule_progress_report_log
+                 GROUP BY activity_id
+             ) rpt ON rpt.activity_id = sa.id
              WHERE w.projectId = $pid AND w.status = 0
              GROUP BY w.scheduleitem_id, w.name, wn.iowGroupid
              ORDER BY COALESCE(wn.sortorder, 999999) ASC, w.scheduleitem_id ASC"

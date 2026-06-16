@@ -598,6 +598,11 @@ function toBarItems(acts, isUpcoming){
             if (projDur > planned && planned > 0) {
                 sc = planned;
                 dl = projDur - planned;
+                if (r.spr_start_date && r.spr_start_date !== '0000-00-00') {
+                    var pe2 = new Date(r.spr_start_date);
+                    pe2.setDate(pe2.getDate() + Math.round(projDur) - 1);
+                    projEndDate = pe2.toISOString().slice(0, 10);
+                }
             } else {
                 sc = projDur || planned;
                 dl = 0;

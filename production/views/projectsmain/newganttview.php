@@ -106,6 +106,11 @@
     return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
   }
 
+  var todayStr = (function(){
+    var d = new Date();
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  })();
+
   function spanDays(s, e) {
     return (s && e) ? Math.round((new Date(e) - new Date(s)) / 86400000) + 1 : null;
   }
@@ -320,10 +325,23 @@
 
                   // A. Duration: computed from actual progress reports
                   var actDur = (act.actual_duration !== null && act.actual_duration !== undefined) ? act.actual_duration : '';
-                  // A. Start: activity start date from schedule_progress_report
+                  // A. Start: activity start date from schedule_progress_report (falls back to planned start when no progress logged)
                   var aStart = safeDate(act.spr_start_date);
                   // A. End: A. Start + A. Duration - 1 (not the last report date)
                   var aEndComputed = (aStart && act.actual_duration) ? addDays(aStart, act.actual_duration - 1) : null;
+
+                  // No progress logged yet but the planned start has already passed: push
+                  // the end date out by the days late, same "start delay" the dashboard's
+                  // Upcoming bucket already shows, so the Gantt bar/overlay reflect it too.
+                  var noProgress = (act.actual_duration === null || act.actual_duration === undefined);
+                  if (noProgress && aStart && aStart < todayStr) {
+                    var startDelayDays = Math.round((new Date(todayStr) - new Date(aStart)) / 86400000);
+                    if (startDelayDays > 0) {
+                      var extendedDur = (parseFloat(act.old_duration) || 1) + startDelayDays;
+                      aEndComputed = addDays(aStart, extendedDur - 1);
+                      actDur = extendedDur;
+                    }
+                  }
 
                   // Bar position uses A. dates when available, falls back to B. dates
                   var barStart = aStart       || act.actual_start_date;
@@ -343,8 +361,7 @@
                     dur:    act.old_duration,
                     start:  act.actual_start_date,
                     end:    act.actual_end_date,
-                    actdur: (act.actual_duration !== null && act.actual_duration !== undefined)
-                            ? act.actual_duration : act.old_duration,
+                    actdur: actDur !== '' ? actDur : act.old_duration,
                     astart: aStart || act.actual_start_date,
                     aend:   aEndComputed || act.actual_end_date
                   };
