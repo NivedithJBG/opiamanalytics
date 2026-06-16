@@ -592,22 +592,14 @@ function toBarItems(acts, isUpcoming){
                 projEndDate = pe.toISOString().slice(0, 10);
             }
         } else {
-            // Ongoing: new formula — use planned start as base if activity started late
-            if (r.spr_start_date && r.spr_start_date !== '0000-00-00'
-                && r.last_report_date && +r.cumulated_qty > 0 && +r.quantity > 0) {
-                var baseDate = (r.start_date && r.start_date < r.spr_start_date)
-                               ? r.start_date : r.spr_start_date;
-                var elapsed = Math.max(1, (new Date(r.last_report_date) - new Date(baseDate)) / 86400000);
-                var projDur = Math.round(elapsed / +r.cumulated_qty * +r.quantity);
-                if (projDur > planned && planned > 0) {
-                    sc = planned;
-                    dl = projDur - planned;
-                } else {
-                    sc = projDur || planned;
-                    dl = 0;
-                }
-            } else {
+            // Ongoing: projected_duration is computed server-side from the canonical
+            // start anchor (earlier of planned start and reported start)
+            var projDur = +r.projected_duration || 0;
+            if (projDur > planned && planned > 0) {
                 sc = planned;
+                dl = projDur - planned;
+            } else {
+                sc = projDur || planned;
                 dl = 0;
             }
         }

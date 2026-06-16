@@ -242,13 +242,18 @@ class ProjectsmainController extends Controller
 
         foreach ($activities as &$a) {
             $a['projected_duration'] = $a['duration'];
+            // Anchor = earlier of planned start (sa.start_date) and reported start (spr.start_date)
+            $plannedStart = (!empty($a['start_date']) && $a['start_date'] !== '0000-00-00') ? $a['start_date'] : '';
+            $reportedStart = (!empty($a['spr_start_date']) && $a['spr_start_date'] !== '0000-00-00') ? $a['spr_start_date'] : '';
+            $anchorStart = ($plannedStart && $reportedStart) ? min($plannedStart, $reportedStart) : ($reportedStart ?: $plannedStart);
+            $a['spr_start_date'] = $anchorStart;
             if ((int)($a['pr_report_count'] ?? 0) > 0
-                && !empty($a['spr_start_date'])   && $a['spr_start_date']   !== '0000-00-00'
+                && $anchorStart
                 && !empty($a['last_report_date'])
                 && (float)($a['cumulated_qty'] ?? 0) > 0
                 && (float)($a['quantity']      ?? 0) > 0)
             {
-                $elapsed = max(1, (strtotime($a['last_report_date']) - strtotime($a['spr_start_date'])) / 86400);
+                $elapsed = max(1, (strtotime($a['last_report_date']) - strtotime($anchorStart)) / 86400);
                 $a['projected_duration'] = round(($elapsed / (float)$a['cumulated_qty']) * (float)$a['quantity'], 1);
             }
         }
@@ -269,14 +274,40 @@ class ProjectsmainController extends Controller
                 SELECT
                     MIN(sa.actual_start_date) AS b_start,
                     MAX(sa.actual_end_date)   AS b_end,
-                    MIN(COALESCE(spr.start_date, sa.actual_start_date)) AS a_start,
+                    MIN(COALESCE(
+                        CASE WHEN sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                                  AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                             THEN LEAST(sa.start_date, spr.start_date)
+                             WHEN spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                             THEN spr.start_date
+                             ELSE sa.start_date END,
+                        sa.actual_start_date
+                    )) AS a_start,
                     MAX(COALESCE(
                         CASE WHEN rpt.cumulated_qty > 0 AND sa.quantity > 0
-                                  AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
-                             THEN DATE_ADD(spr.start_date, INTERVAL GREATEST(0, ROUND(
-                                      (DATEDIFF(rpt.last_report_date, spr.start_date) + 1)
-                                      / rpt.cumulated_qty * sa.quantity
-                                  ) - 1) DAY)
+                                  AND (
+                                      (sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00')
+                                      OR (spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00')
+                                  )
+                             THEN DATE_ADD(
+                                      CASE WHEN sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                                                AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                           THEN LEAST(sa.start_date, spr.start_date)
+                                           WHEN spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                           THEN spr.start_date
+                                           ELSE sa.start_date END,
+                                      INTERVAL GREATEST(0, ROUND(
+                                          (DATEDIFF(rpt.last_report_date,
+                                              CASE WHEN sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                                                        AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                                   THEN LEAST(sa.start_date, spr.start_date)
+                                                   WHEN spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                                   THEN spr.start_date
+                                                   ELSE sa.start_date END
+                                          ) + 1)
+                                          / rpt.cumulated_qty * sa.quantity
+                                      ) - 1) DAY
+                                  )
                              ELSE NULL END,
                         sa.actual_end_date
                     )) AS a_end
@@ -400,7 +431,7 @@ class ProjectsmainController extends Controller
         $pid = (int)$projuser->projectid;
         $connection = \Yii::$app->db;
         $act = $connection->createCommand(
-            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, actual_start_date, actual_end_date, end_date, resource_units, critical_status
+            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status
              FROM scheduleactivities WHERE id=$actid AND projectId=$pid"
         )->queryOne();
         return json_encode(['error'=>'No', 'kpi' => $this->_buildKpi($act, $pid, $connection)]);
@@ -489,13 +520,19 @@ class ProjectsmainController extends Controller
         )->queryOne();
         $last_reported_date = ($lrd && !empty($lrd['last_date'])) ? $lrd['last_date'] : '';
 
-        // Activity start date from schedule_progress_report (matches "Start date" shown in progress screen)
+        // Activity start anchor = earlier of planned schedule start and the date progress reporting began
+        // (covers an initial start delay either way: a late actual start, or a schedule entered after work began)
         $spr = $connection->createCommand(
             "SELECT start_date FROM schedule_progress_report
              WHERE activity_id=$actid LIMIT 1"
         )->queryOne();
-        $act_start_date = ($spr && !empty($spr['start_date']) && $spr['start_date'] != '0000-00-00')
+        $reported_start = ($spr && !empty($spr['start_date']) && $spr['start_date'] != '0000-00-00')
             ? $spr['start_date'] : '';
+        $planned_start = (!empty($act['start_date']) && $act['start_date'] != '0000-00-00')
+            ? $act['start_date'] : '';
+        $act_start_date = ($planned_start && $reported_start)
+            ? min($planned_start, $reported_start)
+            : ($reported_start ?: $planned_start);
 
         $duration   = (float)($act['duration']     ?? 0);
         $b_duration = (float)($act['old_duration'] ?? 0);
@@ -7466,21 +7503,35 @@ class ProjectsmainController extends Controller
         $itemId = (int)$_POST['itemId'];
         $rows = \Yii::$app->db->createCommand("
             SELECT sa.id, sa.name,
-                   sa.actual_start_date, sa.actual_end_date,
+                   sa.start_date, sa.actual_start_date, sa.actual_end_date,
                    sa.old_duration, sa.quantity,
                    sa.scheduleitem_id, sa.critical_status,
                    CASE
                      WHEN rpt.cumulated_qty > 0
                           AND sa.quantity > 0
-                          AND spr.start_date IS NOT NULL
-                          AND spr.start_date != '0000-00-00'
+                          AND (
+                              (sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00')
+                              OR (spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00')
+                          )
                      THEN ROUND(
-                            (DATEDIFF(rpt.last_report_date, spr.start_date) + 1)
+                            (DATEDIFF(rpt.last_report_date,
+                                CASE WHEN sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                                          AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                     THEN LEAST(sa.start_date, spr.start_date)
+                                     WHEN spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                     THEN spr.start_date
+                                     ELSE sa.start_date END
+                            ) + 1)
                             / rpt.cumulated_qty * sa.quantity
                           )
                      ELSE NULL
                    END AS actual_duration,
-                   spr.start_date        AS spr_start_date,
+                   CASE WHEN sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                             AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                        THEN LEAST(sa.start_date, spr.start_date)
+                        WHEN spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                        THEN spr.start_date
+                        ELSE sa.start_date END AS spr_start_date,
                    rpt.last_report_date  AS spr_end_date,
                    GROUP_CONCAT(
                        CONCAT(ar.precedent_activity,'ABC',ar.precedent_activity,
