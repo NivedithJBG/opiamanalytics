@@ -1027,6 +1027,7 @@ function pdShowTasksTip(items, anchor, mode) {
     var overCol  = isDuration ? '#ef5350' : '#66bb6a';
     var underCol = isDuration ? '#f0c419' : '#ef5350';
     var underBarCol = isDuration ? 'rgba(240,196,25,.3)' : 'rgba(239,83,80,.3)';
+    var fmtNum = isDuration ? function(v){ return (+v||0).toFixed(4); } : fm;
     var tip = pdGetTip();
     var cols = ['#d4845a','#f0c419','#8fa3bc','#7c5cbf','#3461b8','#27afc4','#ec407a','#26a69a'];
     var bars = '', taskRows = '';
@@ -1058,8 +1059,8 @@ function pdShowTasksTip(items, anchor, mode) {
             +   '<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:' + col + ';margin-right:10px;vertical-align:middle;"></span>'
             +   sh(r.name || '', 35)
             + '</td>'
-            + '<td style="text-align:right;font-weight:700;color:#e8f0fc;white-space:nowrap;">' + fm(tgt) + u + '</td>'
-            + '<td style="text-align:right;font-weight:700;color:' + actCol + ';white-space:nowrap;">' + (act > 0 ? fm(act) + u : '—') + '</td>'
+            + '<td style="text-align:right;font-weight:700;color:#e8f0fc;white-space:nowrap;">' + fmtNum(tgt) + u + '</td>'
+            + '<td style="text-align:right;font-weight:700;color:' + actCol + ';white-space:nowrap;">' + (act > 0 ? fmtNum(act) + u : '—') + '</td>'
             + '</tr>';
     });
     if (!items.length) {
