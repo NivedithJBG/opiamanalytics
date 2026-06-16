@@ -1016,28 +1016,36 @@ function pdGetTip() {
     }
     return tip;
 }
-function pdShowTasksTip(items, anchor) {
+function pdShowTasksTip(items, anchor, mode) {
     clearTimeout(_pdTipTimer);
     items = items || [];
+    var isDuration = mode === 'duration';
+    var valKey = isDuration ? 'planned_duration' : 'val';
+    var actKey = isDuration ? 'actual_duration'  : 'actual';
+    var title  = isDuration ? 'Task Duration' : 'Task Productivity';
+    var tgtLbl = isDuration ? 'Planned' : 'Target';
+    var overCol  = isDuration ? '#ef5350' : '#66bb6a';
+    var underCol = isDuration ? '#f0c419' : '#ef5350';
+    var underBarCol = isDuration ? 'rgba(240,196,25,.3)' : 'rgba(239,83,80,.3)';
     var tip = pdGetTip();
     var cols = ['#d4845a','#f0c419','#8fa3bc','#7c5cbf','#3461b8','#27afc4','#ec407a','#26a69a'];
     var bars = '', taskRows = '';
     var segPct = function(v, tot) { return tot > 0 ? (v / tot * 100).toFixed(1) + '%' : '0%'; };
     items.forEach(function(r, i) {
-        var tgt = +(r.val) || 0, act = +(r.actual) || 0;
+        var tgt = +(r[valKey]) || 0, act = +(r[actKey]) || 0;
         var col = cols[i % cols.length];
-        var u = r.unit ? ' ' + shu(r.unit) : '';
+        var u = isDuration ? ' d' : (r.unit ? ' ' + shu(r.unit) : '');
         var isOver  = act > 0 && act > tgt;
         var isUnder = act > 0 && act < tgt;
-        var actCol  = isOver ? '#66bb6a' : (isUnder ? '#ef5350' : '#e8f0fc');
+        var actCol  = isOver ? overCol : (isUnder ? underCol : '#e8f0fc');
         if (isOver) {
             bars += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;">'
-                + '<div style="height:' + segPct(act - tgt, act) + ';background:#66bb6a;border-radius:3px 3px 0 0;min-height:3px;"></div>'
+                + '<div style="height:' + segPct(act - tgt, act) + ';background:' + overCol + ';border-radius:3px 3px 0 0;min-height:3px;"></div>'
                 + '<div style="height:' + segPct(tgt, act) + ';background:' + col + ';min-height:4px;"></div>'
                 + '</div>';
         } else if (isUnder) {
             bars += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;">'
-                + '<div style="height:' + segPct(tgt - act, tgt) + ';background:rgba(239,83,80,.3);border-radius:3px 3px 0 0;min-height:3px;"></div>'
+                + '<div style="height:' + segPct(tgt - act, tgt) + ';background:' + underBarCol + ';border-radius:3px 3px 0 0;min-height:3px;"></div>'
                 + '<div style="height:' + segPct(act, tgt) + ';background:' + col + ';min-height:4px;"></div>'
                 + '</div>';
         } else {
@@ -1055,14 +1063,14 @@ function pdShowTasksTip(items, anchor) {
             + '</tr>';
     });
     if (!items.length) {
-        tip.innerHTML = '<div class="tip-title">Task Productivity</div><div style="font-size:17px;color:#aaa;padding:20px 0;text-align:center">No task data</div>';
+        tip.innerHTML = '<div class="tip-title">' + title + '</div><div style="font-size:17px;color:#aaa;padding:20px 0;text-align:center">No task data</div>';
     } else {
-        tip.innerHTML = '<div class="tip-title">Task Productivity</div>'
+        tip.innerHTML = '<div class="tip-title">' + title + '</div>'
             + '<div style="display:flex;gap:8px;align-items:flex-end;height:90px;margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.12);">' + bars + '</div>'
             + '<table>'
             +   '<thead><tr>'
             +     '<th style="text-align:left;">Task</th>'
-            +     '<th style="text-align:right;">Target</th>'
+            +     '<th style="text-align:right;">' + tgtLbl + '</th>'
             +     '<th style="text-align:right;">Actual</th>'
             +   '</tr></thead>'
             +   '<tbody>' + taskRows + '</tbody>'
@@ -1118,6 +1126,16 @@ function doCycleTime(k) {
         +'</svg>';
 
     el.innerHTML = svg;
+
+    // Inject "Task" chip into white body area (top-right of .gp)
+    var old = el.querySelector('.pd-tasks-chip');
+    if (old) old.remove();
+    var chip = document.createElement('span');
+    chip.className = 'pd-tasks-chip';
+    chip.textContent = 'Task';
+    el.appendChild(chip);
+    chip.addEventListener('mouseenter', function() { pdShowTasksTip(k.tasks, chip, 'duration'); });
+    chip.addEventListener('mouseleave', function() { pdHideTipSoon(); });
 }
 
 // ── Capacity Utilisation gauge ────────────────────────────────────────────────

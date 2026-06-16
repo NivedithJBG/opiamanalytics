@@ -525,24 +525,45 @@ class ProjectsmainController extends Controller
         )->queryOne() : null;
         $masterActId = ($wbn_row && $wbn_row['activity_Id']) ? (int)$wbn_row['activity_Id'] : $wbn_id;
         $task_rows = $masterActId ? $connection->createCommand(
-            "SELECT at.task_name, at.task_unit,
+            "SELECT at.id AS task_id, at.task_name, at.task_unit,
                     COALESCE(stn.task_productivity, at.productivity, 0) AS productivity,
-                    COALESCE(stn.task_qty, 0) AS task_qty
+                    COALESCE(stn.task_qty, 0) AS task_qty,
+                    COALESCE(stn.Budgeted_Duration, 0) AS planned_duration
              FROM activity_tasks at
              LEFT JOIN schedule_task_new stn ON stn.task_Id = at.id AND stn.activity_Id = $actid
              WHERE at.activity_id = $masterActId
              ORDER BY at.sort_order ASC"
         )->queryAll() : [];
-        $tasks = array_map(function($t) use ($target_qty, $actual_qty, $elapsed) {
+
+        // Sum measurement-book "work done" qty per task for this activity (Site Office > Measurement Book)
+        $taskMbQty = [];
+        $mbRows = $connection->createCommand(
+            "SELECT entries FROM wo_measurement_book WHERE project_id=$pid AND sent_status=1"
+        )->queryAll();
+        foreach ($mbRows as $mbRow) {
+            foreach (json_decode($mbRow['entries'] ?? '[]', true) ?: [] as $entry) {
+                if ((string)($entry['activity_id'] ?? '') !== (string)$wbn_id) continue;
+                foreach ($entry['tasks'] ?? [] as $t) {
+                    $tid = (int)($t['task_id'] ?? 0);
+                    if (!$tid) continue;
+                    $taskMbQty[$tid] = ($taskMbQty[$tid] ?? 0) + (float)($t['work_done'] ?? 0);
+                }
+            }
+        }
+
+        $tasks = array_map(function($t) use ($target_qty, $actual_qty, $elapsed, $taskMbQty) {
             $tqu = (float)$t['task_qty'];
             $actual = ($elapsed > 0 && $actual_qty > 0 && $tqu > 0)
                 ? round($actual_qty * $tqu / $elapsed, 3) : 0;
+            $mbQty = $taskMbQty[(int)$t['task_id']] ?? 0;
             return [
-                'name'   => $t['task_name'],
-                'unit'   => $t['task_unit'],
-                'val'    => (float)$t['productivity'],
-                'actual' => $actual,
-                'qty'    => round($tqu * $target_qty, 3),
+                'name'             => $t['task_name'],
+                'unit'             => $t['task_unit'],
+                'val'              => (float)$t['productivity'],
+                'actual'           => $actual,
+                'qty'              => round($tqu * $target_qty, 3),
+                'planned_duration' => (float)$t['planned_duration'],
+                'actual_duration'  => ($elapsed > 0 && $mbQty > 0) ? round($elapsed / $mbQty, 3) : 0,
             ];
         }, $task_rows);
 
