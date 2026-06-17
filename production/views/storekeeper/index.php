@@ -757,16 +757,16 @@
                         })();
 
                     if (act.tasks && act.tasks.length) {
-                        html += '<table class="table table-bordered" style="margin:0;font-size:12px;">'
+                        html += '<table class="table table-bordered" style="margin:0;font-size:12px;table-layout:fixed;width:100%;">'
                             + '<thead><tr style="background:#dce3ea;">'
-                            + '<th style="width:32px;padding:5px 8px;">#</th>'
+                            + '<th style="width:28px;padding:5px 6px;">#</th>'
                             + '<th style="padding:5px 8px;">Task</th>'
-                            + '<th style="width:80px;padding:5px 8px;">Unit</th>'
-                            + '<th style="width:100px;padding:5px 8px;text-align:right;background:#e8f0fb;">Rate</th>'
-                            + '<th style="width:140px;padding:5px 8px;text-align:right;">Work Done</th>'
-                            + '<th style="width:100px;padding:5px 8px;text-align:right;">Amount</th>'
-                            + '<th style="width:110px;padding:5px 8px;text-align:right;background:#f0f4e8;">Qty Till Today</th>'
-                            + '<th style="width:120px;padding:5px 8px;text-align:right;background:#f0f4e8;">Amt Till Today</th>'
+                            + '<th style="width:58px;padding:5px 6px;">Unit</th>'
+                            + '<th style="width:80px;padding:5px 6px;text-align:right;background:#e8f0fb;">Rate</th>'
+                            + '<th style="width:110px;padding:5px 6px;text-align:right;">Work Done</th>'
+                            + '<th style="width:82px;padding:5px 6px;text-align:right;">Amount</th>'
+                            + '<th style="width:90px;padding:5px 6px;text-align:right;background:#f0f4e8;">Qty Till Today</th>'
+                            + '<th style="width:95px;padding:5px 6px;text-align:right;background:#f0f4e8;">Amt Till Today</th>'
                             + '</tr></thead><tbody>';
                         $.each(act.tasks, function(ti, task) {
                             var rate     = (task.rate != null && task.rate !== '') ? parseFloat(task.rate) : '';
@@ -774,16 +774,16 @@
                             var amount   = (rate !== '' && rate > 0 && workDone !== '') ? (rate * workDone).toFixed(2) : '—';
                             var cumWd    = parseFloat(task.cum_work_done) || 0;
                             var cumAmt   = parseFloat(task.cum_amount)    || 0;
-                            var roInp    = 'type="number" step="any" readonly style="height:26px;font-size:12px;text-align:right;margin-left:auto;border:1px solid #b8cce4;border-radius:3px;padding:2px 4px;cursor:default;"';
+                            var roInp    = 'type="number" step="any" readonly style="height:24px;font-size:12px;text-align:right;margin-left:auto;border:1px solid #b8cce4;border-radius:3px;padding:2px 4px;cursor:default;"';
                             html += '<tr>'
-                                + '<td style="padding:4px 8px;">' + (ti + 1) + '</td>'
-                                + '<td style="padding:4px 8px;">' + (task.task_name || '') + '</td>'
-                                + '<td style="padding:4px 8px;">' + (task.unit || '') + '</td>'
-                                + '<td style="padding:2px 6px;text-align:right;background:#e8f0fb;"><input ' + roInp + ' value="' + rate + '" style="width:88px;height:26px;font-size:12px;text-align:right;margin-left:auto;background:#e8f0fb;border-color:#b8cce4;color:#000;font-weight:600;cursor:default;"></td>'
-                                + '<td style="padding:2px 6px;text-align:right;"><input ' + roInp + ' value="' + workDone + '" style="width:110px;height:26px;font-size:12px;text-align:right;margin-left:auto;background:#f4f7fa;border-color:#c5ccd4;color:#333;"></td>'
-                                + '<td style="padding:4px 8px;text-align:right;">' + amount + '</td>'
-                                + '<td style="padding:4px 8px;text-align:right;background:#f0f4e8;">' + (cumWd > 0 ? +cumWd.toFixed(2) : '—') + '</td>'
-                                + '<td style="padding:4px 8px;text-align:right;background:#f0f4e8;">' + (cumAmt > 0 ? +cumAmt.toFixed(2) : '—') + '</td>'
+                                + '<td style="padding:4px 6px;">' + (ti + 1) + '</td>'
+                                + '<td style="padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (task.task_name || '') + '">' + (task.task_name || '') + '</td>'
+                                + '<td style="padding:4px 6px;">' + (task.unit || '') + '</td>'
+                                + '<td style="padding:2px 4px;text-align:right;background:#e8f0fb;"><input ' + roInp + ' value="' + rate + '" style="width:70px;height:24px;font-size:12px;text-align:right;margin-left:auto;background:#e8f0fb;border-color:#b8cce4;color:#000;font-weight:600;cursor:default;"></td>'
+                                + '<td style="padding:2px 4px;text-align:right;"><input ' + roInp + ' value="' + workDone + '" style="width:98px;height:24px;font-size:12px;text-align:right;margin-left:auto;background:#f4f7fa;border-color:#c5ccd4;color:#333;"></td>'
+                                + '<td style="padding:4px 6px;text-align:right;">' + amount + '</td>'
+                                + '<td style="padding:4px 6px;text-align:right;background:#f0f4e8;">' + (cumWd > 0 ? +cumWd.toFixed(2) : '—') + '</td>'
+                                + '<td style="padding:4px 6px;text-align:right;background:#f0f4e8;">' + (cumAmt > 0 ? +cumAmt.toFixed(2) : '—') + '</td>'
                                 + '</tr>';
                         });
                         html += '</tbody></table>';
@@ -1351,32 +1351,32 @@
                                 + '</div>';
                         })();
                     if (act.tasks && act.tasks.length) {
-                        html += '<table class="table table-bordered" style="margin:0;font-size:12px;">'
+                        html += '<table class="table table-bordered" style="margin:0;font-size:12px;table-layout:fixed;width:100%;">'
                             + '<thead><tr style="background:#dce3ea;">'
-                            + '<th style="width:32px;padding:5px 8px;">#</th>'
+                            + '<th style="width:28px;padding:5px 6px;">#</th>'
                             + '<th style="padding:5px 8px;">Task</th>'
-                            + '<th style="width:80px;padding:5px 8px;">Unit</th>'
-                            + '<th style="width:100px;padding:5px 8px;text-align:right;background:#e8f0fb;">Rate</th>'
-                            + '<th style="width:140px;padding:5px 8px;text-align:right;">Work Done</th>'
-                            + '<th style="width:100px;padding:5px 8px;text-align:right;">Amount</th>'
-                            + '<th style="width:110px;padding:5px 8px;text-align:right;background:#f0f4e8;">Qty Till Today</th>'
-                            + '<th style="width:120px;padding:5px 8px;text-align:right;background:#f0f4e8;">Amt Till Today</th>'
+                            + '<th style="width:58px;padding:5px 6px;">Unit</th>'
+                            + '<th style="width:80px;padding:5px 6px;text-align:right;background:#e8f0fb;">Rate</th>'
+                            + '<th style="width:110px;padding:5px 6px;text-align:right;">Work Done</th>'
+                            + '<th style="width:82px;padding:5px 6px;text-align:right;">Amount</th>'
+                            + '<th style="width:90px;padding:5px 6px;text-align:right;background:#f0f4e8;">Qty Till Today</th>'
+                            + '<th style="width:95px;padding:5px 6px;text-align:right;background:#f0f4e8;">Amt Till Today</th>'
                             + '</tr></thead><tbody>';
                         $.each(act.tasks, function(ti, task) {
                             var taskRate = parseFloat(task.rate) || 0;
                             var cumWd    = parseFloat(task.cum_work_done) || 0;
                             var cumAmt   = parseFloat(task.cum_amount)    || 0;
                             html += '<tr>'
-                                + '<td style="padding:4px 8px;">' + (ti + 1) + '</td>'
-                                + '<td style="padding:4px 8px;">' + task.task_name + '</td>'
-                                + '<td style="padding:4px 8px;">' + (task.task_unit || '') + '</td>'
-                                + '<td style="padding:2px 6px;text-align:right;background:#e8f0fb;">'
+                                + '<td style="padding:4px 6px;">' + (ti + 1) + '</td>'
+                                + '<td style="padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + task.task_name + '">' + task.task_name + '</td>'
+                                + '<td style="padding:4px 6px;">' + (task.task_unit || '') + '</td>'
+                                + '<td style="padding:2px 4px;text-align:right;background:#e8f0fb;">'
                                 + '<input type="number" step="any" readonly class="form-control input-sm mb-taskrate"'
                                 + ' data-ai="' + ai + '" data-ti="' + ti + '"'
                                 + ' value="' + taskRate + '"'
-                                + ' style="width:88px;height:26px;font-size:12px;text-align:right;margin-left:auto;background:#e8f0fb;border-color:#b8cce4;color:#000;font-weight:600;cursor:default;">'
+                                + ' style="width:70px;height:24px;font-size:12px;text-align:right;margin-left:auto;background:#e8f0fb;border-color:#b8cce4;color:#000;font-weight:600;cursor:default;">'
                                 + '</td>'
-                                + '<td style="padding:2px 6px;text-align:right;">'
+                                + '<td style="padding:2px 4px;text-align:right;">'
                                 + (function(){
                                     var _tqpu  = parseFloat(task.task_qty) || 0;
                                     var _mbCur = parseFloat(act.mb_qty) || 0;
@@ -1384,10 +1384,10 @@
                                     return '<input type="number" step="any" class="form-control input-sm mb-workdone"'
                                         + ' data-ai="' + ai + '" data-ti="' + ti + '" data-tqpu="' + _tqpu + '"'
                                         + ' value="' + _wdDef + '" placeholder="0"'
-                                        + ' style="width:110px;height:26px;font-size:12px;text-align:right;margin-left:auto;">';
+                                        + ' style="width:98px;height:24px;font-size:12px;text-align:right;margin-left:auto;">';
                                 })()
                                 + '</td>'
-                                + '<td style="padding:4px 8px;text-align:right;font-size:12px;color:#000;" class="mb-task-amount" data-ai="' + ai + '" data-ti="' + ti + '">'
+                                + '<td style="padding:4px 6px;text-align:right;font-size:12px;color:#000;" class="mb-task-amount" data-ai="' + ai + '" data-ti="' + ti + '">'
                                 + (function(){
                                     var _tqpu  = parseFloat(task.task_qty) || 0;
                                     var _mbCur = parseFloat(act.mb_qty) || 0;
@@ -1395,8 +1395,8 @@
                                     return (taskRate > 0 && _wd > 0) ? (taskRate * _wd).toFixed(2) : '—';
                                 })()
                                 + '</td>'
-                                + '<td style="padding:4px 8px;text-align:right;font-size:12px;background:#f0f4e8;">' + (cumWd > 0 ? +cumWd.toFixed(2) : '—') + '</td>'
-                                + '<td style="padding:4px 8px;text-align:right;font-size:12px;background:#f0f4e8;">' + (cumAmt > 0 ? +cumAmt.toFixed(2) : '—') + '</td>'
+                                + '<td style="padding:4px 6px;text-align:right;font-size:12px;background:#f0f4e8;">' + (cumWd > 0 ? +cumWd.toFixed(2) : '—') + '</td>'
+                                + '<td style="padding:4px 6px;text-align:right;font-size:12px;background:#f0f4e8;">' + (cumAmt > 0 ? +cumAmt.toFixed(2) : '—') + '</td>'
                                 + '</tr>';
                         });
                         html += '</tbody></table>';
