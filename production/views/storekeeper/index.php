@@ -1121,7 +1121,7 @@
                         + '<input type="number" min="0" max="' + remaining + '" step="any" class="form-control input-sm grn-qty-input"'
                         + ' data-resource-id="' + r.resource_id + '"'
                         + ' data-remaining="' + remaining + '"'
-                        + ' value="' + ordered + '"'
+                        + ' placeholder="0"'
                         + ' style="width:100%;height:26px;padding:2px 6px;font-size:12px;text-align:right;">'
                         + '</td>'
                         + '<td style="padding:2px 4px;">'
