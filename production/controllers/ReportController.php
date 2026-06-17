@@ -250,10 +250,15 @@ class ReportController extends Controller
         $act = $db->createCommand("
             SELECT sa.id, sa.name, sa.unit, sa.quantity,
                    wa.activity_Name, wa.activity_Unit,
-                   spr.start_date AS report_start_date, spr.cumulated_qty
+                   spr.start_date AS report_start_date, spr.cumulated_qty,
+                   rptlog.last_report_date
             FROM scheduleactivities sa
             LEFT JOIN workgroup_activities_new wa ON wa.id = sa.activity_id
             LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
+            LEFT JOIN (
+                SELECT activity_id, MAX(report_date) AS last_report_date
+                FROM schedule_progress_report_log GROUP BY activity_id
+            ) rptlog ON rptlog.activity_id = sa.id
             WHERE sa.id = :aid AND sa.projectId = :pid
             LIMIT 1
         ", [':aid' => $actid, ':pid' => $projectid])->queryOne();
@@ -264,7 +269,8 @@ class ReportController extends Controller
         $unit     = htmlspecialchars($act['unit'] ?: $act['activity_Unit']);
         $bQty     = (float)($act['quantity'] ?? 0);
         $cumQty   = (float)($act['cumulated_qty'] ?? 0);
-        $startDate = $this->formatDateDisplay($act['report_start_date']);
+        $startDate      = $this->formatDateDisplay($act['report_start_date']);
+        $lastReportDate = $this->formatDateDisplay($act['last_report_date'] ?? '');
         $todayDisp = date('d-m-Y');
 
         // Get tasks for this activity — same source as the Tasks screen (schedule_task_new + activity_tasks)
@@ -308,6 +314,11 @@ class ReportController extends Controller
             . ' class="form-control edit_start_date datepicker" data-id="' . $actid . '"'
             . ' value="' . $startDate . '" placeholder="dd-mm-yyyy" autocomplete="off"'
             . ' style="' . $inputStyle . 'width:100%;">';
+        $html .= '</div>';
+
+        $html .= '<div style="flex:0 0 110px;">';
+        $html .= '<label style="' . $labelStyle . '">Last Reported Date</label>';
+        $html .= '<div style="' . $dispStyle . 'width:100%;">' . ($lastReportDate ?: '-') . '</div>';
         $html .= '</div>';
 
         $html .= '<div style="flex:0 0 100px;">';
