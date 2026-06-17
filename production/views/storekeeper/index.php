@@ -1260,6 +1260,10 @@
     $(document).on('click', '#grn-send-btn', function(){
         var orderId = $('#grn-order-id').val();
 
+        if (confirm('Press Print if you need a copy.\n\nOK → Print then Report\nCancel → Report without printing')) {
+            $('#grn-print-btn').trigger('click');
+        }
+
         // Validate date of receipt
         if (!$('#grn-receipt-date').val()) {
             alert('Please enter the Date of Receipt.');
@@ -1499,6 +1503,10 @@
 
     $(document).on('click', '#mb-save-btn', function(){
         var woNum = $('#mb-popup').data('wonumber');
+
+        if (confirm('Press Print if you need a copy.\n\nOK → Print then Report\nCancel → Report without printing')) {
+            $('#mb-print-btn').trigger('click');
+        }
 
         // Validate date
         if (!$('#mb-date-input').val()) {
