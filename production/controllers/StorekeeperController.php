@@ -252,9 +252,9 @@ class StorekeeperController extends Controller
             $woQtyMap[$a['activity_id'] ?? ''] = (float)($a['qty'] ?? 0);
         }
 
-        // Build cumulative qty map across all M.Books for this WO
+        // Build cumulative qty map across all sent M.Books for this WO
         $allMbs = $db->createCommand(
-            'SELECT entries FROM wo_measurement_book WHERE wo_number = :num AND project_id = :pid',
+            'SELECT entries FROM wo_measurement_book WHERE wo_number = :num AND project_id = :pid AND sent_status = 1',
             [':num' => $row['wo_number'], ':pid' => $row['project_id']]
         )->queryAll();
         $cumulativeMap = [];
@@ -468,6 +468,26 @@ class StorekeeperController extends Controller
                 }
             }
 
+            // Last reported qty per activity from progress reports
+            $actIds = array_filter(array_map('intval', array_column($activities, 'activity_id')));
+            $lastReportedMap = [];
+            if (!empty($actIds)) {
+                $ph = implode(',', $actIds);
+                $lrRows = $db->createCommand(
+                    "SELECT l.activity_id, l.currentqty
+                     FROM schedule_progress_report_log l
+                     INNER JOIN (
+                         SELECT activity_id, MAX(id) AS max_id
+                         FROM schedule_progress_report_log
+                         WHERE activity_id IN ($ph)
+                         GROUP BY activity_id
+                     ) m ON l.id = m.max_id"
+                )->queryAll();
+                foreach ($lrRows as $lr) {
+                    $lastReportedMap[(string)$lr['activity_id']] = (float)$lr['currentqty'];
+                }
+            }
+
             // Pre-fill from draft if it exists
             $savedMap = [];
             if ($draft) {
@@ -478,14 +498,16 @@ class StorekeeperController extends Controller
 
             foreach ($activities as &$act) {
                 $aid = $act['activity_id'] ?? '';
-                $act['cumulative_qty'] = $cumulativeMap[$aid] ?? 0;
+                $billed = $cumulativeMap[$aid] ?? 0;
+                $lastRep = $lastReportedMap[$aid] ?? 0;
+                $act['cumulative_qty']   = $billed;
+                $act['last_reported_qty'] = $lastRep;
+                // Defaults: unit from WO, current qty = last reported minus billed
+                $act['mb_unit'] = $act['unit'] ?? '';
+                $act['mb_qty']  = round(max(0, $lastRep - $billed), 2);
                 if (isset($savedMap[$aid])) {
-                    $act['mb_length'] = $savedMap[$aid]['length'] ?? '';
-                    $act['mb_width']  = $savedMap[$aid]['width']  ?? '';
-                    $act['mb_height'] = $savedMap[$aid]['height'] ?? '';
-                    $act['mb_nos']    = $savedMap[$aid]['nos']    ?? '';
-                    $act['mb_unit']   = $savedMap[$aid]['unit']   ?? '';
-                    $act['mb_qty']    = $savedMap[$aid]['qty']    ?? '';
+                    $act['mb_unit'] = $savedMap[$aid]['unit'] ?? ($act['unit'] ?? '');
+                    $act['mb_qty']  = $savedMap[$aid]['qty']  ?? $act['mb_qty'];
                     $stMap = [];
                     foreach ($savedMap[$aid]['tasks'] ?? [] as $st) { $stMap[$st['task_id']] = $st['work_done'] ?? ''; }
                     if (isset($act['tasks']) && is_array($act['tasks'])) {

@@ -736,8 +736,9 @@
                         + (function(){
                             var _wo  = parseFloat(act.wo_qty) || 0;
                             var _cum = parseFloat(act.cumulative_qty) || 0;
+                            var _cur = act.qty != null ? +parseFloat(act.qty).toFixed(2) : 0;
+                            var _bil = Math.max(0, _cum - _cur);
                             var _rem = Math.max(0, _wo - _cum);
-                            var _cur = act.qty != null ? +parseFloat(act.qty).toFixed(2) : '';
                             var fmt  = function(n){ return +n.toFixed(2); };
                             var lbl  = function(t){ return '<span style="font-size:11px;font-weight:600;color:#555;white-space:nowrap;">'+t+'</span>'; };
                             var val  = function(v){ return '<span style="font-size:12px;color:#333;white-space:nowrap;">'+fmt(v)+'</span>'; };
@@ -745,7 +746,7 @@
                             return '<div style="padding:6px 0;background:#f4f7fa;display:flex;align-items:stretch;border-bottom:1px solid #d0d7df;width:100%;">'
                                 + cell('Unit', '<input type="text" readonly style="width:80px;height:22px;font-size:12px;display:inline-block;padding:1px 6px;text-align:center;background:#f4f7fa;border-color:#c5ccd4;color:#333;cursor:default;" value="' + (act.unit || '') + '" placeholder="—">')
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
-                                + cell('Billed Qty', val(_cum))
+                                + cell('Billed Qty', val(_bil))
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
                                 + cell('Current Qty', '<span style="font-size:13px;font-weight:700;color:#001033;white-space:nowrap;">' + _cur + '</span>')
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
@@ -1127,6 +1128,16 @@
         if (m) $(this).val(m[0]);
     });
 
+    // MB — update Remaining Qty display as user types Current Qty
+    $(document).on('input', '.mb-qty', function(){
+        var ai  = $(this).data('ai');
+        var wo  = parseFloat($(this).data('wo-qty')) || 0;
+        var bil = parseFloat($(this).data('bil-qty')) || 0;
+        var cur = parseFloat($(this).val()) || 0;
+        var rem = +(Math.max(0, wo - bil - cur).toFixed(2));
+        $('.mb-rem-display[data-ai="' + ai + '"]').text(rem);
+    });
+
     // MB — clear validation highlight when user fills a field
     $(document).on('input', '.mb-unit, .mb-qty, .mb-workdone', function(){
         if ($(this).val().trim()) $(this).css({ background: '', borderColor: '' });
@@ -1309,8 +1320,9 @@
                         + act.activity_name + '</div>'
                         + (function(){
                             var _wo  = parseFloat(act.qty) || 0;
-                            var _cum = parseFloat(act.cumulative_qty) || 0;
-                            var _rem = Math.max(0, _wo - _cum);
+                            var _bil = parseFloat(act.cumulative_qty) || 0;
+                            var _cur = parseFloat(act.mb_qty) || 0;
+                            var _rem = Math.max(0, _wo - _bil - _cur);
                             var fmt  = function(n){ return +n.toFixed(2); };
                             var lbl  = function(t){ return '<span style="font-size:11px;font-weight:600;color:#555;white-space:nowrap;">'+t+'</span>'; };
                             var val  = function(v){ return '<span style="font-size:12px;color:#333;white-space:nowrap;">'+fmt(v)+'</span>'; };
@@ -1318,11 +1330,11 @@
                             return '<div style="padding:6px 0;background:#f4f7fa;display:flex;align-items:stretch;border-bottom:1px solid #d0d7df;width:100%;">'
                                 + cell('Unit', '<input type="text" style="width:80px;height:22px;font-size:12px;display:inline-block;padding:1px 6px;text-align:center;" class="form-control input-sm mb-unit" data-ai="' + ai + '" value="' + (act.mb_unit || '') + '" placeholder="—">')
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
-                                + cell('Billed Qty', val(_cum))
+                                + cell('Billed Qty', val(_bil))
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
-                                + cell('Current Qty', '<input type="number" step="any" style="width:100px;height:22px;font-size:12px;font-weight:700;display:inline-block;padding:1px 6px;text-align:center;" class="form-control input-sm mb-qty" data-ai="' + ai + '" data-wo-qty="' + _wo + '" data-cum-qty="' + _cum + '" value="' + (act.mb_qty || '') + '" placeholder="—">')
+                                + cell('Current Qty', '<input type="number" step="any" style="width:100px;height:22px;font-size:12px;font-weight:700;display:inline-block;padding:1px 6px;text-align:center;" class="form-control input-sm mb-qty" data-ai="' + ai + '" data-wo-qty="' + _wo + '" data-bil-qty="' + _bil + '" value="' + (_cur || '') + '" placeholder="—">')
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
-                                + cell('Remaining Qty', val(_rem))
+                                + cell('Remaining Qty', '<span class="mb-rem-display" data-ai="' + ai + '" style="font-size:12px;color:#333;white-space:nowrap;">' + fmt(_rem) + '</span>')
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
                                 + cell('WO Qty', val(_wo))
                                 + '</div>';
