@@ -734,14 +734,6 @@
                     html += '<div style="margin-bottom:18px;border:1px solid #d0d7df;border-radius:4px;overflow:hidden;">'
                         + '<div style="background:#072c47;color:#fff;padding:7px 12px;font-size:12px;font-weight:700;">' + (act.activity_name || '—') + '</div>'
                         + '<div style="padding:6px 12px;background:#f4f7fa;display:flex;align-items:center;gap:6px;flex-wrap:nowrap;border-bottom:1px solid #d0d7df;overflow-x:auto;">'
-                        + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">Length</span>'
-                        + '<input ' + inpRo + ' value="' + (act.length != null ? act.length : '') + '" placeholder="—">'
-                        + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">Width</span>'
-                        + '<input ' + inpRo + ' value="' + (act.width  != null ? act.width  : '') + '" placeholder="—">'
-                        + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">Height</span>'
-                        + '<input ' + inpRo + ' value="' + (act.height != null ? act.height : '') + '" placeholder="—">'
-                        + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">Nos</span>'
-                        + '<input ' + inpRo + ' value="' + (act.nos    != null ? act.nos    : '') + '" placeholder="—">'
                         + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">Unit</span>'
                         + '<input type="text" readonly style="width:58px;height:24px;font-size:12px;display:inline-block;padding:2px 4px;background:#f4f7fa;border-color:#c5ccd4;color:#333;cursor:default;" value="' + (act.unit || '') + '" placeholder="—">'
                         + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">QNTY</span>'
@@ -1124,39 +1116,8 @@
     });
 
     // MB — clear validation highlight when user fills a field
-    $(document).on('input', '.mb-unit, .mb-length, .mb-width, .mb-height, .mb-nos, .mb-workdone', function(){
+    $(document).on('input', '.mb-unit, .mb-qty, .mb-workdone', function(){
         if ($(this).val().trim()) $(this).css({ background: '', borderColor: '' });
-    });
-
-    // MB — auto-calculate QNTY = Length × Width × Height × Nos (blank dimension treated as 1)
-    $(document).on('input', '.mb-length, .mb-width, .mb-height, .mb-nos', function(){
-        var ai  = $(this).data('ai');
-        var dim = function(sel) {
-            var v = $('.' + sel + '[data-ai="' + ai + '"]').val().trim();
-            return v === '' ? 1 : (parseFloat(v) || 0);
-        };
-        var l = dim('mb-length'), w = dim('mb-width'), h = dim('mb-height'), n = dim('mb-nos');
-        var qty    = l * w * h * n;
-        var $qtyEl = $('.mb-qty[data-ai="' + ai + '"]');
-        $qtyEl.val(qty % 1 === 0 ? qty : parseFloat(qty.toFixed(4)));
-        var woQty  = parseFloat($qtyEl.data('wo-qty'))  || 0;
-        var cumQty = parseFloat($qtyEl.data('cum-qty')) || 0;
-        if (woQty > 0 && qty > (woQty - cumQty)) {
-            $qtyEl.css({ background: '#fde8e8', borderColor: '#c0392b', color: '#c0392b' });
-        } else {
-            $qtyEl.css({ background: '#e8f4ff', borderColor: '#99c0e0', color: '#000' });
-        }
-        var act = _mbActivities[ai];
-        $.each(act ? (act.tasks || []) : [], function(ti, task) {
-            var $wd = $('.mb-workdone[data-ai="' + ai + '"][data-ti="' + ti + '"]');
-            if (!$wd.val().trim()) return;
-            var tqpu  = parseFloat(task.task_qty) || 0;
-            var maxWd = qty * tqpu;
-            var wd    = parseFloat($wd.val()) || 0;
-            $wd.css(tqpu > 0 && wd > maxWd
-                ? { background: '#fde8e8', borderColor: '#c0392b' }
-                : { background: '', borderColor: '' });
-        });
     });
 
     // MB — real-time work done limit check (must not exceed QNTY × task_qty/unit) + amount update
@@ -1335,22 +1296,13 @@
                         + '<div style="background:#072c47;color:#fff;padding:7px 12px;font-size:12px;font-weight:700;">'
                         + act.activity_name + '</div>'
                         + '<div style="padding:6px 12px;background:#f4f7fa;display:flex;align-items:center;gap:6px;flex-wrap:nowrap;border-bottom:1px solid #d0d7df;overflow-x:auto;">'
-                        + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">Length</span>'
-                        + '<input ' + inpStyle + ' class="form-control input-sm mb-length" data-ai="' + ai + '" value="' + (act.mb_length || '') + '" placeholder="—">'
-                        + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">Width</span>'
-                        + '<input ' + inpStyle + ' class="form-control input-sm mb-width"  data-ai="' + ai + '" value="' + (act.mb_width  || '') + '" placeholder="—">'
-                        + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">Height</span>'
-                        + '<input ' + inpStyle + ' class="form-control input-sm mb-height" data-ai="' + ai + '" value="' + (act.mb_height || '') + '" placeholder="—">'
-                        + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">Nos</span>'
-                        + '<input ' + inpStyle + ' class="form-control input-sm mb-nos"    data-ai="' + ai + '" value="' + (act.mb_nos || '') + '" placeholder="—">'
                         + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">Unit</span>'
                         + '<input type="text" style="width:58px;height:24px;font-size:12px;display:inline-block;padding:2px 4px;" class="form-control input-sm mb-unit" data-ai="' + ai + '" value="' + (act.mb_unit || '') + '" placeholder="—">'
                         + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">QNTY</span>'
-                        + '<input ' + inpStyle + ' readonly class="form-control input-sm mb-qty" data-ai="' + ai + '"'
+                        + '<input ' + inpStyle + ' class="form-control input-sm mb-qty" data-ai="' + ai + '"'
                         + ' data-wo-qty="' + (parseFloat(act.qty) || 0) + '"'
                         + ' data-cum-qty="' + (parseFloat(act.cumulative_qty) || 0) + '"'
-                        + ' value="' + (act.mb_qty || '') + '"'
-                        + ' style="width:72px;height:24px;font-size:12px;display:inline-block;padding:2px 4px;background:#e8f4ff;border-color:#99c0e0;color:#000;font-weight:600;cursor:default;">'
+                        + ' value="' + (act.mb_qty || '') + '" placeholder="—">'
                         + '</div>';
                     var woQty  = parseFloat(act.qty) || 0;
                     var cumQty = parseFloat(act.cumulative_qty) || 0;
@@ -1430,12 +1382,8 @@
             var entry = {
                 activity_id:   act.activity_id,
                 activity_name: act.activity_name,
-                length: $('.mb-length[data-ai="' + ai + '"]').val() || null,
-                width:  $('.mb-width[data-ai="'  + ai + '"]').val() || null,
-                height: $('.mb-height[data-ai="' + ai + '"]').val() || null,
-                nos:    $('.mb-nos[data-ai="'    + ai + '"]').val() || null,
-                unit:   $('.mb-unit[data-ai="'   + ai + '"]').val() || null,
-                qty:    $('.mb-qty[data-ai="'    + ai + '"]').val() || null,
+                unit:   $('.mb-unit[data-ai="' + ai + '"]').val() || null,
+                qty:    $('.mb-qty[data-ai="'  + ai + '"]').val() || null,
                 tasks:  []
             };
             $.each(act.tasks || [], function(ti, task) {
@@ -1504,7 +1452,7 @@
         // Validate all per-activity and per-task fields
         var missingField = false;
         $.each(_mbActivities, function(ai, act) {
-            $.each(['.mb-unit', '.mb-length', '.mb-width', '.mb-height', '.mb-nos'], function(_, cls) {
+            $.each(['.mb-unit', '.mb-qty'], function(_, cls) {
                 var $el = $(cls + '[data-ai="' + ai + '"]');
                 if (!$el.val().trim()) {
                     $el.css({ background: '#fde8e8', borderColor: '#c0392b' });
@@ -1524,7 +1472,7 @@
             });
         });
         if (missingField) {
-            alert('Please fill in all fields (Unit, Length, Width, Height, Nos, and Work Done for all tasks) before sending.');
+            alert('Please fill in Unit and Quantity for all activities, and Work Done for all tasks, before sending.');
             return;
         }
 
@@ -1533,12 +1481,8 @@
             var entry = {
                 activity_id:   act.activity_id,
                 activity_name: act.activity_name,
-                length: $('.mb-length[data-ai="' + ai + '"]').val() || null,
-                width:  $('.mb-width[data-ai="'  + ai + '"]').val() || null,
-                height: $('.mb-height[data-ai="' + ai + '"]').val() || null,
-                nos:    $('.mb-nos[data-ai="'    + ai + '"]').val() || null,
-                unit:   $('.mb-unit[data-ai="'   + ai + '"]').val() || null,
-                qty:    $('.mb-qty[data-ai="'    + ai + '"]').val() || null,
+                unit:   $('.mb-unit[data-ai="' + ai + '"]').val() || null,
+                qty:    $('.mb-qty[data-ai="'  + ai + '"]').val() || null,
                 tasks:  []
             };
             $.each(act.tasks || [], function(ti, task) {
