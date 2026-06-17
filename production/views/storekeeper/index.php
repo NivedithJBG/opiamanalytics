@@ -938,18 +938,19 @@
                 }
                 var html = '<table class="table table-bordered sk-table" style="margin-bottom:0;table-layout:fixed;">'
                     + '<colgroup>'
-                    + '<col style="width:36px;"><col>'
-                    + '<col style="width:100px;"><col style="width:80px;"><col style="width:90px;">'
+                    + '<col style="width:34px;"><col>'
+                    + '<col style="width:58px;"><col style="width:95px;"><col style="width:110px;"><col style="width:88px;">'
                     + '<col style="width:100px;"><col style="width:100px;">'
                     + '</colgroup>'
                     + '<thead><tr>'
                     + '<th style="text-align:center;">#</th>'
                     + '<th>Item</th>'
+                    + '<th style="text-align:center;font-size:11px;">Unit</th>'
                     + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Received Qty</th>'
                     + '<th style="text-align:right;font-size:11px;">Rate</th>'
                     + '<th style="text-align:right;font-size:11px;">Amount</th>'
-                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Rcvd Till Today</th>'
-                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Amt Till Today</th>'
+                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;background:#dce8f5;">Rcvd Till Today</th>'
+                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;background:#dce8f5;">Amt Till Today</th>'
                     + '</tr></thead><tbody>';
                 $.each(data.items, function(i, item) {
                     var qty    = parseFloat(item.qty)  || 0;
@@ -961,11 +962,12 @@
                     html += '<tr>'
                         + '<td style="text-align:center;">' + (i + 1) + '</td>'
                         + '<td>' + (item.resource_name || '—') + '</td>'
+                        + '<td style="text-align:center;font-size:12px;">' + (item.unit || '—') + '</td>'
                         + '<td style="text-align:right;font-size:12px;padding-right:6px;font-weight:600;color:#072c47;">' + qty + '</td>'
                         + '<td style="text-align:right;font-size:12px;padding-right:6px;">' + (rate > 0 ? rate.toFixed(2) : '—') + '</td>'
                         + '<td style="text-align:right;font-size:12px;padding-right:6px;">' + amount + '</td>'
-                        + '<td style="text-align:right;font-size:12px;padding-right:6px;font-weight:600;">' + rcvdTot.toFixed(2) + '</td>'
-                        + '<td style="text-align:right;font-size:12px;padding-right:6px;">' + (amtTot > 0 ? amtTot.toFixed(2) : '—') + '</td>'
+                        + '<td style="text-align:right;font-size:12px;padding-right:6px;font-weight:600;background:#eef4fc;">' + rcvdTot.toFixed(2) + '</td>'
+                        + '<td style="text-align:right;font-size:12px;padding-right:6px;background:#eef4fc;">' + (amtTot > 0 ? amtTot.toFixed(2) : '—') + '</td>'
                         + '</tr>';
                 });
                 html += '</tbody></table>';
@@ -1090,18 +1092,19 @@
                 }
                 var html = '<table class="table table-bordered sk-table" style="margin-bottom:0;table-layout:fixed;">'
                     + '<colgroup>'
-                    + '<col style="width:36px;"><col>'
-                    + '<col style="width:100px;"><col style="width:80px;"><col style="width:90px;">'
+                    + '<col style="width:34px;"><col>'
+                    + '<col style="width:58px;"><col style="width:95px;"><col style="width:110px;"><col style="width:88px;">'
                     + '<col style="width:100px;"><col style="width:100px;">'
                     + '</colgroup>'
                     + '<thead><tr>'
                     + '<th style="text-align:center;">#</th>'
                     + '<th>Item</th>'
+                    + '<th style="text-align:center;font-size:11px;">Unit</th>'
                     + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Received Qty</th>'
                     + '<th style="text-align:right;font-size:11px;">Rate</th>'
                     + '<th style="text-align:right;font-size:11px;">Amount</th>'
-                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Rcvd Till Today</th>'
-                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Amt Till Today</th>'
+                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;background:#dce8f5;">Rcvd Till Today</th>'
+                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;background:#dce8f5;">Amt Till Today</th>'
                     + '</tr></thead><tbody>';
                 $.each(data.rows, function(i, r) {
                     var ordered   = parseFloat(r.ordered_qty) || 0;
@@ -1113,6 +1116,7 @@
                     html += '<tr>'
                         + '<td style="text-align:center;">' + (i + 1) + '</td>'
                         + '<td>' + r.resource_name + '</td>'
+                        + '<td style="text-align:center;font-size:12px;">' + (r.unit || '—') + '</td>'
                         + '<td style="padding:2px 4px;">'
                         + '<input type="number" min="0" max="' + remaining + '" step="any" class="form-control input-sm grn-qty-input"'
                         + ' data-resource-id="' + r.resource_id + '"'
@@ -1130,10 +1134,10 @@
                         + '<td style="text-align:right;font-size:12px;padding-right:6px;vertical-align:middle;">'
                         + '<span class="grn-amount-display">—</span>'
                         + '</td>'
-                        + '<td style="text-align:right;font-size:12px;padding-right:6px;vertical-align:middle;font-weight:600;">'
+                        + '<td style="text-align:right;font-size:12px;padding-right:6px;vertical-align:middle;font-weight:600;background:#eef4fc;">'
                         + rcvdTot.toFixed(2)
                         + '</td>'
-                        + '<td style="text-align:right;font-size:12px;padding-right:6px;vertical-align:middle;">'
+                        + '<td style="text-align:right;font-size:12px;padding-right:6px;vertical-align:middle;background:#eef4fc;">'
                         + (amtTot > 0 ? amtTot.toFixed(2) : '—')
                         + '</td>'
                         + '</tr>';
@@ -1759,12 +1763,12 @@
 
 <!-- GRN Popup -->
 <div id="grn-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:9998;"></div>
-<div id="grn-popup" style="display:none;position:fixed;z-index:9999;width:720px;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:7px;box-shadow:0 6px 28px rgba(0,0,0,0.22);overflow:hidden;">
+<div id="grn-popup" style="display:none;position:fixed;z-index:9999;width:980px;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:7px;box-shadow:0 6px 28px rgba(0,0,0,0.22);overflow:hidden;">
     <div style="background:#072c47;color:#fff;padding:10px 16px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between;">
         <span>Goods Received Note &mdash; <span id="grn-po-number" style="font-weight:400;font-size:12px;"></span></span>
         <span id="grn-close" style="cursor:pointer;font-size:18px;line-height:1;">&times;</span>
     </div>
-    <div style="padding:16px 20px;max-height:60vh;overflow-y:auto;">
+    <div style="padding:16px 20px;max-height:80vh;overflow-y:auto;">
         <input type="hidden" id="grn-order-id">
         <div style="display:flex;gap:20px;margin-bottom:14px;">
             <div style="flex:1;display:flex;flex-direction:column;gap:10px;">
