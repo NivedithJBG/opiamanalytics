@@ -709,7 +709,6 @@
         $('#mb-wo-number').text('');
         $('#mb-date-input').val('').prop('readonly', true).css({background:'#f4f7fa', color:'#333'});
         $('#mb-save-btn').hide();
-        $('#mb-print-btn').hide();
         $('#mb-cancel-btn').text('Close');
         $('#mb-overlay, #mb-popup').show();
         $('#mb-popup').css('display', 'flex').data('viewmode', true);
@@ -1462,7 +1461,6 @@
         $('#mb-popup').hide();
         if ($('#mb-popup').data('viewmode')) {
             $('#mb-save-btn').show();
-            $('#mb-print-btn').show();
             $('#mb-cancel-btn').text('Cancel');
             $('#mb-date-input').prop('readonly', false).css({background:'', color:''});
             $('#mb-popup').data('viewmode', false);
