@@ -942,6 +942,7 @@ function doTargetProduction(k){
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#a8aeb8"/>'
+        +(tq>0?'<text x="105" y="74" text-anchor="middle" font-size="18" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+fm(tq)+(u?' '+u:'')+'</text>':'')
         +'<text x="8" y="112" text-anchor="start" font-size="13" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">'+fm(aq)+(u?' '+u:'')+'</tspan></text>'
         +'<text x="202" y="112" text-anchor="end" font-size="13" fill="#111" font-family="Barlow Condensed,Arial">Target <tspan font-weight="700">'+fm(compTarget)+(u?' '+u:'')+'</tspan></text>'
         +(an?'<text x="105" y="128" text-anchor="middle" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">'+an+'</text>':'')

@@ -336,7 +336,10 @@ class ProjectsmainController extends Controller
         // Per-activity overrun (projected_duration - old_duration, floored at 0) using the
         // canonical start anchor (earlier of planned start and reported start) — reused by
         // both IOW Groups and IOW Items below so their "delay" matches the per-activity figure
-        // shown in the Ongoing bar list instead of the legacy scheduleactivities.delay column.
+        // shown in the Ongoing/Upcoming bar lists instead of the legacy scheduleactivities.delay
+        // column. Two cases, same as toBarItems() on the frontend:
+        //   - progress reported:    overrun = projected_duration - old_duration
+        //   - no progress reported: overrun = today - planned start (if start date has passed)
         $anchorOverrunExpr = "
             GREATEST(0, ROUND(
                 CASE
@@ -355,15 +358,28 @@ class ProjectsmainController extends Controller
                                  ELSE sa.start_date END
                         ) + 1) / rpt.cumulated_qty * sa.quantity
                     ) - sa.old_duration
+                    WHEN (rpt.cumulated_qty IS NULL OR rpt.cumulated_qty = 0)
+                         AND sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                         AND sa.start_date < CURDATE()
+                    THEN DATEDIFF(CURDATE(), sa.start_date)
                     ELSE 0
                 END
             ))";
+
+        // IOW/Group-level delay: if any critical activity underneath has a delay, surface
+        // that (critical path drives the schedule); otherwise fall back to any activity's
+        // delay so a non-critical overrun still isn't hidden.
+        $iowDelayExpr = "
+            CASE WHEN SUM(CASE WHEN sa.critical_status = 'Yes' THEN 1 ELSE 0 END) > 0
+                 THEN MAX(CASE WHEN sa.critical_status = 'Yes' THEN $anchorOverrunExpr ELSE NULL END)
+                 ELSE MAX($anchorOverrunExpr)
+            END";
 
         // IOW Groups — route through workgroups_new (bridge: iow_groups → workgroups_new → wbsscheduleitems)
         $groups_raw = $connection->createCommand(
             "SELECT g.id, g.name,
                     COALESCE(DATEDIFF(MAX(sa.end_date), MIN(sa.start_date)) + 1, 0) AS scheduled,
-                    COALESCE(SUM($anchorOverrunExpr),0) AS delay,
+                    COALESCE($iowDelayExpr,0) AS delay,
                     MIN(sa.start_date) AS start_date,
                     MAX(sa.end_date) AS end_date,
                     MAX(sa.actual_end_date) AS actual_end_date
@@ -388,7 +404,7 @@ class ProjectsmainController extends Controller
         $iow_items_raw = $connection->createCommand(
             "SELECT w.scheduleitem_id AS id, w.name, wn.iowGroupid AS group_id,
                     COALESCE(DATEDIFF(MAX(sa.end_date), MIN(sa.start_date)) + 1, 0) AS scheduled,
-                    COALESCE(SUM($anchorOverrunExpr),0) AS delay,
+                    COALESCE($iowDelayExpr,0) AS delay,
                     MIN(sa.start_date) AS start_date,
                     MAX(sa.end_date) AS end_date,
                     MAX(sa.actual_end_date) AS actual_end_date
