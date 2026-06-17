@@ -949,8 +949,8 @@
                     + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Received Qty</th>'
                     + '<th style="text-align:right;font-size:11px;">Rate</th>'
                     + '<th style="text-align:right;font-size:11px;">Amount</th>'
-                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;background:#dce8f5;">Rcvd Till Today</th>'
-                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;background:#dce8f5;">Amt Till Today</th>'
+                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;white-space:nowrap;">Rcvd Till Today</th>'
+                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Amt Till Today</th>'
                     + '</tr></thead><tbody>';
                 $.each(data.items, function(i, item) {
                     var qty    = parseFloat(item.qty)  || 0;
@@ -1103,8 +1103,8 @@
                     + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Received Qty</th>'
                     + '<th style="text-align:right;font-size:11px;">Rate</th>'
                     + '<th style="text-align:right;font-size:11px;">Amount</th>'
-                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;background:#dce8f5;">Rcvd Till Today</th>'
-                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;background:#dce8f5;">Amt Till Today</th>'
+                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;white-space:nowrap;">Rcvd Till Today</th>'
+                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Amt Till Today</th>'
                     + '</tr></thead><tbody>';
                 $.each(data.rows, function(i, r) {
                     var ordered   = parseFloat(r.ordered_qty) || 0;
