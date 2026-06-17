@@ -1235,6 +1235,28 @@
         }
     });
 
+    // GRN popup — print
+    $(document).on('click', '#grn-print-btn', function(){
+        var w = window.open('', '_blank');
+        w.document.write('<html><head><title>GRN Print</title>'
+            + '<style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px;}'
+            + 'table{border-collapse:collapse;width:100%;}'
+            + 'th,td{border:1px solid #999;padding:4px 8px;font-size:11px;}'
+            + 'th{background:#dce3ea;}'
+            + '.hdr{margin-bottom:12px;} .hdr b{display:inline-block;width:130px;}'
+            + '</style></head><body>'
+            + '<h3 style="margin:0 0 10px;">Goods Received Note</h3>'
+            + '<div class="hdr"><b>GRN No.:</b> ' + $('#grn-serial-number').text() + '</div>'
+            + '<div class="hdr"><b>Purchase Order:</b> ' + $('#grn-po-display').text() + '</div>'
+            + '<div class="hdr"><b>Vendor:</b> ' + $('#grn-vendor-name').text() + '</div>'
+            + '<div class="hdr"><b>Date:</b> ' + ($('#grn-receipt-date').val() || '—') + '</div>'
+            + $('#grn-items-body').html()
+            + '<div style="margin-top:14px;"><b>Remarks:</b> ' + ($('#grn-remarks').val() || '') + '</div>'
+            + '</body></html>');
+        w.document.close();
+        w.print();
+    });
+
     // GRN popup — send
     $(document).on('click', '#grn-send-btn', function(){
         var orderId = $('#grn-order-id').val();
@@ -1800,6 +1822,7 @@
     </div>
     <div style="padding:10px 20px 16px;text-align:right;border-top:1px solid #eee;">
         <button type="button" id="grn-cancel" style="background:#c0392b;border:1px solid #a93226;border-radius:20px;padding:5px 18px;font-size:12px;color:#fff;cursor:pointer;margin-right:8px;">Cancel</button>
-        <button type="button" id="grn-send-btn" style="background:#072c47;color:#fff;border:none;border-radius:20px;padding:5px 22px;font-size:12px;cursor:pointer;">Send</button>
+        <button type="button" id="grn-print-btn" style="background:#6c757d;color:#fff;border:none;border-radius:20px;padding:5px 18px;font-size:12px;cursor:pointer;margin-right:8px;">Print</button>
+        <button type="button" id="grn-send-btn" style="background:#072c47;color:#fff;border:none;border-radius:20px;padding:5px 22px;font-size:12px;cursor:pointer;">Report</button>
     </div>
 </div>
