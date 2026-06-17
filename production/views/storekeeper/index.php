@@ -939,26 +939,33 @@
                 var html = '<table class="table table-bordered sk-table" style="margin-bottom:0;table-layout:fixed;">'
                     + '<colgroup>'
                     + '<col style="width:36px;"><col>'
-                    + '<col style="width:110px;"><col style="width:100px;"><col style="width:110px;">'
+                    + '<col style="width:100px;"><col style="width:80px;"><col style="width:90px;">'
+                    + '<col style="width:100px;"><col style="width:100px;">'
                     + '</colgroup>'
                     + '<thead><tr>'
                     + '<th style="text-align:center;">#</th>'
                     + '<th>Item</th>'
-                    + '<th style="text-align:right;font-size:11px;">Received Quantity</th>'
+                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Received Qty</th>'
                     + '<th style="text-align:right;font-size:11px;">Rate</th>'
                     + '<th style="text-align:right;font-size:11px;">Amount</th>'
+                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Rcvd Till Today</th>'
+                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Amt Till Today</th>'
                     + '</tr></thead><tbody>';
                 $.each(data.items, function(i, item) {
                     var qty    = parseFloat(item.qty)  || 0;
                     // Legacy GRNs saved without a rate fall back to the PO rate
                     var rate   = parseFloat(item.rate) || parseFloat(item.po_rate) || 0;
                     var amount = (qty > 0 && rate > 0) ? (qty * rate).toFixed(2) : '—';
+                    var rcvdTot = parseFloat(item.total_received) || 0;
+                    var amtTot  = parseFloat(item.total_amount)  || 0;
                     html += '<tr>'
                         + '<td style="text-align:center;">' + (i + 1) + '</td>'
                         + '<td>' + (item.resource_name || '—') + '</td>'
                         + '<td style="text-align:right;font-size:12px;padding-right:6px;font-weight:600;color:#072c47;">' + qty + '</td>'
                         + '<td style="text-align:right;font-size:12px;padding-right:6px;">' + (rate > 0 ? rate.toFixed(2) : '—') + '</td>'
                         + '<td style="text-align:right;font-size:12px;padding-right:6px;">' + amount + '</td>'
+                        + '<td style="text-align:right;font-size:12px;padding-right:6px;font-weight:600;">' + rcvdTot.toFixed(2) + '</td>'
+                        + '<td style="text-align:right;font-size:12px;padding-right:6px;">' + (amtTot > 0 ? amtTot.toFixed(2) : '—') + '</td>'
                         + '</tr>';
                 });
                 html += '</tbody></table>';
@@ -1084,20 +1091,25 @@
                 var html = '<table class="table table-bordered sk-table" style="margin-bottom:0;table-layout:fixed;">'
                     + '<colgroup>'
                     + '<col style="width:36px;"><col>'
-                    + '<col style="width:110px;"><col style="width:100px;"><col style="width:110px;">'
+                    + '<col style="width:100px;"><col style="width:80px;"><col style="width:90px;">'
+                    + '<col style="width:100px;"><col style="width:100px;">'
                     + '</colgroup>'
                     + '<thead><tr>'
                     + '<th style="text-align:center;">#</th>'
                     + '<th>Item</th>'
-                    + '<th style="text-align:right;font-size:11px;">Received Quantity</th>'
+                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Received Qty</th>'
                     + '<th style="text-align:right;font-size:11px;">Rate</th>'
                     + '<th style="text-align:right;font-size:11px;">Amount</th>'
+                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Rcvd Till Today</th>'
+                    + '<th style="text-align:right;font-size:11px;white-space:nowrap;">Amt Till Today</th>'
                     + '</tr></thead><tbody>';
                 $.each(data.rows, function(i, r) {
                     var ordered   = parseFloat(r.ordered_qty) || 0;
                     // One GRN per order, no balance carry-over: cap = this order's quantity
                     var remaining = ordered;
-                    var poRate = parseFloat(r.po_rate) || 0;
+                    var poRate   = parseFloat(r.po_rate) || 0;
+                    var rcvdTot  = parseFloat(r.total_received) || 0;
+                    var amtTot   = parseFloat(r.total_amount)  || 0;
                     html += '<tr>'
                         + '<td style="text-align:center;">' + (i + 1) + '</td>'
                         + '<td>' + r.resource_name + '</td>'
@@ -1117,6 +1129,12 @@
                         + '</td>'
                         + '<td style="text-align:right;font-size:12px;padding-right:6px;vertical-align:middle;">'
                         + '<span class="grn-amount-display">—</span>'
+                        + '</td>'
+                        + '<td style="text-align:right;font-size:12px;padding-right:6px;vertical-align:middle;font-weight:600;">'
+                        + rcvdTot.toFixed(2)
+                        + '</td>'
+                        + '<td style="text-align:right;font-size:12px;padding-right:6px;vertical-align:middle;">'
+                        + (amtTot > 0 ? amtTot.toFixed(2) : '—')
                         + '</td>'
                         + '</tr>';
                 });

@@ -793,6 +793,11 @@ class StorekeeperController extends Controller
                         WHERE g2.GRN_Item = por.resource_id
                           AND g2.GRN_Project = po.project_id
                     ), 0) AS total_received,
+                    COALESCE((
+                        SELECT SUM(g2.GRN_Quantity * COALESCE(g2.GRN_Rate, 0)) FROM goods_received_note g2
+                        WHERE g2.GRN_Item = por.resource_id
+                          AND g2.GRN_Project = po.project_id
+                    ), 0) AS total_amount,
                     g.GRN_Quantity AS grn_qty, g.GRN_Rate AS grn_rate, g.grn_number
              FROM purchase_order_resources por
              JOIN purchase_orders po ON po.order_id = por.order_id
@@ -966,7 +971,15 @@ class StorekeeperController extends Controller
         $items = $db->createCommand(
             'SELECT g.GRN_Item AS resource_id, g.GRN_Quantity AS qty, g.GRN_Rate AS rate,
                     COALESCE(por.resource_name, g.GRN_Item) AS resource_name,
-                    por.unit, por.qnty AS ordered_qty, por.rate AS po_rate
+                    por.unit, por.qnty AS ordered_qty, por.rate AS po_rate,
+                    COALESCE((
+                        SELECT SUM(g2.GRN_Quantity) FROM goods_received_note g2
+                        WHERE g2.GRN_Item = g.GRN_Item AND g2.GRN_Project = :pid
+                    ), 0) AS total_received,
+                    COALESCE((
+                        SELECT SUM(g2.GRN_Quantity * COALESCE(g2.GRN_Rate, 0)) FROM goods_received_note g2
+                        WHERE g2.GRN_Item = g.GRN_Item AND g2.GRN_Project = :pid
+                    ), 0) AS total_amount
              FROM goods_received_note g
              LEFT JOIN purchase_order_resources por
                     ON por.resource_id = g.GRN_Item AND por.order_id = g.GRN_Purchase_Order AND por.delete_status = 0
