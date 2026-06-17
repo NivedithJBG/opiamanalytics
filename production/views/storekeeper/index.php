@@ -759,14 +759,14 @@
                     if (act.tasks && act.tasks.length) {
                         html += '<table class="table table-bordered" style="margin:0;font-size:12px;table-layout:fixed;width:100%;">'
                             + '<thead><tr style="background:#dce3ea;">'
-                            + '<th style="width:28px;padding:5px 6px;">#</th>'
-                            + '<th style="padding:5px 8px;">Task</th>'
-                            + '<th style="width:58px;padding:5px 6px;">Unit</th>'
-                            + '<th style="width:80px;padding:5px 6px;text-align:right;background:#e8f0fb;">Rate</th>'
-                            + '<th style="width:110px;padding:5px 6px;text-align:right;">Work Done</th>'
-                            + '<th style="width:82px;padding:5px 6px;text-align:right;">Amount</th>'
-                            + '<th style="width:90px;padding:5px 6px;text-align:right;background:#f0f4e8;">Qty Till Today</th>'
-                            + '<th style="width:95px;padding:5px 6px;text-align:right;background:#f0f4e8;">Amt Till Today</th>'
+                            + '<th style="width:28px;padding:4px 5px;font-size:10px;white-space:nowrap;">#</th>'
+                            + '<th style="padding:4px 6px;font-size:10px;white-space:nowrap;">Task</th>'
+                            + '<th style="width:58px;padding:4px 5px;font-size:10px;white-space:nowrap;">Unit</th>'
+                            + '<th style="width:80px;padding:4px 5px;font-size:10px;white-space:nowrap;text-align:right;background:#e8f0fb;">Rate</th>'
+                            + '<th style="width:110px;padding:4px 5px;font-size:10px;white-space:nowrap;text-align:right;">Work Done</th>'
+                            + '<th style="width:82px;padding:4px 5px;font-size:10px;white-space:nowrap;text-align:right;">Amount</th>'
+                            + '<th style="width:90px;padding:4px 5px;font-size:10px;white-space:nowrap;text-align:right;background:#f0f4e8;">Qty Till Today</th>'
+                            + '<th style="width:95px;padding:4px 5px;font-size:10px;white-space:nowrap;text-align:right;background:#f0f4e8;">Amt Till Today</th>'
                             + '</tr></thead><tbody>';
                         $.each(act.tasks, function(ti, task) {
                             var rate     = (task.rate != null && task.rate !== '') ? parseFloat(task.rate) : '';
@@ -1353,14 +1353,14 @@
                     if (act.tasks && act.tasks.length) {
                         html += '<table class="table table-bordered" style="margin:0;font-size:12px;table-layout:fixed;width:100%;">'
                             + '<thead><tr style="background:#dce3ea;">'
-                            + '<th style="width:28px;padding:5px 6px;">#</th>'
-                            + '<th style="padding:5px 8px;">Task</th>'
-                            + '<th style="width:58px;padding:5px 6px;">Unit</th>'
-                            + '<th style="width:80px;padding:5px 6px;text-align:right;background:#e8f0fb;">Rate</th>'
-                            + '<th style="width:110px;padding:5px 6px;text-align:right;">Work Done</th>'
-                            + '<th style="width:82px;padding:5px 6px;text-align:right;">Amount</th>'
-                            + '<th style="width:90px;padding:5px 6px;text-align:right;background:#f0f4e8;">Qty Till Today</th>'
-                            + '<th style="width:95px;padding:5px 6px;text-align:right;background:#f0f4e8;">Amt Till Today</th>'
+                            + '<th style="width:28px;padding:4px 5px;font-size:10px;white-space:nowrap;">#</th>'
+                            + '<th style="padding:4px 6px;font-size:10px;white-space:nowrap;">Task</th>'
+                            + '<th style="width:58px;padding:4px 5px;font-size:10px;white-space:nowrap;">Unit</th>'
+                            + '<th style="width:80px;padding:4px 5px;font-size:10px;white-space:nowrap;text-align:right;background:#e8f0fb;">Rate</th>'
+                            + '<th style="width:110px;padding:4px 5px;font-size:10px;white-space:nowrap;text-align:right;">Work Done</th>'
+                            + '<th style="width:82px;padding:4px 5px;font-size:10px;white-space:nowrap;text-align:right;">Amount</th>'
+                            + '<th style="width:90px;padding:4px 5px;font-size:10px;white-space:nowrap;text-align:right;background:#f0f4e8;">Qty Till Today</th>'
+                            + '<th style="width:95px;padding:4px 5px;font-size:10px;white-space:nowrap;text-align:right;background:#f0f4e8;">Amt Till Today</th>'
                             + '</tr></thead><tbody>';
                         $.each(act.tasks, function(ti, task) {
                             var taskRate = parseFloat(task.rate) || 0;
