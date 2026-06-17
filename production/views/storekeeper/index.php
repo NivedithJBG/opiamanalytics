@@ -739,6 +739,10 @@
                         + '<span style="color:#ccc;margin:0 4px;">|</span>'
                         + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">Unit</span>'
                         + '<input type="text" readonly style="width:58px;height:24px;font-size:12px;display:inline-block;padding:2px 4px;background:#f4f7fa;border-color:#c5ccd4;color:#333;cursor:default;" value="' + (act.unit || '') + '" placeholder="—">'
+                        + '<span style="color:#ccc;margin:0 4px;">|</span>'
+                        + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">Billed Qty</span>'
+                        + '<span style="font-size:12px;color:#333;white-space:nowrap;">' + (parseFloat(act.cumulative_qty) || 0) + '</span>'
+                        + '<span style="color:#ccc;margin:0 4px;">|</span>'
                         + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">QNTY</span>'
                         + '<input type="number" readonly value="' + (act.qty != null ? act.qty : '') + '" style="width:72px;height:24px;font-size:12px;display:inline-block;padding:2px 4px;background:#e8f4ff;border-color:#99c0e0;color:#000;font-weight:600;cursor:default;">'
                         + '</div>';
@@ -1235,19 +1239,19 @@
             alert('Quantity entered exceeds the remaining balance for one or more items. Please check the highlighted fields.');
             return;
         }
-        var $btn = $(this).prop('disabled', true).text('Sending...');
+        var $btn = $(this).prop('disabled', true).text('Reporting...');
         $.ajax({
             type: 'POST', url: '../storekeeper/savegrn',
             data: { order_id: orderId, items: JSON.stringify(items), remarks: $('#grn-remarks').val(), date_of_receipt: $('#grn-receipt-date').val(), grn_number: $('#grn-serial-number').text() },
             dataType: 'json',
             success: function(data) {
-                $btn.prop('disabled', false).text('Send');
+                $btn.prop('disabled', false).text('Report');
                 if (data.error !== 'No') { alert(data.errortext || 'Error saving GRN.'); return; }
                 $('#grn-overlay, #grn-popup').hide();
                 alert('Goods Received Note submitted successfully.');
             },
             error: function() {
-                $btn.prop('disabled', false).text('Send');
+                $btn.prop('disabled', false).text('Report');
                 alert('Failed to submit. Please try again.');
             }
         });
@@ -1304,6 +1308,10 @@
                         + '<span style="color:#ccc;margin:0 4px;">|</span>'
                         + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">Unit</span>'
                         + '<input type="text" style="width:58px;height:24px;font-size:12px;display:inline-block;padding:2px 4px;" class="form-control input-sm mb-unit" data-ai="' + ai + '" value="' + (act.mb_unit || '') + '" placeholder="—">'
+                        + '<span style="color:#ccc;margin:0 4px;">|</span>'
+                        + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">Billed Qty</span>'
+                        + '<span style="font-size:12px;color:#333;white-space:nowrap;">' + (parseFloat(act.cumulative_qty) || 0) + '</span>'
+                        + '<span style="color:#ccc;margin:0 4px;">|</span>'
                         + '<span style="font-size:11px;font-weight:600;color:#000;white-space:nowrap;">QNTY</span>'
                         + '<input ' + inpStyle + ' class="form-control input-sm mb-qty" data-ai="' + ai + '"'
                         + ' data-wo-qty="' + (parseFloat(act.qty) || 0) + '"'
@@ -1502,18 +1510,18 @@
             });
             entries.push(entry);
         });
-        var $btn = $(this).prop('disabled', true).text('Sending...');
+        var $btn = $(this).prop('disabled', true).text('Reporting...');
         $.ajax({
             type: 'POST', url: '../storekeeper/savemb',
             data: { wo_number: woNum, entries: JSON.stringify(entries), mb_number: $('#mb-serial-number').text(), mb_date: $('#mb-date-input').val() }, dataType: 'json',
             success: function(data) {
-                $btn.prop('disabled', false).text('Send');
+                $btn.prop('disabled', false).text('Report');
                 if (data.error !== 'No') { alert(data.errortext || 'Error sending.'); return; }
                 closeMbPopup();
                 alert('Measurement Book submitted successfully.');
             },
             error: function() {
-                $btn.prop('disabled', false).text('Send');
+                $btn.prop('disabled', false).text('Report');
                 alert('Failed to submit. Please try again.');
             }
         });
@@ -1698,7 +1706,7 @@
     <div style="padding:10px 20px 14px;text-align:right;border-top:1px solid #eee;flex-shrink:0;">
         <button type="button" id="mb-cancel-btn" style="background:#f0f4f8;border:1px solid #c5ccd4;border-radius:20px;padding:5px 18px;font-size:12px;color:#000;cursor:pointer;margin-right:8px;">Cancel</button>
         <button type="button" id="mb-draft-btn" style="background:#465365;color:#fff;border:none;border-radius:20px;padding:5px 18px;font-size:12px;cursor:pointer;margin-right:8px;">Save</button>
-        <button type="button" id="mb-save-btn" style="background:#072c47;color:#fff;border:none;border-radius:20px;padding:5px 22px;font-size:12px;cursor:pointer;">Send</button>
+        <button type="button" id="mb-save-btn" style="background:#001a6e;color:#fff;border:none;border-radius:20px;padding:5px 22px;font-size:12px;cursor:pointer;">Report</button>
     </div>
 </div>
 
