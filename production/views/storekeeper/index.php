@@ -1136,6 +1136,11 @@
         var cur = parseFloat($(this).val()) || 0;
         var rem = +(Math.max(0, wo - bil - cur).toFixed(2));
         $('.mb-rem-display[data-ai="' + ai + '"]').text(rem);
+        // Auto-update task work done for this activity
+        $('.mb-workdone[data-ai="' + ai + '"]').each(function(){
+            var tqpu = parseFloat($(this).data('tqpu')) || 0;
+            if (tqpu > 0) $(this).val(+(cur * tqpu).toFixed(2)).trigger('input');
+        });
     });
 
     // MB — clear validation highlight when user fills a field
@@ -1362,13 +1367,23 @@
                                 + ' style="width:88px;height:26px;font-size:12px;text-align:right;margin-left:auto;background:#e8f0fb;border-color:#b8cce4;color:#000;font-weight:600;cursor:default;">'
                                 + '</td>'
                                 + '<td style="padding:2px 6px;text-align:right;">'
-                                + '<input type="number" step="any" class="form-control input-sm mb-workdone"'
-                                + ' data-ai="' + ai + '" data-ti="' + ti + '"'
-                                + ' value="' + (task.mb_work_done || '') + '" placeholder="0"'
-                                + ' style="width:110px;height:26px;font-size:12px;text-align:right;margin-left:auto;">'
+                                + (function(){
+                                    var _tqpu  = parseFloat(task.task_qty) || 0;
+                                    var _mbCur = parseFloat(act.mb_qty) || 0;
+                                    var _wdDef = +(_mbCur * _tqpu).toFixed(2);
+                                    return '<input type="number" step="any" class="form-control input-sm mb-workdone"'
+                                        + ' data-ai="' + ai + '" data-ti="' + ti + '" data-tqpu="' + _tqpu + '"'
+                                        + ' value="' + _wdDef + '" placeholder="0"'
+                                        + ' style="width:110px;height:26px;font-size:12px;text-align:right;margin-left:auto;">';
+                                })()
                                 + '</td>'
                                 + '<td style="padding:4px 8px;text-align:right;font-size:12px;color:#000;" class="mb-task-amount" data-ai="' + ai + '" data-ti="' + ti + '">'
-                                + (taskRate > 0 && task.mb_work_done ? (taskRate * parseFloat(task.mb_work_done)).toFixed(2) : '—')
+                                + (function(){
+                                    var _tqpu  = parseFloat(task.task_qty) || 0;
+                                    var _mbCur = parseFloat(act.mb_qty) || 0;
+                                    var _wd    = _mbCur * _tqpu;
+                                    return (taskRate > 0 && _wd > 0) ? (taskRate * _wd).toFixed(2) : '—';
+                                })()
                                 + '</td></tr>';
                         });
                         html += '</tbody></table>';
