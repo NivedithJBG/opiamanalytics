@@ -258,19 +258,34 @@ class StorekeeperController extends Controller
             [':num' => $row['wo_number'], ':pid' => $row['project_id']]
         )->queryAll();
         $cumulativeMap = [];
+        $taskCumMap    = [];
         foreach ($allMbs as $mb) {
             foreach (json_decode($mb['entries'] ?? '[]', true) ?: [] as $e) {
                 $aid = $e['activity_id'] ?? '';
                 $cumulativeMap[$aid] = ($cumulativeMap[$aid] ?? 0) + (float)($e['qty'] ?? 0);
+                foreach ($e['tasks'] ?? [] as $t) {
+                    $tid = $t['task_id'] ?? '';
+                    $wd  = (float)($t['work_done'] ?? 0);
+                    $rt  = (float)($t['rate']      ?? 0);
+                    $key = $aid . '_' . $tid;
+                    $taskCumMap[$key]['work_done'] = ($taskCumMap[$key]['work_done'] ?? 0) + $wd;
+                    $taskCumMap[$key]['amount']    = ($taskCumMap[$key]['amount']    ?? 0) + ($wd * $rt);
+                }
             }
         }
 
-        // Enrich entries with wo_qty and cumulative_qty
+        // Enrich entries with wo_qty, cumulative_qty, and per-task cumulative totals
         $entries = json_decode($row['entries'] ?? '[]', true) ?: [];
         foreach ($entries as &$entry) {
             $aid = $entry['activity_id'] ?? '';
             $entry['wo_qty']         = $woQtyMap[$aid]      ?? 0;
             $entry['cumulative_qty'] = $cumulativeMap[$aid] ?? 0;
+            foreach ($entry['tasks'] ?? [] as &$task) {
+                $key = $aid . '_' . ($task['task_id'] ?? '');
+                $task['cum_work_done'] = round($taskCumMap[$key]['work_done'] ?? 0, 2);
+                $task['cum_amount']    = round($taskCumMap[$key]['amount']    ?? 0, 2);
+            }
+            unset($task);
         }
 
         return [
@@ -461,10 +476,19 @@ class StorekeeperController extends Controller
             )->queryAll();
 
             $cumulativeMap = [];
+            $taskCumMap    = []; // keyed aid_taskid
             foreach ($sentMbs as $mbRow) {
                 foreach (json_decode($mbRow['entries'] ?? '[]', true) ?: [] as $e) {
                     $aid = $e['activity_id'] ?? '';
                     $cumulativeMap[$aid] = ($cumulativeMap[$aid] ?? 0) + (float)($e['qty'] ?? 0);
+                    foreach ($e['tasks'] ?? [] as $t) {
+                        $tid = $t['task_id'] ?? '';
+                        $wd  = (float)($t['work_done'] ?? 0);
+                        $rt  = (float)($t['rate']      ?? 0);
+                        $key = $aid . '_' . $tid;
+                        $taskCumMap[$key]['work_done'] = ($taskCumMap[$key]['work_done'] ?? 0) + $wd;
+                        $taskCumMap[$key]['amount']    = ($taskCumMap[$key]['amount']    ?? 0) + ($wd * $rt);
+                    }
                 }
             }
 
@@ -505,16 +529,18 @@ class StorekeeperController extends Controller
                 // Defaults: unit from WO, current qty = last reported minus billed
                 $act['mb_unit'] = $act['unit'] ?? '';
                 $act['mb_qty']  = round(max(0, $lastRep - $billed), 2);
+                // Attach task-level cumulative totals
+                if (isset($act['tasks']) && is_array($act['tasks'])) {
+                    foreach ($act['tasks'] as &$task) {
+                        $key = $aid . '_' . ($task['task_id'] ?? '');
+                        $task['cum_work_done'] = round($taskCumMap[$key]['work_done'] ?? 0, 2);
+                        $task['cum_amount']    = round($taskCumMap[$key]['amount']    ?? 0, 2);
+                    }
+                    unset($task);
+                }
                 if (isset($savedMap[$aid])) {
                     $act['mb_unit'] = $savedMap[$aid]['unit'] ?? ($act['unit'] ?? '');
                     $act['mb_qty']  = $savedMap[$aid]['qty']  ?? $act['mb_qty'];
-                    $stMap = [];
-                    foreach ($savedMap[$aid]['tasks'] ?? [] as $st) { $stMap[$st['task_id']] = $st['work_done'] ?? ''; }
-                    if (isset($act['tasks']) && is_array($act['tasks'])) {
-                        foreach ($act['tasks'] as &$task) {
-                            $task['mb_work_done'] = $stMap[$task['task_id']] ?? '';
-                        }
-                    }
                 }
             }
 
