@@ -737,10 +737,10 @@
                             var _wo  = parseFloat(act.wo_qty) || 0;
                             var _cum = parseFloat(act.cumulative_qty) || 0;
                             var _rem = Math.max(0, _wo - _cum);
-                            var _cur = act.qty != null ? act.qty : '';
-                            var sep  = '<span style="color:#ccc;margin:0 4px;">|</span>';
+                            var _cur = act.qty != null ? +parseFloat(act.qty).toFixed(2) : '';
+                            var fmt  = function(n){ return +n.toFixed(2); };
                             var lbl  = function(t){ return '<span style="font-size:11px;font-weight:600;color:#555;white-space:nowrap;">'+t+'</span>'; };
-                            var val  = function(v){ return '<span style="font-size:12px;color:#333;white-space:nowrap;">'+v+'</span>'; };
+                            var val  = function(v){ return '<span style="font-size:12px;color:#333;white-space:nowrap;">'+fmt(v)+'</span>'; };
                             var cell = function(label, content){ return '<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;padding:4px 8px;">'+lbl(label)+'<div style="margin-top:2px;">'+content+'</div></div>'; };
                             return '<div style="padding:6px 0;background:#f4f7fa;display:flex;align-items:stretch;border-bottom:1px solid #d0d7df;width:100%;">'
                                 + cell('Unit', '<input type="text" readonly style="width:80px;height:22px;font-size:12px;display:inline-block;padding:1px 6px;text-align:center;background:#f4f7fa;border-color:#c5ccd4;color:#333;cursor:default;" value="' + (act.unit || '') + '" placeholder="—">')
@@ -1121,6 +1121,12 @@
         });
     });
 
+    // MB — restrict qty inputs to 2 decimal places
+    $(document).on('input', '.mb-qty, .mb-workdone', function(){
+        var m = $(this).val().match(/^-?\d*(\.\d{0,2})?/);
+        if (m) $(this).val(m[0]);
+    });
+
     // MB — clear validation highlight when user fills a field
     $(document).on('input', '.mb-unit, .mb-qty, .mb-workdone', function(){
         if ($(this).val().trim()) $(this).css({ background: '', borderColor: '' });
@@ -1305,9 +1311,9 @@
                             var _wo  = parseFloat(act.qty) || 0;
                             var _cum = parseFloat(act.cumulative_qty) || 0;
                             var _rem = Math.max(0, _wo - _cum);
-                            var sep  = '<span style="color:#ccc;margin:0 4px;">|</span>';
+                            var fmt  = function(n){ return +n.toFixed(2); };
                             var lbl  = function(t){ return '<span style="font-size:11px;font-weight:600;color:#555;white-space:nowrap;">'+t+'</span>'; };
-                            var val  = function(v){ return '<span style="font-size:12px;color:#333;white-space:nowrap;">'+v+'</span>'; };
+                            var val  = function(v){ return '<span style="font-size:12px;color:#333;white-space:nowrap;">'+fmt(v)+'</span>'; };
                             var cell = function(label, content){ return '<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;padding:4px 8px;">'+lbl(label)+'<div style="margin-top:2px;">'+content+'</div></div>'; };
                             return '<div style="padding:6px 0;background:#f4f7fa;display:flex;align-items:stretch;border-bottom:1px solid #d0d7df;width:100%;">'
                                 + cell('Unit', '<input type="text" style="width:80px;height:22px;font-size:12px;display:inline-block;padding:1px 6px;text-align:center;" class="form-control input-sm mb-unit" data-ai="' + ai + '" value="' + (act.mb_unit || '') + '" placeholder="—">')
