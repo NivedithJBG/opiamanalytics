@@ -741,13 +741,17 @@
                             var sep  = '<span style="color:#ccc;margin:0 4px;">|</span>';
                             var lbl  = function(t){ return '<span style="font-size:11px;font-weight:600;color:#555;white-space:nowrap;">'+t+'</span>'; };
                             var val  = function(v){ return '<span style="font-size:12px;color:#333;white-space:nowrap;">'+v+'</span>'; };
-                            return '<div style="padding:6px 12px;background:#f4f7fa;display:flex;align-items:center;gap:6px;flex-wrap:nowrap;border-bottom:1px solid #d0d7df;overflow-x:auto;">'
-                                + lbl('Unit')
-                                + '<input type="text" readonly style="width:58px;height:24px;font-size:12px;display:inline-block;padding:2px 4px;background:#f4f7fa;border-color:#c5ccd4;color:#333;cursor:default;" value="' + (act.unit || '') + '" placeholder="—">'
-                                + sep + lbl('Billed Qty') + val(_cum)
-                                + sep + lbl('Current Qty') + '<span style="font-size:12px;font-weight:700;color:#001033;white-space:nowrap;">' + _cur + '</span>'
-                                + sep + lbl('Remaining Qty') + val(_rem)
-                                + sep + lbl('WO Qty') + val(_wo)
+                            var cell = function(label, content){ return '<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;padding:4px 8px;">'+lbl(label)+'<div style="margin-top:2px;">'+content+'</div></div>'; };
+                            return '<div style="padding:6px 0;background:#f4f7fa;display:flex;align-items:stretch;border-bottom:1px solid #d0d7df;width:100%;">'
+                                + cell('Unit', '<input type="text" readonly style="width:80px;height:26px;font-size:13px;display:inline-block;padding:2px 6px;text-align:center;background:#f4f7fa;border-color:#c5ccd4;color:#333;cursor:default;" value="' + (act.unit || '') + '" placeholder="—">')
+                                + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
+                                + cell('Billed Qty', val(_cum))
+                                + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
+                                + cell('Current Qty', '<span style="font-size:13px;font-weight:700;color:#001033;white-space:nowrap;">' + _cur + '</span>')
+                                + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
+                                + cell('Remaining Qty', val(_rem))
+                                + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
+                                + cell('WO Qty', val(_wo))
                                 + '</div>';
                         })();
 
@@ -1304,14 +1308,17 @@
                             var sep  = '<span style="color:#ccc;margin:0 4px;">|</span>';
                             var lbl  = function(t){ return '<span style="font-size:11px;font-weight:600;color:#555;white-space:nowrap;">'+t+'</span>'; };
                             var val  = function(v){ return '<span style="font-size:12px;color:#333;white-space:nowrap;">'+v+'</span>'; };
-                            return '<div style="padding:6px 12px;background:#f4f7fa;display:flex;align-items:center;gap:6px;flex-wrap:nowrap;border-bottom:1px solid #d0d7df;overflow-x:auto;">'
-                                + lbl('Unit')
-                                + '<input type="text" style="width:58px;height:24px;font-size:12px;display:inline-block;padding:2px 4px;" class="form-control input-sm mb-unit" data-ai="' + ai + '" value="' + (act.mb_unit || '') + '" placeholder="—">'
-                                + sep + lbl('Billed Qty') + val(_cum)
-                                + sep + lbl('Current Qty')
-                                + '<input type="number" step="any" style="width:72px;height:24px;font-size:12px;font-weight:700;display:inline-block;padding:2px 4px;" class="form-control input-sm mb-qty" data-ai="' + ai + '" data-wo-qty="' + _wo + '" data-cum-qty="' + _cum + '" value="' + (act.mb_qty || '') + '" placeholder="—">'
-                                + sep + lbl('Remaining Qty') + val(_rem)
-                                + sep + lbl('WO Qty') + val(_wo)
+                            var cell = function(label, content){ return '<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;padding:4px 8px;">'+lbl(label)+'<div style="margin-top:2px;">'+content+'</div></div>'; };
+                            return '<div style="padding:6px 0;background:#f4f7fa;display:flex;align-items:stretch;border-bottom:1px solid #d0d7df;width:100%;">'
+                                + cell('Unit', '<input type="text" style="width:80px;height:26px;font-size:13px;display:inline-block;padding:2px 6px;text-align:center;" class="form-control input-sm mb-unit" data-ai="' + ai + '" value="' + (act.mb_unit || '') + '" placeholder="—">')
+                                + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
+                                + cell('Billed Qty', val(_cum))
+                                + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
+                                + cell('Current Qty', '<input type="number" step="any" style="width:100px;height:26px;font-size:13px;font-weight:700;display:inline-block;padding:2px 6px;text-align:center;" class="form-control input-sm mb-qty" data-ai="' + ai + '" data-wo-qty="' + _wo + '" data-cum-qty="' + _cum + '" value="' + (act.mb_qty || '') + '" placeholder="—">')
+                                + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
+                                + cell('Remaining Qty', val(_rem))
+                                + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
+                                + cell('WO Qty', val(_wo))
                                 + '</div>';
                         })();
                     if (act.tasks && act.tasks.length) {
