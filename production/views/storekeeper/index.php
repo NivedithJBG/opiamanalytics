@@ -709,7 +709,7 @@
         $('#mb-wo-number').text('');
         $('#mb-date-input').val('').prop('readonly', true).css({background:'#f4f7fa', color:'#333'});
         $('#mb-save-btn').hide();
-        $('#mb-draft-btn').hide();
+        $('#mb-print-btn').hide();
         $('#mb-cancel-btn').text('Close');
         $('#mb-overlay, #mb-popup').show();
         $('#mb-popup').css('display', 'flex').data('viewmode', true);
@@ -1302,7 +1302,7 @@
                     // Resume unsent draft
                     $('#mb-serial-number').text(data.mb_number || '—');
                     $('#mb-date-input').val(data.mb_date || '');
-                    $('#mb-draft-btn').text('Save').css('background', '#465365');
+                    // (draft save removed)
                 } else {
                     // Fresh M.Book — fetch next MB number
                     $.ajax({
@@ -1390,7 +1390,7 @@
         $('#mb-popup').hide();
         if ($('#mb-popup').data('viewmode')) {
             $('#mb-save-btn').show();
-            $('#mb-draft-btn').show();
+            $('#mb-print-btn').show();
             $('#mb-cancel-btn').text('Cancel');
             $('#mb-date-input').prop('readonly', false).css({background:'', color:''});
             $('#mb-popup').data('viewmode', false);
@@ -1400,43 +1400,31 @@
 
     $(document).on('click', '#mb-close, #mb-cancel-btn, #mb-overlay', closeMbPopup);
 
-    $(document).on('click', '#mb-draft-btn', function(){
-        var woNum    = $('#mb-popup').data('wonumber');
+    $(document).on('click', '#mb-print-btn', function(){
         var mbNumber = $('#mb-serial-number').text();
         var mbDate   = $('#mb-date-input').val();
-        var entries  = [];
-        $.each(_mbActivities, function(ai, act) {
-            var entry = {
-                activity_id:   act.activity_id,
-                activity_name: act.activity_name,
-                unit:   $('.mb-unit[data-ai="' + ai + '"]').val() || null,
-                qty:    $('.mb-qty[data-ai="'  + ai + '"]').val() || null,
-                tasks:  []
-            };
-            $.each(act.tasks || [], function(ti, task) {
-                entry.tasks.push({
-                    task_id:   task.task_id,
-                    task_name: task.task_name,
-                    unit:      task.task_unit,
-                    rate:      parseFloat($('.mb-taskrate[data-ai="' + ai + '"][data-ti="' + ti + '"]').val()) || null,
-                    work_done: $('.mb-workdone[data-ai="' + ai + '"][data-ti="' + ti + '"]').val() || null
-                });
-            });
-            entries.push(entry);
-        });
-        var $btn = $(this).prop('disabled', true).text('Saving...');
-        $.ajax({
-            type: 'POST', url: '../storekeeper/savedraft',
-            data: { wo_number: woNum, entries: JSON.stringify(entries), mb_number: mbNumber, mb_date: mbDate },
-            dataType: 'json',
-            success: function(data) {
-                $btn.prop('disabled', false);
-                if (data.error !== 'No') { $btn.text('Save'); alert(data.errortext || 'Error saving.'); return; }
-                $btn.text('Saved ✓').css('background', '#2d7a4f');
-                setTimeout(function(){ $btn.text('Save').css('background', '#465365'); }, 2000);
-            },
-            error: function() { $btn.prop('disabled', false).text('Save'); alert('Failed to save. Please try again.'); }
-        });
+        var woNum    = $('#mb-wo-number').text();
+        var vendor   = $('#mb-vendor-name').text();
+        var bodyHtml = $('#mb-body').html();
+        var w = window.open('', '_blank');
+        w.document.write(
+            '<html><head><title>Measurement Book ' + mbNumber + '</title>'
+            + '<style>body{font-family:Arial,sans-serif;font-size:12px;margin:20px;}'
+            + 'table{border-collapse:collapse;width:100%;margin-bottom:12px;}'
+            + 'th,td{border:1px solid #ccc;padding:5px 8px;}'
+            + 'th{background:#dce3ea;}'
+            + 'input{border:1px solid #ccc;padding:2px 4px;font-size:12px;}'
+            + '.mb-rem-display,.mb-unit,.mb-qty{display:inline;}'
+            + '@media print{button{display:none;}}'
+            + '</style></head><body>'
+            + '<h3 style="margin:0 0 4px;">Measurement Book</h3>'
+            + '<p style="margin:0 0 10px;font-size:12px;">MB No: <b>' + mbNumber + '</b> &nbsp; Date: <b>' + mbDate + '</b> &nbsp; WO: <b>' + woNum + '</b> &nbsp; Vendor: <b>' + vendor + '</b></p>'
+            + bodyHtml
+            + '</body></html>'
+        );
+        w.document.close();
+        w.focus();
+        w.print();
     });
 
     $(document).on('click', '#mb-save-btn', function(){
@@ -1717,8 +1705,8 @@
     </div>
     <div id="mb-body" style="padding:16px 20px;overflow-y:auto;flex:1;"></div>
     <div style="padding:10px 20px 14px;text-align:right;border-top:1px solid #eee;flex-shrink:0;">
-        <button type="button" id="mb-cancel-btn" style="background:#f0f4f8;border:1px solid #c5ccd4;border-radius:20px;padding:5px 18px;font-size:12px;color:#000;cursor:pointer;margin-right:8px;">Cancel</button>
-        <button type="button" id="mb-draft-btn" style="background:#465365;color:#fff;border:none;border-radius:20px;padding:5px 18px;font-size:12px;cursor:pointer;margin-right:8px;">Save</button>
+        <button type="button" id="mb-cancel-btn" style="background:#c0392b;border:none;border-radius:20px;padding:5px 18px;font-size:12px;color:#fff;cursor:pointer;margin-right:8px;">Cancel</button>
+        <button type="button" id="mb-print-btn" style="background:#6c757d;color:#fff;border:none;border-radius:20px;padding:5px 18px;font-size:12px;cursor:pointer;margin-right:8px;">Print</button>
         <button type="button" id="mb-save-btn" style="background:#001a6e;color:#fff;border:none;border-radius:20px;padding:5px 22px;font-size:12px;cursor:pointer;">Report</button>
     </div>
 </div>
