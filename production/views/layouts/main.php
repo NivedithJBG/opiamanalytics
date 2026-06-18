@@ -145,8 +145,8 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-tools.overNow4    { background-color: #CC0000 !important; }
         .round-icons .icon-wrench.overNow    { background-color: #555555 !important; }
         .round-icons .icon-document.overNow8 { background-color: #000000 !important; }
-        .round-icons .perf-dashboard-btn     { background-color: #2e7d32 !important; }
-        .round-icons .cost-dashboard-btn     { background-color: #7b1fa2 !important; }
+        .round-icons .perf-dashboard-btn     { background-color: #2e7d32 !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
+        .round-icons .cost-dashboard-btn     { background-color: #7b1fa2 !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
         /* Keep coloured backgrounds on hover/focus */
         .round-icons .icon-chart3:hover,            .round-icons .icon-chart3:focus            { background: #002060 !important; }
         .round-icons .icon-calendar:hover,          .round-icons .icon-calendar:focus          { background: #8a6200 !important; }
