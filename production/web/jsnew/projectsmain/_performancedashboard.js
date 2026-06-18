@@ -162,8 +162,7 @@ function loadCdActivityData(actId){
 function renderCdUnitCostOfResource(items, actName){
     var el = document.getElementById('cd-c6');
     if (!el) return;
-    var palette = ['#90caf9','#b0bec5'];
-    var scPalette = ['#ce93d8','#80cbc4','#ffcc80','#ef9a9a','#a5d6a7','#90caf9','#fff176','#f48fb1','#bcaaa4','#80deea'];
+    var colPalette = ['#90caf9','#ce93d8','#80cbc4','#ffcc80','#ef9a9a','#a5d6a7','#fff176','#f48fb1','#bcaaa4','#80deea'];
     if (!items.length){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
@@ -173,132 +172,60 @@ function renderCdUnitCostOfResource(items, actName){
 
     var maxVal = 0;
     items.forEach(function(r){
-        var est = +r.rate || 0;
-        var act = (r.actual_unit_cost != null) ? +r.actual_unit_cost : 0;
-        maxVal = Math.max(maxVal, est, act);
+        maxVal = Math.max(maxVal, +r.rate || 0);
     });
     if (!maxVal) maxVal = 1;
 
-    var bars = '', labels = '', scLegend = [], scIdx = 0;
+    // X-axis scale header (aligned to bar area, left label column is 105px)
+    var LBL_W = 105;
+    var scaleTicks = [0, 0.25, 0.5, 0.75, 1];
+    var scaleHtml = '<div style="display:flex;align-items:flex-end;padding-left:' + LBL_W + 'px;margin-bottom:3px;padding-right:2px;">';
+    scaleTicks.forEach(function(t, i){
+        var align = i === 0 ? 'left' : i === scaleTicks.length - 1 ? 'right' : 'center';
+        scaleHtml += '<div style="flex:' + (i === 0 ? '0 0 0px' : '1') + ';font-size:8px;color:#7a8ea8;text-align:' + align + ';white-space:nowrap;">'
+                   + fmR(maxVal * t) + '</div>';
+    });
+    scaleHtml += '</div>';
+
+    // Vertical grid lines (absolute inside the bar track)
+    var gridLines = '';
+    [0.25, 0.5, 0.75, 1].forEach(function(t){
+        gridLines += '<div style="position:absolute;top:0;bottom:0;left:' + (t * 100).toFixed(1) + '%;'
+                   + 'border-left:1px dashed #dde3ef;pointer-events:none;"></div>';
+    });
+
+    // One horizontal bar row per resource
+    var rowsHtml = '';
     items.forEach(function(r, i){
         var est  = +r.rate || 0;
-        var act  = (r.actual_unit_cost != null) ? +r.actual_unit_cost : null;
-        var col  = palette[i % palette.length];
-        var unit = r.unit ? '/' + shu(r.unit) : '';
         var nm   = r.name || '';
-        var isMaterial = act !== null;
+        var unit = r.unit ? '/' + shu(r.unit) : '';
+        var col  = colPalette[i % colPalette.length];
+        var wPct = Math.max(est / maxVal * 100, 5).toFixed(1) + '%';
 
-        var barHtml = '';
-        if (+r.type_id === 4) {
-            // Sub Contractor — narrow bar, rate + unit only; name goes to left legend
-            var scCol = scPalette[scIdx % scPalette.length]; scIdx++;
-            scLegend.push({color: scCol, name: nm});
-            var pct = Math.max(est / maxVal * 100, 20).toFixed(1) + '%';
-            barHtml = '<div class="resb" style="height:'+pct+';min-height:44px;background:'+scCol+';'
-                    + 'display:flex;flex-direction:column;align-items:center;justify-content:center;'
-                    + 'overflow:hidden;padding:2px 1px;gap:1px;">'
-                    + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;color:#111;'
-                    + 'white-space:nowrap;font-weight:700;">' + fmR(est)
-                    + (unit ? '<span style="font-size:9px;color:rgba(0,0,0,.65)">' + unit + '</span>' : '')
-                    + '</span>'
-                    + '</div>';
-        } else if (!isMaterial) {
-            // Non-material or no GRN data — single plain bar
-            var pct = Math.max(est / maxVal * 100, 12).toFixed(1) + '%';
-            barHtml = '<div class="resb" style="height:'+pct+';min-height:30px;background:'+col+';'
-                    + 'display:flex;align-items:center;justify-content:center;overflow:hidden;">'
-                    + '<span style="font-family:\'Nunito\',sans-serif;font-size:13px;color:#111;white-space:nowrap;">'+fmR(est)+(unit?'<span style="font-size:10px;color:rgba(0,0,0,.7)">'+unit+'</span>':'')+'</span>'
-                    + '</div>';
-        } else if (act > est) {
-            // Overrun: base bar (est) + red extension (act - est) on top
-            var basePct = Math.max(est / maxVal * 100, 8).toFixed(1) + '%';
-            var extPct  = ((act - est) / maxVal * 100).toFixed(1) + '%';
-            barHtml = '<div class="resb" style="height:'+extPct+';background:#e53935;'
-                    + 'display:flex;align-items:center;justify-content:center;overflow:hidden;">'
-                    + '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;white-space:nowrap;">+'+fmR(act - est)+'</span>'
-                    + '</div>'
-                    + '<div class="resb" style="height:'+basePct+';min-height:20px;background:'+col+';'
-                    + 'display:flex;align-items:center;justify-content:center;overflow:hidden;">'
-                    + '<span style="font-family:\'Nunito\',sans-serif;font-size:13px;color:#111;white-space:nowrap;">'+fmR(act)+(unit?'<span style="font-size:10px;color:rgba(0,0,0,.7)">'+unit+'</span>':'')+'</span>'
-                    + '</div>';
-        } else {
-            // Saving: actual bar + yellow top segment up to estimated level
-            var actPct  = Math.max(act / maxVal * 100, 8).toFixed(1) + '%';
-            var savePct = ((est - act) / maxVal * 100).toFixed(1) + '%';
-            barHtml = '<div class="resb" style="height:'+savePct+';background:#fdd835;'
-                    + 'display:flex;align-items:center;justify-content:center;overflow:hidden;">'
-                    + '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#333;white-space:nowrap;">-'+fmR(est - act)+'</span>'
-                    + '</div>'
-                    + '<div class="resb" style="height:'+actPct+';min-height:20px;background:'+col+';'
-                    + 'display:flex;align-items:center;justify-content:center;overflow:hidden;">'
-                    + '<span style="font-family:\'Nunito\',sans-serif;font-size:13px;color:#111;white-space:nowrap;">'+fmR(act)+(unit?'<span style="font-size:10px;color:rgba(0,0,0,.7)">'+unit+'</span>':'')+'</span>'
-                    + '</div>';
-        }
-
-        var colW = (+r.type_id === 4) ? 'flex:0 0 26px;max-width:26px;' : '';
-        bars += '<div class="rescol" style="height:100%;display:flex;flex-direction:column;justify-content:flex-end;' + colW + '">'
-              + barHtml
-              + '</div>';
-
-        var typ = r.type_name || '';
-        if (+r.type_id === 4) {
-            labels += '<div class="reslbl"></div>';
-        } else {
-            labels += '<div class="reslbl" style="color:#111;line-height:1.3;">'
-                    + '<span style="font-size:11px;color:#1a2a3a;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + sh(typ, 12) + '</span>'
-                    + '<span style="font-size:10px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + sh(nm, 12) + '</span>'
-                    + '</div>';
-        }
-    });
-
-    // Build SC legend
-    var legendHtml = '';
-    scLegend.forEach(function(lg){
-        legendHtml += '<div style="display:flex;align-items:flex-start;gap:5px;margin-bottom:5px;">'
-                    + '<div style="width:9px;height:9px;border-radius:2px;background:'+lg.color+';flex-shrink:0;margin-top:2px;"></div>'
-                    + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#111;line-height:1.3;word-break:break-word;">' + lg.name + '</span>'
-                    + '</div>';
-    });
-
-    var allSC = scIdx === items.length;
-    var foot  = actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '';
-
-    if (legendHtml) {
-        // Y-axis grid lines (absolute inside .resbars, from bottom)
-        var gridLines = '';
-        [0.75, 0.5, 0.25].forEach(function(t){
-            gridLines += '<div style="position:absolute;left:0;right:0;bottom:'+(t*100).toFixed(0)+'%;'
-                       + 'border-top:1px dashed #dde3ef;pointer-events:none;z-index:0;"></div>';
-        });
-        // Y-axis value labels (absolute, positioned from bottom of bars area)
-        var yLbls = '';
-        [1, 0.75, 0.5, 0.25].forEach(function(t){
-            yLbls += '<div style="position:absolute;bottom:'+(t*100).toFixed(0)+'%;right:2px;'
-                   + 'transform:translateY(50%);font-size:8px;color:#7a8ea8;white-space:nowrap;line-height:1;">'
-                   + fmR(maxVal*t) + '</div>';
-        });
-        var chartArea = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
-            + '<div style="flex:1;min-height:0;display:flex;gap:0;">'
-            + '<div style="flex-shrink:0;width:27px;position:relative;border-right:1px solid #dde3ef;margin-right:2px;">' + yLbls + '</div>'
-            + '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
-            + '<div class="resbars" style="position:relative;">' + bars + gridLines + '</div>'
-            + (allSC ? '' : '<div class="reslabels">' + labels + '</div>')
+        rowsHtml += '<div style="display:flex;align-items:center;margin-bottom:5px;">'
+            // left label
+            + '<div style="flex-shrink:0;width:' + LBL_W + 'px;font-family:\'Barlow Condensed\',sans-serif;'
+            + 'font-size:10px;color:#1a2a3a;text-align:right;padding-right:6px;line-height:1.3;'
+            + 'overflow:hidden;word-break:break-word;">' + nm + '</div>'
+            // bar track (relative, so grid lines and bar sit inside it)
+            + '<div style="flex:1;position:relative;height:22px;background:#f0f4fa;border-radius:2px;">'
+            + gridLines
+            + '<div style="position:absolute;left:0;top:0;bottom:0;width:' + wPct + ';'
+            + 'background:' + col + ';border-radius:2px;z-index:1;'
+            + 'display:flex;align-items:center;padding:0 5px;overflow:hidden;min-width:28px;">'
+            + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;color:#111;font-weight:700;white-space:nowrap;">'
+            + fmR(est)
+            + (unit ? '<span style="font-size:8px;color:rgba(0,0,0,.65);">' + unit + '</span>' : '')
+            + '</span>'
             + '</div>'
             + '</div>'
             + '</div>';
+    });
 
-        el.innerHTML = '<div style="display:flex;flex:1;min-height:0;gap:5px;">'
-            + '<div style="flex-shrink:0;width:120px;padding:2px 4px 2px 0;overflow-y:auto;border-right:1px solid #dde3ef;">'
-            + legendHtml
-            + '</div>'
-            + chartArea
-            + '</div>'
-            + foot;
-    } else {
-        el.innerHTML = '<div class="resbars">' + bars + '</div>'
-            + '<div class="reslabels">' + labels + '</div>'
-            + foot;
-    }
+    el.innerHTML = scaleHtml
+        + '<div style="flex:1;min-height:0;overflow-y:auto;">' + rowsHtml + '</div>'
+        + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '');
 }
 
 function renderCdValueOfWorkDone(d){
