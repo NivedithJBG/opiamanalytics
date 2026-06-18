@@ -190,16 +190,16 @@ function renderCdUnitCostOfResource(items, actName){
 
         var barHtml = '';
         if (+r.type_id === 4) {
-            // Sub Contractor — bar shows rate + unit only; name goes to side legend
+            // Sub Contractor — narrow bar, rate + unit only; name goes to left legend
             var scCol = scPalette[scIdx % scPalette.length]; scIdx++;
             scLegend.push({color: scCol, name: nm});
             var pct = Math.max(est / maxVal * 100, 20).toFixed(1) + '%';
-            barHtml = '<div class="resb" style="height:'+pct+';min-height:54px;background:'+scCol+';'
+            barHtml = '<div class="resb" style="height:'+pct+';min-height:44px;background:'+scCol+';'
                     + 'display:flex;flex-direction:column;align-items:center;justify-content:center;'
-                    + 'overflow:hidden;padding:4px 3px;gap:2px;">'
-                    + '<span style="font-family:\'Nunito\',sans-serif;font-size:13px;color:#111;'
+                    + 'overflow:hidden;padding:2px 1px;gap:1px;">'
+                    + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;color:#111;'
                     + 'white-space:nowrap;font-weight:700;">' + fmR(est)
-                    + (unit ? '<span style="font-size:10px;color:rgba(0,0,0,.65)">' + unit + '</span>' : '')
+                    + (unit ? '<span style="font-size:9px;color:rgba(0,0,0,.65)">' + unit + '</span>' : '')
                     + '</span>'
                     + '</div>';
         } else if (!isMaterial) {
@@ -235,7 +235,8 @@ function renderCdUnitCostOfResource(items, actName){
                     + '</div>';
         }
 
-        bars += '<div class="rescol" style="height:100%;display:flex;flex-direction:column;justify-content:flex-end;">'
+        var colW = (+r.type_id === 4) ? 'flex:0 0 26px;max-width:26px;' : '';
+        bars += '<div class="rescol" style="height:100%;display:flex;flex-direction:column;justify-content:flex-end;' + colW + '">'
               + barHtml
               + '</div>';
 
@@ -254,8 +255,8 @@ function renderCdUnitCostOfResource(items, actName){
     var legendHtml = '';
     scLegend.forEach(function(lg){
         legendHtml += '<div style="display:flex;align-items:flex-start;gap:5px;margin-bottom:5px;">'
-                    + '<div style="width:10px;height:10px;border-radius:2px;background:'+lg.color+';flex-shrink:0;margin-top:2px;"></div>'
-                    + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#111;line-height:1.3;">' + (lg.name) + '</span>'
+                    + '<div style="width:9px;height:9px;border-radius:2px;background:'+lg.color+';flex-shrink:0;margin-top:2px;"></div>'
+                    + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#111;line-height:1.3;word-break:break-word;">' + lg.name + '</span>'
                     + '</div>';
     });
 
@@ -266,11 +267,11 @@ function renderCdUnitCostOfResource(items, actName){
                   + '</div>';
 
     if (legendHtml) {
-        el.innerHTML = '<div style="display:flex;flex:1;min-height:0;gap:6px;">'
-            + chartArea
-            + '<div style="flex-shrink:0;width:115px;padding:2px 0 2px 4px;overflow-y:auto;border-left:1px solid #dde3ef;">'
+        el.innerHTML = '<div style="display:flex;flex:1;min-height:0;gap:5px;">'
+            + '<div style="flex-shrink:0;width:130px;padding:2px 4px 2px 0;overflow-y:auto;border-right:1px solid #dde3ef;">'
             + legendHtml
             + '</div>'
+            + chartArea
             + '</div>'
             + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '');
     } else {
