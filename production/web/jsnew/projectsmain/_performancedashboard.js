@@ -261,23 +261,43 @@ function renderCdUnitCostOfResource(items, actName){
     });
 
     var allSC = scIdx === items.length;
-    var chartArea = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
-                  + '<div class="resbars">' + bars + '</div>'
-                  + (allSC ? '' : '<div class="reslabels">' + labels + '</div>')
-                  + '</div>';
+    var foot  = actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '';
 
     if (legendHtml) {
+        // Y-axis grid lines (absolute inside .resbars, from bottom)
+        var gridLines = '';
+        [0.75, 0.5, 0.25].forEach(function(t){
+            gridLines += '<div style="position:absolute;left:0;right:0;bottom:'+(t*100).toFixed(0)+'%;'
+                       + 'border-top:1px dashed #dde3ef;pointer-events:none;z-index:0;"></div>';
+        });
+        // Y-axis value labels (absolute, positioned from bottom of bars area)
+        var yLbls = '';
+        [1, 0.75, 0.5, 0.25].forEach(function(t){
+            yLbls += '<div style="position:absolute;bottom:'+(t*100).toFixed(0)+'%;right:2px;'
+                   + 'transform:translateY(50%);font-size:8px;color:#7a8ea8;white-space:nowrap;line-height:1;">'
+                   + fmR(maxVal*t) + '</div>';
+        });
+        var chartArea = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
+            + '<div style="flex:1;min-height:0;display:flex;gap:0;">'
+            + '<div style="flex-shrink:0;width:27px;position:relative;border-right:1px solid #dde3ef;margin-right:2px;">' + yLbls + '</div>'
+            + '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
+            + '<div class="resbars" style="position:relative;">' + bars + gridLines + '</div>'
+            + (allSC ? '' : '<div class="reslabels">' + labels + '</div>')
+            + '</div>'
+            + '</div>'
+            + '</div>';
+
         el.innerHTML = '<div style="display:flex;flex:1;min-height:0;gap:5px;">'
-            + '<div style="flex-shrink:0;width:130px;padding:2px 4px 2px 0;overflow-y:auto;border-right:1px solid #dde3ef;">'
+            + '<div style="flex-shrink:0;width:120px;padding:2px 4px 2px 0;overflow-y:auto;border-right:1px solid #dde3ef;">'
             + legendHtml
             + '</div>'
             + chartArea
             + '</div>'
-            + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '');
+            + foot;
     } else {
         el.innerHTML = '<div class="resbars">' + bars + '</div>'
             + '<div class="reslabels">' + labels + '</div>'
-            + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '');
+            + foot;
     }
 }
 
