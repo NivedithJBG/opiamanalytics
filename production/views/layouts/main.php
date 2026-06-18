@@ -146,7 +146,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-wrench.overNow    { background-color: #555555 !important; }
         .round-icons .icon-document.overNow8 { background-color: #000000 !important; }
         .round-icons .perf-dashboard-btn     { background-color: #2e7d32 !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
-        .round-icons .cost-dashboard-btn     { background-color: #7b1fa2 !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
+        .round-icons .cost-dashboard-btn     { background-color: #7b1fa2 !important; height: 20px !important; width: 20px !important; font-size: 9px !important; }
         /* Keep coloured backgrounds on hover/focus */
         .round-icons .icon-chart3:hover,            .round-icons .icon-chart3:focus            { background: #002060 !important; }
         .round-icons .icon-calendar:hover,          .round-icons .icon-calendar:focus          { background: #8a6200 !important; }
@@ -334,6 +334,7 @@ if($action=='login')
                 }
 
                 if($ProjectId && Yii::$app->controller->id != 'procurement') {  ?>
+                <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                 <li>
                     <a href="#ganttchartPopup" class="dropdown-toggle icon-chart3" data-toggle="modal" data-projectid="<?php echo $ProjectId; ?>" id="ganttchartPopupLink" data-target="#ganttchartPopup" title="Gantt Chart"></a>
                     <!-- <a class="icon-chart3" title="Gantt Chart" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/newganttchart?id='.$ProjectId)?>"> 
@@ -401,7 +402,6 @@ if($action=='login')
                     <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -416,7 +416,6 @@ if($action=='login')
                     <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1555" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -488,7 +487,6 @@ if($action=='login')
                     <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
