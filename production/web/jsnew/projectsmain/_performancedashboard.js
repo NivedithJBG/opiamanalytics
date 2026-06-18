@@ -163,6 +163,7 @@ function renderCdUnitCostOfResource(items, actName){
     var el = document.getElementById('cd-c6');
     if (!el) return;
     var palette = ['#90caf9','#b0bec5'];
+    var scPalette = ['#ce93d8','#80cbc4','#ffcc80','#ef9a9a','#a5d6a7','#90caf9','#fff176','#f48fb1','#bcaaa4','#80deea'];
     if (!items.length){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
@@ -178,7 +179,7 @@ function renderCdUnitCostOfResource(items, actName){
     });
     if (!maxVal) maxVal = 1;
 
-    var bars = '', labels = '';
+    var bars = '', labels = '', scIdx = 0;
     items.forEach(function(r, i){
         var est  = +r.rate || 0;
         var act  = (r.actual_unit_cost != null) ? +r.actual_unit_cost : null;
@@ -190,8 +191,9 @@ function renderCdUnitCostOfResource(items, actName){
         var barHtml = '';
         if (+r.type_id === 4) {
             // Sub Contractor — single bar showing estimated rate with name + rate + unit on surface
+            var scCol = scPalette[scIdx % scPalette.length]; scIdx++;
             var pct = Math.max(est / maxVal * 100, 20).toFixed(1) + '%';
-            barHtml = '<div class="resb" style="height:'+pct+';min-height:54px;background:#ce93d8;'
+            barHtml = '<div class="resb" style="height:'+pct+';min-height:54px;background:'+scCol+';'
                     + 'display:flex;flex-direction:column;align-items:center;justify-content:center;'
                     + 'overflow:hidden;padding:4px 3px;gap:2px;">'
                     + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;color:#4a148c;'
