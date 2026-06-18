@@ -401,7 +401,6 @@ if($action=='login')
                     <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;font-size:13px;font-weight:700;font-family:Arial,sans-serif;">&#8377;</a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -416,7 +415,6 @@ if($action=='login')
                     <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;font-size:13px;font-weight:700;font-family:Arial,sans-serif;">&#8377;</a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1555" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -488,7 +486,6 @@ if($action=='login')
                     <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;font-size:13px;font-weight:700;font-family:Arial,sans-serif;">&#8377;</a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
