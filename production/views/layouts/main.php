@@ -401,7 +401,7 @@ if($action=='login')
                     <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-stats-bars cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"><svg viewBox="0 0 14 13" width="12" height="12" fill="white" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="7" width="3.2" height="6" rx="0.4"/><rect x="5.4" y="4" width="3.2" height="9" rx="0.4"/><rect x="10.8" y="1" width="3.2" height="12" rx="0.4"/></svg></a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -416,7 +416,7 @@ if($action=='login')
                     <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-stats-bars cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"><svg viewBox="0 0 14 13" width="12" height="12" fill="white" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="7" width="3.2" height="6" rx="0.4"/><rect x="5.4" y="4" width="3.2" height="9" rx="0.4"/><rect x="10.8" y="1" width="3.2" height="12" rx="0.4"/></svg></a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1555" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -488,7 +488,7 @@ if($action=='login')
                     <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-stats-bars cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"><svg viewBox="0 0 14 13" width="12" height="12" fill="white" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="7" width="3.2" height="6" rx="0.4"/><rect x="5.4" y="4" width="3.2" height="9" rx="0.4"/><rect x="10.8" y="1" width="3.2" height="12" rx="0.4"/></svg></a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
