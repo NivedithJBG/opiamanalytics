@@ -197,28 +197,30 @@ function renderCdUnitCostOfResource(items, actName){
     // One horizontal bar row per resource
     var rowsHtml = '';
     items.forEach(function(r, i){
-        var est  = +r.rate || 0;
-        var nm   = r.name || '';
-        var unit = r.unit ? '/' + shu(r.unit) : '';
-        var col  = colPalette[i % colPalette.length];
-        var wPct = Math.max(est / maxVal * 100, 5).toFixed(1) + '%';
+        var est     = +r.rate || 0;
+        var nm      = r.name || '';
+        var unit    = r.unit ? '/' + shu(r.unit) : '';
+        var col     = colPalette[i % colPalette.length];
+        var wPctNum = (est / maxVal * 100);
+        var wPct    = wPctNum.toFixed(1) + '%';
+        var valTxt  = fmR(est) + (unit ? '<span style="font-size:8px;color:rgba(0,0,0,.55);">' + unit + '</span>' : '');
+        // label inside bar if ≥30%, otherwise just to the right of the bar
+        var barInner = wPctNum >= 30
+            ? '<div style="position:absolute;left:0;top:0;bottom:0;width:' + wPct + ';background:' + col + ';border-radius:2px;z-index:1;display:flex;align-items:center;padding:0 5px;overflow:hidden;">'
+              + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;color:#111;font-weight:700;white-space:nowrap;">' + valTxt + '</span>'
+              + '</div>'
+            : '<div style="position:absolute;left:0;top:0;bottom:0;width:' + wPct + ';background:' + col + ';border-radius:2px;z-index:1;"></div>'
+              + '<div style="position:absolute;left:calc(' + wPct + ' + 3px);top:50%;transform:translateY(-50%);font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:#333;white-space:nowrap;z-index:2;">' + valTxt + '</div>';
 
         rowsHtml += '<div style="display:flex;align-items:center;margin-bottom:5px;">'
             // left label
             + '<div style="flex-shrink:0;width:' + LBL_W + 'px;font-family:\'Barlow Condensed\',sans-serif;'
             + 'font-size:10px;color:#1a2a3a;text-align:right;padding-right:6px;line-height:1.3;'
             + 'overflow:hidden;word-break:break-word;">' + nm + '</div>'
-            // bar track (relative, so grid lines and bar sit inside it)
-            + '<div style="flex:1;position:relative;height:22px;background:#f0f4fa;border-radius:2px;">'
+            // bar track
+            + '<div style="flex:1;position:relative;height:22px;background:#f0f4fa;border-radius:2px;overflow:hidden;">'
             + gridLines
-            + '<div style="position:absolute;left:0;top:0;bottom:0;width:' + wPct + ';'
-            + 'background:' + col + ';border-radius:2px;z-index:1;'
-            + 'display:flex;align-items:center;padding:0 5px;overflow:hidden;min-width:28px;">'
-            + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;color:#111;font-weight:700;white-space:nowrap;">'
-            + fmR(est)
-            + (unit ? '<span style="font-size:8px;color:rgba(0,0,0,.65);">' + unit + '</span>' : '')
-            + '</span>'
-            + '</div>'
+            + barInner
             + '</div>'
             + '</div>';
     });
