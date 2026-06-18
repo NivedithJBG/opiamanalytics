@@ -179,7 +179,7 @@ function renderCdUnitCostOfResource(items, actName){
     });
     if (!maxVal) maxVal = 1;
 
-    var bars = '', labels = '', scIdx = 0;
+    var bars = '', labels = '', scLegend = [], scIdx = 0;
     items.forEach(function(r, i){
         var est  = +r.rate || 0;
         var act  = (r.actual_unit_cost != null) ? +r.actual_unit_cost : null;
@@ -190,15 +190,13 @@ function renderCdUnitCostOfResource(items, actName){
 
         var barHtml = '';
         if (+r.type_id === 4) {
-            // Sub Contractor — single bar showing estimated rate with name + rate + unit on surface
+            // Sub Contractor — bar shows rate + unit only; name goes to side legend
             var scCol = scPalette[scIdx % scPalette.length]; scIdx++;
+            scLegend.push({color: scCol, name: nm});
             var pct = Math.max(est / maxVal * 100, 20).toFixed(1) + '%';
             barHtml = '<div class="resb" style="height:'+pct+';min-height:54px;background:'+scCol+';'
                     + 'display:flex;flex-direction:column;align-items:center;justify-content:center;'
                     + 'overflow:hidden;padding:4px 3px;gap:2px;">'
-                    + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;color:#4a148c;'
-                    + 'font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;'
-                    + 'text-overflow:ellipsis;max-width:100%;">' + sh(nm, 14) + '</span>'
                     + '<span style="font-family:\'Nunito\',sans-serif;font-size:13px;color:#111;'
                     + 'white-space:nowrap;font-weight:700;">' + fmR(est)
                     + (unit ? '<span style="font-size:10px;color:rgba(0,0,0,.65)">' + unit + '</span>' : '')
@@ -243,10 +241,7 @@ function renderCdUnitCostOfResource(items, actName){
 
         var typ = r.type_name || '';
         if (+r.type_id === 4) {
-            labels += '<div class="reslbl" style="color:#111;line-height:1.3;">'
-                    + '<span style="font-size:11px;color:#7b1fa2;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Sub Cont.</span>'
-                    + '<span style="font-size:10px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + sh(nm, 12) + '</span>'
-                    + '</div>';
+            labels += '<div class="reslbl"></div>';
         } else {
             labels += '<div class="reslbl" style="color:#111;line-height:1.3;">'
                     + '<span style="font-size:11px;color:#1a2a3a;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + sh(typ, 12) + '</span>'
@@ -255,9 +250,34 @@ function renderCdUnitCostOfResource(items, actName){
         }
     });
 
-    el.innerHTML = '<div class="resbars">' + bars + '</div>'
-        + '<div class="reslabels">' + labels + '</div>'
-        + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '');
+    // Build SC legend
+    var legendHtml = '';
+    scLegend.forEach(function(lg){
+        legendHtml += '<div style="display:flex;align-items:flex-start;gap:5px;margin-bottom:5px;">'
+                    + '<div style="width:10px;height:10px;border-radius:2px;background:'+lg.color+';flex-shrink:0;margin-top:2px;"></div>'
+                    + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#111;line-height:1.3;">' + (lg.name) + '</span>'
+                    + '</div>';
+    });
+
+    var allSC = scIdx === items.length;
+    var chartArea = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
+                  + '<div class="resbars">' + bars + '</div>'
+                  + (allSC ? '' : '<div class="reslabels">' + labels + '</div>')
+                  + '</div>';
+
+    if (legendHtml) {
+        el.innerHTML = '<div style="display:flex;flex:1;min-height:0;gap:6px;">'
+            + chartArea
+            + '<div style="flex-shrink:0;width:115px;padding:2px 0 2px 4px;overflow-y:auto;border-left:1px solid #dde3ef;">'
+            + legendHtml
+            + '</div>'
+            + '</div>'
+            + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '');
+    } else {
+        el.innerHTML = '<div class="resbars">' + bars + '</div>'
+            + '<div class="reslabels">' + labels + '</div>'
+            + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '');
+    }
 }
 
 function renderCdValueOfWorkDone(d){
