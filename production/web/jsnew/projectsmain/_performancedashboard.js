@@ -184,10 +184,25 @@ function renderCdUnitCostOfResource(items, actName){
         var act  = (r.actual_unit_cost != null) ? +r.actual_unit_cost : null;
         var col  = palette[i % palette.length];
         var unit = r.unit ? '/' + shu(r.unit) : '';
+        var nm   = r.name || '';
         var isMaterial = act !== null;
 
         var barHtml = '';
-        if (!isMaterial) {
+        if (+r.type_id === 4) {
+            // Sub Contractor — single bar showing estimated rate with name + rate + unit on surface
+            var pct = Math.max(est / maxVal * 100, 20).toFixed(1) + '%';
+            barHtml = '<div class="resb" style="height:'+pct+';min-height:54px;background:#ce93d8;'
+                    + 'display:flex;flex-direction:column;align-items:center;justify-content:center;'
+                    + 'overflow:hidden;padding:4px 3px;gap:2px;">'
+                    + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;color:#4a148c;'
+                    + 'font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;'
+                    + 'text-overflow:ellipsis;max-width:100%;">' + sh(nm, 14) + '</span>'
+                    + '<span style="font-family:\'Nunito\',sans-serif;font-size:13px;color:#111;'
+                    + 'white-space:nowrap;font-weight:700;">' + fmR(est)
+                    + (unit ? '<span style="font-size:10px;color:rgba(0,0,0,.65)">' + unit + '</span>' : '')
+                    + '</span>'
+                    + '</div>';
+        } else if (!isMaterial) {
             // Non-material or no GRN data — single plain bar
             var pct = Math.max(est / maxVal * 100, 12).toFixed(1) + '%';
             barHtml = '<div class="resb" style="height:'+pct+';min-height:30px;background:'+col+';'
@@ -225,11 +240,17 @@ function renderCdUnitCostOfResource(items, actName){
               + '</div>';
 
         var typ = r.type_name || '';
-        var nm  = r.name || '';
-        labels += '<div class="reslbl" style="color:#111;line-height:1.3;">'
-                + '<span style="font-size:11px;color:#1a2a3a;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + sh(typ, 12) + '</span>'
-                + '<span style="font-size:10px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + sh(nm, 12) + '</span>'
-                + '</div>';
+        if (+r.type_id === 4) {
+            labels += '<div class="reslbl" style="color:#111;line-height:1.3;">'
+                    + '<span style="font-size:11px;color:#7b1fa2;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Sub Cont.</span>'
+                    + '<span style="font-size:10px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + sh(nm, 12) + '</span>'
+                    + '</div>';
+        } else {
+            labels += '<div class="reslbl" style="color:#111;line-height:1.3;">'
+                    + '<span style="font-size:11px;color:#1a2a3a;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + sh(typ, 12) + '</span>'
+                    + '<span style="font-size:10px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + sh(nm, 12) + '</span>'
+                    + '</div>';
+        }
     });
 
     el.innerHTML = '<div class="resbars">' + bars + '</div>'
