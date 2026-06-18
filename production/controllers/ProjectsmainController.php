@@ -737,6 +737,8 @@ class ProjectsmainController extends Controller
                         COALESCE(r.Unit, '') AS unit,
                         grn_cost.actual_unit_cost
                  FROM pricing_estimate_resources_new pern
+                 JOIN workgroup_activities_new wga ON wga.id = pern.activity_id
+                                                  AND wga.process_Id = pern.process_Id
                  LEFT JOIN resources r     ON r.Resource_Id        = pern.resource_Id
                  LEFT JOIN resourcetype rt ON rt.ResourceType_Id   = pern.resourcetype_Id
                  LEFT JOIN (
