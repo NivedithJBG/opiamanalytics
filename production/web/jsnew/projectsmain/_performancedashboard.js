@@ -514,43 +514,157 @@ function renderCdCostOnCompletion(items, actName, estQty){
 function renderCdResourceConsumption(items, actName, lastQty){
     var el = document.getElementById('cd-c7');
     if (!el) return;
-    var palette = ['#a5d6a7','#80cbc4'];
-    if (!items.length){
+    var colPalette = ['#a5d6a7','#80cbc4','#ffcc80','#90caf9','#ce93d8','#ef9a9a','#fff176','#f48fb1','#bcaaa4','#80deea'];
+    var tipPalette = ['#2e7d32','#00695c','#e65100','#1565c0','#6a1b9a','#b71c1c','#f57f17','#880e4f','#4e342e','#006064'];
+
+    function fmR(v){ return v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(0); }
+
+    // Same formula as Unit Cost panel: amount = rate × qty
+    var actUnitCost = 0;
+    items.forEach(function(r){ actUnitCost += ((+r.rate || 0) * (+r.res_qty || 0)); });
+
+    if (!items.length || !actUnitCost){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
     }
-    var maxVal = 0;
-    items.forEach(function(r){ maxVal = Math.max(maxVal, +r.res_qty || 0); });
-    if (!maxVal) maxVal = 1;
-    var bars = '', labels = '';
-    items.forEach(function(r, i){
-        var val  = +r.res_qty || 0;
-        var barPct = Math.max(val / maxVal * 100, 12).toFixed(1) + '%';
-        var col  = palette[i % palette.length];
-        var disp = val >= 1000000 ? (val / 1000000).toFixed(1) + 'M'
-                 : val >= 1000    ? (val / 1000).toFixed(1) + 'K'
-                 : val % 1 === 0  ? val.toFixed(0)
-                 : val.toFixed(2);
-        var unit = r.unit ? shu(r.unit) : '';
-        bars += '<div class="rescol" style="height:100%;display:flex;flex-direction:column;justify-content:flex-end;">'
-              + '<div class="resb" style="height:' + barPct + ';min-height:30px;background:' + col + ';'
-              +   'display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;">'
-              + '<span style="font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:400;'
-              +   'color:#111;white-space:nowrap;line-height:1.2;">' + disp + '</span>'
-              + (unit ? '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:400;'
-              +   'color:rgba(0,0,0,.7);white-space:nowrap;">' + unit + '</span>' : '')
-              + '</div>'
-              + '</div>';
-        var typ = r.type_name || '';
-        var nm  = r.name || '';
-        labels += '<div class="reslbl" style="color:#111;line-height:1.3;">'
-                + '<span style="font-size:11px;color:#1a2a3a;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + sh(typ, 12) + '</span>'
-                + '<span style="font-size:10px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + sh(nm, 12) + '</span>'
-                + '</div>';
+
+    // Group by resource type — collect qty (for tooltip) alongside amount
+    var typeMap = {};
+    items.forEach(function(r){
+        var tid = r.type_id || '0';
+        if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', amount: 0, resources: [] };
+        typeMap[tid].amount += ((+r.rate || 0) * (+r.res_qty || 0));
+        typeMap[tid].resources.push({ name: r.name || '', qty: +r.res_qty || 0, unit: r.unit || '' });
     });
-    el.innerHTML = '<div class="resbars">' + bars + '</div>'
-        + '<div class="reslabels">' + labels + '</div>'
-        + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '');
+    var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
+    types.sort(function(a, b){ return b.amount - a.amount; });
+
+    // Y-axis scale labels
+    var scaleHtml = '';
+    [100,75,50,25,0].forEach(function(g){
+        scaleHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
+            + 'font-family:\'Nunito\',sans-serif;font-size:8px;color:#8a9bb0;line-height:1;">'
+            + g + '</div>';
+    });
+
+    // Gridlines
+    var gridHtml = '';
+    [75,50,25].forEach(function(g){
+        gridHtml += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;'
+            + 'border-top:1px dashed rgba(90,110,140,0.22);pointer-events:none;"></div>';
+    });
+    gridHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(90,110,140,0.3);pointer-events:none;"></div>';
+    gridHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(90,110,140,0.35);pointer-events:none;"></div>';
+
+    var barsHtml = '', labelsHtml = '';
+    types.forEach(function(t, i){
+        var pct = t.amount / actUnitCost * 100;
+        var col = colPalette[i % colPalette.length];
+        var sp  = Math.max(100 - pct, 0).toFixed(2);
+        var bp  = Math.max(pct, 0.5).toFixed(2);
+        barsHtml += '<div data-cons-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
+            + '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
+            + '<div style="flex:' + bp + ' 1 0;width:80%;min-height:0;background:' + col + ';'
+            + 'border-radius:3px 3px 0 0;display:flex;flex-direction:column;'
+            + 'align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
+            + (pct >= 10 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">' + pct.toFixed(1) + '%</span>'
+                         + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.amount) + '</span>' : '')
+            + '</div>'
+            + '</div>';
+        labelsHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#1a2a3a;'
+            + 'text-align:center;padding:2px 3px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+            + t.name + '</div>';
+    });
+
+    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
+        + '<div style="flex:1;min-height:0;display:flex;">'
+        + '<div style="width:28px;position:relative;flex-shrink:0;">' + scaleHtml + '</div>'
+        + '<div style="flex:1;position:relative;min-width:0;">'
+        + gridHtml
+        + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + barsHtml + '</div>'
+        + '</div>'
+        + '</div>'
+        + '<div style="display:flex;padding-left:28px;">' + labelsHtml + '</div>'
+        + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '')
+        + '</div>';
+
+    // Tooltip — same structure as Unit Cost panel, but shows qty instead of rate
+    var tipEl = document.getElementById('uc-cons-tip');
+    if (!tipEl){
+        tipEl = document.createElement('div');
+        tipEl.id = 'uc-cons-tip';
+        tipEl.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
+            + 'background:#fff;border:1px solid #dde4ee;border-radius:8px;'
+            + 'box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:12px 14px 10px;';
+        document.body.appendChild(tipEl);
+    }
+
+    el.querySelectorAll('[data-cons-idx]').forEach(function(col){
+        col.addEventListener('mouseenter', function(){
+            var t = types[+col.getAttribute('data-cons-idx')];
+            var maxQty = 0;
+            t.resources.forEach(function(r){ if (r.qty > maxQty) maxQty = r.qty; });
+
+            var tgHtml = '';
+            [75,50,25].forEach(function(g){
+                tgHtml += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;'
+                    + 'border-top:1px dashed rgba(100,130,170,0.55);pointer-events:none;"></div>';
+            });
+            tgHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
+            tgHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
+
+            var tsHtml = '';
+            [100,75,50,25,0].forEach(function(g){
+                tsHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
+                    + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#667;line-height:1;white-space:nowrap;">'
+                    + fmR(maxQty * g / 100) + '</div>';
+            });
+
+            var tbHtml = '', tlHtml = '';
+            t.resources.forEach(function(r, ri){
+                var pct = maxQty > 0 ? r.qty / maxQty * 100 : 0;
+                var sp2 = Math.max(100 - pct, 0).toFixed(2);
+                var bp2 = Math.max(pct, 0.5).toFixed(2);
+                var c2  = tipPalette[ri % tipPalette.length];
+                tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 5px;">'
+                    + '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
+                    + '<div style="flex:' + bp2 + ' 1 0;width:44%;min-height:0;background:' + c2 + ';'
+                    + 'border-radius:2px 2px 0 0;display:flex;flex-direction:column;'
+                    + 'align-items:center;justify-content:center;overflow:hidden;padding:3px 2px;">'
+                    + '<span style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;">' + fmR(r.qty) + '</span>'
+                    + (r.unit ? '<span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);white-space:nowrap;">/' + r.unit + '</span>' : '')
+                    + '</div>'
+                    + '</div>';
+                tlHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#334;'
+                    + 'text-align:center;padding:5px 3px 0;word-break:break-word;line-height:1.3;">'
+                    + r.name + '</div>';
+            });
+
+            var tipW = Math.max(300, t.resources.length * 70);
+            tipEl.style.width = tipW + 'px';
+            tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
+                + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
+                + t.name + ' — Quantities</div>'
+                + '<div style="display:flex;height:220px;">'
+                + '<div style="width:32px;position:relative;flex-shrink:0;">' + tsHtml + '</div>'
+                + '<div style="flex:1;position:relative;min-width:0;">'
+                + tgHtml
+                + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + tbHtml + '</div>'
+                + '</div>'
+                + '</div>'
+                + '<div style="display:flex;padding-left:32px;">' + tlHtml + '</div>';
+
+            var rect = col.getBoundingClientRect();
+            var left = rect.left + rect.width / 2 - tipW / 2;
+            left = Math.max(4, Math.min(left, window.innerWidth - tipW - 4));
+            var top  = rect.top - 8;
+            tipEl.style.left = left + 'px';
+            tipEl.style.top  = top + 'px';
+            tipEl.style.transform = 'translateY(-100%)';
+            tipEl.style.display = 'block';
+        });
+        col.addEventListener('mouseleave', function(){ tipEl.style.display = 'none'; });
+    });
 }
 
 // ── Data fetch ────────────────────────────────────────────────────────────────
