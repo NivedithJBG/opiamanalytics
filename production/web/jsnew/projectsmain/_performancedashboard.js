@@ -185,47 +185,57 @@ function renderCdUnitCostOfResource(items, actName){
     var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
     types.sort(function(a, b){ return b.amount - a.amount; });
 
-    // Y-axis gridlines at 0,25,50,75,100%
-    var gridHtml = '';
-    [100,75,50,25,0].forEach(function(g){
-        gridHtml += '<div style="position:absolute;left:28px;right:0;bottom:' + g + '%;'
-            + 'border-top:1px dashed rgba(90,110,140,0.25);pointer-events:none;">'
-            + '</div>';
-    });
-
-    // Y-axis scale labels
+    // Y-axis scale labels (right-aligned in 28px gutter, positioned relative to chart area)
     var scaleHtml = '';
     [100,75,50,25,0].forEach(function(g){
-        scaleHtml += '<div style="position:absolute;left:0;width:26px;bottom:calc(' + g + '% - 6px);'
-            + 'text-align:right;font-family:\'Nunito\',sans-serif;font-size:8px;color:#8a9bb0;line-height:1;">'
+        scaleHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
+            + 'font-family:\'Nunito\',sans-serif;font-size:8px;color:#8a9bb0;line-height:1;">'
             + g + '</div>';
     });
 
-    // Vertical bars — one per resource type, height = % of activity unit cost
+    // Gridlines spanning the bars area
+    var gridHtml = '';
+    [75,50,25].forEach(function(g){
+        gridHtml += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;'
+            + 'border-top:1px dashed rgba(90,110,140,0.22);pointer-events:none;"></div>';
+    });
+    gridHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(90,110,140,0.3);pointer-events:none;"></div>';
+    gridHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(90,110,140,0.35);pointer-events:none;"></div>';
+
+    // Bars use flex-grow spacer trick — avoids height:% needing a definite parent
+    // spacer flex-grow = (100-pct), bar flex-grow = pct → bar occupies pct% of chart height
     var barsHtml = '';
+    var labelsHtml = '';
     types.forEach(function(t, i){
-        var pct  = t.amount / actUnitCost * 100;
-        var barH = pct.toFixed(1);
-        var col  = colPalette[i % colPalette.length];
-        barsHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 3px;">'
-            + '<div style="width:80%;background:' + col + ';height:' + barH + '%;'
-            + 'min-height:4px;border-radius:3px 3px 0 0;display:flex;flex-direction:column;'
-            + 'align-items:center;justify-content:center;padding:2px;overflow:hidden;">'
-            + (pct >= 12 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">' + pct.toFixed(1) + '%</span>'
+        var pct = t.amount / actUnitCost * 100;
+        var col = colPalette[i % colPalette.length];
+        var sp  = Math.max(100 - pct, 0).toFixed(2);
+        var bp  = Math.max(pct, 0.5).toFixed(2);
+        barsHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;">'
+            + '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
+            + '<div style="flex:' + bp + ' 1 0;width:80%;min-height:0;background:' + col + ';'
+            + 'border-radius:3px 3px 0 0;display:flex;flex-direction:column;'
+            + 'align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
+            + (pct >= 10 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">' + pct.toFixed(1) + '%</span>'
                          + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.amount) + '</span>' : '')
             + '</div>'
-            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#1a2a3a;'
-            + 'text-align:center;padding-top:3px;overflow:hidden;text-overflow:ellipsis;'
-            + 'white-space:nowrap;width:100%;">' + t.name + '</div>'
             + '</div>';
+        labelsHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#1a2a3a;'
+            + 'text-align:center;padding:2px 3px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+            + t.name + '</div>';
     });
 
-    el.innerHTML = '<div style="flex:1;min-height:0;position:relative;display:flex;flex-direction:column;">'
-        + '<div style="position:relative;flex:1;min-height:0;">'
-        + scaleHtml + gridHtml
-        + '<div style="position:absolute;inset:0;left:28px;display:flex;align-items:flex-end;padding:0 2px;">'
-        + barsHtml + '</div>'
+    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
+        // chart area: Y-axis gutter + bars+grid
+        + '<div style="flex:1;min-height:0;display:flex;">'
+        + '<div style="width:28px;position:relative;flex-shrink:0;">' + scaleHtml + '</div>'
+        + '<div style="flex:1;position:relative;min-width:0;">'
+        + gridHtml
+        + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + barsHtml + '</div>'
         + '</div>'
+        + '</div>'
+        // label row
+        + '<div style="display:flex;padding-left:28px;">' + labelsHtml + '</div>'
         + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '')
         + '</div>';
 }
