@@ -147,7 +147,7 @@ function loadCdActivityData(actId){
         success: function(d){
             renderCdUnitCostOfResource(d.items || [], d.activity_name || '');
             renderCdResourceConsumption(d.items || [], d.activity_name || '', +d.last_report_qty || 0);
-            renderCdUnitCostOfActivity(d.items || [], d.activity_name || '');
+            renderCdUnitCostOfActivity(d.items || [], d.activity_name || '', d.unit || '');
             renderCdCostOfActivity(d.items || [], d.activity_name || '', +d.last_report_qty || 0);
             renderCdCostOnCompletion(d.items || [], d.activity_name || '', +d.activity_qty || 0);
             renderCdValueOfWorkDone(d);
@@ -359,7 +359,7 @@ function renderCdValueOfWorkDone(d){
     el.innerHTML = svg;
 }
 
-function renderCdUnitCostOfActivity(items, actName){
+function renderCdUnitCostOfActivity(items, actName, actUnit){
     var el = document.getElementById('cd-g5');
     if (!el) return;
 
@@ -399,7 +399,8 @@ function renderCdUnitCostOfActivity(items, actName){
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
-        +'<text x="'+cx+'" y="'+(cy-10)+'" text-anchor="middle" font-size="22" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">&#8377; '+unitCost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</text>'
+        +'<text x="'+cx+'" y="'+(cy-14)+'" text-anchor="middle" font-size="18" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">&#8377; '+unitCost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</text>'
+        +(actUnit?'<text x="'+cx+'" y="'+(cy-1)+'" text-anchor="middle" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">per '+actUnit+'</text>':'')
         +'<text x="8" y="112" text-anchor="start" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">—</tspan></text>'
         +'<text x="202" y="112" text-anchor="end" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">Rate <tspan font-weight="700">'+fmCost(unitCost)+'</tspan></text>'
         +(an?'<text x="'+cx+'" y="128" text-anchor="middle" font-size="13" fill="#111" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
