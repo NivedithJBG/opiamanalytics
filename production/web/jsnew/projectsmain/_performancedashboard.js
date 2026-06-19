@@ -163,6 +163,7 @@ function renderCdUnitCostOfResource(items, actName){
     var el = document.getElementById('cd-c6');
     if (!el) return;
     var colPalette = ['#90caf9','#ce93d8','#80cbc4','#ffcc80','#ef9a9a','#a5d6a7','#fff176','#f48fb1','#bcaaa4','#80deea'];
+    var tipPalette = ['#42a5f5','#ab47bc','#26a69a','#ffa726','#ef5350','#66bb6a','#ffee58','#ec407a','#8d6e63','#26c6da'];
 
     function fmR(v){ return v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(0); }
 
@@ -175,17 +176,18 @@ function renderCdUnitCostOfResource(items, actName){
         return;
     }
 
-    // Group by resource type — sum amount (rate × qty) per type
+    // Group by resource type — sum amount (rate × qty) per type, collect individual resources
     var typeMap = {};
     items.forEach(function(r){
         var tid = r.type_id || '0';
-        if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', amount: 0 };
+        if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', amount: 0, resources: [] };
         typeMap[tid].amount += ((+r.rate || 0) * (+r.res_qty || 0));
+        typeMap[tid].resources.push({ name: r.name || '', rate: +r.rate || 0 });
     });
     var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
     types.sort(function(a, b){ return b.amount - a.amount; });
 
-    // Y-axis scale labels (right-aligned in 28px gutter, positioned relative to chart area)
+    // Y-axis scale labels (right-aligned in 28px gutter)
     var scaleHtml = '';
     [100,75,50,25,0].forEach(function(g){
         scaleHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
@@ -193,7 +195,7 @@ function renderCdUnitCostOfResource(items, actName){
             + g + '</div>';
     });
 
-    // Gridlines spanning the bars area
+    // Gridlines
     var gridHtml = '';
     [75,50,25].forEach(function(g){
         gridHtml += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;'
@@ -202,8 +204,7 @@ function renderCdUnitCostOfResource(items, actName){
     gridHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(90,110,140,0.3);pointer-events:none;"></div>';
     gridHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(90,110,140,0.35);pointer-events:none;"></div>';
 
-    // Bars use flex-grow spacer trick — avoids height:% needing a definite parent
-    // spacer flex-grow = (100-pct), bar flex-grow = pct → bar occupies pct% of chart height
+    // Bars (flex-grow spacer trick) — data-type-idx for tooltip binding
     var barsHtml = '';
     var labelsHtml = '';
     types.forEach(function(t, i){
@@ -211,7 +212,7 @@ function renderCdUnitCostOfResource(items, actName){
         var col = colPalette[i % colPalette.length];
         var sp  = Math.max(100 - pct, 0).toFixed(2);
         var bp  = Math.max(pct, 0.5).toFixed(2);
-        barsHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;">'
+        barsHtml += '<div data-type-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
             + '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
             + '<div style="flex:' + bp + ' 1 0;width:80%;min-height:0;background:' + col + ';'
             + 'border-radius:3px 3px 0 0;display:flex;flex-direction:column;'
@@ -226,7 +227,6 @@ function renderCdUnitCostOfResource(items, actName){
     });
 
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
-        // chart area: Y-axis gutter + bars+grid
         + '<div style="flex:1;min-height:0;display:flex;">'
         + '<div style="width:28px;position:relative;flex-shrink:0;">' + scaleHtml + '</div>'
         + '<div style="flex:1;position:relative;min-width:0;">'
@@ -234,10 +234,65 @@ function renderCdUnitCostOfResource(items, actName){
         + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + barsHtml + '</div>'
         + '</div>'
         + '</div>'
-        // label row
         + '<div style="display:flex;padding-left:28px;">' + labelsHtml + '</div>'
         + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '')
         + '</div>';
+
+    // Shared tooltip element (body-level so it can overflow the panel)
+    var tipEl = document.getElementById('uc-res-tip');
+    if (!tipEl){
+        tipEl = document.createElement('div');
+        tipEl.id = 'uc-res-tip';
+        tipEl.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
+            + 'background:#1a2534;border:1px solid rgba(144,180,220,0.2);border-radius:6px;'
+            + 'box-shadow:0 6px 20px rgba(0,0,0,0.45);padding:8px 8px 6px;';
+        document.body.appendChild(tipEl);
+    }
+
+    el.querySelectorAll('[data-type-idx]').forEach(function(col){
+        col.addEventListener('mouseenter', function(){
+            var t = types[+col.getAttribute('data-type-idx')];
+            var maxRate = 0;
+            t.resources.forEach(function(r){ if (r.rate > maxRate) maxRate = r.rate; });
+
+            var tbHtml = '', tlHtml = '';
+            t.resources.forEach(function(r, ri){
+                var pct = maxRate > 0 ? r.rate / maxRate * 100 : 0;
+                var sp2 = Math.max(100 - pct, 0).toFixed(2);
+                var bp2 = Math.max(pct, 1).toFixed(2);
+                var c2  = tipPalette[ri % tipPalette.length];
+                tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 4px;">'
+                    + '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
+                    + '<div style="flex:' + bp2 + ' 1 0;width:72%;min-height:0;background:' + c2 + ';'
+                    + 'border-radius:2px 2px 0 0;display:flex;flex-direction:column;'
+                    + 'align-items:center;justify-content:center;overflow:hidden;padding:1px;">'
+                    + (pct >= 18 ? '<span style="font-size:8px;font-weight:700;color:#fff;white-space:nowrap;">' + fmR(r.rate) + '</span>' : '')
+                    + '</div>'
+                    + '</div>';
+                tlHtml += '<div style="flex:1;min-width:0;font-size:8px;color:#90b4d0;text-align:center;'
+                    + 'padding:3px 2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+                    + sh(r.name, 10) + '</div>';
+            });
+
+            var tipW = Math.max(110, t.resources.length * 40);
+            tipEl.style.width = tipW + 'px';
+            tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;'
+                + 'color:#64b5f6;font-weight:600;letter-spacing:.4px;margin-bottom:5px;white-space:nowrap;">'
+                + t.name + ' — Rates</div>'
+                + '<div style="height:80px;display:flex;">' + tbHtml + '</div>'
+                + '<div style="display:flex;">' + tlHtml + '</div>';
+
+            var rect = col.getBoundingClientRect();
+            var left = rect.left + rect.width / 2 - tipW / 2;
+            left = Math.max(4, Math.min(left, window.innerWidth - tipW - 4));
+            var top  = rect.top - 4;
+            tipEl.style.left = left + 'px';
+            tipEl.style.top  = top + 'px';
+            tipEl.style.transform = 'translateY(-100%)';
+            tipEl.style.display = 'block';
+        });
+        col.addEventListener('mouseleave', function(){ tipEl.style.display = 'none'; });
+    });
 }
 
 function renderCdValueOfWorkDone(d){
