@@ -148,7 +148,7 @@ function loadCdActivityData(actId){
             renderCdUnitCostOfResource(d.items || [], d.activity_name || '');
             renderCdResourceConsumption(d.items || [], d.activity_name || '', +d.last_report_qty || 0);
             renderCdUnitCostOfActivity(d.items || [], d.activity_name || '', d.unit || '');
-            renderCdCostOfActivity(d.items || [], d.activity_name || '', +d.last_report_qty || 0);
+            renderCdCostOfActivity(d.items || [], d.activity_name || '', +d.last_report_qty || 0, +d.activity_qty || 0, d.unit || '');
             renderCdCostOnCompletion(d.items || [], d.activity_name || '', +d.activity_qty || 0);
             renderCdValueOfWorkDone(d);
         },
@@ -535,55 +535,52 @@ function renderCdUnitCostOfActivity(items, actName, actUnit){
     chip.addEventListener('mouseleave', function(){ chipTip.style.display = 'none'; });
 }
 
-function renderCdCostOfActivity(items, actName, workDone){
+function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
     var el = document.getElementById('cd-g2');
     if (!el) return;
 
     var unitCost = 0;
     items.forEach(function(r){ unitCost += (+r.res_qty || 0) * (+r.rate || 0); });
-    var cost = unitCost * workDone;
 
-    if (!cost){
+    var estimatedCost = unitCost * estActQty;
+    var workDoneValue = unitCost * lastQty;
+
+    if (!estimatedCost){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
     }
 
-    var maxVal = cost * 2;
-    var actual = 0; // formula to be defined later
-    var f      = Math.max(0, Math.min(1, actual / maxVal));
-    var an     = sh(actName || '', 38);
-    var cx=105, cy=92, r=76, sw=14;
+    var pct     = Math.min(workDoneValue / estimatedCost * 100, 100);
+    var barW    = pct.toFixed(2);
+    var an      = sh(actName || '', 40);
+    var unitLbl = actUnit ? ' / ' + actUnit : '';
 
-    function ptF(frac){ var a=Math.PI*(1-frac); return [(cx+r*Math.cos(a)).toFixed(1),(cy-r*Math.sin(a)).toFixed(1)]; }
-    function arc(f1,f2,col,cap){
-        if(f2<=f1) return ''; cap=cap||'butt';
-        var p1=ptF(f1), p2=ptF(f2);
-        if((f2-f1)>=1){ var pm=ptF(0.5);
-            return '<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+pm[0]+','+pm[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>';
-        }
-        return '<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>';
-    }
+    function fmC(v){ return '&#8377; ' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
-    var nr=r-15, na=Math.PI*(1-f);
-    var nx=(cx+nr*Math.cos(na)).toFixed(1), ny=(cy-nr*Math.sin(na)).toFixed(1);
+    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:10px 14px 8px;">'
 
-    function fmCost(v){ return v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'K':v.toFixed(0); }
+        // Estimated cost label row
+        + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">'
+        + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;letter-spacing:.3px;">Estimated Cost</span>'
+        + '<span style="font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:700;color:#1a2540;">' + fmC(estimatedCost) + '</span>'
+        + '</div>'
 
-    var svg='<svg width="100%" height="100%" viewBox="0 0 210 134" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
-        +arc(0, 0.5, '#81C784')
-        +arc(0.5, 1,  '#E57373')
-        +(f>0?arc(0,f,'#1a3a6b','butt'):'')
-        +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
-        +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
-        +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
-        +'<text x="'+cx+'" y="'+(cy-20)+'" text-anchor="middle" font-size="18" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+fmCost(cost)+'</text>'
-        +'<text x="'+cx+'" y="'+(cy-5)+'" text-anchor="middle" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Cost</text>'
-        +'<text x="8" y="112" text-anchor="start" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">—</tspan></text>'
-        +'<text x="202" y="112" text-anchor="end" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">WD Cost <tspan font-weight="700">'+fmCost(cost)+'</tspan></text>'
-        +(an?'<text x="'+cx+'" y="128" text-anchor="middle" font-size="13" fill="#111" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
-        +'</svg>';
+        // Bar
+        + '<div style="position:relative;width:100%;height:38px;border-radius:4px;overflow:hidden;background:#c8d8ee;">'
+        + '<div style="position:absolute;top:0;left:0;height:100%;width:' + barW + '%;background:#1a3a6b;border-radius:4px 0 0 4px;transition:width .4s;"></div>'
+        + (pct > 8 ? '<span style="position:absolute;top:50%;right:' + (100 - pct + 1) + '%;transform:translateY(-50%);font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;padding-right:6px;">' + pct.toFixed(1) + '%</span>' : '')
+        + '</div>'
 
-    el.innerHTML = svg;
+        // Work done label row
+        + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;">'
+        + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;letter-spacing:.3px;">Value of Work Done</span>'
+        + '<span style="font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:700;color:#1a3a6b;">' + fmC(workDoneValue) + '</span>'
+        + '</div>'
+
+        // Activity name footer
+        + (an ? '<div style="margin-top:auto;padding-top:8px;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#5a6e8c;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + an + unitLbl + '</div>' : '')
+
+        + '</div>';
 }
 
 function renderCdCostOnCompletion(items, actName, estQty){
