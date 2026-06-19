@@ -280,15 +280,17 @@ function renderCdUnitCostOfResource(items, actName){
                 var c2  = tipPalette[ri % tipPalette.length];
                 tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 5px;">'
                     + '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
-                    + '<div style="flex:' + bp2 + ' 1 0;width:40%;min-height:0;background:' + c2 + ';'
+                    + '<div style="flex:' + bp2 + ' 1 0;width:44%;min-height:0;background:' + c2 + ';'
                     + 'border-radius:2px 2px 0 0;display:flex;flex-direction:column;'
-                    + 'align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
+                    + 'align-items:center;justify-content:center;overflow:hidden;padding:3px 2px;">'
                     + '<span style="font-size:11px;font-weight:400;color:#fff;white-space:nowrap;">' + fmR(r.rate) + '</span>'
+                    + '<span style="font-size:9px;font-weight:400;color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%;text-align:center;">' + r.name + '</span>'
                     + '</div>'
                     + '</div>';
+                // Full name at bottom — wraps freely
                 tlHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#334;'
-                    + 'text-align:center;padding:5px 2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
-                    + sh(r.name, 14) + '</div>';
+                    + 'text-align:center;padding:5px 3px 0;word-break:break-word;line-height:1.3;">'
+                    + r.name + '</div>';
             });
 
             var tipW = Math.max(300, t.resources.length * 70);
