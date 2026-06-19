@@ -1465,13 +1465,13 @@
                 + '<td>' + (r.unit || '') + '</td>'
                 + '<td class="num" style="background:#e6e6e6;color:#333;">' + estQty.toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
                 + '<td class="num" style="background:#e6e6e6;color:#333;">'
-                +   (estValue ? estValue.toLocaleString(undefined, {maximumFractionDigits:2}) : '&mdash;')
+                +   (estValue ? estValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : '&mdash;')
                 + '</td>'
                 + '<td class="num" style="background:#e6f0e6;color:#333;">'
                 +   (mbWdq ? mbWdq.toLocaleString(undefined, {maximumFractionDigits:2}) : '&mdash;')
                 + '</td>'
                 + '<td class="num" style="background:#e6f0e6;color:#333;">'
-                +   (wdValue ? wdValue.toLocaleString(undefined, {maximumFractionDigits:2}) : '&mdash;')
+                +   (wdValue ? wdValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : '&mdash;')
                 + '</td>'
                 + (function(){
                     var sid = r.schedule_activity_id;
@@ -1493,9 +1493,9 @@
         html += '</tbody>'
             + '<tfoot><tr style="background:#d0d8e8;font-weight:700;font-size:13px;">'
             + '<td colspan="5" style="text-align:right;padding:7px 10px;border:1px solid #b0b8c8;letter-spacing:0.3px;">Total</td>'
-            + '<td class="num" style="background:#c4cfe0;color:#1a2540;border:1px solid #b0b8c8;">' + totalEstValue.toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
+            + '<td class="num" style="background:#c4cfe0;color:#1a2540;border:1px solid #b0b8c8;">' + totalEstValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>'
             + '<td class="num" style="background:#d8ead8;color:#1a2540;border:1px solid #b0b8c8;"></td>'
-            + '<td class="num" style="background:#d8ead8;color:#1a2540;border:1px solid #b0b8c8;">' + (totalWdValue ? totalWdValue.toLocaleString(undefined, {maximumFractionDigits:2}) : '&mdash;') + '</td>'
+            + '<td class="num" style="background:#d8ead8;color:#1a2540;border:1px solid #b0b8c8;">' + (totalWdValue ? totalWdValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : '&mdash;') + '</td>'
             + '<td colspan="2" style="border:1px solid #b0b8c8;"></td>'
             + '</tr></tfoot>'
             + '</table>';
