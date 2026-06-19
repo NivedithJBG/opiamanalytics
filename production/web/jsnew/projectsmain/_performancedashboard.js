@@ -406,7 +406,181 @@ function renderCdUnitCostOfActivity(items, actName){
         +(an?'<text x="'+cx+'" y="128" text-anchor="middle" font-size="13" fill="#111" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +'</svg>';
 
-    el.innerHTML = svg;
+    var colPalette = ['#90caf9','#ce93d8','#80cbc4','#ffcc80','#ef9a9a','#a5d6a7','#fff176','#f48fb1','#bcaaa4','#80deea'];
+    var tipPalette = ['#42a5f5','#ab47bc','#26a69a','#ffa726','#ef5350','#66bb6a','#ffee58','#ec407a','#8d6e63','#26c6da'];
+    function fmR(v){ return v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'K':(+v).toFixed(0); }
+
+    // Group by type for the chip tooltip
+    var typeMap = {};
+    items.forEach(function(r){
+        var tid = r.type_id || '0';
+        if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', amount: 0, resources: [] };
+        typeMap[tid].amount += ((+r.rate || 0) * (+r.res_qty || 0));
+        typeMap[tid].resources.push({ name: r.name || '', amount: (+r.rate || 0) * (+r.res_qty || 0), unit: r.unit || '' });
+    });
+    var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
+    types.sort(function(a,b){ return b.amount - a.amount; });
+
+    el.style.position = 'relative';
+    el.innerHTML = svg
+        + '<div id="cd-g5-chip" style="position:absolute;top:5px;right:6px;'
+        + 'background:#1a2a3a;color:#90caf9;border:1px solid #3a5a8a;border-radius:10px;'
+        + 'font-size:10px;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.4px;'
+        + 'padding:2px 9px;cursor:pointer;user-select:none;">&#9776; Breakdown</div>';
+
+    // Chip tooltip — shared
+    var chipTip = document.getElementById('uc-act-tip');
+    if (!chipTip){
+        chipTip = document.createElement('div');
+        chipTip.id = 'uc-act-tip';
+        chipTip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
+            + 'background:#fff;border:1px solid #dde4ee;border-radius:8px;'
+            + 'box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:12px 14px 10px;';
+        document.body.appendChild(chipTip);
+    }
+
+    // Secondary resource tooltip — shared
+    var resTip = document.getElementById('uc-act-res-tip');
+    if (!resTip){
+        resTip = document.createElement('div');
+        resTip.id = 'uc-act-res-tip';
+        resTip.style.cssText = 'position:fixed;z-index:10000;display:none;pointer-events:none;'
+            + 'background:#fff;border:1px solid #dde4ee;border-radius:8px;'
+            + 'box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:12px 14px 10px;';
+        document.body.appendChild(resTip);
+    }
+
+    var chip = document.getElementById('cd-g5-chip');
+    chip.addEventListener('mouseenter', function(){
+        // Y-axis gridlines
+        var tgHtml = '';
+        [75,50,25].forEach(function(g){
+            tgHtml += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;'
+                + 'border-top:1px dashed rgba(100,130,170,0.55);pointer-events:none;"></div>';
+        });
+        tgHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
+        tgHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
+
+        // Y-axis scale labels (actual amounts)
+        var tsHtml = '';
+        [100,75,50,25,0].forEach(function(g){
+            tsHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
+                + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#667;line-height:1;white-space:nowrap;">'
+                + fmR(unitCost * g / 100) + '</div>';
+        });
+
+        var tbHtml = '', tlHtml = '';
+        types.forEach(function(t, i){
+            var pct = t.amount / unitCost * 100;
+            var sp  = Math.max(100 - pct, 0).toFixed(2);
+            var bp  = Math.max(pct, 0.5).toFixed(2);
+            var col = colPalette[i % colPalette.length];
+            tbHtml += '<div data-act-type-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 5px;cursor:pointer;">'
+                + '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
+                + '<div style="flex:' + bp + ' 1 0;width:40%;min-height:0;background:' + col + ';'
+                + 'border-radius:2px 2px 0 0;display:flex;flex-direction:column;'
+                + 'align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
+                + (pct >= 10 ? '<span style="font-size:11px;font-weight:700;color:#111;white-space:nowrap;">' + pct.toFixed(1) + '%</span>'
+                             + '<span style="font-size:8px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.amount) + '</span>' : '')
+                + '</div>'
+                + '</div>';
+            tlHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#334;'
+                + 'text-align:center;padding:4px 3px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+                + t.name + '</div>';
+        });
+
+        var tipW = Math.max(280, types.length * 68);
+        chipTip.style.width = tipW + 'px';
+        chipTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
+            + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">Resource Amount by Type</div>'
+            + '<div style="display:flex;height:200px;">'
+            + '<div style="width:32px;position:relative;flex-shrink:0;">' + tsHtml + '</div>'
+            + '<div style="flex:1;position:relative;min-width:0;">'
+            + tgHtml
+            + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + tbHtml + '</div>'
+            + '</div>'
+            + '</div>'
+            + '<div style="display:flex;padding-left:32px;">' + tlHtml + '</div>';
+
+        var rect = chip.getBoundingClientRect();
+        var left = rect.right - tipW;
+        left = Math.max(4, Math.min(left, window.innerWidth - tipW - 4));
+        chipTip.style.left = left + 'px';
+        chipTip.style.top  = (rect.bottom + 4) + 'px';
+        chipTip.style.transform = '';
+        chipTip.style.display = 'block';
+
+        // Bind type bar hover → individual resource amounts
+        chipTip.querySelectorAll('[data-act-type-idx]').forEach(function(bar){
+            bar.addEventListener('mouseenter', function(){
+                var t = types[+bar.getAttribute('data-act-type-idx')];
+                var maxAmt = 0;
+                t.resources.forEach(function(r){ if (r.amount > maxAmt) maxAmt = r.amount; });
+
+                var tgH2 = '';
+                [75,50,25].forEach(function(g){
+                    tgH2 += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;'
+                        + 'border-top:1px dashed rgba(100,130,170,0.55);pointer-events:none;"></div>';
+                });
+                tgH2 += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
+                tgH2 += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
+
+                var tsH2 = '';
+                [100,75,50,25,0].forEach(function(g){
+                    tsH2 += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
+                        + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#667;line-height:1;white-space:nowrap;">'
+                        + fmR(maxAmt * g / 100) + '</div>';
+                });
+
+                var tbH2 = '', tlH2 = '';
+                t.resources.forEach(function(r, ri){
+                    var pct = maxAmt > 0 ? r.amount / maxAmt * 100 : 0;
+                    var sp2 = Math.max(100 - pct, 0).toFixed(2);
+                    var bp2 = Math.max(pct, 0.5).toFixed(2);
+                    var c2  = tipPalette[ri % tipPalette.length];
+                    tbH2 += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 5px;">'
+                        + '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
+                        + '<div style="flex:' + bp2 + ' 1 0;width:40%;min-height:0;background:' + c2 + ';'
+                        + 'border-radius:2px 2px 0 0;display:flex;flex-direction:column;'
+                        + 'align-items:center;justify-content:center;overflow:hidden;padding:3px 2px;">'
+                        + '<span style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;">' + fmR(r.amount) + '</span>'
+                        + (r.unit ? '<span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);white-space:nowrap;">/' + r.unit + '</span>' : '')
+                        + '</div>'
+                        + '</div>';
+                    tlH2 += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#334;'
+                        + 'text-align:center;padding:5px 3px 0;word-break:break-word;line-height:1.3;">'
+                        + r.name + '</div>';
+                });
+
+                var tipW2 = Math.max(300, t.resources.length * 70);
+                resTip.style.width = tipW2 + 'px';
+                resTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
+                    + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
+                    + t.name + ' — Amounts</div>'
+                    + '<div style="display:flex;height:220px;">'
+                    + '<div style="width:32px;position:relative;flex-shrink:0;">' + tsH2 + '</div>'
+                    + '<div style="flex:1;position:relative;min-width:0;">'
+                    + tgH2
+                    + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + tbH2 + '</div>'
+                    + '</div>'
+                    + '</div>'
+                    + '<div style="display:flex;padding-left:32px;">' + tlH2 + '</div>';
+
+                var bRect = bar.getBoundingClientRect();
+                var left2 = bRect.left + bRect.width / 2 - tipW2 / 2;
+                left2 = Math.max(4, Math.min(left2, window.innerWidth - tipW2 - 4));
+                resTip.style.left = left2 + 'px';
+                resTip.style.top  = (bRect.top - 8) + 'px';
+                resTip.style.transform = 'translateY(-100%)';
+                resTip.style.display = 'block';
+            });
+            bar.addEventListener('mouseleave', function(){ resTip.style.display = 'none'; });
+        });
+    });
+    chip.addEventListener('mouseleave', function(){
+        chipTip.style.display = 'none';
+        resTip.style.display = 'none';
+    });
 }
 
 function renderCdCostOfActivity(items, actName, workDone){
