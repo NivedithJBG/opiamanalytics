@@ -557,7 +557,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
 
     function fmC(v){ return '&#8377; ' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
-    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:10px 14px 8px;">'
+    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:10px 4px 8px;">'
 
         // Estimated cost label row
         + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">'
@@ -566,7 +566,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
         + '</div>'
 
         // Bar
-        + '<div style="position:relative;width:100%;height:38px;border-radius:4px;overflow:hidden;background:#c8d8ee;">'
+        + '<div style="position:relative;width:100%;height:22px;border-radius:4px;overflow:hidden;background:#c8d8ee;">'
         + '<div style="position:absolute;top:0;left:0;height:100%;width:' + barW + '%;background:#1a3a6b;border-radius:4px 0 0 4px;transition:width .4s;"></div>'
         + (pct > 8 ? '<span style="position:absolute;top:50%;right:' + (100 - pct + 1) + '%;transform:translateY(-50%);font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;padding-right:6px;">' + pct.toFixed(1) + '%</span>' : '')
         + '</div>'
