@@ -182,7 +182,7 @@ function renderCdUnitCostOfResource(items, actName){
         var tid = r.type_id || '0';
         if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', amount: 0, resources: [] };
         typeMap[tid].amount += ((+r.rate || 0) * (+r.res_qty || 0));
-        typeMap[tid].resources.push({ name: r.name || '', rate: +r.rate || 0 });
+        typeMap[tid].resources.push({ name: r.name || '', rate: +r.rate || 0, unit: r.unit || '' });
     });
     var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
     types.sort(function(a, b){ return b.amount - a.amount; });
@@ -284,7 +284,7 @@ function renderCdUnitCostOfResource(items, actName){
                     + 'border-radius:2px 2px 0 0;display:flex;flex-direction:column;'
                     + 'align-items:center;justify-content:center;overflow:hidden;padding:3px 2px;">'
                     + '<span style="font-size:11px;font-weight:400;color:#fff;white-space:nowrap;">' + fmR(r.rate) + '</span>'
-                    + '<span style="font-size:9px;font-weight:400;color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%;text-align:center;">' + r.name + '</span>'
+                    + (r.unit ? '<span style="font-size:9px;font-weight:400;color:rgba(255,255,255,0.85);white-space:nowrap;">/' + r.unit + '</span>' : '')
                     + '</div>'
                     + '</div>';
                 // Full name at bottom — wraps freely
