@@ -452,13 +452,14 @@ function renderCdUnitCostOfActivity(items, actName){
 
     var chip = document.getElementById('cd-g5-chip');
     chip.addEventListener('mouseenter', function(){
-        // Flatten all resources across types, colour by type, sort type-first then amount-desc
+        // Flatten all resources across types, unique colour per resource, sort type-first then amount-desc
         var allRes = [];
         var maxAmt = 0;
-        types.forEach(function(t, ti){
+        var resIdx = 0;
+        types.forEach(function(t){
             t.resources.slice().sort(function(a,b){ return b.amount - a.amount; }).forEach(function(r){
                 if (r.amount > maxAmt) maxAmt = r.amount;
-                allRes.push({ name: r.name, amount: r.amount, unit: r.unit, typeName: t.name, col: colPalette[ti % colPalette.length] });
+                allRes.push({ name: r.name, amount: r.amount, unit: r.unit, typeName: t.name, col: colPalette[resIdx++ % colPalette.length] });
             });
         });
 
