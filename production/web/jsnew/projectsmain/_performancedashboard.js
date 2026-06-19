@@ -163,70 +163,49 @@ function renderCdUnitCostOfResource(items, actName){
     var el = document.getElementById('cd-c6');
     if (!el) return;
     var colPalette = ['#90caf9','#ce93d8','#80cbc4','#ffcc80','#ef9a9a','#a5d6a7','#fff176','#f48fb1','#bcaaa4','#80deea'];
-    if (!items.length){
+
+    function fmR(v){ return v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(0); }
+
+    // Total rate sum across all resources
+    var totalRate = 0;
+    items.forEach(function(r){ totalRate += (+r.rate || 0); });
+
+    if (!items.length || !totalRate){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
     }
 
-    function fmR(v){ return v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(0); }
-
-    var maxVal = 0;
+    // Group by resource type — sum rates
+    var typeMap = {};
     items.forEach(function(r){
-        maxVal = Math.max(maxVal, +r.rate || 0);
+        var tid = r.type_id || '0';
+        if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', rateSum: 0 };
+        typeMap[tid].rateSum += (+r.rate || 0);
     });
-    if (!maxVal) maxVal = 1;
+    var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
+    types.sort(function(a, b){ return b.rateSum - a.rateSum; });
 
-    // X-axis scale header (aligned to bar area, left label column is 105px)
-    var LBL_W = 105;
-    var scaleTicks = [0, 0.25, 0.5, 0.75, 1];
-    var scaleHtml = '<div style="display:flex;align-items:flex-end;padding-left:' + LBL_W + 'px;margin-bottom:3px;padding-right:2px;">';
-    scaleTicks.forEach(function(t, i){
-        var align = i === 0 ? 'left' : i === scaleTicks.length - 1 ? 'right' : 'center';
-        scaleHtml += '<div style="flex:' + (i === 0 ? '0 0 0px' : '1') + ';font-size:8px;color:#7a8ea8;text-align:' + align + ';white-space:nowrap;">'
-                   + fmR(maxVal * t) + '</div>';
-    });
-    scaleHtml += '</div>';
-
-    // Vertical grid lines (absolute inside the bar track)
-    var gridLines = '';
-    [0.25, 0.5, 0.75, 1].forEach(function(t){
-        gridLines += '<div style="position:absolute;top:0;bottom:0;left:' + (t * 100).toFixed(1) + '%;'
-                   + 'border-left:1px dashed #dde3ef;pointer-events:none;"></div>';
-    });
-
-    // One horizontal bar row per resource
-    var rowsHtml = '';
-    items.forEach(function(r, i){
-        var est     = +r.rate || 0;
-        var nm      = r.name || '';
-        var unit    = r.unit ? '/' + shu(r.unit) : '';
-        var col     = colPalette[i % colPalette.length];
-        var wPctNum = (est / maxVal * 100);
-        var wPct    = wPctNum.toFixed(1) + '%';
-        var valTxt  = fmR(est) + (unit ? '<span style="font-size:8px;color:rgba(0,0,0,.55);">' + unit + '</span>' : '');
-        // label inside bar if ≥30%, otherwise just to the right of the bar
-        var barInner = wPctNum >= 30
-            ? '<div style="position:absolute;left:0;top:0;bottom:0;width:' + wPct + ';background:' + col + ';border-radius:2px;z-index:1;display:flex;align-items:center;padding:0 5px;overflow:hidden;">'
-              + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;color:#111;font-weight:700;white-space:nowrap;">' + valTxt + '</span>'
-              + '</div>'
-            : '<div style="position:absolute;left:0;top:0;bottom:0;width:' + wPct + ';background:' + col + ';border-radius:2px;z-index:1;"></div>'
-              + '<div style="position:absolute;left:calc(' + wPct + ' + 3px);top:50%;transform:translateY(-50%);font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:#333;white-space:nowrap;z-index:2;">' + valTxt + '</div>';
-
-        rowsHtml += '<div style="display:flex;align-items:center;margin-bottom:5px;">'
-            // left label
-            + '<div style="flex-shrink:0;width:' + LBL_W + 'px;font-family:\'Barlow Condensed\',sans-serif;'
-            + 'font-size:10px;color:#1a2a3a;text-align:right;padding-right:6px;line-height:1.3;'
-            + 'overflow:hidden;word-break:break-word;">' + nm + '</div>'
-            // bar track
-            + '<div style="flex:1;position:relative;height:22px;background:#f0f4fa;border-radius:2px;overflow:hidden;">'
-            + gridLines
-            + barInner
+    // Vertical bars — one per resource type, height = percentage of total rate
+    var barsHtml = '';
+    types.forEach(function(t, i){
+        var pct  = t.rateSum / totalRate * 100;
+        var barH = Math.max(pct, 8).toFixed(1);
+        var col  = colPalette[i % colPalette.length];
+        barsHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 3px;">'
+            + '<div style="width:80%;background:' + col + ';height:' + barH + '%;'
+            + 'min-height:28px;border-radius:3px 3px 0 0;display:flex;flex-direction:column;'
+            + 'align-items:center;justify-content:center;padding:2px;overflow:hidden;">'
+            + '<span style="font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:700;color:#111;white-space:nowrap;">' + pct.toFixed(1) + '%</span>'
+            + '<span style="font-family:\'Nunito\',sans-serif;font-size:9px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.rateSum) + '</span>'
             + '</div>'
+            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#1a2a3a;'
+            + 'text-align:center;padding-top:3px;overflow:hidden;text-overflow:ellipsis;'
+            + 'white-space:nowrap;width:100%;">' + t.name + '</div>'
             + '</div>';
     });
 
-    el.innerHTML = scaleHtml
-        + '<div style="flex:1;min-height:0;overflow-y:auto;">' + rowsHtml + '</div>'
+    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;align-items:flex-end;padding:4px 4px 0;">'
+        + barsHtml + '</div>'
         + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '');
 }
 
