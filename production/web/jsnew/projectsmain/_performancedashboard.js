@@ -479,7 +479,7 @@ function renderCdUnitCostOfActivity(items, actName){
                 + fmR(maxAmt * g / 100) + '</div>';
         });
 
-        var tbHtml = '', tlHtml = '';
+        var tbHtml = '', legendHtml = '';
         allRes.forEach(function(r){
             var pct = maxAmt > 0 ? r.amount / maxAmt * 100 : 0;
             var sp  = Math.max(100 - pct, 0).toFixed(2);
@@ -493,23 +493,27 @@ function renderCdUnitCostOfActivity(items, actName){
                 + (r.unit ? '<span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);white-space:nowrap;">/' + r.unit + '</span>' : '')
                 + '</div>'
                 + '</div>';
-            tlHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#334;'
-                + 'text-align:center;padding:4px 2px 0;word-break:break-word;line-height:1.3;">'
-                + r.name + '</div>';
+            legendHtml += '<div style="display:flex;align-items:center;gap:5px;padding:2px 0;min-width:0;">'
+                + '<span style="width:10px;height:10px;border-radius:2px;background:' + r.col + ';flex-shrink:0;display:inline-block;"></span>'
+                + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#334;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + r.name + '</span>'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2a3a;white-space:nowrap;margin-left:6px;">' + fmR(r.amount) + (r.unit ? ' /'+r.unit : '') + '</span>'
+                + '</div>';
         });
 
-        var tipW = Math.max(300, allRes.length * 64);
+        var tipW = Math.max(340, allRes.length * 56);
         chipTip.style.width = tipW + 'px';
         chipTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
             + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">Resource Amounts</div>'
-            + '<div style="display:flex;height:220px;">'
+            + '<div style="display:flex;height:260px;">'
             + '<div style="width:32px;position:relative;flex-shrink:0;">' + tsHtml + '</div>'
             + '<div style="flex:1;position:relative;min-width:0;">'
             + tgHtml
             + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + tbHtml + '</div>'
             + '</div>'
             + '</div>'
-            + '<div style="display:flex;padding-left:32px;">' + tlHtml + '</div>';
+            + '<div style="margin-top:10px;padding-left:32px;border-top:1px solid #e8edf4;padding-top:8px;">'
+            + legendHtml
+            + '</div>';
 
         var rect = chip.getBoundingClientRect();
         var left = rect.right - tipW;
