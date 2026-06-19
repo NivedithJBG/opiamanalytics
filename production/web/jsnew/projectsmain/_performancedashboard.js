@@ -185,18 +185,34 @@ function renderCdUnitCostOfResource(items, actName){
     var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
     types.sort(function(a, b){ return b.amount - a.amount; });
 
+    // Y-axis gridlines at 0,25,50,75,100%
+    var gridHtml = '';
+    [100,75,50,25,0].forEach(function(g){
+        gridHtml += '<div style="position:absolute;left:28px;right:0;bottom:' + g + '%;'
+            + 'border-top:1px dashed rgba(90,110,140,0.25);pointer-events:none;">'
+            + '</div>';
+    });
+
+    // Y-axis scale labels
+    var scaleHtml = '';
+    [100,75,50,25,0].forEach(function(g){
+        scaleHtml += '<div style="position:absolute;left:0;width:26px;bottom:calc(' + g + '% - 6px);'
+            + 'text-align:right;font-family:\'Nunito\',sans-serif;font-size:8px;color:#8a9bb0;line-height:1;">'
+            + g + '</div>';
+    });
+
     // Vertical bars — one per resource type, height = % of activity unit cost
     var barsHtml = '';
     types.forEach(function(t, i){
         var pct  = t.amount / actUnitCost * 100;
-        var barH = Math.max(pct, 8).toFixed(1);
+        var barH = pct.toFixed(1);
         var col  = colPalette[i % colPalette.length];
         barsHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 3px;">'
             + '<div style="width:80%;background:' + col + ';height:' + barH + '%;'
-            + 'min-height:28px;border-radius:3px 3px 0 0;display:flex;flex-direction:column;'
+            + 'min-height:4px;border-radius:3px 3px 0 0;display:flex;flex-direction:column;'
             + 'align-items:center;justify-content:center;padding:2px;overflow:hidden;">'
-            + '<span style="font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:700;color:#111;white-space:nowrap;">' + pct.toFixed(1) + '%</span>'
-            + '<span style="font-family:\'Nunito\',sans-serif;font-size:9px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.amount) + '</span>'
+            + (pct >= 12 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">' + pct.toFixed(1) + '%</span>'
+                         + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.amount) + '</span>' : '')
             + '</div>'
             + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#1a2a3a;'
             + 'text-align:center;padding-top:3px;overflow:hidden;text-overflow:ellipsis;'
@@ -204,9 +220,14 @@ function renderCdUnitCostOfResource(items, actName){
             + '</div>';
     });
 
-    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;align-items:flex-end;padding:4px 4px 0;">'
+    el.innerHTML = '<div style="flex:1;min-height:0;position:relative;display:flex;flex-direction:column;">'
+        + '<div style="position:relative;flex:1;min-height:0;">'
+        + scaleHtml + gridHtml
+        + '<div style="position:absolute;inset:0;left:28px;display:flex;align-items:flex-end;padding:0 2px;">'
         + barsHtml + '</div>'
-        + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '');
+        + '</div>'
+        + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '')
+        + '</div>';
 }
 
 function renderCdValueOfWorkDone(d){
