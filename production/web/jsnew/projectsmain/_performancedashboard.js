@@ -497,7 +497,7 @@ function renderCdUnitCostOfActivity(items, actName){
                 + '</td>'
                 + '<td style="padding:4px 8px 4px 2px;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#334;">' + r.name + '</td>'
                 + '<td style="padding:4px 8px;font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:700;color:#1a2a3a;text-align:right;white-space:nowrap;">'
-                + fmR(r.amount) + (r.unit ? ' /'+r.unit : '')
+                + r.amount.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) + (r.unit ? ' /'+r.unit : '')
                 + '</td>'
                 + '</tr>';
         });
