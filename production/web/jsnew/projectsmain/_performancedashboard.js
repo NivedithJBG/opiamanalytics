@@ -264,12 +264,12 @@ function renderCdUnitCostOfResource(items, actName){
             tgHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
             tgHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
 
-            // Y-axis scale labels for tooltip
+            // Y-axis scale labels show actual rate values (not %)
             var tsHtml = '';
             [100,75,50,25,0].forEach(function(g){
                 tsHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
-                    + 'font-family:\'Nunito\',sans-serif;font-size:8px;color:#889;line-height:1;">'
-                    + g + '</div>';
+                    + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#667;line-height:1;white-space:nowrap;">'
+                    + fmR(maxRate * g / 100) + '</div>';
             });
 
             var tbHtml = '', tlHtml = '';
@@ -283,27 +283,27 @@ function renderCdUnitCostOfResource(items, actName){
                     + '<div style="flex:' + bp2 + ' 1 0;width:40%;min-height:0;background:' + c2 + ';'
                     + 'border-radius:2px 2px 0 0;display:flex;flex-direction:column;'
                     + 'align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
-                    + '<span style="font-size:9px;font-weight:400;color:#fff;white-space:nowrap;">' + fmR(r.rate) + '</span>'
+                    + '<span style="font-size:11px;font-weight:400;color:#fff;white-space:nowrap;">' + fmR(r.rate) + '</span>'
                     + '</div>'
                     + '</div>';
-                tlHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#445;'
-                    + 'text-align:center;padding:4px 2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+                tlHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#334;'
+                    + 'text-align:center;padding:5px 2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
                     + sh(r.name, 14) + '</div>';
             });
 
-            var tipW = Math.max(280, t.resources.length * 64);
+            var tipW = Math.max(300, t.resources.length * 70);
             tipEl.style.width = tipW + 'px';
-            tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;'
+            tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
                 + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
                 + t.name + ' — Unit Rates</div>'
                 + '<div style="display:flex;height:220px;">'
-                + '<div style="width:24px;position:relative;flex-shrink:0;">' + tsHtml + '</div>'
+                + '<div style="width:32px;position:relative;flex-shrink:0;">' + tsHtml + '</div>'
                 + '<div style="flex:1;position:relative;min-width:0;">'
                 + tgHtml
                 + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + tbHtml + '</div>'
                 + '</div>'
                 + '</div>'
-                + '<div style="display:flex;padding-left:24px;">' + tlHtml + '</div>';
+                + '<div style="display:flex;padding-left:32px;">' + tlHtml + '</div>';
 
             var rect = col.getBoundingClientRect();
             var left = rect.left + rect.width / 2 - tipW / 2;
