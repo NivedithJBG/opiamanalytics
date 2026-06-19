@@ -730,7 +730,7 @@ class ProjectsmainController extends Controller
         if ($wbId) {
             $rows = $db->createCommand(
                 "SELECT pern.pricing_resourceid,
-                        COALESCE(r.Name, rt.Name) AS name,
+                        COALESCE(pern.display_name, r.Name, rt.Name) AS name,
                         COALESCE(rt.Name, '') AS type_name,
                         pern.rate, pern.quantity,
                         pern.resourcetype_Id AS type_id,
