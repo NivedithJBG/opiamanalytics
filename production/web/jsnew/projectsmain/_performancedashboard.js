@@ -542,43 +542,56 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
     var unitCost = 0;
     items.forEach(function(r){ unitCost += (+r.res_qty || 0) * (+r.rate || 0); });
 
-    var estimatedCost = unitCost * estActQty;
-    var workDoneValue = unitCost * lastQty;
+    // Actual unit cost: use actual_unit_cost where available, fall back to estimated rate
+    var actualUnitCost = 0;
+    items.forEach(function(r){
+        var ac = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined) ? +r.actual_unit_cost : (+r.rate || 0);
+        actualUnitCost += (+r.res_qty || 0) * ac;
+    });
+
+    var estimatedCost  = unitCost       * estActQty;   // budget for full activity
+    var estWorkDone    = unitCost       * lastQty;      // estimated cost of qty done
+    var actualWorkDone = actualUnitCost * lastQty;      // actual cost of qty done
 
     if (!estimatedCost){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
     }
 
-    var pct     = Math.min(workDoneValue / estimatedCost * 100, 100);
+    var pct     = Math.min(estWorkDone / estimatedCost * 100, 100);
     var barW    = pct.toFixed(2);
     var an      = sh(actName || '', 40);
     var unitLbl = actUnit ? ' / ' + actUnit : '';
 
     function fmC(v){ return '&#8377; ' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
-    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:10px 4px 8px;">'
+    function legendRow(swatch, label, value){
+        return '<tr>'
+            + '<td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + swatch + ';"></span></td>'
+            + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">' + label + '</td>'
+            + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">' + fmC(value) + '</td>'
+            + '</tr>';
+    }
 
-        // Estimated cost label row
-        + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">'
-        + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;letter-spacing:.3px;">Estimated Cost</span>'
-        + '<span style="font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:700;color:#1a2540;">' + fmC(estimatedCost) + '</span>'
-        + '</div>'
+    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:8px 4px 6px;">'
 
         // Bar
-        + '<div style="position:relative;width:100%;height:22px;border-radius:4px;overflow:hidden;background:#c8d8ee;">'
-        + '<div style="position:absolute;top:0;left:0;height:100%;width:' + barW + '%;background:#1a3a6b;border-radius:4px 0 0 4px;transition:width .4s;"></div>'
-        + (pct > 8 ? '<span style="position:absolute;top:50%;right:' + (100 - pct + 1) + '%;transform:translateY(-50%);font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;padding-right:6px;">' + pct.toFixed(1) + '%</span>' : '')
+        + '<div style="position:relative;width:100%;height:18px;border-radius:4px;overflow:hidden;background:#c8d8ee;margin-bottom:10px;">'
+        + '<div style="position:absolute;top:0;left:0;height:100%;width:' + barW + '%;background:#1a3a6b;border-radius:4px 0 0 4px;"></div>'
+        + (pct > 8 ? '<span style="position:absolute;top:50%;right:' + (100 - pct + 1) + '%;transform:translateY(-50%);font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;padding-right:4px;">' + pct.toFixed(1) + '%</span>' : '')
         + '</div>'
 
-        // Work done label row
-        + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;">'
-        + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;letter-spacing:.3px;">Value of Work Done</span>'
-        + '<span style="font-family:\'Nunito\',sans-serif;font-size:13px;font-weight:700;color:#1a3a6b;">' + fmC(workDoneValue) + '</span>'
-        + '</div>'
+        // Legend table
+        + '<table style="width:100%;border-collapse:collapse;">'
+        + '<tbody>'
+        + legendRow('#c8d8ee', 'Estimated Cost of Activity', estimatedCost)
+        + legendRow('#1a3a6b', 'Estimated Cost of Work Done', estWorkDone)
+        + legendRow('#27ae60', 'Actual Cost of Work Done',   actualWorkDone)
+        + '</tbody>'
+        + '</table>'
 
         // Activity name footer
-        + (an ? '<div style="margin-top:auto;padding-top:8px;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#5a6e8c;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + an + unitLbl + '</div>' : '')
+        + (an ? '<div style="margin-top:auto;padding-top:6px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + an + unitLbl + '</div>' : '')
 
         + '</div>';
 }
