@@ -166,29 +166,29 @@ function renderCdUnitCostOfResource(items, actName){
 
     function fmR(v){ return v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(0); }
 
-    // Total rate sum across all resources
-    var totalRate = 0;
-    items.forEach(function(r){ totalRate += (+r.rate || 0); });
+    // Activity unit cost = sum of (rate × qty) for all resources
+    var actUnitCost = 0;
+    items.forEach(function(r){ actUnitCost += ((+r.rate || 0) * (+r.res_qty || 0)); });
 
-    if (!items.length || !totalRate){
+    if (!items.length || !actUnitCost){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
     }
 
-    // Group by resource type — sum rates
+    // Group by resource type — sum amount (rate × qty) per type
     var typeMap = {};
     items.forEach(function(r){
         var tid = r.type_id || '0';
-        if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', rateSum: 0 };
-        typeMap[tid].rateSum += (+r.rate || 0);
+        if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', amount: 0 };
+        typeMap[tid].amount += ((+r.rate || 0) * (+r.res_qty || 0));
     });
     var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
-    types.sort(function(a, b){ return b.rateSum - a.rateSum; });
+    types.sort(function(a, b){ return b.amount - a.amount; });
 
-    // Vertical bars — one per resource type, height = percentage of total rate
+    // Vertical bars — one per resource type, height = % of activity unit cost
     var barsHtml = '';
     types.forEach(function(t, i){
-        var pct  = t.rateSum / totalRate * 100;
+        var pct  = t.amount / actUnitCost * 100;
         var barH = Math.max(pct, 8).toFixed(1);
         var col  = colPalette[i % colPalette.length];
         barsHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 3px;">'
@@ -196,7 +196,7 @@ function renderCdUnitCostOfResource(items, actName){
             + 'min-height:28px;border-radius:3px 3px 0 0;display:flex;flex-direction:column;'
             + 'align-items:center;justify-content:center;padding:2px;overflow:hidden;">'
             + '<span style="font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:700;color:#111;white-space:nowrap;">' + pct.toFixed(1) + '%</span>'
-            + '<span style="font-family:\'Nunito\',sans-serif;font-size:9px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.rateSum) + '</span>'
+            + '<span style="font-family:\'Nunito\',sans-serif;font-size:9px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.amount) + '</span>'
             + '</div>'
             + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#1a2a3a;'
             + 'text-align:center;padding-top:3px;overflow:hidden;text-overflow:ellipsis;'
