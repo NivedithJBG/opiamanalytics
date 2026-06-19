@@ -283,8 +283,8 @@ function renderCdUnitCostOfResource(items, actName){
                     + '<div style="flex:' + bp2 + ' 1 0;width:44%;min-height:0;background:' + c2 + ';'
                     + 'border-radius:2px 2px 0 0;display:flex;flex-direction:column;'
                     + 'align-items:center;justify-content:center;overflow:hidden;padding:3px 2px;">'
-                    + '<span style="font-size:11px;font-weight:400;color:#fff;white-space:nowrap;">' + fmR(r.rate) + '</span>'
-                    + (r.unit ? '<span style="font-size:9px;font-weight:400;color:rgba(255,255,255,0.85);white-space:nowrap;">/' + r.unit + '</span>' : '')
+                    + '<span style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;">' + fmR(r.rate) + '</span>'
+                    + (r.unit ? '<span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);white-space:nowrap;">/' + r.unit + '</span>' : '')
                     + '</div>'
                     + '</div>';
                 // Full name at bottom — wraps freely
