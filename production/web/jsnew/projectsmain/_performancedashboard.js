@@ -244,8 +244,8 @@ function renderCdUnitCostOfResource(items, actName){
         tipEl = document.createElement('div');
         tipEl.id = 'uc-res-tip';
         tipEl.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#1a2534;border:1px solid rgba(144,180,220,0.2);border-radius:6px;'
-            + 'box-shadow:0 6px 20px rgba(0,0,0,0.45);padding:8px 8px 6px;';
+            + 'background:#fff;border:1px solid #dde4ee;border-radius:8px;'
+            + 'box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:12px 14px 10px;';
         document.body.appendChild(tipEl);
     }
 
@@ -255,37 +255,61 @@ function renderCdUnitCostOfResource(items, actName){
             var maxRate = 0;
             t.resources.forEach(function(r){ if (r.rate > maxRate) maxRate = r.rate; });
 
+            // Y-axis gridlines inside tooltip chart area
+            var tgHtml = '';
+            [75,50,25].forEach(function(g){
+                tgHtml += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;'
+                    + 'border-top:1px dashed rgba(180,195,215,0.6);pointer-events:none;"></div>';
+            });
+            tgHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(180,195,215,0.8);pointer-events:none;"></div>';
+            tgHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(180,195,215,0.9);pointer-events:none;"></div>';
+
+            // Y-axis scale labels for tooltip
+            var tsHtml = '';
+            [100,75,50,25,0].forEach(function(g){
+                tsHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
+                    + 'font-family:\'Nunito\',sans-serif;font-size:8px;color:#aab;line-height:1;">'
+                    + g + '</div>';
+            });
+
             var tbHtml = '', tlHtml = '';
             t.resources.forEach(function(r, ri){
                 var pct = maxRate > 0 ? r.rate / maxRate * 100 : 0;
                 var sp2 = Math.max(100 - pct, 0).toFixed(2);
-                var bp2 = Math.max(pct, 1).toFixed(2);
+                var bp2 = Math.max(pct, 0.5).toFixed(2);
                 var c2  = tipPalette[ri % tipPalette.length];
-                tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 4px;">'
+                tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 5px;">'
                     + '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
-                    + '<div style="flex:' + bp2 + ' 1 0;width:72%;min-height:0;background:' + c2 + ';'
+                    + '<div style="flex:' + bp2 + ' 1 0;width:40%;min-height:0;background:' + c2 + ';'
                     + 'border-radius:2px 2px 0 0;display:flex;flex-direction:column;'
-                    + 'align-items:center;justify-content:center;overflow:hidden;padding:1px;">'
-                    + (pct >= 18 ? '<span style="font-size:8px;font-weight:700;color:#fff;white-space:nowrap;">' + fmR(r.rate) + '</span>' : '')
+                    + 'align-items:center;justify-content:flex-end;overflow:visible;padding-bottom:2px;">'
+                    + '<span style="font-size:9px;font-weight:700;color:#222;white-space:nowrap;writing-mode:vertical-rl;'
+                    + 'transform:rotate(180deg);line-height:1;max-height:80px;overflow:hidden;">' + fmR(r.rate) + '</span>'
                     + '</div>'
                     + '</div>';
-                tlHtml += '<div style="flex:1;min-width:0;font-size:8px;color:#90b4d0;text-align:center;'
-                    + 'padding:3px 2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
-                    + sh(r.name, 10) + '</div>';
+                tlHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#445;'
+                    + 'text-align:center;padding:4px 2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+                    + sh(r.name, 14) + '</div>';
             });
 
-            var tipW = Math.max(110, t.resources.length * 40);
+            var tipW = Math.max(200, t.resources.length * 52);
             tipEl.style.width = tipW + 'px';
-            tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;'
-                + 'color:#64b5f6;font-weight:600;letter-spacing:.4px;margin-bottom:5px;white-space:nowrap;">'
-                + t.name + ' — Rates</div>'
-                + '<div style="height:80px;display:flex;">' + tbHtml + '</div>'
-                + '<div style="display:flex;">' + tlHtml + '</div>';
+            tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;'
+                + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
+                + t.name + ' — Unit Rates</div>'
+                + '<div style="display:flex;height:200px;">'
+                + '<div style="width:24px;position:relative;flex-shrink:0;">' + tsHtml + '</div>'
+                + '<div style="flex:1;position:relative;min-width:0;">'
+                + tgHtml
+                + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + tbHtml + '</div>'
+                + '</div>'
+                + '</div>'
+                + '<div style="display:flex;padding-left:24px;">' + tlHtml + '</div>';
 
             var rect = col.getBoundingClientRect();
             var left = rect.left + rect.width / 2 - tipW / 2;
             left = Math.max(4, Math.min(left, window.innerWidth - tipW - 4));
-            var top  = rect.top - 4;
+            var top  = rect.top - 8;
             tipEl.style.left = left + 'px';
             tipEl.style.top  = top + 'px';
             tipEl.style.transform = 'translateY(-100%)';
