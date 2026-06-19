@@ -517,7 +517,7 @@ function renderCdResourceConsumption(items, actName, lastQty){
     var colPalette = ['#a5d6a7','#80cbc4','#ffcc80','#90caf9','#ce93d8','#ef9a9a','#fff176','#f48fb1','#bcaaa4','#80deea'];
     var tipPalette = ['#2e7d32','#00695c','#e65100','#1565c0','#6a1b9a','#b71c1c','#f57f17','#880e4f','#4e342e','#006064'];
 
-    function fmR(v){ return v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(0); }
+    function fmR(v){ return v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(2); }
 
     // Same formula as Unit Cost panel: amount = rate × qty
     var actUnitCost = 0;
