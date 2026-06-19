@@ -255,20 +255,20 @@ function renderCdUnitCostOfResource(items, actName){
             var maxRate = 0;
             t.resources.forEach(function(r){ if (r.rate > maxRate) maxRate = r.rate; });
 
-            // Y-axis gridlines inside tooltip chart area
+            // Y-axis gridlines inside tooltip chart area — darker dashes
             var tgHtml = '';
             [75,50,25].forEach(function(g){
                 tgHtml += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;'
-                    + 'border-top:1px dashed rgba(180,195,215,0.6);pointer-events:none;"></div>';
+                    + 'border-top:1px dashed rgba(100,130,170,0.55);pointer-events:none;"></div>';
             });
-            tgHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(180,195,215,0.8);pointer-events:none;"></div>';
-            tgHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(180,195,215,0.9);pointer-events:none;"></div>';
+            tgHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
+            tgHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
 
             // Y-axis scale labels for tooltip
             var tsHtml = '';
             [100,75,50,25,0].forEach(function(g){
                 tsHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
-                    + 'font-family:\'Nunito\',sans-serif;font-size:8px;color:#aab;line-height:1;">'
+                    + 'font-family:\'Nunito\',sans-serif;font-size:8px;color:#889;line-height:1;">'
                     + g + '</div>';
             });
 
@@ -282,9 +282,8 @@ function renderCdUnitCostOfResource(items, actName){
                     + '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
                     + '<div style="flex:' + bp2 + ' 1 0;width:40%;min-height:0;background:' + c2 + ';'
                     + 'border-radius:2px 2px 0 0;display:flex;flex-direction:column;'
-                    + 'align-items:center;justify-content:flex-end;overflow:visible;padding-bottom:2px;">'
-                    + '<span style="font-size:9px;font-weight:700;color:#222;white-space:nowrap;writing-mode:vertical-rl;'
-                    + 'transform:rotate(180deg);line-height:1;max-height:80px;overflow:hidden;">' + fmR(r.rate) + '</span>'
+                    + 'align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
+                    + '<span style="font-size:9px;font-weight:400;color:#fff;white-space:nowrap;">' + fmR(r.rate) + '</span>'
                     + '</div>'
                     + '</div>';
                 tlHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#445;'
@@ -292,12 +291,12 @@ function renderCdUnitCostOfResource(items, actName){
                     + sh(r.name, 14) + '</div>';
             });
 
-            var tipW = Math.max(200, t.resources.length * 52);
+            var tipW = Math.max(280, t.resources.length * 64);
             tipEl.style.width = tipW + 'px';
             tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;'
                 + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
                 + t.name + ' — Unit Rates</div>'
-                + '<div style="display:flex;height:200px;">'
+                + '<div style="display:flex;height:220px;">'
                 + '<div style="width:24px;position:relative;flex-shrink:0;">' + tsHtml + '</div>'
                 + '<div style="flex:1;position:relative;min-width:0;">'
                 + tgHtml
