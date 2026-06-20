@@ -966,7 +966,7 @@ function renderCdResourceConsumption(items, actName, lastQty){
             var tsHtml = '';
             [100,75,50,25,0].forEach(function(g){
                 tsHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
-                    + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#7aa8d0;line-height:1;white-space:nowrap;">'
+                    + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;line-height:1;white-space:nowrap;">'
                     + fmR(maxQty * g / 100) + '</div>';
             });
 
@@ -985,15 +985,15 @@ function renderCdResourceConsumption(items, actName, lastQty){
                     + (r.unit ? '<span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);white-space:nowrap;">/' + r.unit + '</span>' : '')
                     + '</div>'
                     + '</div>';
-                tlHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#334;'
-                    + 'text-align:center;padding:5px 3px 0;word-break:break-word;line-height:1.3;color:#c8ddf0;">'
+                tlHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;'
+                    + 'text-align:center;padding:5px 3px 0;word-break:break-word;line-height:1.3;color:#fff;">'
                     + r.name + '</div>';
             });
 
             var tipW = Math.max(300, t.resources.length * 70);
             tipEl.style.width = tipW + 'px';
             tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
-                + 'color:#90caf9;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
+                + 'color:#fff;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
                 + t.name + ' — Quantities</div>'
                 + '<div style="display:flex;height:220px;">'
                 + '<div style="width:32px;position:relative;flex-shrink:0;">' + tsHtml + '</div>'
