@@ -595,7 +595,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
     });
 
     el.style.position = 'relative';
-    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:8px 4px 6px;">'
+    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:16px 4px 6px;">'
 
         // Bar
         + '<div style="position:relative;width:100%;height:18px;border-radius:4px;overflow:hidden;background:#555f6e;margin-bottom:10px;">'
@@ -942,7 +942,7 @@ function renderCdCurrentProjectCost(activities){
             + '</tr>';
     }
 
-    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:8px 4px 6px;">'
+    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:16px 4px 6px;">'
         + '<div style="position:relative;width:100%;height:18px;border-radius:4px;overflow:hidden;background:#00838f;margin-bottom:10px;">'
         + '<div style="position:absolute;top:0;left:0;height:100%;width:' + barW + '%;background:#26c6da;border-radius:4px 0 0 4px;"></div>'
         + (pct > 6 ? '<span style="position:absolute;top:50%;left:' + (pct / 2) + '%;transform:translate(-50%,-50%);font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">' + pct.toFixed(1) + '%</span>' : '')
