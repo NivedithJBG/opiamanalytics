@@ -643,52 +643,37 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
         tgH += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
         tgH += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
 
-        // Y-axis scale
+        // Y-axis scale — abbreviated values, right-aligned inside gutter
         var tsH = '';
+        function fmCShort(v){ return v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'K':(+v).toFixed(0); }
         [100,75,50,25,0].forEach(function(g){
             tsH += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
-                + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#667;line-height:1;white-space:nowrap;">'
-                + fmC(maxResC * g / 100) + '</div>';
+                + 'font-family:\'Nunito\',sans-serif;font-size:8px;color:#667;line-height:1;white-space:nowrap;">'
+                + fmCShort(maxResC * g / 100) + '</div>';
         });
 
-        var tbH = '', tblR = '';
-        allResC.forEach(function(r, ri){
+        var tbH = '';
+        allResC.forEach(function(r){
             var pctR = maxResC > 0 ? r.totalCost / maxResC * 100 : 0;
             var spR  = Math.max(100 - pctR, 0).toFixed(2);
             var bpR  = Math.max(pctR, 0.5).toFixed(2);
-            tbH += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 4px;">'
+            // narrow bar columns — padding 0 2px, bar width 55% to keep slender but tighter
+            tbH += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 2px;">'
                 + '<div style="flex:' + spR + ' 1 0;min-height:0;"></div>'
-                + '<div style="flex:' + bpR + ' 1 0;width:40%;min-height:0;background:' + r.col + ';border-radius:2px 2px 0 0;"></div>'
+                + '<div style="flex:' + bpR + ' 1 0;width:55%;min-height:0;background:' + r.col + ';border-radius:2px 2px 0 0;"></div>'
                 + '</div>';
-            var rowBg = ri % 2 === 0 ? '#f5f7fb' : '#fff';
-            tblR += '<tr style="background:' + rowBg + ';">'
-                + '<td style="padding:4px 6px;width:14px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + r.col + ';"></span></td>'
-                + '<td style="padding:4px 8px 4px 2px;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#334;">' + r.name + '</td>'
-                + '<td style="padding:4px 8px;font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">'
-                + r.totalCost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>'
-                + '</tr>';
         });
 
-        var tipW = Math.max(460, allResC.length * 64);
+        var tipW = Math.max(280, allResC.length * 36);
         cTip.style.width = tipW + 'px';
         cTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
             + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">Resource Total Cost</div>'
             + '<div style="display:flex;height:220px;">'
-            + '<div style="width:32px;position:relative;flex-shrink:0;">' + tsH + '</div>'
+            + '<div style="width:28px;position:relative;flex-shrink:0;">' + tsH + '</div>'
             + '<div style="flex:1;position:relative;min-width:0;">'
             + tgH
             + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + tbH + '</div>'
             + '</div>'
-            + '</div>'
-            + '<div style="margin-top:10px;border-top:1px solid #e0e5ef;">'
-            + '<table style="width:100%;border-collapse:collapse;">'
-            + '<thead><tr style="background:#e8edf7;">'
-            + '<th style="padding:4px 6px;width:14px;"></th>'
-            + '<th style="padding:4px 8px 4px 2px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;font-weight:600;text-align:left;letter-spacing:.3px;">Resource</th>'
-            + '<th style="padding:4px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;font-weight:600;text-align:right;letter-spacing:.3px;">Total Cost</th>'
-            + '</tr></thead>'
-            + '<tbody>' + tblR + '</tbody>'
-            + '</table>'
             + '</div>';
 
         var rect = chip2.getBoundingClientRect();
