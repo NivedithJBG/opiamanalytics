@@ -52,20 +52,27 @@ $(function(){
         }
     });
 
-    // Resource Groups tab heading clicked — load list
+    // Flip caret and load list when accordion panels open/close
     $(document).on('click', '.resgroup-tab', function(){
+        var $caret = $(this).find('.reslib-caret');
         setTimeout(function(){
             if($('#reslib-group').hasClass('in')){
+                $caret.html('&#9650;');
                 $('#listresgroup').trigger('click');
+            } else {
+                $caret.html('&#9660;');
             }
         }, 400);
     });
 
-    // Resources tab heading clicked — load list
     $(document).on('click', '.resres-tab', function(){
+        var $caret = $(this).find('.reslib-caret');
         setTimeout(function(){
             if($('#reslib-res').hasClass('in')){
+                $caret.html('&#9650;');
                 $('#listresource').trigger('click');
+            } else {
+                $caret.html('&#9660;');
             }
         }, 400);
     });

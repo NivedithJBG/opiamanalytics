@@ -137,12 +137,10 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
                         <!-- ===== TAB 2: Resource Groups ===== -->
                         <div class="panel panel-default resource-grp-masters-tab tab-wrapper tab acco-two">
                             <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/resourcegroup.js" type="text/javascript"></script>
-                            <div class="panel-heading">
-                                <h4 class="panel-title resgroup-tab">
-                                    <a data-toggle="collapse" data-parent="#accordionreslib" href="#reslib-group">
-                                        <span class="icon-folder"></span> Resource Groups
-                                    </a>
-                                </h4>
+                            <div class="panel-heading restype-piano-tab resgroup-tab" style="cursor:pointer;" data-toggle="collapse" data-target="#reslib-group">
+                                <span class="restype-piano-icon icon-folder"></span>
+                                Resource Groups
+                                <span style="margin-left:auto;font-size:11px;opacity:0.7;" class="reslib-caret">&#9660;</span>
                             </div>
                             <div id="reslib-group" class="tab-content cOrder-body panel-collapse collapse">
                                 <div class="panel-body">
@@ -240,12 +238,11 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
                         <!-- ===== TAB 3: Resources ===== -->
                         <div class="panel panel-default resource-masters-tab tab-wrapper tab acco-three">
                             <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/resource.js" type="text/javascript"></script>
-                            <div class="panel-heading">
-                                <h4 class="panel-title resres-tab">
-                                    <a data-toggle="collapse" data-parent="#accordionreslib" href="#reslib-res">
-                                        <span class="icon-settings"></span> Resources
-                                    </a>
-                                </h4>
+                            <div class="panel-heading restype-piano-tab resres-tab" style="cursor:pointer;" data-toggle="collapse" data-target="#reslib-res">
+                                <span class="restype-piano-icon icon-settings"></span>
+                                Resources
+                                <span style="margin-left:auto;font-size:11px;opacity:0.7;" class="reslib-caret">&#9660;</span>
+                            </div>
                             </div>
                             <div id="reslib-res" class="tab-content cOrder-body panel-collapse collapse">
                                 <div class="panel-body">
