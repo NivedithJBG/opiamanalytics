@@ -323,13 +323,13 @@ function renderCdUnitCostOfResource(items, actName){
                 legendRows += '<tr>'
                     + '<td style="padding:5px 8px 1px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;" rowspan="2">'
                     + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + c2 + ';margin-right:5px;vertical-align:middle;"></span>' + r.name + '</td>'
-                    + '<td style="padding:5px 0 1px 8px;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'
-                    + '<span style="opacity:0.6;font-size:9px;">Planned </span>'
+                    + '<td style="padding:5px 6px 1px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:rgba(255,255,255,0.6);white-space:nowrap;">Planned</td>'
+                    + '<td style="padding:5px 0 1px 4px;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'
                     + planned.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + unitSuffix + '</td>'
                     + '</tr>'
                     + '<tr style="border-bottom:1px solid rgba(255,255,255,0.1);">'
-                    + '<td style="padding:1px 0 5px 8px;font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:' + actualColor + ';text-align:right;white-space:nowrap;">'
-                    + '<span style="opacity:0.6;font-size:9px;color:#fff;">Actual &nbsp;</span>'
+                    + '<td style="padding:1px 6px 5px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:rgba(255,255,255,0.6);white-space:nowrap;">Actual</td>'
+                    + '<td style="padding:1px 0 5px 4px;font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:' + actualColor + ';text-align:right;white-space:nowrap;">'
                     + actualDisplay + (actual !== null ? unitSuffix : '') + '</td>'
                     + '</tr>';
             });
@@ -337,7 +337,7 @@ function renderCdUnitCostOfResource(items, actName){
             var tipW = Math.max(360, t.resources.length * 70);
             tipEl.style.width = tipW + 'px';
             tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
-                + 'color:#90caf9;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
+                + 'color:#fff;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
                 + t.name + ' — Unit Rates</div>'
                 + '<div style="display:flex;height:220px;">'
                 + '<div style="width:32px;position:relative;flex-shrink:0;">' + tsHtml + '</div>'
@@ -350,7 +350,8 @@ function renderCdUnitCostOfResource(items, actName){
                 + '<table style="width:100%;border-collapse:collapse;">'
                 + '<thead><tr>'
                 + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:left;">Resource</th>'
-                + '<th style="padding:3px 0 3px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Rate</th>'
+                + '<th style="padding:3px 6px 3px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;"></th>'
+                + '<th style="padding:3px 0 3px 4px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Rate</th>'
                 + '</tr></thead>'
                 + '<tbody>' + legendRows + '</tbody>'
                 + '</table>'
