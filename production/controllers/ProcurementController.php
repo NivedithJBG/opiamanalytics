@@ -930,6 +930,27 @@ class ProcurementController extends Controller
                             'activity_qty' => $activityQty, 'rows' => $rows]);
     }
 
+    public function actionCheckworesources()
+    {
+        $uid      = Yii::$app->user->id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return json_encode(['error' => 'Yes', 'errortext' => 'No project selected.']);
+        $projectid = (int)$projuser->projectid;
+        $db  = Yii::$app->db;
+        $ids = json_decode($_POST['activity_ids'] ?? '[]', true);
+        foreach ((array)$ids as $actId) {
+            $actId = (int)$actId;
+            if (!$actId) continue;
+            $n = $db->createCommand(
+                "SELECT COUNT(*) FROM pricing_estimate_resources_new
+                 WHERE activity_id=:aid AND project_id=:pid AND resourcetype_Id=4 AND pricing_status=0",
+                [':aid' => $actId, ':pid' => $projectid]
+            )->queryScalar();
+            if (!$n) return json_encode(['error' => 'Yes', 'errortext' => 'Please allocate a contractor for this task']);
+        }
+        return json_encode(['error' => 'No']);
+    }
+
     public function actionSavewotaskrates()
     {
         \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -1120,20 +1141,6 @@ class ProcurementController extends Controller
         if (empty($activities)) return json_encode(['error' => 'Yes', 'errortext' => 'No activities selected.']);
 
         $db = Yii::$app->db;
-
-        // Ensure every selected activity has a sub-contractor resource allocated
-        foreach ($activities as $act) {
-            $actId = (int)($act['activity_id'] ?? 0);
-            if (!$actId) continue;
-            $scCount = $db->createCommand(
-                "SELECT COUNT(*) FROM pricing_estimate_resources_new
-                 WHERE activity_id=:aid AND project_id=:pid AND resourcetype_Id=4 AND pricing_status=0",
-                [':aid' => $actId, ':pid' => $projectid]
-            )->queryScalar();
-            if (!$scCount) {
-                return json_encode(['error' => 'Yes', 'errortext' => 'Please allocate a contractor for this task']);
-            }
-        }
 
         // Auto-build delivery address from project details
         $project = $db->createCommand(

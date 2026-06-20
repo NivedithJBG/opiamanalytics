@@ -1514,25 +1514,35 @@
         });
         if (!selected.length) { alert('Please select at least one activity.'); return; }
 
-        // Reset fields
-        $('#wo-raise-subject, #wo-raise-scope, #wo-raise-leadtime, #wo-raise-startdate').val('');
-        $('#wo-raise-payment-cycle').val('');
-        $('#wo-raise-terms-list').html('<div class="wo-term-row" style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
-            + '<input type="text" class="wo-term-input" placeholder="Enter term..." style="flex:1;height:30px;border:1px solid #c5ccd4;border-radius:4px;padding:2px 8px;font-size:12px;color:#333;">'
-            + '<button type="button" class="wo-term-remove" style="background:#c0392b;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;display:none;">&times;</button></div>');
+        // Check sub-contractor resource mapping before opening popup
+        var actIds = selected.map(function(s){ return s.id; });
+        $.ajax({
+            type: 'POST', url: '../procurement/checkworesources', dataType: 'json',
+            data: { activity_ids: JSON.stringify(actIds) },
+            success: function(chk) {
+                if (chk.error !== 'No') { alert(chk.errortext || 'Please allocate a contractor for this task'); return; }
 
-        // Load vendors for WO (Sub Contractors only)
-        $('#wo-raise-vendor').html('<option value="">Loading...</option>');
-        $.ajax({ type:'POST', url:'../procurement/getvendors', dataType:'json', data: { context: 'wo' },
-            success: function(data) {
-                var opts = '<option value="">— Select Vendor —</option>';
-                if (data.error === 'No') $.each(data.vendors, function(i,v){ opts += '<option value="'+v.Vendor_Id+'">'+v.Name+'</option>'; });
-                $('#wo-raise-vendor').html(opts);
-            }
+                // All good — reset fields and open popup
+                $('#wo-raise-subject, #wo-raise-scope, #wo-raise-leadtime, #wo-raise-startdate').val('');
+                $('#wo-raise-payment-cycle').val('');
+                $('#wo-raise-terms-list').html('<div class="wo-term-row" style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
+                    + '<input type="text" class="wo-term-input" placeholder="Enter term..." style="flex:1;height:30px;border:1px solid #c5ccd4;border-radius:4px;padding:2px 8px;font-size:12px;color:#333;">'
+                    + '<button type="button" class="wo-term-remove" style="background:#c0392b;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;display:none;">&times;</button></div>');
+
+                $('#wo-raise-vendor').html('<option value="">Loading...</option>');
+                $.ajax({ type:'POST', url:'../procurement/getvendors', dataType:'json', data: { context: 'wo' },
+                    success: function(data) {
+                        var opts = '<option value="">— Select Vendor —</option>';
+                        if (data.error === 'No') $.each(data.vendors, function(i,v){ opts += '<option value="'+v.Vendor_Id+'">'+v.Name+'</option>'; });
+                        $('#wo-raise-vendor').html(opts);
+                    }
+                });
+
+                $('#wo-raise-overlay').show();
+                $('#wo-raise-popup').show();
+            },
+            error: function() { alert('Validation failed. Please try again.'); }
         });
-
-        $('#wo-raise-overlay').show();
-        $('#wo-raise-popup').show();
     });
 
     $(document).on('click', '#wo-raise-close, #wo-raise-cancel, #wo-raise-overlay', function(e){
@@ -1898,6 +1908,15 @@
                 selected : $tr.find('.wo-sc-select').is(':checked') ? 1 : 0
             });
         });
+        // Must have at least one task selected with a non-zero rate
+        var hasValues = false;
+        tasks.forEach(function(t){ if (t.selected && t.rate > 0) hasValues = true; });
+        if (!hasValues) {
+            alert('Please enter rates for at least one task before saving.');
+            $btn.prop('disabled', false).text('Save');
+            return;
+        }
+
         var actQtyVal = parseFloat($('#wo-activity-qty-inp').val());
         $.ajax({
             type: 'POST', url: '../procurement/savewotaskrates', dataType: 'json',
