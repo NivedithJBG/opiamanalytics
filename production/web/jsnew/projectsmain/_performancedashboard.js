@@ -183,7 +183,7 @@ function renderCdUnitCostOfResource(items, actName){
         var tid = r.type_id || '0';
         if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', amount: 0, resources: [] };
         typeMap[tid].amount += ((+r.rate || 0) * (+r.res_qty || 0));
-        typeMap[tid].resources.push({ name: r.name || '', rate: +r.rate || 0, unit: r.unit || '' });
+        typeMap[tid].resources.push({ name: r.name || '', rate: +r.rate || 0, unit: r.unit || '', actual: (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined) ? +r.actual_unit_cost : null });
     });
     var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
     types.sort(function(a, b){ return b.amount - a.amount; });
@@ -253,10 +253,15 @@ function renderCdUnitCostOfResource(items, actName){
     el.querySelectorAll('[data-type-idx]').forEach(function(col){
         col.addEventListener('mouseenter', function(){
             var t = types[+col.getAttribute('data-type-idx')];
-            var maxRate = 0;
-            t.resources.forEach(function(r){ if (r.rate > maxRate) maxRate = r.rate; });
 
-            // Y-axis gridlines inside tooltip chart area — darker dashes
+            // Scale = max of planned rates and actual rates to fit both
+            var scale = 0;
+            t.resources.forEach(function(r){
+                if (r.rate > scale) scale = r.rate;
+                if (r.actual !== null && r.actual > scale) scale = r.actual;
+            });
+
+            // Y-axis gridlines
             var tgHtml = '';
             [75,50,25].forEach(function(g){
                 tgHtml += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;'
@@ -265,36 +270,66 @@ function renderCdUnitCostOfResource(items, actName){
             tgHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
             tgHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
 
-            // Y-axis scale labels show actual rate values (not %)
+            // Y-axis scale labels
             var tsHtml = '';
             [100,75,50,25,0].forEach(function(g){
                 tsHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
                     + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#7aa8d0;line-height:1;white-space:nowrap;">'
-                    + fmR(maxRate * g / 100) + '</div>';
+                    + fmR(scale * g / 100) + '</div>';
             });
 
-            var tbHtml = '', tlHtml = '';
+            var tbHtml = '', legendRows = '';
             t.resources.forEach(function(r, ri){
-                var pct = maxRate > 0 ? r.rate / maxRate * 100 : 0;
-                var sp2 = Math.max(100 - pct, 0).toFixed(2);
-                var bp2 = Math.max(pct, 0.5).toFixed(2);
-                var c2  = tipPalette[ri % tipPalette.length];
+                var c2 = tipPalette[ri % tipPalette.length];
+                var planned = r.rate;
+                var actual  = r.actual;
+
+                var barHtml = '';
+                if (actual === null) {
+                    // No actual data — single plain bar
+                    var sp = Math.max(100 - (scale > 0 ? planned / scale * 100 : 0), 0).toFixed(2);
+                    var bp = Math.max(scale > 0 ? planned / scale * 100 : 0, 0.5).toFixed(2);
+                    barHtml = '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
+                        + '<div style="flex:' + bp + ' 1 0;width:44%;min-height:0;background:' + c2 + ';border-radius:2px 2px 0 0;"></div>';
+                } else if (actual > planned) {
+                    // Over budget — base (planned) + red (excess)
+                    var sp   = Math.max(100 - (scale > 0 ? actual / scale * 100 : 0), 0).toFixed(2);
+                    var bpPl = Math.max(scale > 0 ? planned / scale * 100 : 0, 0.5).toFixed(2);
+                    var bpEx = Math.max(scale > 0 ? (actual - planned) / scale * 100 : 0, 0.5).toFixed(2);
+                    barHtml = '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
+                        + '<div style="flex:' + bpEx + ' 1 0;width:44%;min-height:0;background:#ef5350;border-radius:2px 2px 0 0;"></div>'
+                        + '<div style="flex:' + bpPl + ' 1 0;width:44%;min-height:0;background:' + c2 + ';"></div>';
+                } else {
+                    // Under/equal — green (actual) + muted (headroom)
+                    var sp     = Math.max(100 - (scale > 0 ? planned / scale * 100 : 0), 0).toFixed(2);
+                    var bpHdR  = Math.max(scale > 0 ? (planned - actual) / scale * 100 : 0, 0).toFixed(2);
+                    var bpAct  = Math.max(scale > 0 ? actual / scale * 100 : 0, 0.5).toFixed(2);
+                    barHtml = '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
+                        + '<div style="flex:' + bpHdR + ' 1 0;width:44%;min-height:0;background:rgba(100,150,100,0.25);border-top:1px dashed rgba(100,200,100,0.5);"></div>'
+                        + '<div style="flex:' + bpAct + ' 1 0;width:44%;min-height:0;background:#66bb6a;border-radius:2px 2px 0 0;"></div>';
+                }
+
                 tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 5px;">'
-                    + '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
-                    + '<div style="flex:' + bp2 + ' 1 0;width:44%;min-height:0;background:' + c2 + ';'
-                    + 'border-radius:2px 2px 0 0;display:flex;flex-direction:column;'
-                    + 'align-items:center;justify-content:center;overflow:hidden;padding:3px 2px;">'
-                    + '<span style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;">' + fmR(r.rate) + '</span>'
-                    + (r.unit ? '<span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);white-space:nowrap;">/' + r.unit + '</span>' : '')
-                    + '</div>'
+                    + barHtml
                     + '</div>';
-                // Full name at bottom — wraps freely
-                tlHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#334;'
-                    + 'text-align:center;padding:5px 3px 0;word-break:break-word;line-height:1.3;color:#c8ddf0;">'
-                    + r.name + '</div>';
+
+                // Legend table row
+                var actualDisplay = actual !== null
+                    ? actual.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})
+                    : '&mdash;';
+                var actualColor = actual === null ? '#7aa8d0'
+                    : actual > planned ? '#ef5350' : '#66bb6a';
+                legendRows += '<tr style="border-bottom:1px solid rgba(100,130,170,0.2);">'
+                    + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#c8ddf0;">'
+                    + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + c2 + ';margin-right:5px;"></span>' + r.name + '</td>'
+                    + '<td style="padding:4px 8px;font-family:\'Nunito\',sans-serif;font-size:11px;color:#90caf9;text-align:right;white-space:nowrap;">'
+                    + planned.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + (r.unit ? ' /'+r.unit : '') + '</td>'
+                    + '<td style="padding:4px 0 4px 8px;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:' + actualColor + ';text-align:right;white-space:nowrap;">'
+                    + actualDisplay + (actual !== null && r.unit ? ' /'+r.unit : '') + '</td>'
+                    + '</tr>';
             });
 
-            var tipW = Math.max(300, t.resources.length * 70);
+            var tipW = Math.max(360, t.resources.length * 70);
             tipEl.style.width = tipW + 'px';
             tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
                 + 'color:#90caf9;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
@@ -306,7 +341,16 @@ function renderCdUnitCostOfResource(items, actName){
                 + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + tbHtml + '</div>'
                 + '</div>'
                 + '</div>'
-                + '<div style="display:flex;padding-left:32px;">' + tlHtml + '</div>';
+                + '<div style="margin-top:8px;border-top:1px solid rgba(100,130,170,0.3);padding-top:6px;">'
+                + '<table style="width:100%;border-collapse:collapse;">'
+                + '<thead><tr>'
+                + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#7aa8d0;font-weight:600;text-align:left;">Resource</th>'
+                + '<th style="padding:3px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#7aa8d0;font-weight:600;text-align:right;">Planned Rate</th>'
+                + '<th style="padding:3px 0 3px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#7aa8d0;font-weight:600;text-align:right;">Actual Rate</th>'
+                + '</tr></thead>'
+                + '<tbody>' + legendRows + '</tbody>'
+                + '</table>'
+                + '</div>';
 
             var rect = col.getBoundingClientRect();
             var left = rect.left + rect.width / 2 - tipW / 2;
