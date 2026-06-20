@@ -970,7 +970,7 @@ function renderCdResourceConsumption(items, actName, lastQty){
                     + fmR(maxQty * g / 100) + '</div>';
             });
 
-            var tbHtml = '', tlHtml = '';
+            var tbHtml = '', legendRows = '';
             t.resources.forEach(function(r, ri){
                 var pct = maxQty > 0 ? r.qty / maxQty * 100 : 0;
                 var sp2 = Math.max(100 - pct, 0).toFixed(2);
@@ -979,18 +979,19 @@ function renderCdResourceConsumption(items, actName, lastQty){
                 tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 5px;">'
                     + '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
                     + '<div style="flex:' + bp2 + ' 1 0;width:44%;min-height:0;background:' + c2 + ';'
-                    + 'border-radius:2px 2px 0 0;display:flex;flex-direction:column;'
-                    + 'align-items:center;justify-content:center;overflow:hidden;padding:3px 2px;">'
-                    + '<span style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;">' + fmR(r.qty) + '</span>'
-                    + (r.unit ? '<span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);white-space:nowrap;">/' + r.unit + '</span>' : '')
-                    + '</div>'
+                    + 'border-radius:2px 2px 0 0;"></div>'
                     + '</div>';
-                tlHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;'
-                    + 'text-align:center;padding:5px 3px 0;word-break:break-word;line-height:1.3;color:#fff;">'
-                    + r.name + '</div>';
+                var qtyDisplay = r.qty.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+                var unitSuffix = r.unit ? ' ' + r.unit : '';
+                legendRows += '<tr style="border-bottom:1px solid rgba(255,255,255,0.1);">'
+                    + '<td style="padding:5px 8px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">'
+                    + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + c2 + ';margin-right:5px;vertical-align:middle;"></span>' + r.name + '</td>'
+                    + '<td style="padding:5px 0 5px 4px;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'
+                    + qtyDisplay + unitSuffix + '</td>'
+                    + '</tr>';
             });
 
-            var tipW = Math.max(300, t.resources.length * 70);
+            var tipW = Math.max(360, t.resources.length * 70);
             tipEl.style.width = tipW + 'px';
             tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
                 + 'color:#fff;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
@@ -1002,7 +1003,15 @@ function renderCdResourceConsumption(items, actName, lastQty){
                 + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + tbHtml + '</div>'
                 + '</div>'
                 + '</div>'
-                + '<div style="display:flex;padding-left:32px;">' + tlHtml + '</div>';
+                + '<div style="margin-top:8px;border-top:1px solid rgba(100,130,170,0.3);padding-top:6px;">'
+                + '<table style="width:100%;border-collapse:collapse;">'
+                + '<thead><tr>'
+                + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:left;">Resource</th>'
+                + '<th style="padding:3px 0 3px 4px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Quantity</th>'
+                + '</tr></thead>'
+                + '<tbody>' + legendRows + '</tbody>'
+                + '</table>'
+                + '</div>';
 
             var rect = col.getBoundingClientRect();
             var left = rect.left + rect.width / 2 - tipW / 2;
