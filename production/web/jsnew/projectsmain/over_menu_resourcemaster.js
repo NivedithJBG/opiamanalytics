@@ -25,27 +25,31 @@ $(function(){
         if($('.overNow').hasClass('active')){
             $('.menu-popup-cntnr').addClass('active');
             $('body').css('overflow-y', 'hidden');
-            // Open Resource Types tab and load data — same as Activity Library pattern
-            $('.menu-popup-cntnr .panel-group .panel:first-child .panel-title a').trigger('click');
+            // Auto-load Resource Types list in the piano tab
             setTimeout(function(){
                 $('#listrestype').trigger('click');
-            }, 450);
+            }, 200);
         } else {
             $('.menu-popup-cntnr').removeClass('active');
             $('body').css('overflow-y', 'auto');
-            // Reset tabs for next open
+            // Reset accordion tabs for next open
             $('.menu-popup-cntnr .panel-group .tab-content').removeClass('in');
             $('.menu-popup-cntnr .panel-group .tab-content').attr('aria-expanded', 'false');
         }
     });
 
-    // Resource Types tab heading clicked — load list
-    $(document).on('click', '.restype-tab', function(){
-        setTimeout(function(){
-            if($('#reslib-type').hasClass('in')){
-                $('#listrestype').trigger('click');
-            }
-        }, 400);
+    // Piano tab toggle for Resource Types
+    $(document).on('click', '#restype-piano-toggle', function(){
+        var $body = $('#restype-piano-body');
+        var $caret = $('#restype-piano-caret');
+        if($body.is(':visible')){
+            $body.slideUp(150);
+            $caret.html('&#9660;');
+        } else {
+            $body.slideDown(150);
+            $caret.html('&#9650;');
+            setTimeout(function(){ $('#listrestype').trigger('click'); }, 200);
+        }
     });
 
     // Resource Groups tab heading clicked — load list
