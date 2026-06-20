@@ -5,7 +5,7 @@ $resourceTypes  = Resourcetype::find()->where(['Status' => 0])->orderBy(['sortor
 $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_sortorder' => SORT_ASC, 'Resource_group_Name' => SORT_ASC])->all();
 ?>
 <style>
-#reslib-group, #reslib-res {
+#reslib-type, #reslib-group, #reslib-res {
     max-height: none !important;
     overflow: visible !important;
     transition: none !important;
@@ -27,120 +27,106 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     padding-left: 15px;
     padding-right: 15px;
 }
-/* Resource Types piano tab */
-.restype-piano-tab {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #072c47;
-    color: #fff;
-    padding: 10px 20px;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.4px;
-    cursor: pointer;
-    border-bottom: 2px solid #0a3a5c;
-    user-select: none;
-}
-.restype-piano-tab .restype-piano-icon {
-    font-size: 14px;
-    opacity: 0.85;
-}
-.restype-piano-body {
-    background: #f8fafc;
-    border-bottom: 2px solid #dde4ee;
-    padding: 14px 20px 10px;
-}
 </style>
 <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/over_menu_resourcemaster.js" type="text/javascript"></script>
-<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/resourcetype.js?v=6" type="text/javascript"></script>
 
 <div class="container-fluid procu-accordion">
     <div class="row">
         <div class="menu-popup-cntnr">
             <div class="menu-cntnt-wrpr">
                 <div class="col-md-12">
+                    <div class="panel-group" id="accordionreslib">
 
-                    <!-- ===== PIANO TAB: Resource Types (always visible) ===== -->
-                    <div class="restype-piano-tab" id="restype-piano-toggle">
-                        <span class="restype-piano-icon icon-equalizer"></span>
-                        Resource Types
-                        <span style="margin-left:auto;font-size:11px;opacity:0.7;" id="restype-piano-caret">&#9650;</span>
-                    </div>
-                    <div class="restype-piano-body" id="restype-piano-body">
-                        <div class="search-and-content-wrpr">
-                            <a href="#" id="listrestype" style="display:none;"></a>
-                            <div class="search-and-actions-wrpr row">
-                                <div class="content-search-wrpr col-md-6 col-sm-6">
-                                    <input type="text" placeholder="Search" id="searchrestypename" class="form-control">
-                                    <button id="resourcetypesearch" class="btn btn-primary" type="button"><span class="icon-search5"></span></button>
-                                </div>
-                                <div class="col-md-6 col-sm-6 text-right" style="padding-top:4px;">
-                                    <button type="button" id="addrestype" class="btn btn-sm" style="background-color:#0a3a5c;color:#fff;border-color:#0a3a5c;border-radius:20px;padding:5px 22px;"><span class="icon-plus"></span> Add</button>
-                                </div>
+                        <!-- ===== TAB 1: Resource Types ===== -->
+                        <div class="panel panel-default resource-type-masters-tab tab-wrapper tab acco-one">
+                            <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/resourcetype.js?v=6" type="text/javascript"></script>
+                            <div class="panel-heading">
+                                <h4 class="panel-title restype-tab">
+                                    <a data-toggle="collapse" href="#reslib-type">
+                                        <span class="icon-equalizer"></span> Resource Types
+                                    </a>
+                                </h4>
                             </div>
-                            <div class="content-wrpr">
-                                <!-- Add form -->
-                                <div class="add-form add-resource-type-form" style="display:none;">
-                                    <div class="row" style="margin-top:8px;">
-                                        <form id="addrestypeform">
-                                            <div class="col-md-1"></div>
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>Resource Type Name</label>
-                                                    <input id="restypename1" type="text" class="form-control" placeholder="e.g. Sub Contractor, Materials">
-                                                    <span class="error" style="display:none;"></span>
+                            <div id="reslib-type" class="tab-content cOrder-body panel-collapse collapse">
+                                <div class="panel-body">
+                                    <div class="search-and-content-wrpr">
+
+                                        <a href="#" id="listrestype" style="display:none;"></a>
+                                        <div class="search-and-actions-wrpr row">
+                                            <div class="content-search-wrpr col-md-6 col-sm-6">
+                                                <input type="text" placeholder="Search" id="searchrestypename" class="form-control">
+                                                <button id="resourcetypesearch" class="btn btn-primary" type="button"><span class="icon-search5"></span></button>
+                                            </div>
+                                            <div class="col-md-6 col-sm-6 text-right" style="padding-top:4px;">
+                                                <button type="button" id="addrestype" class="btn btn-sm" style="background-color:#072c47;color:#fff;border-color:#072c47;border-radius:20px;padding:5px 22px;"><span class="icon-plus"></span> Add</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="content-wrpr">
+                                            <!-- Add form -->
+                                            <div class="add-form add-resource-type-form" style="display:none;">
+                                                <div class="row">
+                                                    <form id="addrestypeform">
+                                                        <div class="col-md-1"></div>
+                                                        <div class="col-md-6">
+                                                            <div class="form-group">
+                                                                <label>Resource Type</label>
+                                                                <input id="restypename1" type="text" class="form-control" placeholder="Resource Type">
+                                                                <span class="error" style="display:none;"></span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-5 text-left">
+                                                            <label>&nbsp;</label><br>
+                                                            <button type="button" id="cancelrestype" class="btn btn-sm" style="border-radius:20px;padding:6px 20px;background-color:#d9534f!important;color:#fff!important;border-color:#d43f3a!important;margin-right:6px;">Cancel</button>
+                                                            <button type="button" id="saverestype" class="btn btn-sm" style="border-radius:20px;padding:6px 20px;background-color:#072c47!important;color:#fff!important;border-color:#072c47!important;">Add Resource Type</button>
+                                                        </div>
+                                                    </form>
                                                 </div>
                                             </div>
-                                            <div class="col-md-5 text-left">
-                                                <label>&nbsp;</label><br>
-                                                <button type="button" id="cancelrestype" class="btn btn-sm" style="border-radius:20px;padding:6px 20px;background-color:#d9534f!important;color:#fff!important;border-color:#d43f3a!important;margin-right:6px;">Cancel</button>
-                                                <button type="button" id="saverestype" class="btn btn-sm" style="border-radius:20px;padding:6px 20px;background-color:#072c47!important;color:#fff!important;border-color:#072c47!important;">Add Resource Type</button>
+
+                                            <!-- Edit form -->
+                                            <div class="edit-form edit-resource-type-form" style="display:none;padding:10px 0;">
+                                                <div class="row">
+                                                    <div class="col-md-1"></div>
+                                                    <div class="col-md-5">
+                                                        <div class="form-group">
+                                                            <label>Resource Type Name</label>
+                                                            <input class="form-control" id="restypenames" placeholder="Enter resource type name" type="text">
+                                                            <span class="error" style="display:none;"></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6 text-left">
+                                                        <label>&nbsp;</label><br>
+                                                        <button type="button" class="btn btn-danger" id="cancelrestypes"><span class="icon-close"></span> Cancel</button>
+                                                        <button type="button" class="btn btn-primary" id="saveresourcetypebutton"><span class="icon-check"></span> Save Changes</button>
+                                                        <input type="hidden" id="saveresourcetypeval" value="">
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </form>
+
+                                            <!-- Preloader -->
+                                            <div class="preloader" style="display:none;text-align:center;padding:20px 0;">
+                                                <img src="<?php echo Yii::$app->request->baseUrl; ?>/images/loader.gif">
+                                            </div>
+
+                                            <!-- List -->
+                                            <div id="restypelistsection" class="data-content-list"></div>
+                                        </div>
+
                                     </div>
                                 </div>
-                                <!-- Edit form -->
-                                <div class="edit-form edit-resource-type-form" style="display:none;padding:10px 0;">
-                                    <div class="row">
-                                        <div class="col-md-1"></div>
-                                        <div class="col-md-5">
-                                            <div class="form-group">
-                                                <label>Resource Type Name</label>
-                                                <input class="form-control" id="restypenames" placeholder="Enter resource type name" type="text">
-                                                <span class="error" style="display:none;"></span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6 text-left">
-                                            <label>&nbsp;</label><br>
-                                            <button type="button" class="btn btn-danger" id="cancelrestypes"><span class="icon-close"></span> Cancel</button>
-                                            <button type="button" class="btn btn-primary" id="saveresourcetypebutton"><span class="icon-check"></span> Save Changes</button>
-                                            <input type="hidden" id="saveresourcetypeval" value="">
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Preloader -->
-                                <div class="preloader" style="display:none;text-align:center;padding:20px 0;">
-                                    <img src="<?php echo Yii::$app->request->baseUrl; ?>/images/loader.gif">
-                                </div>
-                                <!-- List -->
-                                <div id="restypelistsection" class="data-content-list"></div>
                             </div>
                         </div>
-                    </div>
-                    <!-- End piano tab -->
-
-                    <div class="panel-group acco-one-active" id="accordionreslib">
-
-                        <!-- ===== (Resource Types removed from accordion — now piano tab above) ===== -->
 
                         <!-- ===== TAB 2: Resource Groups ===== -->
                         <div class="panel panel-default resource-grp-masters-tab tab-wrapper tab acco-two">
                             <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/resourcegroup.js" type="text/javascript"></script>
-                            <div class="panel-heading restype-piano-tab resgroup-tab" style="cursor:pointer;" data-toggle="collapse" data-target="#reslib-group">
-                                <span class="restype-piano-icon icon-folder"></span>
-                                Resource Groups
-                                <span style="margin-left:auto;font-size:11px;opacity:0.7;" class="reslib-caret">&#9660;</span>
+                            <div class="panel-heading">
+                                <h4 class="panel-title resgroup-tab">
+                                    <a data-toggle="collapse" href="#reslib-group">
+                                        <span class="icon-folder"></span> Resource Groups
+                                    </a>
+                                </h4>
                             </div>
                             <div id="reslib-group" class="tab-content cOrder-body panel-collapse collapse">
                                 <div class="panel-body">
@@ -238,11 +224,12 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
                         <!-- ===== TAB 3: Resources ===== -->
                         <div class="panel panel-default resource-masters-tab tab-wrapper tab acco-three">
                             <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/resource.js" type="text/javascript"></script>
-                            <div class="panel-heading restype-piano-tab resres-tab" style="cursor:pointer;" data-toggle="collapse" data-target="#reslib-res">
-                                <span class="restype-piano-icon icon-settings"></span>
-                                Resources
-                                <span style="margin-left:auto;font-size:11px;opacity:0.7;" class="reslib-caret">&#9660;</span>
-                            </div>
+                            <div class="panel-heading">
+                                <h4 class="panel-title resres-tab">
+                                    <a data-toggle="collapse" href="#reslib-res">
+                                        <span class="icon-settings"></span> Resources
+                                    </a>
+                                </h4>
                             </div>
                             <div id="reslib-res" class="tab-content cOrder-body panel-collapse collapse">
                                 <div class="panel-body">

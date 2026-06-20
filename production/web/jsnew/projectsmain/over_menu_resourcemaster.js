@@ -25,54 +25,36 @@ $(function(){
         if($('.overNow').hasClass('active')){
             $('.menu-popup-cntnr').addClass('active');
             $('body').css('overflow-y', 'hidden');
-            // Auto-load Resource Types list in the piano tab
-            setTimeout(function(){
-                $('#listrestype').trigger('click');
-            }, 200);
+            // No tab auto-opens — user clicks to open
         } else {
             $('.menu-popup-cntnr').removeClass('active');
             $('body').css('overflow-y', 'auto');
-            // Reset accordion tabs for next open
-            $('.menu-popup-cntnr .panel-group .tab-content').removeClass('in');
-            $('.menu-popup-cntnr .panel-group .tab-content').attr('aria-expanded', 'false');
+            // Collapse all tabs when library is closed
+            $('#reslib-type, #reslib-group, #reslib-res').removeClass('in').attr('aria-expanded', 'false');
         }
     });
 
-    // Piano tab toggle for Resource Types
-    $(document).on('click', '#restype-piano-toggle', function(){
-        var $body = $('#restype-piano-body');
-        var $caret = $('#restype-piano-caret');
-        if($body.is(':visible')){
-            $body.slideUp(150);
-            $caret.html('&#9660;');
-        } else {
-            $body.slideDown(150);
-            $caret.html('&#9650;');
-            setTimeout(function(){ $('#listrestype').trigger('click'); }, 200);
-        }
+    // Load list when each tab is expanded
+    $(document).on('click', '.restype-tab', function(){
+        setTimeout(function(){
+            if($('#reslib-type').hasClass('in')){
+                $('#listrestype').trigger('click');
+            }
+        }, 400);
     });
 
-    // Flip caret and load list when accordion panels open/close
     $(document).on('click', '.resgroup-tab', function(){
-        var $caret = $(this).find('.reslib-caret');
         setTimeout(function(){
             if($('#reslib-group').hasClass('in')){
-                $caret.html('&#9650;');
                 $('#listresgroup').trigger('click');
-            } else {
-                $caret.html('&#9660;');
             }
         }, 400);
     });
 
     $(document).on('click', '.resres-tab', function(){
-        var $caret = $(this).find('.reslib-caret');
         setTimeout(function(){
             if($('#reslib-res').hasClass('in')){
-                $caret.html('&#9650;');
                 $('#listresource').trigger('click');
-            } else {
-                $caret.html('&#9660;');
             }
         }, 400);
     });
