@@ -946,6 +946,17 @@ class ProcurementController extends Controller
         if (!$activityId || empty($tasks)) return ['error' => 'Yes', 'errortext' => 'Invalid data.'];
 
         $db = Yii::$app->db;
+        $projectid = (int)$projuser->projectid;
+
+        // Ensure a sub-contractor resource is allocated for this activity
+        $scCount = $db->createCommand(
+            "SELECT COUNT(*) FROM pricing_estimate_resources_new
+             WHERE activity_id=:aid AND project_id=:pid AND resourcetype_Id=4 AND pricing_status=0",
+            [':aid' => $activityId, ':pid' => $projectid]
+        )->queryScalar();
+        if (!$scCount) {
+            return ['error' => 'Yes', 'errortext' => 'Please allocate a contractor for this task'];
+        }
 
         // Auto-create table on first use
         $db->createCommand("CREATE TABLE IF NOT EXISTS `wo_task_rates` (
@@ -1109,6 +1120,20 @@ class ProcurementController extends Controller
         if (empty($activities)) return json_encode(['error' => 'Yes', 'errortext' => 'No activities selected.']);
 
         $db = Yii::$app->db;
+
+        // Ensure every selected activity has a sub-contractor resource allocated
+        foreach ($activities as $act) {
+            $actId = (int)($act['activity_id'] ?? 0);
+            if (!$actId) continue;
+            $scCount = $db->createCommand(
+                "SELECT COUNT(*) FROM pricing_estimate_resources_new
+                 WHERE activity_id=:aid AND project_id=:pid AND resourcetype_Id=4 AND pricing_status=0",
+                [':aid' => $actId, ':pid' => $projectid]
+            )->queryScalar();
+            if (!$scCount) {
+                return json_encode(['error' => 'Yes', 'errortext' => 'Please allocate a contractor for this task']);
+            }
+        }
 
         // Auto-build delivery address from project details
         $project = $db->createCommand(
