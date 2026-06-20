@@ -906,6 +906,54 @@ function renderCdResourceConsumption(items, actName, lastQty){
     });
 }
 
+// ── Current Project Cost panel (#cd-g1) ──────────────────────────────────────
+function renderCdCurrentProjectCost(activities){
+    var el = document.getElementById('cd-g1');
+    if (!el) return;
+
+    var estimatedProjectCost = 0;
+    var estimatedCurrentCost = 0;
+    var actualCurrentCost    = 0;
+
+    activities.forEach(function(a){
+        estimatedProjectCost += (+a.activity_cost || 0);
+        var unitCost  = +a.unit_cost    || 0;
+        var cumQty    = +a.cumulated_qty || 0;
+        if (cumQty > 0 && unitCost > 0) estimatedCurrentCost += unitCost * cumQty;
+        actualCurrentCost += (+a.actual_cost || 0);
+    });
+
+    if (!estimatedProjectCost){
+        el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
+        return;
+    }
+
+    var pct  = Math.min(estimatedCurrentCost / estimatedProjectCost * 100, 100);
+    var barW = pct.toFixed(2);
+
+    function fmC(v){ return '&#8377; ' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+    function lgRow(swatch, label, value){
+        return '<tr>'
+            + '<td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + swatch + ';"></span></td>'
+            + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">' + label + '</td>'
+            + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">' + fmC(value) + '</td>'
+            + '</tr>';
+    }
+
+    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:8px 4px 6px;">'
+        + '<div style="position:relative;width:100%;height:18px;border-radius:4px;overflow:hidden;background:#00838f;margin-bottom:10px;">'
+        + '<div style="position:absolute;top:0;left:0;height:100%;width:' + barW + '%;background:#26c6da;border-radius:4px 0 0 4px;"></div>'
+        + (pct > 6 ? '<span style="position:absolute;top:50%;left:' + (pct / 2) + '%;transform:translate(-50%,-50%);font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">' + pct.toFixed(1) + '%</span>' : '')
+        + '</div>'
+        + '<table style="width:100%;border-collapse:collapse;"><tbody>'
+        + lgRow('#00838f', 'Estimated Cost of Project',         estimatedProjectCost)
+        + lgRow('#26c6da', 'Estimated Current Project Cost',    estimatedCurrentCost)
+        + lgRow('#27ae60', 'Actual Current Cost of Project',    actualCurrentCost)
+        + '</tbody></table>'
+        + '</div>';
+}
+
 // ── Data fetch ────────────────────────────────────────────────────────────────
 function loadAll(){
     $.ajax({
@@ -938,6 +986,9 @@ function loadAll(){
                 (d.project_bar&&d.project_bar.b_end_date)||'',
                 (d.project_bar&&d.project_bar.a_end_date)||''
             );
+
+            // Current Project Cost panel
+            renderCdCurrentProjectCost(d.activities || []);
 
             // Default: first group → its IOW items → first IOW's activities
             if (_groups.length) filterByGroup(_groups[0].id, d.default_iow_id);

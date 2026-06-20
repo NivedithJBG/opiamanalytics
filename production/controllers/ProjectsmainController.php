@@ -198,6 +198,7 @@ class ProjectsmainController extends Controller
                         ELSE NULL
                     END AS actual_duration,
                     COALESCE(cost.activity_cost, 0) AS activity_cost,
+                    COALESCE(cost.unit_cost, 0)    AS unit_cost,
                     COALESCE(ac.actual_cost, 0)    AS actual_cost
              FROM scheduleactivities sa
              LEFT JOIN (
@@ -214,7 +215,8 @@ class ProjectsmainController extends Controller
              ) pr ON pr.activity_id = sa.id
              LEFT JOIN (
                  SELECT pen.activity_Id,
-                        COALESCE(pen.activity_qty, 0) * COALESCE(SUM(pern.quantity * pern.rate), 0) AS activity_cost
+                        COALESCE(pen.activity_qty, 0) * COALESCE(SUM(pern.quantity * pern.rate), 0) AS activity_cost,
+                        COALESCE(SUM(pern.quantity * pern.rate), 0) AS unit_cost
                  FROM pricing_estimate_new pen
                  LEFT JOIN pricing_estimate_resources_new pern
                         ON pern.activity_id = pen.activity_Id AND pern.project_id = pen.project_Id AND pern.pricing_status = 0
