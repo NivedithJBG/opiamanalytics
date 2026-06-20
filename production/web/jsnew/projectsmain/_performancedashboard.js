@@ -670,11 +670,11 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
                 + '</tr>';
         });
 
-        var tipW = Math.max(320, allResC.length * 36);
+        var tipW = Math.max(360, allResC.length * 56);
         cTip.style.width = tipW + 'px';
         cTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
             + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">Resource Total Cost</div>'
-            + '<div style="display:flex;height:200px;">'
+            + '<div style="display:flex;height:220px;">'
             + '<div style="width:28px;position:relative;flex-shrink:0;">' + tsH + '</div>'
             + '<div style="flex:1;position:relative;min-width:0;">'
             + tgH
