@@ -986,6 +986,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
                 legendRows += '<tr style="border-bottom:1px solid rgba(255,255,255,0.1);">'
                     + '<td style="padding:5px 8px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">'
                     + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + c2 + ';margin-right:5px;vertical-align:middle;"></span>' + r.name + '</td>'
+                    + '<td style="padding:5px 6px 5px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">Planned</td>'
                     + '<td style="padding:5px 0 5px 4px;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'
                     + qtyDisplay + unitSuffix + '</td>'
                     + '</tr>';
@@ -1007,6 +1008,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
                 + '<table style="width:100%;border-collapse:collapse;">'
                 + '<thead><tr>'
                 + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:left;">Resource</th>'
+                + '<th style="padding:3px 6px 3px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;"></th>'
                 + '<th style="padding:3px 0 3px 4px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Quantity</th>'
                 + '</tr></thead>'
                 + '<tbody>' + legendRows + '</tbody>'
