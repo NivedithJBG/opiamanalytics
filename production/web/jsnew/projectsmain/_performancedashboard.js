@@ -944,7 +944,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
         tipEl = document.createElement('div');
         tipEl.id = 'uc-cons-tip';
         tipEl.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#0d1a2e;border:1px solid rgba(255,255,255,0.6);border-radius:8px;'
+            + 'background:#0d1a2e;border:2px solid rgba(255,255,255,0.85);border-radius:8px;'
             + 'box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:12px 14px 10px;';
         document.body.appendChild(tipEl);
     }
