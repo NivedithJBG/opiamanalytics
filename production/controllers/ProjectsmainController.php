@@ -765,11 +765,9 @@ class ProjectsmainController extends Controller
             foreach ($mbs as $mb) {
                 foreach (json_decode($mb['entries'] ?? '[]', true) ?: [] as $entry) {
                     if ((int)($entry['activity_id'] ?? 0) !== $wbId) continue;
+                    $mbQty += (float)($entry['qty'] ?? 0);
                     foreach ($entry['tasks'] ?? [] as $task) {
-                        $wd = (float)($task['work_done'] ?? 0);
-                        $rt = (float)($task['rate']      ?? 0);
-                        $mbAmount += $rt * $wd;
-                        $mbQty    += $wd;
+                        $mbAmount += (float)($task['rate'] ?? 0) * (float)($task['work_done'] ?? 0);
                     }
                 }
             }
