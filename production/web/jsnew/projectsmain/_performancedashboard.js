@@ -313,19 +313,24 @@ function renderCdUnitCostOfResource(items, actName){
                     + barHtml
                     + '</div>';
 
-                // Legend table row
+                // Legend — two rows per resource: Planned then Actual
                 var actualDisplay = actual !== null
                     ? actual.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})
                     : '&mdash;';
-                var actualColor = actual === null ? '#7aa8d0'
+                var actualColor = actual === null ? '#fff'
                     : actual > planned ? '#ef5350' : '#66bb6a';
-                legendRows += '<tr style="border-bottom:1px solid rgba(100,130,170,0.2);">'
-                    + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#c8ddf0;">'
-                    + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + c2 + ';margin-right:5px;"></span>' + r.name + '</td>'
-                    + '<td style="padding:4px 8px;font-family:\'Nunito\',sans-serif;font-size:11px;color:#90caf9;text-align:right;white-space:nowrap;">'
-                    + planned.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + (r.unit ? ' /'+r.unit : '') + '</td>'
-                    + '<td style="padding:4px 0 4px 8px;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:' + actualColor + ';text-align:right;white-space:nowrap;">'
-                    + actualDisplay + (actual !== null && r.unit ? ' /'+r.unit : '') + '</td>'
+                var unitSuffix = r.unit ? ' /'+r.unit : '';
+                legendRows += '<tr>'
+                    + '<td style="padding:5px 8px 1px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;" rowspan="2">'
+                    + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + c2 + ';margin-right:5px;vertical-align:middle;"></span>' + r.name + '</td>'
+                    + '<td style="padding:5px 0 1px 8px;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'
+                    + '<span style="opacity:0.6;font-size:9px;">Planned </span>'
+                    + planned.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + unitSuffix + '</td>'
+                    + '</tr>'
+                    + '<tr style="border-bottom:1px solid rgba(255,255,255,0.1);">'
+                    + '<td style="padding:1px 0 5px 8px;font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:' + actualColor + ';text-align:right;white-space:nowrap;">'
+                    + '<span style="opacity:0.6;font-size:9px;color:#fff;">Actual &nbsp;</span>'
+                    + actualDisplay + (actual !== null ? unitSuffix : '') + '</td>'
                     + '</tr>';
             });
 
@@ -344,9 +349,8 @@ function renderCdUnitCostOfResource(items, actName){
                 + '<div style="margin-top:8px;border-top:1px solid rgba(100,130,170,0.3);padding-top:6px;">'
                 + '<table style="width:100%;border-collapse:collapse;">'
                 + '<thead><tr>'
-                + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#7aa8d0;font-weight:600;text-align:left;">Resource</th>'
-                + '<th style="padding:3px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#7aa8d0;font-weight:600;text-align:right;">Planned Rate</th>'
-                + '<th style="padding:3px 0 3px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#7aa8d0;font-weight:600;text-align:right;">Actual Rate</th>'
+                + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:left;">Resource</th>'
+                + '<th style="padding:3px 0 3px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Rate</th>'
                 + '</tr></thead>'
                 + '<tbody>' + legendRows + '</tbody>'
                 + '</table>'
