@@ -737,13 +737,17 @@ class ProjectsmainController extends Controller
                         pern.rate, pern.quantity,
                         pern.resourcetype_Id AS type_id,
                         COALESCE(r.Unit, '') AS unit,
-                        grn_cost.actual_unit_cost
+                        grn_cost.actual_unit_cost,
+                        grn_cost.grn_qty,
+                        si.stock_at_site
                  FROM pricing_estimate_resources_new pern
                  LEFT JOIN resources r     ON r.Resource_Id        = pern.resource_Id
                  LEFT JOIN resourcetype rt ON rt.ResourceType_Id   = pern.resourcetype_Id
                  LEFT JOIN (
                      SELECT por.allocation_id,
-                            SUM(g.GRN_Quantity * por.rate) / NULLIF(SUM(g.GRN_Quantity), 0) AS actual_unit_cost
+                            SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4)) * por.rate)
+                                / NULLIF(SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))), 0) AS actual_unit_cost,
+                            SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))) AS grn_qty
                      FROM purchase_order_resources por
                      JOIN goods_received_note g ON g.GRN_Purchase_Order = por.order_id
                                                 AND g.GRN_Item = por.resource_id
@@ -753,9 +757,20 @@ class ProjectsmainController extends Controller
                        AND por.delete_status = 0
                      GROUP BY por.allocation_id
                  ) grn_cost ON grn_cost.allocation_id = pern.pricing_resourceid
+                 LEFT JOIN (
+                     SELECT si.pricing_resourceid, si.stock_at_site
+                     FROM store_indents si
+                     INNER JOIN (
+                         SELECT pricing_resourceid, MAX(id) AS max_id
+                         FROM store_indents
+                         WHERE project_id = :pid3
+                         GROUP BY pricing_resourceid
+                     ) latest ON latest.pricing_resourceid = si.pricing_resourceid
+                              AND si.id = latest.max_id
+                 ) si ON si.pricing_resourceid = pern.pricing_resourceid
                  WHERE pern.activity_id = :wid AND pern.project_id = :pid AND pern.pricing_status = 0
                  ORDER BY pern.rate DESC",
-                [':wid' => $wbId, ':pid' => $pid, ':pid2' => $pid]
+                [':wid' => $wbId, ':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid]
             )->queryAll();
             $mbAmount = 0.0; $mbQty = 0.0;
             $mbs = $db->createCommand(
@@ -780,6 +795,11 @@ class ProjectsmainController extends Controller
                     : (in_array($typeId, [2, 6, 7]) && $r['actual_unit_cost'] !== null
                         ? (float)$r['actual_unit_cost']
                         : null);
+                $grnQty   = (float)($r['grn_qty'] ?? 0);
+                $stockQty = (float)($r['stock_at_site'] ?? 0);
+                $actualResQty = (in_array($typeId, [2, 6, 7]) && $lastQty > 0 && $grnQty > 0)
+                    ? ($grnQty - $stockQty) / $lastQty
+                    : null;
                 $items[] = [
                     'name'             => $r['name'],
                     'type_name'        => $r['type_name'],
@@ -789,6 +809,7 @@ class ProjectsmainController extends Controller
                     'res_qty'          => $resQty,
                     'consumption'      => round($lastQty * $resQty, 3),
                     'actual_unit_cost' => $actUnit,
+                    'actual_res_qty'   => $actualResQty,
                 ];
             }
         }

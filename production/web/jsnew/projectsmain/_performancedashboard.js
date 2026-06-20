@@ -884,7 +884,8 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
         var tid = r.type_id || '0';
         if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', amount: 0, resources: [] };
         typeMap[tid].amount += ((+r.rate || 0) * (+r.res_qty || 0));
-        typeMap[tid].resources.push({ name: r.name || '', qty: +r.res_qty || 0, unit: r.unit || '' });
+        typeMap[tid].resources.push({ name: r.name || '', qty: +r.res_qty || 0, unit: r.unit || '',
+            actual: (r.actual_res_qty !== null && r.actual_res_qty !== undefined) ? +r.actual_res_qty : null });
     });
     var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
     types.sort(function(a, b){ return b.amount - a.amount; });
@@ -953,7 +954,10 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
         col.addEventListener('mouseenter', function(){
             var t = types[+col.getAttribute('data-cons-idx')];
             var maxQty = 0;
-            t.resources.forEach(function(r){ if (r.qty > maxQty) maxQty = r.qty; });
+            t.resources.forEach(function(r){
+                if (r.qty > maxQty) maxQty = r.qty;
+                if (r.actual !== null && r.actual > maxQty) maxQty = r.actual;
+            });
 
             var tgHtml = '';
             [75,50,25].forEach(function(g){
@@ -972,24 +976,62 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
 
             var tbHtml = '', legendRows = '';
             t.resources.forEach(function(r, ri){
-                var pct = maxQty > 0 ? r.qty / maxQty * 100 : 0;
-                var sp2 = Math.max(100 - pct, 0).toFixed(2);
-                var bp2 = Math.max(pct, 0.5).toFixed(2);
-                var c2  = tipPalette[ri % tipPalette.length];
+                var planned = r.qty;
+                var actual  = r.actual;
+                var c2 = tipPalette[ri % tipPalette.length];
+
+                var barHtml = '';
+                if (actual === null) {
+                    var sp2 = Math.max(100 - (maxQty > 0 ? planned / maxQty * 100 : 0), 0).toFixed(2);
+                    var bp2 = Math.max(maxQty > 0 ? planned / maxQty * 100 : 0, 0.5).toFixed(2);
+                    barHtml = '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
+                        + '<div style="flex:' + bp2 + ' 1 0;width:44%;min-height:0;background:' + c2 + ';border-radius:2px 2px 0 0;"></div>';
+                } else if (actual > planned) {
+                    var sp2  = Math.max(100 - (maxQty > 0 ? actual / maxQty * 100 : 0), 0).toFixed(2);
+                    var bpPl = Math.max(maxQty > 0 ? planned / maxQty * 100 : 0, 0.5).toFixed(2);
+                    var bpEx = Math.max(maxQty > 0 ? (actual - planned) / maxQty * 100 : 0, 0.5).toFixed(2);
+                    barHtml = '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
+                        + '<div style="flex:' + bpEx + ' 1 0;width:44%;min-height:0;background:#ef5350;border-radius:2px 2px 0 0;"></div>'
+                        + '<div style="flex:' + bpPl + ' 1 0;width:44%;min-height:0;background:' + c2 + ';"></div>';
+                } else {
+                    var sp2    = Math.max(100 - (maxQty > 0 ? planned / maxQty * 100 : 0), 0).toFixed(2);
+                    var bpHdR  = Math.max(maxQty > 0 ? (planned - actual) / maxQty * 100 : 0, 0).toFixed(2);
+                    var bpAct  = Math.max(maxQty > 0 ? actual / maxQty * 100 : 0, 0.5).toFixed(2);
+                    barHtml = '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
+                        + '<div style="flex:' + bpHdR + ' 1 0;width:44%;min-height:0;background:rgba(100,150,100,0.25);border-top:1px dashed rgba(100,200,100,0.5);"></div>'
+                        + '<div style="flex:' + bpAct + ' 1 0;width:44%;min-height:0;background:#66bb6a;border-radius:2px 2px 0 0;"></div>';
+                }
+
                 tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 5px;">'
-                    + '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
-                    + '<div style="flex:' + bp2 + ' 1 0;width:44%;min-height:0;background:' + c2 + ';'
-                    + 'border-radius:2px 2px 0 0;"></div>'
-                    + '</div>';
-                var qtyDisplay = r.qty.toLocaleString(undefined, {minimumFractionDigits:3, maximumFractionDigits:3});
+                    + barHtml + '</div>';
+
                 var unitSuffix = (r.unit ? ' ' + r.unit : '') + (actUnit ? ' / ' + actUnit : '');
-                legendRows += '<tr style="border-bottom:1px solid rgba(255,255,255,0.1);">'
-                    + '<td style="padding:5px 8px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">'
-                    + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + c2 + ';margin-right:5px;vertical-align:middle;"></span>' + r.name + '</td>'
-                    + '<td style="padding:5px 6px 5px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">Planned</td>'
-                    + '<td style="padding:5px 0 5px 4px;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'
-                    + qtyDisplay + unitSuffix + '</td>'
-                    + '</tr>';
+                var planDisp   = planned.toLocaleString(undefined, {minimumFractionDigits:3, maximumFractionDigits:3});
+
+                if (actual === null) {
+                    legendRows += '<tr style="border-bottom:1px solid rgba(255,255,255,0.1);">'
+                        + '<td style="padding:5px 8px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">'
+                        + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + c2 + ';margin-right:5px;vertical-align:middle;"></span>' + r.name + '</td>'
+                        + '<td style="padding:5px 6px 5px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">Planned</td>'
+                        + '<td style="padding:5px 0 5px 4px;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'
+                        + planDisp + unitSuffix + '</td>'
+                        + '</tr>';
+                } else {
+                    var actDisp  = actual.toLocaleString(undefined, {minimumFractionDigits:3, maximumFractionDigits:3});
+                    var actColor = actual > planned ? '#ef5350' : '#66bb6a';
+                    legendRows += '<tr>'
+                        + '<td style="padding:5px 8px 1px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;" rowspan="2">'
+                        + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + c2 + ';margin-right:5px;vertical-align:middle;"></span>' + r.name + '</td>'
+                        + '<td style="padding:5px 6px 1px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">Planned</td>'
+                        + '<td style="padding:5px 0 1px 4px;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'
+                        + planDisp + unitSuffix + '</td>'
+                        + '</tr>'
+                        + '<tr style="border-bottom:1px solid rgba(255,255,255,0.1);">'
+                        + '<td style="padding:1px 6px 5px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">Actual</td>'
+                        + '<td style="padding:1px 0 5px 4px;font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:' + actColor + ';text-align:right;white-space:nowrap;">'
+                        + actDisp + unitSuffix + '</td>'
+                        + '</tr>';
+                }
             });
 
             var tipW = Math.max(360, t.resources.length * 70);
