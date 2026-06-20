@@ -147,7 +147,7 @@ function loadCdActivityData(actId){
         dataType: 'json',
         success: function(d){
             renderCdUnitCostOfResource(d.items || [], d.activity_name || '');
-            renderCdResourceConsumption(d.items || [], d.activity_name || '', +d.last_report_qty || 0);
+            renderCdResourceConsumption(d.items || [], d.activity_name || '', +d.last_report_qty || 0, d.unit || '');
             renderCdUnitCostOfActivity(d.items || [], d.activity_name || '', d.unit || '');
             renderCdCostOfActivity(d.items || [], d.activity_name || '', +d.last_report_qty || 0, +d.activity_qty || 0, d.unit || '');
             renderCdCostOnCompletion(d.items || [], d.activity_name || '', +d.activity_qty || 0);
@@ -861,7 +861,7 @@ function renderCdCostOnCompletion(items, actName, estQty){
     el.innerHTML = svg;
 }
 
-function renderCdResourceConsumption(items, actName, lastQty){
+function renderCdResourceConsumption(items, actName, lastQty, actUnit){
     var el = document.getElementById('cd-c7');
     if (!el) return;
     var colPalette = ['#a5d6a7','#80cbc4','#ffcc80','#90caf9','#ce93d8','#ef9a9a','#fff176','#f48fb1','#bcaaa4','#80deea'];
@@ -982,7 +982,7 @@ function renderCdResourceConsumption(items, actName, lastQty){
                     + 'border-radius:2px 2px 0 0;"></div>'
                     + '</div>';
                 var qtyDisplay = r.qty.toLocaleString(undefined, {minimumFractionDigits:3, maximumFractionDigits:3});
-                var unitSuffix = r.unit ? ' ' + r.unit : '';
+                var unitSuffix = (r.unit ? ' ' + r.unit : '') + (actUnit ? ' / ' + actUnit : '');
                 legendRows += '<tr style="border-bottom:1px solid rgba(255,255,255,0.1);">'
                     + '<td style="padding:5px 8px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">'
                     + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + c2 + ';margin-right:5px;vertical-align:middle;"></span>' + r.name + '</td>'
