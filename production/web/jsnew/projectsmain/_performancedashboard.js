@@ -245,7 +245,7 @@ function renderCdUnitCostOfResource(items, actName){
                 + '<div style="flex:' + bp + ' 1 0;width:80%;min-height:0;background:' + col + ';'
                 + 'border-radius:3px 3px 0 0;display:flex;flex-direction:column;'
                 + 'align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
-                + (spPct >= 10 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">' + t._plannedPct.toFixed(1) + '%</span>'
+                + (spPct >= 10 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">' + pct.toFixed(1) + '%</span>'
                                + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.amount) + '</span>' : '')
                 + '</div>'
                 + '</div>';
