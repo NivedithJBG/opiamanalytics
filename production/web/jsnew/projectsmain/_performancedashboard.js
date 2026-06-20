@@ -573,6 +573,27 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
             + '</tr>';
     }
 
+    var colPalette2 = ['#90caf9','#ce93d8','#80cbc4','#ffcc80','#ef9a9a','#a5d6a7','#fff176','#f48fb1','#bcaaa4','#80deea'];
+
+    // Build resource total costs for the chip popup
+    var resIdx2 = 0;
+    var allResC = [];
+    var maxResC = 0;
+    // Group by type to maintain order, then flatten
+    var typeMapC = {};
+    items.forEach(function(r){
+        var tid = r.type_id || '0';
+        if (!typeMapC[tid]) typeMapC[tid] = { name: r.type_name || 'Other', resources: [] };
+        typeMapC[tid].resources.push({ name: r.name || '', totalCost: (+r.rate || 0) * (+r.res_qty || 0) * estActQty, unit: r.unit || '' });
+    });
+    Object.keys(typeMapC).forEach(function(k){
+        typeMapC[k].resources.sort(function(a,b){ return b.totalCost - a.totalCost; }).forEach(function(r){
+            if (r.totalCost > maxResC) maxResC = r.totalCost;
+            allResC.push({ name: r.name, totalCost: r.totalCost, unit: r.unit, col: colPalette2[resIdx2++ % colPalette2.length] });
+        });
+    });
+
+    el.style.position = 'relative';
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:8px 4px 6px;">'
 
         // Bar
@@ -593,7 +614,93 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
         // Activity name footer
         + (an ? '<div style="margin-top:auto;padding-top:6px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + an + unitLbl + '</div>' : '')
 
-        + '</div>';
+        + '</div>'
+
+        // Chip
+        + '<div id="cd-g2-chip" style="position:absolute;top:5px;right:6px;'
+        + 'background:#1a2a3a;color:#90caf9;border:1px solid #3a5a8a;border-radius:10px;'
+        + 'font-size:10px;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.4px;'
+        + 'padding:2px 9px;cursor:pointer;user-select:none;">&#9776; Resources</div>';
+
+    // Shared chip tooltip
+    var cTip = document.getElementById('cd-g2-tip');
+    if (!cTip){
+        cTip = document.createElement('div');
+        cTip.id = 'cd-g2-tip';
+        cTip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
+            + 'background:#fff;border:1px solid #dde4ee;border-radius:8px;'
+            + 'box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:12px 14px 10px;';
+        document.body.appendChild(cTip);
+    }
+
+    var chip2 = document.getElementById('cd-g2-chip');
+    chip2.addEventListener('mouseenter', function(){
+        // Gridlines
+        var tgH = '';
+        [75,50,25].forEach(function(g){
+            tgH += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;border-top:1px dashed rgba(100,130,170,0.55);pointer-events:none;"></div>';
+        });
+        tgH += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
+        tgH += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
+
+        // Y-axis scale
+        var tsH = '';
+        [100,75,50,25,0].forEach(function(g){
+            tsH += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
+                + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#667;line-height:1;white-space:nowrap;">'
+                + fmC(maxResC * g / 100) + '</div>';
+        });
+
+        var tbH = '', tblR = '';
+        allResC.forEach(function(r, ri){
+            var pctR = maxResC > 0 ? r.totalCost / maxResC * 100 : 0;
+            var spR  = Math.max(100 - pctR, 0).toFixed(2);
+            var bpR  = Math.max(pctR, 0.5).toFixed(2);
+            tbH += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 4px;">'
+                + '<div style="flex:' + spR + ' 1 0;min-height:0;"></div>'
+                + '<div style="flex:' + bpR + ' 1 0;width:40%;min-height:0;background:' + r.col + ';border-radius:2px 2px 0 0;"></div>'
+                + '</div>';
+            var rowBg = ri % 2 === 0 ? '#f5f7fb' : '#fff';
+            tblR += '<tr style="background:' + rowBg + ';">'
+                + '<td style="padding:4px 6px;width:14px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + r.col + ';"></span></td>'
+                + '<td style="padding:4px 8px 4px 2px;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#334;">' + r.name + '</td>'
+                + '<td style="padding:4px 8px;font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">'
+                + r.totalCost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})
+                + (r.unit ? ' /'+r.unit : '') + '</td>'
+                + '</tr>';
+        });
+
+        var tipW = Math.max(360, allResC.length * 56);
+        cTip.style.width = tipW + 'px';
+        cTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
+            + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">Resource Total Cost</div>'
+            + '<div style="display:flex;height:220px;">'
+            + '<div style="width:32px;position:relative;flex-shrink:0;">' + tsH + '</div>'
+            + '<div style="flex:1;position:relative;min-width:0;">'
+            + tgH
+            + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + tbH + '</div>'
+            + '</div>'
+            + '</div>'
+            + '<div style="margin-top:10px;border-top:1px solid #e0e5ef;">'
+            + '<table style="width:100%;border-collapse:collapse;">'
+            + '<thead><tr style="background:#e8edf7;">'
+            + '<th style="padding:4px 6px;width:14px;"></th>'
+            + '<th style="padding:4px 8px 4px 2px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;font-weight:600;text-align:left;letter-spacing:.3px;">Resource</th>'
+            + '<th style="padding:4px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;font-weight:600;text-align:right;letter-spacing:.3px;">Total Cost</th>'
+            + '</tr></thead>'
+            + '<tbody>' + tblR + '</tbody>'
+            + '</table>'
+            + '</div>';
+
+        var rect = chip2.getBoundingClientRect();
+        var left = rect.right - tipW;
+        left = Math.max(4, Math.min(left, window.innerWidth - tipW - 4));
+        cTip.style.left = left + 'px';
+        cTip.style.top  = (rect.bottom + 4) + 'px';
+        cTip.style.transform = '';
+        cTip.style.display = 'block';
+    });
+    chip2.addEventListener('mouseleave', function(){ cTip.style.display = 'none'; });
 }
 
 function renderCdCostOnCompletion(items, actName, estQty){
