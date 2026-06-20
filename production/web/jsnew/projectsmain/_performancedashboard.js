@@ -244,8 +244,8 @@ function renderCdUnitCostOfResource(items, actName){
         tipEl = document.createElement('div');
         tipEl.id = 'uc-res-tip';
         tipEl.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#fff;border:1px solid #dde4ee;border-radius:8px;'
-            + 'box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:12px 14px 10px;';
+            + 'background:#0d1a2e;border:1px solid #2a4a7a;border-radius:8px;'
+            + 'box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:12px 14px 10px;';
         document.body.appendChild(tipEl);
     }
 
@@ -268,7 +268,7 @@ function renderCdUnitCostOfResource(items, actName){
             var tsHtml = '';
             [100,75,50,25,0].forEach(function(g){
                 tsHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
-                    + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#667;line-height:1;white-space:nowrap;">'
+                    + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#7aa8d0;line-height:1;white-space:nowrap;">'
                     + fmR(maxRate * g / 100) + '</div>';
             });
 
@@ -289,14 +289,14 @@ function renderCdUnitCostOfResource(items, actName){
                     + '</div>';
                 // Full name at bottom — wraps freely
                 tlHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#334;'
-                    + 'text-align:center;padding:5px 3px 0;word-break:break-word;line-height:1.3;">'
+                    + 'text-align:center;padding:5px 3px 0;word-break:break-word;line-height:1.3;color:#c8ddf0;">'
                     + r.name + '</div>';
             });
 
             var tipW = Math.max(300, t.resources.length * 70);
             tipEl.style.width = tipW + 'px';
             tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
-                + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
+                + 'color:#90caf9;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
                 + t.name + ' — Unit Rates</div>'
                 + '<div style="display:flex;height:220px;">'
                 + '<div style="width:32px;position:relative;flex-shrink:0;">' + tsHtml + '</div>'
@@ -433,8 +433,8 @@ function renderCdUnitCostOfActivity(items, actName, actUnit){
         chipTip = document.createElement('div');
         chipTip.id = 'uc-act-tip';
         chipTip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#fff;border:1px solid #dde4ee;border-radius:8px;'
-            + 'box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:12px 14px 10px;';
+            + 'background:#0d1a2e;border:1px solid #2a4a7a;border-radius:8px;'
+            + 'box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:12px 14px 10px;';
         document.body.appendChild(chipTip);
     }
 
@@ -444,8 +444,8 @@ function renderCdUnitCostOfActivity(items, actName, actUnit){
         resTip = document.createElement('div');
         resTip.id = 'uc-act-res-tip';
         resTip.style.cssText = 'position:fixed;z-index:10000;display:none;pointer-events:none;'
-            + 'background:#fff;border:1px solid #dde4ee;border-radius:8px;'
-            + 'box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:12px 14px 10px;';
+            + 'background:#0d1a2e;border:1px solid #2a4a7a;border-radius:8px;'
+            + 'box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:12px 14px 10px;';
         document.body.appendChild(resTip);
     }
 
@@ -475,7 +475,7 @@ function renderCdUnitCostOfActivity(items, actName, actUnit){
         var tsHtml = '';
         [100,75,50,25,0].forEach(function(g){
             tsHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
-                + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#667;line-height:1;white-space:nowrap;">'
+                + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#7aa8d0;line-height:1;white-space:nowrap;">'
                 + fmR(maxAmt * g / 100) + '</div>';
         });
 
@@ -490,13 +490,13 @@ function renderCdUnitCostOfActivity(items, actName, actUnit){
                 + '<div style="flex:' + bp + ' 1 0;width:40%;min-height:0;background:' + r.col + ';border-radius:2px 2px 0 0;"></div>'
                 + '</div>';
             // Table row: zebra stripe, swatch, name, amount
-            var rowBg = ri % 2 === 0 ? '#f5f7fb' : '#fff';
+            var rowBg = ri % 2 === 0 ? '#162035' : '#0d1a2e';
             tblRows += '<tr style="background:' + rowBg + ';">'
                 + '<td style="padding:4px 6px;width:14px;">'
                 + '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + r.col + ';"></span>'
                 + '</td>'
-                + '<td style="padding:4px 8px 4px 2px;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#334;">' + r.name + '</td>'
-                + '<td style="padding:4px 8px;font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:700;color:#1a2a3a;text-align:right;white-space:nowrap;">'
+                + '<td style="padding:4px 8px 4px 2px;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#c8ddf0;">' + r.name + '</td>'
+                + '<td style="padding:4px 8px;font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:700;color:#fff;text-align:right;white-space:nowrap;">'
                 + r.amount.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) + (r.unit ? ' /'+r.unit : '')
                 + '</td>'
                 + '</tr>';
@@ -505,7 +505,7 @@ function renderCdUnitCostOfActivity(items, actName, actUnit){
         var tipW = Math.max(360, allRes.length * 56);
         chipTip.style.width = tipW + 'px';
         chipTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
-            + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">Resource Amounts</div>'
+            + 'color:#90caf9;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">Resource Amounts</div>'
             + '<div style="display:flex;height:240px;">'
             + '<div style="width:32px;position:relative;flex-shrink:0;">' + tsHtml + '</div>'
             + '<div style="flex:1;position:relative;min-width:0;">'
@@ -513,12 +513,12 @@ function renderCdUnitCostOfActivity(items, actName, actUnit){
             + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + tbHtml + '</div>'
             + '</div>'
             + '</div>'
-            + '<div style="margin-top:10px;border-top:1px solid #e0e5ef;">'
+            + '<div style="margin-top:10px;border-top:1px solid #1e3a5a;">'
             + '<table style="width:100%;border-collapse:collapse;">'
-            + '<thead><tr style="background:#e8edf7;">'
+            + '<thead><tr style="background:#162035;">'
             + '<th style="padding:4px 6px;width:14px;"></th>'
-            + '<th style="padding:4px 8px 4px 2px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;font-weight:600;text-align:left;letter-spacing:.3px;">Resource</th>'
-            + '<th style="padding:4px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;font-weight:600;text-align:right;letter-spacing:.3px;">Amount</th>'
+            + '<th style="padding:4px 8px 4px 2px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#7aa8d0;font-weight:600;text-align:left;letter-spacing:.3px;">Resource</th>'
+            + '<th style="padding:4px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#7aa8d0;font-weight:600;text-align:right;letter-spacing:.3px;">Amount</th>'
             + '</tr></thead>'
             + '<tbody>' + tblRows + '</tbody>'
             + '</table>'
@@ -833,8 +833,8 @@ function renderCdResourceConsumption(items, actName, lastQty){
         tipEl = document.createElement('div');
         tipEl.id = 'uc-cons-tip';
         tipEl.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#fff;border:1px solid #dde4ee;border-radius:8px;'
-            + 'box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:12px 14px 10px;';
+            + 'background:#0d1a2e;border:1px solid #2a4a7a;border-radius:8px;'
+            + 'box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:12px 14px 10px;';
         document.body.appendChild(tipEl);
     }
 
@@ -855,7 +855,7 @@ function renderCdResourceConsumption(items, actName, lastQty){
             var tsHtml = '';
             [100,75,50,25,0].forEach(function(g){
                 tsHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
-                    + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#667;line-height:1;white-space:nowrap;">'
+                    + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#7aa8d0;line-height:1;white-space:nowrap;">'
                     + fmR(maxQty * g / 100) + '</div>';
             });
 
@@ -875,14 +875,14 @@ function renderCdResourceConsumption(items, actName, lastQty){
                     + '</div>'
                     + '</div>';
                 tlHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#334;'
-                    + 'text-align:center;padding:5px 3px 0;word-break:break-word;line-height:1.3;">'
+                    + 'text-align:center;padding:5px 3px 0;word-break:break-word;line-height:1.3;color:#c8ddf0;">'
                     + r.name + '</div>';
             });
 
             var tipW = Math.max(300, t.resources.length * 70);
             tipEl.style.width = tipW + 'px';
             tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
-                + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
+                + 'color:#90caf9;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
                 + t.name + ' — Quantities</div>'
                 + '<div style="display:flex;height:220px;">'
                 + '<div style="width:32px;position:relative;flex-shrink:0;">' + tsHtml + '</div>'
