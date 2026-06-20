@@ -188,7 +188,10 @@ function renderCdUnitCostOfResource(items, actName){
             typeMap[tid].actualAmount += (+r.actual_unit_cost || 0) * (+r.res_qty || 0);
             typeMap[tid].hasActual = true;
         }
-        typeMap[tid].resources.push({ name: r.name || '', rate: +r.rate || 0, unit: r.unit || '', actual: hasAct ? +r.actual_unit_cost : null });
+        // For SC (type_id=4) the actual is activity-level ₹/activity-unit, not per resource unit
+        // — keep null in resources so tooltip scale stays based on planned rates only
+        var resActual = (hasAct && +r.type_id !== 4) ? +r.actual_unit_cost : null;
+        typeMap[tid].resources.push({ name: r.name || '', rate: +r.rate || 0, unit: r.unit || '', actual: resActual });
     });
     var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
     types.sort(function(a, b){ return b.amount - a.amount; });
