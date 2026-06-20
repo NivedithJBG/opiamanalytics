@@ -981,7 +981,7 @@ function renderCdResourceConsumption(items, actName, lastQty){
                     + '<div style="flex:' + bp2 + ' 1 0;width:44%;min-height:0;background:' + c2 + ';'
                     + 'border-radius:2px 2px 0 0;"></div>'
                     + '</div>';
-                var qtyDisplay = r.qty.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+                var qtyDisplay = r.qty.toLocaleString(undefined, {minimumFractionDigits:3, maximumFractionDigits:3});
                 var unitSuffix = r.unit ? ' ' + r.unit : '';
                 legendRows += '<tr style="border-bottom:1px solid rgba(255,255,255,0.1);">'
                     + '<td style="padding:5px 8px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">'
