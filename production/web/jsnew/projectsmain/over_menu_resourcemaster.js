@@ -25,31 +25,46 @@ $(function(){
         if($('.overNow').hasClass('active')){
             $('.menu-popup-cntnr').addClass('active');
             $('body').css('overflow-y', 'hidden');
-            // Activate Resource Types tab by default
-            activateReslibTab('type');
+            // Open Resource Types tab and load data — same as Activity Library pattern
+            $('.menu-popup-cntnr .panel-group .panel:first-child .panel-title a').trigger('click');
+            setTimeout(function(){
+                $('#listrestype').trigger('click');
+            }, 450);
         } else {
             $('.menu-popup-cntnr').removeClass('active');
             $('body').css('overflow-y', 'auto');
+            // Reset tabs for next open
+            $('.menu-popup-cntnr .panel-group .tab-content').removeClass('in');
+            $('.menu-popup-cntnr .panel-group .tab-content').attr('aria-expanded', 'false');
         }
     });
 
-    // Piano tab switching
-    $(document).on('click', '.reslib-tab-btn', function(){
-        var tab = $(this).data('tab');
-        activateReslibTab(tab);
+    // Resource Types tab heading clicked — load list
+    $(document).on('click', '.restype-tab', function(){
+        setTimeout(function(){
+            if($('#reslib-type').hasClass('in')){
+                $('#listrestype').trigger('click');
+            }
+        }, 400);
     });
 
-    function activateReslibTab(tab){
-        $('.reslib-tab-btn').removeClass('active');
-        $('.reslib-tab-btn[data-tab="' + tab + '"]').addClass('active');
-        $('.reslib-tab-content').removeClass('active');
-        $('#reslib-tab-' + tab).addClass('active');
+    // Resource Groups tab heading clicked — load list
+    $(document).on('click', '.resgroup-tab', function(){
         setTimeout(function(){
-            if (tab === 'type')  $('#listrestype').trigger('click');
-            if (tab === 'group') $('#listresgroup').trigger('click');
-            if (tab === 'res')   $('#listresource').trigger('click');
-        }, 100);
-    }
+            if($('#reslib-group').hasClass('in')){
+                $('#listresgroup').trigger('click');
+            }
+        }, 400);
+    });
+
+    // Resources tab heading clicked — load list
+    $(document).on('click', '.resres-tab', function(){
+        setTimeout(function(){
+            if($('#reslib-res').hasClass('in')){
+                $('#listresource').trigger('click');
+            }
+        }, 400);
+    });
 
     $(document).on('click', '.menu-win-close', function(e){
         e.preventDefault();
