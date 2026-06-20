@@ -772,7 +772,7 @@ class ProjectsmainController extends Controller
                  ORDER BY pern.rate DESC",
                 [':wid' => $wbId, ':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid]
             )->queryAll();
-            $mbAmount = 0.0; $mbQty = 0.0;
+            $mbAmount = 0.0; $mbQty = 0.0; $taskWorkMap = [];
             $mbs = $db->createCommand(
                 "SELECT entries FROM wo_measurement_book WHERE project_id=:pid AND sent_status=1 AND delete_status=0",
                 [':pid' => $pid]
@@ -783,6 +783,10 @@ class ProjectsmainController extends Controller
                     $mbQty += (float)($entry['qty'] ?? 0);
                     foreach ($entry['tasks'] ?? [] as $task) {
                         $mbAmount += (float)($task['rate'] ?? 0) * (float)($task['work_done'] ?? 0);
+                        $key = strtolower(trim($task['task_name'] ?? ''));
+                        if ($key !== '') {
+                            $taskWorkMap[$key] = ($taskWorkMap[$key] ?? 0.0) + (float)($task['work_done'] ?? 0);
+                        }
                     }
                 }
             }
@@ -797,9 +801,16 @@ class ProjectsmainController extends Controller
                         : null);
                 $grnQty   = (float)($r['grn_qty'] ?? 0);
                 $stockQty = (float)($r['stock_at_site'] ?? 0);
-                $actualResQty = (in_array($typeId, [2, 6, 7]) && $lastQty > 0 && $grnQty > 0)
-                    ? ($grnQty - $stockQty) / $lastQty
-                    : null;
+                if ($typeId === 4 && $lastQty > 0) {
+                    $nameKey = strtolower(trim($r['name']));
+                    $actualResQty = isset($taskWorkMap[$nameKey])
+                        ? $taskWorkMap[$nameKey] / $lastQty
+                        : null;
+                } elseif (in_array($typeId, [2, 6, 7]) && $lastQty > 0 && $grnQty > 0) {
+                    $actualResQty = ($grnQty - $stockQty) / $lastQty;
+                } else {
+                    $actualResQty = null;
+                }
                 $items[] = [
                     'name'             => $r['name'],
                     'type_name'        => $r['type_name'],
