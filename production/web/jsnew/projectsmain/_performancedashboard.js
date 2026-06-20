@@ -754,7 +754,7 @@ function renderCdResourceConsumption(items, actName, lastQty){
     var el = document.getElementById('cd-c7');
     if (!el) return;
     var colPalette = ['#a5d6a7','#80cbc4','#ffcc80','#90caf9','#ce93d8','#ef9a9a','#fff176','#f48fb1','#bcaaa4','#80deea'];
-    var tipPalette = ['#2e7d32','#00695c','#e65100','#1565c0','#6a1b9a','#b71c1c','#f57f17','#880e4f','#4e342e','#006064'];
+    var tipPalette = ['#ffa726','#ff7043','#ef5350','#ffca28','#ff8a65','#ffcc02','#e64a19','#ffd54f','#bf360c','#ffab40'];
 
     function fmR(v){ return v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(2); }
 
