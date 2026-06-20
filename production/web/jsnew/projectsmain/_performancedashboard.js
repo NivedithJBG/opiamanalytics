@@ -93,6 +93,7 @@ function renderCdBars(){
 
     renderCostBars('cd-c2', [{name: _cdProjectName || 'Project', cost: totalCost, id: 0}], null);
     renderCostBars('cd-c1', groupItems, filterByGroupCd);
+    renderCdCurrentProjectCost(_all);
     if (_groups.length) filterByGroupCd(_groups[0].id);
 }
 
@@ -986,9 +987,6 @@ function loadAll(){
                 (d.project_bar&&d.project_bar.b_end_date)||'',
                 (d.project_bar&&d.project_bar.a_end_date)||''
             );
-
-            // Current Project Cost panel
-            renderCdCurrentProjectCost(d.activities || []);
 
             // Default: first group → its IOW items → first IOW's activities
             if (_groups.length) filterByGroup(_groups[0].id, d.default_iow_id);
