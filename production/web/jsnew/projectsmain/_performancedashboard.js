@@ -878,24 +878,42 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
         return;
     }
 
-    // Group by resource type — collect qty (for tooltip) alongside amount
+    // Group by resource type — accumulate planned & actual amounts
     var typeMap = {};
     items.forEach(function(r){
         var tid = r.type_id || '0';
-        if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', amount: 0, resources: [] };
+        if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', amount: 0, actualAmount: 0, hasActual: false, resources: [] };
         typeMap[tid].amount += ((+r.rate || 0) * (+r.res_qty || 0));
+        var hasAct = r.actual_res_qty !== null && r.actual_res_qty !== undefined;
+        if (hasAct) {
+            typeMap[tid].actualAmount += (+r.rate || 0) * (+r.actual_res_qty);
+            typeMap[tid].hasActual = true;
+        }
         typeMap[tid].resources.push({ name: r.name || '', qty: +r.res_qty || 0, unit: r.unit || '',
-            actual: (r.actual_res_qty !== null && r.actual_res_qty !== undefined) ? +r.actual_res_qty : null });
+            actual: hasAct ? +r.actual_res_qty : null });
     });
     var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
     types.sort(function(a, b){ return b.amount - a.amount; });
 
+    // Compute variance per type and overall scale
+    var maxScale = 100;
+    types.forEach(function(t){
+        if (!t.hasActual) return;
+        var plannedPct  = t.amount / actUnitCost * 100;
+        var variancePct = (t.actualAmount - t.amount) / actUnitCost * 100;
+        var barTop = plannedPct + Math.max(0, variancePct);
+        if (barTop > maxScale) maxScale = barTop;
+        t._variancePct = variancePct;
+        t._plannedPct  = plannedPct;
+    });
+
     // Y-axis scale labels
     var scaleHtml = '';
     [100,75,50,25,0].forEach(function(g){
+        var label = (maxScale * g / 100).toFixed(maxScale > 100 ? 1 : 0);
         scaleHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
             + 'font-family:\'Nunito\',sans-serif;font-size:8px;color:#8a9bb0;line-height:1;">'
-            + g + '</div>';
+            + label + '</div>';
     });
 
     // Gridlines
@@ -906,22 +924,58 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
     });
     gridHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(90,110,140,0.3);pointer-events:none;"></div>';
     gridHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(90,110,140,0.35);pointer-events:none;"></div>';
+    if (maxScale > 100) {
+        var refPos = (100 / maxScale * 100).toFixed(2);
+        gridHtml += '<div style="position:absolute;left:0;right:0;bottom:' + refPos + '%;border-top:2px dashed rgba(90,110,140,0.5);pointer-events:none;"></div>';
+    }
 
     var barsHtml = '', labelsHtml = '';
     types.forEach(function(t, i){
-        var pct = t.amount / actUnitCost * 100;
         var col = colPalette[i % colPalette.length];
-        var sp  = Math.max(100 - pct, 0).toFixed(2);
-        var bp  = Math.max(pct, 0.5).toFixed(2);
-        barsHtml += '<div data-cons-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
-            + '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
-            + '<div style="flex:' + bp + ' 1 0;width:80%;min-height:0;background:' + col + ';'
-            + 'border-radius:3px 3px 0 0;display:flex;flex-direction:column;'
-            + 'align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
-            + (pct >= 10 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">' + pct.toFixed(1) + '%</span>'
-                         + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.amount) + '</span>' : '')
-            + '</div>'
-            + '</div>';
+
+        if (!t.hasActual) {
+            var pct     = t.amount / actUnitCost * 100;
+            var spPct   = pct / maxScale * 100;
+            var sp      = Math.max(100 - spPct, 0).toFixed(2);
+            var bp      = Math.max(spPct, 0.5).toFixed(2);
+            barsHtml += '<div data-cons-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
+                + '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
+                + '<div style="flex:' + bp + ' 1 0;width:80%;min-height:0;background:' + col + ';'
+                + 'border-radius:3px 3px 0 0;display:flex;flex-direction:column;'
+                + 'align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
+                + (spPct >= 10 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">' + pct.toFixed(1) + '%</span>'
+                               + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.amount) + '</span>' : '')
+                + '</div>'
+                + '</div>';
+        } else {
+            var variancePct = t._variancePct;
+            var plannedPct  = t._plannedPct;
+            var barTop      = plannedPct + Math.max(0, variancePct);
+            var barTopScaled = barTop / maxScale * 100;
+            var spFlex = Math.max(100 - barTopScaled, 0).toFixed(2);
+
+            var varColor, varFlex, baseFlex;
+            if (variancePct > 0) {
+                varColor = '#ef5350';
+                varFlex  = Math.max(variancePct / maxScale * 100, 0.5).toFixed(2);
+                baseFlex = Math.max(plannedPct / maxScale * 100, 0.5).toFixed(2);
+            } else {
+                varColor = '#66bb6a';
+                varFlex  = Math.max(Math.abs(variancePct) / maxScale * 100, 0.5).toFixed(2);
+                baseFlex = Math.max((plannedPct - Math.abs(variancePct)) / maxScale * 100, 0.5).toFixed(2);
+            }
+
+            barsHtml += '<div data-cons-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
+                + '<div style="flex:' + spFlex + ' 1 0;min-height:0;"></div>'
+                + '<div style="flex:' + varFlex + ' 1 0;width:80%;min-height:0;background:' + varColor + ';border-radius:3px 3px 0 0;"></div>'
+                + '<div style="flex:' + baseFlex + ' 1 0;width:80%;min-height:0;background:' + col + ';display:flex;flex-direction:column;'
+                + 'align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
+                + (baseFlex >= 10 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">' + plannedPct.toFixed(1) + '%</span>'
+                                  + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.amount) + '</span>' : '')
+                + '</div>'
+                + '</div>';
+        }
+
         labelsHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#1a2a3a;'
             + 'text-align:center;padding:2px 3px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
             + t.name + '</div>';
