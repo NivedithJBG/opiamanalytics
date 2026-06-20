@@ -624,14 +624,10 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
 
     // Shared chip tooltip
     var cTip = document.getElementById('cd-g2-tip');
-    if (!cTip){
-        cTip = document.createElement('div');
-        cTip.id = 'cd-g2-tip';
-        cTip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#fff;border:1px solid #dde4ee;border-radius:8px;'
-            + 'box-shadow:0 8px 28px rgba(0,0,0,0.18);padding:12px 14px 10px;';
-        document.body.appendChild(cTip);
-    }
+    if (!cTip){ cTip = document.createElement('div'); cTip.id = 'cd-g2-tip'; document.body.appendChild(cTip); }
+    cTip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
+        + 'background:#0d1a2e;border:1px solid #2a4a7a;border-radius:8px;'
+        + 'box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:12px 14px 10px;';
 
     var chip2 = document.getElementById('cd-g2-chip');
     chip2.addEventListener('mouseenter', function(){
@@ -640,15 +636,15 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
         [75,50,25].forEach(function(g){
             tgH += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;border-top:1px dashed rgba(100,130,170,0.55);pointer-events:none;"></div>';
         });
-        tgH += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
-        tgH += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
+        tgH += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,160,220,0.5);pointer-events:none;"></div>';
+        tgH += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,160,220,0.5);pointer-events:none;"></div>';
 
         // Y-axis scale — abbreviated values, right-aligned inside gutter
         var tsH = '';
         function fmCShort(v){ return v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'K':(+v).toFixed(0); }
         [100,75,50,25,0].forEach(function(g){
             tsH += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
-                + 'font-family:\'Nunito\',sans-serif;font-size:8px;color:#667;line-height:1;white-space:nowrap;">'
+                + 'font-family:\'Nunito\',sans-serif;font-size:8px;color:#7aa8d0;line-height:1;white-space:nowrap;">'
                 + fmCShort(maxResC * g / 100) + '</div>';
         });
 
@@ -661,11 +657,11 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
                 + '<div style="flex:' + spR + ' 1 0;min-height:0;"></div>'
                 + '<div style="flex:' + bpR + ' 1 0;width:55%;min-height:0;background:' + r.col + ';border-radius:2px 2px 0 0;"></div>'
                 + '</div>';
-            var rowBg = ri % 2 === 0 ? '#f5f7fb' : '#fff';
+            var rowBg = ri % 2 === 0 ? '#162035' : '#0d1a2e';
             tblR += '<tr style="background:' + rowBg + ';">'
                 + '<td style="padding:3px 5px;width:14px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + r.col + ';"></span></td>'
-                + '<td style="padding:3px 8px 3px 2px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#334;">' + r.name + '</td>'
-                + '<td style="padding:3px 6px;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">'
+                + '<td style="padding:3px 8px 3px 2px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#c8ddf0;">' + r.name + '</td>'
+                + '<td style="padding:3px 6px;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;text-align:right;white-space:nowrap;">'
                 + r.totalCost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>'
                 + '</tr>';
         });
@@ -673,7 +669,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
         var tipW = Math.max(360, allResC.length * 56);
         cTip.style.width = tipW + 'px';
         cTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
-            + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">Resource Total Cost</div>'
+            + 'color:#90caf9;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">Resource Total Cost</div>'
             + '<div style="display:flex;height:220px;">'
             + '<div style="width:28px;position:relative;flex-shrink:0;">' + tsH + '</div>'
             + '<div style="flex:1;position:relative;min-width:0;">'
@@ -681,12 +677,12 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
             + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + tbH + '</div>'
             + '</div>'
             + '</div>'
-            + '<div style="margin-top:8px;border-top:1px solid #e0e5ef;">'
+            + '<div style="margin-top:8px;border-top:1px solid #1e3a5a;">'
             + '<table style="width:100%;border-collapse:collapse;">'
-            + '<thead><tr style="background:#e8edf7;">'
+            + '<thead><tr style="background:#162035;">'
             + '<th style="padding:3px 5px;width:14px;"></th>'
-            + '<th style="padding:3px 8px 3px 2px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;font-weight:600;text-align:left;">Resource</th>'
-            + '<th style="padding:3px 6px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;font-weight:600;text-align:right;">Total Cost</th>'
+            + '<th style="padding:3px 8px 3px 2px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#7aa8d0;font-weight:600;text-align:left;">Resource</th>'
+            + '<th style="padding:3px 6px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#7aa8d0;font-weight:600;text-align:right;">Total Cost</th>'
             + '</tr></thead>'
             + '<tbody>' + tblR + '</tbody>'
             + '</table>'
