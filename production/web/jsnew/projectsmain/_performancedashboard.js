@@ -573,7 +573,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
             + '</tr>';
     }
 
-    var colPalette2 = ['#90caf9','#ce93d8','#80cbc4','#ffcc80','#ef9a9a','#a5d6a7','#fff176','#f48fb1','#bcaaa4','#80deea'];
+    var colPalette2 = ['#ff7043','#ab47bc','#26a69a','#ffa726','#42a5f5','#66bb6a','#ec407a','#8d6e63','#26c6da','#d4e157'];
 
     // Build resource total costs for the chip popup
     var resIdx2 = 0;
@@ -617,7 +617,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
         + '</div>'
 
         // Chip
-        + '<div id="cd-g2-chip" style="position:absolute;top:5px;right:6px;'
+        + '<div id="cd-g2-chip" style="position:absolute;bottom:5px;right:6px;'
         + 'background:#1a2a3a;color:#90caf9;border:1px solid #3a5a8a;border-radius:10px;'
         + 'font-size:10px;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.4px;'
         + 'padding:2px 9px;cursor:pointer;user-select:none;">&#9776; Resources</div>';
@@ -665,12 +665,11 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
                 + '<td style="padding:4px 6px;width:14px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + r.col + ';"></span></td>'
                 + '<td style="padding:4px 8px 4px 2px;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#334;">' + r.name + '</td>'
                 + '<td style="padding:4px 8px;font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">'
-                + r.totalCost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})
-                + (r.unit ? ' /'+r.unit : '') + '</td>'
+                + r.totalCost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) + '</td>'
                 + '</tr>';
         });
 
-        var tipW = Math.max(360, allResC.length * 56);
+        var tipW = Math.max(460, allResC.length * 64);
         cTip.style.width = tipW + 'px';
         cTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
             + 'color:#2a4a7a;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">Resource Total Cost</div>'
