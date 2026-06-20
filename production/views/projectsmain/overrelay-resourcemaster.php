@@ -38,7 +38,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
                     <div class="panel-group" id="accordionreslib">
 
                         <!-- ===== TAB 1: Resource Types ===== -->
-                        <div class="panel panel-default resource-type-masters-tab tab-wrapper tab">
+                        <div class="panel panel-default resource-type-masters-tab tab-wrapper" style="display:block!important;">
                             <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/resourcetype.js?v=6" type="text/javascript"></script>
                             <div class="panel-heading">
                                 <h4 class="panel-title restype-tab">
