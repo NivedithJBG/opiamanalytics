@@ -1420,7 +1420,7 @@
                                 + '<td style="padding:2px 4px;text-align:right;background:#e8f0fb;">'
                                 + '<input type="number" step="any" readonly class="form-control input-sm mb-taskrate"'
                                 + ' data-ai="' + ai + '" data-ti="' + ti + '"'
-                                + ' value="' + taskRate + '"'
+                                + ' value="' + (taskRate || '') + '"'
                                 + ' style="width:70px;height:24px;font-size:12px;text-align:right;margin-left:auto;background:#e8f0fb;border-color:#b8cce4;color:#000;font-weight:600;cursor:default;">'
                                 + '</td>'
                                 + '<td style="padding:2px 4px;text-align:right;">'
@@ -1430,7 +1430,7 @@
                                     var _wdDef = +(_mbCur * _tqpu).toFixed(2);
                                     return '<input type="number" step="any" class="form-control input-sm mb-workdone"'
                                         + ' data-ai="' + ai + '" data-ti="' + ti + '" data-tqpu="' + _tqpu + '"'
-                                        + ' value="' + _wdDef + '" placeholder="0"'
+                                        + ' value="' + (_wdDef || '') + '" placeholder=""'
                                         + ' style="width:98px;height:24px;font-size:12px;text-align:right;margin-left:auto;">';
                                 })()
                                 + '</td>'
