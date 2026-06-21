@@ -588,7 +588,10 @@ class StorekeeperController extends Controller
         $entries   = $_POST['entries'] ?? '[]';
         $mb_number = trim($_POST['mb_number'] ?? '');
         $rawDate   = trim($_POST['mb_date'] ?? '');
-        $mb_date   = preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawDate) ? $rawDate : date('Y-m-d');
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawDate)) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Please enter the Date.']);
+        }
+        $mb_date   = $rawDate;
         $projectid = $projuser->projectid;
 
         if (!$wo_number) return json_encode(['error' => 'Yes', 'errortext' => 'Invalid data.']);

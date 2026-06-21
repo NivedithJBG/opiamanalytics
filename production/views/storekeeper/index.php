@@ -1504,15 +1504,15 @@
     $(document).on('click', '#mb-save-btn', function(){
         var woNum = $('#mb-popup').data('wonumber');
 
-        if (confirm('Press Print if you need a copy.\n\nOK → Print then Report\nCancel → Report without printing')) {
-            $('#mb-print-btn').trigger('click');
-        }
-
-        // Validate date
+        // Validate date first — before any dialogs
         if (!$('#mb-date-input').val()) {
             alert('Please enter the Date.');
             $('#mb-date-input').focus();
             return;
+        }
+
+        if (confirm('Press Print if you need a copy.\n\nOK → Print then Report\nCancel → Report without printing')) {
+            $('#mb-print-btn').trigger('click');
         }
 
         // Check WO qty limits before allowing send
