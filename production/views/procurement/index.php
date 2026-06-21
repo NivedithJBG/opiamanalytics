@@ -1439,7 +1439,9 @@
             + '</tr></thead><tbody>';
         var rowNum = 0;
         var currentIow = null;
+        var totalEstQty   = 0;
         var totalEstValue = 0;
+        var totalWdQty    = 0;
         var totalWdValue  = 0;
         $.each(rows, function(i, r) {
             if (r.workgroup_name !== currentIow) {
@@ -1456,7 +1458,9 @@
             var mbWdq    = parseFloat(r.mb_work_done_qty) || 0;
             var impliedRate = estQty > 0 ? estValue / estQty : 0;
             var wdValue  = mbWdq * impliedRate;
+            totalEstQty   += estQty;
             totalEstValue += estValue;
+            totalWdQty    += mbWdq;
             totalWdValue  += wdValue;
             html += '<tr class="' + (rowNum % 2 === 0 ? 'procu-even' : '') + '">'
                 + '<td>' + rowNum + '</td>'
@@ -1492,9 +1496,10 @@
         });
         html += '</tbody>'
             + '<tfoot><tr style="background:#d0d8e8;font-weight:700;font-size:13px;">'
-            + '<td colspan="5" style="text-align:right;padding:7px 10px;border:1px solid #b0b8c8;letter-spacing:0.3px;">Total</td>'
+            + '<td colspan="4" style="text-align:right;padding:7px 10px;border:1px solid #b0b8c8;letter-spacing:0.3px;">Total</td>'
+            + '<td class="num" style="background:#c4cfe0;color:#1a2540;border:1px solid #b0b8c8;">' + totalEstQty.toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
             + '<td class="num" style="background:#c4cfe0;color:#1a2540;border:1px solid #b0b8c8;">' + totalEstValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>'
-            + '<td class="num" style="background:#d8ead8;color:#1a2540;border:1px solid #b0b8c8;"></td>'
+            + '<td class="num" style="background:#d8ead8;color:#1a2540;border:1px solid #b0b8c8;">' + (totalWdQty ? totalWdQty.toLocaleString(undefined, {maximumFractionDigits:2}) : '&mdash;') + '</td>'
             + '<td class="num" style="background:#d8ead8;color:#1a2540;border:1px solid #b0b8c8;">' + (totalWdValue ? totalWdValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : '&mdash;') + '</td>'
             + '<td colspan="2" style="border:1px solid #b0b8c8;"></td>'
             + '</tr></tfoot>'
