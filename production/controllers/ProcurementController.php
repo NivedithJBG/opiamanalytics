@@ -791,18 +791,24 @@ class ProcurementController extends Controller
             'SELECT entries FROM wo_measurement_book WHERE project_id = :pid AND sent_status = 1 AND delete_status = 0',
             [':pid' => $projectid]
         )->queryAll();
-        $mbQtyMap = [];
+        $mbQtyMap   = [];
+        $mbValueMap = [];
         foreach ($mbBooks as $mb) {
             $entries = json_decode($mb['entries'] ?? '[]', true) ?: [];
             foreach ($entries as $e) {
                 $aid = (string)($e['activity_id'] ?? '');
                 if ($aid !== '') {
                     $mbQtyMap[$aid] = ($mbQtyMap[$aid] ?? 0) + (float)($e['qty'] ?? 0);
+                    foreach ($e['tasks'] ?? [] as $t) {
+                        $mbValueMap[$aid] = ($mbValueMap[$aid] ?? 0)
+                            + (float)($t['rate'] ?? 0) * (float)($t['work_done'] ?? 0);
+                    }
                 }
             }
         }
         foreach ($rows as &$row) {
-            $row['mb_work_done_qty'] = $mbQtyMap[(string)$row['activity_id']] ?? 0;
+            $row['mb_work_done_qty']   = $mbQtyMap[(string)$row['activity_id']]   ?? 0;
+            $row['mb_work_done_value'] = $mbValueMap[(string)$row['activity_id']] ?? 0;
         }
         unset($row);
 

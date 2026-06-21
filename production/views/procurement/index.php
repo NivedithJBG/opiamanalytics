@@ -1456,8 +1456,7 @@
             var estQty   = parseFloat(r.estimated_quantity) || 0;
             var estValue = parseFloat(r.sc_estimated_value) || 0;
             var mbWdq    = parseFloat(r.mb_work_done_qty) || 0;
-            var impliedRate = estQty > 0 ? estValue / estQty : 0;
-            var wdValue  = mbWdq * impliedRate;
+            var wdValue  = parseFloat(r.mb_work_done_value) || 0;
             totalEstQty   += estQty;
             totalEstValue += estValue;
             totalWdQty    += mbWdq;
