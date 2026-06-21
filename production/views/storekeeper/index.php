@@ -1390,7 +1390,7 @@
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
                                 + cell('Billed Qty', val(_bil))
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
-                                + cell('Current Qty', '<input type="number" step="any" style="width:100px;height:22px;font-size:12px;font-weight:700;display:inline-block;padding:1px 6px;text-align:center;" class="form-control input-sm mb-qty" data-ai="' + ai + '" data-wo-qty="' + _wo + '" data-cum-qty="' + _bil + '" value="' + (_cur || '') + '" placeholder="—">')
+                                + cell('Current Qty', '<input type="number" step="any" min="0" max="' + Math.max(0, _wo - _bil).toFixed(3) + '" style="width:100px;height:22px;font-size:12px;font-weight:700;display:inline-block;padding:1px 6px;text-align:center;" class="form-control input-sm mb-qty" data-ai="' + ai + '" data-wo-qty="' + _wo + '" data-cum-qty="' + _bil + '" value="' + (_cur || '') + '" placeholder="—">')
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
                                 + cell('Remaining Qty', '<span class="mb-rem-display" data-ai="' + ai + '" style="font-size:12px;color:#333;white-space:nowrap;">' + fmt(_rem) + '</span>')
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
@@ -1515,23 +1515,43 @@
             return;
         }
 
-        // Check WO qty limits before allowing send
-        var overLimit = false;
+        // Check WO qty limits and missing fields — skip activities left completely blank
+        var overLimit = false, missingField = false;
         $.each(_mbActivities, function(ai, act) {
-            var $qtyEl  = $('.mb-qty[data-ai="' + ai + '"]');
+            var $qtyEl  = $('.mb-qty[data-ai="'  + ai + '"]');
+            var $unitEl = $('.mb-unit[data-ai="' + ai + '"]');
+            var qtyVal  = $qtyEl.val().trim();
+            var unitVal = $unitEl.val().trim();
+
+            // If both unit and qty are blank, this activity is skipped (optional)
+            if (!qtyVal && !unitVal) return;
+
+            // If one is filled but the other isn't, flag missing
+            if (!unitVal) { $unitEl.css({ background: '#fde8e8', borderColor: '#c0392b' }); missingField = true; }
+            else           { $unitEl.css({ background: '', borderColor: '' }); }
+            if (!qtyVal)  { $qtyEl.css({ background: '#fde8e8', borderColor: '#c0392b', color: '#c0392b' }); missingField = true; }
+            else           { $qtyEl.css({ background: '', borderColor: '', color: '' }); }
+
             var woQty   = parseFloat($qtyEl.data('wo-qty'))  || 0;
             var cumQty  = parseFloat($qtyEl.data('cum-qty')) || 0;
-            var thisQty = parseFloat($qtyEl.val()) || 0;
-            if (woQty > 0 && thisQty > (woQty - cumQty)) {
+            var thisQty = parseFloat(qtyVal) || 0;
+
+            // Check activity qty limit
+            if (woQty > 0 && thisQty > (woQty - cumQty) + 0.001) {
                 overLimit = true;
                 $qtyEl.css({ background: '#fde8e8', borderColor: '#c0392b', color: '#c0392b' });
             }
+
+            // Check task work done limits
             $.each(act.tasks || [], function(ti, task) {
-                var $wd   = $('.mb-workdone[data-ai="' + ai + '"][data-ti="' + ti + '"]');
+                var $wd  = $('.mb-workdone[data-ai="' + ai + '"][data-ti="' + ti + '"]');
+                var wdVal = $wd.val().trim();
+                if (!wdVal) { $wd.css({ background: '#fde8e8', borderColor: '#c0392b' }); missingField = true; return; }
+                $wd.css({ background: '', borderColor: '' });
                 var tqpu  = parseFloat(task.task_qty) || 0;
                 var maxWd = thisQty * tqpu;
-                var wd    = parseFloat($wd.val()) || 0;
-                if (tqpu > 0 && wd > maxWd) {
+                var wd    = parseFloat(wdVal) || 0;
+                if (tqpu > 0 && wd > maxWd + 0.001) {
                     overLimit = true;
                     $wd.css({ background: '#fde8e8', borderColor: '#c0392b' });
                 }
@@ -1541,41 +1561,26 @@
             alert('One or more quantities exceed Work Order limits. Please check the highlighted fields.');
             return;
         }
-
-        // Validate all per-activity and per-task fields
-        var missingField = false;
-        $.each(_mbActivities, function(ai, act) {
-            $.each(['.mb-unit', '.mb-qty'], function(_, cls) {
-                var $el = $(cls + '[data-ai="' + ai + '"]');
-                if (!$el.val().trim()) {
-                    $el.css({ background: '#fde8e8', borderColor: '#c0392b' });
-                    missingField = true;
-                } else {
-                    $el.css({ background: '', borderColor: '' });
-                }
-            });
-            $.each(act.tasks || [], function(ti) {
-                var $wd = $('.mb-workdone[data-ai="' + ai + '"][data-ti="' + ti + '"]');
-                if (!$wd.val().trim()) {
-                    $wd.css({ background: '#fde8e8', borderColor: '#c0392b' });
-                    missingField = true;
-                } else {
-                    $wd.css({ background: '', borderColor: '' });
-                }
-            });
-        });
         if (missingField) {
             alert('Please fill in Unit and Quantity for all activities, and Work Done for all tasks, before sending.');
             return;
         }
+        // Ensure at least one activity has been filled in
+        var anyFilled = false;
+        $.each(_mbActivities, function(ai) {
+            if ($('.mb-qty[data-ai="' + ai + '"]').val().trim()) { anyFilled = true; return false; }
+        });
+        if (!anyFilled) { alert('Please enter quantities for at least one activity.'); return; }
 
         var entries = [];
         $.each(_mbActivities, function(ai, act) {
+            var qtyVal = $('.mb-qty[data-ai="' + ai + '"]').val().trim();
+            if (!qtyVal) return; // skip blank activities
             var entry = {
                 activity_id:   act.activity_id,
                 activity_name: act.activity_name,
                 unit:   $('.mb-unit[data-ai="' + ai + '"]').val() || null,
-                qty:    $('.mb-qty[data-ai="'  + ai + '"]').val() || null,
+                qty:    qtyVal || null,
                 tasks:  []
             };
             $.each(act.tasks || [], function(ti, task) {
