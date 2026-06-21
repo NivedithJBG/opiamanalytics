@@ -492,26 +492,6 @@ class StorekeeperController extends Controller
                 }
             }
 
-            // Last reported qty per activity from progress reports
-            $actIds = array_filter(array_map('intval', array_column($activities, 'activity_id')));
-            $lastReportedMap = [];
-            if (!empty($actIds)) {
-                $ph = implode(',', $actIds);
-                $lrRows = $db->createCommand(
-                    "SELECT l.activity_id, l.currentqty
-                     FROM schedule_progress_report_log l
-                     INNER JOIN (
-                         SELECT activity_id, MAX(id) AS max_id
-                         FROM schedule_progress_report_log
-                         WHERE activity_id IN ($ph)
-                         GROUP BY activity_id
-                     ) m ON l.id = m.max_id"
-                )->queryAll();
-                foreach ($lrRows as $lr) {
-                    $lastReportedMap[(string)$lr['activity_id']] = (float)$lr['currentqty'];
-                }
-            }
-
             // Pre-fill from draft if it exists
             $savedMap = [];
             if ($draft) {
@@ -521,17 +501,12 @@ class StorekeeperController extends Controller
             }
 
             foreach ($activities as &$act) {
-                $aid = $act['activity_id'] ?? '';
+                $aid    = $act['activity_id'] ?? '';
                 $billed = $cumulativeMap[$aid] ?? 0;
-                $lastRep = $lastReportedMap[$aid] ?? 0;
-                $act['cumulative_qty']   = $billed;
-                $act['last_reported_qty'] = $lastRep;
-                // Defaults: unit from WO, current qty = last reported minus billed, capped at WO remaining
+                $act['cumulative_qty'] = $billed;
+                // MB is independent of progress reports — Current Qty is manually entered by site engineer
                 $act['mb_unit'] = $act['unit'] ?? '';
-                $woQty = (float)($act['qty'] ?? 0);
-                $progressQty = max(0, $lastRep - $billed);
-                $remaining   = $woQty > 0 ? max(0, $woQty - $billed) : $progressQty;
-                $act['mb_qty'] = round(min($progressQty, $remaining), 2);
+                $act['mb_qty']  = 0;
                 // Attach task-level cumulative totals
                 if (isset($act['tasks']) && is_array($act['tasks'])) {
                     foreach ($act['tasks'] as &$task) {
@@ -630,28 +605,6 @@ class StorekeeperController extends Controller
         }
 
         $newEntries = json_decode($entries, true) ?: [];
-
-        // Gate: each measured activity must have a progress report dated today (the send date)
-        $unreported = [];
-        foreach ($newEntries as $entry) {
-            $aid = (int)($entry['activity_id'] ?? 0);
-            $qty = (float)($entry['qty'] ?? 0);
-            if (!$aid || $qty <= 0) continue;
-            $hasReport = (int)$db->createCommand(
-                'SELECT COUNT(*) FROM scheduleactivities sa
-                 JOIN schedule_progress_report_log l ON l.activity_id = sa.id
-                 WHERE sa.activity_id = :aid AND sa.projectId = :pid AND sa.status = 0
-                   AND l.report_date = CURDATE()',
-                [':aid' => $aid, ':pid' => $projectid]
-            )->queryScalar();
-            if (!$hasReport) $unreported[] = $entry['activity_name'] ?? ('#' . $aid);
-        }
-        if (!empty($unreported)) {
-            return json_encode(['error' => 'Yes',
-                'errortext' => "Measurement Book cannot be sent — progress must be reported TODAY for:\n• "
-                               . implode("\n• ", array_unique($unreported))
-                               . "\n\nPlease report progress, then send the Measurement Book."]);
-        }
 
         // Validate new entries against WO limits
         foreach ($newEntries as $entry) {
