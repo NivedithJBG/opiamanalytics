@@ -739,7 +739,8 @@ class ProjectsmainController extends Controller
                         COALESCE(r.Unit, '') AS unit,
                         grn_cost.actual_unit_cost,
                         grn_cost.grn_qty,
-                        si.stock_at_site
+                        si.stock_at_site,
+                        pern.task_ids
                  FROM pricing_estimate_resources_new pern
                  LEFT JOIN resources r     ON r.Resource_Id        = pern.resource_Id
                  LEFT JOIN resourcetype rt ON rt.ResourceType_Id   = pern.resourcetype_Id
@@ -794,11 +795,26 @@ class ProjectsmainController extends Controller
             foreach ($rows as $r) {
                 $resQty  = (float)$r['quantity'];
                 $typeId  = (int)$r['type_id'];
-                $actUnit = $typeId === 4
-                    ? $scActualUnitCost
-                    : (in_array($typeId, [2, 6, 7]) && $r['actual_unit_cost'] !== null
+                if ($typeId === 4) {
+                    // Actual rate = wo_task_rates.rate for the task mapped to this SC resource
+                    $taskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
+                    $actUnit = null;
+                    if (!empty($taskIds)) {
+                        $inIds = implode(',', $taskIds);
+                        $woRate = $db->createCommand(
+                            "SELECT AVG(rate) FROM wo_task_rates
+                             WHERE activity_id=:aid AND project_id=:pid AND task_id IN ($inIds)",
+                            [':aid' => $wbId, ':pid' => $pid]
+                        )->queryScalar();
+                        if ($woRate !== null && $woRate !== false) {
+                            $actUnit = (float)$woRate;
+                        }
+                    }
+                } else {
+                    $actUnit = (in_array($typeId, [2, 6, 7]) && $r['actual_unit_cost'] !== null
                         ? (float)$r['actual_unit_cost']
                         : null);
+                }
                 $grnQty   = (float)($r['grn_qty'] ?? 0);
                 $stockQty = (float)($r['stock_at_site'] ?? 0);
                 if ($typeId === 4 && $lastQty > 0) {
