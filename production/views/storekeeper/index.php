@@ -1377,24 +1377,24 @@
                         + '<div style="background:#072c47;color:#fff;padding:7px 12px;font-size:12px;font-weight:700;">'
                         + act.activity_name + '</div>'
                         + (function(){
-                            var _wo  = parseFloat(act.qty) || 0;
+                            var _lr  = parseFloat(act.last_reported_qty) || 0; // ceiling = last reported
                             var _bil = parseFloat(act.cumulative_qty) || 0;
                             var _cur = parseFloat(act.mb_qty) || 0;
-                            var _rem = Math.max(0, _wo - _bil - _cur);
+                            var _rem = Math.max(0, _lr - _bil - _cur);
                             var fmt  = function(n){ return +n.toFixed(2); };
                             var lbl  = function(t){ return '<span style="font-size:11px;font-weight:600;color:#555;white-space:nowrap;">'+t+'</span>'; };
                             var val  = function(v){ return '<span style="font-size:12px;color:#333;white-space:nowrap;">'+fmt(v)+'</span>'; };
                             var cell = function(label, content){ return '<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;padding:4px 8px;">'+lbl(label)+'<div style="margin-top:2px;">'+content+'</div></div>'; };
                             return '<div style="padding:6px 0;background:#f4f7fa;display:flex;align-items:stretch;border-bottom:1px solid #d0d7df;width:100%;">'
-                                + cell('Unit', '<input type="text" style="width:80px;height:22px;font-size:12px;display:inline-block;padding:1px 6px;text-align:center;" class="form-control input-sm mb-unit" data-ai="' + ai + '" value="' + (act.mb_unit || '') + '" placeholder="—">')
+                                + cell('Unit', '<input type="text" readonly style="width:80px;height:22px;font-size:12px;display:inline-block;padding:1px 6px;text-align:center;background:#eef1f5;cursor:default;" class="form-control input-sm mb-unit" data-ai="' + ai + '" value="' + (act.unit || '') + '" placeholder="—">')
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
                                 + cell('Billed Qty', val(_bil))
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
-                                + cell('Current Qty', '<input type="number" step="any" min="0" max="' + Math.max(0, _wo - _bil).toFixed(3) + '" style="width:100px;height:22px;font-size:12px;font-weight:700;display:inline-block;padding:1px 6px;text-align:center;" class="form-control input-sm mb-qty" data-ai="' + ai + '" data-wo-qty="' + _wo + '" data-cum-qty="' + _bil + '" value="' + (_cur || '') + '" placeholder="—">')
+                                + cell('Current Qty', '<input type="number" step="any" min="0" max="' + Math.max(0, _lr - _bil).toFixed(3) + '" style="width:100px;height:22px;font-size:12px;font-weight:700;display:inline-block;padding:1px 6px;text-align:center;" class="form-control input-sm mb-qty" data-ai="' + ai + '" data-wo-qty="' + _lr + '" data-cum-qty="' + _bil + '" value="' + (_cur || '') + '" placeholder="—">')
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
                                 + cell('Remaining Qty', '<span class="mb-rem-display" data-ai="' + ai + '" style="font-size:12px;color:#333;white-space:nowrap;">' + fmt(_rem) + '</span>')
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
-                                + cell('WO Qty', val(_wo))
+                                + cell('Last Reported', val(_lr))
                                 + '</div>';
                         })();
                     if (act.tasks && act.tasks.length) {

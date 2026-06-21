@@ -504,8 +504,19 @@ class StorekeeperController extends Controller
                 $aid    = $act['activity_id'] ?? '';
                 $billed = $cumulativeMap[$aid] ?? 0;
                 $act['cumulative_qty'] = $billed;
-                // MB is independent of progress reports — Current Qty is manually entered by site engineer
-                $act['mb_unit'] = $act['unit'] ?? '';
+                // Pull unit and last reported qty from schedule
+                $saRow = $db->createCommand(
+                    "SELECT sa.unit, sa.quantity,
+                            COALESCE(MAX(spr.cumulated_qty), 0) AS last_reported_qty
+                     FROM scheduleactivities sa
+                     LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
+                     WHERE sa.activity_id = :wid AND sa.projectId = :pid AND sa.status = 0",
+                    [':wid' => (int)$aid, ':pid' => $projectid]
+                )->queryOne();
+                $act['unit']              = $saRow['unit']              ?? ($act['unit'] ?? '');
+                $act['schedule_qty']      = (float)($saRow['quantity']  ?? 0);
+                $act['last_reported_qty'] = (float)($saRow['last_reported_qty'] ?? 0);
+                $act['mb_unit'] = $act['unit'];
                 $act['mb_qty']  = 0;
                 // Attach task-level cumulative totals
                 if (isset($act['tasks']) && is_array($act['tasks'])) {
@@ -606,17 +617,31 @@ class StorekeeperController extends Controller
 
         $newEntries = json_decode($entries, true) ?: [];
 
-        // Validate new entries against WO limits
+        // Build last_reported_qty map from schedule progress reports
+        $lastReportedMap = [];
+        foreach ($woActivities as $act) {
+            $wbsId = (int)($act['activity_id'] ?? 0);
+            $lr = $db->createCommand(
+                "SELECT COALESCE(MAX(spr.cumulated_qty), 0)
+                 FROM scheduleactivities sa
+                 LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
+                 WHERE sa.activity_id = :wid AND sa.projectId = :pid AND sa.status = 0",
+                [':wid' => $wbsId, ':pid' => $projectid]
+            )->queryScalar();
+            $lastReportedMap[(string)$wbsId] = (float)($lr ?? 0);
+        }
+
+        // Validate new entries against last reported qty (not WO qty)
         foreach ($newEntries as $entry) {
             $aid     = $entry['activity_id'] ?? '';
             $newQty  = (float)($entry['qty'] ?? 0);
-            $woQty   = $woQtyMap[$aid] ?? 0;
             $prevQty = $cumulativeMap[$aid] ?? 0;
+            $lastRep = $lastReportedMap[$aid] ?? 0;
 
-            if ($woQty > 0 && ($prevQty + $newQty) > $woQty) {
-                $remaining = max(0, $woQty - $prevQty);
+            if ($lastRep > 0 && ($prevQty + $newQty) > $lastRep + 0.001) {
+                $remaining = max(0, $lastRep - $prevQty);
                 return json_encode(['error' => 'Yes',
-                    'errortext' => 'Activity "' . ($entry['activity_name'] ?? $aid) . '": quantity exceeds WO order. Only ' . $remaining . ' units remaining.']);
+                    'errortext' => 'Activity "' . ($entry['activity_name'] ?? $aid) . '": billed quantity would exceed last reported progress (' . $lastRep . '). Only ' . round($remaining, 3) . ' remaining.']);
             }
 
             foreach ($entry['tasks'] ?? [] as $task) {
