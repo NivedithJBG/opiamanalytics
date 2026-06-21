@@ -948,6 +948,22 @@ class ProcurementController extends Controller
                 [':aid' => $actId, ':pid' => $projectid]
             )->queryScalar();
             if (!$n) return json_encode(['error' => 'Yes', 'errortext' => 'Please allocate a contractor for this task']);
+
+            // Check each selected task in wo_task_rates is mapped to a SC resource via task_ids
+            $selectedTasks = $db->createCommand(
+                "SELECT task_id FROM wo_task_rates WHERE activity_id=:aid AND project_id=:pid AND selected=1",
+                [':aid' => $actId, ':pid' => $projectid]
+            )->queryColumn();
+            foreach ($selectedTasks as $tid) {
+                $mapped = $db->createCommand(
+                    "SELECT COUNT(*) FROM pricing_estimate_resources_new
+                     WHERE activity_id=:aid AND project_id=:pid AND resourcetype_Id=4
+                       AND pricing_status=0 AND FIND_IN_SET(:tid, task_ids)",
+                    [':aid' => $actId, ':pid' => $projectid, ':tid' => (int)$tid]
+                )->queryScalar();
+                if (!$mapped) return json_encode(['error' => 'Yes',
+                    'errortext' => 'Please map the resource to this task in the Resource Allocation page before raising the Work Order.']);
+            }
         }
         return json_encode(['error' => 'No']);
     }
@@ -1022,6 +1038,25 @@ class ProcurementController extends Controller
                         'activity_id' => $activityId,
                         'qty'         => $activityQty,
                     ])->execute();
+                }
+            }
+
+            // Pre-validate all selected tasks before saving
+            foreach ($tasks as $task) {
+                if ((int)($task['selected'] ?? 1) !== 1) continue;
+                $taskId = (int)($task['task_id'] ?? 0);
+                if (!$taskId) continue;
+                if ((float)($task['rate'] ?? 0) <= 0) {
+                    return ['error' => 'Yes', 'errortext' => 'Please enter the rate for all selected tasks before saving.'];
+                }
+                $mapped = $db->createCommand(
+                    "SELECT COUNT(*) FROM pricing_estimate_resources_new
+                     WHERE activity_id=:aid AND project_id=:pid AND resourcetype_Id=4
+                       AND pricing_status=0 AND FIND_IN_SET(:tid, task_ids)",
+                    [':aid' => $activityId, ':pid' => $projectid, ':tid' => $taskId]
+                )->queryScalar();
+                if (!$mapped) {
+                    return ['error' => 'Yes', 'errortext' => 'Please map a Sub Contractor resource to this task in the Resource Allocation page before saving.'];
                 }
             }
 

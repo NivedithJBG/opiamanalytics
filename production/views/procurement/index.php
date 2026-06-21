@@ -1908,11 +1908,16 @@
                 selected : $tr.find('.wo-sc-select').is(':checked') ? 1 : 0
             });
         });
-        // Must have at least one task selected with a non-zero rate
-        var hasValues = false;
-        tasks.forEach(function(t){ if (t.selected && t.rate > 0) hasValues = true; });
-        if (!hasValues) {
-            alert('Please enter rates for at least one task before saving.');
+        // All selected tasks must have rate > 0
+        var missingRate = tasks.some(function(t){ return t.selected && t.rate <= 0; });
+        var anySelected = tasks.some(function(t){ return t.selected; });
+        if (!anySelected) {
+            alert('Please select at least one task.');
+            $btn.prop('disabled', false).text('Save');
+            return;
+        }
+        if (missingRate) {
+            alert('Please enter rates for all selected tasks before saving.');
             $btn.prop('disabled', false).text('Save');
             return;
         }
