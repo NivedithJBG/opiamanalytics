@@ -1542,12 +1542,13 @@
                 $qtyEl.css({ background: '#fde8e8', borderColor: '#c0392b', color: '#c0392b' });
             }
 
-            // Check task work done limits
+            // Check task work done — only validate limit when activity qty is filled
             $.each(act.tasks || [], function(ti, task) {
                 var $wd  = $('.mb-workdone[data-ai="' + ai + '"][data-ti="' + ti + '"]');
                 var wdVal = $wd.val().trim();
                 if (!wdVal) { $wd.css({ background: '#fde8e8', borderColor: '#c0392b' }); missingField = true; return; }
                 $wd.css({ background: '', borderColor: '' });
+                if (!qtyVal || thisQty <= 0) return; // can't check limit without activity qty
                 var tqpu  = parseFloat(task.task_qty) || 0;
                 var maxWd = thisQty * tqpu;
                 var wd    = parseFloat(wdVal) || 0;
