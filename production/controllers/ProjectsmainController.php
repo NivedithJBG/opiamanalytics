@@ -774,6 +774,8 @@ class ProjectsmainController extends Controller
                 [':wid' => $wbId, ':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid]
             )->queryAll();
             $mbAmount = 0.0; $mbQty = 0.0; $taskWorkMap = [];
+            $taskAmountById   = []; // task_id => SUM(rate × work_done)
+            $taskWorkDoneById = []; // task_id => SUM(work_done)
             $mbs = $db->createCommand(
                 "SELECT entries FROM wo_measurement_book WHERE project_id=:pid AND sent_status=1 AND delete_status=0",
                 [':pid' => $pid]
@@ -783,10 +785,17 @@ class ProjectsmainController extends Controller
                     if ((int)($entry['activity_id'] ?? 0) !== $wbId) continue;
                     $mbQty += (float)($entry['qty'] ?? 0);
                     foreach ($entry['tasks'] ?? [] as $task) {
-                        $mbAmount += (float)($task['rate'] ?? 0) * (float)($task['work_done'] ?? 0);
+                        $wd  = (float)($task['work_done'] ?? 0);
+                        $rt  = (float)($task['rate']      ?? 0);
+                        $mbAmount += $rt * $wd;
                         $key = strtolower(trim($task['task_name'] ?? ''));
                         if ($key !== '') {
-                            $taskWorkMap[$key] = ($taskWorkMap[$key] ?? 0.0) + (float)($task['work_done'] ?? 0);
+                            $taskWorkMap[$key] = ($taskWorkMap[$key] ?? 0.0) + $wd;
+                        }
+                        $tid = (int)($task['task_id'] ?? 0);
+                        if ($tid) {
+                            $taskAmountById[$tid]   = ($taskAmountById[$tid]   ?? 0.0) + $rt * $wd;
+                            $taskWorkDoneById[$tid] = ($taskWorkDoneById[$tid] ?? 0.0) + $wd;
                         }
                     }
                 }
@@ -796,18 +805,18 @@ class ProjectsmainController extends Controller
                 $resQty  = (float)$r['quantity'];
                 $typeId  = (int)$r['type_id'];
                 if ($typeId === 4) {
-                    // Actual rate = wo_task_rates.rate for the task mapped to this SC resource
+                    // Actual rate = SUM(work_done_value) / SUM(work_done_qty) from sent MBs
                     $taskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
                     $actUnit = null;
                     if (!empty($taskIds)) {
-                        $inIds = implode(',', $taskIds);
-                        $woRate = $db->createCommand(
-                            "SELECT AVG(rate) FROM wo_task_rates
-                             WHERE activity_id=:aid AND project_id=:pid AND task_id IN ($inIds)",
-                            [':aid' => $wbId, ':pid' => $pid]
-                        )->queryScalar();
-                        if ($woRate !== null && $woRate !== false) {
-                            $actUnit = (float)$woRate;
+                        $totalWdValue = 0.0;
+                        $totalWdQty   = 0.0;
+                        foreach ($taskIds as $tid) {
+                            $totalWdValue += $taskAmountById[$tid]   ?? 0.0;
+                            $totalWdQty   += $taskWorkDoneById[$tid] ?? 0.0;
+                        }
+                        if ($totalWdQty > 0) {
+                            $actUnit = $totalWdValue / $totalWdQty;
                         }
                     }
                 } else {
