@@ -518,12 +518,19 @@ class StorekeeperController extends Controller
                 $act['last_reported_qty'] = (float)($saRow['last_reported_qty'] ?? 0);
                 $act['mb_unit'] = $act['unit'];
                 $act['mb_qty']  = 0;
-                // Attach task-level cumulative totals
+                // Attach task-level cumulative totals and per-unit qty from wo_task_rates
                 if (isset($act['tasks']) && is_array($act['tasks'])) {
                     foreach ($act['tasks'] as &$task) {
                         $key = $aid . '_' . ($task['task_id'] ?? '');
                         $task['cum_work_done'] = round($taskCumMap[$key]['work_done'] ?? 0, 2);
                         $task['cum_amount']    = round($taskCumMap[$key]['amount']    ?? 0, 2);
+                        // Per-unit qty from wo_task_rates (not the WO_Subject total)
+                        $tid = (int)($task['task_id'] ?? 0);
+                        $uqty = $db->createCommand(
+                            "SELECT task_qty FROM wo_task_rates WHERE activity_id=:aid AND task_id=:tid AND project_id=:pid",
+                            [':aid' => (int)$aid, ':tid' => $tid, ':pid' => $projectid]
+                        )->queryScalar();
+                        $task['unit_qty'] = (float)($uqty !== false ? $uqty : ($task['task_qty'] ?? 0));
                     }
                     unset($task);
                 }

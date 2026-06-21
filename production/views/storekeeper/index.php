@@ -1183,7 +1183,7 @@
         var task = (act && act.tasks) ? act.tasks[ti] : null;
         if (!task) return;
         var currentQty = parseFloat($('.mb-qty[data-ai="' + ai + '"]').val()) || 0;
-        var tqpu       = parseFloat(task.task_qty) || 0;
+        var tqpu       = parseFloat(task.unit_qty || task.task_qty) || 0;
         var maxWd      = currentQty * tqpu;
         var wd         = parseFloat($(this).val()) || 0;
         if (tqpu > 0 && wd > maxWd) {
@@ -1425,7 +1425,7 @@
                                 + '</td>'
                                 + '<td style="padding:2px 4px;text-align:right;">'
                                 + (function(){
-                                    var _tqpu  = parseFloat(task.task_qty) || 0;
+                                    var _tqpu  = parseFloat(task.unit_qty) || 0; // per-unit from wo_task_rates
                                     var _mbCur = parseFloat(act.mb_qty) || 0;
                                     var _wdDef = +(_mbCur * _tqpu).toFixed(2);
                                     return '<input type="number" step="any" class="form-control input-sm mb-workdone"'
@@ -1436,7 +1436,7 @@
                                 + '</td>'
                                 + '<td style="padding:4px 6px;text-align:right;font-size:12px;color:#000;" class="mb-task-amount" data-ai="' + ai + '" data-ti="' + ti + '">'
                                 + (function(){
-                                    var _tqpu  = parseFloat(task.task_qty) || 0;
+                                    var _tqpu  = parseFloat(task.unit_qty) || 0; // per-unit from wo_task_rates
                                     var _mbCur = parseFloat(act.mb_qty) || 0;
                                     var _wd    = _mbCur * _tqpu;
                                     return (taskRate > 0 && _wd > 0) ? (taskRate * _wd).toFixed(2) : '—';
@@ -1549,7 +1549,7 @@
                 if (!wdVal) { $wd.css({ background: '#fde8e8', borderColor: '#c0392b' }); missingField = true; return; }
                 $wd.css({ background: '', borderColor: '' });
                 if (!qtyVal || thisQty <= 0) return; // can't check limit without activity qty
-                var tqpu  = parseFloat(task.task_qty) || 0;
+                var tqpu  = parseFloat(task.unit_qty || task.task_qty) || 0;
                 var maxWd = thisQty * tqpu;
                 var wd    = parseFloat(wdVal) || 0;
                 if (tqpu > 0 && wd > maxWd + 0.001) {
