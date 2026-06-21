@@ -327,7 +327,48 @@ class Activity1Controller extends Controller
         }
 
         else
-        {   
+        {
+            $db = Yii::$app->db;
+
+            // --- Cascade: store_indents (via pricing_estimate_resources_new) ---
+            $pricingIds = $db->createCommand(
+                "SELECT pricing_resourceid FROM pricing_estimate_resources_new WHERE activity_id=:aid",
+                [':aid' => $activityid]
+            )->queryColumn();
+            if (!empty($pricingIds)) {
+                $db->createCommand()->delete('store_indents', ['pricing_resourceid' => $pricingIds])->execute();
+            }
+
+            // --- Cascade: WO task/SC rates and activity qty ---
+            $db->createCommand()->delete('wo_task_rates',   ['activity_id' => $activityid])->execute();
+            $db->createCommand()->delete('wo_sc_rates',     ['activity_id' => $activityid])->execute();
+            $db->createCommand()->delete('wo_activity_qty', ['activity_id' => $activityid])->execute();
+
+            // --- Cascade: Work Orders containing this activity (JSON search) ---
+            $woNums = $db->createCommand(
+                "SELECT WO_Number FROM work_order
+                 WHERE JSON_SEARCH(WO_Subject, 'one', :aid, NULL, '\$[*].activity_id') IS NOT NULL",
+                [':aid' => (string)$activityid]
+            )->queryColumn();
+            if (!empty($woNums)) {
+                $db->createCommand()->delete('wo_measurement_book', ['wo_number' => $woNums])->execute();
+                $db->createCommand()->delete('work_order', ['WO_Number' => $woNums])->execute();
+            }
+
+            // --- Cascade: Purchase Orders linked to this schedule activity ---
+            if ($scheduleid) {
+                $poIds = $db->createCommand(
+                    "SELECT DISTINCT order_id FROM purchase_order_activities WHERE activity_id=:sid",
+                    [':sid' => $scheduleid->id]
+                )->queryColumn();
+                if (!empty($poIds)) {
+                    $db->createCommand()->delete('goods_received_note',      ['GRN_Purchase_Order' => $poIds])->execute();
+                    $db->createCommand()->delete('purchase_order_resources',  ['order_id' => $poIds])->execute();
+                    $db->createCommand()->delete('purchase_order_activities', ['order_id' => $poIds])->execute();
+                    $db->createCommand()->delete('purchase_orders',           ['order_id' => $poIds])->execute();
+                }
+            }
+
             //delete from prjt estimate
             $model=WorkgroupActivitiesNew::findOne($_POST['actid']);
             $model->delete();
