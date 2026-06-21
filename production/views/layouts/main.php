@@ -1779,11 +1779,8 @@ if($action=='login')
 #cd-grid{flex:1;min-height:0;display:grid;grid-template-columns:1.8fr 1.1fr 1.1fr;grid-template-rows:repeat(12,1fr);row-gap:0;column-gap:0}
 #cd-modal .ph{background:#222222;}
 #cd-modal .panel{border-right:3px solid #a0aec0}
-@media(max-width:900px) and (orientation:portrait){
-  #pd-modal,#cd-modal{width:1180px!important;transform:translate(-50%,-50%) scale(0.65)!important;transform-origin:center center}
-}
-@media(min-width:901px) and (max-width:1080px) and (orientation:portrait){
-  #pd-modal,#cd-modal{width:1180px!important;transform:translate(-50%,-50%) scale(0.83)!important;transform-origin:center center}
+@media(max-width:1100px){
+  #pd-modal,#cd-modal{width:1180px!important;height:860px!important;transform:translate(-50%,-50%) scale(0.85)!important;transform-origin:center center}
 }
 </style>
 <div id="cd-bk"></div>
