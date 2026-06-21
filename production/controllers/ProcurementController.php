@@ -755,6 +755,7 @@ class ProcurementController extends Controller
                     WHERE pr.activity_id     = wa.id
                       AND pr.project_id      = :pid5
                       AND pr.resourcetype_Id = 4
+                      AND pr.pricing_status  = 0
                 ), 0)                           AS sc_estimated_value,
                 COALESCE(wdq.work_done_qty, 0)  AS work_done_qty,
                 eat.activitytype_name           AS activity_type,
