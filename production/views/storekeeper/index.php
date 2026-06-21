@@ -1390,7 +1390,7 @@
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
                                 + cell('Billed Qty', val(_bil))
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
-                                + cell('Current Qty', '<input type="number" step="any" style="width:100px;height:22px;font-size:12px;font-weight:700;display:inline-block;padding:1px 6px;text-align:center;" class="form-control input-sm mb-qty" data-ai="' + ai + '" data-wo-qty="' + _wo + '" data-bil-qty="' + _bil + '" value="' + (_cur || '') + '" placeholder="—">')
+                                + cell('Current Qty', '<input type="number" step="any" style="width:100px;height:22px;font-size:12px;font-weight:700;display:inline-block;padding:1px 6px;text-align:center;" class="form-control input-sm mb-qty" data-ai="' + ai + '" data-wo-qty="' + _wo + '" data-cum-qty="' + _bil + '" value="' + (_cur || '') + '" placeholder="—">')
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'
                                 + cell('Remaining Qty', '<span class="mb-rem-display" data-ai="' + ai + '" style="font-size:12px;color:#333;white-space:nowrap;">' + fmt(_rem) + '</span>')
                                 + '<div style="width:1px;background:#d0d7df;margin:4px 0;"></div>'

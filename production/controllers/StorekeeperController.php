@@ -526,9 +526,12 @@ class StorekeeperController extends Controller
                 $lastRep = $lastReportedMap[$aid] ?? 0;
                 $act['cumulative_qty']   = $billed;
                 $act['last_reported_qty'] = $lastRep;
-                // Defaults: unit from WO, current qty = last reported minus billed
+                // Defaults: unit from WO, current qty = last reported minus billed, capped at WO remaining
                 $act['mb_unit'] = $act['unit'] ?? '';
-                $act['mb_qty']  = round(max(0, $lastRep - $billed), 2);
+                $woQty = (float)($act['qty'] ?? 0);
+                $progressQty = max(0, $lastRep - $billed);
+                $remaining   = $woQty > 0 ? max(0, $woQty - $billed) : $progressQty;
+                $act['mb_qty'] = round(min($progressQty, $remaining), 2);
                 // Attach task-level cumulative totals
                 if (isset($act['tasks']) && is_array($act['tasks'])) {
                     foreach ($act['tasks'] as &$task) {
