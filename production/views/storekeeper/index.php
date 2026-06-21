@@ -1489,8 +1489,13 @@
             + 'th{background:#dce3ea;}'
             + 'input{border:1px solid #ccc;padding:2px 4px;font-size:12px;}'
             + '.mb-rem-display,.mb-unit,.mb-qty{display:inline;}'
-            + '@media print{button{display:none;}}'
+            + '.no-print{display:inline-block;margin-bottom:10px;}'
+            + '@media print{.no-print{display:none;}}'
             + '</style></head><body>'
+            + '<div class="no-print" style="margin-bottom:12px;">'
+            + '<button onclick="window.print()" style="background:#072c47;color:#fff;border:none;border-radius:4px;padding:6px 18px;font-size:12px;cursor:pointer;margin-right:8px;">Print</button>'
+            + '<button onclick="window.close()" style="background:#888;color:#fff;border:none;border-radius:4px;padding:6px 18px;font-size:12px;cursor:pointer;">Close</button>'
+            + '</div>'
             + '<h3 style="margin:0 0 4px;">Measurement Book</h3>'
             + '<p style="margin:0 0 10px;font-size:12px;">MB No: <b>' + mbNumber + '</b> &nbsp; Date: <b>' + mbDate + '</b> &nbsp; WO: <b>' + woNum + '</b> &nbsp; Vendor: <b>' + vendor + '</b></p>'
             + bodyHtml
@@ -1498,7 +1503,6 @@
         );
         w.document.close();
         w.focus();
-        w.print();
     });
 
     $(document).on('click', '#mb-save-btn', function(){
@@ -1509,10 +1513,6 @@
             alert('Please enter the Date.');
             $('#mb-date-input').focus();
             return;
-        }
-
-        if (confirm('Press Print if you need a copy.\n\nOK → Print then Report\nCancel → Report without printing')) {
-            $('#mb-print-btn').trigger('click');
         }
 
         // Check WO qty limits before allowing send
