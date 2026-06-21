@@ -294,39 +294,9 @@ class Activity1Controller extends Controller
     {
         $activityid=$_POST['actid'];
         $connection = Yii::$app->db;
-        //check data in project estimate
-        $estimate=PricingEstimateNew::find()->where(['activity_Id' => $activityid])->count();
-
         //check data in progress report
         $scheduleid=Scheduleactivities::find()->where(['activity_id' => $activityid])->one();
-        
-		//$report_data= ScheduleProgressReport::find()->where(['activity_id' => $scheduleid->id])->one();
 
-        //check data in project schedule
-        /*$sql1 = "SELECT * FROM `activity_relations` WHERE status=0 AND `precedent_activity` = '".$scheduleid->id."' OR dependent_activity='".$scheduleid->id."' ORDER BY `id` DESC "; 
-        $command = $connection->createCommand($sql1);
-        $dataReader = $command->query();
-        $anyrelation = $dataReader->read();*/
-
-        /*if(!empty($report_data))
-        {
-            $arr = array('error'=>'Yes','errortext'=>'Cannot delete this item as it is reported. Please clear progress report data.');
-            return json_encode($arr);
-        }
-        else if(!empty($anyrelation))
-        {
-            $arr = array('error'=>'Yes','errortext'=>'Cannot delete this item as it has relation in schedule. Please delete relation in project schedule.');
-            return json_encode($arr);
-        }
-        else*/ 
-        
-        if($estimate>0)
-        {
-            $arr = array('error'=>'Yes','errortext'=>'Cannot delete this item as it is estimated. Please remove from the estimate.');
-            return json_encode($arr);
-        }
-
-        else
         {
             $db = Yii::$app->db;
 
@@ -369,9 +339,10 @@ class Activity1Controller extends Controller
                 }
             }
 
-            //delete from prjt estimate
+            //delete from prjt estimate (including pricing_estimate_new — no longer blocks deletion)
             $model=WorkgroupActivitiesNew::findOne($_POST['actid']);
             $model->delete();
+            PricingEstimateNew::deleteAll(['activity_Id' => $_POST['actid']]);
             $pricing=PricingEstimate::deleteAll(['activity_Id' => $_POST['actid']]);
             $pricingres=PricingEstimateResourcesNew::deleteAll(['activity_Id' => $_POST['actid']]);
             $connection = Yii::$app->db;
