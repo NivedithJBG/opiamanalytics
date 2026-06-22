@@ -747,16 +747,16 @@ class ProcurementController extends Controller
             SELECT
                 wa.id                           AS activity_id,
                 wa.activity_Name                AS activity_name,
-                wa.activity_Unit                AS unit,
-                COALESCE(pe.activity_qty, 0)    AS estimated_quantity,
-                COALESCE(pe.activity_qty, 0) * COALESCE((
+                COALESCE(sa.unit, wa.activity_Unit) AS unit,
+                COALESCE(sa.quantity, 0)            AS estimated_quantity,
+                COALESCE(sa.quantity, 0) * COALESCE((
                     SELECT SUM(pr.quantity * pr.rate)
                     FROM pricing_estimate_resources_new pr
                     WHERE pr.activity_id     = wa.id
                       AND pr.project_id      = :pid5
                       AND pr.resourcetype_Id = 4
                       AND pr.pricing_status  = 0
-                ), 0)                           AS sc_estimated_value,
+                ), 0)                               AS sc_estimated_value,
                 COALESCE(wdq.work_done_qty, 0)  AS work_done_qty,
                 eat.activitytype_name           AS activity_type,
                 wn.Name                         AS workgroup_name,
