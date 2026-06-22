@@ -1738,11 +1738,12 @@
                     alert(data.errortext || 'Error raising indent.');
                     return;
                 }
+                alert('Indent raised successfully.');
                 loadIndents();
             },
-            error: function() {
+            error: function(xhr) {
                 $btn.prop('disabled', false).html('<span class="icon-plus"></span> Raise Indent');
-                alert('Failed to raise indent. Please try again.');
+                alert('Failed to raise indent. Server response: ' + xhr.responseText.substring(0, 200));
             }
         });
     });
