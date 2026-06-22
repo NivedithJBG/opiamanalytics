@@ -1702,7 +1702,17 @@
     // ── Raise Indent button ────────────────────────────────────────────────
     $(document).on('click', '#sk-raise-indent-btn', function(){
         if ($('.sk-cb:checked').length === 0) {
-            alert('Please select at least one item to raise an indent.');
+            alert('Please select at least one resource to raise an indent.');
+            return;
+        }
+        var noTask = [];
+        $('.sk-cb:checked').each(function(){
+            var id  = $(this).val();
+            var $tb = $('.sk-indent-task-btn[data-id="' + id + '"]');
+            if (!$tb.data('task-id')) noTask.push($tb.data('resource-name') || id);
+        });
+        if (noTask.length) {
+            alert('Please select a task for: ' + noTask.join(', '));
             return;
         }
         var selected = [];
@@ -1711,8 +1721,8 @@
             var $tb = $('.sk-indent-task-btn[data-id="' + id + '"]');
             selected.push({
                 id:        id,
-                task_id:   $tb.data('task-id')   || '',
-                task_name: $tb.data('task-name') || ''
+                task_id:   $tb.data('task-id'),
+                task_name: $tb.data('task-name')
             });
         });
         var $btn = $(this);
