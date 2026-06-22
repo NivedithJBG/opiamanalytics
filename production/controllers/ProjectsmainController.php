@@ -2542,13 +2542,7 @@ class ProjectsmainController extends Controller
             if(count($dataProvider)>0):
                 $totalindex = 0;
                 foreach($dataProvider AS $key=>$data):
-                   $actreported = ScheduleProgressReport::find()->where(['activity_id' => $data['id']])->andWhere(['!=', 'cumulated_qty', 0])->one();
-                   if(!$actreported){
-                     $reportedstyle = '';
-                   }
-                   else{
-                     $reportedstyle = 'disabled style="pointer-events: none; cursor: not-allowed;" title="Already Reported!"';
-                   }
+                   $reportedstyle = ''; // activity editing always allowed regardless of progress reports
                 $reportlog = "SELECT SUM(currentqty) AS totalqty FROM schedule_progress_report_log WHERE activity_id='".$data['id']."'";
                 $command = $connection->createCommand($reportlog);
                 $dataReader = $command->query();
