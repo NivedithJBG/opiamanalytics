@@ -198,6 +198,19 @@
         </div>
     </div>
 
+    <!-- Raise Indent Popup -->
+    <div id="sk-raise-popup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;overflow-y:auto;">
+        <div style="background:#fff;margin:50px auto;max-width:820px;border-radius:6px;padding:26px 30px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+            <button id="sk-raise-popup-close" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;color:#888;cursor:pointer;">&times;</button>
+            <h4 style="margin:0 0 18px;font-size:15px;font-weight:700;color:#333;">Raise Indent</h4>
+            <div id="sk-raise-popup-body"></div>
+            <div style="text-align:right;margin-top:16px;">
+                <button type="button" id="sk-raise-popup-cancel" style="background:#888;color:#fff;border:none;border-radius:20px;padding:6px 22px;font-size:13px;font-weight:600;cursor:pointer;margin-right:10px;">Cancel</button>
+                <button type="button" id="sk-raise-popup-submit" style="background:#072c47;color:#fff;border:none;border-radius:20px;padding:6px 26px;font-size:13px;font-weight:600;cursor:pointer;">Submit</button>
+            </div>
+        </div>
+    </div>
+
     <div id="sk-tab-issued" class="sk-tab-content">
         <div id="sk-inv-filter-bar" style="padding:12px 20px;border-bottom:1px solid #e0e4e8;background:#f4f7fa;display:flex;align-items:center;gap:8px;">
             <span class="icon-search5" style="font-size:14px;color:#465365;"></span>
@@ -321,7 +334,7 @@
                 + '<td class="num" style="background:#e6e6e6;color:#333;">' + purchasedQty.toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
                 + '<td class="num" style="background:#e6e6e6;color:#333;">' + consumedQty.toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
                 + '<td style="text-align:center;padding:4px 6px;">'
-                + '<button type="button" class="sk-indent-task-btn" data-id="' + r.resource_id + '" data-resource-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-task-id="" data-task-name="" style="background:#072c47;color:#fff;border:none;border-radius:12px;padding:5px 12px;font-size:12px;font-weight:400;cursor:pointer;min-width:80px;">Tasks</button>'
+                + '<button type="button" class="sk-indent-task-btn" data-id="' + r.resource_id + '" data-resource-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-task-id="" data-task-name="" data-activity-name="" style="background:#072c47;color:#fff;border:none;border-radius:12px;padding:5px 12px;font-size:12px;font-weight:400;cursor:pointer;min-width:80px;">Tasks</button>'
                 + '</td>'
                 + '<td style="text-align:center;padding:4px 8px;">'
                 + (r.estimate_reached == 1
@@ -1663,7 +1676,7 @@
                 $.each(tasks, function(i, t) {
                     var bg      = i % 2 === 1 ? 'background:#f7f7f7;' : 'background:#fff;';
                     var checked = (String(t.task_id) === selId) ? ' checked' : '';
-                    html += '<tr style="' + bg + '" class="sk-indent-task-row" data-task-id="' + t.task_id + '" data-task-name="' + String(t.task_name || '').replace(/"/g, '&quot;') + '">'
+                    html += '<tr style="' + bg + '" class="sk-indent-task-row" data-task-id="' + t.task_id + '" data-task-name="' + String(t.task_name || '').replace(/"/g, '&quot;') + '" data-activity-name="' + String(t.activity_name || '').replace(/"/g, '&quot;') + '">'
                         + '<td style="padding:7px 12px;border:1px solid #e0e0e0;text-align:center;">'
                         +   '<input type="radio" name="sk-indent-task-radio" value="' + t.task_id + '"' + checked + ' style="width:14px;height:14px;cursor:pointer;accent-color:#072c47;">'
                         + '</td>'
@@ -1690,16 +1703,17 @@
     $(document).on('click', '#sk-indent-task-save-btn', function(){
         var $radio = $('input[name="sk-indent-task-radio"]:checked');
         if (!$radio.length) { alert('Please select a task.'); return; }
-        var $btn  = $('#sk-indent-task-modal').data('btn');
-        var tid   = $radio.val();
-        var tname = $radio.closest('tr').data('task-name');
-        $btn.data('task-id', tid).data('task-name', tname);
+        var $btn    = $('#sk-indent-task-modal').data('btn');
+        var tid     = $radio.val();
+        var tname   = $radio.closest('tr').data('task-name');
+        var actname = $radio.closest('tr').data('activity-name') || '';
+        $btn.data('task-id', tid).data('task-name', tname).data('activity-name', actname);
         $btn.closest('tr').find('td:eq(1) .sk-indent-task-sub').remove();
         $btn.closest('tr').find('td:eq(1)').append('<div class="sk-indent-task-sub" style="font-size:10px;color:#072c47;margin-top:2px;">&#9656; ' + tname + '</div>');
         $('#sk-indent-task-modal').hide();
     });
 
-    // ── Raise Indent button ────────────────────────────────────────────────
+    // ── Raise Indent button — open popup ──────────────────────────────────
     $(document).on('click', '#sk-raise-indent-btn', function(){
         if ($('.sk-cb:checked').length === 0) {
             alert('Please select at least one resource to raise an indent.');
@@ -1715,35 +1729,73 @@
             alert('Please select a task for: ' + noTask.join(', '));
             return;
         }
-        var selected = [];
+        var inp  = 'width:90px;height:26px;padding:2px 5px;text-align:right;font-size:12px;border:1px solid #ccc;border-radius:3px;';
+        var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+            + '<thead><tr style="background:#555;color:#fff;">'
+            + '<th style="padding:9px 12px;border:1px solid #444;">Resource</th>'
+            + '<th style="padding:9px 12px;border:1px solid #444;">Task</th>'
+            + '<th style="padding:9px 12px;border:1px solid #444;">Activity</th>'
+            + '<th style="padding:9px 12px;border:1px solid #444;width:110px;text-align:right;">Stock at Site</th>'
+            + '<th style="padding:9px 12px;border:1px solid #444;width:110px;text-align:right;">Re-order Qty</th>'
+            + '</tr></thead><tbody>';
+        var idx = 0;
         $('.sk-cb:checked').each(function(){
             var id  = $(this).val();
             var $tb = $('.sk-indent-task-btn[data-id="' + id + '"]');
+            var bg  = idx++ % 2 === 1 ? 'background:#f7f7f7;' : 'background:#fff;';
+            html += '<tr style="' + bg + '" data-resource-id="' + id + '">'
+                + '<td style="padding:7px 12px;border:1px solid #e0e0e0;font-weight:600;">' + ($tb.data('resource-name') || id) + '</td>'
+                + '<td style="padding:7px 12px;border:1px solid #e0e0e0;">' + ($tb.data('task-name') || '') + '</td>'
+                + '<td style="padding:7px 12px;border:1px solid #e0e0e0;color:#465365;font-size:12px;">' + ($tb.data('activity-name') || '') + '</td>'
+                + '<td style="padding:5px 8px;border:1px solid #e0e0e0;text-align:right;">'
+                +   '<input type="number" class="sk-popup-stock" data-id="' + id + '" min="0" step="any" placeholder="0" style="' + inp + '">'
+                + '</td>'
+                + '<td style="padding:5px 8px;border:1px solid #e0e0e0;text-align:right;">'
+                +   '<input type="number" class="sk-popup-reorder" data-id="' + id + '" min="0" step="any" placeholder="0" style="' + inp + '">'
+                + '</td>'
+                + '</tr>';
+        });
+        html += '</tbody></table>';
+        $('#sk-raise-popup-body').html(html);
+        $('#sk-raise-popup').show();
+    });
+
+    $(document).on('click', '#sk-raise-popup-close, #sk-raise-popup-cancel', function(){
+        $('#sk-raise-popup').hide();
+    });
+
+    $(document).on('click', '#sk-raise-popup-submit', function(){
+        var selected = [];
+        $('#sk-raise-popup-body tr[data-resource-id]').each(function(){
+            var id  = $(this).data('resource-id').toString();
+            var $tb = $('.sk-indent-task-btn[data-id="' + id + '"]');
             selected.push({
                 id:        id,
-                task_id:   $tb.data('task-id'),
-                task_name: $tb.data('task-name')
+                task_id:   $tb.data('task-id')   || '',
+                task_name: $tb.data('task-name')  || '',
+                stock:     parseFloat($('.sk-popup-stock[data-id="'   + id + '"]').val()) || 0,
+                reorder:   parseFloat($('.sk-popup-reorder[data-id="' + id + '"]').val()) || 0
             });
         });
-        var $btn = $(this);
-        $btn.prop('disabled', true).text('Saving...');
+        var $btn = $(this).prop('disabled', true).text('Saving...');
         $.ajax({
             type: 'POST',
             url: '../storekeeper/raiseindent',
             data: { items: JSON.stringify(selected) },
             dataType: 'json',
             success: function(data) {
-                $btn.prop('disabled', false).html('<span class="icon-plus"></span> Raise Indent');
+                $btn.prop('disabled', false).text('Submit');
                 if (data.error !== 'No') {
                     alert(data.errortext || 'Error raising indent.');
                     return;
                 }
+                $('#sk-raise-popup').hide();
                 alert('Indent raised successfully.');
                 loadIndents();
             },
             error: function(xhr) {
-                $btn.prop('disabled', false).html('<span class="icon-plus"></span> Raise Indent');
-                alert('Failed to raise indent. Server response: ' + xhr.responseText.substring(0, 200));
+                $btn.prop('disabled', false).text('Submit');
+                alert('Failed. Server: ' + xhr.responseText.substring(0, 200));
             }
         });
     });

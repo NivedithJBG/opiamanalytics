@@ -137,6 +137,8 @@ class StorekeeperController extends Controller
             $rid      = (int)($item['id'] ?? 0);
             $taskId   = !empty($item['task_id'])   ? (int)$item['task_id']   : null;
             $taskName = !empty($item['task_name']) ? trim($item['task_name']) : null;
+            $stock    = (float)($item['stock']   ?? 0);
+            $reorder  = (float)($item['reorder'] ?? 0);
             if (!$rid) continue;
 
             $exists = $db->createCommand(
@@ -145,7 +147,7 @@ class StorekeeperController extends Controller
             )->queryOne();
             if ($exists) {
                 $db->createCommand()->update('store_indents',
-                    ['task_id' => $taskId, 'task_name' => $taskName, 'raised_by' => $uid, 'raised_at' => date('Y-m-d H:i:s')],
+                    ['task_id' => $taskId, 'task_name' => $taskName, 'stock_at_site' => $stock, 'reorder_quantity' => $reorder, 'raised_by' => $uid, 'raised_at' => date('Y-m-d H:i:s')],
                     ['id' => $exists['id']]
                 )->execute();
                 $saved++;
@@ -169,8 +171,8 @@ class StorekeeperController extends Controller
                 'resource_name'      => $res['Name'],
                 'resource_type'      => $res['rt_name'],
                 'unit'               => $res['Unit'],
-                'stock_at_site'      => 0,
-                'reorder_quantity'   => 0,
+                'stock_at_site'      => $stock,
+                'reorder_quantity'   => $reorder,
                 'raised_by'          => $uid,
                 'raised_at'          => date('Y-m-d H:i:s'),
             ])->execute();
