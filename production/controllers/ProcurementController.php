@@ -36,6 +36,7 @@ class ProcurementController extends Controller
                     r.Resource_Id                                  AS resource_id,
                     rt.Name                                        AS resource_type,
                     COALESCE(p.display_name, r.Name)               AS resource_name,
+                    wa.activity_Name                               AS activity_name,
                     r.Unit                                         AS unit,
                     p.quantity * pe.activity_qty                   AS estimated_quantity,
                     p.rate                                         AS rate,
@@ -50,6 +51,7 @@ class ProcurementController extends Controller
                                             AND pe.project_Id  = p.project_id
                 JOIN resources r             ON p.resource_Id  = r.Resource_Id
                 JOIN resourcetype rt         ON p.resourcetype_Id = rt.ResourceType_Id
+                LEFT JOIN workgroup_activities_new wa ON wa.id = p.activity_id
                 LEFT JOIN (
                     SELECT
                         por.allocation_id,

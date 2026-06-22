@@ -736,7 +736,10 @@
             var alertInp   = hasIndent ? inp + 'background:#fff0f0;border-color:#e74c3c;color:#c0392b;font-weight:700;' : inp;
             html += '<tr class="' + (rowNum % 2 === 0 ? 'procu-even' : '') + '">'
                 + '<td>' + rowNum + '</td>'
-                + '<td>' + r.resource_name + '</td>'
+                + '<td>' + r.resource_name
+                    + (r.activity_name ? '<div style="font-size:10px;color:#7a8a9a;margin-top:1px;">' + r.activity_name + '</div>' : '')
+                    + ((!r.task_ids || r.task_ids.toString().trim() === '') ? '<span style="background:#e74c3c;color:#fff;font-size:9px;border-radius:3px;padding:1px 5px;margin-top:2px;display:inline-block;">Not Mapped</span>' : '')
+                    + '</td>'
                 + '<td>' + (r.unit || '') + '</td>'
                 + '<td class="num" style="background:#e6e6e6;color:#333;">' + parseFloat(r.estimated_quantity).toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
                 + '<td class="num" style="background:#e6e6e6;color:#333;">' + eVal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>'
