@@ -749,7 +749,7 @@ class ProcurementController extends Controller
                 wa.activity_Name                AS activity_name,
                 COALESCE(sa.unit, wa.activity_Unit) AS unit,
                 COALESCE(sa.quantity, 0)            AS estimated_quantity,
-                COALESCE(sa.quantity, 0) * COALESCE((
+                COALESCE(pe.activity_qty, 0) * COALESCE((
                     SELECT SUM(pr.quantity * pr.rate)
                     FROM pricing_estimate_resources_new pr
                     WHERE pr.activity_id     = wa.id
