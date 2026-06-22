@@ -958,19 +958,6 @@
             return;
         }
 
-        // Check each selected resource is mapped to a task
-        var unmapped = [];
-        $('.po-cb:checked').each(function(){
-            var taskIds = $(this).data('task-ids');
-            if (!taskIds || taskIds.toString().trim() === '') {
-                unmapped.push($(this).data('name') || 'Unknown');
-            }
-        });
-        if (unmapped.length) {
-            alert('Please Map the following Resource(s) to a Task in the Resource Allocation page before raising the Purchase Order:\n• ' + unmapped.join('\n• '));
-            return;
-        }
-
         var terms = [];
         $('.po-bulk-term-input').each(function(){ var v = $(this).val().trim(); if (v) terms.push(v); });
 

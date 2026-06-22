@@ -181,6 +181,17 @@ class ProcurementController extends Controller
         $terms      = trim($_POST['terms']    ?? '');
         $db         = Yii::$app->db;
 
+        // Validate resource is mapped to a task before allowing PO
+        $taskIds = $db->createCommand(
+            "SELECT task_ids FROM pricing_estimate_resources_new
+             WHERE resource_Id=:rid AND project_id=:pid AND pricing_status=0 LIMIT 1",
+            [':rid' => $resourceid, ':pid' => $projectid]
+        )->queryScalar();
+        if ($taskIds !== false && trim($taskIds ?? '') === '') {
+            return json_encode(['error' => 'Yes', 'errortext' =>
+                'Please Map the Resource to a Task in the Resource Allocation page before raising the Purchase Order.']);
+        }
+
         $exists = $db->createCommand(
             'SELECT id FROM po_settings WHERE project_id = :pid AND resource_id = :rid',
             [':pid' => $projectid, ':rid' => $resourceid]
