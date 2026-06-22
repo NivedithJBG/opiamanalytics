@@ -43,7 +43,9 @@ class StorekeeperController extends Controller
                 COALESCE(pq.purchased_qty, 0) - COALESCE(cq.consumed_qty, 0) AS stock,
                 SUM(p.quantity * pe.activity_qty)                              AS estimated_quantity,
                 CASE WHEN COALESCE(pq.purchased_qty, 0) >= SUM(p.quantity * pe.activity_qty)
-                     THEN 1 ELSE 0 END                                        AS estimate_reached
+                     THEN 1 ELSE 0 END                                        AS estimate_reached,
+                MAX(CASE WHEN p.task_ids IS NOT NULL AND p.task_ids != ''
+                     THEN 1 ELSE 0 END)                                       AS has_task_mapping
             FROM pricing_estimate_resources_new p
             JOIN pricing_estimate_new pe ON p.activity_id  = pe.activity_Id
                                         AND pe.project_Id  = p.project_id

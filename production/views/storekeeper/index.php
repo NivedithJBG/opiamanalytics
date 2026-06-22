@@ -340,12 +340,16 @@
                 + '<input type="text" inputmode="decimal" autocomplete="off" class="form-control input-sm sk-reorder-input" data-id="' + r.resource_id + '" placeholder="0" style="' + inp + '">'
                 + '</td>'
                 + '<td style="text-align:center;padding:4px 6px;">'
-                + '<button type="button" class="sk-task-btn" data-id="' + r.resource_id + '" data-resource-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-task-id="" data-task-name="" style="border:1px solid #465365;border-radius:4px;padding:3px 10px;font-size:11px;background:#fff;color:#465365;cursor:pointer;white-space:nowrap;">Task</button>'
+                + (r.has_task_mapping == 1
+                    ? '<button type="button" class="sk-task-btn" data-id="' + r.resource_id + '" data-resource-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-task-id="" data-task-name="" style="border:1px solid #465365;border-radius:4px;padding:3px 10px;font-size:11px;background:#fff;color:#465365;cursor:pointer;white-space:nowrap;">Task</button>'
+                    : '<span style="font-size:10px;font-weight:600;color:#c0392b;white-space:nowrap;">Not Mapped</span>')
                 + '</td>'
                 + '<td style="text-align:center;padding:4px 8px;">'
                 + (r.estimate_reached == 1
                     ? '<span style="font-size:10px;font-weight:700;color:#c0392b;white-space:nowrap;">Est. Reached</span>'
-                    : '<input type="checkbox" class="sk-cb" value="' + r.resource_id + '" style="width:16px;height:16px;cursor:pointer;accent-color:#072c47;">')
+                    : (r.has_task_mapping == 1
+                        ? '<input type="checkbox" class="sk-cb" value="' + r.resource_id + '" style="width:16px;height:16px;cursor:pointer;accent-color:#072c47;">'
+                        : '<input type="checkbox" disabled style="width:16px;height:16px;cursor:not-allowed;opacity:0.35;" title="Map this resource to a task in Resource Allocation before raising an indent.">'))
                 + '</td>'
                 + '</tr>';
         });
@@ -1679,11 +1683,11 @@
                 }
                 var tasks = data.tasks || [];
                 if (!tasks.length) {
-                    $('#sk-task-body').html('<p style="color:#888;font-size:12px;padding:8px 0;">No tasks are mapped to this resource. You may raise the indent without a task selection.</p>');
-                    $btn.data('no-tasks', true);
+                    $('#sk-task-body').html('<p style="color:#c0392b;font-size:12px;padding:8px 0;">No tasks are mapped to this resource. Please map a task in the Resource Allocation page before raising an indent.</p>');
+                    $('#sk-task-confirm').hide();
                     return;
                 }
-                $btn.data('no-tasks', false);
+                $('#sk-task-confirm').show();
                 var selId = String($btn.data('task-id') || '');
                 var html  = '<div style="font-size:11px;color:#888;margin-bottom:10px;">Select the task this indent is being raised for:</div>';
                 $.each(tasks, function(i, t) {
@@ -1706,10 +1710,6 @@
     // ── Task popup: confirm selection ──────────────────────────────────────
     $(document).on('click', '#sk-task-confirm', function(){
         var $btn = $('#sk-task-popup').data('btn');
-        if ($btn.data('no-tasks')) {
-            $('#sk-task-overlay,#sk-task-popup').hide();
-            return;
-        }
         var $sel = $('input[name="sk-task-radio"]:checked');
         if (!$sel.length) { alert('Please select a task.'); return; }
         var tid   = $sel.val();
@@ -1743,7 +1743,7 @@
                 invalid.push(id);
             }
             var $tb = $('.sk-task-btn[data-id="' + id + '"]');
-            if ($tb.length && !$tb.data('task-id') && !$tb.data('no-tasks')) {
+            if ($tb.length && !$tb.data('task-id')) {
                 noTask.push($tb.data('resource-name') || id);
             }
         });
