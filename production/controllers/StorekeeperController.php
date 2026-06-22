@@ -89,6 +89,37 @@ class StorekeeperController extends Controller
         return json_encode(['error' => 'No', 'rows' => $rows]);
     }
 
+    public function actionGetresourcetasks()
+    {
+        $uid      = Yii::$app->user->id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return json_encode(['error' => 'Yes', 'errortext' => 'No project selected.']);
+        $projectid = $projuser->projectid;
+        $db  = Yii::$app->db;
+        $rid = (int)($_POST['resource_id'] ?? 0);
+        if (!$rid) return json_encode(['error' => 'Yes', 'errortext' => 'Invalid resource.']);
+
+        $rows = $db->createCommand("
+            SELECT
+                at.id             AS task_id,
+                at.task_name,
+                at.task_unit,
+                wan.activity_Name AS activity_name
+            FROM pricing_estimate_resources_new pern
+            JOIN activity_tasks at        ON FIND_IN_SET(at.id, pern.task_ids) > 0
+            JOIN workgroup_activities_new wan ON wan.id = pern.activity_id
+            WHERE pern.resource_Id    = :rid
+              AND pern.project_id     = :pid
+              AND pern.pricing_status = 0
+              AND pern.task_ids IS NOT NULL
+              AND pern.task_ids != ''
+            GROUP BY at.id, at.task_name, at.task_unit, wan.activity_Name
+            ORDER BY wan.activity_Name ASC, at.sort_order ASC, at.task_name ASC
+        ", [':pid' => $projectid, ':rid' => $rid])->queryAll();
+
+        return json_encode(['error' => 'No', 'tasks' => $rows]);
+    }
+
     public function actionRaiseindent()
     {
         $uid      = Yii::$app->user->id;
@@ -103,7 +134,9 @@ class StorekeeperController extends Controller
 
         $saved = 0;
         foreach ($items as $item) {
-            $rid = (int)($item['id'] ?? 0);
+            $rid      = (int)($item['id'] ?? 0);
+            $taskId   = !empty($item['task_id'])   ? (int)$item['task_id']   : null;
+            $taskName = !empty($item['task_name']) ? trim($item['task_name']) : null;
             if (!$rid) continue;
 
             $exists = $db->createCommand(
@@ -112,7 +145,7 @@ class StorekeeperController extends Controller
             )->queryOne();
             if ($exists) {
                 $db->createCommand()->update('store_indents',
-                    ['raised_by' => $uid, 'raised_at' => date('Y-m-d H:i:s')],
+                    ['task_id' => $taskId, 'task_name' => $taskName, 'raised_by' => $uid, 'raised_at' => date('Y-m-d H:i:s')],
                     ['id' => $exists['id']]
                 )->execute();
                 $saved++;
@@ -130,6 +163,8 @@ class StorekeeperController extends Controller
             $db->createCommand()->insert('store_indents', [
                 'project_id'         => $projectid,
                 'resource_id'        => $rid,
+                'task_id'            => $taskId,
+                'task_name'          => $taskName,
                 'pricing_resourceid' => 0,
                 'resource_name'      => $res['Name'],
                 'resource_type'      => $res['rt_name'],

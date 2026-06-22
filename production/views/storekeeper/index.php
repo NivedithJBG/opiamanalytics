@@ -189,6 +189,15 @@
         <div id="sk-body"></div>
     </div>
 
+    <!-- Indent Task Selection Modal -->
+    <div id="sk-indent-task-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;overflow-y:auto;">
+        <div style="background:#fff;margin:60px auto;max-width:600px;border-radius:6px;padding:26px 30px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+            <button id="sk-indent-task-modal-close" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;color:#888;cursor:pointer;line-height:1;" title="Close">&times;</button>
+            <h4 id="sk-indent-task-modal-title" style="margin:0 0 18px;font-size:15px;font-weight:700;color:#333;padding-right:30px;"></h4>
+            <div id="sk-indent-task-modal-body"></div>
+        </div>
+    </div>
+
     <div id="sk-tab-issued" class="sk-tab-content">
         <div id="sk-inv-filter-bar" style="padding:12px 20px;border-bottom:1px solid #e0e4e8;background:#f4f7fa;display:flex;align-items:center;gap:8px;">
             <span class="icon-search5" style="font-size:14px;color:#465365;"></span>
@@ -289,6 +298,7 @@
             + '<th>Unit</th>'
             + '<th style="text-align:right;">Purchased Qty</th>'
             + '<th style="text-align:right;">Consumed Qty</th>'
+            + '<th style="text-align:center;width:110px;">Task</th>'
             + '<th style="text-align:center;width:60px;">Select</th>'
             + '</tr></thead><tbody>';
         var rowNum = 0;
@@ -296,9 +306,9 @@
         $.each(rows, function(i, r) {
             if (r.resource_type !== currentType) {
                 currentType = r.resource_type;
-                html += '<tr><td colspan="6" style="border:none;padding:0;height:7px;background:#fff;"></td></tr>'
+                html += '<tr><td colspan="7" style="border:none;padding:0;height:7px;background:#fff;"></td></tr>'
                     + '<tr style="background:#c8c8c8;">'
-                    + '<td colspan="6" style="padding:6px 10px;font-weight:700;font-size:11px;color:#000;border:1px solid #bbb;letter-spacing:0.3px;">'
+                    + '<td colspan="7" style="padding:6px 10px;font-weight:700;font-size:11px;color:#000;border:1px solid #bbb;letter-spacing:0.3px;">'
                     + currentType + '</td></tr>';
             }
             rowNum++;
@@ -310,6 +320,9 @@
                 + '<td>' + (r.unit || '') + '</td>'
                 + '<td class="num" style="background:#e6e6e6;color:#333;">' + purchasedQty.toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
                 + '<td class="num" style="background:#e6e6e6;color:#333;">' + consumedQty.toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
+                + '<td style="text-align:center;padding:4px 6px;">'
+                + '<button type="button" class="sk-indent-task-btn" data-id="' + r.resource_id + '" data-resource-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-task-id="" data-task-name="" style="background:#072c47;color:#fff;border:none;border-radius:12px;padding:5px 12px;font-size:12px;font-weight:400;cursor:pointer;min-width:80px;">Tasks</button>'
+                + '</td>'
                 + '<td style="text-align:center;padding:4px 8px;">'
                 + (r.estimate_reached == 1
                     ? '<span style="font-size:10px;font-weight:700;color:#c0392b;white-space:nowrap;">Est. Reached</span>'
@@ -1616,6 +1629,78 @@
         loadIndents();
     });
 
+    // ── Indent Task button ─────────────────────────────────────────────────
+    $(document).on('click', '.sk-indent-task-btn', function(){
+        var $btn = $(this);
+        var rid  = $btn.data('id');
+        var name = $btn.data('resource-name');
+        $('#sk-indent-task-modal-title').text(name);
+        $('#sk-indent-task-modal').data('btn', $btn);
+        $('#sk-indent-task-modal-body').html('<p style="text-align:center;padding:30px;color:#888;">Loading...</p>');
+        $('#sk-indent-task-modal').show();
+
+        $.ajax({
+            type: 'POST', url: '../storekeeper/getresourcetasks',
+            data: { resource_id: rid }, dataType: 'json',
+            success: function(data) {
+                if (data.error !== 'No') {
+                    $('#sk-indent-task-modal-body').html('<p style="text-align:center;padding:20px;color:#888;">' + (data.errortext || 'Error.') + '</p>');
+                    return;
+                }
+                var tasks = data.tasks || [];
+                if (!tasks.length) {
+                    $('#sk-indent-task-modal-body').html('<p style="text-align:center;padding:20px;color:#888;">No tasks are mapped to this resource.</p>');
+                    return;
+                }
+                var selId = String($btn.data('task-id') || '');
+                var html  = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+                    + '<thead><tr style="background:#555;color:#fff;">'
+                    + '<th style="padding:9px 12px;border:1px solid #444;width:36px;text-align:center;"></th>'
+                    + '<th style="padding:9px 12px;border:1px solid #444;">Task</th>'
+                    + '<th style="padding:9px 12px;border:1px solid #444;width:80px;text-align:center;">Unit</th>'
+                    + '<th style="padding:9px 12px;border:1px solid #444;">Activity</th>'
+                    + '</tr></thead><tbody>';
+                $.each(tasks, function(i, t) {
+                    var bg      = i % 2 === 1 ? 'background:#f7f7f7;' : 'background:#fff;';
+                    var checked = (String(t.task_id) === selId) ? ' checked' : '';
+                    html += '<tr style="' + bg + '" class="sk-indent-task-row" data-task-id="' + t.task_id + '" data-task-name="' + String(t.task_name || '').replace(/"/g, '&quot;') + '">'
+                        + '<td style="padding:7px 12px;border:1px solid #e0e0e0;text-align:center;">'
+                        +   '<input type="radio" name="sk-indent-task-radio" value="' + t.task_id + '"' + checked + ' style="width:14px;height:14px;cursor:pointer;accent-color:#072c47;">'
+                        + '</td>'
+                        + '<td style="padding:7px 12px;border:1px solid #e0e0e0;font-weight:600;">' + (t.task_name || '') + '</td>'
+                        + '<td style="padding:7px 12px;border:1px solid #e0e0e0;text-align:center;color:#555;">' + (t.task_unit || '') + '</td>'
+                        + '<td style="padding:7px 12px;border:1px solid #e0e0e0;color:#465365;font-size:12px;">' + (t.activity_name || '') + '</td>'
+                        + '</tr>';
+                });
+                html += '</tbody></table>';
+                html += '<div style="text-align:right;margin-top:16px;">'
+                    + '<button type="button" id="sk-indent-task-cancel-btn" style="background:#888;color:#fff;border:none;border-radius:20px;padding:6px 22px;font-size:13px;font-weight:600;cursor:pointer;margin-right:10px;">Cancel</button>'
+                    + '<button type="button" id="sk-indent-task-save-btn" style="background:#072c47;color:#fff;border:none;border-radius:20px;padding:6px 26px;font-size:13px;font-weight:600;cursor:pointer;">Select</button>'
+                    + '</div>';
+                $('#sk-indent-task-modal-body').html(html);
+            },
+            error: function() { $('#sk-indent-task-modal-body').html('<p style="text-align:center;padding:20px;color:#c0392b;">Failed to load tasks.</p>'); }
+        });
+    });
+
+    $(document).on('click', '#sk-indent-task-modal-close, #sk-indent-task-cancel-btn', function(){
+        $('#sk-indent-task-modal').hide();
+    });
+
+    $(document).on('click', '#sk-indent-task-save-btn', function(){
+        var $radio = $('input[name="sk-indent-task-radio"]:checked');
+        if (!$radio.length) { alert('Please select a task.'); return; }
+        var $btn   = $('#sk-indent-task-modal').data('btn');
+        var tid    = $radio.val();
+        var tname  = $radio.closest('tr').data('task-name');
+        var label  = tname && tname.length > 14 ? tname.substring(0, 12) + '…' : (tname || 'Task');
+        $btn.data('task-id', tid).data('task-name', tname).text(label)
+            .css({background:'#27ae60', fontWeight:'600'});
+        $btn.closest('tr').find('td:eq(1) .sk-indent-task-sub').remove();
+        $btn.closest('tr').find('td:eq(1)').append('<div class="sk-indent-task-sub" style="font-size:10px;color:#072c47;margin-top:2px;">&#9656; ' + tname + '</div>');
+        $('#sk-indent-task-modal').hide();
+    });
+
     // ── Raise Indent button ────────────────────────────────────────────────
     $(document).on('click', '#sk-raise-indent-btn', function(){
         if ($('.sk-cb:checked').length === 0) {
@@ -1624,7 +1709,13 @@
         }
         var selected = [];
         $('.sk-cb:checked').each(function(){
-            selected.push({ id: $(this).val() });
+            var id  = $(this).val();
+            var $tb = $('.sk-indent-task-btn[data-id="' + id + '"]');
+            selected.push({
+                id:        id,
+                task_id:   $tb.data('task-id')   || '',
+                task_name: $tb.data('task-name') || ''
+            });
         });
         var $btn = $(this);
         $btn.prop('disabled', true).text('Saving...');
