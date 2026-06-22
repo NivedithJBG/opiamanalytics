@@ -43,9 +43,7 @@ class StorekeeperController extends Controller
                 COALESCE(pq.purchased_qty, 0) - COALESCE(cq.consumed_qty, 0) AS stock,
                 SUM(p.quantity * pe.activity_qty)                              AS estimated_quantity,
                 CASE WHEN COALESCE(pq.purchased_qty, 0) >= SUM(p.quantity * pe.activity_qty)
-                     THEN 1 ELSE 0 END                                        AS estimate_reached,
-                MAX(CASE WHEN p.task_ids IS NOT NULL AND p.task_ids != ''
-                     THEN 1 ELSE 0 END)                                       AS has_task_mapping
+                     THEN 1 ELSE 0 END                                        AS estimate_reached
             FROM pricing_estimate_resources_new p
             JOIN pricing_estimate_new pe ON p.activity_id  = pe.activity_Id
                                         AND pe.project_Id  = p.project_id
@@ -91,166 +89,38 @@ class StorekeeperController extends Controller
         return json_encode(['error' => 'No', 'rows' => $rows]);
     }
 
-    public function actionGetresourcetasks()
-    {
-        $uid      = Yii::$app->user->id;
-        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
-        if (!$projuser) return json_encode(['error' => 'Yes', 'errortext' => 'No project selected.']);
-        $projectid = $projuser->projectid;
-        $db  = Yii::$app->db;
-        $rid = (int)($_POST['resource_id'] ?? 0);
-        if (!$rid) return json_encode(['error' => 'Yes', 'errortext' => 'Invalid resource.']);
-
-        $rows = $db->createCommand("
-            SELECT
-                at.id                  AS task_id,
-                at.task_name,
-                at.task_unit,
-                wan.activity_Name      AS activity_name,
-                MIN(CASE
-                    WHEN sa.id IS NOT NULL
-                     AND EXISTS (SELECT 1 FROM schedule_progress_report_log spr
-                                 WHERE spr.activity_id = sa.id AND spr.report_date = CURDATE())
-                    THEN 1 ELSE 0
-                END)                   AS has_progress_today
-            FROM pricing_estimate_resources_new pern
-            JOIN activity_tasks at        ON FIND_IN_SET(at.id, pern.task_ids) > 0
-            JOIN workgroup_activities_new wan ON wan.id = pern.activity_id
-            LEFT JOIN scheduleactivities sa   ON sa.activity_id = pern.activity_id
-                                             AND sa.projectId   = :pid
-                                             AND sa.status      = 0
-            WHERE pern.resource_Id    = :rid
-              AND pern.project_id     = :pid2
-              AND pern.pricing_status = 0
-              AND pern.task_ids IS NOT NULL
-              AND pern.task_ids != ''
-            GROUP BY at.id, at.task_name, at.task_unit, wan.activity_Name
-            ORDER BY at.sort_order ASC, at.task_name ASC
-        ", [':pid' => $projectid, ':pid2' => $projectid, ':rid' => $rid])->queryAll();
-
-        return json_encode(['error' => 'No', 'tasks' => $rows]);
-    }
-
     public function actionRaiseindent()
     {
         $uid      = Yii::$app->user->id;
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
-
-        if (!$projuser) {
-            return json_encode(['error' => 'Yes', 'errortext' => 'No project selected.']);
-        }
+        if (!$projuser) return json_encode(['error' => 'Yes', 'errortext' => 'No project selected.']);
 
         $projectid = $projuser->projectid;
         $db = Yii::$app->db;
 
         $items = json_decode(isset($_POST['items']) ? $_POST['items'] : '[]', true);
-        if (empty($items)) {
-            return json_encode(['error' => 'Yes', 'errortext' => 'No items selected.']);
-        }
+        if (empty($items)) return json_encode(['error' => 'Yes', 'errortext' => 'No items selected.']);
 
-        $saved   = 0;
-        $blocked = [];
+        $saved = 0;
         foreach ($items as $item) {
-            $rid      = (int)($item['id']        ?? 0);
-            $stock    = (float)($item['stock']   ?? 0);
-            $reorder  = (float)($item['reorder'] ?? 0);
-            $taskId   = !empty($item['task_id'])   ? (int)trim($item['task_id'])   : null;
-            $taskName = !empty($item['task_name']) ? trim($item['task_name'])       : null;
-
+            $rid = (int)($item['id'] ?? 0);
             if (!$rid) continue;
 
-            if ($taskId) {
-                // Task selected: find the activity this task belongs to, check its progress today
-                $actRow = $db->createCommand("
-                    SELECT wan.activity_Name AS activity_name, sa.id AS sa_id
-                    FROM pricing_estimate_resources_new pern
-                    JOIN workgroup_activities_new wan ON wan.id = pern.activity_id
-                    LEFT JOIN scheduleactivities sa ON sa.activity_id = pern.activity_id
-                                                   AND sa.projectId = :pid AND sa.status = 0
-                    WHERE pern.project_id = :pid AND pern.resource_Id = :rid
-                      AND pern.pricing_status = 0 AND FIND_IN_SET(:tid, pern.task_ids) > 0
-                    LIMIT 1
-                ", [':pid' => $projectid, ':rid' => $rid, ':tid' => $taskId])->queryOne();
-
-                $activityName = $actRow['activity_name'] ?? ('Activity for task #' . $taskId);
-                $saId         = $actRow['sa_id'] ?? null;
-
-                $progressReported = $saId ? (int)$db->createCommand(
-                    "SELECT COUNT(*) FROM schedule_progress_report_log
-                     WHERE activity_id = :said AND report_date = CURDATE()",
-                    [':said' => $saId]
-                )->queryScalar() : 0;
-
-                if (!$progressReported) {
-                    $blocked[] = [
-                        'activity_name' => $activityName,
-                        'message'       => 'Please report progress for activity "' . $activityName . '" before raising an indent.',
-                    ];
-                    continue;
-                }
-            } else {
-                // No task selected: check ALL ongoing activities for this resource (original behaviour)
-                $unreported = $db->createCommand(
-                    "SELECT DISTINCT sa.name
-                     FROM pricing_estimate_resources_new per
-                     JOIN scheduleactivities sa ON sa.activity_id = per.activity_id
-                                               AND sa.projectId   = per.project_id
-                                               AND sa.status      = 0
-                     WHERE per.project_id = :pid AND per.resource_Id = :rid AND per.pricing_status = 0
-                       AND sa.completed_status = 0
-                       AND sa.actual_start_date IS NOT NULL
-                       AND sa.actual_start_date != '0000-00-00'
-                       AND sa.actual_start_date <= CURDATE()
-                       AND NOT EXISTS (SELECT 1 FROM schedule_progress_report_log l
-                                       WHERE l.activity_id = sa.id AND l.report_date = CURDATE())",
-                    [':pid' => $projectid, ':rid' => $rid]
-                )->queryColumn();
-                if (!empty($unreported)) {
-                    $resName = $db->createCommand(
-                        'SELECT Name FROM resources WHERE Resource_Id = :rid', [':rid' => $rid]
-                    )->queryScalar();
-                    $blocked[] = [
-                        'activity_name' => implode(', ', $unreported),
-                        'message'       => 'Report today\'s progress for activity "' . implode('", "', $unreported) . '" before raising an indent.',
-                    ];
-                    continue;
-                }
-            }
-
-            // Skip if GRN received quantity has reached or exceeded estimated quantity
-            $estimateCheck = $db->createCommand(
-                "SELECT
-                     SUM(p.quantity * pe.activity_qty) AS estimated_qty,
-                     COALESCE((SELECT SUM(grn.GRN_Quantity) FROM goods_received_note grn
-                               WHERE grn.GRN_Project = :pid AND grn.GRN_Item = :rid), 0) AS received_qty
-                 FROM pricing_estimate_resources_new p
-                 JOIN pricing_estimate_new pe ON p.activity_id = pe.activity_Id AND pe.project_Id = p.project_id
-                 WHERE p.project_id = :pid AND p.resource_Id = :rid AND p.pricing_status = 0",
+            $exists = $db->createCommand(
+                'SELECT id FROM store_indents WHERE project_id = :pid AND resource_id = :rid',
                 [':pid' => $projectid, ':rid' => $rid]
             )->queryOne();
-            if ($estimateCheck && (float)$estimateCheck['received_qty'] >= (float)$estimateCheck['estimated_qty']) continue;
-
-            // Upsert: one indent per (project, resource, task)
-            $exists = $db->createCommand(
-                'SELECT id FROM store_indents WHERE project_id = :pid AND resource_id = :rid AND task_id <=> :tid',
-                [':pid' => $projectid, ':rid' => $rid, ':tid' => $taskId]
-            )->queryOne();
             if ($exists) {
-                $db->createCommand()->update('store_indents', [
-                    'task_name'        => $taskName,
-                    'stock_at_site'    => $stock,
-                    'reorder_quantity' => $reorder,
-                    'raised_by'        => $uid,
-                    'raised_at'        => date('Y-m-d H:i:s'),
-                ], ['id' => $exists['id']])->execute();
+                $db->createCommand()->update('store_indents',
+                    ['raised_by' => $uid, 'raised_at' => date('Y-m-d H:i:s')],
+                    ['id' => $exists['id']]
+                )->execute();
                 $saved++;
                 continue;
             }
 
-            // Fetch resource details
             $res = $db->createCommand(
-                'SELECT r.Name, r.Unit, rt.Name AS rt_name
-                 FROM resources r
+                'SELECT r.Name, r.Unit, rt.Name AS rt_name FROM resources r
                  JOIN resourcetype rt ON r.ResourceType_Id = rt.ResourceType_Id
                  WHERE r.Resource_Id = :rid',
                 [':rid' => $rid]
@@ -260,21 +130,19 @@ class StorekeeperController extends Controller
             $db->createCommand()->insert('store_indents', [
                 'project_id'         => $projectid,
                 'resource_id'        => $rid,
-                'task_id'            => $taskId,
-                'task_name'          => $taskName,
                 'pricing_resourceid' => 0,
                 'resource_name'      => $res['Name'],
                 'resource_type'      => $res['rt_name'],
                 'unit'               => $res['Unit'],
-                'stock_at_site'      => $stock,
-                'reorder_quantity'   => $reorder,
+                'stock_at_site'      => 0,
+                'reorder_quantity'   => 0,
                 'raised_by'          => $uid,
                 'raised_at'          => date('Y-m-d H:i:s'),
             ])->execute();
             $saved++;
         }
 
-        return json_encode(['error' => 'No', 'saved' => $saved, 'blocked' => $blocked]);
+        return json_encode(['error' => 'No', 'saved' => $saved]);
     }
 
     public function actionIssuedmbooks()
