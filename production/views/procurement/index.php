@@ -756,7 +756,7 @@
                 + '<button type="button" class="btn btn-xs po-btn-params" data-id="' + rid + '" style="background:#465365;color:#fff;border-radius:20px;padding:6px 16px;margin:2px 2px;font-size:12px;">Parameters</button>'
                 + '</td>'
                 + '<td style="text-align:center;padding:4px 8px;">'
-                + '<input type="checkbox" class="po-cb" value="' + rid + '" data-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-unit="' + String(r.unit || '').replace(/"/g, '&quot;') + '" data-allocation-id="' + (r.allocation_id || '') + '" style="width:16px;height:16px;cursor:pointer;accent-color:#072c47;">'
+                + '<input type="checkbox" class="po-cb" value="' + rid + '" data-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-unit="' + String(r.unit || '').replace(/"/g, '&quot;') + '" data-allocation-id="' + (r.allocation_id || '') + '" data-task-ids="' + (r.task_ids || '') + '" style="width:16px;height:16px;cursor:pointer;accent-color:#072c47;">'
                 + '</td>'
                 + '</tr>';
         });
@@ -955,6 +955,19 @@
 
         if (!$('#po-bulk-vendor').val()) {
             alert('Please select a vendor.');
+            return;
+        }
+
+        // Check each selected resource is mapped to a task
+        var unmapped = [];
+        $('.po-cb:checked').each(function(){
+            var taskIds = $(this).data('task-ids');
+            if (!taskIds || taskIds.toString().trim() === '') {
+                unmapped.push($(this).data('name') || 'Unknown');
+            }
+        });
+        if (unmapped.length) {
+            alert('Please Map the following Resource(s) to a Task in the Resource Allocation page before raising the Purchase Order:\n• ' + unmapped.join('\n• '));
             return;
         }
 

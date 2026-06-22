@@ -43,7 +43,8 @@ class ProcurementController extends Controller
                     COALESCE(pq.purchased_quantity, 0)             AS purchased_quantity,
                     COALESCE(pq.purchased_value, 0)                AS purchased_value,
                     si.stock_at_site                               AS indent_stock,
-                    si.reorder_quantity                            AS indent_reorder
+                    si.reorder_quantity                            AS indent_reorder,
+                    p.task_ids                                     AS task_ids
                 FROM pricing_estimate_resources_new p
                 JOIN pricing_estimate_new pe ON p.activity_id  = pe.activity_Id
                                             AND pe.project_Id  = p.project_id
@@ -264,6 +265,22 @@ class ProcurementController extends Controller
         if (empty($resources)) return json_encode(['error' => 'Yes', 'errortext' => 'No resources selected.']);
 
         $db = Yii::$app->db;
+
+        // Validate each resource is mapped to a task via task_ids
+        foreach ($resources as $res) {
+            $allocId = (int)($res['allocation_id'] ?? 0);
+            if ($allocId) {
+                $taskIds = $db->createCommand(
+                    "SELECT task_ids FROM pricing_estimate_resources_new WHERE pricing_resourceid=:aid AND pricing_status=0",
+                    [':aid' => $allocId]
+                )->queryScalar();
+                if ($taskIds !== false && trim($taskIds ?? '') === '') {
+                    return json_encode(['error' => 'Yes', 'errortext' =>
+                        'Please Map the Resource "' . ($res['resource_name'] ?? '') .
+                        '" to a Task in the Resource Allocation page before raising the Purchase Order.']);
+                }
+            }
+        }
 
         $seq = (int)$db->createCommand(
             'SELECT COUNT(*) FROM purchase_orders WHERE project_id = :pid',
