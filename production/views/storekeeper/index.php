@@ -1690,12 +1690,10 @@
     $(document).on('click', '#sk-indent-task-save-btn', function(){
         var $radio = $('input[name="sk-indent-task-radio"]:checked');
         if (!$radio.length) { alert('Please select a task.'); return; }
-        var $btn   = $('#sk-indent-task-modal').data('btn');
-        var tid    = $radio.val();
-        var tname  = $radio.closest('tr').data('task-name');
-        var label  = tname && tname.length > 14 ? tname.substring(0, 12) + '…' : (tname || 'Task');
-        $btn.data('task-id', tid).data('task-name', tname).text(label)
-            .css({background:'#27ae60', fontWeight:'600'});
+        var $btn  = $('#sk-indent-task-modal').data('btn');
+        var tid   = $radio.val();
+        var tname = $radio.closest('tr').data('task-name');
+        $btn.data('task-id', tid).data('task-name', tname);
         $btn.closest('tr').find('td:eq(1) .sk-indent-task-sub').remove();
         $btn.closest('tr').find('td:eq(1)').append('<div class="sk-indent-task-sub" style="font-size:10px;color:#072c47;margin-top:2px;">&#9656; ' + tname + '</div>');
         $('#sk-indent-task-modal').hide();
