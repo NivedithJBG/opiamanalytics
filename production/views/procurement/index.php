@@ -723,7 +723,8 @@
                     + '</td></tr>';
             }
             rowNum++;
-            var rid    = r.resource_id;
+            var rid      = r.resource_id;
+            var isMapped = r.task_ids && r.task_ids.toString().trim() !== '';
             var rate   = parseFloat(r.rate) || 0;
             var eVal   = parseFloat(r.amount) || 0;
             totalEVal += eVal;
@@ -759,7 +760,7 @@
                 + '<button type="button" class="btn btn-xs po-btn-params" data-id="' + rid + '" style="background:#465365;color:#fff;border-radius:20px;padding:6px 16px;margin:2px 2px;font-size:12px;">Parameters</button>'
                 + '</td>'
                 + '<td style="text-align:center;padding:4px 8px;">'
-                + '<input type="checkbox" class="po-cb" value="' + rid + '" data-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-unit="' + String(r.unit || '').replace(/"/g, '&quot;') + '" data-allocation-id="' + (r.allocation_id || '') + '" data-task-ids="' + (r.task_ids || '') + '" style="width:16px;height:16px;cursor:pointer;accent-color:#072c47;">'
+                + '<input type="checkbox" class="po-cb" value="' + rid + '" data-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-unit="' + String(r.unit || '').replace(/"/g, '&quot;') + '" data-allocation-id="' + (r.allocation_id || '') + '" data-task-ids="' + (r.task_ids || '') + '"' + (isMapped ? '' : ' disabled title="Map this resource to a task in Resource Allocation before raising a PO."') + ' style="width:16px;height:16px;' + (isMapped ? 'cursor:pointer;accent-color:#072c47;' : 'cursor:not-allowed;opacity:0.35;') + '">'
                 + '</td>'
                 + '</tr>';
         });
