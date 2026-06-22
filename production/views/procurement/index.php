@@ -723,8 +723,7 @@
                     + '</td></tr>';
             }
             rowNum++;
-            var rid      = r.resource_id;
-            var isMapped = r.task_ids && r.task_ids.toString().trim() !== '';
+            var rid    = r.resource_id;
             var rate   = parseFloat(r.rate) || 0;
             var eVal   = parseFloat(r.amount) || 0;
             totalEVal += eVal;
@@ -760,7 +759,7 @@
                 + '<button type="button" class="btn btn-xs po-btn-params" data-id="' + rid + '" style="background:#465365;color:#fff;border-radius:20px;padding:6px 16px;margin:2px 2px;font-size:12px;">Parameters</button>'
                 + '</td>'
                 + '<td style="text-align:center;padding:4px 8px;">'
-                + '<input type="checkbox" class="po-cb" value="' + rid + '" data-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-unit="' + String(r.unit || '').replace(/"/g, '&quot;') + '" data-allocation-id="' + (r.allocation_id || '') + '" data-task-ids="' + (r.task_ids || '') + '"' + (isMapped ? '' : ' disabled title="Map this resource to a task in Resource Allocation before raising a PO."') + ' style="width:16px;height:16px;' + (isMapped ? 'cursor:pointer;accent-color:#072c47;' : 'cursor:not-allowed;opacity:0.35;') + '">'
+                + '<input type="checkbox" class="po-cb" value="' + rid + '" data-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-unit="' + String(r.unit || '').replace(/"/g, '&quot;') + '" data-allocation-id="' + (r.allocation_id || '') + '" data-task-ids="' + (r.task_ids || '') + '" style="width:16px;height:16px;cursor:pointer;accent-color:#072c47;">'
                 + '</td>'
                 + '</tr>';
         });
@@ -881,6 +880,15 @@
     $(document).on('click', '#po-raise-all-btn', function(){
         if ($('.po-cb:checked').length === 0) {
             alert('Please select at least one resource to raise a Purchase Order.');
+            return;
+        }
+        var unmapped = [];
+        $('.po-cb:checked').each(function(){
+            var taskIds = ($(this).data('task-ids') || '').toString().trim();
+            if (!taskIds) unmapped.push($(this).data('name') || '');
+        });
+        if (unmapped.length > 0) {
+            alert('Please map the following resource(s) to a task in the Resource Allocation page before raising a Purchase Order:\n• ' + unmapped.join('\n• '));
             return;
         }
         $('#po-bulk-credit-period, #po-bulk-lead-time').val('');
