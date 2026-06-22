@@ -140,7 +140,12 @@ class StorekeeperController extends Controller
                 FROM pricing_estimate_resources_new pern
                 JOIN workgroup_activities_new wan ON wan.id = pern.activity_id
                 LEFT JOIN scheduleactivities sa   ON sa.activity_id = pern.activity_id
-                                                AND sa.projectId = :pid AND sa.status = 0
+                                                AND sa.projectId        = :pid
+                                                AND sa.status           = 0
+                                                AND sa.completed_status = 0
+                                                AND sa.actual_start_date IS NOT NULL
+                                                AND sa.actual_start_date != '0000-00-00'
+                                                AND sa.actual_start_date <= CURDATE()
                 WHERE pern.project_id = :pid AND pern.resource_Id = :rid
                   AND pern.pricing_status = 0 AND FIND_IN_SET(:tid, pern.task_ids) > 0
                 LIMIT 1
