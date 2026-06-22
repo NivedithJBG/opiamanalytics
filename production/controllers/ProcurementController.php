@@ -781,10 +781,17 @@ class ProcurementController extends Controller
                 ON  wdq.activity_id = wa.id
                 AND wdq.project_id  = :pid4
             WHERE wa.pricing_status = 0
+              AND EXISTS (
+                  SELECT 1 FROM pricing_estimate_resources_new pr
+                  WHERE pr.activity_id    = wa.id
+                    AND pr.project_id     = :pid6
+                    AND pr.resourcetype_Id = 4
+                    AND pr.pricing_status  = 0
+              )
             ORDER BY COALESCE(wn.sortorder, 999999) ASC, COALESCE(wa.sortorder, 999999) ASC, sa.id ASC
         ";
 
-        $rows = $db->createCommand($sql, [':pid' => $projectid, ':pid2' => $projectid, ':pid3' => $projectid, ':pid4' => $projectid, ':pid5' => $projectid])->queryAll();
+        $rows = $db->createCommand($sql, [':pid' => $projectid, ':pid2' => $projectid, ':pid3' => $projectid, ':pid4' => $projectid, ':pid5' => $projectid, ':pid6' => $projectid])->queryAll();
 
         // Build M.Book qty map: sum qty per activity_id from all issued (sent_status=1) M.Books
         $mbBooks = $db->createCommand(
