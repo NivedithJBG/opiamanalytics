@@ -120,6 +120,49 @@ class StorekeeperController extends Controller
         return json_encode(['error' => 'No', 'tasks' => $rows]);
     }
 
+    public function actionCheckindentprogress()
+    {
+        $uid      = Yii::$app->user->id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return json_encode(['error' => 'Yes', 'errortext' => 'No project selected.']);
+        $projectid = $projuser->projectid;
+        $db    = Yii::$app->db;
+        $items = json_decode($_POST['items'] ?? '[]', true);
+
+        $blocked = [];
+        foreach ($items as $item) {
+            $rid    = (int)($item['id']      ?? 0);
+            $taskId = !empty($item['task_id']) ? (int)$item['task_id'] : null;
+            if (!$rid || !$taskId) continue;
+
+            $actRow = $db->createCommand("
+                SELECT wan.activity_Name AS activity_name, sa.id AS sa_id
+                FROM pricing_estimate_resources_new pern
+                JOIN workgroup_activities_new wan ON wan.id = pern.activity_id
+                LEFT JOIN scheduleactivities sa   ON sa.activity_id = pern.activity_id
+                                                AND sa.projectId = :pid AND sa.status = 0
+                WHERE pern.project_id = :pid AND pern.resource_Id = :rid
+                  AND pern.pricing_status = 0 AND FIND_IN_SET(:tid, pern.task_ids) > 0
+                LIMIT 1
+            ", [':pid' => $projectid, ':rid' => $rid, ':tid' => $taskId])->queryOne();
+
+            if (!$actRow || !$actRow['sa_id']) continue;
+
+            $reported = (int)$db->createCommand(
+                "SELECT COUNT(*) FROM schedule_progress_report_log
+                 WHERE activity_id = :said AND report_date = CURDATE()",
+                [':said' => $actRow['sa_id']]
+            )->queryScalar();
+
+            if (!$reported) {
+                $name = $actRow['activity_name'];
+                if (!in_array($name, $blocked)) $blocked[] = $name;
+            }
+        }
+
+        return json_encode(['error' => 'No', 'blocked' => $blocked]);
+    }
+
     public function actionRaiseindent()
     {
         $uid      = Yii::$app->user->id;
