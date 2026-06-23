@@ -1354,7 +1354,7 @@ function renderCostBars(containerId, items, onRowClick){
     var html = '';
     items.forEach(function(r){
         var pct = (r.cost / maxVal * 100).toFixed(1);
-        var col = '#001f5b';
+        var col = '#4a4a4a';
         var disp = fmtCost(r.cost);
         html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer">'
               + '<div class="blbl" title="'+r.name+'">'+sh(r.name,30)+'</div>'
@@ -1381,17 +1381,17 @@ function renderActivityCostBars(containerId, items, onRowClick){
         var bar = '';
         if (act === 0) {
             bar = est > 0
-                ? '<div class="bs" style="width:100%;background:#001f5b;color:#fff;font-size:13px;">'+fmtCost(est)+'</div>'
+                ? '<div class="bs" style="width:100%;background:#4a4a4a;color:#fff;font-size:13px;">'+fmtCost(est)+'</div>'
                 : '<div class="bs" style="width:2%;background:#ccc">—</div>';
         } else if (act > est) {
             var estPct  = (est / rowMax * 100).toFixed(1);
             var overPct = ((act - est) / rowMax * 100).toFixed(1);
-            bar = '<div class="bs" style="width:'+estPct+'%;background:#001f5b;color:#fff;font-size:13px;">'+fmtCost(est)+'</div>'
+            bar = '<div class="bs" style="width:'+estPct+'%;background:#4a4a4a;color:#fff;font-size:13px;">'+fmtCost(est)+'</div>'
                 + '<div class="bs" style="width:'+overPct+'%;background:#c62828;color:#fff;font-size:13px;">+'+fmtCost(act-est)+'</div>';
         } else {
             var actPct  = (act  / rowMax * 100).toFixed(1);
             var savePct = ((est - act) / rowMax * 100).toFixed(1);
-            bar = '<div class="bs" style="width:'+actPct+'%;background:#001f5b;color:#fff;font-size:13px;">'+fmtCost(act)+'</div>'
+            bar = '<div class="bs" style="width:'+actPct+'%;background:#4a4a4a;color:#fff;font-size:13px;">'+fmtCost(act)+'</div>'
                 + '<div class="bs" style="width:'+savePct+'%;background:#2e7d32;color:#fff;font-size:13px;">-'+fmtCost(est-act)+'</div>';
         }
         html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer">'
