@@ -773,6 +773,16 @@ class ProjectsmainController extends Controller
                  ORDER BY pern.rate DESC",
                 [':wid' => $wbId, ':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid]
             )->queryAll();
+            // Build task planned qty per unit from wo_task_rates (schedule-task screen)
+            $taskQtyMap = [];  // task_id => task_qty (planned qty per activity unit)
+            $wtrRows = $db->createCommand(
+                "SELECT task_id, task_qty FROM wo_task_rates WHERE activity_id = :wid AND project_id = :pid",
+                [':wid' => $wbId, ':pid' => $pid]
+            )->queryAll();
+            foreach ($wtrRows as $wtr) {
+                $taskQtyMap[(int)$wtr['task_id']] = (float)($wtr['task_qty'] ?? 0);
+            }
+
             $mbAmount = 0.0; $mbQty = 0.0; $taskWorkMap = [];
             $taskAmountById   = []; // task_id => SUM(rate × work_done)
             $taskWorkDoneById = []; // task_id => SUM(work_done)
@@ -838,14 +848,15 @@ class ProjectsmainController extends Controller
                 }
 
                 // Planned consumption = res_qty × task_work_done (absolute)
-                // Fallback: res_qty if no MB data for the mapped task
+                // Fallback: res_qty × wo_task_rates.task_qty (planned qty per unit from schedule-task screen)
                 $mappedTaskId = (int)trim($r['task_ids'] ?? '');
                 $taskWorkDone = ($mappedTaskId > 0 && isset($taskWorkDoneById[$mappedTaskId]))
                     ? (float)$taskWorkDoneById[$mappedTaskId]
                     : null;
+                $taskQtyPerUnit = $mappedTaskId > 0 ? ($taskQtyMap[$mappedTaskId] ?? null) : null;
                 $plannedConsumption = ($taskWorkDone !== null)
                     ? round($resQty * $taskWorkDone, 3)
-                    : $resQty;
+                    : ($taskQtyPerUnit !== null ? round($resQty * $taskQtyPerUnit, 3) : $resQty);
 
                 // Actual consumption = GRN total - last physical stock (Materials only)
                 $actualConsumption = null;
