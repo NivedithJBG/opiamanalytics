@@ -887,8 +887,12 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
             typeMap[tid].actualAmount += (+r.rate || 0) * (+r.actual_res_qty);
             typeMap[tid].hasActual = true;
         }
-        typeMap[tid].resources.push({ name: r.name || '', qty: +r.res_qty || 0, unit: r.unit || '',
-            actual: hasAct ? +r.actual_res_qty : null });
+        typeMap[tid].resources.push({
+            name:   r.name || '',
+            qty:    (r.planned_consumption != null) ? +r.planned_consumption : (+r.res_qty || 0),
+            unit:   r.unit || '',
+            actual: (r.actual_consumption  != null) ? +r.actual_consumption  : null
+        });
     });
     var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
     types.sort(function(a, b){ return b.amount - a.amount; });

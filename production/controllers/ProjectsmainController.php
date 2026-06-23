@@ -836,16 +836,35 @@ class ProjectsmainController extends Controller
                 } else {
                     $actualResQty = null;
                 }
+
+                // Planned consumption = res_qty × task_work_done (absolute)
+                // Fallback: res_qty if no MB data for the mapped task
+                $mappedTaskId = (int)trim($r['task_ids'] ?? '');
+                $taskWorkDone = ($mappedTaskId > 0 && isset($taskWorkDoneById[$mappedTaskId]))
+                    ? (float)$taskWorkDoneById[$mappedTaskId]
+                    : null;
+                $plannedConsumption = ($taskWorkDone !== null)
+                    ? round($resQty * $taskWorkDone, 3)
+                    : $resQty;
+
+                // Actual consumption = GRN total - last physical stock (Materials only)
+                $actualConsumption = null;
+                if (in_array($typeId, [2, 6, 7]) && $grnQty > 0) {
+                    $actualConsumption = round(max(0, $grnQty - $stockQty), 3);
+                }
+
                 $items[] = [
-                    'name'             => $r['name'],
-                    'type_name'        => $r['type_name'],
-                    'rate'             => (float)$r['rate'],
-                    'type_id'          => $typeId,
-                    'unit'             => $r['unit'],
-                    'res_qty'          => $resQty,
-                    'consumption'      => round($lastQty * $resQty, 3),
-                    'actual_unit_cost' => $actUnit,
-                    'actual_res_qty'   => $actualResQty,
+                    'name'                 => $r['name'],
+                    'type_name'            => $r['type_name'],
+                    'rate'                 => (float)$r['rate'],
+                    'type_id'              => $typeId,
+                    'unit'                 => $r['unit'],
+                    'res_qty'              => $resQty,
+                    'consumption'          => round($lastQty * $resQty, 3),
+                    'actual_unit_cost'     => $actUnit,
+                    'actual_res_qty'       => $actualResQty,
+                    'planned_consumption'  => $plannedConsumption,
+                    'actual_consumption'   => $actualConsumption,
                 ];
             }
         }
