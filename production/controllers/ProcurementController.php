@@ -161,11 +161,11 @@ class ProcurementController extends Controller
         $resourceid = (int)($_POST['resource_id'] ?? 0);
 
         $row = Yii::$app->db->createCommand(
-            'SELECT vendor_id, unit, rate, ship_to, terms FROM po_settings WHERE project_id = :pid AND resource_id = :rid',
+            'SELECT vendor_id, credit_period, lead_time, unit, rate, ship_to, terms FROM po_settings WHERE project_id = :pid AND resource_id = :rid',
             [':pid' => $projectid, ':rid' => $resourceid]
         )->queryOne();
 
-        return json_encode(['error' => 'No', 'data' => $row ?: ['vendor_id' => '', 'unit' => '', 'rate' => '', 'ship_to' => '', 'terms' => '']]);
+        return json_encode(['error' => 'No', 'data' => $row ?: ['vendor_id' => '', 'credit_period' => '', 'lead_time' => '', 'unit' => '', 'rate' => '', 'ship_to' => '', 'terms' => '']]);
     }
 
     public function actionSaveposettings()
@@ -388,6 +388,34 @@ class ProcurementController extends Controller
                 'despatch_status'   => 0,
                 'amend_sts'         => 0,
             ])->execute();
+        }
+
+        // Save PO settings per resource so next PO can pre-fill
+        foreach ($resources as $r) {
+            $rid = (int)($r['resource_id'] ?? 0);
+            if (!$rid) continue;
+            $existsPs = $db->createCommand(
+                'SELECT id FROM po_settings WHERE project_id = :pid AND resource_id = :rid',
+                [':pid' => $projectid, ':rid' => $rid]
+            )->queryOne();
+            $psData = [
+                'vendor_id'     => $vendorId ?: null,
+                'credit_period' => $creditPeriod ?: null,
+                'lead_time'     => $leadTime    ?: null,
+                'ship_to'       => $shipTo,
+                'terms'         => $termsJson,
+                'unit'          => $r['unit'] ?? '',
+                'rate'          => (float)($r['rate'] ?? 0),
+                'updated_at'    => date('Y-m-d H:i:s'),
+            ];
+            if ($existsPs) {
+                $db->createCommand()->update('po_settings', $psData, ['id' => $existsPs['id']])->execute();
+            } else {
+                $db->createCommand()->insert('po_settings', array_merge($psData, [
+                    'project_id'  => $projectid,
+                    'resource_id' => $rid,
+                ]))->execute();
+            }
         }
 
         $rids = array_values(array_filter(array_map(fn($r) => (int)($r['resource_id'] ?? 0), $resources)));

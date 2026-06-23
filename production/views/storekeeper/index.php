@@ -311,6 +311,8 @@
             + '<th>Unit</th>'
             + '<th style="text-align:right;">Purchased Qty</th>'
             + '<th style="text-align:right;">Consumed Qty</th>'
+            + '<th style="text-align:right;">Stock at Site</th>'
+            + '<th style="text-align:right;">Reorder Level</th>'
             + '<th style="text-align:center;width:110px;">Task</th>'
             + '<th style="text-align:center;width:60px;">Select</th>'
             + '</tr></thead><tbody>';
@@ -319,20 +321,29 @@
         $.each(rows, function(i, r) {
             if (r.resource_type !== currentType) {
                 currentType = r.resource_type;
-                html += '<tr><td colspan="7" style="border:none;padding:0;height:7px;background:#fff;"></td></tr>'
+                html += '<tr><td colspan="9" style="border:none;padding:0;height:7px;background:#fff;"></td></tr>'
                     + '<tr style="background:#c8c8c8;">'
-                    + '<td colspan="7" style="padding:6px 10px;font-weight:700;font-size:11px;color:#000;border:1px solid #bbb;letter-spacing:0.3px;">'
+                    + '<td colspan="9" style="padding:6px 10px;font-weight:700;font-size:11px;color:#000;border:1px solid #bbb;letter-spacing:0.3px;">'
                     + currentType + '</td></tr>';
             }
             rowNum++;
-            var purchasedQty = parseFloat(r.purchased_quantity || 0);
-            var consumedQty  = parseFloat(r.consumed_quantity  || 0);
-            html += '<tr class="' + (rowNum % 2 === 0 ? 'sk-even' : '') + '" data-id="' + r.resource_id + '">'
+            var purchasedQty  = parseFloat(r.purchased_quantity || 0);
+            var consumedQty   = parseFloat(r.consumed_quantity  || 0);
+            var stockQty      = parseFloat(r.stock              || 0);
+            var reorderLevel  = parseFloat(r.reorder_level      || 0);
+            var belowReorder  = reorderLevel > 0 && stockQty <= reorderLevel;
+            var rowBg         = belowReorder ? 'background:#fff0f0;' : (rowNum % 2 === 0 ? '' : '');
+            var reorderBadge  = belowReorder
+                ? ' <span style="background:#e74c3c;color:#fff;font-size:9px;border-radius:3px;padding:1px 5px;vertical-align:middle;">Reorder</span>'
+                : '';
+            html += '<tr class="' + (rowNum % 2 === 0 ? 'sk-even' : '') + '" style="' + rowBg + '" data-id="' + r.resource_id + '">'
                 + '<td>' + rowNum + '</td>'
-                + '<td>' + r.resource_name + '</td>'
+                + '<td>' + r.resource_name + reorderBadge + '</td>'
                 + '<td>' + (r.unit || '') + '</td>'
                 + '<td class="num" style="background:#e6e6e6;color:#333;">' + purchasedQty.toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
                 + '<td class="num" style="background:#e6e6e6;color:#333;">' + consumedQty.toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
+                + '<td class="num" style="background:' + (belowReorder ? '#ffd0d0' : '#e6e6e6') + ';color:' + (belowReorder ? '#c0392b' : '#333') + ';font-weight:' + (belowReorder ? '700' : 'normal') + ';">' + stockQty.toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
+                + '<td class="num" style="background:#e6e6e6;color:#555;">' + reorderLevel.toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
                 + '<td style="text-align:center;padding:4px 6px;">'
                 + '<button type="button" class="sk-indent-task-btn" data-id="' + r.resource_id + '" data-resource-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-task-id="" data-task-name="" data-activity-name="" style="background:#072c47;color:#fff;border:none;border-radius:12px;padding:5px 12px;font-size:12px;font-weight:400;cursor:pointer;min-width:80px;">Tasks</button>'
                 + '</td>'
@@ -1763,15 +1774,18 @@
                     var id  = $(this).val();
                     var $tb = $('.sk-indent-task-btn[data-id="' + id + '"]');
                     var bg  = idx++ % 2 === 1 ? 'background:#f7f7f7;' : 'background:#fff;';
+                    var rowData    = _skAllRows.filter(function(x){ return String(x.resource_id) === String(id); })[0] || {};
+                    var preStock   = parseFloat(rowData.stock             || 0);
+                    var preReorder = parseFloat(rowData.reorder_quantity  || 0);
                     html += '<tr style="' + bg + '" data-resource-id="' + id + '">'
                         + '<td style="padding:7px 12px;border:1px solid #e0e0e0;font-weight:600;">' + ($tb.data('resource-name') || id) + '</td>'
                         + '<td style="padding:7px 12px;border:1px solid #e0e0e0;">' + ($tb.data('task-name') || '') + '</td>'
                         + '<td style="padding:7px 12px;border:1px solid #e0e0e0;color:#465365;font-size:12px;">' + ($tb.data('activity-name') || '') + '</td>'
                         + '<td style="padding:5px 8px;border:1px solid #e0e0e0;text-align:right;">'
-                        +   '<input type="number" class="sk-popup-stock" data-id="' + id + '" min="0" step="any" placeholder="0" style="' + inp + '">'
+                        +   '<input type="number" class="sk-popup-stock" data-id="' + id + '" min="0" step="any" value="' + preStock + '" style="' + inp + '">'
                         + '</td>'
                         + '<td style="padding:5px 8px;border:1px solid #e0e0e0;text-align:right;">'
-                        +   '<input type="number" class="sk-popup-reorder" data-id="' + id + '" min="0" step="any" placeholder="0" style="' + inp + '">'
+                        +   '<input type="number" class="sk-popup-reorder" data-id="' + id + '" min="0" step="any" value="' + preReorder + '" style="' + inp + '">'
                         + '</td>'
                         + '</tr>';
                 });

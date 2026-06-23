@@ -901,21 +901,43 @@
             + '<button type="button" class="po-bulk-term-remove" style="background:#c0392b;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;display:none;">&times;</button>'
             + '</div>'
         );
-        // Load vendors for PO (Materials, Purchased Inputs, Consumables only)
+        // Load vendors and pre-fill from previous PO settings
+        var firstRid = $('.po-cb:checked').first().val();
         $('#po-bulk-vendor').html('<option value="">Loading...</option>');
-        $.ajax({
-            type: 'POST',
-            url: '../procurement/getvendors',
-            dataType: 'json',
-            data: { context: 'po' },
-            success: function(data) {
-                var opts = '<option value="">— Select Vendor —</option>';
-                if (data.error === 'No') {
-                    $.each(data.vendors, function(i, v) {
-                        opts += '<option value="' + v.Vendor_Id + '">' + v.Name + '</option>';
-                    });
+        $.when(
+            $.ajax({ type: 'POST', url: '../procurement/getvendors', dataType: 'json', data: { context: 'po' } }),
+            $.ajax({ type: 'POST', url: '../procurement/getposettings', dataType: 'json', data: { resource_id: firstRid } })
+        ).done(function(vendorResp, settingsResp) {
+            var vData = vendorResp[0], sData = settingsResp[0];
+            var opts = '<option value="">— Select Vendor —</option>';
+            if (vData.error === 'No') {
+                $.each(vData.vendors, function(i, v) {
+                    opts += '<option value="' + v.Vendor_Id + '">' + v.Name + '</option>';
+                });
+            }
+            $('#po-bulk-vendor').html(opts);
+            // Pre-fill from previous PO settings if available
+            if (sData.error === 'No' && sData.data) {
+                var s = sData.data;
+                if (s.vendor_id)     $('#po-bulk-vendor').val(s.vendor_id);
+                if (s.credit_period) $('#po-bulk-credit-period').val(s.credit_period);
+                if (s.lead_time)     $('#po-bulk-lead-time').val(s.lead_time);
+                if (s.ship_to && s.ship_to.trim()) $('#po-bulk-shipto').val(s.ship_to.trim());
+                if (s.terms) {
+                    try {
+                        var terms = JSON.parse(s.terms);
+                        if (terms && terms.length) {
+                            var tHtml = '';
+                            $.each(terms, function(i, t) {
+                                tHtml += '<div class="po-bulk-term-row" style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
+                                    + '<input type="text" class="po-bulk-term-input" value="' + $('<div>').text(t).html() + '" placeholder="Enter term..." style="flex:1;height:30px;border:1px solid #c5ccd4;border-radius:4px;padding:2px 8px;font-size:12px;color:#333;">'
+                                    + '<button type="button" class="po-bulk-term-remove" style="background:#c0392b;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;">&times;</button>'
+                                    + '</div>';
+                            });
+                            $('#po-bulk-terms-list').html(tHtml);
+                        }
+                    } catch(e) {}
                 }
-                $('#po-bulk-vendor').html(opts);
             }
         });
         $('#po-bulk-overlay').show();
