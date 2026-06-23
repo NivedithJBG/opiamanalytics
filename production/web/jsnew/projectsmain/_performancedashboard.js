@@ -1356,13 +1356,15 @@ function renderCostBars(containerId, items, onRowClick){
         var pct = (r.cost / maxVal * 100).toFixed(1);
         var col = '#4a4a4a';
         var disp = fmtCost(r.cost);
-        html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer">'
-              + '<div class="blbl" title="'+r.name+'">'+sh(r.name,30)+'</div>'
-              + '<div class="btrk">'
+        html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
+              + '<div class="blbl" style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
+              + '<div class="btrk" style="flex:1;">'
               + (r.cost > 0
-                    ? '<div class="bs" style="width:'+pct+'%;background:'+col+';color:#fff;font-size:13px;">'+disp+'</div>'
-                    : '<div class="bs" style="width:2%;background:#ccc">—</div>')
-              + '</div></div>';
+                    ? '<div class="bs" style="width:'+pct+'%;background:'+col+'"></div>'
+                    : '<div class="bs" style="width:2%;background:#ccc"></div>')
+              + '</div>'
+              + '<div style="font-size:11px;color:#000;min-width:38px;text-align:right;padding-left:5px;white-space:nowrap;">'+disp+'</div>'
+              + '</div>';
     });
     el.innerHTML = html;
     $(el).find('.brow[data-aid]').on('click', function(){
@@ -1379,24 +1381,30 @@ function renderActivityCostBars(containerId, items, onRowClick){
         var est = r.cost || 0, act = r.actual_cost || 0;
         var rowMax = Math.max(est, act, 1);
         var bar = '';
+        var dispVal = '';
         if (act === 0) {
             bar = est > 0
-                ? '<div class="bs" style="width:100%;background:#4a4a4a;color:#fff;font-size:13px;">'+fmtCost(est)+'</div>'
-                : '<div class="bs" style="width:2%;background:#ccc">—</div>';
+                ? '<div class="bs" style="width:100%;background:#4a4a4a;"></div>'
+                : '<div class="bs" style="width:2%;background:#ccc"></div>';
+            dispVal = fmtCost(est);
         } else if (act > est) {
             var estPct  = (est / rowMax * 100).toFixed(1);
             var overPct = ((act - est) / rowMax * 100).toFixed(1);
-            bar = '<div class="bs" style="width:'+estPct+'%;background:#4a4a4a;color:#fff;font-size:13px;">'+fmtCost(est)+'</div>'
-                + '<div class="bs" style="width:'+overPct+'%;background:#c62828;color:#fff;font-size:13px;">+'+fmtCost(act-est)+'</div>';
+            bar = '<div class="bs" style="width:'+estPct+'%;background:#4a4a4a;"></div>'
+                + '<div class="bs" style="width:'+overPct+'%;background:#c62828;"></div>';
+            dispVal = fmtCost(act);
         } else {
             var actPct  = (act  / rowMax * 100).toFixed(1);
             var savePct = ((est - act) / rowMax * 100).toFixed(1);
-            bar = '<div class="bs" style="width:'+actPct+'%;background:#4a4a4a;color:#fff;font-size:13px;">'+fmtCost(act)+'</div>'
-                + '<div class="bs" style="width:'+savePct+'%;background:#2e7d32;color:#fff;font-size:13px;">-'+fmtCost(est-act)+'</div>';
+            bar = '<div class="bs" style="width:'+actPct+'%;background:#4a4a4a;"></div>'
+                + '<div class="bs" style="width:'+savePct+'%;background:#2e7d32;"></div>';
+            dispVal = fmtCost(est);
         }
-        html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer">'
-              + '<div class="blbl" title="'+r.name+'">'+sh(r.name,30)+'</div>'
-              + '<div class="btrk">'+bar+'</div></div>';
+        html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
+              + '<div class="blbl" style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
+              + '<div class="btrk" style="flex:1;">'+bar+'</div>'
+              + '<div style="font-size:11px;color:#000;min-width:38px;text-align:right;padding-left:5px;white-space:nowrap;">'+dispVal+'</div>'
+              + '</div>';
     });
     el.innerHTML = html;
     $(el).find('.brow[data-aid]').on('click', function(){
