@@ -867,10 +867,6 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
 
     function fmR(v){ return v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(2); }
 
-    // Only show Materials, Purchased Inputs, Consumables
-    var matTypes = ['Materials', 'Purchased Inputs', 'Consumables'];
-    items = items.filter(function(r){ return matTypes.indexOf(r.type_name || '') !== -1; });
-
     // Same formula as Unit Cost panel: amount = rate × qty
     var actUnitCost = 0;
     items.forEach(function(r){ actUnitCost += ((+r.rate || 0) * (+r.res_qty || 0)); });
