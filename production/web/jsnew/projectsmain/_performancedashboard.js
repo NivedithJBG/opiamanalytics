@@ -867,6 +867,10 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
 
     function fmR(v){ return v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(2); }
 
+    // Only show Materials, Purchased Inputs, Consumables
+    var matTypes = ['Materials', 'Purchased Inputs', 'Consumables'];
+    items = items.filter(function(r){ return matTypes.indexOf(r.type_name || '') !== -1; });
+
     // Same formula as Unit Cost panel: amount = rate × qty
     var actUnitCost = 0;
     items.forEach(function(r){ actUnitCost += ((+r.rate || 0) * (+r.res_qty || 0)); });
@@ -1057,7 +1061,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
                 tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 5px;">'
                     + barHtml + '</div>';
 
-                var unitSuffix = (r.unit ? ' ' + r.unit : '') + (actUnit ? ' / ' + actUnit : '');
+                var unitSuffix = (r.unit ? ' ' + r.unit : '') + (actUnit ? ' / Per ' + actUnit : '');
                 var planDisp   = planned.toLocaleString(undefined, {minimumFractionDigits:3, maximumFractionDigits:3});
 
                 if (actual === null) {
