@@ -502,8 +502,8 @@ function renderCdUnitCostOfActivity(items, actName, actUnit){
     function fmCost(v){ return v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'K':v.toFixed(0); }
 
     var svg='<svg width="100%" height="100%" viewBox="0 0 210 134" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
-        +arc(0, 0.5, '#81C784')
-        +arc(0.5, 1,  '#E57373')
+        +arc(0, 0.5, '#00838f')
+        +arc(0.5, 1,  '#FF6D00')
         +(f>0?arc(0,f,'#1a3a6b','butt'):'')
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
@@ -843,8 +843,8 @@ function renderCdCostOnCompletion(items, actName, estQty){
     function fmCost(v){ return v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'K':v.toFixed(0); }
 
     var svg='<svg width="100%" height="100%" viewBox="0 0 210 134" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
-        +arc(0, 0.5, '#81C784')
-        +arc(0.5, 1,  '#E57373')
+        +arc(0, 0.5, '#00838f')
+        +arc(0.5, 1,  '#FF6D00')
         +(f>0?arc(0,f,'#1a3a6b','butt'):'')
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
@@ -1821,8 +1821,8 @@ function doCycleTime(k) {
     var nx=(cx+nr*Math.cos(na)).toFixed(1), ny=(cy-nr*Math.sin(na)).toFixed(1);
 
     var svg='<svg width="210" height="138" viewBox="0 0 210 138" xmlns="http://www.w3.org/2000/svg">'
-        +arc(0, 0.5, '#81C784')
-        +arc(0.5, 1,  '#E57373')
+        +arc(0, 0.5, '#00838f')
+        +arc(0.5, 1,  '#FF6D00')
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
