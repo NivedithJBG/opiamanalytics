@@ -1057,7 +1057,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
                 tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 5px;">'
                     + barHtml + '</div>';
 
-                var unitSuffix = (r.unit ? ' ' + r.unit : '') + (actUnit ? ' / Per ' + actUnit : '');
+                var unitSuffix = (r.unit ? ' ' + r.unit : '') + ' / Unit';
                 var planDisp   = planned.toLocaleString(undefined, {minimumFractionDigits:3, maximumFractionDigits:3});
 
                 if (actual === null) {
