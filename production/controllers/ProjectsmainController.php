@@ -847,21 +847,29 @@ class ProjectsmainController extends Controller
                     $actualResQty = null;
                 }
 
-                // Planned consumption = res_qty × task_work_done (absolute)
-                // Fallback: res_qty × wo_task_rates.task_qty (planned qty per unit from schedule-task screen)
-                $mappedTaskId = (int)trim($r['task_ids'] ?? '');
-                $taskWorkDone = ($mappedTaskId > 0 && isset($taskWorkDoneById[$mappedTaskId]))
-                    ? (float)$taskWorkDoneById[$mappedTaskId]
-                    : null;
+                $mappedTaskId   = (int)trim($r['task_ids'] ?? '');
+                $taskWorkDone   = ($mappedTaskId > 0 && isset($taskWorkDoneById[$mappedTaskId]))
+                    ? (float)$taskWorkDoneById[$mappedTaskId] : null;
                 $taskQtyPerUnit = $mappedTaskId > 0 ? ($taskQtyMap[$mappedTaskId] ?? null) : null;
-                $plannedConsumption = ($taskWorkDone !== null)
-                    ? round($resQty * $taskWorkDone, 3)
-                    : ($taskQtyPerUnit !== null ? round($resQty * $taskQtyPerUnit, 3) : $resQty);
 
-                // Actual consumption = GRN total - last physical stock (Materials only)
-                $actualConsumption = null;
-                if (in_array($typeId, [2, 6, 7]) && $grnQty > 0) {
-                    $actualConsumption = round(max(0, $grnQty - $stockQty), 3);
+                if ($typeId === 4) {
+                    // SC: planned = res_qty × task_qty_per_unit (schedule-task planned rate)
+                    //     actual  = MB work_done for the mapped task
+                    $plannedConsumption = $taskQtyPerUnit !== null
+                        ? round($resQty * $taskQtyPerUnit, 3)
+                        : $resQty;
+                    $actualConsumption = $taskWorkDone !== null
+                        ? round($taskWorkDone, 3)
+                        : null;
+                } else {
+                    // Materials: planned = res_qty × MB work_done (or × task_qty_per_unit as fallback)
+                    //            actual  = GRN total − last physical stock
+                    $plannedConsumption = ($taskWorkDone !== null)
+                        ? round($resQty * $taskWorkDone, 3)
+                        : ($taskQtyPerUnit !== null ? round($resQty * $taskQtyPerUnit, 3) : $resQty);
+                    $actualConsumption = (in_array($typeId, [2, 6, 7]) && $grnQty > 0)
+                        ? round(max(0, $grnQty - $stockQty), 3)
+                        : null;
                 }
 
                 $items[] = [
