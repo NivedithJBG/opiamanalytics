@@ -253,14 +253,16 @@ function renderCdUnitCostOfResource(items, actName){
         var col = _resTypeCol(t.name, colPalette[i % colPalette.length]);
 
         if (!t.hasActual) {
-            // No actual data — single bar as before
             var pct  = t.amount / actUnitCost * 100;
             var spPct = pct / maxScale * 100;
             var sp   = Math.max(100 - spPct, 0).toFixed(2);
             var bp   = Math.max(spPct, 0.5).toFixed(2);
             barsHtml += '<div data-type-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
                 + '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
-                + '<div style="flex:' + bp + ' 1 0;width:80%;min-height:0;background:' + col + ';border-radius:3px 3px 0 0;"></div>'
+                + '<div style="flex:' + bp + ' 1 0;width:80%;min-height:0;background:' + col + ';border-radius:3px 3px 0 0;'
+                + 'display:flex;align-items:center;justify-content:center;overflow:hidden;">'
+                + (spPct >= 8 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;">' + pct.toFixed(1) + '%</span>' : '')
+                + '</div>'
                 + '</div>';
         } else {
             var variancePct = t._variancePct;
@@ -268,7 +270,6 @@ function renderCdUnitCostOfResource(items, actName){
             var barTop      = plannedPct + Math.max(0, variancePct);
             var barTopScaled = barTop / maxScale * 100;
             var spFlex = Math.max(100 - barTopScaled, 0).toFixed(2);
-
             var varColor, varFlex, baseFlex;
             if (variancePct > 0) {
                 varColor = '#ef5350';
@@ -279,17 +280,18 @@ function renderCdUnitCostOfResource(items, actName){
                 varFlex  = Math.max(Math.abs(variancePct) / maxScale * 100, 0.5).toFixed(2);
                 baseFlex = Math.max((plannedPct - Math.abs(variancePct)) / maxScale * 100, 0.5).toFixed(2);
             }
-
             barsHtml += '<div data-type-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
                 + '<div style="flex:' + spFlex + ' 1 0;min-height:0;"></div>'
                 + '<div style="flex:' + varFlex + ' 1 0;width:80%;min-height:0;background:' + varColor + ';border-radius:3px 3px 0 0;"></div>'
-                + '<div style="flex:' + baseFlex + ' 1 0;width:80%;min-height:0;background:' + col + ';"></div>'
+                + '<div style="flex:' + baseFlex + ' 1 0;width:80%;min-height:0;background:' + col + ';'
+                + 'display:flex;align-items:center;justify-content:center;overflow:hidden;">'
+                + (parseFloat(baseFlex) >= 8 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;">' + plannedPct.toFixed(1) + '%</span>' : '')
+                + '</div>'
                 + '</div>';
         }
 
         labelsHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 3px 0;">'
             + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + t.name + '</div>'
-            + '<div style="font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:700;color:#000;white-space:nowrap;">&#8377; ' + fmR(t.amount) + '</div>'
             + '</div>';
     });
 
