@@ -510,12 +510,11 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, estQty, schedQty){
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
-        +'<text x="'+cx+'" y="'+(cy-14)+'" text-anchor="middle" font-size="16" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">&#8377; '+adjUnitCost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</text>'
-        +(estQty>0?'<text x="'+cx+'" y="'+(cy+2)+'" text-anchor="middle" font-size="11" font-weight="600" fill="#27ae60" font-family="Barlow Condensed,Arial">&#8377; '+(unitCost*estQty).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</text>':'')
+        +'<text x="'+cx+'" y="'+(cy-10)+'" text-anchor="middle" font-size="18" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">&#8377; '+adjUnitCost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</text>'
+        +(actUnit?'<text x="'+cx+'" y="'+(cy+8)+'" text-anchor="middle" font-size="12" fill="#5a6e8c" font-family="Barlow Condensed,Arial">'+actUnit+'</text>':'')
         +'<text x="8" y="112" text-anchor="start" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">—</tspan></text>'
         +'<text x="202" y="112" text-anchor="end" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">Rate <tspan font-weight="700">'+fmCost(adjUnitCost)+'</tspan></text>'
-        +(an?'<text x="'+cx+'" y="122" text-anchor="middle" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Unit Rate: &#8377; '+fmCost(unitCost)+'</text>':'')
-        +(an?'<text x="'+cx+'" y="134" text-anchor="middle" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">'+an+(actUnit?' / '+actUnit:'')+'</text>':'')
+        +(an?'<text x="'+cx+'" y="128" text-anchor="middle" font-size="13" fill="#111" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +'</svg>';
 
     var colPalette = ['#90caf9','#ce93d8','#80cbc4','#ffcc80','#ef9a9a','#a5d6a7','#fff176','#f48fb1','#bcaaa4','#80deea'];
