@@ -942,59 +942,17 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
         gridHtml += '<div style="position:absolute;left:0;right:0;bottom:' + refPos + '%;border-top:2px dashed rgba(90,110,140,0.5);pointer-events:none;"></div>';
     }
 
-    var barsHtml = '', labelsHtml = '';
+    var barsHtml = '';
     types.forEach(function(t, i){
         var col = _resTypeCol(t.name, colPalette[i % colPalette.length]);
-
-        if (!t.hasActual) {
-            var pct     = t.amount / actUnitCost * 100;
-            var spPct   = pct / maxScale * 100;
-            var sp      = Math.max(100 - spPct, 0).toFixed(2);
-            var bp      = Math.max(spPct, 0.5).toFixed(2);
-            barsHtml += '<div data-cons-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
-                + '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
-                + '<div style="flex:' + bp + ' 1 0;width:80%;min-height:0;background:' + col + ';border-radius:3px 3px 0 0;"></div>'
-                + '</div>';
-        } else {
-            var variancePct = t._variancePct;
-            var plannedPct  = t._plannedPct;
-            var barTop      = plannedPct + Math.max(0, variancePct);
-            var barTopScaled = barTop / maxScale * 100;
-            var spFlex = Math.max(100 - barTopScaled, 0).toFixed(2);
-
-            var varColor, varFlex, baseFlex;
-            if (variancePct > 0) {
-                varColor = '#ef5350';
-                varFlex  = Math.max(variancePct / maxScale * 100, 0.5).toFixed(2);
-                baseFlex = Math.max(plannedPct / maxScale * 100, 0.5).toFixed(2);
-            } else {
-                varColor = '#66bb6a';
-                varFlex  = Math.max(Math.abs(variancePct) / maxScale * 100, 0.5).toFixed(2);
-                baseFlex = Math.max((plannedPct - Math.abs(variancePct)) / maxScale * 100, 0.5).toFixed(2);
-            }
-
-            barsHtml += '<div data-cons-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
-                + '<div style="flex:' + spFlex + ' 1 0;min-height:0;"></div>'
-                + '<div style="flex:' + varFlex + ' 1 0;width:80%;min-height:0;background:' + varColor + ';border-radius:3px 3px 0 0;"></div>'
-                + '<div style="flex:' + baseFlex + ' 1 0;width:80%;min-height:0;background:' + col + ';"></div>'
-                + '</div>';
-        }
-
-        labelsHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 3px 0;">'
-            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + t.name + '</div>'
-            + '<div style="font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:700;color:#000;white-space:nowrap;">&#8377; ' + fmR(t.amount) + '</div>'
+        // All bars same full height — no proportional sizing
+        barsHtml += '<div data-cons-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
+            + '<div style="flex:1;width:80%;min-height:0;background:' + col + ';border-radius:3px 3px 0 0;"></div>'
             + '</div>';
     });
 
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
-        + '<div style="flex:1;min-height:0;display:flex;">'
-        + '<div style="width:28px;position:relative;flex-shrink:0;">' + scaleHtml + '</div>'
-        + '<div style="flex:1;position:relative;min-width:0;">'
-        + gridHtml
-        + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + barsHtml + '</div>'
-        + '</div>'
-        + '</div>'
-        + '<div style="display:flex;padding-left:28px;">' + labelsHtml + '</div>'
+        + '<div style="flex:1;min-height:0;display:flex;padding:4px 2px 0;">' + barsHtml + '</div>'
         + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '')
         + '</div>';
 
