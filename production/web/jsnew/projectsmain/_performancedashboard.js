@@ -92,7 +92,7 @@ function renderCdBars(){
     // Project Cost on Completion = sum of group costs
     var totalCost = groupItems.reduce(function(s, g){ return s + g.cost; }, 0);
 
-    _cdTotalCost = totalCost;
+    renderCostBars('cd-c2', [{name: _cdProjectName || 'Project', cost: totalCost, id: 0}], null);
     renderCostBars('cd-c1', groupItems, filterByGroupCd);
     if (_groups.length) filterByGroupCd(_groups[0].id);
 }
@@ -126,9 +126,7 @@ function filterByIowCd(iowId){
     var fOngoing  = filtered.filter(function(a){ return parseInt(a.pr_report_count, 10) > 0; });
     var fUpcoming = filtered.filter(function(a){ return !(parseInt(a.pr_report_count, 10) > 0); });
     fUpcoming.sort(function(a, b){ return (a.start_date || '').localeCompare(b.start_date || ''); });
-    var actItems = toCostBarItems(fOngoing.concat(fUpcoming));
-    var projItem = { name: _cdProjectName || 'Project Total', cost: _cdTotalCost, actual_cost: 0, id: 0 };
-    renderActivityCostBars('cd-c4', [projItem].concat(actItems), function(id){ if(id) loadCdActivityData(id); });
+    renderActivityCostBars('cd-c4', toCostBarItems(fOngoing.concat(fUpcoming)), loadCdActivityData);
     var firstAct = fOngoing.length ? fOngoing[0] : (fUpcoming.length ? fUpcoming[0] : null);
     if (firstAct) loadCdActivityData(firstAct.id);
     else {
