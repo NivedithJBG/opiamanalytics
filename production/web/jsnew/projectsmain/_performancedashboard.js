@@ -47,7 +47,7 @@ var _cdTotalCost = 0;
 
 // Resource type colour map (name → bar colour)
 var _resTypeColours = {
-    'materials':         '#7E57C2',   // Blue Purple
+    'materials':         '#1A237E',   // Navy Blue
     'purchased inputs':  '#9E9E9E',   // Grey
     'consumables':       '#80CBC4',   // Grey Green (teal)
     'tools and tackles': '#607D8B',   // Blue Grey
