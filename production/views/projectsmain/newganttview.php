@@ -47,7 +47,7 @@
   width: 15px; height: 15px; border-radius: 50%;
   border: 1px solid darkgrey; display: inline-block; flex-shrink: 0;
 }
-.dot-critical  { background: #d9534f; }
+.dot-critical  { background: #00838f; }
 .dot-normal    { background: #337ab7; }
 </style>
 
