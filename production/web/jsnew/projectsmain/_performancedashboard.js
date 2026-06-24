@@ -260,28 +260,21 @@ function renderCdUnitCostOfResource(items, actName){
             var bp   = Math.max(spPct, 0.5).toFixed(2);
             barsHtml += '<div data-type-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
                 + '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
-                + '<div style="flex:' + bp + ' 1 0;width:80%;min-height:0;background:' + col + ';'
-                + 'border-radius:3px 3px 0 0;display:flex;flex-direction:column;'
-                + 'align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
-                + (spPct >= 10 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">' + pct.toFixed(1) + '%</span>'
-                               + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.amount) + '</span>' : '')
-                + '</div>'
+                + '<div style="flex:' + bp + ' 1 0;width:80%;min-height:0;background:' + col + ';border-radius:3px 3px 0 0;"></div>'
                 + '</div>';
         } else {
             var variancePct = t._variancePct;
             var plannedPct  = t._plannedPct;
-            var barTop      = plannedPct + Math.max(0, variancePct);     // total bar height in % of actUnitCost
-            var barTopScaled = barTop / maxScale * 100;                   // as % of chart height
+            var barTop      = plannedPct + Math.max(0, variancePct);
+            var barTopScaled = barTop / maxScale * 100;
             var spFlex = Math.max(100 - barTopScaled, 0).toFixed(2);
 
             var varColor, varFlex, baseFlex;
             if (variancePct > 0) {
-                // Overspend — base = planned, red on top
                 varColor = '#ef5350';
                 varFlex  = Math.max(variancePct / maxScale * 100, 0.5).toFixed(2);
                 baseFlex = Math.max(plannedPct / maxScale * 100, 0.5).toFixed(2);
             } else {
-                // Savings — base = actual, green on top
                 varColor = '#66bb6a';
                 varFlex  = Math.max(Math.abs(variancePct) / maxScale * 100, 0.5).toFixed(2);
                 baseFlex = Math.max((plannedPct - Math.abs(variancePct)) / maxScale * 100, 0.5).toFixed(2);
@@ -290,17 +283,14 @@ function renderCdUnitCostOfResource(items, actName){
             barsHtml += '<div data-type-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
                 + '<div style="flex:' + spFlex + ' 1 0;min-height:0;"></div>'
                 + '<div style="flex:' + varFlex + ' 1 0;width:80%;min-height:0;background:' + varColor + ';border-radius:3px 3px 0 0;"></div>'
-                + '<div style="flex:' + baseFlex + ' 1 0;width:80%;min-height:0;background:' + col + ';display:flex;flex-direction:column;'
-                + 'align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
-                + (baseFlex >= 10 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">' + plannedPct.toFixed(1) + '%</span>'
-                                  + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.amount) + '</span>' : '')
-                + '</div>'
+                + '<div style="flex:' + baseFlex + ' 1 0;width:80%;min-height:0;background:' + col + ';"></div>'
                 + '</div>';
         }
 
-        labelsHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#1a2a3a;'
-            + 'text-align:center;padding:2px 3px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
-            + t.name + '</div>';
+        labelsHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 3px 0;">'
+            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + t.name + '</div>'
+            + '<div style="font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:700;color:#000;white-space:nowrap;">&#8377; ' + fmR(t.amount) + '</div>'
+            + '</div>';
     });
 
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
