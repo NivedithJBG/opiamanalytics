@@ -93,6 +93,8 @@ function renderCdBars(){
     var totalCost = groupItems.reduce(function(s, g){ return s + g.cost; }, 0);
 
     renderCostBars('cd-c2', [{name: _cdProjectName || 'Project', cost: totalCost, id: 0}], null);
+    var c2el = document.getElementById('cd-c2');
+    if (c2el) { c2el.style.display = 'flex'; c2el.style.flexDirection = 'column'; c2el.style.justifyContent = 'center'; }
     renderCostBars('cd-c1', groupItems, filterByGroupCd);
     if (_groups.length) filterByGroupCd(_groups[0].id);
 }
