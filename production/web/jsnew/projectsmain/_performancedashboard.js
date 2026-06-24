@@ -47,7 +47,7 @@ var _cdTotalCost = 0;
 
 // Resource type colour map (name → bar colour)
 var _resTypeColours = {
-    'materials':         '#6B7AA0',   // More grey, less navy
+    'materials':         '#526090',   // Darker grey-navy
     'purchased inputs':  '#9E9E9E',   // Grey
     'consumables':       '#80CBC4',   // Grey Green (teal)
     'tools and tackles': '#607D8B',   // Blue Grey
@@ -961,12 +961,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
             var bp      = Math.max(spPct, 0.5).toFixed(2);
             barsHtml += '<div data-cons-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
                 + '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
-                + '<div style="flex:' + bp + ' 1 0;width:80%;min-height:0;background:' + col + ';'
-                + 'border-radius:3px 3px 0 0;display:flex;flex-direction:column;'
-                + 'align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
-                + (spPct >= 10 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">' + pct.toFixed(1) + '%</span>'
-                               + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.amount) + '</span>' : '')
-                + '</div>'
+                + '<div style="flex:' + bp + ' 1 0;width:80%;min-height:0;background:' + col + ';border-radius:3px 3px 0 0;"></div>'
                 + '</div>';
         } else {
             var variancePct = t._variancePct;
@@ -989,17 +984,14 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
             barsHtml += '<div data-cons-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
                 + '<div style="flex:' + spFlex + ' 1 0;min-height:0;"></div>'
                 + '<div style="flex:' + varFlex + ' 1 0;width:80%;min-height:0;background:' + varColor + ';border-radius:3px 3px 0 0;"></div>'
-                + '<div style="flex:' + baseFlex + ' 1 0;width:80%;min-height:0;background:' + col + ';display:flex;flex-direction:column;'
-                + 'align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
-                + (baseFlex >= 10 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">' + plannedPct.toFixed(1) + '%</span>'
-                                  + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;color:rgba(0,0,0,.6);white-space:nowrap;">' + fmR(t.amount) + '</span>' : '')
-                + '</div>'
+                + '<div style="flex:' + baseFlex + ' 1 0;width:80%;min-height:0;background:' + col + ';"></div>'
                 + '</div>';
         }
 
-        labelsHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#1a2a3a;'
-            + 'text-align:center;padding:2px 3px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
-            + t.name + '</div>';
+        labelsHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 3px 0;">'
+            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:9px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + t.name + '</div>'
+            + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:#000;white-space:nowrap;">' + fmR(t.amount) + '</div>'
+            + '</div>';
     });
 
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
@@ -1484,11 +1476,12 @@ function renderCdResourceCost(items, actName){
         var bp   = Math.max(parseFloat(pct), 0.5).toFixed(2);
         barsHtml += '<div data-rc-idx="'+i+'" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
             + '<div style="flex:'+sp+' 1 0;min-height:0;"></div>'
-            + '<div style="flex:'+bp+' 1 0;width:80%;min-height:0;background:'+col+';border-radius:3px 3px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
-            + (parseFloat(pct) >= 10 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">'+pct+'%</span>'
-                                     + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;color:rgba(0,0,0,.6);white-space:nowrap;">'+fmR(t.amount)+'</span>' : '')
-            + '</div></div>';
-        labelsHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#1a2a3a;text-align:center;padding:2px 3px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+t.name+'</div>';
+            + '<div style="flex:'+bp+' 1 0;width:80%;min-height:0;background:'+col+';border-radius:3px 3px 0 0;"></div>'
+            + '</div>';
+        labelsHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 3px 0;">'
+            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:9px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+t.name+'</div>'
+            + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:#000;white-space:nowrap;">'+fmR(t.amount)+'</div>'
+            + '</div>';
     });
 
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
