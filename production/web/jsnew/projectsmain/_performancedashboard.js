@@ -507,7 +507,6 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, estQty, schedQty, a
     var svg='<svg width="100%" height="100%" viewBox="0 0 210 134" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
         +arc(0, 0.5, '#00838f')
         +arc(0.5, 1,  '#FF6D00')
-        +(f>0?arc(0,f,'#1a3a6b','butt'):'')
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
