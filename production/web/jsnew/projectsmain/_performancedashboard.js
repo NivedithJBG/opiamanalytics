@@ -1420,7 +1420,7 @@ function renderActivityCostBars(containerId, items, onRowClick){
 
 // ── Resource Cost panel (#cd-g3) ─────────────────────────────────────────────
 function renderCdResourceCost(items, actName){
-    var el = document.getElementById('cd-g3');
+    var el = document.getElementById('cd-rcost');
     if (!el) return;
     var colPalette = ['#a5d6a7','#80cbc4','#ffcc80','#90caf9','#ce93d8','#ef9a9a','#fff176','#f48fb1','#bcaaa4','#80deea'];
     var tipPalette = ['#ffa726','#ff7043','#ef5350','#ffca28','#ff8a65','#ffcc02','#e64a19','#ffd54f','#bf360c','#ffab40'];
