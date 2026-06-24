@@ -93,7 +93,6 @@ function renderCdBars(){
 
     renderCostBars('cd-c2', [{name: _cdProjectName || 'Project', cost: totalCost, id: 0}], null);
     renderCostBars('cd-c1', groupItems, filterByGroupCd);
-    renderCdCurrentProjectCost(_all);
     if (_groups.length) filterByGroupCd(_groups[0].id);
 }
 
