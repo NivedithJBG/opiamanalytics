@@ -989,8 +989,8 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
         }
 
         labelsHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 3px 0;">'
-            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:9px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + t.name + '</div>'
-            + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:#000;white-space:nowrap;">' + fmR(t.amount) + '</div>'
+            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + t.name + '</div>'
+            + '<div style="font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:700;color:#000;white-space:nowrap;">&#8377; ' + fmR(t.amount) + '</div>'
             + '</div>';
     });
 
@@ -1479,8 +1479,8 @@ function renderCdResourceCost(items, actName){
             + '<div style="flex:'+bp+' 1 0;width:80%;min-height:0;background:'+col+';border-radius:3px 3px 0 0;"></div>'
             + '</div>';
         labelsHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 3px 0;">'
-            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:9px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+t.name+'</div>'
-            + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:#000;white-space:nowrap;">'+fmR(t.amount)+'</div>'
+            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+t.name+'</div>'
+            + '<div style="font-family:\'Nunito\',sans-serif;font-size:12px;font-weight:700;color:#000;white-space:nowrap;">&#8377; '+fmR(t.amount)+'</div>'
             + '</div>';
     });
 
