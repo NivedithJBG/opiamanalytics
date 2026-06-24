@@ -873,83 +873,75 @@ function renderCdCostOnCompletion(items, actName, estQty){
 function renderCdResourceConsumption(items, actName, lastQty, actUnit){
     var el = document.getElementById('cd-c7');
     if (!el) return;
-    var colPalette = ['#a5d6a7','#80cbc4','#ffcc80','#90caf9','#ce93d8','#ef9a9a','#fff176','#f48fb1','#bcaaa4','#80deea'];
-    var tipPalette = ['#ffa726','#ff7043','#ef5350','#ffca28','#ff8a65','#ffcc02','#e64a19','#ffd54f','#bf360c','#ffab40'];
+    var resColours = ['#ffa726','#ff7043','#ef5350','#ffca28','#ff8a65','#26a69a','#7e57c2','#66bb6a','#42a5f5','#ec407a'];
 
     function fmR(v){ return v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(2); }
 
-    // Same formula as Unit Cost panel: amount = rate × qty
-    var actUnitCost = 0;
-    items.forEach(function(r){ actUnitCost += ((+r.rate || 0) * (+r.res_qty || 0)); });
-
-    if (!items.length || !actUnitCost){
+    if (!items.length){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
     }
 
-    // Group by resource type — accumulate planned & actual amounts
-    var typeMap = {};
+    // Flatten all resources from all types
+    var resources = [];
     items.forEach(function(r){
-        var tid = r.type_id || '0';
-        if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', amount: 0, actualAmount: 0, hasActual: false, resources: [] };
-        typeMap[tid].amount += ((+r.rate || 0) * (+r.res_qty || 0));
-        var hasAct = r.actual_res_qty !== null && r.actual_res_qty !== undefined;
-        if (hasAct) {
-            typeMap[tid].actualAmount += (+r.rate || 0) * (+r.actual_res_qty);
-            typeMap[tid].hasActual = true;
-        }
-        typeMap[tid].resources.push({
+        resources.push({
             name:   r.name || '',
             qty:    (r.planned_consumption != null) ? +r.planned_consumption : (+r.res_qty || 0),
             unit:   r.unit || '',
             actual: (r.actual_consumption  != null) ? +r.actual_consumption  : null
         });
     });
-    var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
-    types.sort(function(a, b){ return b.amount - a.amount; });
-
-    // Compute variance per type and overall scale
-    var maxScale = 100;
-    types.forEach(function(t){
-        if (!t.hasActual) return;
-        var plannedPct  = t.amount / actUnitCost * 100;
-        var variancePct = (t.actualAmount - t.amount) / actUnitCost * 100;
-        var barTop = plannedPct + Math.max(0, variancePct);
-        if (barTop > maxScale) maxScale = barTop;
-        t._variancePct = variancePct;
-        t._plannedPct  = plannedPct;
-    });
-
-    // Y-axis scale labels
-    var scaleHtml = '';
-    [100,75,50,25,0].forEach(function(g){
-        var label = (maxScale * g / 100).toFixed(maxScale > 100 ? 1 : 0);
-        scaleHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
-            + 'font-family:\'Nunito\',sans-serif;font-size:8px;color:#8a9bb0;line-height:1;">'
-            + label + '</div>';
-    });
-
-    // Gridlines
-    var gridHtml = '';
-    [75,50,25].forEach(function(g){
-        gridHtml += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;'
-            + 'border-top:1px dashed rgba(90,110,140,0.22);pointer-events:none;"></div>';
-    });
-    gridHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(90,110,140,0.3);pointer-events:none;"></div>';
-    gridHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(90,110,140,0.35);pointer-events:none;"></div>';
-    if (maxScale > 100) {
-        var refPos = (100 / maxScale * 100).toFixed(2);
-        gridHtml += '<div style="position:absolute;left:0;right:0;bottom:' + refPos + '%;border-top:2px dashed rgba(90,110,140,0.5);pointer-events:none;"></div>';
+    if (!resources.length){
+        el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No data</div>';
+        return;
     }
 
+    // Scale: max across all resource planned/actual quantities
+    var maxQty = 0;
+    resources.forEach(function(r){
+        if (r.qty > maxQty) maxQty = r.qty;
+        if (r.actual !== null && r.actual > maxQty) maxQty = r.actual;
+    });
+    if (!maxQty) maxQty = 1;
+
+    // Build bars and legend for each individual resource
     var barsHtml = '', labelsHtml = '';
-    types.forEach(function(t, i){
-        var col = _resTypeCol(t.name, colPalette[i % colPalette.length]);
-        barsHtml += '<div data-cons-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
-            + '<div style="flex:1;width:80%;min-height:0;background:' + col + ';border-radius:3px 3px 0 0;"></div>'
-            + '</div>';
-        labelsHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 3px 0;">'
-            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + t.name + '</div>'
+    resources.forEach(function(r, ri){
+        var col     = resColours[ri % resColours.length];
+        var planned = r.qty;
+        var actual  = r.actual;
+        var barHtml = '';
+        if (actual === null) {
+            var sp = Math.max(100 - (planned / maxQty * 100), 0).toFixed(2);
+            var bp = Math.max(planned / maxQty * 100, 0.5).toFixed(2);
+            barHtml = '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
+                + '<div style="flex:' + bp + ' 1 0;width:70%;min-height:0;background:' + col + ';border-radius:3px 3px 0 0;"></div>';
+        } else if (actual > planned) {
+            var sp   = Math.max(100 - (actual / maxQty * 100), 0).toFixed(2);
+            var bpPl = Math.max(planned / maxQty * 100, 0.5).toFixed(2);
+            var bpEx = Math.max((actual - planned) / maxQty * 100, 0.5).toFixed(2);
+            barHtml = '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
+                + '<div style="flex:' + bpEx + ' 1 0;width:70%;min-height:0;background:#ef5350;border-radius:3px 3px 0 0;"></div>'
+                + '<div style="flex:' + bpPl + ' 1 0;width:70%;min-height:0;background:' + col + ';"></div>';
+        } else {
+            var sp    = Math.max(100 - (planned / maxQty * 100), 0).toFixed(2);
+            var bpRem = Math.max((planned - actual) / maxQty * 100, 0).toFixed(2);
+            var bpAct = Math.max(actual / maxQty * 100, 0.5).toFixed(2);
+            barHtml = '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
+                + '<div style="flex:' + bpRem + ' 1 0;width:70%;min-height:0;background:rgba(100,150,100,0.2);border-top:1px dashed rgba(100,200,100,0.5);"></div>'
+                + '<div style="flex:' + bpAct + ' 1 0;width:70%;min-height:0;background:#66bb6a;border-radius:3px 3px 0 0;"></div>';
+        }
+        barsHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;">' + barHtml + '</div>';
+        var unitSuffix = (r.unit ? ' ' + r.unit : '') + ' / Unit';
+        var planDisp   = planned.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+        var valLine    = actual !== null
+            ? '<div style="font-size:10px;color:' + (actual > planned ? '#ef5350' : '#27ae60') + ';font-weight:700;white-space:nowrap;">'
+              + actual.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + unitSuffix + '</div>'
+            : '<div style="font-size:10px;color:#333;white-space:nowrap;">' + planDisp + unitSuffix + '</div>';
+        labelsHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 2px 0;overflow:hidden;">'
+            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + r.name + '</div>'
+            + valLine
             + '</div>';
     });
 
@@ -959,135 +951,14 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
         + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '')
         + '</div>';
 
-    // Tooltip — same structure as Unit Cost panel, but shows qty instead of rate
-    var tipEl = document.getElementById('uc-cons-tip');
-    if (!tipEl){
-        tipEl = document.createElement('div');
-        tipEl.id = 'uc-cons-tip';
-        tipEl.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#0d1a2e;border-radius:8px;'
-            + 'box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:12px 14px 10px;';
-        document.body.appendChild(tipEl);
-    }
-
-    el.querySelectorAll('[data-cons-idx]').forEach(function(col){
-        col.addEventListener('mouseenter', function(){
-            var t = types[+col.getAttribute('data-cons-idx')];
-            var maxQty = 0;
-            t.resources.forEach(function(r){
-                if (r.qty > maxQty) maxQty = r.qty;
-                if (r.actual !== null && r.actual > maxQty) maxQty = r.actual;
-            });
-
-            var tgHtml = '';
-            [75,50,25].forEach(function(g){
-                tgHtml += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;'
-                    + 'border-top:1px dashed rgba(100,130,170,0.55);pointer-events:none;"></div>';
-            });
-            tgHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
-            tgHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
-
-            var tsHtml = '';
-            [100,75,50,25,0].forEach(function(g){
-                tsHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
-                    + 'font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;line-height:1;white-space:nowrap;">'
-                    + fmR(maxQty * g / 100) + '</div>';
-            });
-
-            var tbHtml = '', legendRows = '';
-            t.resources.forEach(function(r, ri){
-                var planned = r.qty;
-                var actual  = r.actual;
-                var c2 = tipPalette[ri % tipPalette.length];
-
-                var barHtml = '';
-                if (actual === null) {
-                    var sp2 = Math.max(100 - (maxQty > 0 ? planned / maxQty * 100 : 0), 0).toFixed(2);
-                    var bp2 = Math.max(maxQty > 0 ? planned / maxQty * 100 : 0, 0.5).toFixed(2);
-                    barHtml = '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
-                        + '<div style="flex:' + bp2 + ' 1 0;width:44%;min-height:0;background:' + c2 + ';border-radius:2px 2px 0 0;"></div>';
-                } else if (actual > planned) {
-                    var sp2  = Math.max(100 - (maxQty > 0 ? actual / maxQty * 100 : 0), 0).toFixed(2);
-                    var bpPl = Math.max(maxQty > 0 ? planned / maxQty * 100 : 0, 0.5).toFixed(2);
-                    var bpEx = Math.max(maxQty > 0 ? (actual - planned) / maxQty * 100 : 0, 0.5).toFixed(2);
-                    barHtml = '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
-                        + '<div style="flex:' + bpEx + ' 1 0;width:44%;min-height:0;background:#ef5350;border-radius:2px 2px 0 0;"></div>'
-                        + '<div style="flex:' + bpPl + ' 1 0;width:44%;min-height:0;background:' + c2 + ';"></div>';
-                } else {
-                    var sp2    = Math.max(100 - (maxQty > 0 ? planned / maxQty * 100 : 0), 0).toFixed(2);
-                    var bpHdR  = Math.max(maxQty > 0 ? (planned - actual) / maxQty * 100 : 0, 0).toFixed(2);
-                    var bpAct  = Math.max(maxQty > 0 ? actual / maxQty * 100 : 0, 0.5).toFixed(2);
-                    barHtml = '<div style="flex:' + sp2 + ' 1 0;min-height:0;"></div>'
-                        + '<div style="flex:' + bpHdR + ' 1 0;width:44%;min-height:0;background:rgba(100,150,100,0.25);border-top:1px dashed rgba(100,200,100,0.5);"></div>'
-                        + '<div style="flex:' + bpAct + ' 1 0;width:44%;min-height:0;background:#66bb6a;border-radius:2px 2px 0 0;"></div>';
-                }
-
-                tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 5px;">'
-                    + barHtml + '</div>';
-
-                var unitSuffix = (r.unit ? ' ' + r.unit : '') + ' / Unit';
-                var planDisp   = planned.toLocaleString(undefined, {minimumFractionDigits:3, maximumFractionDigits:3});
-
-                if (actual === null) {
-                    legendRows += '<tr style="border-bottom:1px solid rgba(255,255,255,0.1);">'
-                        + '<td style="padding:5px 8px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">'
-                        + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + c2 + ';margin-right:5px;vertical-align:middle;"></span>' + r.name + '</td>'
-                        + '<td style="padding:5px 6px 5px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">Planned</td>'
-                        + '<td style="padding:5px 0 5px 4px;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'
-                        + planDisp + unitSuffix + '</td>'
-                        + '</tr>';
-                } else {
-                    var actDisp  = actual.toLocaleString(undefined, {minimumFractionDigits:3, maximumFractionDigits:3});
-                    var actColor = actual > planned ? '#ef5350' : '#66bb6a';
-                    legendRows += '<tr>'
-                        + '<td style="padding:5px 8px 1px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;" rowspan="2">'
-                        + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + c2 + ';margin-right:5px;vertical-align:middle;"></span>' + r.name + '</td>'
-                        + '<td style="padding:5px 6px 1px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">Planned</td>'
-                        + '<td style="padding:5px 0 1px 4px;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'
-                        + planDisp + unitSuffix + '</td>'
-                        + '</tr>'
-                        + '<tr style="border-bottom:1px solid rgba(255,255,255,0.1);">'
-                        + '<td style="padding:1px 6px 5px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">Actual</td>'
-                        + '<td style="padding:1px 0 5px 4px;font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:' + actColor + ';text-align:right;white-space:nowrap;">'
-                        + actDisp + unitSuffix + '</td>'
-                        + '</tr>';
-                }
-            });
-
-            var tipW = Math.max(360, t.resources.length * 70);
-            tipEl.style.width = tipW + 'px';
-            tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;'
-                + 'color:#fff;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'
-                + t.name + ' — Quantities</div>'
-                + '<div style="display:flex;height:220px;">'
-                + '<div style="width:32px;position:relative;flex-shrink:0;">' + tsHtml + '</div>'
-                + '<div style="flex:1;position:relative;min-width:0;">'
-                + tgHtml
-                + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + tbHtml + '</div>'
-                + '</div>'
-                + '</div>'
-                + '<div style="margin-top:8px;border-top:1px solid rgba(100,130,170,0.3);padding-top:6px;">'
-                + '<table style="width:100%;border-collapse:collapse;">'
-                + '<thead><tr>'
-                + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:left;">Resource</th>'
-                + '<th style="padding:3px 6px 3px 8px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;"></th>'
-                + '<th style="padding:3px 0 3px 4px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Quantity</th>'
-                + '</tr></thead>'
-                + '<tbody>' + legendRows + '</tbody>'
-                + '</table>'
-                + '</div>';
-
-            var rect = col.getBoundingClientRect();
-            var left = rect.left + rect.width / 2 - tipW / 2;
-            left = Math.max(4, Math.min(left, window.innerWidth - tipW - 4));
-            var top  = rect.top - 8;
-            tipEl.style.left = left + 'px';
-            tipEl.style.top  = top + 'px';
-            tipEl.style.transform = 'translateY(-100%)';
-            tipEl.style.display = 'block';
-        });
-        col.addEventListener('mouseleave', function(){ tipEl.style.display = 'none'; });
+    // Gridlines
+    var gridHtml = '';
+    [75,50,25].forEach(function(g){
+        gridHtml += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;'
+            + 'border-top:1px dashed rgba(90,110,140,0.22);pointer-events:none;"></div>';
     });
+    gridHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(90,110,140,0.3);pointer-events:none;"></div>';
+    gridHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(90,110,140,0.35);pointer-events:none;"></div>';
 }
 
 // ── Current Project Cost panel (#cd-g1) ──────────────────────────────────────
