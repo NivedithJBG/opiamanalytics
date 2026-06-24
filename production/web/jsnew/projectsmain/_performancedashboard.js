@@ -148,7 +148,7 @@ function loadCdActivityData(actId){
         success: function(d){
             renderCdUnitCostOfResource(d.items || [], d.activity_name || '');
             renderCdResourceConsumption(d.items || [], d.activity_name || '', +d.last_report_qty || 0, d.unit || '');
-            renderCdUnitCostOfActivity(d.items || [], d.activity_name || '', d.unit || '');
+            renderCdUnitCostOfActivity(d.items || [], d.activity_name || '', d.unit || '', +d.activity_qty || 0, +d.schedule_qty || 0);
             renderCdCostOfActivity(d.items || [], d.activity_name || '', +d.last_report_qty || 0, +d.activity_qty || 0, d.unit || '');
             renderCdCostOnCompletion(d.items || [], d.activity_name || '', +d.activity_qty || 0);
             renderCdValueOfWorkDone(d);
@@ -468,12 +468,15 @@ function renderCdValueOfWorkDone(d){
     el.innerHTML = svg;
 }
 
-function renderCdUnitCostOfActivity(items, actName, actUnit){
+function renderCdUnitCostOfActivity(items, actName, actUnit, estQty, schedQty){
     var el = document.getElementById('cd-g5');
     if (!el) return;
 
     var unitCost = 0;
     items.forEach(function(r){ unitCost += (+r.res_qty || 0) * (+r.rate || 0); });
+    var totalPlanned   = unitCost * (schedQty || 0);
+    var qtyMismatch    = estQty > 0 && schedQty > 0 && Math.abs(estQty - schedQty) > 0.001;
+    var mismatchColour = schedQty > estQty ? '#e74c3c' : '#f39c12';
 
     if (!unitCost){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
@@ -508,7 +511,9 @@ function renderCdUnitCostOfActivity(items, actName, actUnit){
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
-        +'<text x="'+cx+'" y="'+(cy-10)+'" text-anchor="middle" font-size="18" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">&#8377; '+unitCost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</text>'
+        +'<text x="'+cx+'" y="'+(cy-18)+'" text-anchor="middle" font-size="16" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">&#8377; '+unitCost.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</text>'
+        +(totalPlanned>0?'<text x="'+cx+'" y="'+(cy-4)+'" text-anchor="middle" font-size="11" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">= &#8377; '+totalPlanned.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</text>':'')
+        +(schedQty>0?'<text x="'+cx+'" y="'+(cy+10)+'" text-anchor="middle" font-size="10" fill="'+(qtyMismatch?mismatchColour:'#5a6e8c')+'" font-family="Barlow Condensed,Arial">'+schedQty+' '+(actUnit||'')+' (Sched)'+(qtyMismatch?' / '+estQty+' (Est)':'')+'</text>':'')
         +'<text x="8" y="112" text-anchor="start" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">—</tspan></text>'
         +'<text x="202" y="112" text-anchor="end" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">Rate <tspan font-weight="700">'+fmCost(unitCost)+'</tspan></text>'
         +(an?'<text x="'+cx+'" y="128" text-anchor="middle" font-size="13" fill="#111" font-family="Barlow Condensed,Arial">'+an+(actUnit?' / '+actUnit:'')+'</text>':'')
