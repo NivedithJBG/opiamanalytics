@@ -1360,7 +1360,7 @@ function renderCostBars(containerId, items, onRowClick){
     var html = '';
     items.forEach(function(r){
         var pct = (r.cost / maxVal * 100).toFixed(1);
-        var col = '#888888';
+        var col = '#78909C';
         var disp = fmtCost(r.cost);
         html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
               + '<div class="blbl" style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
@@ -1390,19 +1390,19 @@ function renderActivityCostBars(containerId, items, onRowClick){
         var dispVal = '';
         if (act === 0) {
             bar = est > 0
-                ? '<div class="bs" style="width:100%;background:#888888;"></div>'
+                ? '<div class="bs" style="width:100%;background:#78909C;"></div>'
                 : '<div class="bs" style="width:2%;background:#ccc"></div>';
             dispVal = fmtCost(est);
         } else if (act > est) {
             var estPct  = (est / rowMax * 100).toFixed(1);
             var overPct = ((act - est) / rowMax * 100).toFixed(1);
-            bar = '<div class="bs" style="width:'+estPct+'%;background:#888888;"></div>'
+            bar = '<div class="bs" style="width:'+estPct+'%;background:#78909C;"></div>'
                 + '<div class="bs" style="width:'+overPct+'%;background:#c62828;"></div>';
             dispVal = fmtCost(act);
         } else {
             var actPct  = (act  / rowMax * 100).toFixed(1);
             var savePct = ((est - act) / rowMax * 100).toFixed(1);
-            bar = '<div class="bs" style="width:'+actPct+'%;background:#888888;"></div>'
+            bar = '<div class="bs" style="width:'+actPct+'%;background:#78909C;"></div>'
                 + '<div class="bs" style="width:'+savePct+'%;background:#2e7d32;"></div>';
             dispVal = fmtCost(est);
         }
@@ -1672,7 +1672,7 @@ function renderBars(containerId, items, onRowClick){
     var ticks = niceAxis(maxVal);
 
     var html = '<div class="leg">'
-        +'<span><span class="ld" style="background:#888888"></span>Normal</span>'
+        +'<span><span class="ld" style="background:#78909C"></span>Normal</span>'
         +'<span><span class="ld" style="background:#00838f"></span>Critical</span>'
         +'<span><span class="ld" style="background:#FF0000"></span>Delay</span>'
         +'</div>';
@@ -1681,7 +1681,7 @@ function renderBars(containerId, items, onRowClick){
         var sc = r.scheduled, dl = r.delay;
         var scPct = (sc/maxVal*100).toFixed(1);
         var dlPct = (dl/maxVal*100).toFixed(1);
-        var barCol = r.critical ? '#00838f' : '#888888';
+        var barCol = r.critical ? '#00838f' : '#78909C';
         var rowCls = 'brow';
         var tipLines = [];
         if (r.start_date)    tipLines.push('Planned Start:  ' + fmtDate(r.start_date));
@@ -2036,7 +2036,7 @@ function doActivityDuration(k) {
     var elapsed  = +k.elapsed            || 0;
     var wDone    = +(+k.work_done_pct || 0).toFixed(1);
     var wRemain  = Math.max(0, +(100 - wDone).toFixed(1));
-    var baseCol  = k.critical ? '#00838f' : '#888888';  // blue if critical, dark grey otherwise
+    var baseCol  = k.critical ? '#00838f' : '#78909C';  // blue if critical, dark grey otherwise
 
     if (!bDur) {
         el.innerHTML = '<div style="font-size:11px;color:#aaa;text-align:center;padding-top:20px">No duration data</div>';
