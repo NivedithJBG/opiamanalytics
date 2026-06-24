@@ -1796,6 +1796,7 @@ if($action=='login')
       <div class="panel" style="grid-column:2;grid-row:1/span 4"><div class="ph">Cost of Activity</div><div class="gp" id="cd-g2"></div></div>
       <div class="panel" style="grid-column:3;grid-row:1/span 4"><div class="ph">Quantity of Work Done</div><div class="gp" id="cd-g4"></div></div>
       <div class="panel" style="grid-column:2;grid-row:5/span 4"><div class="ph">Unit Cost of Activity</div><div class="gp" id="cd-g5"></div></div>
+      <div class="panel" style="grid-column:3;grid-row:5/span 4"><div class="ph">Resource Cost</div><div class="resbody" id="cd-g3"></div></div>
       <div class="panel" style="grid-column:2;grid-row:9/span 4"><div class="ph">Unit Cost of Resource</div><div class="resbody" id="cd-c6"></div></div>
       <div class="panel" style="grid-column:3;grid-row:9/span 4"><div class="ph">Resource Consumption</div><div class="resbody" id="cd-c7"></div></div>
     </div>

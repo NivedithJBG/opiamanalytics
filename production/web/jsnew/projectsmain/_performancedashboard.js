@@ -147,6 +147,7 @@ function loadCdActivityData(actId){
         success: function(d){
             renderCdUnitCostOfResource(d.items || [], d.activity_name || '');
             renderCdResourceConsumption(d.items || [], d.activity_name || '', +d.last_report_qty || 0, d.unit || '');
+            renderCdResourceCost(d.items || [], d.activity_name || '');
             renderCdUnitCostOfActivity(d.items || [], d.activity_name || '', d.unit || '', +d.activity_qty || 0, +d.schedule_qty || 0, +d.actual_unit_cost_raw || 0);
             renderCdCostOfActivity(d.items || [], d.activity_name || '', +d.last_report_qty || 0, +d.activity_qty || 0, d.unit || '');
             renderCdCostOnCompletion(d.items || [], d.activity_name || '', +d.activity_qty || 0);
@@ -1414,6 +1415,142 @@ function renderActivityCostBars(containerId, items, onRowClick){
     el.innerHTML = html;
     $(el).find('.brow[data-aid]').on('click', function(){
         if (onRowClick) onRowClick($(this).data('aid'));
+    });
+}
+
+// ── Resource Cost panel (#cd-g3) ─────────────────────────────────────────────
+function renderCdResourceCost(items, actName){
+    var el = document.getElementById('cd-g3');
+    if (!el) return;
+    var colPalette = ['#a5d6a7','#80cbc4','#ffcc80','#90caf9','#ce93d8','#ef9a9a','#fff176','#f48fb1','#bcaaa4','#80deea'];
+    var tipPalette = ['#ffa726','#ff7043','#ef5350','#ffca28','#ff8a65','#ffcc02','#e64a19','#ffd54f','#bf360c','#ffab40'];
+
+    function fmR(v){ return v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'K':(+v).toFixed(2); }
+    function fmRs(v){ return '&#8377;'+fmR(v); }
+
+    // Group by resource type
+    var typeMap = {};
+    items.forEach(function(r){
+        var tid = r.type_id || '0';
+        if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', amount: 0, resources: [] };
+        var amt = (+r.res_qty || 0) * (+r.rate || 0);
+        typeMap[tid].amount += amt;
+        typeMap[tid].resources.push({ name: r.name || '', amount: amt, unit: r.unit || '' });
+    });
+    var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
+    types.sort(function(a,b){ return b.amount - a.amount; });
+
+    var totalAmount = types.reduce(function(s,t){ return s + t.amount; }, 0);
+    if (!totalAmount){
+        el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
+        return;
+    }
+
+    // Y-axis scale
+    var scaleHtml = '';
+    [100,75,50,25,0].forEach(function(g){
+        var label = fmR(totalAmount * g / 100);
+        scaleHtml += '<div style="position:absolute;right:2px;bottom:calc('+g+'% - 5px);font-family:\'Nunito\',sans-serif;font-size:8px;color:#8a9bb0;line-height:1;">'+label+'</div>';
+    });
+    var gridHtml = '';
+    [75,50,25].forEach(function(g){
+        gridHtml += '<div style="position:absolute;left:0;right:0;bottom:'+g+'%;border-top:1px dashed rgba(90,110,140,0.22);pointer-events:none;"></div>';
+    });
+    gridHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(90,110,140,0.3);pointer-events:none;"></div>';
+    gridHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(90,110,140,0.35);pointer-events:none;"></div>';
+
+    var barsHtml = '', labelsHtml = '';
+    types.forEach(function(t, i){
+        var col  = colPalette[i % colPalette.length];
+        var pct  = (t.amount / totalAmount * 100).toFixed(1);
+        var sp   = Math.max(100 - parseFloat(pct), 0).toFixed(2);
+        var bp   = Math.max(parseFloat(pct), 0.5).toFixed(2);
+        barsHtml += '<div data-rc-idx="'+i+'" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
+            + '<div style="flex:'+sp+' 1 0;min-height:0;"></div>'
+            + '<div style="flex:'+bp+' 1 0;width:80%;min-height:0;background:'+col+';border-radius:3px 3px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:2px;">'
+            + (parseFloat(pct) >= 10 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#111;white-space:nowrap;">'+pct+'%</span>'
+                                     + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;color:rgba(0,0,0,.6);white-space:nowrap;">'+fmR(t.amount)+'</span>' : '')
+            + '</div></div>';
+        labelsHtml += '<div style="flex:1;min-width:0;font-family:\'Barlow Condensed\',sans-serif;font-size:9px;color:#1a2a3a;text-align:center;padding:2px 3px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+t.name+'</div>';
+    });
+
+    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
+        + '<div style="flex:1;min-height:0;display:flex;">'
+        + '<div style="width:28px;position:relative;flex-shrink:0;">'+scaleHtml+'</div>'
+        + '<div style="flex:1;position:relative;min-width:0;">'+gridHtml
+        + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">'+barsHtml+'</div>'
+        + '</div></div>'
+        + '<div style="display:flex;padding-left:28px;">'+labelsHtml+'</div>'
+        + (actName ? '<div class="resfoot">'+sh(actName,32)+'</div>' : '')
+        + '</div>';
+
+    // Tooltip
+    var tipEl = document.getElementById('rc-cost-tip');
+    if (!tipEl){
+        tipEl = document.createElement('div');
+        tipEl.id = 'rc-cost-tip';
+        tipEl.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
+            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:12px 14px 10px;';
+        document.body.appendChild(tipEl);
+    }
+
+    el.querySelectorAll('[data-rc-idx]').forEach(function(col){
+        col.addEventListener('mouseenter', function(){
+            var t = types[+col.getAttribute('data-rc-idx')];
+            var maxAmt = t.resources.reduce(function(m,r){ return Math.max(m, r.amount); }, 0) || 1;
+
+            var tgHtml = '';
+            [75,50,25].forEach(function(g){ tgHtml += '<div style="position:absolute;left:0;right:0;bottom:'+g+'%;border-top:1px dashed rgba(100,130,170,0.55);pointer-events:none;"></div>'; });
+            tgHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
+            tgHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
+
+            var tsHtml = '';
+            [100,75,50,25,0].forEach(function(g){
+                tsHtml += '<div style="position:absolute;right:2px;bottom:calc('+g+'% - 5px);font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;line-height:1;white-space:nowrap;">'+fmR(maxAmt*g/100)+'</div>';
+            });
+
+            var tbHtml = '', legendRows = '';
+            t.resources.forEach(function(r, ri){
+                var c2  = tipPalette[ri % tipPalette.length];
+                var pct2 = maxAmt > 0 ? r.amount / maxAmt * 100 : 0;
+                var sp2  = Math.max(100 - pct2, 0).toFixed(2);
+                var bp2  = Math.max(pct2, 0.5).toFixed(2);
+                tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 5px;">'
+                    + '<div style="flex:'+sp2+' 1 0;min-height:0;"></div>'
+                    + '<div style="flex:'+bp2+' 1 0;width:44%;min-height:0;background:'+c2+';border-radius:2px 2px 0 0;"></div>'
+                    + '</div>';
+                legendRows += '<tr style="border-bottom:1px solid rgba(255,255,255,0.1);">'
+                    + '<td style="padding:5px 8px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">'
+                    + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+c2+';margin-right:5px;vertical-align:middle;"></span>'+r.name+'</td>'
+                    + '<td style="padding:5px 0 5px 4px;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'+fmRs(r.amount)+'</td>'
+                    + '</tr>';
+            });
+
+            var tipW = Math.max(320, t.resources.length * 60);
+            tipEl.style.width = tipW + 'px';
+            tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;letter-spacing:.4px;margin-bottom:8px;">'+t.name+' — Amounts</div>'
+                + '<div style="display:flex;height:180px;">'
+                + '<div style="width:32px;position:relative;flex-shrink:0;">'+tsHtml+'</div>'
+                + '<div style="flex:1;position:relative;min-width:0;">'+tgHtml
+                + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">'+tbHtml+'</div>'
+                + '</div></div>'
+                + '<div style="margin-top:8px;border-top:1px solid rgba(100,130,170,0.3);padding-top:6px;">'
+                + '<table style="width:100%;border-collapse:collapse;"><thead><tr>'
+                + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:left;">Resource</th>'
+                + '<th style="padding:3px 0 3px 4px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Amount</th>'
+                + '</tr></thead><tbody>'+legendRows+'</tbody></table>'
+                + '<div style="margin-top:6px;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;text-align:right;">Total: '+fmRs(t.amount)+'</div>'
+                + '</div>';
+
+            var rect = col.getBoundingClientRect();
+            var left = rect.left + rect.width/2 - tipW/2;
+            left = Math.max(4, Math.min(left, window.innerWidth - tipW - 4));
+            tipEl.style.left = left + 'px';
+            tipEl.style.top  = rect.top - 8 + 'px';
+            tipEl.style.transform = 'translateY(-100%)';
+            tipEl.style.display = 'block';
+        });
+        col.addEventListener('mouseleave', function(){ tipEl.style.display = 'none'; });
     });
 }
 
