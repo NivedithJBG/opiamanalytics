@@ -511,11 +511,11 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, estQty, schedQty, a
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
         +'<text x="'+cx+'" y="'+(cy-10)+'" text-anchor="middle" font-size="18" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+(actualAdj > 0 ? '&#8377; '+actualAdj.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : '—')+(actUnit?' / '+actUnit:'')+'</text>'
-        +'<rect x="8" y="102" width="10" height="7" rx="1" fill="#00838f"/>'
-        +'<text x="22" y="109" text-anchor="start" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">Planned <tspan font-weight="700">&#8377; '+fmCost(adjUnitCost)+'</tspan></text>'
-        +'<rect x="8" y="116" width="10" height="7" rx="1" fill="#FF6D00"/>'
-        +'<text x="22" y="123" text-anchor="start" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">'+(actualAdj > 0 ? '&#8377; '+fmCost(actualAdj) : '—')+'</tspan></text>'
-        +(an?'<text x="'+cx+'" y="133" text-anchor="middle" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
+        +'<rect x="8" y="107" width="10" height="7" rx="1" fill="#00838f"/>'
+        +'<text x="21" y="114" text-anchor="start" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">Planned <tspan font-weight="700">&#8377; '+fmCost(adjUnitCost)+'</tspan></text>'
+        +'<rect x="110" y="107" width="10" height="7" rx="1" fill="#FF6D00"/>'
+        +'<text x="123" y="114" text-anchor="start" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">'+(actualAdj > 0 ? '&#8377; '+fmCost(actualAdj) : '—')+'</tspan></text>'
+        +(an?'<text x="'+cx+'" y="128" text-anchor="middle" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +'</svg>';
 
     var colPalette = ['#90caf9','#ce93d8','#80cbc4','#ffcc80','#ef9a9a','#a5d6a7','#fff176','#f48fb1','#bcaaa4','#80deea'];
