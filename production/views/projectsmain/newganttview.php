@@ -47,10 +47,10 @@
   width: 15px; height: 15px; border-radius: 50%;
   border: 1px solid darkgrey; display: inline-block; flex-shrink: 0;
 }
-.dot-critical  { background: #00BCD4; }
+.dot-critical  { background: #00ACC1; }
 .dot-normal    { background: #337ab7; }
 /* Critical path bar colour — overrides external CSS (needed when view loads without full layout) */
-.gtaskpink, div.gtaskpink.gplan { background: #00BCD4 !important; border-color: #0097A7 !important; }
+.gtaskpink, div.gtaskpink.gplan { background: #00ACC1 !important; border-color: #0097A7 !important; }
 </style>
 
 <div class="container-fluid">
