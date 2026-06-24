@@ -148,7 +148,7 @@ function loadCdActivityData(actId){
         success: function(d){
             renderCdUnitCostOfResource(d.items || [], d.activity_name || '');
             renderCdResourceConsumption(d.items || [], d.activity_name || '', +d.last_report_qty || 0, d.unit || '');
-            renderCdUnitCostOfActivity(d.items || [], d.activity_name || '', d.unit || '', +d.activity_qty || 0, +d.schedule_qty || 0);
+            renderCdUnitCostOfActivity(d.items || [], d.activity_name || '', d.unit || '', +d.activity_qty || 0, +d.schedule_qty || 0, +d.actual_unit_cost_raw || 0);
             renderCdCostOfActivity(d.items || [], d.activity_name || '', +d.last_report_qty || 0, +d.activity_qty || 0, d.unit || '');
             renderCdCostOnCompletion(d.items || [], d.activity_name || '', +d.activity_qty || 0);
             renderCdValueOfWorkDone(d);
@@ -468,7 +468,7 @@ function renderCdValueOfWorkDone(d){
     el.innerHTML = svg;
 }
 
-function renderCdUnitCostOfActivity(items, actName, actUnit, estQty, schedQty){
+function renderCdUnitCostOfActivity(items, actName, actUnit, estQty, schedQty, actualRaw){
     var el = document.getElementById('cd-g5');
     if (!el) return;
 
@@ -476,14 +476,15 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, estQty, schedQty){
     items.forEach(function(r){ unitCost += (+r.res_qty || 0) * (+r.rate || 0); });
     var ratio       = (estQty > 0 && schedQty > 0) ? estQty / schedQty : 1;
     var adjUnitCost = unitCost * ratio;
+    var actualAdj   = (actualRaw || 0) * ratio;
 
     if (!unitCost){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
     }
 
-    var maxVal = unitCost * 2;
-    var actual = 0; // formula to be defined later
+    var maxVal = Math.max(adjUnitCost, actualAdj) * 2 || adjUnitCost * 2 || 1;
+    var actual = actualAdj;
     var f      = Math.max(0, Math.min(1, actual / maxVal));
     var an     = sh(actName || '', 38);
     var cx=105, cy=92, r=76, sw=14;

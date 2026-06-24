@@ -810,7 +810,8 @@ class ProjectsmainController extends Controller
                     }
                 }
             }
-            $scActualUnitCost = $mbQty > 0 ? $mbAmount / $mbQty : null;
+            $scActualUnitCost    = $mbQty > 0 ? $mbAmount / $mbQty : null;
+            $actualUnitCostTotal = 0.0;
             foreach ($rows as $r) {
                 $resQty  = (float)$r['quantity'];
                 $typeId  = (int)$r['type_id'];
@@ -872,6 +873,19 @@ class ProjectsmainController extends Controller
                         : null;
                 }
 
+                // Actual unit cost contribution for this resource (per estimate unit)
+                $actualContrib = 0.0;
+                if ($typeId === 4 && $lastQty > 0) {
+                    $scTaskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
+                    foreach ($scTaskIds as $stid) {
+                        $actualContrib += ($taskAmountById[$stid] ?? 0.0) / $lastQty;
+                    }
+                } elseif (in_array($typeId, [2, 6, 7]) && $lastQty > 0 && $grnQty > 0 && $actUnit !== null) {
+                    $consumed       = max(0, $grnQty - $stockQty);
+                    $actualContrib  = (float)$actUnit * $consumed / $lastQty;
+                }
+                $actualUnitCostTotal += $actualContrib;
+
                 $items[] = [
                     'name'                 => $r['name'],
                     'type_name'            => $r['type_name'],
@@ -889,12 +903,13 @@ class ProjectsmainController extends Controller
         }
 
         return json_encode([
-            'activity_name'   => $sa['name'],
-            'activity_qty'    => $actQty,
-            'schedule_qty'    => (float)($sa['quantity'] ?? 0),
-            'unit'            => $sa['unit'] ?? '',
-            'last_report_qty' => $lastQty,
-            'items'           => $items,
+            'activity_name'       => $sa['name'],
+            'activity_qty'        => $actQty,
+            'schedule_qty'        => (float)($sa['quantity'] ?? 0),
+            'unit'                => $sa['unit'] ?? '',
+            'last_report_qty'     => $lastQty,
+            'actual_unit_cost_raw'=> round($actualUnitCostTotal, 4),
+            'items'               => $items,
         ]);
     }
 
