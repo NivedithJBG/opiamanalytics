@@ -1422,8 +1422,8 @@ function renderActivityCostBars(containerId, items, onRowClick){
 function renderCdResourceCost(items, actName){
     var el = document.getElementById('cd-rcost');
     if (!el) return;
-    var colPalette = ['#a5d6a7','#80cbc4','#ffcc80','#90caf9','#ce93d8','#ef9a9a','#fff176','#f48fb1','#bcaaa4','#80deea'];
-    var tipPalette = ['#ffa726','#ff7043','#ef5350','#ffca28','#ff8a65','#ffcc02','#e64a19','#ffd54f','#bf360c','#ffab40'];
+    var colPalette = ['#1565C0','#2E7D32','#E65100','#6A1B9A','#00838F','#C62828','#F57F17','#00695C','#283593','#AD1457'];
+    var tipPalette = ['#42A5F5','#66BB6A','#FFA726','#AB47BC','#26C6DA','#EF5350','#FFEE58','#26A69A','#5C6BC0','#EC407A'];
 
     function fmR(v){ return v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'K':(+v).toFixed(2); }
     function fmRs(v){ return '&#8377;'+fmR(v); }
