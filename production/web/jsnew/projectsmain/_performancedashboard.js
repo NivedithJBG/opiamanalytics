@@ -946,19 +946,12 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
     });
 
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
-        + '<div style="flex:1;min-height:0;display:flex;padding:4px 2px 0;">' + barsHtml + '</div>'
+        + '<div style="flex:1;position:relative;min-height:0;">'
+        + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + barsHtml + '</div>'
+        + '</div>'
         + '<div style="display:flex;">' + labelsHtml + '</div>'
         + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '')
         + '</div>';
-
-    // Gridlines
-    var gridHtml = '';
-    [75,50,25].forEach(function(g){
-        gridHtml += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;'
-            + 'border-top:1px dashed rgba(90,110,140,0.22);pointer-events:none;"></div>';
-    });
-    gridHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(90,110,140,0.3);pointer-events:none;"></div>';
-    gridHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(90,110,140,0.35);pointer-events:none;"></div>';
 }
 
 // ── Current Project Cost panel (#cd-g1) ──────────────────────────────────────
