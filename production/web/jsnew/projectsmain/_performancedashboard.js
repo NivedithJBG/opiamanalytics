@@ -94,7 +94,7 @@ function renderCdBars(){
 
     renderCostBars('cd-c2', [{name: _cdProjectName || 'Project', cost: totalCost, id: 0}], null);
     var c2el = document.getElementById('cd-c2');
-    if (c2el) c2el.style.paddingTop = '20%';
+    if (c2el) c2el.style.paddingTop = '55%';
     renderCostBars('cd-c1', groupItems, filterByGroupCd);
     if (_groups.length) filterByGroupCd(_groups[0].id);
 }
