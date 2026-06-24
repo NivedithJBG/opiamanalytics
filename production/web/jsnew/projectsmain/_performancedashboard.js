@@ -942,17 +942,20 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
         gridHtml += '<div style="position:absolute;left:0;right:0;bottom:' + refPos + '%;border-top:2px dashed rgba(90,110,140,0.5);pointer-events:none;"></div>';
     }
 
-    var barsHtml = '';
+    var barsHtml = '', labelsHtml = '';
     types.forEach(function(t, i){
         var col = _resTypeCol(t.name, colPalette[i % colPalette.length]);
-        // All bars same full height — no proportional sizing
         barsHtml += '<div data-cons-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
             + '<div style="flex:1;width:80%;min-height:0;background:' + col + ';border-radius:3px 3px 0 0;"></div>'
+            + '</div>';
+        labelsHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 3px 0;">'
+            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + t.name + '</div>'
             + '</div>';
     });
 
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
         + '<div style="flex:1;min-height:0;display:flex;padding:4px 2px 0;">' + barsHtml + '</div>'
+        + '<div style="display:flex;">' + labelsHtml + '</div>'
         + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '')
         + '</div>';
 
