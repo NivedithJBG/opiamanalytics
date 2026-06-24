@@ -49,6 +49,8 @@
 }
 .dot-critical  { background: #00838f; }
 .dot-normal    { background: #337ab7; }
+/* Critical path bar colour — overrides external CSS (needed when view loads without full layout) */
+.gtaskpink, div.gtaskpink.gplan { background: #00838f !important; border-color: #006064 !important; }
 </style>
 
 <div class="container-fluid">
