@@ -1485,16 +1485,16 @@ function renderProjectBar(el, budgeted, actual, label, bEndDate, aEndDate){
     if (actual>0 && actual>budgeted){
         var bPct=(budgeted/maxVal*100).toFixed(1);
         var rPct=((actual-budgeted)/maxVal*100).toFixed(1);
-        html+='<div style="width:'+bPct+'%;background:#1a6fbf;min-width:3px;'+lbl+';color:#fff">'+budgeted+' d</div>';
+        html+='<div style="width:'+bPct+'%;background:#00838f;min-width:3px;'+lbl+';color:#fff">'+budgeted+' d</div>';
         html+='<div style="width:'+rPct+'%;background:#e53935;min-width:3px;'+lbl+';color:#fff">+'+(actual-budgeted)+' d</div>';
     } else if (actual>0 && actual<budgeted){
         var aPct=(actual/maxVal*100).toFixed(1);
         var yPct=((budgeted-actual)/maxVal*100).toFixed(1);
-        html+='<div style="width:'+aPct+'%;background:#1a6fbf;min-width:3px;'+lbl+';color:#fff">'+actual+' d</div>';
+        html+='<div style="width:'+aPct+'%;background:#00838f;min-width:3px;'+lbl+';color:#fff">'+actual+' d</div>';
         html+='<div style="width:'+yPct+'%;background:#f0c419;min-width:3px;'+lbl+';color:#1a2540">-'+(budgeted-actual)+' d</div>';
     } else {
         var boPct=(budgeted/maxVal*100).toFixed(1);
-        html+='<div style="width:'+boPct+'%;background:#1a6fbf;min-width:3px;'+lbl+';color:#fff">'+budgeted+' d</div>';
+        html+='<div style="width:'+boPct+'%;background:#00838f;min-width:3px;'+lbl+';color:#fff">'+budgeted+' d</div>';
     }
     html+='</div>';
     // Dates + delay row
@@ -1512,7 +1512,7 @@ function renderProjectBar(el, budgeted, actual, label, bEndDate, aEndDate){
     }
     html+='</div>';
     html+='<div style="display:flex;gap:10px;margin-top:5px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#5a6e8c">'
-        +'<span><span style="display:inline-block;width:10px;height:8px;background:#1a6fbf;margin-right:3px;border-radius:1px"></span>Budgeted</span>'
+        +'<span><span style="display:inline-block;width:10px;height:8px;background:#00838f;margin-right:3px;border-radius:1px"></span>Budgeted</span>'
         +'<span><span style="display:inline-block;width:10px;height:8px;background:#e53935;margin-right:3px;border-radius:1px"></span>Overrun</span>'
         +'<span><span style="display:inline-block;width:10px;height:8px;background:#f0c419;margin-right:3px;border-radius:1px"></span>Ahead</span>'
         +'</div>';
@@ -1535,7 +1535,7 @@ function renderBars(containerId, items, onRowClick){
 
     var html = '<div class="leg">'
         +'<span><span class="ld" style="background:#555555"></span>Normal</span>'
-        +'<span><span class="ld" style="background:#1a6fbf"></span>Critical</span>'
+        +'<span><span class="ld" style="background:#00838f"></span>Critical</span>'
         +'<span><span class="ld" style="background:#FF0000"></span>Delay</span>'
         +'</div>';
 
@@ -1543,7 +1543,7 @@ function renderBars(containerId, items, onRowClick){
         var sc = r.scheduled, dl = r.delay;
         var scPct = (sc/maxVal*100).toFixed(1);
         var dlPct = (dl/maxVal*100).toFixed(1);
-        var barCol = r.critical ? '#1a6fbf' : '#555555';
+        var barCol = r.critical ? '#00838f' : '#555555';
         var rowCls = 'brow';
         var tipLines = [];
         if (r.start_date)    tipLines.push('Planned Start:  ' + fmtDate(r.start_date));
@@ -1896,7 +1896,7 @@ function doActivityDuration(k) {
     var elapsed  = +k.elapsed            || 0;
     var wDone    = +(+k.work_done_pct || 0).toFixed(1);
     var wRemain  = Math.max(0, +(100 - wDone).toFixed(1));
-    var baseCol  = k.critical ? '#1a6fbf' : '#555555';  // blue if critical, dark grey otherwise
+    var baseCol  = k.critical ? '#00838f' : '#555555';  // blue if critical, dark grey otherwise
 
     if (!bDur) {
         el.innerHTML = '<div style="font-size:11px;color:#aaa;text-align:center;padding-top:20px">No duration data</div>';

@@ -64,7 +64,7 @@ div.gtaskblue.gplan {
 
 div.gtaskpurple.gplan {
   /*background: #484848;*/
-  background: #1982ad;
+  background: #00838f;
   /* Old browsers */
   /* background: linear-gradient(to bottom, rgba(58, 132, 195, 1) 0%, rgba(65, 154, 214, 1) 20%, rgba(75, 184, 240, 1) 40%, rgba(58, 139, 194, 1) 70%, rgba(38, 85, 139, 1) 100%); */
   /* W3C */
@@ -280,16 +280,16 @@ div.gtaskbarcontainer .gtaskyellow {
 }*/
 
 .gtaskred{
-  background: #1982ad !important;
+  background: #00838f !important;
 }
 
 /*.gtaskredcomplete{
-    background: #1982ad !important;
+    background: #00838f !important;
     float: left !important;
     height: 13px !important;
 }*/
 /*div.gtaskblue.gplan{
-  /*background: #1982ad;
+  /*background: #00838f;
   background: #39b0e1;
 }*/
 
@@ -350,11 +350,11 @@ div.gtaskbarcontainer.gplan{
 
 .criticalPath{
   /*border-style: groove;*/
-  border: solid 1px #1982ad;
+  border: solid 1px #00838f;
 }
 .criticalPathArwLeft{
-  border-left: 4px solid #1982ad;
+  border-left: 4px solid #00838f;
 }
 .criticalPathArwRight{
-  border-right: 4px solid #1982ad;
+  border-right: 4px solid #00838f;
 }
