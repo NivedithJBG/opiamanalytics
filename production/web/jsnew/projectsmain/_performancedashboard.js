@@ -1554,12 +1554,14 @@ function renderBars(containerId, items, onRowClick){
         if (r.startDelayed)  tipLines.push('Start Delay:    ' + r.startDelayDays + ' days');
         else if (dl > 0)     tipLines.push('Delay:          ' + dl + ' days');
         var tipAttr = tipLines.length ? ' data-tip="' + tipLines.join('&#10;') + '"' : '';
-        html += '<div class="'+rowCls+'"'+tipAttr+' '+(r.id?'data-aid="'+r.id+'" style="cursor:pointer"':'')+'>'
-            +'<div class="blbl" title="'+r.name+'">'+sh(r.name,30)+'</div>'
-            +'<div class="btrk">'
-            +(sc>0?'<div class="bs" style="width:'+scPct+'%;background:'+barCol+'">'+sc+'</div>':'')
-            +(dl>0?'<div class="bs" style="width:'+dlPct+'%;background:#FF0000">'+dl+'</div>':'')
+        var dispVal = sc > 0 ? (String(sc) + (dl > 0 ? '<span style="color:#FF0000;margin-left:3px;">+' + dl + '</span>' : '')) : '';
+        html += '<div class="'+rowCls+'"'+tipAttr+' '+(r.id?'data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;"':'style="display:flex;align-items:center;"')+'>'
+            +'<div class="blbl" style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
+            +'<div class="btrk" style="flex:1;">'
+            +(sc>0?'<div class="bs" style="width:'+scPct+'%;background:'+barCol+'"></div>':'')
+            +(dl>0?'<div class="bs" style="width:'+dlPct+'%;background:#FF0000"></div>':'')
             +'</div>'
+            +'<div style="font-size:11px;color:#000;font-weight:700;min-width:38px;text-align:right;padding-left:5px;white-space:nowrap;">'+dispVal+'</div>'
             +'</div>';
     });
 
@@ -1922,13 +1924,13 @@ function doActivityDuration(k) {
     // Single bar: base colour (grey or blue) + overrun (red) or slack (yellow), dark overlay for elapsed
     var bar = '<div style="position:relative;display:flex;align-items:stretch;height:22px;border-radius:3px;overflow:hidden;">';
     if (isOver) {
-        bar += '<div style="width:' + (bDur/maxDur*100).toFixed(1) + '%;background:' + baseCol + ';min-width:3px;' + seg + ';color:#fff">' + bDur + ' d</div>';
-        bar += '<div style="width:' + ((aDur-bDur)/maxDur*100).toFixed(1) + '%;background:#e53935;min-width:3px;' + seg + ';color:#fff">+' + (aDur-bDur) + ' d</div>';
+        bar += '<div style="width:' + (bDur/maxDur*100).toFixed(1) + '%;background:' + baseCol + ';min-width:3px;' + seg + '"></div>';
+        bar += '<div style="width:' + ((aDur-bDur)/maxDur*100).toFixed(1) + '%;background:#e53935;min-width:3px;' + seg + '"></div>';
     } else if (isUnder) {
-        bar += '<div style="width:' + (aDur/maxDur*100).toFixed(1) + '%;background:' + baseCol + ';min-width:3px;' + seg + ';color:#fff">' + aDur + ' d</div>';
-        bar += '<div style="width:' + ((bDur-aDur)/maxDur*100).toFixed(1) + '%;background:#f0c419;min-width:3px;' + seg + ';color:#1a2540">-' + (bDur-aDur) + ' d</div>';
+        bar += '<div style="width:' + (aDur/maxDur*100).toFixed(1) + '%;background:' + baseCol + ';min-width:3px;' + seg + '"></div>';
+        bar += '<div style="width:' + ((bDur-aDur)/maxDur*100).toFixed(1) + '%;background:#f0c419;min-width:3px;' + seg + '"></div>';
     } else {
-        bar += '<div style="width:100%;background:' + baseCol + ';' + seg + ';color:#fff">' + bDur + ' d</div>';
+        bar += '<div style="width:100%;background:' + baseCol + ';' + seg + '"></div>';
     }
     bar += '<div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(elapsed) + ';background:#0d3b8e;opacity:0.55;pointer-events:none"></div>';
     bar += '</div>';
