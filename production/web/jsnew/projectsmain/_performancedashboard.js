@@ -45,6 +45,20 @@ var _cdLoaded = false;
 var _cdProjectName = '';
 var _cdTotalCost = 0;
 
+// Resource type colour map (name → bar colour)
+var _resTypeColours = {
+    'materials':         '#7E57C2',   // Blue Purple
+    'purchased inputs':  '#9E9E9E',   // Grey
+    'consumables':       '#80CBC4',   // Grey Green (teal)
+    'tools and tackles': '#607D8B',   // Blue Grey
+    'sub contractors':   '#708090',   // Slate
+    'sub contractor':    '#708090'    // Slate (singular)
+};
+function _resTypeCol(name, fallback){
+    var k = (name || '').toLowerCase().trim();
+    return _resTypeColours[k] || fallback || '#78909C';
+}
+
 $(document).on('click', '.cost-dashboard-btn', function(e){
     e.preventDefault();
     $('#cd-modal, #cd-bk').addClass('cd-open');
@@ -236,7 +250,7 @@ function renderCdUnitCostOfResource(items, actName){
     var barsHtml = '';
     var labelsHtml = '';
     types.forEach(function(t, i){
-        var col = colPalette[i % colPalette.length];
+        var col = _resTypeCol(t.name, colPalette[i % colPalette.length]);
 
         if (!t.hasActual) {
             // No actual data — single bar as before
@@ -938,7 +952,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
 
     var barsHtml = '', labelsHtml = '';
     types.forEach(function(t, i){
-        var col = colPalette[i % colPalette.length];
+        var col = _resTypeCol(t.name, colPalette[i % colPalette.length]);
 
         if (!t.hasActual) {
             var pct     = t.amount / actUnitCost * 100;
@@ -1464,7 +1478,7 @@ function renderCdResourceCost(items, actName){
 
     var barsHtml = '', labelsHtml = '';
     types.forEach(function(t, i){
-        var col  = colPalette[i % colPalette.length];
+        var col  = _resTypeCol(t.name, colPalette[i % colPalette.length]);
         var pct  = (t.amount / totalAmount * 100).toFixed(1);
         var sp   = Math.max(100 - parseFloat(pct), 0).toFixed(2);
         var bp   = Math.max(parseFloat(pct), 0.5).toFixed(2);
