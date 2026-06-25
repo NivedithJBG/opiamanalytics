@@ -528,7 +528,14 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
     // Total estimated cost = SUM(rate × res_qty) × estActQty
     var unitCost = 0;
     items.forEach(function(r){ unitCost += (+r.res_qty || 0) * (+r.rate || 0); });
-    var estimatedCost = unitCost * estActQty;
+
+    if (!unitCost){
+        el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
+        return;
+    }
+
+    // Use estActQty when available; fall back to 1 so bar always shows when resources exist
+    var estimatedCost = unitCost * (estActQty || 1);
 
     // Planned cost of work done = SUM(rate × planned_consumption)
     var plannedWorkDone = 0;
@@ -542,11 +549,6 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
             hasActual = true;
         }
     });
-
-    if (!estimatedCost){
-        el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
-        return;
-    }
 
     var scale = estimatedCost;
     var plW   = Math.min(plannedWorkDone / scale * 100, 100).toFixed(2);
