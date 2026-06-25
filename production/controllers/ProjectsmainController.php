@@ -817,6 +817,8 @@ class ProjectsmainController extends Controller
             }
             $scActualUnitCost    = $mbQty > 0 ? $mbAmount / $mbQty : null;
             $actualUnitCostTotal = 0.0;
+            $schedQty = (float)($sa['quantity'] ?? 0);
+            $ratio    = ($actQty > 0) ? $schedQty / $actQty : 0.0;
             foreach ($rows as $r) {
                 $resQty  = (float)$r['quantity'];
                 $typeId  = (int)$r['type_id'];
@@ -868,13 +870,11 @@ class ProjectsmainController extends Controller
                         ? round($taskWorkDone / $mbQty, 3)
                         : null;
                 } else {
-                    // Materials: planned = res_qty × MB work_done (or × task_qty_per_unit as fallback)
-                    //            actual  = GRN total − last physical stock
-                    $plannedConsumption = ($taskWorkDone !== null)
-                        ? round($resQty * $taskWorkDone, 3)
-                        : ($taskQtyPerUnit !== null ? round($resQty * $taskQtyPerUnit, 3) : $resQty);
-                    $actualConsumption = (in_array($typeId, [2, 6, 7]) && $grnQty > 0)
-                        ? round(max(0, $grnQty - $stockQty), 3)
+                    // Materials/Consumables/Purchased Inputs/Tools: planned = res_qty × (schedQty / estQty)
+                    //                                               actual  = (GRN_qty − stock) / lastQty
+                    $plannedConsumption = round($resQty * $ratio, 3);
+                    $actualConsumption  = (in_array($typeId, [2, 6, 7]) && $grnQty > 0 && $lastQty > 0)
+                        ? round(max(0, $grnQty - $stockQty) / $lastQty, 3)
                         : null;
                 }
 
