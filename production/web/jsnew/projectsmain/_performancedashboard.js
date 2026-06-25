@@ -1296,7 +1296,7 @@ function renderCdResourceCost(items, actName){
             });
 
             // Vertical bar per resource — distinct colours
-            var tipPal = ['#42a5f5','#ffa726','#ab47bc','#26c6da','#ffee58','#ec407a','#26a69a','#5c6bc0','#8d6e63','#78909c'];
+            var tipPal = ['#EF5350','#FF7043','#FFA726','#FFEE58','#9CCC65','#26C6DA','#42A5F5','#AB47BC','#EC407A','#8D6E63'];
             var tbHtml = '', lblHtml = '';
             t.resources.forEach(function(r, ri){
                 var rCol    = tipPal[ri % tipPal.length];
