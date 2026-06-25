@@ -528,14 +528,15 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
     var unitCost = 0;
     items.forEach(function(r){ unitCost += (+r.res_qty || 0) * (+r.rate || 0); });
 
-    var actualUnitCost = 0;
-    items.forEach(function(r){
-        var ac = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined) ? +r.actual_unit_cost : (+r.rate || 0);
-        actualUnitCost += (+r.res_qty || 0) * ac;
-    });
-
     var estimatedCost  = unitCost * estActQty;
-    var actualWorkDone = actualUnitCost * lastQty;
+
+    // Actual Cost of Work Done = Actual Unit Cost × lastQty = SUM(actual_unit_cost × actual_consumption)
+    var actualWorkDone = 0;
+    items.forEach(function(r){
+        if (r.actual_unit_cost != null && r.actual_consumption != null) {
+            actualWorkDone += (+r.actual_unit_cost) * (+r.actual_consumption);
+        }
+    });
 
     // Estimated Cost of Work Done = Planned Unit Cost × lastQty = SUM(rate × planned_consumption)
     var estWorkDone = 0;
