@@ -823,11 +823,12 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
     var resources = [];
     items.forEach(function(r){
         resources.push({
-            name:    r.name || '',
-            qty:     (r.planned_consumption != null) ? +r.planned_consumption : (+r.res_qty || 0),
-            unit:    r.unit || '',
-            type_id: +r.type_id || 0,
-            actual:  (r.actual_consumption  != null) ? +r.actual_consumption  : null
+            name:      r.name || '',
+            qty:       (r.planned_consumption != null) ? +r.planned_consumption : (+r.res_qty || 0),
+            unit:      r.unit || '',
+            task_unit: r.task_unit || '',
+            type_id:   +r.type_id || 0,
+            actual:    (r.actual_consumption  != null) ? +r.actual_consumption  : null
         });
     });
     if (!resources.length){
@@ -851,9 +852,8 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
         var col     = resColours[ri % resColours.length];
         var planned = r.qty;
         var actual  = r.actual;
-        var unitSuffix = r.type_id === 4
-            ? ' / ' + (actUnit || 'Unit')
-            : (r.unit ? ' ' + r.unit : '');
+        var resUnit = r.type_id === 4 ? (r.task_unit || r.unit || '') : (r.unit || '');
+        var unitSuffix = (resUnit ? ' ' + resUnit : '') + (actUnit ? ' / ' + actUnit : '');
         var barHtml = '';
         if (actual === null) {
             var plW = Math.max(planned / maxQty * 100, 0.5).toFixed(1);

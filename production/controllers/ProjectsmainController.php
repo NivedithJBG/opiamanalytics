@@ -774,13 +774,18 @@ class ProjectsmainController extends Controller
                 [':wid' => $wbId, ':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid]
             )->queryAll();
             // Build task planned qty per unit from wo_task_rates (schedule-task screen)
-            $taskQtyMap = [];  // task_id => task_qty (planned qty per activity unit)
+            $taskQtyMap  = [];  // task_id => task_qty (planned qty per activity unit)
+            $taskUnitMap = [];  // task_id => task_unit from activity_tasks
             $wtrRows = $db->createCommand(
-                "SELECT task_id, task_qty FROM wo_task_rates WHERE activity_id = :wid AND project_id = :pid",
+                "SELECT wtr.task_id, wtr.task_qty, COALESCE(at.task_unit, '') AS task_unit
+                 FROM wo_task_rates wtr
+                 LEFT JOIN activity_tasks at ON at.id = wtr.task_id
+                 WHERE wtr.activity_id = :wid AND wtr.project_id = :pid",
                 [':wid' => $wbId, ':pid' => $pid]
             )->queryAll();
             foreach ($wtrRows as $wtr) {
-                $taskQtyMap[(int)$wtr['task_id']] = (float)($wtr['task_qty'] ?? 0);
+                $taskQtyMap[(int)$wtr['task_id']]  = (float)($wtr['task_qty'] ?? 0);
+                $taskUnitMap[(int)$wtr['task_id']] = $wtr['task_unit'] ?? '';
             }
 
             $mbAmount = 0.0; $mbQty = 0.0; $taskWorkMap = [];
@@ -886,12 +891,21 @@ class ProjectsmainController extends Controller
                 }
                 $actualUnitCostTotal += $actualContrib;
 
+                $taskUnit = '';
+                if ($typeId === 4) {
+                    $scTaskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
+                    if (!empty($scTaskIds)) {
+                        $taskUnit = $taskUnitMap[reset($scTaskIds)] ?? '';
+                    }
+                }
+
                 $items[] = [
                     'name'                 => $r['name'],
                     'type_name'            => $r['type_name'],
                     'rate'                 => (float)$r['rate'],
                     'type_id'              => $typeId,
                     'unit'                 => $r['unit'],
+                    'task_unit'            => $taskUnit,
                     'res_qty'              => $resQty,
                     'consumption'          => round($lastQty * $resQty, 3),
                     'actual_unit_cost'     => $actUnit,
