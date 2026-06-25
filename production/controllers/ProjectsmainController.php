@@ -2959,12 +2959,30 @@ class ProjectsmainController extends Controller
             $atime = 0;
             $taskRowsHtml = '';
 
+            // Qty/Unit formula: SUM(SC res_qty mapped to task) × (estQty / schedQty)
+            $estPenRow = $connection->createCommand(
+                "SELECT activity_qty FROM pricing_estimate_new WHERE activity_Id=:wid AND project_Id=:pid AND pricing_status=0 LIMIT 1",
+                [':wid' => $estimate['activity_id'], ':pid' => $projuser->projectid]
+            )->queryOne();
+            $estActQtyForTask = $estPenRow ? (float)$estPenRow['activity_qty'] : 0;
+            $schedQtyForTask  = (float)($est_qty ?? 0);
+            $taskRatio        = $schedQtyForTask > 0 ? $estActQtyForTask / $schedQtyForTask : 0.0;
+
             if(count($tasks) > 0) {
                 foreach($tasks AS $key => $task):
                     $sqlqr = "SELECT Budgeted_Duration,End_Duration,status,task_qty,task_productivity,task_resource_units FROM schedule_task_new WHERE activity_Id='".$activityid."' AND task_Id='".$task['Id']."'";
                     $command1 = $connection->createCommand($sqlqr);
                     $dataReader1 = $command1->query();
                     $sche_tasks = $dataReader1->read();
+
+                    // SC qty/unit = SUM(SC res_qty mapped to this task) × (estQty / schedQty)
+                    $scResQty = (float)($connection->createCommand(
+                        "SELECT COALESCE(SUM(quantity), 0) FROM pricing_estimate_resources_new
+                         WHERE activity_id=:wid AND project_id=:pid AND resourcetype_Id=4 AND pricing_status=0
+                           AND FIND_IN_SET(:tid, task_ids)",
+                        [':wid' => $estimate['activity_id'], ':tid' => $task['Id'], ':pid' => $projuser->projectid]
+                    )->queryScalar() ?: 0);
+                    $computedTaskQty = round($scResQty * $taskRatio, 3);
 
                     $repquery = "SELECT reportid FROM new_report WHERE activity_Id='".$activityid."' AND status=0 AND totalduration!=0";
                     $command = $connection->createCommand($repquery);
@@ -3002,7 +3020,7 @@ class ProjectsmainController extends Controller
                             <input type="text" class="form-control taskname_edit" name="taskname[]" value="'.$task['task'].'" '.$disabledForm.'></td>
                         <td><input type="text" class="form-control" value="'.htmlspecialchars($task['task_unit']).'" readonly></td>
                         <td><input type="number" step="0.001" class="form-control task-productivity-val" name="task_productivity_val[]" value="'.(!empty($sche_tasks) && $sche_tasks['task_productivity'] > 0 ? number_format((float)$sche_tasks['task_productivity'], 3, '.', '') : number_format((float)$task['productivity'], 3, '.', '')).'" '.$disabledForm.'></td>
-                        <td><input type="number" step="0.001" class="form-control" name="task_qty[]" value="'.(!empty($sche_tasks) && $sche_tasks['task_qty'] > 0 ? $sche_tasks['task_qty'] : '').'"></td>
+                        <td><input type="number" step="0.001" class="form-control" name="task_qty[]" value="'.$computedTaskQty.'" readonly style="background-color:#f0f0f0;color:#555;cursor:not-allowed;"></td>
                         <td><input type="number" step="0.001" min="0.001" class="form-control task-resource-units-val" name="task_resource_units[]" value="'.$savedResUnits.'"></td>
                         <td><input type="number" class="form-control taskduration_edit" name="taskduration[]" value="'.(!empty($sche_tasks) ? $sche_tasks['Budgeted_Duration'] : '').'" readonly style="background-color:#e9ecef;"></td>
                         <td style="text-align:center;">'.$buttonrow.'</td>
