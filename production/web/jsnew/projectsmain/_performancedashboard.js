@@ -842,55 +842,46 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
     });
     if (!maxQty) maxQty = 1;
 
-    // Build bars and legend for each individual resource
-    var barsHtml = '', labelsHtml = '';
+    function fmQ(v){ return v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(2); }
+
+    // Horizontal bars — name left, bar right
+    var rowsHtml = '';
     resources.forEach(function(r, ri){
         var col     = resColours[ri % resColours.length];
         var planned = r.qty;
         var actual  = r.actual;
+        var unitSuffix = (r.unit ? ' ' + r.unit : '') + ' / Unit';
         var barHtml = '';
         if (actual === null) {
-            // No actual — show planned bar in resource colour
-            var sp = Math.max(100 - (planned / maxQty * 100), 0).toFixed(2);
-            var bp = Math.max(planned / maxQty * 100, 0.5).toFixed(2);
-            barHtml = '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
-                + '<div style="flex:' + bp + ' 1 0;width:70%;min-height:0;background:' + col + ';border-radius:3px 3px 0 0;"></div>';
+            var plW = Math.max(planned / maxQty * 100, 0.5).toFixed(1);
+            barHtml = '<div style="width:' + plW + '%;height:100%;background:' + col + ';border-radius:0 3px 3px 0;'
+                + 'display:flex;align-items:center;padding-left:5px;overflow:hidden;">'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">' + fmQ(planned) + unitSuffix + '</span>'
+                + '</div>';
         } else if (actual > planned) {
-            // Actual exceeds planned — resource colour for planned, red for excess on top
-            var sp   = Math.max(100 - (actual / maxQty * 100), 0).toFixed(2);
-            var bpPl = Math.max(planned / maxQty * 100, 0.5).toFixed(2);
-            var bpEx = Math.max((actual - planned) / maxQty * 100, 0.5).toFixed(2);
-            barHtml = '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
-                + '<div style="flex:' + bpEx + ' 1 0;width:70%;min-height:0;background:#ef5350;border-radius:3px 3px 0 0;"></div>'
-                + '<div style="flex:' + bpPl + ' 1 0;width:70%;min-height:0;background:' + col + ';"></div>';
+            var plW = Math.max(planned / maxQty * 100, 0.5).toFixed(1);
+            var exW = Math.max((actual - planned) / maxQty * 100, 0.5).toFixed(1);
+            barHtml = '<div style="width:' + plW + '%;height:100%;background:' + col + ';display:flex;align-items:center;padding-left:5px;overflow:hidden;">'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">' + fmQ(planned) + '</span></div>'
+                + '<div style="width:' + exW + '%;height:100%;background:#ef5350;border-radius:0 3px 3px 0;display:flex;align-items:center;overflow:hidden;">'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;padding-left:3px;">+' + fmQ(actual-planned) + '</span></div>';
         } else {
-            // Actual < planned — resource colour for actual, green only for the difference
-            var sp    = Math.max(100 - (planned / maxQty * 100), 0).toFixed(2);
-            var bpDiff = Math.max((planned - actual) / maxQty * 100, 0).toFixed(2);
-            var bpAct = Math.max(actual / maxQty * 100, 0.5).toFixed(2);
-            barHtml = '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
-                + '<div style="flex:' + bpDiff + ' 1 0;width:70%;min-height:0;background:#66bb6a;border-radius:3px 3px 0 0;"></div>'
-                + '<div style="flex:' + bpAct + ' 1 0;width:70%;min-height:0;background:' + col + ';"></div>';
+            var acW  = Math.max(actual / maxQty * 100, 0.5).toFixed(1);
+            var savW = Math.max((planned - actual) / maxQty * 100, 0).toFixed(1);
+            barHtml = '<div style="width:' + acW + '%;height:100%;background:' + col + ';display:flex;align-items:center;padding-left:5px;overflow:hidden;">'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">' + fmQ(actual) + '</span></div>'
+                + '<div style="width:' + savW + '%;height:100%;background:#66bb6a;border-radius:0 3px 3px 0;"></div>';
         }
-        barsHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;">' + barHtml + '</div>';
-        var unitSuffix = (r.unit ? ' ' + r.unit : '') + ' / Unit';
-        var planDisp   = planned.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
-        var valLine    = actual !== null
-            ? '<div style="font-size:10px;color:' + (actual > planned ? '#ef5350' : '#27ae60') + ';font-weight:700;white-space:nowrap;">'
-              + actual.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + unitSuffix + '</div>'
-            : '<div style="font-size:10px;color:#333;white-space:nowrap;">' + planDisp + unitSuffix + '</div>';
-        labelsHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 2px 0;overflow:hidden;">'
-            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + r.name + '</div>'
-            + valLine
+        rowsHtml += '<div style="display:flex;align-items:center;margin-bottom:5px;">'
+            + '<div style="width:130px;min-width:130px;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#000;'
+            + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;text-align:right;">' + r.name + '</div>'
+            + '<div style="flex:1;height:18px;background:#e8edf3;border-radius:3px;overflow:hidden;display:flex;">' + barHtml + '</div>'
             + '</div>';
     });
 
-    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
-        + '<div style="flex:1;position:relative;min-height:0;">'
-        + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + barsHtml + '</div>'
-        + '</div>'
-        + '<div style="display:flex;">' + labelsHtml + '</div>'
-        + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '')
+    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:6px 4px;overflow-y:auto;">'
+        + rowsHtml
+        + (actName ? '<div class="resfoot" style="margin-top:4px;">' + sh(actName, 32) + '</div>' : '')
         + '</div>';
 }
 
