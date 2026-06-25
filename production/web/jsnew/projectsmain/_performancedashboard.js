@@ -534,9 +534,12 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
         actualUnitCost += (+r.res_qty || 0) * ac;
     });
 
-    var estimatedCost  = unitCost       * estActQty;
-    var estWorkDone    = unitCost       * lastQty;
+    var estimatedCost  = unitCost * estActQty;
     var actualWorkDone = actualUnitCost * lastQty;
+
+    // Estimated Cost of Work Done = Planned Unit Cost × lastQty = SUM(rate × planned_consumption)
+    var estWorkDone = 0;
+    items.forEach(function(r){ estWorkDone += (+r.rate || 0) * (+r.planned_consumption || 0); });
 
     if (!estimatedCost){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
