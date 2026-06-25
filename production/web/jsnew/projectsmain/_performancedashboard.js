@@ -1330,11 +1330,12 @@ function renderCdResourceCost(items, actName){
                 tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;">'
                     + barInner + '</div>';
 
+                var fmFull = function(v){ return '&#8377;'+(+v).toFixed(2); };
                 lblHtml += '<div style="flex:1;min-width:0;text-align:center;padding:3px 2px 0;border-top:2px solid '+rCol+';">'
                     + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.name+'">'+sh(r.name,13)+'</div>'
-                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">P:'+fmRs(planned)+'</div>'
-                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">A:'+(actual !== null ? fmRs(actual) : '—')+'</div>'
-                    + (diff !== null ? '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:'+dCol+';white-space:nowrap;">'+(diff>0?'+':'')+fmRs(diff)+'</div>' : '')
+                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">Planned: '+fmFull(planned)+'</div>'
+                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">Actual: '+(actual !== null ? fmFull(actual) : '—')+'</div>'
+                    + (diff !== null ? '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:#fff;white-space:nowrap;">Diff: '+(diff>0?'+':'')+fmFull(diff)+'</div>' : '')
                     + '</div>';
             });
 
