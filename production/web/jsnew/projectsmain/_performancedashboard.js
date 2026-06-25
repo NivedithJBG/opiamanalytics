@@ -850,7 +850,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
         var col     = resColours[ri % resColours.length];
         var planned = r.qty;
         var actual  = r.actual;
-        var unitSuffix = (r.unit ? ' ' + r.unit : '') + ' / Unit';
+        var unitSuffix = ' ' + (r.unit || actUnit || '') + ' / Unit';
         var barHtml = '';
         if (actual === null) {
             var plW = Math.max(planned / maxQty * 100, 0.5).toFixed(1);
