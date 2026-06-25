@@ -622,14 +622,14 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:16px 4px 6px;">'
 
         // Bar: full width = estimated cost, overlay = planned/actual
-        + '<div style="position:relative;width:100%;height:22px;border-radius:4px;overflow:hidden;background:#e8edf3;margin-bottom:10px;">'
+        + '<div style="position:relative;width:100%;height:22px;border-radius:4px;overflow:hidden;background:#B2DFDB;margin-bottom:10px;">'
         + barSegments
         + '</div>'
 
         // Legend table
         + '<table style="width:100%;border-collapse:collapse;">'
         + '<tbody>'
-        + legendRow('#e8edf3', 'Estimated Cost (Full Activity)', estimatedCost)
+        + legendRow('#B2DFDB', 'Estimated Cost (Full Activity)', estimatedCost)
         + legendRow('#00838f', 'Planned Cost of Work Done', plannedWorkDone)
         + (hasActual ? legendRow(diff > 0 ? '#ef5350' : '#66bb6a', 'Actual Cost of Work Done', actualWorkDone, actCol) : '')
         + '</tbody>'
