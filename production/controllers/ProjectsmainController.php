@@ -773,19 +773,19 @@ class ProjectsmainController extends Controller
                  ORDER BY pern.rate DESC",
                 [':wid' => $wbId, ':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid]
             )->queryAll();
-            // Build task planned qty per unit from wo_task_rates (schedule-task screen)
+            // Build task planned qty per unit from schedule_task_new (Schedule tab → Activity → Task → Qty/Unit)
             $taskQtyMap  = [];  // task_id => task_qty (planned qty per activity unit)
             $taskUnitMap = [];  // task_id => task_unit from activity_tasks
-            $wtrRows = $db->createCommand(
-                "SELECT wtr.task_id, wtr.task_qty, COALESCE(at.task_unit, '') AS task_unit
-                 FROM wo_task_rates wtr
-                 LEFT JOIN activity_tasks at ON at.id = wtr.task_id
-                 WHERE wtr.activity_id = :wid AND wtr.project_id = :pid",
-                [':wid' => $wbId, ':pid' => $pid]
+            $stnRows = $db->createCommand(
+                "SELECT stn.task_Id AS task_id, stn.task_qty, COALESCE(at.task_unit, '') AS task_unit
+                 FROM schedule_task_new stn
+                 LEFT JOIN activity_tasks at ON at.id = stn.task_Id
+                 WHERE stn.activity_Id = :actid",
+                [':actid' => $actid]
             )->queryAll();
-            foreach ($wtrRows as $wtr) {
-                $taskQtyMap[(int)$wtr['task_id']]  = (float)($wtr['task_qty'] ?? 0);
-                $taskUnitMap[(int)$wtr['task_id']] = $wtr['task_unit'] ?? '';
+            foreach ($stnRows as $stn) {
+                $taskQtyMap[(int)$stn['task_id']]  = (float)($stn['task_qty'] ?? 0);
+                $taskUnitMap[(int)$stn['task_id']] = $stn['task_unit'] ?? '';
             }
 
             $mbAmount = 0.0; $mbQty = 0.0; $taskWorkMap = [];
@@ -2959,30 +2959,12 @@ class ProjectsmainController extends Controller
             $atime = 0;
             $taskRowsHtml = '';
 
-            // Compute ratio = estQty / schedQty for SC task_qty formula
-            $estPenRow = $connection->createCommand(
-                "SELECT activity_qty FROM pricing_estimate_new WHERE activity_Id=:wid AND project_Id=:pid AND pricing_status=0 LIMIT 1",
-                [':wid' => $estimate['activity_id'], ':pid' => $projuser->projectid]
-            )->queryOne();
-            $estActQtyForTask = $estPenRow ? (float)$estPenRow['activity_qty'] : 0;
-            $schedQtyForTask  = (float)($est_qty ?? 0);
-            $taskRatio        = $schedQtyForTask > 0 ? $estActQtyForTask / $schedQtyForTask : 0.0;
-
             if(count($tasks) > 0) {
                 foreach($tasks AS $key => $task):
                     $sqlqr = "SELECT Budgeted_Duration,End_Duration,status,task_qty,task_productivity,task_resource_units FROM schedule_task_new WHERE activity_Id='".$activityid."' AND task_Id='".$task['Id']."'";
                     $command1 = $connection->createCommand($sqlqr);
                     $dataReader1 = $command1->query();
                     $sche_tasks = $dataReader1->read();
-
-                    // SC qty/unit = SUM(SC res_qty mapped to this task) × (estQty / schedQty)
-                    $scResQty = (float)($connection->createCommand(
-                        "SELECT COALESCE(SUM(quantity), 0) FROM pricing_estimate_resources_new
-                         WHERE activity_id=:wid AND project_id=:pid AND resourcetype_Id=4 AND pricing_status=0
-                           AND FIND_IN_SET(:tid, task_ids)",
-                        [':wid' => $estimate['activity_id'], ':tid' => $task['Id'], ':pid' => $projuser->projectid]
-                    )->queryScalar() ?: 0);
-                    $computedTaskQty = round($scResQty * $taskRatio, 3);
 
                     $repquery = "SELECT reportid FROM new_report WHERE activity_Id='".$activityid."' AND status=0 AND totalduration!=0";
                     $command = $connection->createCommand($repquery);
@@ -3020,7 +3002,7 @@ class ProjectsmainController extends Controller
                             <input type="text" class="form-control taskname_edit" name="taskname[]" value="'.$task['task'].'" '.$disabledForm.'></td>
                         <td><input type="text" class="form-control" value="'.htmlspecialchars($task['task_unit']).'" readonly></td>
                         <td><input type="number" step="0.001" class="form-control task-productivity-val" name="task_productivity_val[]" value="'.(!empty($sche_tasks) && $sche_tasks['task_productivity'] > 0 ? number_format((float)$sche_tasks['task_productivity'], 3, '.', '') : number_format((float)$task['productivity'], 3, '.', '')).'" '.$disabledForm.'></td>
-                        <td><input type="number" step="0.001" class="form-control" name="task_qty[]" value="'.$computedTaskQty.'" readonly style="background-color:#f0f0f0;color:#555;cursor:not-allowed;"></td>
+                        <td><input type="number" step="0.001" class="form-control" name="task_qty[]" value="'.(!empty($sche_tasks) && $sche_tasks['task_qty'] > 0 ? $sche_tasks['task_qty'] : '').'"></td>
                         <td><input type="number" step="0.001" min="0.001" class="form-control task-resource-units-val" name="task_resource_units[]" value="'.$savedResUnits.'"></td>
                         <td><input type="number" class="form-control taskduration_edit" name="taskduration[]" value="'.(!empty($sche_tasks) ? $sche_tasks['Budgeted_Duration'] : '').'" readonly style="background-color:#e9ecef;"></td>
                         <td style="text-align:center;">'.$buttonrow.'</td>
