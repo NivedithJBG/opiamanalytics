@@ -1296,7 +1296,12 @@ function renderCdResourceCost(items, actName){
             });
 
             // Vertical bar per resource — distinct colours
-            var tipPal = ['#EF5350','#FF7043','#FFA726','#FFEE58','#9CCC65','#26C6DA','#42A5F5','#AB47BC','#EC407A','#8D6E63'];
+            var tipPalMap = {
+                'materials':       ['#42A5F5','#26C6DA','#66BB6A','#AB47BC','#FFA726','#7E57C2','#26A69A','#5C6BC0','#9CCC65','#78909C'],
+                'sub contractors': ['#FF8F00','#FFCA28','#9CCC65','#00ACC1','#5C6BC0','#8D6E63','#26A69A','#FFB300','#558B2F','#546E7A'],
+                'sub contractor':  ['#FF8F00','#FFCA28','#9CCC65','#00ACC1','#5C6BC0','#8D6E63','#26A69A','#FFB300','#558B2F','#546E7A']
+            };
+            var tipPal = tipPalMap[t.name.toLowerCase().trim()] || ['#FFA726','#FFEE58','#9CCC65','#26C6DA','#42A5F5','#AB47BC','#7E57C2','#26A69A','#8D6E63','#78909C'];
             var tbHtml = '', lblHtml = '';
             t.resources.forEach(function(r, ri){
                 var rCol    = tipPal[ri % tipPal.length];
