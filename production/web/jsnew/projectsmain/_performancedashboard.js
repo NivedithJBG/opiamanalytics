@@ -810,7 +810,6 @@ function renderCdCostOnCompletion(items, actName, estQty){
 function renderCdResourceConsumption(items, actName, lastQty, actUnit){
     var el = document.getElementById('cd-c7');
     if (!el) return;
-    var resColours = ['#ffa726','#ff7043','#ef5350','#ffca28','#ff8a65','#26a69a','#7e57c2','#66bb6a','#42a5f5','#ec407a'];
 
     function fmR(v){ return v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(2); }
 
@@ -828,6 +827,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
             unit:      r.unit || '',
             task_unit: r.task_unit || '',
             type_id:   +r.type_id || 0,
+            type_name: r.type_name || '',
             actual:    (r.actual_consumption  != null) ? +r.actual_consumption  : null
         });
     });
@@ -849,7 +849,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
     // Horizontal bars — name left, bar right
     var rowsHtml = '';
     resources.forEach(function(r, ri){
-        var col     = resColours[ri % resColours.length];
+        var col     = _resTypeCol(r.type_name, '#90caf9');
         var planned = r.qty;
         var actual  = r.actual;
         var resUnit = r.type_id === 4 ? (r.task_unit || r.unit || '') : (r.unit || '');
