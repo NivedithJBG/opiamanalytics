@@ -854,13 +854,13 @@ class ProjectsmainController extends Controller
                 $taskQtyPerUnit = $mappedTaskId > 0 ? ($taskQtyMap[$mappedTaskId] ?? null) : null;
 
                 if ($typeId === 4) {
-                    // SC: planned = res_qty × task_qty_per_unit × last_reported_qty (progress report)
-                    //     actual  = MB work_done for the mapped task
+                    // SC: planned = task_qty_per_unit (qty per schedule unit from wo_task_rates)
+                    //     actual  = MB work_done / last_reported_qty (per schedule unit)
                     $plannedConsumption = $taskQtyPerUnit !== null
-                        ? round($resQty * $taskQtyPerUnit * $lastQty, 3)
-                        : round($resQty * $lastQty, 3);
-                    $actualConsumption = $taskWorkDone !== null
-                        ? round($taskWorkDone, 3)
+                        ? round($taskQtyPerUnit, 3)
+                        : null;
+                    $actualConsumption = ($taskWorkDone !== null && $lastQty > 0)
+                        ? round($taskWorkDone / $lastQty, 3)
                         : null;
                 } else {
                     // Materials: planned = res_qty × MB work_done (or × task_qty_per_unit as fallback)

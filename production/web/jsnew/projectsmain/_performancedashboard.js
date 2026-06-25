@@ -823,10 +823,11 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
     var resources = [];
     items.forEach(function(r){
         resources.push({
-            name:   r.name || '',
-            qty:    (r.planned_consumption != null) ? +r.planned_consumption : (+r.res_qty || 0),
-            unit:   r.unit || '',
-            actual: (r.actual_consumption  != null) ? +r.actual_consumption  : null
+            name:    r.name || '',
+            qty:     (r.planned_consumption != null) ? +r.planned_consumption : (+r.res_qty || 0),
+            unit:    r.unit || '',
+            type_id: +r.type_id || 0,
+            actual:  (r.actual_consumption  != null) ? +r.actual_consumption  : null
         });
     });
     if (!resources.length){
@@ -850,7 +851,9 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
         var col     = resColours[ri % resColours.length];
         var planned = r.qty;
         var actual  = r.actual;
-        var unitSuffix = ' ' + (r.unit || actUnit || '') + ' / Unit';
+        var unitSuffix = r.type_id === 4
+            ? ' / ' + (actUnit || 'Unit')
+            : (r.unit ? ' ' + r.unit : '');
         var barHtml = '';
         if (actual === null) {
             var plW = Math.max(planned / maxQty * 100, 0.5).toFixed(1);
@@ -862,15 +865,17 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
             var plW = Math.max(planned / maxQty * 100, 0.5).toFixed(1);
             var exW = Math.max((actual - planned) / maxQty * 100, 0.5).toFixed(1);
             barHtml = '<div style="width:' + plW + '%;height:100%;background:' + col + ';display:flex;align-items:center;padding-left:5px;overflow:hidden;">'
-                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">' + fmQ(planned) + '</span></div>'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">' + fmQ(planned) + unitSuffix + '</span></div>'
                 + '<div style="width:' + exW + '%;height:100%;background:#ef5350;border-radius:0 3px 3px 0;display:flex;align-items:center;overflow:hidden;">'
-                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;padding-left:3px;">+' + fmQ(actual-planned) + '</span></div>';
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;padding-left:3px;">+' + fmQ(actual-planned) + unitSuffix + '</span></div>';
         } else {
             var acW  = Math.max(actual / maxQty * 100, 0.5).toFixed(1);
             var savW = Math.max((planned - actual) / maxQty * 100, 0).toFixed(1);
             barHtml = '<div style="width:' + acW + '%;height:100%;background:' + col + ';display:flex;align-items:center;padding-left:5px;overflow:hidden;">'
-                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">' + fmQ(actual) + '</span></div>'
-                + '<div style="width:' + savW + '%;height:100%;background:#66bb6a;border-radius:0 3px 3px 0;"></div>';
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">' + fmQ(actual) + unitSuffix + '</span></div>'
+                + '<div style="width:' + savW + '%;height:100%;background:#66bb6a;border-radius:0 3px 3px 0;'
+                + 'display:flex;align-items:center;overflow:hidden;">'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;padding-left:3px;">-' + fmQ(planned-actual) + unitSuffix + '</span></div>';
         }
         rowsHtml += '<div style="display:flex;align-items:center;margin-bottom:5px;">'
             + '<div style="width:130px;min-width:130px;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#000;'
