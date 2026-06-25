@@ -581,7 +581,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:16px 4px 6px;">'
 
         + '<div style="position:relative;width:100%;height:20px;border-radius:4px;overflow:hidden;background:#555f6e;margin-bottom:10px;">'
-        + '<div style="position:absolute;top:0;left:0;height:100%;width:' + barW + '%;background:#e65100;border-radius:4px 0 0 4px;display:flex;align-items:center;overflow:hidden;">'
+        + '<div style="position:absolute;top:0;left:0;height:100%;width:' + barW + '%;background:#1565C0;border-radius:4px 0 0 4px;display:flex;align-items:center;overflow:hidden;">'
         + (pct > 5 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;padding:0 6px;overflow:hidden;">' + fmC(estWorkDone) + '</span>' : '')
         + '</div>'
         + '</div>'
@@ -589,7 +589,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
         + '<table style="width:100%;border-collapse:collapse;">'
         + '<tbody>'
         + legendRow('#555f6e', 'Estimated Cost of Activity', estimatedCost)
-        + legendRow('#e65100', 'Estimated Cost of Work Done', estWorkDone)
+        + legendRow('#1565C0', 'Estimated Cost of Work Done', estWorkDone)
         + legendRow('#27ae60', 'Actual Cost of Work Done',   actualWorkDone)
         + '</tbody>'
         + '</table>'
