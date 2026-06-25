@@ -47,7 +47,7 @@ var _cdTotalCost = 0;
 
 // Resource type colour map (name → bar colour)
 var _resTypeColours = {
-    'materials':         '#1976D2',   // Blue
+    'materials':         '#3E4A5C',   // Dark greyed navy
     'purchased inputs':  '#9E9E9E',   // Grey
     'consumables':       '#80CBC4',   // Grey Green (teal)
     'tools and tackles': '#607D8B',   // Blue Grey
@@ -1331,11 +1331,12 @@ function renderCdResourceCost(items, actName){
                     + barInner + '</div>';
 
                 var fmFull = function(v){ return '&#8377;'+(+v).toFixed(2); };
+                var valLine = 'P:'+fmFull(planned)
+                    + ' &nbsp;A:'+(actual !== null ? fmFull(actual) : '—')
+                    + (diff !== null ? ' &nbsp;'+(diff>0?'+':'')+fmFull(diff) : '');
                 lblHtml += '<div style="flex:1;min-width:0;text-align:center;padding:3px 2px 0;border-top:2px solid '+rCol+';">'
                     + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.name+'">'+sh(r.name,13)+'</div>'
-                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">Planned: '+fmFull(planned)+'</div>'
-                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">Actual: '+(actual !== null ? fmFull(actual) : '—')+'</div>'
-                    + (diff !== null ? '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:#fff;white-space:nowrap;">Diff: '+(diff>0?'+':'')+fmFull(diff)+'</div>' : '')
+                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">'+valLine+'</div>'
                     + '</div>';
             });
 
