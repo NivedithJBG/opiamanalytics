@@ -587,7 +587,6 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
         + legendRow('#555f6e', 'Estimated Cost of Activity', estimatedCost)
         + legendRow('#e65100', 'Estimated Cost of Work Done', estWorkDone)
         + legendRow('#27ae60', 'Actual Cost of Work Done',   actualWorkDone)
-        + (hasActual ? legendRow(diff > 0 ? '#ef5350' : '#66bb6a', 'Actual Cost of Work Done', actualWorkDone, actCol) : '')
         + '</tbody>'
         + '</table>'
 
