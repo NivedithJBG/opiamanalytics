@@ -1295,59 +1295,50 @@ function renderCdResourceCost(items, actName){
                 tsHtml += '<div style="position:absolute;right:2px;bottom:calc('+g+'% - 5px);font-family:\'Nunito\',sans-serif;font-size:8px;color:#8a9bb0;line-height:1;white-space:nowrap;">'+fmR(tipMax*g/100)+'</div>';
             });
 
-            // Vertical bar per resource
+            // Vertical bar per resource — distinct colours
+            var tipPal = ['#42a5f5','#ffa726','#ab47bc','#26c6da','#ffee58','#ec407a','#26a69a','#5c6bc0','#8d6e63','#78909c'];
             var tbHtml = '', lblHtml = '';
-            t.resources.forEach(function(r){
+            t.resources.forEach(function(r, ri){
+                var rCol    = tipPal[ri % tipPal.length];
                 var planned = r.planned;
                 var actual  = r.actual;
+                var diff    = actual !== null ? actual - planned : null;
+                var dCol    = diff === null ? '' : (diff > 0 ? '#ef5350' : '#66bb6a');
                 var barInner = '';
 
                 if (actual === null) {
                     var plPct = Math.max(planned / tipMax * 100, 0.5);
                     var spPct = Math.max(100 - plPct, 0);
                     barInner = '<div style="flex:'+spPct.toFixed(2)+' 1 0;min-height:0;"></div>'
-                        + '<div style="flex:'+plPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:'+col+';border-radius:3px 3px 0 0;'
-                        + 'display:flex;align-items:flex-start;justify-content:center;overflow:hidden;">'
-                        + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;font-weight:700;color:#fff;padding:2px 1px;white-space:nowrap;">'+fmR(planned)+'</span>'
-                        + '</div>';
+                        + '<div style="flex:'+plPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:'+rCol+';border-radius:3px 3px 0 0;overflow:hidden;"></div>';
                 } else if (actual > planned) {
                     var plPct = Math.max(planned / tipMax * 100, 0.5);
                     var exPct = Math.max((actual - planned) / tipMax * 100, 0.5);
                     var spPct = Math.max(100 - plPct - exPct, 0);
                     barInner = '<div style="flex:'+spPct.toFixed(2)+' 1 0;min-height:0;"></div>'
-                        + '<div style="flex:'+exPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:#ef5350;border-radius:3px 3px 0 0;'
-                        + 'display:flex;align-items:flex-start;justify-content:center;overflow:hidden;">'
-                        + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;font-weight:700;color:#fff;padding:2px 1px;white-space:nowrap;">+'+fmR(actual-planned)+'</span>'
-                        + '</div>'
-                        + '<div style="flex:'+plPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:'+col+';">'
-                        + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;font-weight:700;color:#fff;padding:2px 1px;white-space:nowrap;display:block;text-align:center;">'+fmR(planned)+'</span>'
-                        + '</div>';
+                        + '<div style="flex:'+exPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:#ef5350;border-radius:3px 3px 0 0;overflow:hidden;"></div>'
+                        + '<div style="flex:'+plPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:'+rCol+';overflow:hidden;"></div>';
                 } else {
                     var acPct  = Math.max(actual / tipMax * 100, 0.5);
                     var savPct = Math.max((planned - actual) / tipMax * 100, 0);
                     var spPct  = Math.max(100 - acPct - savPct, 0);
                     barInner = '<div style="flex:'+spPct.toFixed(2)+' 1 0;min-height:0;"></div>'
-                        + '<div style="flex:'+savPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:#66bb6a;border-radius:3px 3px 0 0;'
-                        + 'display:flex;align-items:flex-start;justify-content:center;overflow:hidden;">'
-                        + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;font-weight:700;color:#fff;padding:2px 1px;white-space:nowrap;">-'+fmR(planned-actual)+'</span>'
-                        + '</div>'
-                        + '<div style="flex:'+acPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:'+col+';">'
-                        + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;font-weight:700;color:#fff;padding:2px 1px;white-space:nowrap;display:block;text-align:center;">'+fmR(actual)+'</span>'
-                        + '</div>';
+                        + '<div style="flex:'+savPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:#66bb6a;border-radius:3px 3px 0 0;overflow:hidden;"></div>'
+                        + '<div style="flex:'+acPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:'+rCol+';overflow:hidden;"></div>';
                 }
 
                 tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;">'
                     + barInner + '</div>';
 
-                var aCol = actual !== null ? (actual > planned ? '#ef9a9a' : '#a5d6a7') : '#8a9bb0';
-                lblHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 2px 0;">'
-                    + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+sh(r.name,14)+'</div>'
-                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#8a9bb0;white-space:nowrap;">P:'+fmR(planned)+'</div>'
-                    + (actual !== null ? '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:'+aCol+';white-space:nowrap;">A:'+fmR(actual)+'</div>' : '')
+                lblHtml += '<div style="flex:1;min-width:0;text-align:center;padding:3px 2px 0;border-top:2px solid '+rCol+';">'
+                    + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.name+'">'+sh(r.name,13)+'</div>'
+                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">P:'+fmRs(planned)+'</div>'
+                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">A:'+(actual !== null ? fmRs(actual) : '—')+'</div>'
+                    + (diff !== null ? '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:'+dCol+';white-space:nowrap;">'+(diff>0?'+':'')+fmRs(diff)+'</div>' : '')
                     + '</div>';
             });
 
-            var tipW = Math.max(260, t.resources.length * 65 + 40);
+            var tipW = Math.max(280, t.resources.length * 72 + 40);
             tipEl.style.width = tipW + 'px';
             tipEl.innerHTML = '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;">'
                 + '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+col+';flex-shrink:0;"></span>'
@@ -1358,7 +1349,7 @@ function renderCdResourceCost(items, actName){
                 + '<div style="flex:1;position:relative;min-width:0;">'+tgHtml
                 + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">'+tbHtml+'</div>'
                 + '</div></div>'
-                + '<div style="display:flex;padding-left:30px;margin-top:3px;">'+lblHtml+'</div>';
+                + '<div style="display:flex;padding-left:30px;margin-top:6px;border-top:1px solid rgba(100,130,170,0.3);padding-top:6px;">'+lblHtml+'</div>';
 
             var rect = barCol.getBoundingClientRect();
             var left = rect.left + rect.width / 2 - tipW / 2;
