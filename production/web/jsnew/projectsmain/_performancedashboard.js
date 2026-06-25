@@ -47,7 +47,7 @@ var _cdTotalCost = 0;
 
 // Resource type colour map (name → bar colour)
 var _resTypeColours = {
-    'materials':         '#3E4A5C',   // Dark greyed navy
+    'materials':         '#5C6BC0',   // Indigo
     'purchased inputs':  '#9E9E9E',   // Grey
     'consumables':       '#80CBC4',   // Grey Green (teal)
     'tools and tackles': '#607D8B',   // Blue Grey
@@ -1331,16 +1331,16 @@ function renderCdResourceCost(items, actName){
                     + barInner + '</div>';
 
                 var fmFull = function(v){ return '&#8377;'+(+v).toFixed(2); };
-                var valLine = 'P:'+fmFull(planned)
-                    + ' &nbsp;A:'+(actual !== null ? fmFull(actual) : '—')
-                    + (diff !== null ? ' &nbsp;'+(diff>0?'+':'')+fmFull(diff) : '');
+                var valLine = 'Planned: '+fmFull(planned)
+                    + ' &nbsp;&nbsp;Actual: '+(actual !== null ? fmFull(actual) : '—')
+                    + (diff !== null ? ' &nbsp;&nbsp;Difference: '+(diff>0?'+':'')+fmFull(diff) : '');
                 lblHtml += '<div style="flex:1;min-width:0;text-align:center;padding:3px 2px 0;border-top:2px solid '+rCol+';">'
                     + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.name+'">'+sh(r.name,13)+'</div>'
                     + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">'+valLine+'</div>'
                     + '</div>';
             });
 
-            var tipW = Math.max(280, t.resources.length * 72 + 40);
+            var tipW = Math.max(360, t.resources.length * 72 + 40);
             tipEl.style.width = tipW + 'px';
             tipEl.innerHTML = '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;">'
                 + '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+col+';flex-shrink:0;"></span>'
