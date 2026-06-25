@@ -525,90 +525,47 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
     var el = document.getElementById('cd-g2');
     if (!el) return;
 
-    // Total estimated cost = SUM(rate × res_qty) × estActQty
     var unitCost = 0;
     items.forEach(function(r){ unitCost += (+r.res_qty || 0) * (+r.rate || 0); });
 
-    if (!unitCost){
+    var actualUnitCost = 0;
+    items.forEach(function(r){
+        var ac = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined) ? +r.actual_unit_cost : (+r.rate || 0);
+        actualUnitCost += (+r.res_qty || 0) * ac;
+    });
+
+    var estimatedCost  = unitCost       * estActQty;
+    var estWorkDone    = unitCost       * lastQty;
+    var actualWorkDone = actualUnitCost * lastQty;
+
+    if (!estimatedCost){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
     }
 
-    // Use estActQty when available; fall back to 1 so bar always shows when resources exist
-    var estimatedCost = unitCost * (estActQty || 1);
-
-    // Planned cost of work done = SUM(rate × planned_consumption)
-    var plannedWorkDone = 0;
-    items.forEach(function(r){ plannedWorkDone += (+r.rate || 0) * (+r.planned_consumption || 0); });
-
-    // Actual cost of work done = SUM(actual_unit_cost × actual_consumption)
-    var actualWorkDone = 0, hasActual = false;
-    items.forEach(function(r){
-        if (r.actual_unit_cost != null && r.actual_consumption != null) {
-            actualWorkDone += (+r.actual_unit_cost) * (+r.actual_consumption);
-            hasActual = true;
-        }
-    });
-
-    var scale = estimatedCost;
-    var plW   = Math.min(plannedWorkDone / scale * 100, 100).toFixed(2);
-    var acW   = hasActual ? Math.min(actualWorkDone / scale * 100, 100).toFixed(2) : null;
-    var diff  = hasActual ? actualWorkDone - plannedWorkDone : null;
-    var an    = sh(actName || '', 40);
+    var pct     = Math.min(estWorkDone / estimatedCost * 100, 100);
+    var barW    = pct.toFixed(2);
+    var an      = sh(actName || '', 40);
     var unitLbl = actUnit ? ' / ' + actUnit : '';
 
-    function fmC(v){ return '&#8377; ' + (+v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
+    function fmC(v){ return '&#8377; ' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
-    // Bar segments on top of grey background
-    var barSegments = '';
-    if (acW === null) {
-        // No actual — just planned overlay
-        barSegments = '<div style="position:absolute;top:0;left:0;height:100%;width:'+plW+'%;background:#00838f;border-radius:4px 0 0 4px;'
-            + 'display:flex;align-items:center;justify-content:flex-end;overflow:hidden;">'
-            + '<span style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:#fff;padding-right:4px;white-space:nowrap;">'+fmC(plannedWorkDone)+'</span>'
-            + '</div>';
-    } else if (diff > 0) {
-        // Actual exceeds planned — planned (teal) + red excess
-        var exW = Math.min((actualWorkDone - plannedWorkDone) / scale * 100, 100 - parseFloat(plW)).toFixed(2);
-        barSegments = '<div style="position:absolute;top:0;left:0;height:100%;width:'+plW+'%;background:#00838f;'
-            + 'display:flex;align-items:center;justify-content:flex-end;overflow:hidden;">'
-            + '<span style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:#fff;padding-right:4px;white-space:nowrap;">'+fmC(plannedWorkDone)+'</span>'
-            + '</div>'
-            + '<div style="position:absolute;top:0;left:'+plW+'%;height:100%;width:'+exW+'%;background:#ef5350;border-radius:0 4px 4px 0;'
-            + 'display:flex;align-items:center;overflow:hidden;">'
-            + '<span style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:#fff;padding-left:3px;white-space:nowrap;">+'+fmC(diff)+'</span>'
-            + '</div>';
-    } else {
-        // Actual below planned — actual (teal) + green savings
-        var savW = Math.max((plannedWorkDone - actualWorkDone) / scale * 100, 0).toFixed(2);
-        barSegments = '<div style="position:absolute;top:0;left:0;height:100%;width:'+acW+'%;background:#00838f;'
-            + 'display:flex;align-items:center;justify-content:flex-end;overflow:hidden;">'
-            + '<span style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:#fff;padding-right:4px;white-space:nowrap;">'+fmC(actualWorkDone)+'</span>'
-            + '</div>'
-            + '<div style="position:absolute;top:0;left:'+acW+'%;height:100%;width:'+savW+'%;background:#66bb6a;border-radius:0 4px 4px 0;'
-            + 'display:flex;align-items:center;overflow:hidden;">'
-            + '<span style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:#fff;padding-left:3px;white-space:nowrap;">-'+fmC(Math.abs(diff))+'</span>'
-            + '</div>';
-    }
-
-    function legendRow(swatch, label, value, valueCol){
+    function legendRow(swatch, label, value){
         return '<tr>'
             + '<td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + swatch + ';"></span></td>'
             + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">' + label + '</td>'
-            + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+(valueCol||'#1a2540')+';text-align:right;white-space:nowrap;">' + fmC(value) + '</td>'
+            + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">' + fmC(value) + '</td>'
             + '</tr>';
     }
 
     var colPalette2 = ['#ff7043','#ab47bc','#26a69a','#ffa726','#42a5f5','#66bb6a','#ec407a','#8d6e63','#26c6da','#d4e157'];
 
-    // Build resource planned costs for the chip popup
     var resIdx2 = 0, allResC = [], maxResC = 0;
     var typeMapC = {};
     items.forEach(function(r){
         var tid = r.type_id || '0';
         if (!typeMapC[tid]) typeMapC[tid] = { name: r.type_name || 'Other', resources: [] };
-        var rCost = (+r.rate || 0) * (+r.planned_consumption || 0);
-        typeMapC[tid].resources.push({ name: r.name || '', totalCost: rCost, unit: r.unit || '' });
+        typeMapC[tid].resources.push({ name: r.name || '', totalCost: (+r.rate || 0) * (+r.res_qty || 0) * estActQty, unit: r.unit || '' });
     });
     Object.keys(typeMapC).forEach(function(k){
         typeMapC[k].resources.sort(function(a,b){ return b.totalCost - a.totalCost; }).forEach(function(r){
@@ -617,20 +574,19 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
         });
     });
 
-    var actCol = diff === null ? '#1a2540' : (diff > 0 ? '#c62828' : '#2e7d32');
     el.style.position = 'relative';
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:16px 4px 6px;">'
 
-        // Bar: full width = estimated cost, overlay = planned/actual
-        + '<div style="position:relative;width:100%;height:22px;border-radius:4px;overflow:hidden;background:#B2DFDB;margin-bottom:10px;">'
-        + barSegments
+        + '<div style="position:relative;width:100%;height:18px;border-radius:4px;overflow:hidden;background:#555f6e;margin-bottom:10px;">'
+        + '<div style="position:absolute;top:0;left:0;height:100%;width:' + barW + '%;background:#e65100;border-radius:4px 0 0 4px;"></div>'
+        + (pct > 8 ? '<span style="position:absolute;top:50%;right:' + (100 - pct + 1) + '%;transform:translateY(-50%);font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;padding-right:4px;">' + pct.toFixed(1) + '%</span>' : '')
         + '</div>'
 
-        // Legend table
         + '<table style="width:100%;border-collapse:collapse;">'
         + '<tbody>'
-        + legendRow('#B2DFDB', 'Estimated Cost (Full Activity)', estimatedCost)
-        + legendRow('#00838f', 'Planned Cost of Work Done', plannedWorkDone)
+        + legendRow('#555f6e', 'Estimated Cost of Activity', estimatedCost)
+        + legendRow('#e65100', 'Estimated Cost of Work Done', estWorkDone)
+        + legendRow('#27ae60', 'Actual Cost of Work Done',   actualWorkDone)
         + (hasActual ? legendRow(diff > 0 ? '#ef5350' : '#66bb6a', 'Actual Cost of Work Done', actualWorkDone, actCol) : '')
         + '</tbody>'
         + '</table>'
