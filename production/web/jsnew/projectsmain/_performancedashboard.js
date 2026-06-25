@@ -260,7 +260,7 @@ function renderCdUnitCostOfResource(items, actName){
         tipEl6 = document.createElement('div');
         tipEl6.id = 'uc-res-tip';
         tipEl6.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.45);padding:10px 14px;min-width:220px;';
+            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.45);padding:12px 18px;min-width:280px;';
         document.body.appendChild(tipEl6);
     }
     el.querySelectorAll('[data-res-idx]').forEach(function(row){
@@ -282,7 +282,7 @@ function renderCdUnitCostOfResource(items, actName){
                 + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+dCol+';text-align:right;white-space:nowrap;">'+dTxt+'</td></tr>' : '')
                 + '</table>';
             var rect = row.getBoundingClientRect();
-            var tipW = 220;
+            var tipW = 280;
             tipEl6.style.width = tipW + 'px';
             var left = rect.left + rect.width / 2 - tipW / 2;
             left = Math.max(4, Math.min(left, window.innerWidth - tipW - 4));
@@ -814,7 +814,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
         tipEl7 = document.createElement('div');
         tipEl7.id = 'rc-cons-tip';
         tipEl7.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.45);padding:10px 14px;min-width:230px;';
+            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.45);padding:12px 18px;min-width:290px;';
         document.body.appendChild(tipEl7);
     }
     el.querySelectorAll('[data-res-idx]').forEach(function(row){
@@ -839,7 +839,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
                 + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+dCol+';text-align:right;white-space:nowrap;">'+dTxt+'</td></tr>' : '')
                 + '</table>';
             var rect = row.getBoundingClientRect();
-            var tipW = 240;
+            var tipW = 290;
             tipEl7.style.width = tipW + 'px';
             var left = rect.left + rect.width / 2 - tipW / 2;
             left = Math.max(4, Math.min(left, window.innerWidth - tipW - 4));
