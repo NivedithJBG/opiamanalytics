@@ -183,6 +183,7 @@ function renderCdUnitCostOfResource(items, actName){
     var colPalette = ['#90caf9','#ce93d8','#80cbc4','#ffcc80','#ef9a9a','#a5d6a7','#fff176','#f48fb1','#bcaaa4','#80deea'];
 
     function fmR(v){ return (+v).toFixed(2); }
+    function fmRK(v){ return v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'K':(+v).toFixed(0); }
 
     if (!items.length){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
@@ -217,28 +218,29 @@ function renderCdUnitCostOfResource(items, actName){
         var actual  = r.actual;
         var plW     = (planned / maxVal * 100).toFixed(1);
 
+        var uSfx    = r.unit ? ' / ' + r.unit : '';
         var barHtml = '';
         if (actual === null) {
             // No actual — plain planned bar
             barHtml = '<div style="width:' + plW + '%;height:100%;background:' + col + ';border-radius:0 3px 3px 0;'
                 + 'display:flex;align-items:center;padding-left:5px;overflow:hidden;">'
-                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">&#8377;' + fmR(planned) + '</span>'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">&#8377;' + fmRK(planned) + uSfx + '</span>'
                 + '</div>';
         } else if (actual > planned) {
             // Over planned — planned + red excess
             var exW = ((actual - planned) / maxVal * 100).toFixed(1);
             barHtml = '<div style="width:' + plW + '%;height:100%;background:' + col + ';display:flex;align-items:center;padding-left:5px;overflow:hidden;">'
-                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">&#8377;' + fmR(planned) + '</span>'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">&#8377;' + fmRK(planned) + uSfx + '</span>'
                 + '</div>'
                 + '<div style="width:' + exW + '%;height:100%;background:#ef5350;border-radius:0 3px 3px 0;display:flex;align-items:center;overflow:hidden;">'
-                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;padding-left:3px;">+&#8377;' + fmR(actual-planned) + '</span>'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;padding-left:3px;">+&#8377;' + fmRK(actual-planned) + uSfx + '</span>'
                 + '</div>';
         } else {
             // Under planned — actual bar + green saving
             var acW  = (actual / maxVal * 100).toFixed(1);
             var savW = ((planned - actual) / maxVal * 100).toFixed(1);
             barHtml = '<div style="width:' + acW + '%;height:100%;background:' + col + ';display:flex;align-items:center;padding-left:5px;overflow:hidden;">'
-                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">&#8377;' + fmR(actual) + '</span>'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">&#8377;' + fmRK(actual) + uSfx + '</span>'
                 + '</div>'
                 + '<div style="width:' + savW + '%;height:100%;background:#66bb6a;border-radius:0 3px 3px 0;"></div>';
         }
