@@ -223,88 +223,27 @@ function renderCdUnitCostOfResource(items, actName){
         t._plannedPct  = plannedPct;
     });
 
-    // Y-axis scale labels — show % of maxScale at each grid position
-    var scaleHtml = '';
-    [100,75,50,25,0].forEach(function(g){
-        var label = (maxScale * g / 100).toFixed(maxScale > 100 ? 1 : 0);
-        scaleHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
-            + 'font-family:\'Nunito\',sans-serif;font-size:8px;color:#8a9bb0;line-height:1;white-space:nowrap;">'
-            + label + '</div>';
-    });
-
-    // Gridlines
-    var gridHtml = '';
-    [75,50,25].forEach(function(g){
-        gridHtml += '<div style="position:absolute;left:0;right:0;bottom:' + g + '%;'
-            + 'border-top:1px dashed rgba(90,110,140,0.22);pointer-events:none;"></div>';
-    });
-    gridHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(90,110,140,0.3);pointer-events:none;"></div>';
-    gridHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(90,110,140,0.35);pointer-events:none;"></div>';
-    // 100% reference line when scale > 100
-    if (maxScale > 100) {
-        var refPos = (100 / maxScale * 100).toFixed(2);
-        gridHtml += '<div style="position:absolute;left:0;right:0;bottom:' + refPos + '%;border-top:2px dashed rgba(90,110,140,0.5);pointer-events:none;"></div>';
-    }
-
-    // Stacked bars: spacer + variance segment (red/green) + base segment
-    var barsHtml = '';
-    var labelsHtml = '';
+    // Horizontal bars — name on left, bar on right
+    var rowsHtml = '';
     types.forEach(function(t, i){
         var col = _resTypeCol(t.name, colPalette[i % colPalette.length]);
-
-        if (!t.hasActual) {
-            var pct  = t.amount / actUnitCost * 100;
-            var spPct = pct / maxScale * 100;
-            var sp   = Math.max(100 - spPct, 0).toFixed(2);
-            var bp   = Math.max(spPct, 0.5).toFixed(2);
-            barsHtml += '<div data-type-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
-                + '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
-                + '<div style="flex:' + bp + ' 1 0;width:80%;min-height:0;background:' + col + ';border-radius:3px 3px 0 0;'
-                + 'display:flex;align-items:center;justify-content:center;overflow:hidden;">'
-                + (spPct >= 8 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;">' + pct.toFixed(1) + '%</span>' : '')
-                + '</div>'
-                + '</div>';
-        } else {
-            var variancePct = t._variancePct;
-            var plannedPct  = t._plannedPct;
-            var barTop      = plannedPct + Math.max(0, variancePct);
-            var barTopScaled = barTop / maxScale * 100;
-            var spFlex = Math.max(100 - barTopScaled, 0).toFixed(2);
-            var varColor, varFlex, baseFlex;
-            if (variancePct > 0) {
-                varColor = '#ef5350';
-                varFlex  = Math.max(variancePct / maxScale * 100, 0.5).toFixed(2);
-                baseFlex = Math.max(plannedPct / maxScale * 100, 0.5).toFixed(2);
-            } else {
-                varColor = '#66bb6a';
-                varFlex  = Math.max(Math.abs(variancePct) / maxScale * 100, 0.5).toFixed(2);
-                baseFlex = Math.max((plannedPct - Math.abs(variancePct)) / maxScale * 100, 0.5).toFixed(2);
-            }
-            barsHtml += '<div data-type-idx="' + i + '" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
-                + '<div style="flex:' + spFlex + ' 1 0;min-height:0;"></div>'
-                + '<div style="flex:' + varFlex + ' 1 0;width:80%;min-height:0;background:' + varColor + ';border-radius:3px 3px 0 0;"></div>'
-                + '<div style="flex:' + baseFlex + ' 1 0;width:80%;min-height:0;background:' + col + ';'
-                + 'display:flex;align-items:center;justify-content:center;overflow:hidden;">'
-                + (parseFloat(baseFlex) >= 8 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;">' + plannedPct.toFixed(1) + '%</span>' : '')
-                + '</div>'
-                + '</div>';
-        }
-
-        labelsHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 3px 0;">'
-            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + t.name + '</div>'
+        var pct = (t.amount / actUnitCost * 100).toFixed(1);
+        var barW = Math.max(parseFloat(pct), 0.5).toFixed(1);
+        var barInner = '<div style="width:' + barW + '%;height:100%;background:' + col + ';border-radius:0 3px 3px 0;'
+            + 'display:flex;align-items:center;padding-left:6px;overflow:hidden;">'
+            + '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;">' + pct + '%</span>'
+            + '</div>';
+        rowsHtml += '<div data-type-idx="' + i + '" style="display:flex;align-items:center;margin-bottom:5px;cursor:pointer;">'
+            + '<div style="width:130px;min-width:130px;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#000;'
+            + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;text-align:right;">' + t.name + '</div>'
+            + '<div style="flex:1;height:18px;background:#e8edf3;border-radius:3px;overflow:hidden;">' + barInner + '</div>'
+            + '<div style="width:36px;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#000;text-align:right;padding-left:5px;white-space:nowrap;">&#8377;' + fmR(t.amount) + '</div>'
             + '</div>';
     });
 
-    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'
-        + '<div style="flex:1;min-height:0;display:flex;">'
-        + '<div style="width:28px;position:relative;flex-shrink:0;">' + scaleHtml + '</div>'
-        + '<div style="flex:1;position:relative;min-width:0;">'
-        + gridHtml
-        + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">' + barsHtml + '</div>'
-        + '</div>'
-        + '</div>'
-        + '<div style="display:flex;padding-left:28px;">' + labelsHtml + '</div>'
-        + (actName ? '<div class="resfoot">' + sh(actName, 32) + '</div>' : '')
+    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:6px 4px;">'
+        + rowsHtml
+        + (actName ? '<div class="resfoot" style="margin-top:4px;">' + sh(actName, 32) + '</div>' : '')
         + '</div>';
 
     // Shared tooltip element (body-level so it can overflow the panel)
