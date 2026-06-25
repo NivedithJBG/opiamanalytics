@@ -182,7 +182,7 @@ function renderCdUnitCostOfResource(items, actName){
     if (!el) return;
     var colPalette = ['#90caf9','#ce93d8','#80cbc4','#ffcc80','#ef9a9a','#a5d6a7','#fff176','#f48fb1','#bcaaa4','#80deea'];
 
-    function fmR(v){ return v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(0); }
+    function fmR(v){ return (+v).toFixed(2); }
 
     if (!items.length){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
