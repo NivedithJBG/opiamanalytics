@@ -181,83 +181,82 @@ function renderCdUnitCostOfResource(items, actName){
     var el = document.getElementById('cd-c6');
     if (!el) return;
     var colPalette = ['#90caf9','#ce93d8','#80cbc4','#ffcc80','#ef9a9a','#a5d6a7','#fff176','#f48fb1','#bcaaa4','#80deea'];
-    var tipPalette = ['#42a5f5','#ab47bc','#26a69a','#ffa726','#ef5350','#66bb6a','#ffee58','#ec407a','#8d6e63','#26c6da'];
 
     function fmR(v){ return v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(0); }
 
-    // Activity unit cost = sum of (rate × qty) for all resources
-    var actUnitCost = 0;
-    items.forEach(function(r){ actUnitCost += ((+r.rate || 0) * (+r.res_qty || 0)); });
-
-    if (!items.length || !actUnitCost){
+    if (!items.length){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
     }
 
-    // Group by resource type — sum estimated & actual amounts per type, collect resources
-    var typeMap = {};
-    items.forEach(function(r){
-        var tid = r.type_id || '0';
-        if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', amount: 0, actualAmount: 0, hasActual: false, resources: [] };
-        typeMap[tid].amount += ((+r.rate || 0) * (+r.res_qty || 0));
+    // Build flat resource list with planned (rate) and actual (actual_unit_cost)
+    var resources = items.map(function(r){
         var hasAct = r.actual_unit_cost !== null && r.actual_unit_cost !== undefined;
-        if (hasAct) {
-            typeMap[tid].actualAmount += (+r.actual_unit_cost || 0) * (+r.res_qty || 0);
-            typeMap[tid].hasActual = true;
-        }
-        var resActual = hasAct ? +r.actual_unit_cost : null;
-        typeMap[tid].resources.push({ name: r.name || '', rate: +r.rate || 0, unit: r.unit || '', actual: resActual });
-    });
-    var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
-    types.sort(function(a, b){ return b.amount - a.amount; });
-
-    // Compute variance per type and overall scale
-    var maxScale = 100;
-    types.forEach(function(t){
-        if (!t.hasActual) return;
-        var plannedPct = t.amount / actUnitCost * 100;
-        var variancePct = (t.actualAmount - t.amount) / actUnitCost * 100;
-        var barTop = plannedPct + Math.max(0, variancePct);
-        if (barTop > maxScale) maxScale = barTop;
-        t._variancePct = variancePct;
-        t._plannedPct  = plannedPct;
+        return {
+            name:    r.name || '',
+            planned: +r.rate || 0,
+            actual:  hasAct ? +r.actual_unit_cost : null,
+            unit:    r.unit || '',
+            col:     _resTypeCol(r.type_name, colPalette[0])
+        };
     });
 
-    // Horizontal bars — name on left, bar on right
+    // Scale: max of all planned and actual values
+    var maxVal = 0;
+    resources.forEach(function(r){
+        if (r.planned > maxVal) maxVal = r.planned;
+        if (r.actual !== null && r.actual > maxVal) maxVal = r.actual;
+    });
+    if (!maxVal) maxVal = 1;
+
+    // Horizontal bars: name left, planned bar, actual indicator, value right
     var rowsHtml = '';
-    types.forEach(function(t, i){
-        var col = _resTypeCol(t.name, colPalette[i % colPalette.length]);
-        var pct = (t.amount / actUnitCost * 100).toFixed(1);
-        var barW = Math.max(parseFloat(pct), 0.5).toFixed(1);
-        var barInner = '<div style="width:' + barW + '%;height:100%;background:' + col + ';border-radius:0 3px 3px 0;'
-            + 'display:flex;align-items:center;padding-left:6px;overflow:hidden;">'
-            + '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;">' + pct + '%</span>'
-            + '</div>';
-        rowsHtml += '<div data-type-idx="' + i + '" style="display:flex;align-items:center;margin-bottom:5px;cursor:pointer;">'
+    resources.forEach(function(r){
+        var col     = r.col;
+        var planned = r.planned;
+        var actual  = r.actual;
+        var plW     = (planned / maxVal * 100).toFixed(1);
+
+        var barHtml = '';
+        if (actual === null) {
+            // No actual — plain planned bar
+            barHtml = '<div style="width:' + plW + '%;height:100%;background:' + col + ';border-radius:0 3px 3px 0;'
+                + 'display:flex;align-items:center;padding-left:5px;overflow:hidden;">'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">&#8377;' + fmR(planned) + '</span>'
+                + '</div>';
+        } else if (actual > planned) {
+            // Over planned — planned + red excess
+            var exW = ((actual - planned) / maxVal * 100).toFixed(1);
+            barHtml = '<div style="width:' + plW + '%;height:100%;background:' + col + ';display:flex;align-items:center;padding-left:5px;overflow:hidden;">'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">&#8377;' + fmR(planned) + '</span>'
+                + '</div>'
+                + '<div style="width:' + exW + '%;height:100%;background:#ef5350;border-radius:0 3px 3px 0;display:flex;align-items:center;overflow:hidden;">'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;padding-left:3px;">+&#8377;' + fmR(actual-planned) + '</span>'
+                + '</div>';
+        } else {
+            // Under planned — actual bar + green saving
+            var acW  = (actual / maxVal * 100).toFixed(1);
+            var savW = ((planned - actual) / maxVal * 100).toFixed(1);
+            barHtml = '<div style="width:' + acW + '%;height:100%;background:' + col + ';display:flex;align-items:center;padding-left:5px;overflow:hidden;">'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">&#8377;' + fmR(actual) + '</span>'
+                + '</div>'
+                + '<div style="width:' + savW + '%;height:100%;background:#66bb6a;border-radius:0 3px 3px 0;"></div>';
+        }
+
+        rowsHtml += '<div style="display:flex;align-items:center;margin-bottom:5px;">'
             + '<div style="width:130px;min-width:130px;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#000;'
-            + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;text-align:right;">' + t.name + '</div>'
-            + '<div style="flex:1;height:18px;background:#e8edf3;border-radius:3px;overflow:hidden;">' + barInner + '</div>'
-            + '<div style="width:36px;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#000;text-align:right;padding-left:5px;white-space:nowrap;">&#8377;' + fmR(t.amount) + '</div>'
+            + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;text-align:right;">' + r.name + '</div>'
+            + '<div style="flex:1;height:18px;background:#e8edf3;border-radius:3px;overflow:hidden;display:flex;">' + barHtml + '</div>'
             + '</div>';
     });
 
-    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:6px 4px;">'
+    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:6px 4px;overflow-y:auto;">'
         + rowsHtml
         + (actName ? '<div class="resfoot" style="margin-top:4px;">' + sh(actName, 32) + '</div>' : '')
         + '</div>';
 
-    // Shared tooltip element (body-level so it can overflow the panel)
-    var tipEl = document.getElementById('uc-res-tip');
-    if (!tipEl){
-        tipEl = document.createElement('div');
-        tipEl.id = 'uc-res-tip';
-        tipEl.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#0d1a2e;border:1px solid #2a4a7a;border-radius:8px;'
-            + 'box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:12px 14px 10px;';
-        document.body.appendChild(tipEl);
-    }
-
-    el.querySelectorAll('[data-type-idx]').forEach(function(col){
+    // (tooltip removed — all data shown inline)
+    if (false) { el.querySelectorAll('[data-type-idx]').forEach(function(col){
         col.addEventListener('mouseenter', function(){
             var t = types[+col.getAttribute('data-type-idx')];
 
@@ -373,8 +372,7 @@ function renderCdUnitCostOfResource(items, actName){
             tipEl.style.transform = 'translateY(-100%)';
             tipEl.style.display = 'block';
         });
-        col.addEventListener('mouseleave', function(){ tipEl.style.display = 'none'; });
-    });
+    }); }  // end dead tooltip block
 }
 
 function renderCdValueOfWorkDone(d){
