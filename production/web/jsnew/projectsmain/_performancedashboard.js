@@ -1276,49 +1276,91 @@ function renderCdResourceCost(items, actName){
             var t   = types[+barCol.getAttribute('data-rc-idx')];
             var col = _resTypeCol(t.name, '#90caf9');
 
-            var rows = '';
+            // Scale across all resources in this type
+            var tipMax = 0;
             t.resources.forEach(function(r){
-                var diff    = r.actual !== null ? r.actual - r.planned : null;
-                var diffCol = diff === null ? '' : (diff > 0 ? '#ef9a9a' : '#a5d6a7');
-                var diffTxt = diff === null ? '—'
-                    : (diff > 0 ? '+' : '') + fmRs(diff);
-                rows += '<tr>'
-                    + '<td style="padding:4px 10px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#cfd8e3;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.name+'</td>'
-                    + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'+fmRs(r.planned)+'</td>'
-                    + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'+(r.actual !== null ? fmRs(r.actual) : '—')+'</td>'
-                    + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:'+diffCol+';text-align:right;white-space:nowrap;">'+diffTxt+'</td>'
-                    + '</tr>';
+                if (r.planned > tipMax) tipMax = r.planned;
+                if (r.actual !== null && r.actual > tipMax) tipMax = r.actual;
+            });
+            if (!tipMax) tipMax = 1;
+
+            // Y-axis grid + scale labels
+            var tgHtml = '', tsHtml = '';
+            [75,50,25].forEach(function(g){
+                tgHtml += '<div style="position:absolute;left:0;right:0;bottom:'+g+'%;border-top:1px dashed rgba(100,130,170,0.4);pointer-events:none;"></div>';
+            });
+            tgHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,130,170,0.5);pointer-events:none;"></div>';
+            tgHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,130,170,0.5);pointer-events:none;"></div>';
+            [100,75,50,25,0].forEach(function(g){
+                tsHtml += '<div style="position:absolute;right:2px;bottom:calc('+g+'% - 5px);font-family:\'Nunito\',sans-serif;font-size:8px;color:#8a9bb0;line-height:1;white-space:nowrap;">'+fmR(tipMax*g/100)+'</div>';
             });
 
-            var tPlanned = t.planned;
-            var tActual  = t.hasActual ? t.actual : null;
-            var tDiff    = tActual !== null ? tActual - tPlanned : null;
-            var tDiffCol = tDiff === null ? '' : (tDiff > 0 ? '#ef5350' : '#66bb6a');
-            var tDiffTxt = tDiff === null ? '' : (tDiff > 0 ? '+' : '') + fmRs(tDiff);
+            // Vertical bar per resource
+            var tbHtml = '', lblHtml = '';
+            t.resources.forEach(function(r){
+                var planned = r.planned;
+                var actual  = r.actual;
+                var barInner = '';
 
+                if (actual === null) {
+                    var plPct = Math.max(planned / tipMax * 100, 0.5);
+                    var spPct = Math.max(100 - plPct, 0);
+                    barInner = '<div style="flex:'+spPct.toFixed(2)+' 1 0;min-height:0;"></div>'
+                        + '<div style="flex:'+plPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:'+col+';border-radius:3px 3px 0 0;'
+                        + 'display:flex;align-items:flex-start;justify-content:center;overflow:hidden;">'
+                        + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;font-weight:700;color:#fff;padding:2px 1px;white-space:nowrap;">'+fmR(planned)+'</span>'
+                        + '</div>';
+                } else if (actual > planned) {
+                    var plPct = Math.max(planned / tipMax * 100, 0.5);
+                    var exPct = Math.max((actual - planned) / tipMax * 100, 0.5);
+                    var spPct = Math.max(100 - plPct - exPct, 0);
+                    barInner = '<div style="flex:'+spPct.toFixed(2)+' 1 0;min-height:0;"></div>'
+                        + '<div style="flex:'+exPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:#ef5350;border-radius:3px 3px 0 0;'
+                        + 'display:flex;align-items:flex-start;justify-content:center;overflow:hidden;">'
+                        + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;font-weight:700;color:#fff;padding:2px 1px;white-space:nowrap;">+'+fmR(actual-planned)+'</span>'
+                        + '</div>'
+                        + '<div style="flex:'+plPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:'+col+';">'
+                        + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;font-weight:700;color:#fff;padding:2px 1px;white-space:nowrap;display:block;text-align:center;">'+fmR(planned)+'</span>'
+                        + '</div>';
+                } else {
+                    var acPct  = Math.max(actual / tipMax * 100, 0.5);
+                    var savPct = Math.max((planned - actual) / tipMax * 100, 0);
+                    var spPct  = Math.max(100 - acPct - savPct, 0);
+                    barInner = '<div style="flex:'+spPct.toFixed(2)+' 1 0;min-height:0;"></div>'
+                        + '<div style="flex:'+savPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:#66bb6a;border-radius:3px 3px 0 0;'
+                        + 'display:flex;align-items:flex-start;justify-content:center;overflow:hidden;">'
+                        + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;font-weight:700;color:#fff;padding:2px 1px;white-space:nowrap;">-'+fmR(planned-actual)+'</span>'
+                        + '</div>'
+                        + '<div style="flex:'+acPct.toFixed(2)+' 1 0;width:80%;min-height:0;background:'+col+';">'
+                        + '<span style="font-family:\'Nunito\',sans-serif;font-size:8px;font-weight:700;color:#fff;padding:2px 1px;white-space:nowrap;display:block;text-align:center;">'+fmR(actual)+'</span>'
+                        + '</div>';
+                }
+
+                tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;">'
+                    + barInner + '</div>';
+
+                var aCol = actual !== null ? (actual > planned ? '#ef9a9a' : '#a5d6a7') : '#8a9bb0';
+                lblHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 2px 0;">'
+                    + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+sh(r.name,14)+'</div>'
+                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#8a9bb0;white-space:nowrap;">P:'+fmR(planned)+'</div>'
+                    + (actual !== null ? '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:'+aCol+';white-space:nowrap;">A:'+fmR(actual)+'</div>' : '')
+                    + '</div>';
+            });
+
+            var tipW = Math.max(260, t.resources.length * 65 + 40);
+            tipEl.style.width = tipW + 'px';
             tipEl.innerHTML = '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;">'
                 + '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+col+';flex-shrink:0;"></span>'
                 + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;letter-spacing:.3px;">'+t.name+'</span>'
                 + '</div>'
-                + '<table style="width:100%;border-collapse:collapse;">'
-                + '<thead><tr>'
-                + '<th style="padding:3px 10px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#8a9bb0;font-weight:600;text-align:left;">Resource</th>'
-                + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#8a9bb0;font-weight:600;text-align:right;">Planned</th>'
-                + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#8a9bb0;font-weight:600;text-align:right;">Actual</th>'
-                + '<th style="padding:3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#8a9bb0;font-weight:600;text-align:right;">Diff</th>'
-                + '</tr></thead>'
-                + '<tbody style="border-top:1px solid rgba(100,130,170,0.25);">'+rows+'</tbody>'
-                + '<tfoot><tr style="border-top:1px solid rgba(100,130,170,0.4);">'
-                + '<td style="padding:5px 10px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;font-weight:700;">Total</td>'
-                + '<td style="padding:5px 8px 3px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">'+fmRs(tPlanned)+'</td>'
-                + '<td style="padding:5px 8px 3px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">'+(tActual !== null ? fmRs(tActual) : '—')+'</td>'
-                + '<td style="padding:5px 0 3px;font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:'+tDiffCol+';text-align:right;white-space:nowrap;">'+tDiffTxt+'</td>'
-                + '</tr></tfoot>'
-                + '</table>';
+                + '<div style="display:flex;height:140px;">'
+                + '<div style="width:30px;position:relative;flex-shrink:0;">'+tsHtml+'</div>'
+                + '<div style="flex:1;position:relative;min-width:0;">'+tgHtml
+                + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">'+tbHtml+'</div>'
+                + '</div></div>'
+                + '<div style="display:flex;padding-left:30px;margin-top:3px;">'+lblHtml+'</div>';
 
             var rect = barCol.getBoundingClientRect();
-            var tipW = 300;
-            tipEl.style.width = tipW + 'px';
             var left = rect.left + rect.width / 2 - tipW / 2;
             left = Math.max(4, Math.min(left, window.innerWidth - tipW - 4));
             tipEl.style.left = left + 'px';
