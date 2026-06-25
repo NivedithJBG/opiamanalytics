@@ -913,11 +913,13 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
         var actual  = r.actual;
         var barHtml = '';
         if (actual === null) {
+            // No actual — show planned bar in resource colour
             var sp = Math.max(100 - (planned / maxQty * 100), 0).toFixed(2);
             var bp = Math.max(planned / maxQty * 100, 0.5).toFixed(2);
             barHtml = '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
                 + '<div style="flex:' + bp + ' 1 0;width:70%;min-height:0;background:' + col + ';border-radius:3px 3px 0 0;"></div>';
         } else if (actual > planned) {
+            // Actual exceeds planned — resource colour for planned, red for excess on top
             var sp   = Math.max(100 - (actual / maxQty * 100), 0).toFixed(2);
             var bpPl = Math.max(planned / maxQty * 100, 0.5).toFixed(2);
             var bpEx = Math.max((actual - planned) / maxQty * 100, 0.5).toFixed(2);
@@ -925,12 +927,13 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
                 + '<div style="flex:' + bpEx + ' 1 0;width:70%;min-height:0;background:#ef5350;border-radius:3px 3px 0 0;"></div>'
                 + '<div style="flex:' + bpPl + ' 1 0;width:70%;min-height:0;background:' + col + ';"></div>';
         } else {
+            // Actual < planned — resource colour for actual, green only for the difference
             var sp    = Math.max(100 - (planned / maxQty * 100), 0).toFixed(2);
-            var bpRem = Math.max((planned - actual) / maxQty * 100, 0).toFixed(2);
+            var bpDiff = Math.max((planned - actual) / maxQty * 100, 0).toFixed(2);
             var bpAct = Math.max(actual / maxQty * 100, 0.5).toFixed(2);
             barHtml = '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
-                + '<div style="flex:' + bpRem + ' 1 0;width:70%;min-height:0;background:rgba(100,150,100,0.2);border-top:1px dashed rgba(100,200,100,0.5);"></div>'
-                + '<div style="flex:' + bpAct + ' 1 0;width:70%;min-height:0;background:#66bb6a;border-radius:3px 3px 0 0;"></div>';
+                + '<div style="flex:' + bpDiff + ' 1 0;width:70%;min-height:0;background:#66bb6a;border-radius:3px 3px 0 0;"></div>'
+                + '<div style="flex:' + bpAct + ' 1 0;width:70%;min-height:0;background:' + col + ';"></div>';
         }
         barsHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;">' + barHtml + '</div>';
         var unitSuffix = (r.unit ? ' ' + r.unit : '') + ' / Unit';
