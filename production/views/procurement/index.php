@@ -2026,7 +2026,7 @@
                     var bg        = i % 2 === 1 ? 'background:#f7f7f7;' : 'background:#fff;';
                     var unitQty   = r.task_unit_qty != null ? parseFloat(r.task_unit_qty) : 0;
                     var savedRate = r.saved_rate != null ? parseFloat(r.saved_rate) : 0;
-                    var totalQty  = unitQty * actQtyBk;
+                    var totalQty  = r.saved_total_qty != null ? parseFloat(r.saved_total_qty) : (unitQty * actQtyBk);
                     var initAmt   = savedRate * totalQty;
                     html += '<tr style="' + bg + '" class="wo-task-row" data-task-id="' + (r.task_id || '') + '">'
                         + '<td style="padding:7px 12px;border:1px solid #e0e0e0;text-align:center;">'
