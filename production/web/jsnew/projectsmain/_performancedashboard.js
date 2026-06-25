@@ -580,9 +580,10 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
     el.style.position = 'relative';
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:16px 4px 6px;">'
 
-        + '<div style="position:relative;width:100%;height:18px;border-radius:4px;overflow:hidden;background:#555f6e;margin-bottom:10px;">'
-        + '<div style="position:absolute;top:0;left:0;height:100%;width:' + barW + '%;background:#e65100;border-radius:4px 0 0 4px;"></div>'
-        + (pct > 8 ? '<span style="position:absolute;top:50%;right:' + (100 - pct + 1) + '%;transform:translateY(-50%);font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;padding-right:4px;">' + pct.toFixed(1) + '%</span>' : '')
+        + '<div style="position:relative;width:100%;height:20px;border-radius:4px;overflow:hidden;background:#555f6e;margin-bottom:10px;">'
+        + '<div style="position:absolute;top:0;left:0;height:100%;width:' + barW + '%;background:#e65100;border-radius:4px 0 0 4px;display:flex;align-items:center;overflow:hidden;">'
+        + (pct > 5 ? '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;padding:0 6px;overflow:hidden;">' + fmC(estWorkDone) + '</span>' : '')
+        + '</div>'
         + '</div>'
 
         + '<table style="width:100%;border-collapse:collapse;">'
