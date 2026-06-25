@@ -864,8 +864,8 @@ class ProjectsmainController extends Controller
                     $plannedConsumption = $taskQtyPerUnit !== null
                         ? round($taskQtyPerUnit, 3)
                         : null;
-                    $actualConsumption = ($taskWorkDone !== null && $lastQty > 0)
-                        ? round($taskWorkDone / $lastQty, 3)
+                    $actualConsumption = ($taskWorkDone !== null && $mbQty > 0)
+                        ? round($taskWorkDone / $mbQty, 3)
                         : null;
                 } else {
                     // Materials: planned = res_qty × MB work_done (or × task_qty_per_unit as fallback)
