@@ -972,14 +972,25 @@ class ProcurementController extends Controller
             [':mid' => $masterActivityId]
         )->queryAll();
 
+        // Ratio = estQty / schedQty for computing SC task_unit_qty
+        $estQtyRow = $db->createCommand(
+            "SELECT activity_qty FROM pricing_estimate_new WHERE activity_Id=:wid AND project_Id=:pid AND pricing_status=0 LIMIT 1",
+            [':wid' => $sa['activity_id'], ':pid' => $projectid]
+        )->queryOne();
+        $estActQty = $estQtyRow ? (float)$estQtyRow['activity_qty'] : 0;
+        $schedQty  = (float)($sa['quantity'] ?? 0);
+        $ratio     = $schedQty > 0 ? $estActQty / $schedQty : 0.0;
+
         $rows = [];
         foreach ($taskRows as $t) {
-            // task_unit_qty: qty per unit from schedule-task screen (no wo_task_rates override)
-            $stRow = $db->createCommand(
-                "SELECT task_qty FROM schedule_task_new WHERE activity_Id=:sid AND task_Id=:tid LIMIT 1",
-                [':sid' => $schedId, ':tid' => $t['id']]
-            )->queryOne();
-            $taskUnitQty = ($stRow && $stRow['task_qty'] > 0) ? (float)$stRow['task_qty'] : (float)$t['productivity'];
+            // task_unit_qty = SUM(SC res_qty mapped to this task) × (estQty / schedQty)
+            $scResQty = (float)($db->createCommand(
+                "SELECT COALESCE(SUM(quantity), 0) FROM pricing_estimate_resources_new
+                 WHERE activity_id=:wid AND project_id=:pid AND resourcetype_Id=4 AND pricing_status=0
+                   AND FIND_IN_SET(:tid, task_ids)",
+                [':wid' => $sa['activity_id'], ':tid' => $t['id'], ':pid' => $projectid]
+            )->queryScalar() ?: 0);
+            $taskUnitQty = round($scResQty * $ratio, 3);
 
             $savedRate = $db->createCommand(
                 "SELECT rate, task_qty, total_qty, selected FROM wo_task_rates WHERE activity_id=:aid AND task_id=:tid LIMIT 1",

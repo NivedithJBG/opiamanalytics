@@ -2039,7 +2039,7 @@
                         +   '<span>' + (r.task_unit || '') + '</span>'
                         + '</td>'
                         + '<td style="padding:5px 8px;border:1px solid #e0e0e0;text-align:right;">'
-                        +   '<input type="number" class="wo-task-qty-inp" data-unit-qty="' + unitQty + '" min="0" step="any" value="' + totalQty.toFixed(3) + '" style="' + inp + '">'
+                        +   '<input type="number" class="wo-task-qty-inp" data-unit-qty="' + unitQty + '" value="' + totalQty.toFixed(3) + '" readonly style="width:80px;height:26px;padding:2px 5px;text-align:right;font-size:12px;border:1px solid #ccc;border-radius:3px;background:#f0f0f0;color:#555;cursor:not-allowed;">'
                         + '</td>'
                         + '<td style="padding:5px 8px;border:1px solid #e0e0e0;text-align:right;" class="wo-td-rate">'
                         +   '<input type="number" class="wo-rate-inp" data-approx="' + totalQty + '" min="0" step="any" placeholder="0.00" value="' + (savedRate || '') + '" style="' + inp + '">'
