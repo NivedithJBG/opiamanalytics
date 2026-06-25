@@ -582,13 +582,13 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:16px 4px 6px;">'
 
         + '<div style="position:relative;width:100%;height:20px;border-radius:4px;overflow:hidden;background:#555f6e;margin-bottom:10px;">'
-        + '<div style="position:absolute;top:0;left:0;height:100%;width:' + barW + '%;background:#1565C0;border-radius:4px 0 0 4px;"></div>'
+        + '<div style="position:absolute;top:0;left:0;height:100%;width:' + barW + '%;background:#2196F3;border-radius:4px 0 0 4px;"></div>'
         + '</div>'
 
         + '<table style="width:100%;border-collapse:collapse;">'
         + '<tbody>'
         + legendRow('#555f6e', 'Estimated Cost of Activity', estimatedCost)
-        + legendRow('#1565C0', 'Estimated Cost of Work Done', estWorkDone)
+        + legendRow('#2196F3', 'Estimated Cost of Work Done', estWorkDone)
         + legendRow('#27ae60', 'Actual Cost of Work Done',   actualWorkDone)
         + '</tbody>'
         + '</table>'
