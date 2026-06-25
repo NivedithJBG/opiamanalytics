@@ -274,11 +274,11 @@ function renderCdUnitCostOfResource(items, actName){
                 + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;">'+r.name+'</span>'
                 + '</div>'
                 + '<table style="width:100%;border-collapse:collapse;">'
-                + '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8a9bb0;">Planned</td>'
+                + '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Planned</td>'
                 + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">&#8377;'+fmR(r.planned)+'</td></tr>'
-                + '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8a9bb0;">Actual</td>'
+                + '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual</td>'
                 + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+(r.actual !== null ? '#fff' : '#5a6e8c')+';text-align:right;white-space:nowrap;">'+(r.actual !== null ? '&#8377;'+fmR(r.actual) : '—')+'</td></tr>'
-                + (diff !== null ? '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8a9bb0;">Diff</td>'
+                + (diff !== null ? '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Diff</td>'
                 + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+dCol+';text-align:right;white-space:nowrap;">'+dTxt+'</td></tr>' : '')
                 + '</table>';
             var rect = row.getBoundingClientRect();
@@ -831,11 +831,11 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
                 + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;">'+r.name+'</span>'
                 + '</div>'
                 + '<table style="width:100%;border-collapse:collapse;">'
-                + '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8a9bb0;">Planned</td>'
+                + '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Planned</td>'
                 + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">'+fmQ(r.qty)+uSfx+'</td></tr>'
-                + '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8a9bb0;">Actual</td>'
+                + '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual</td>'
                 + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+(r.actual !== null ? '#fff' : '#5a6e8c')+';text-align:right;white-space:nowrap;">'+(r.actual !== null ? fmQ(r.actual)+uSfx : '—')+'</td></tr>'
-                + (diff !== null ? '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8a9bb0;">Diff</td>'
+                + (diff !== null ? '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Diff</td>'
                 + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+dCol+';text-align:right;white-space:nowrap;">'+dTxt+'</td></tr>' : '')
                 + '</table>';
             var rect = row.getBoundingClientRect();
