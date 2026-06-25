@@ -165,7 +165,7 @@ function loadCdActivityData(actId){
             renderCdUnitCostOfResource(d.items || [], d.activity_name || '');
             renderCdResourceConsumption(d.items || [], d.activity_name || '', +d.last_report_qty || 0, d.unit || '');
             renderCdResourceCost(d.items || [], d.activity_name || '');
-            renderCdUnitCostOfActivity(d.items || [], d.activity_name || '', d.unit || '', +d.activity_qty || 0, +d.schedule_qty || 0, +d.actual_unit_cost_raw || 0);
+            renderCdUnitCostOfActivity(d.items || [], d.activity_name || '', d.unit || '', +d.last_report_qty || 0);
             renderCdCostOfActivity(d.items || [], d.activity_name || '', +d.last_report_qty || 0, +d.activity_qty || 0, d.unit || '');
             renderCdCostOnCompletion(d.items || [], d.activity_name || '', +d.activity_qty || 0);
             renderCdValueOfWorkDone(d);
@@ -336,24 +336,30 @@ function renderCdValueOfWorkDone(d){
     el.innerHTML = svg;
 }
 
-function renderCdUnitCostOfActivity(items, actName, actUnit, estQty, schedQty, actualRaw){
+function renderCdUnitCostOfActivity(items, actName, actUnit, lastQty){
     var el = document.getElementById('cd-g5');
     if (!el) return;
 
-    var unitCost = 0;
-    items.forEach(function(r){ unitCost += (+r.res_qty || 0) * (+r.rate || 0); });
-    var ratio       = (estQty > 0 && schedQty > 0) ? estQty / schedQty : 1;
-    var adjUnitCost = unitCost * ratio;
-    var actualAdj   = (actualRaw || 0) * ratio;
+    // Planned = SUM(rate × planned_consumption) / lastQty
+    // Actual  = SUM(actual_unit_cost × actual_consumption) / lastQty
+    var plannedCost = 0, actualCost = 0, hasActual = false;
+    items.forEach(function(r){
+        plannedCost += (+r.rate || 0) * (+r.planned_consumption || 0);
+        if (r.actual_unit_cost != null && r.actual_consumption != null) {
+            actualCost  += (+r.actual_unit_cost) * (+r.actual_consumption);
+            hasActual    = true;
+        }
+    });
+    var plannedUnitCost = (lastQty > 0) ? plannedCost / lastQty : 0;
+    var actualUnitCost  = (hasActual && lastQty > 0) ? actualCost / lastQty : null;
 
-    if (!unitCost){
+    if (!plannedUnitCost){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
     }
 
-    var maxVal = adjUnitCost * 2 || 1;
-    var actual = actualAdj;
-    var f      = Math.max(0, Math.min(1, actual / maxVal));
+    var maxVal = plannedUnitCost * 2;
+    var f      = actualUnitCost !== null ? Math.max(0, Math.min(1, actualUnitCost / maxVal)) : 0;
     var an     = sh(actName || '', 38);
     var cx=105, cy=92, r=76, sw=14;
 
@@ -374,13 +380,13 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, estQty, schedQty, a
 
     var svg='<svg width="100%" height="100%" viewBox="0 0 210 134" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
         +arc(0, 0.5, '#00838f')
-        +arc(0.5, 1,  '#FF6D00')
-        +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
+        +arc(0.5, 1,  '#ef5350')
+        +(actualUnitCost !== null ? '<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>' : '')
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
-        +'<text x="'+cx+'" y="'+(cy-10)+'" text-anchor="middle" font-size="18" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+(actualAdj > 0 ? '&#8377; '+actualAdj.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : '—')+(actUnit?' / '+actUnit:'')+'</text>'
-        +'<text x="55" y="114" text-anchor="middle" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">Planned <tspan font-weight="700">&#8377; '+fmCost(adjUnitCost)+'</tspan></text>'
-        +'<text x="155" y="114" text-anchor="middle" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">'+(actualAdj > 0 ? '&#8377; '+fmCost(actualAdj) : '—')+'</tspan></text>'
+        +'<text x="'+cx+'" y="'+(cy-10)+'" text-anchor="middle" font-size="18" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">&#8377; '+fmCost(plannedUnitCost)+(actUnit?' / '+actUnit:'')+'</text>'
+        +'<text x="55" y="114" text-anchor="middle" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">Planned <tspan font-weight="700">&#8377; '+fmCost(plannedUnitCost)+'</tspan></text>'
+        +'<text x="155" y="114" text-anchor="middle" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">'+(actualUnitCost !== null ? '&#8377; '+fmCost(actualUnitCost) : '—')+'</tspan></text>'
         +(an?'<text x="'+cx+'" y="128" text-anchor="middle" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +'</svg>';
 
@@ -393,8 +399,9 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, estQty, schedQty, a
     items.forEach(function(r){
         var tid = r.type_id || '0';
         if (!typeMap[tid]) typeMap[tid] = { name: r.type_name || 'Other', amount: 0, resources: [] };
-        typeMap[tid].amount += ((+r.rate || 0) * (+r.res_qty || 0));
-        typeMap[tid].resources.push({ name: r.name || '', amount: (+r.rate || 0) * (+r.res_qty || 0), unit: r.unit || '' });
+        var rAmt = (+r.rate || 0) * (+r.planned_consumption || 0);
+        typeMap[tid].amount += rAmt;
+        typeMap[tid].resources.push({ name: r.name || '', amount: rAmt, unit: r.unit || '' });
     });
     var types = Object.keys(typeMap).map(function(k){ return typeMap[k]; });
     types.sort(function(a,b){ return b.amount - a.amount; });
