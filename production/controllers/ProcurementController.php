@@ -1002,7 +1002,6 @@ class ProcurementController extends Controller
                 'task_name'       => $t['task_name'],
                 'task_unit'       => $t['task_unit'],
                 'task_unit_qty'   => $taskUnitQty,
-                '_dbg'            => ['sc_res_qty'=>$scResQty,'est_qty'=>$estActQty,'sched_qty'=>$schedQty,'ratio'=>$ratio,'task_unit_qty'=>$taskUnitQty,'wbs_id'=>$sa['activity_id'],'task_id'=>$t['id']],
                 'task_qty'        => $taskUnitQty,
                 'saved_total_qty' => $savedRate && $savedRate['total_qty'] !== null ? (float)$savedRate['total_qty'] : null,
                 'saved_rate'      => $savedRate ? (float)$savedRate['rate'] : null,

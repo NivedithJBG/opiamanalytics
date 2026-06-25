@@ -2022,7 +2022,6 @@
                     + '<th style="padding:9px 12px;border:1px solid #444;width:110px;text-align:right;">Rate</th>'
                     + '<th style="padding:9px 12px;border:1px solid #444;width:110px;text-align:right;">Amount</th>'
                     + '</tr></thead><tbody>';
-                console.log('WO task rows debug:', data.rows);
                 $.each(data.rows, function(i, r) {
                     var bg        = i % 2 === 1 ? 'background:#f7f7f7;' : 'background:#fff;';
                     var unitQty   = r.task_unit_qty != null ? parseFloat(r.task_unit_qty) : 0;
