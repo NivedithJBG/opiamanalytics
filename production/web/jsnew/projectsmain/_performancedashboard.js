@@ -1198,14 +1198,15 @@ function renderCdResourceCost(items, actName){
     items.forEach(function(r){
         var tid = r.type_id != null ? String(r.type_id) : '0';
         if (!typeMap[tid]) {
-            typeMap[tid] = { name: r.type_name || 'Other', planned: 0, actual: 0, hasActual: false };
+            typeMap[tid] = { name: r.type_name || 'Other', planned: 0, actual: 0, hasActual: false, resources: [] };
             typeOrder.push(tid);
         }
-        typeMap[tid].planned += (+r.rate || 0) * (+r.planned_consumption || 0);
-        if (r.actual_unit_cost != null && r.actual_consumption != null) {
-            typeMap[tid].actual   += (+r.actual_unit_cost) * (+r.actual_consumption);
-            typeMap[tid].hasActual = true;
-        }
+        var rPlanned = (+r.rate || 0) * (+r.planned_consumption || 0);
+        var rActual  = (r.actual_unit_cost != null && r.actual_consumption != null)
+            ? (+r.actual_unit_cost) * (+r.actual_consumption) : null;
+        typeMap[tid].planned += rPlanned;
+        if (rActual !== null) { typeMap[tid].actual += rActual; typeMap[tid].hasActual = true; }
+        typeMap[tid].resources.push({ name: r.name || '', planned: rPlanned, actual: rActual });
     });
 
     var types = typeOrder.map(function(k){ return typeMap[k]; });
@@ -1232,7 +1233,7 @@ function renderCdResourceCost(items, actName){
     gridHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(90,110,140,0.35);pointer-events:none;"></div>';
 
     var barsHtml = '', labelsHtml = '';
-    types.forEach(function(t){
+    types.forEach(function(t, i){
         var col     = _resTypeCol(t.name, '#90caf9');
         var planned = t.planned;
         var actual  = t.hasActual ? t.actual : null;
@@ -1274,7 +1275,7 @@ function renderCdResourceCost(items, actName){
                 + '</div>';
         }
 
-        barsHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;">'
+        barsHtml += '<div data-rc-idx="'+i+'" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
             + barInner + '</div>';
 
         var actColour = actual !== null ? (actual > planned ? '#c62828' : '#2e7d32') : '#5a6e8c';
@@ -1294,6 +1295,75 @@ function renderCdResourceCost(items, actName){
         + '<div style="display:flex;padding-left:28px;">'+labelsHtml+'</div>'
         + (actName ? '<div class="resfoot">'+sh(actName,32)+'</div>' : '')
         + '</div>';
+
+    // Tooltip
+    var tipEl = document.getElementById('rc-cost-tip');
+    if (!tipEl){
+        tipEl = document.createElement('div');
+        tipEl.id = 'rc-cost-tip';
+        tipEl.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
+            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.45);'
+            + 'padding:10px 14px 10px;min-width:260px;';
+        document.body.appendChild(tipEl);
+    }
+
+    el.querySelectorAll('[data-rc-idx]').forEach(function(barCol){
+        barCol.addEventListener('mouseenter', function(){
+            var t   = types[+barCol.getAttribute('data-rc-idx')];
+            var col = _resTypeCol(t.name, '#90caf9');
+
+            var rows = '';
+            t.resources.forEach(function(r){
+                var diff    = r.actual !== null ? r.actual - r.planned : null;
+                var diffCol = diff === null ? '' : (diff > 0 ? '#ef9a9a' : '#a5d6a7');
+                var diffTxt = diff === null ? '—'
+                    : (diff > 0 ? '+' : '') + fmRs(diff);
+                rows += '<tr>'
+                    + '<td style="padding:4px 10px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#cfd8e3;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.name+'</td>'
+                    + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'+fmRs(r.planned)+'</td>'
+                    + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;text-align:right;white-space:nowrap;">'+(r.actual !== null ? fmRs(r.actual) : '—')+'</td>'
+                    + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:'+diffCol+';text-align:right;white-space:nowrap;">'+diffTxt+'</td>'
+                    + '</tr>';
+            });
+
+            var tPlanned = t.planned;
+            var tActual  = t.hasActual ? t.actual : null;
+            var tDiff    = tActual !== null ? tActual - tPlanned : null;
+            var tDiffCol = tDiff === null ? '' : (tDiff > 0 ? '#ef5350' : '#66bb6a');
+            var tDiffTxt = tDiff === null ? '' : (tDiff > 0 ? '+' : '') + fmRs(tDiff);
+
+            tipEl.innerHTML = '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;">'
+                + '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+col+';flex-shrink:0;"></span>'
+                + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;letter-spacing:.3px;">'+t.name+'</span>'
+                + '</div>'
+                + '<table style="width:100%;border-collapse:collapse;">'
+                + '<thead><tr>'
+                + '<th style="padding:3px 10px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#8a9bb0;font-weight:600;text-align:left;">Resource</th>'
+                + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#8a9bb0;font-weight:600;text-align:right;">Planned</th>'
+                + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#8a9bb0;font-weight:600;text-align:right;">Actual</th>'
+                + '<th style="padding:3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#8a9bb0;font-weight:600;text-align:right;">Diff</th>'
+                + '</tr></thead>'
+                + '<tbody style="border-top:1px solid rgba(100,130,170,0.25);">'+rows+'</tbody>'
+                + '<tfoot><tr style="border-top:1px solid rgba(100,130,170,0.4);">'
+                + '<td style="padding:5px 10px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;font-weight:700;">Total</td>'
+                + '<td style="padding:5px 8px 3px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">'+fmRs(tPlanned)+'</td>'
+                + '<td style="padding:5px 8px 3px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">'+(tActual !== null ? fmRs(tActual) : '—')+'</td>'
+                + '<td style="padding:5px 0 3px;font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:'+tDiffCol+';text-align:right;white-space:nowrap;">'+tDiffTxt+'</td>'
+                + '</tr></tfoot>'
+                + '</table>';
+
+            var rect = barCol.getBoundingClientRect();
+            var tipW = 300;
+            tipEl.style.width = tipW + 'px';
+            var left = rect.left + rect.width / 2 - tipW / 2;
+            left = Math.max(4, Math.min(left, window.innerWidth - tipW - 4));
+            tipEl.style.left = left + 'px';
+            tipEl.style.top  = (rect.top - 8) + 'px';
+            tipEl.style.transform = 'translateY(-100%)';
+            tipEl.style.display = 'block';
+        });
+        barCol.addEventListener('mouseleave', function(){ tipEl.style.display = 'none'; });
+    });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
