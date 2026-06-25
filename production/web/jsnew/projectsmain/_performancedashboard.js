@@ -1233,7 +1233,7 @@ function renderCdResourceCost(items, actName){
 
     var barsHtml = '', labelsHtml = '';
     types.forEach(function(t){
-        var col     = _resTypeCol(t.name, '#607D8B');
+        var col     = _resTypeCol(t.name, '#90caf9');
         var planned = t.planned;
         var actual  = t.hasActual ? t.actual : null;
         var barInner = '';
