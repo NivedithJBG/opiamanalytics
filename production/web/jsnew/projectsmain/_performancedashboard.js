@@ -531,10 +531,11 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
     var estimatedCost  = unitCost * estActQty;
 
     // Actual Cost of Work Done = Actual Unit Cost × lastQty = SUM(actual_unit_cost × actual_consumption)
-    var actualWorkDone = 0;
+    var actualWorkDone = 0, hasActual = false;
     items.forEach(function(r){
         if (r.actual_unit_cost != null && r.actual_consumption != null) {
             actualWorkDone += (+r.actual_unit_cost) * (+r.actual_consumption);
+            hasActual = true;
         }
     });
 
@@ -547,8 +548,10 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
         return;
     }
 
-    var pct     = Math.min(estWorkDone / estimatedCost * 100, 100);
-    var barW    = pct.toFixed(2);
+    var scale   = estimatedCost;
+    var plW     = Math.min(estWorkDone    / scale * 100, 100);
+    var acW     = hasActual ? Math.min(actualWorkDone / scale * 100, 200) : null;
+    var diff    = hasActual ? actualWorkDone - estWorkDone : null;
     var an      = sh(actName || '', 40);
     var unitLbl = actUnit ? ' / ' + actUnit : '';
 
@@ -581,15 +584,31 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
     el.style.position = 'relative';
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:16px 4px 6px;">'
 
-        + '<div style="position:relative;width:100%;height:20px;border-radius:4px;overflow:hidden;background:#555f6e;margin-bottom:10px;">'
-        + '<div style="position:absolute;top:0;left:0;height:100%;width:' + barW + '%;background:#2979FF;border-radius:4px 0 0 4px;"></div>'
-        + '</div>'
+        + (function(){
+            var s = '<div style="position:relative;width:100%;height:20px;border-radius:4px;overflow:hidden;background:#555f6e;margin-bottom:10px;">';
+            if (acW === null) {
+                // No actual — just blue planned bar
+                s += '<div style="position:absolute;top:0;left:0;height:100%;width:'+plW.toFixed(2)+'%;background:#2979FF;border-radius:4px 0 0 4px;"></div>';
+            } else if (diff > 0) {
+                // Actual exceeds planned — blue (planned) + red extension
+                var exW = Math.min((actualWorkDone - estWorkDone) / scale * 100, 100 - plW).toFixed(2);
+                s += '<div style="position:absolute;top:0;left:0;height:100%;width:'+plW.toFixed(2)+'%;background:#2979FF;"></div>';
+                s += '<div style="position:absolute;top:0;left:'+plW.toFixed(2)+'%;height:100%;width:'+exW+'%;background:#ef5350;border-radius:0 4px 4px 0;"></div>';
+            } else {
+                // Actual below planned — actual (blue) + green savings within planned
+                var savW = Math.max((estWorkDone - actualWorkDone) / scale * 100, 0).toFixed(2);
+                s += '<div style="position:absolute;top:0;left:0;height:100%;width:'+(acW).toFixed(2)+'%;background:#2979FF;border-radius:4px 0 0 4px;"></div>';
+                s += '<div style="position:absolute;top:0;left:'+(acW).toFixed(2)+'%;height:100%;width:'+savW+'%;background:#66bb6a;border-radius:0 4px 4px 0;"></div>';
+            }
+            s += '</div>';
+            return s;
+          })()
 
         + '<table style="width:100%;border-collapse:collapse;">'
         + '<tbody>'
         + legendRow('#555f6e', 'Estimated Cost of Activity', estimatedCost)
         + legendRow('#2979FF', 'Estimated Cost of Work Done', estWorkDone)
-        + legendRow('#27ae60', 'Actual Cost of Work Done',   actualWorkDone)
+        + (hasActual ? legendRow(diff > 0 ? '#ef5350' : '#66bb6a', 'Actual Cost of Work Done', actualWorkDone) : '')
         + '</tbody>'
         + '</table>'
 
