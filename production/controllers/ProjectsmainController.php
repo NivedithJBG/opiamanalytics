@@ -818,7 +818,7 @@ class ProjectsmainController extends Controller
             $scActualUnitCost    = $mbQty > 0 ? $mbAmount / $mbQty : null;
             $actualUnitCostTotal = 0.0;
             $schedQty = (float)($sa['quantity'] ?? 0);
-            $ratio    = ($actQty > 0) ? $schedQty / $actQty : 0.0;
+            $ratio    = ($schedQty > 0) ? $actQty / $schedQty : 0.0;
             foreach ($rows as $r) {
                 $resQty  = (float)$r['quantity'];
                 $typeId  = (int)$r['type_id'];
