@@ -614,7 +614,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
     var ewdW = estimatedCost > 0 ? Math.min(estWorkDone / estimatedCost * 100, 100).toFixed(2) : '0';
     var barHtml = '<div style="position:relative;width:100%;height:20px;border-radius:4px;background:#555f6e;margin-bottom:10px;overflow:hidden;">';
     if (estWorkDone > 0) {
-        barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdW+'%;background:#2979FF;border-radius:4px 0 0 4px;"></div>';
+        barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdW+'%;background:#0D47A1;border-radius:4px 0 0 4px;"></div>';
     }
     if (actualCostOfActivity !== null) {
         var actW = Math.min(actualCostOfActivity / estimatedCost * 100, 100).toFixed(2);
@@ -638,7 +638,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
             return '<table style="width:100%;border-collapse:collapse;"><tbody>'
                 + lr('#555f6e', 'Estimated Cost of Activity',  estimatedCost)
                 + (actualCostOfActivity !== null ? lr('#40C4FF', 'Actual Cost of Activity', actualCostOfActivity, '#0288D1') : '')
-                + (estWorkDone > 0            ? lr('#2979FF', 'Est. Cost of Work Done',   estWorkDone,          '#2979FF') : '')
+                + (estWorkDone > 0            ? lr('#0D47A1', 'Est. Cost of Work Done',   estWorkDone,          '#0D47A1') : '')
                 + (hasActual                  ? lr('#00838f', 'Actual Cost of Work Done',  actualWorkDone,       '#00838f') : '')
                 + '</tbody></table>';
           })()
