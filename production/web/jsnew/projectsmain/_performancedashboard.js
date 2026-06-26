@@ -580,33 +580,58 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
     items.forEach(function(r){ unitCost += (+r.res_qty || 0) * (+r.rate || 0); });
     var estimatedCost = unitCost * estActQty;
 
+    // Actual Cost of Activity = Actual Unit Cost × schedQty
+    var actualWorkDone = 0, hasActual = false;
+    items.forEach(function(r){
+        if (r.actual_unit_cost != null && r.actual_consumption != null) {
+            actualWorkDone += (+r.actual_unit_cost) * (+r.actual_consumption);
+            hasActual = true;
+        }
+    });
+    var actualUnitCost       = (hasActual && lastQty > 0) ? actualWorkDone / lastQty : null;
+    var actualCostOfActivity = (actualUnitCost !== null) ? actualUnitCost * schedQty : null;
+
     if (!estimatedCost){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
     }
 
+    var actDiff = actualCostOfActivity !== null ? actualCostOfActivity - estimatedCost : null;
     var an      = sh(actName || '', 40);
     var unitLbl = actUnit ? ' / ' + actUnit : '';
 
     function fmC(v){ return '&#8377; ' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
+    // Bar segments
+    var barHtml = '<div style="position:relative;width:100%;height:20px;border-radius:4px;margin-bottom:10px;">';
+    barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:100%;background:#555f6e;border-radius:4px;"></div>';
+    if (actualCostOfActivity !== null) {
+        if (actDiff > 0) {
+            var redW = Math.min(actDiff / estimatedCost * 100, 35).toFixed(2);
+            barHtml += '<div style="position:absolute;top:0;right:0;height:100%;width:'+redW+'%;background:#ef5350;border-radius:0 4px 4px 0;"></div>';
+        } else {
+            var gW = Math.min((estimatedCost - actualCostOfActivity) / estimatedCost * 100, 100).toFixed(2);
+            barHtml += '<div style="position:absolute;top:0;right:0;height:100%;width:'+gW+'%;background:#66bb6a;border-radius:0 4px 4px 0;"></div>';
+        }
+    }
+    barHtml += '</div>';
+
+    var actColour = actDiff === null ? '#1a2540' : (actDiff > 0 ? '#c62828' : '#2e7d32');
+
     el.style.position = 'relative';
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:16px 4px 6px;">'
-
-        + '<div style="width:100%;height:20px;border-radius:4px;background:#555f6e;margin-bottom:10px;"></div>'
-
-        + '<table style="width:100%;border-collapse:collapse;">'
-        + '<tbody>'
-        + '<tr>'
-        + '<td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#555f6e;"></span></td>'
+        + barHtml
+        + '<table style="width:100%;border-collapse:collapse;"><tbody>'
+        + '<tr><td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#555f6e;"></span></td>'
         + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">Estimated Cost of Activity</td>'
-        + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">' + fmC(estimatedCost) + '</td>'
-        + '</tr>'
-        + '</tbody>'
-        + '</table>'
-
+        + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">' + fmC(estimatedCost) + '</td></tr>'
+        + (actualCostOfActivity !== null
+            ? '<tr><td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+(actDiff>0?'#ef5350':'#66bb6a')+';"></span></td>'
+            + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">Actual Cost of Activity</td>'
+            + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+actColour+';text-align:right;white-space:nowrap;">' + fmC(actualCostOfActivity) + '</td></tr>'
+            : '')
+        + '</tbody></table>'
         + (an ? '<div style="margin-top:auto;padding-top:6px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + an + unitLbl + '</div>' : '')
-
         + '</div>';
 }
 
