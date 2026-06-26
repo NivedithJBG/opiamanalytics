@@ -124,12 +124,12 @@ function renderCdBars(){
         if (brow) brow.style.marginTop = '0';
 
         // Append 4 legend rows
-        function fmL(v){ return v >= 1e7 ? (v/1e7).toFixed(1)+'Cr' : v >= 1e5 ? (v/1e5).toFixed(1)+'L' : v >= 1e3 ? (v/1e3).toFixed(1)+'K' : Math.round(v); }
         function legendHtml(col, label, val){
-            return '<div style="display:flex;align-items:center;padding:2px 4px;gap:5px;">'
+            var full = '&#8377;' + Math.round(+val).toLocaleString();
+            return '<div style="display:flex;align-items:center;padding:1px 2px;gap:2px;">'
                 + '<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+col+';flex-shrink:0;"></span>'
-                + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;flex:1;">'+label+'</span>'
-                + '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;white-space:nowrap;">&#8377;'+fmL(val)+'</span>'
+                + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+label+'</span>'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;white-space:nowrap;padding-left:2px;">'+full+'</span>'
                 + '</div>';
         }
         var leg = document.createElement('div');
