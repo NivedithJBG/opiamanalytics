@@ -179,7 +179,7 @@ class ProjectsmainController extends Controller
 
         // All activities for this project
         $activities = $connection->createCommand(
-            "SELECT sa.id, sa.name, sa.scheduleitem_id, sa.duration, sa.delay,
+            "SELECT sa.id, sa.name, sa.scheduleitem_id, sa.activity_id, sa.duration, sa.delay,
                     sa.completed_status, sa.start_date, sa.end_date,
                     sa.actual_start_date, sa.actual_end_date, sa.unit, sa.resource_units,
                     sa.quantity, sa.old_duration, sa.critical_status,
