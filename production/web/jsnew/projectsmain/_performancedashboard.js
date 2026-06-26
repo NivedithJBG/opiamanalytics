@@ -580,6 +580,14 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
     items.forEach(function(r){ unitCost += (+r.res_qty || 0) * (+r.rate || 0); });
     var estimatedCost = unitCost * estActQty;
 
+    // Estimated Cost of Work Done = Planned Unit Cost × lastQty
+    var estWorkDone = 0;
+    if (lastQty > 0) {
+        var plannedUnitCostForBar = 0;
+        items.forEach(function(r){ plannedUnitCostForBar += (+r.rate || 0) * (+r.planned_consumption || 0); });
+        estWorkDone = plannedUnitCostForBar * lastQty;
+    }
+
     // Actual Cost of Activity = Actual Unit Cost × Schedule Quantity
     var actualWorkDone = 0, hasActual = false;
     items.forEach(function(r){
@@ -602,8 +610,16 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
 
     function fmC(v){ return '&#8377; ' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
-    // Bar — grey = estimated cost; light blue overlay = actual cost of activity
-    var barHtml = '<div style="position:relative;width:100%;height:20px;border-radius:4px;background:#555f6e;margin-bottom:10px;overflow:hidden;">';
+    // Est. Cost of Work Done bar (top, thinner)
+    var ewdW = estimatedCost > 0 ? Math.min(estWorkDone / estimatedCost * 100, 100).toFixed(2) : '0';
+    var barHtml = '';
+    if (estWorkDone > 0) {
+        barHtml += '<div style="width:100%;height:10px;border-radius:3px;background:#e8edf3;margin-bottom:4px;overflow:hidden;position:relative;">'
+            + '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdW+'%;background:#2979FF;border-radius:3px 0 0 3px;"></div>'
+            + '</div>';
+    }
+    // Grey bar = estimated cost; light blue overlay = actual cost of activity
+    barHtml += '<div style="position:relative;width:100%;height:20px;border-radius:4px;background:#555f6e;margin-bottom:10px;overflow:hidden;">';
     if (actualCostOfActivity !== null) {
         var actW = Math.min(actualCostOfActivity / estimatedCost * 100, 100).toFixed(2);
         barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+actW+'%;background:#40C4FF;border-radius:4px 0 0 4px;opacity:0.9;"></div>';
@@ -619,6 +635,9 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
         + '<tr><td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#555f6e;"></span></td>'
         + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">Estimated Cost of Activity</td>'
         + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">' + fmC(estimatedCost) + '</td></tr>'
+        + (estWorkDone > 0 ? '<tr><td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2979FF;"></span></td>'
+        + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">Est. Cost of Work Done</td>'
+        + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#2979FF;text-align:right;white-space:nowrap;">' + fmC(estWorkDone) + '</td></tr>' : '')
         + (actualCostOfActivity !== null
             ? '<tr><td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#40C4FF;"></span></td>'
             + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">Actual Cost of Activity</td>'
