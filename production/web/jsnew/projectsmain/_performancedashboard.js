@@ -598,10 +598,9 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
         estWorkDone = plannedUnitCostForBar * lastQty;
     }
 
-    // Actual Cost of Activity = Actual Unit Cost × (estActQty / schedQty)
-    var actualUnitCost      = (hasActual && lastQty > 0) ? actualWorkDone / lastQty : null;
-    var ratio               = (schedQty > 0) ? estActQty / schedQty : 0;
-    var actualCostOfActivity = (actualUnitCost !== null) ? actualUnitCost * ratio : null;
+    // Actual Cost of Activity = Actual Unit Cost × Schedule Quantity
+    var actualUnitCost       = (hasActual && lastQty > 0) ? actualWorkDone / lastQty : null;
+    var actualCostOfActivity = (actualUnitCost !== null) ? actualUnitCost * schedQty : null;
 
     if (!estimatedCost){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
