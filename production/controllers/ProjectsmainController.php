@@ -261,6 +261,30 @@ class ProjectsmainController extends Controller
         }
         unset($a);
 
+        // Compute MB (Measurement Book) costs per WBS activity — adds SC actual costs
+        $mbCostByWbs = [];
+        $mbRows = $connection->createCommand(
+            "SELECT entries FROM wo_measurement_book WHERE project_id=:pid AND sent_status=1 AND delete_status=0",
+            [':pid' => $pid]
+        )->queryAll();
+        foreach ($mbRows as $mb) {
+            foreach (json_decode($mb['entries'] ?? '[]', true) ?: [] as $entry) {
+                $wbsId = (int)($entry['activity_id'] ?? 0);
+                if (!$wbsId) continue;
+                foreach ($entry['tasks'] ?? [] as $task) {
+                    $wd = (float)($task['work_done'] ?? 0);
+                    $rt = (float)($task['rate']      ?? 0);
+                    $mbCostByWbs[$wbsId] = ($mbCostByWbs[$wbsId] ?? 0.0) + $rt * $wd;
+                }
+            }
+        }
+        // Merge MB cost into each activity as actual_work_done = GRN cost + MB cost
+        foreach ($activities as &$a) {
+            $wbsId = (int)($a['activity_id'] ?? 0);
+            $a['actual_work_done'] = (float)($a['actual_cost'] ?? 0) + ($mbCostByWbs[$wbsId] ?? 0.0);
+        }
+        unset($a);
+
         // Project-level duration bar — matches Gantt B./A. Duration columns exactly:
         // B. Duration = span from earliest schedule start to latest schedule end across all WBS items
         // A. Duration = span from earliest actual start to latest actual/projected end
