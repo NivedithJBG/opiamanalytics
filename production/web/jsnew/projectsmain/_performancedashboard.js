@@ -620,9 +620,9 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
         + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">Estimated Cost of Activity</td>'
         + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">' + fmC(estimatedCost) + '</td></tr>'
         + (actualCostOfActivity !== null
-            ? '<tr><td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+(actDiff>0?'#ef5350':'#66bb6a')+';"></span></td>'
+            ? '<tr><td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#40C4FF;"></span></td>'
             + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">Actual Cost of Activity</td>'
-            + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+actColour+';text-align:right;white-space:nowrap;">' + fmC(actualCostOfActivity) + '</td></tr>'
+            + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#0288D1;text-align:right;white-space:nowrap;">' + fmC(actualCostOfActivity) + '</td></tr>'
             : '')
         + '</tbody></table>'
         + (an ? '<div style="margin-top:auto;padding-top:6px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + an + unitLbl + '</div>' : '')
