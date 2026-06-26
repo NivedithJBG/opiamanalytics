@@ -622,6 +622,11 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
     if (estWorkDone > 0) {
         barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdW+'%;background:#0D47A1;border-radius:4px 0 0 4px;"></div>';
     }
+    // Actual cost of work done (yellow) on top of est work done
+    if (hasActual && estimatedCost > 0) {
+        var aWdW = Math.min(actualWorkDone / estimatedCost * 100, 100).toFixed(2);
+        barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+aWdW+'%;background:#FFD600;border-radius:4px 0 0 4px;opacity:0.9;"></div>';
+    }
     barHtml += '</div>';
 
     var actColour = actDiff === null ? '#1a2540' : (actDiff > 0 ? '#c62828' : '#2e7d32');
@@ -641,7 +646,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
                 + lr('#555f6e', 'Estimated Cost of Activity',  estimatedCost)
                 + (actualCostOfActivity !== null ? lr('#40C4FF', 'Actual Cost of Activity', actualCostOfActivity, '#0288D1') : '')
                 + (estWorkDone > 0            ? lr('#0D47A1', 'Est. Cost of Work Done',   estWorkDone,          '#0D47A1') : '')
-                + (hasActual                  ? lr('#00838f', 'Actual Cost of Work Done',  actualWorkDone,       '#00838f') : '')
+                + (hasActual                  ? lr('#FFD600', 'Actual Cost of Work Done',  actualWorkDone,       '#B8A000') : '')
                 + '</tbody></table>';
           })()
         + (an ? '<div style="margin-top:auto;padding-top:6px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + an + unitLbl + '</div>' : '')
