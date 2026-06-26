@@ -87,26 +87,27 @@ $(document).on('click', '#cd-close, #cd-bk', function(){
 
 function renderCdBars(){
     // IOW costs = sum of activity costs under each IOW
-    var iowCostMap = {};
+    var iowCostMap = {}, iowActualMap = {};
     _iow_items.forEach(function(iow){
         var sid = String(iow.id);
-        iowCostMap[sid] = _all
-            .filter(function(a){ return String(a.scheduleitem_id) === sid; })
-            .reduce(function(s, a){ return s + (+a.activity_cost || 0); }, 0);
+        var acts = _all.filter(function(a){ return String(a.scheduleitem_id) === sid; });
+        iowCostMap[sid]   = acts.reduce(function(s, a){ return s + (+a.activity_cost || 0); }, 0);
+        iowActualMap[sid] = acts.reduce(function(s, a){ return s + (+a.actual_cost   || 0); }, 0);
     });
 
     // Group costs = sum of IOW costs under each group
     var groupItems = _groups.map(function(g){
-        var cost = _iow_items
-            .filter(function(i){ return String(i.group_id) === String(g.id); })
-            .reduce(function(s, i){ return s + (iowCostMap[String(i.id)] || 0); }, 0);
-        return {name: g.name, cost: cost, id: g.id};
+        var iows = _iow_items.filter(function(i){ return String(i.group_id) === String(g.id); });
+        var cost   = iows.reduce(function(s, i){ return s + (iowCostMap[String(i.id)]   || 0); }, 0);
+        var actual = iows.reduce(function(s, i){ return s + (iowActualMap[String(i.id)] || 0); }, 0);
+        return {name: g.name, cost: cost, actual_cost: actual, id: g.id};
     });
 
-    // Project Cost on Completion = sum of group costs
-    var totalCost = groupItems.reduce(function(s, g){ return s + g.cost; }, 0);
+    // Project Cost = sum of group costs
+    var totalCost   = groupItems.reduce(function(s, g){ return s + g.cost; }, 0);
+    var totalActual = groupItems.reduce(function(s, g){ return s + g.actual_cost; }, 0);
 
-    renderCostBars('cd-c2', [{name: _cdProjectName || 'Project', cost: totalCost, id: 0}], null);
+    renderCostBars('cd-c2', [{name: _cdProjectName || 'Project', cost: totalCost, actual_cost: totalActual, id: 0}], null);
     var c2el = document.getElementById('cd-c2');
     if (c2el) { c2el.style.display = 'flex'; c2el.style.flexDirection = 'column'; c2el.style.justifyContent = 'center'; }
     renderCostBars('cd-c1', groupItems, filterByGroupCd);
@@ -120,11 +121,11 @@ function filterByGroupCd(groupId){
 
     // IOW Cost — sum activity costs per IOW
     var iowItems = filtered.map(function(iow){
-        var sid = String(iow.id);
-        var cost = _all
-            .filter(function(a){ return String(a.scheduleitem_id) === sid; })
-            .reduce(function(s, a){ return s + (+a.activity_cost || 0); }, 0);
-        return {name: iow.name, cost: cost, id: iow.id};
+        var sid  = String(iow.id);
+        var acts = _all.filter(function(a){ return String(a.scheduleitem_id) === sid; });
+        var cost   = acts.reduce(function(s, a){ return s + (+a.activity_cost || 0); }, 0);
+        var actual = acts.reduce(function(s, a){ return s + (+a.actual_cost   || 0); }, 0);
+        return {name: iow.name, cost: cost, actual_cost: actual, id: iow.id};
     });
     renderCostBars('cd-c3', iowItems, filterByIowCd);
 
@@ -1041,20 +1042,38 @@ function renderCostBars(containerId, items, onRowClick){
     var el = document.getElementById(containerId);
     if (!el) return;
     var maxVal = 0;
-    items.forEach(function(r){ maxVal = Math.max(maxVal, r.cost); });
+    items.forEach(function(r){
+        maxVal = Math.max(maxVal, r.cost || 0, r.actual_cost || 0);
+    });
     if (!maxVal) maxVal = 1;
     var html = '';
     items.forEach(function(r){
-        var pct = (r.cost / maxVal * 100).toFixed(1);
-        var col = '#607D8B';
-        var disp = fmtCost(r.cost);
+        var est = r.cost || 0;
+        var act = r.actual_cost || 0;
+        var rowMax = Math.max(est, act, 1);
+        var bar = '', disp = '';
+        if (act === 0) {
+            var pct = (est / maxVal * 100).toFixed(1);
+            bar  = est > 0
+                ? '<div class="bs" style="width:'+pct+'%;background:#607D8B;"></div>'
+                : '<div class="bs" style="width:2%;background:#ccc;"></div>';
+            disp = fmtCost(est);
+        } else if (act > est) {
+            var estPct  = (est / maxVal * 100).toFixed(1);
+            var overPct = ((act - est) / maxVal * 100).toFixed(1);
+            bar  = '<div class="bs" style="width:'+estPct+'%;background:#607D8B;"></div>'
+                 + '<div class="bs" style="width:'+overPct+'%;background:#c62828;"></div>';
+            disp = fmtCost(act);
+        } else {
+            var actPct  = (act  / maxVal * 100).toFixed(1);
+            var savePct = ((est - act) / maxVal * 100).toFixed(1);
+            bar  = '<div class="bs" style="width:'+actPct+'%;background:#607D8B;"></div>'
+                 + '<div class="bs" style="width:'+savePct+'%;background:#2e7d32;"></div>';
+            disp = fmtCost(est);
+        }
         html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
               + '<div class="blbl" style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
-              + '<div class="btrk" style="flex:1;">'
-              + (r.cost > 0
-                    ? '<div class="bs" style="width:'+pct+'%;background:'+col+'"></div>'
-                    : '<div class="bs" style="width:2%;background:#ccc"></div>')
-              + '</div>'
+              + '<div class="btrk" style="flex:1;">'+bar+'</div>'
               + '<div style="font-size:11px;color:#000;font-weight:700;min-width:38px;text-align:right;padding-left:5px;white-space:nowrap;">'+disp+'</div>'
               + '</div>';
     });
