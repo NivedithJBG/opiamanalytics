@@ -602,19 +602,8 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
 
     function fmC(v){ return '&#8377; ' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
-    // Bar segments
-    var barHtml = '<div style="position:relative;width:100%;height:20px;border-radius:4px;margin-bottom:10px;">';
-    barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:100%;background:#555f6e;border-radius:4px;"></div>';
-    if (actualCostOfActivity !== null) {
-        if (actDiff > 0) {
-            var redW = Math.min(actDiff / estimatedCost * 100, 35).toFixed(2);
-            barHtml += '<div style="position:absolute;top:0;right:0;height:100%;width:'+redW+'%;background:#ef5350;border-radius:0 4px 4px 0;"></div>';
-        } else {
-            var gW = Math.min((estimatedCost - actualCostOfActivity) / estimatedCost * 100, 100).toFixed(2);
-            barHtml += '<div style="position:absolute;top:0;right:0;height:100%;width:'+gW+'%;background:#66bb6a;border-radius:0 4px 4px 0;"></div>';
-        }
-    }
-    barHtml += '</div>';
+    // Bar — grey full width = estimated cost
+    var barHtml = '<div style="width:100%;height:20px;border-radius:4px;background:#555f6e;margin-bottom:10px;"></div>';
 
     var actColour = actDiff === null ? '#1a2540' : (actDiff > 0 ? '#c62828' : '#2e7d32');
 
