@@ -106,13 +106,41 @@ function renderCdBars(){
     });
 
     // Project Cost = sum of group costs
-    var totalCost     = groupItems.reduce(function(s, g){ return s + g.cost; }, 0);
-    var totalActual   = groupItems.reduce(function(s, g){ return s + g.actual_cost; }, 0);
-    var totalWorkDone = groupItems.reduce(function(s, g){ return s + g.est_work_done; }, 0);
+    var totalCost            = groupItems.reduce(function(s, g){ return s + g.cost; }, 0);
+    var totalActual          = groupItems.reduce(function(s, g){ return s + g.actual_cost; }, 0);
+    var totalWorkDone        = groupItems.reduce(function(s, g){ return s + g.est_work_done; }, 0);
+    var totalGrnOnly         = _all.reduce(function(s, a){ return s + (+a.actual_cost || 0); }, 0);
+    var totalActualWorkDone  = totalActual; // GRN + MB
 
     renderCostBars('cd-c2', [{name: _cdProjectName || 'Project', cost: totalCost, actual_cost: totalActual, est_work_done: totalWorkDone, id: 0}], null);
     var c2el = document.getElementById('cd-c2');
-    if (c2el) { c2el.style.display = 'flex'; c2el.style.flexDirection = 'column'; c2el.style.justifyContent = 'center'; }
+    if (c2el) {
+        c2el.style.display        = 'flex';
+        c2el.style.flexDirection  = 'column';
+        c2el.style.justifyContent = 'flex-start';
+        c2el.style.paddingTop     = '4px';
+
+        // Raise bar by 2px
+        var brow = c2el.querySelector('.brow');
+        if (brow) brow.style.marginTop = '-2px';
+
+        // Append 4 legend rows
+        function fmL(v){ return v >= 1e7 ? (v/1e7).toFixed(1)+'Cr' : v >= 1e5 ? (v/1e5).toFixed(1)+'L' : v >= 1e3 ? (v/1e3).toFixed(1)+'K' : Math.round(v); }
+        function legendHtml(col, label, val){
+            return '<div style="display:flex;align-items:center;padding:2px 4px;gap:5px;">'
+                + '<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+col+';flex-shrink:0;"></span>'
+                + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;flex:1;">'+label+'</span>'
+                + '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;white-space:nowrap;">&#8377;'+fmL(val)+'</span>'
+                + '</div>';
+        }
+        var leg = document.createElement('div');
+        leg.style.cssText = 'margin-top:6px;border-top:1px solid #e0e4ec;padding-top:4px;';
+        leg.innerHTML = legendHtml('#607D8B', 'Project Estimated Cost',          totalCost)
+                      + legendHtml(totalGrnOnly > totalCost ? '#c62828' : '#2e7d32', 'Project Actual Cost', totalGrnOnly)
+                      + legendHtml('#2979FF',  'Est. Cost of Work Done',          totalWorkDone)
+                      + legendHtml(totalActualWorkDone > totalWorkDone ? '#c62828' : '#2e7d32', 'Actual Cost of Work Done', totalActualWorkDone);
+        c2el.appendChild(leg);
+    }
     renderCostBars('cd-c1', groupItems, filterByGroupCd);
     if (_groups.length) filterByGroupCd(_groups[0].id);
 }
