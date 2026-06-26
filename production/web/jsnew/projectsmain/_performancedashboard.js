@@ -134,11 +134,16 @@ function renderCdBars(){
                 + '</div>';
         }
         var leg = document.createElement('div');
-        leg.style.cssText = 'margin-top:6px;border-top:1px solid #e0e4ec;padding-top:4px;';
-        leg.innerHTML = legendHtml('#607D8B', 'Project Estimated Cost',          totalCost)
-                      + legendHtml(totalGrnOnly > totalCost ? '#c62828' : '#2e7d32', 'Project Actual Cost', totalGrnOnly)
-                      + legendHtml('#2979FF',  'Est. Cost of Work Done',          totalWorkDone)
-                      + legendHtml(totalActualWorkDone > totalWorkDone ? '#c62828' : '#2e7d32', 'Actual Cost of Work Done', totalActualWorkDone);
+        leg.style.cssText = 'margin-top:6px;border-top:1px solid #e0e4ec;padding-top:4px;display:flex;gap:4px;';
+        var leftCol  = '<div style="flex:1;min-width:0;">'
+                     + legendHtml('#607D8B', 'Estimated Cost', totalCost)
+                     + legendHtml(totalGrnOnly > totalCost ? '#c62828' : '#2e7d32', 'Actual Cost', totalGrnOnly)
+                     + '</div>';
+        var rightCol = '<div style="flex:1;min-width:0;border-left:1px solid #e0e4ec;padding-left:4px;">'
+                     + legendHtml('#2979FF',  'Est. Work Done', totalWorkDone)
+                     + legendHtml(totalActualWorkDone > totalWorkDone ? '#c62828' : '#2e7d32', 'Act. Work Done', totalActualWorkDone)
+                     + '</div>';
+        leg.innerHTML = leftCol + rightCol;
         c2el.appendChild(leg);
     }
     renderCostBars('cd-c1', groupItems, filterByGroupCd);
