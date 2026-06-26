@@ -870,12 +870,19 @@ class ProjectsmainController extends Controller
                         ? round($taskWorkDone / $mbQty, 3)
                         : null;
                 } else {
-                    // Materials/Consumables/Purchased Inputs/Tools: planned = res_qty × (schedQty / estQty)
-                    //                                               actual  = (GRN_qty − stock) / lastQty
-                    $plannedConsumption = round($resQty * $ratio, 3);
-                    $actualConsumption  = (in_array($typeId, [2, 6, 7]) && $grnQty > 0 && $lastQty > 0)
-                        ? round(max(0, $grnQty - $stockQty) / $lastQty, 3)
-                        : null;
+                    // Materials/Consumables/Purchased Inputs/Tools:
+                    // planned = res_qty × task_qty_per_unit (schedule-activity-task Qty/Unit for mapped task)
+                    //           fallback to res_qty × (estQty/schedQty) if no task mapped
+                    $plannedConsumption = ($taskQtyPerUnit !== null)
+                        ? round($resQty * $taskQtyPerUnit, 3)
+                        : round($resQty * $ratio, 3);
+                    // actual = (GRN_qty − stock) / lastQty
+                    // if no GRN data (or Tools type): default actual = planned
+                    if (in_array($typeId, [2, 6, 7]) && $grnQty > 0 && $lastQty > 0) {
+                        $actualConsumption = round(max(0, $grnQty - $stockQty) / $lastQty, 3);
+                    } else {
+                        $actualConsumption = $plannedConsumption;
+                    }
                 }
 
                 // Actual unit cost contribution for this resource (per estimate unit)
