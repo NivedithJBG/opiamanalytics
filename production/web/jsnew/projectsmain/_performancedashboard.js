@@ -599,40 +599,26 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:16px 4px 6px;">'
 
         + (function(){
-            var s = '<div style="position:relative;width:100%;height:20px;border-radius:4px;overflow:hidden;background:#555f6e;margin-bottom:10px;">';
-            if (acW === null) {
-                // No actual — just blue planned bar
-                s += '<div style="position:absolute;top:0;left:0;height:100%;width:'+plW.toFixed(2)+'%;background:#2979FF;border-radius:4px 0 0 4px;"></div>';
-            } else if (diff > 0) {
-                // Actual exceeds planned — blue (planned) + red extension
-                var exW = Math.min((actualWorkDone - estWorkDone) / scale * 100, 100 - plW).toFixed(2);
-                s += '<div style="position:absolute;top:0;left:0;height:100%;width:'+plW.toFixed(2)+'%;background:#2979FF;"></div>';
-                s += '<div style="position:absolute;top:0;left:'+plW.toFixed(2)+'%;height:100%;width:'+exW+'%;background:#ef5350;border-radius:0 4px 4px 0;"></div>';
-            } else {
-                // Actual below planned — actual (blue) + green savings within planned
-                var savW = Math.max((estWorkDone - actualWorkDone) / scale * 100, 0).toFixed(2);
-                s += '<div style="position:absolute;top:0;left:0;height:100%;width:'+(acW).toFixed(2)+'%;background:#2979FF;border-radius:4px 0 0 4px;"></div>';
-                s += '<div style="position:absolute;top:0;left:'+(acW).toFixed(2)+'%;height:100%;width:'+savW+'%;background:#66bb6a;border-radius:0 4px 4px 0;"></div>';
+            // Grey bar = Estimated Cost of Activity
+            // Red/green diff of actual vs estimated shown on same bar
+            // Blue overlay = Estimated Cost of Work Done on top
+            var s = '<div style="position:relative;width:100%;height:20px;border-radius:4px;margin-bottom:10px;">';
+            // Grey background (estimated cost = full width)
+            s += '<div style="position:absolute;top:0;left:0;height:100%;width:100%;background:#555f6e;border-radius:4px;"></div>';
+            // Actual vs estimated comparison
+            if (actCostW !== null) {
+                if (actCostDiff > 0) {
+                    // Actual > estimated: red extension from right edge
+                    var redW = Math.min(actCostDiff / scale * 100, 35).toFixed(2);
+                    s += '<div style="position:absolute;top:0;right:0;height:100%;width:'+redW+'%;background:#ef5350;border-radius:0 4px 4px 0;"></div>';
+                } else {
+                    // Actual < estimated: green savings at right end of grey bar
+                    var gSavW = Math.min((estimatedCost - actualCostOfActivity) / scale * 100, 100).toFixed(2);
+                    s += '<div style="position:absolute;top:0;right:0;height:100%;width:'+gSavW+'%;background:#66bb6a;border-radius:0 4px 4px 0;"></div>';
+                }
             }
-            s += '</div>';
-            return s;
-          })()
-
-        + (function(){
-            if (actCostW === null) return '';
-            var s = '<div style="position:relative;width:100%;height:20px;border-radius:4px;background:#555f6e;margin-bottom:10px;overflow:hidden;">';
-            if (actCostDiff > 0) {
-                // Actual cost > estimated — orange (100%) + red extension (capped at visible)
-                var redW = Math.min(actCostDiff / scale * 100, 30).toFixed(2);
-                s += '<div style="position:absolute;top:0;left:0;height:100%;width:100%;background:#F57C00;"></div>';
-                s += '<div style="position:absolute;top:0;right:0;height:100%;width:'+redW+'%;background:#ef5350;border-radius:0 4px 4px 0;"></div>';
-            } else {
-                // Actual cost < estimated — orange + green savings
-                var oW   = Math.min(actCostW, 100).toFixed(2);
-                var gW   = Math.min((estimatedCost - actualCostOfActivity) / scale * 100, 100 - parseFloat(oW)).toFixed(2);
-                s += '<div style="position:absolute;top:0;left:0;height:100%;width:'+oW+'%;background:#F57C00;border-radius:4px 0 0 4px;"></div>';
-                s += '<div style="position:absolute;top:0;left:'+oW+'%;height:100%;width:'+gW+'%;background:#66bb6a;border-radius:0 4px 4px 0;"></div>';
-            }
+            // Blue overlay = estimated work done (on top)
+            s += '<div style="position:absolute;top:0;left:0;height:100%;width:'+Math.min(plW,100).toFixed(2)+'%;background:#2979FF;border-radius:4px 0 0 4px;"></div>';
             s += '</div>';
             return s;
           })()
