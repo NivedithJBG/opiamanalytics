@@ -602,8 +602,13 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
 
     function fmC(v){ return '&#8377; ' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
-    // Bar — grey full width = estimated cost
-    var barHtml = '<div style="width:100%;height:20px;border-radius:4px;background:#555f6e;margin-bottom:10px;"></div>';
+    // Bar — grey = estimated cost; light blue overlay = actual cost of activity
+    var barHtml = '<div style="position:relative;width:100%;height:20px;border-radius:4px;background:#555f6e;margin-bottom:10px;overflow:hidden;">';
+    if (actualCostOfActivity !== null) {
+        var actW = Math.min(actualCostOfActivity / estimatedCost * 100, 100).toFixed(2);
+        barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+actW+'%;background:#40C4FF;border-radius:4px 0 0 4px;opacity:0.9;"></div>';
+    }
+    barHtml += '</div>';
 
     var actColour = actDiff === null ? '#1a2540' : (actDiff > 0 ? '#c62828' : '#2e7d32');
 
