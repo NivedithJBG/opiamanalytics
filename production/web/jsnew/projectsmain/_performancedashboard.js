@@ -350,13 +350,16 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, lastQty){
             hasActual    = true;
         }
     });
-    var plannedUnitCost = (lastQty > 0) ? plannedCost / lastQty : 0;
-    var actualUnitCost  = (hasActual && lastQty > 0) ? actualCost / lastQty : null;
 
-    if (!plannedUnitCost){
+    if (!plannedCost){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
     }
+
+    // When no progress reported, use plannedCost as unit cost (qty treated as 1)
+    var plannedUnitCost = (lastQty > 0) ? plannedCost / lastQty : plannedCost;
+    // When no actual data or no progress yet, actual = planned
+    var actualUnitCost  = (hasActual && lastQty > 0) ? actualCost / lastQty : plannedUnitCost;
 
     var maxVal = plannedUnitCost * 2;
     var f      = actualUnitCost !== null ? Math.max(0, Math.min(1, actualUnitCost / maxVal)) : 0;
