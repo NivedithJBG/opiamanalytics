@@ -118,11 +118,10 @@ function renderCdBars(){
         c2el.style.display        = 'flex';
         c2el.style.flexDirection  = 'column';
         c2el.style.justifyContent = 'flex-start';
-        c2el.style.paddingTop     = '4px';
+        c2el.style.paddingTop     = '18%';
 
-        // Position bar 1px up
         var brow = c2el.querySelector('.brow');
-        if (brow) brow.style.marginTop = '-1px';
+        if (brow) brow.style.marginTop = '0';
 
         // Append 4 legend rows
         function fmL(v){ return v >= 1e7 ? (v/1e7).toFixed(1)+'Cr' : v >= 1e5 ? (v/1e5).toFixed(1)+'L' : v >= 1e3 ? (v/1e3).toFixed(1)+'K' : Math.round(v); }
