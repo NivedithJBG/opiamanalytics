@@ -87,35 +87,44 @@ $(document).on('click', '#cd-close, #cd-bk', function(){
 
 function renderCdBars(){
     // IOW costs = sum of activity costs under each IOW
-    var iowCostMap = {}, iowActualMap = {}, iowWorkDoneMap = {};
+    var iowCostMap = {}, iowAcoaMap = {}, iowWorkDoneMap = {}, iowAwdMap = {};
     _iow_items.forEach(function(iow){
-        var sid = String(iow.id);
+        var sid  = String(iow.id);
         var acts = _all.filter(function(a){ return String(a.scheduleitem_id) === sid; });
-        iowCostMap[sid]     = acts.reduce(function(s, a){ return s + (+a.activity_cost   || 0); }, 0);
-        iowActualMap[sid]   = acts.reduce(function(s, a){ return s + (+a.actual_work_done || +a.actual_cost || 0); }, 0);
+        iowCostMap[sid]     = acts.reduce(function(s, a){ return s + (+a.activity_cost || 0); }, 0);
         iowWorkDoneMap[sid] = acts.reduce(function(s, a){
             var sc = +a.quantity || 1;
             return s + ((+a.activity_cost || 0) * (+a.cumulated_qty || 0) / sc);
+        }, 0);
+        iowAwdMap[sid]  = acts.reduce(function(s, a){ return s + (+a.actual_work_done || +a.actual_cost || 0); }, 0);
+        iowAcoaMap[sid] = acts.reduce(function(s, a){
+            var cq = +a.cumulated_qty || 0, sq = +a.quantity || 1;
+            var awd = +a.actual_work_done || +a.actual_cost || 0;
+            return s + (cq > 0 ? awd * sq / cq : 0);
         }, 0);
     });
 
     // Group costs = sum of IOW costs under each group
     var groupItems = _groups.map(function(g){
         var iows = _iow_items.filter(function(i){ return String(i.group_id) === String(g.id); });
-        var cost      = iows.reduce(function(s, i){ return s + (iowCostMap[String(i.id)]     || 0); }, 0);
-        var actual    = iows.reduce(function(s, i){ return s + (iowActualMap[String(i.id)]   || 0); }, 0);
-        var workDone  = iows.reduce(function(s, i){ return s + (iowWorkDoneMap[String(i.id)] || 0); }, 0);
-        return {name: g.name, cost: cost, actual_cost: actual, est_work_done: workDone, id: g.id};
+        return {
+            name:          g.name,
+            cost:          iows.reduce(function(s, i){ return s + (iowCostMap[String(i.id)]     || 0); }, 0),
+            acoa:          iows.reduce(function(s, i){ return s + (iowAcoaMap[String(i.id)]     || 0); }, 0),
+            est_work_done: iows.reduce(function(s, i){ return s + (iowWorkDoneMap[String(i.id)] || 0); }, 0),
+            awd:           iows.reduce(function(s, i){ return s + (iowAwdMap[String(i.id)]      || 0); }, 0),
+            id:            g.id
+        };
     });
 
     // Project Cost = sum of group costs
-    var totalCost            = groupItems.reduce(function(s, g){ return s + g.cost; }, 0);
-    var totalActual          = groupItems.reduce(function(s, g){ return s + g.actual_cost; }, 0);
-    var totalWorkDone        = groupItems.reduce(function(s, g){ return s + g.est_work_done; }, 0);
-    var totalGrnOnly         = _all.reduce(function(s, a){ return s + (+a.actual_cost || 0); }, 0);
-    var totalActualWorkDone  = totalActual; // GRN + MB
+    var totalCost     = groupItems.reduce(function(s, g){ return s + g.cost; }, 0);
+    var totalAcoa     = groupItems.reduce(function(s, g){ return s + g.acoa; }, 0);
+    var totalWorkDone = groupItems.reduce(function(s, g){ return s + g.est_work_done; }, 0);
+    var totalAwd      = groupItems.reduce(function(s, g){ return s + g.awd; }, 0);
+    var totalGrnOnly  = _all.reduce(function(s, a){ return s + (+a.actual_cost || 0); }, 0);
 
-    renderCostBars('cd-c2', [{name: _cdProjectName || 'Project', cost: totalCost, actual_cost: totalActual, est_work_done: totalWorkDone, id: 0}], null);
+    renderCostBars('cd-c2', [{name: _cdProjectName || 'Project', cost: totalCost, acoa: totalAcoa, est_work_done: totalWorkDone, awd: totalAwd, id: 0}], null);
     var c2el = document.getElementById('cd-c2');
     if (c2el) {
         c2el.style.display        = 'flex';
@@ -143,12 +152,12 @@ function renderCdBars(){
         var leg = document.createElement('div');
         leg.style.cssText = 'margin-top:12px;padding-left:70px;display:flex;gap:6px;';
         var leftCol  = '<div style="flex:1;min-width:0;">'
-                     + legendHtml('#607D8B', 'Estimated Cost', totalCost)
-                     + legendHtml(totalGrnOnly > totalCost ? '#c62828' : '#2e7d32', 'Actual Cost', totalGrnOnly)
+                     + legendHtml('#607D8B', 'Estimated Cost',    totalCost)
+                     + legendHtml('#40C4FF', 'Actual Cost of Act', totalAcoa)
                      + '</div>';
         var rightCol = '<div style="flex:1;min-width:0;border-left:1px solid #e0e4ec;padding-left:4px;">'
-                     + legendHtml('#2979FF',  'Est. Work Done', totalWorkDone)
-                     + legendHtml(totalActualWorkDone > totalWorkDone ? '#c62828' : '#2e7d32', 'Act. Work Done', totalActualWorkDone)
+                     + legendHtml('#0D47A1', 'Est. Work Done',    totalWorkDone)
+                     + legendHtml('#FFD600', 'Act. Work Done',    totalAwd)
                      + '</div>';
         leg.innerHTML = leftCol + rightCol;
         c2el.appendChild(leg);
@@ -167,12 +176,16 @@ function filterByGroupCd(groupId){
         var sid  = String(iow.id);
         var acts = _all.filter(function(a){ return String(a.scheduleitem_id) === sid; });
         var cost     = acts.reduce(function(s, a){ return s + (+a.activity_cost || 0); }, 0);
-        var actual   = acts.reduce(function(s, a){ return s + (+a.actual_work_done || +a.actual_cost || 0); }, 0);
         var workDone = acts.reduce(function(s, a){
             var sc = +a.quantity || 1;
             return s + ((+a.activity_cost || 0) * (+a.cumulated_qty || 0) / sc);
         }, 0);
-        return {name: iow.name, cost: cost, actual_cost: actual, est_work_done: workDone, id: iow.id};
+        var awd  = acts.reduce(function(s, a){ return s + (+a.actual_work_done || +a.actual_cost || 0); }, 0);
+        var acoa = acts.reduce(function(s, a){
+            var cq = +a.cumulated_qty || 0, sq = +a.quantity || 1;
+            return s + (cq > 0 ? (+a.actual_work_done || +a.actual_cost || 0) * sq / cq : 0);
+        }, 0);
+        return {name: iow.name, cost: cost, acoa: acoa, est_work_done: workDone, awd: awd, id: iow.id};
     });
     renderCostBars('cd-c3', iowItems, filterByIowCd);
 
@@ -1063,50 +1076,29 @@ function fmtCost(v){
 function renderCostBars(containerId, items, onRowClick){
     var el = document.getElementById(containerId);
     if (!el) return;
-    var maxVal = 0;
-    items.forEach(function(r){
-        maxVal = Math.max(maxVal, r.cost || 0, r.actual_cost || 0);
-    });
-    if (!maxVal) maxVal = 1;
     var html = '';
     items.forEach(function(r){
-        var est = r.cost || 0;
-        var act = r.actual_cost || 0;
-        var rowMax = Math.max(est, act, 1);
-        var bar = '', disp = '';
-        var ewd = r.est_work_done || 0;
-        if (act === 0) {
-            var pct    = (est / maxVal * 100).toFixed(1);
-            var ewdPct = Math.min(ewd / maxVal * 100, parseFloat(pct)).toFixed(1);
-            bar  = est > 0
-                ? '<div class="bs" style="width:'+pct+'%;background:#607D8B;position:relative;">'
-                  + (ewd > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct+'%;background:#2979FF;opacity:0.85;"></div>' : '')
-                  + '</div>'
-                : '<div class="bs" style="width:2%;background:#ccc;"></div>';
-            disp = fmtCost(est);
-        } else if (act > est) {
-            var estPct  = (est / maxVal * 100).toFixed(1);
-            var overPct = ((act - est) / maxVal * 100).toFixed(1);
-            var ewdPct  = Math.min(ewd / maxVal * 100, parseFloat(estPct)).toFixed(1);
-            bar  = '<div class="bs" style="width:'+estPct+'%;background:#607D8B;position:relative;">'
-                 + (ewd > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct+'%;background:#2979FF;opacity:0.85;"></div>' : '')
-                 + '</div>'
-                 + '<div class="bs" style="width:'+overPct+'%;background:#c62828;"></div>';
-            disp = fmtCost(act);
+        var est  = r.cost          || 0;
+        var acoa = r.acoa          || 0;
+        var ewd  = r.est_work_done || 0;
+        var awd  = r.awd           || 0;
+        var bar  = '';
+        if (!est) {
+            bar = '<div class="bs" style="width:2%;background:#ccc;"></div>';
         } else {
-            var actPct  = (act  / maxVal * 100).toFixed(1);
-            var savePct = ((est - act) / maxVal * 100).toFixed(1);
-            var ewdPct  = Math.min(ewd / maxVal * 100, parseFloat(actPct)).toFixed(1);
-            bar  = '<div class="bs" style="width:'+actPct+'%;background:#607D8B;position:relative;">'
-                 + (ewd > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct+'%;background:#2979FF;opacity:0.85;"></div>' : '')
-                 + '</div>'
-                 + '<div class="bs" style="width:'+savePct+'%;background:#2e7d32;"></div>';
-            disp = fmtCost(est);
+            var acoaPct = Math.min(acoa / est * 100, 100).toFixed(1);
+            var ewdPct  = Math.min(ewd  / est * 100, 100).toFixed(1);
+            var awdPct  = Math.min(awd  / est * 100, 100).toFixed(1);
+            bar = '<div class="bs" style="width:100%;background:#607D8B;position:relative;">'
+                + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#40C4FF;opacity:0.85;"></div>' : '')
+                + (ewd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct +'%;background:#0D47A1;"></div>' : '')
+                + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#FFD600;opacity:0.9;"></div>' : '')
+                + '</div>';
         }
         html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
               + '<div class="blbl" style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
               + '<div class="btrk" style="flex:1;">'+bar+'</div>'
-              + '<div style="font-size:11px;color:#000;font-weight:700;min-width:38px;text-align:right;padding-left:5px;white-space:nowrap;">'+disp+'</div>'
+              + '<div style="font-size:11px;color:#000;font-weight:700;min-width:38px;text-align:right;padding-left:5px;white-space:nowrap;">'+fmtCost(est)+'</div>'
               + '</div>';
     });
     el.innerHTML = html;
