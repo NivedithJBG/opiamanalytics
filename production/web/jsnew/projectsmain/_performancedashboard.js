@@ -576,110 +576,35 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
     var el = document.getElementById('cd-g2');
     if (!el) return;
 
-    var unitCost = 0;
+    var unitCost      = 0;
     items.forEach(function(r){ unitCost += (+r.res_qty || 0) * (+r.rate || 0); });
-
-    var estimatedCost  = unitCost * estActQty;
-
-    // Actual Cost of Work Done = Actual Unit Cost × lastQty = SUM(actual_unit_cost × actual_consumption)
-    var actualWorkDone = 0, hasActual = false;
-    items.forEach(function(r){
-        if (r.actual_unit_cost != null && r.actual_consumption != null) {
-            actualWorkDone += (+r.actual_unit_cost) * (+r.actual_consumption);
-            hasActual = true;
-        }
-    });
-
-    // Estimated Cost of Work Done = Planned Unit Cost × lastQty (zero when no progress reported)
-    var estWorkDone = 0;
-    if (lastQty > 0) {
-        var plannedUnitCostForBar = 0;
-        items.forEach(function(r){ plannedUnitCostForBar += (+r.rate || 0) * (+r.planned_consumption || 0); });
-        estWorkDone = plannedUnitCostForBar * lastQty;
-    }
-
-    // Actual Cost of Activity = Actual Unit Cost × Schedule Quantity
-    var actualUnitCost       = (hasActual && lastQty > 0) ? actualWorkDone / lastQty : null;
-    var actualCostOfActivity = (actualUnitCost !== null) ? actualUnitCost * schedQty : null;
+    var estimatedCost = unitCost * estActQty;
 
     if (!estimatedCost){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
     }
 
-    var scale   = estimatedCost;
-    var plW     = Math.min(estWorkDone    / scale * 100, 100);
-    var acW     = hasActual ? Math.min(actualWorkDone / scale * 100, 200) : null;
-    var diff    = hasActual ? actualWorkDone - estWorkDone : null;
-    var actCostW = actualCostOfActivity !== null ? actualCostOfActivity / scale * 100 : null;
-    var actCostDiff = actualCostOfActivity !== null ? actualCostOfActivity - estimatedCost : null;
     var an      = sh(actName || '', 40);
     var unitLbl = actUnit ? ' / ' + actUnit : '';
 
     function fmC(v){ return '&#8377; ' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
-    function legendRow(swatch, label, value){
-        return '<tr>'
-            + '<td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + swatch + ';"></span></td>'
-            + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">' + label + '</td>'
-            + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">' + fmC(value) + '</td>'
-            + '</tr>';
-    }
-
-    var colPalette2 = ['#ff7043','#ab47bc','#26a69a','#ffa726','#42a5f5','#66bb6a','#ec407a','#8d6e63','#26c6da','#d4e157'];
-
-    var resIdx2 = 0, allResC = [], maxResC = 0;
-    var typeMapC = {};
-    items.forEach(function(r){
-        var tid = r.type_id || '0';
-        if (!typeMapC[tid]) typeMapC[tid] = { name: r.type_name || 'Other', resources: [] };
-        typeMapC[tid].resources.push({ name: r.name || '', totalCost: (+r.rate || 0) * (+r.res_qty || 0) * estActQty, unit: r.unit || '' });
-    });
-    Object.keys(typeMapC).forEach(function(k){
-        typeMapC[k].resources.sort(function(a,b){ return b.totalCost - a.totalCost; }).forEach(function(r){
-            if (r.totalCost > maxResC) maxResC = r.totalCost;
-            allResC.push({ name: r.name, totalCost: r.totalCost, unit: r.unit, col: colPalette2[resIdx2++ % colPalette2.length] });
-        });
-    });
-
     el.style.position = 'relative';
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:16px 4px 6px;">'
 
-        + (function(){
-            // Grey bar = Estimated Cost of Activity
-            // Red/green diff of actual vs estimated shown on same bar
-            // Blue overlay = Estimated Cost of Work Done on top
-            var s = '<div style="position:relative;width:100%;height:20px;border-radius:4px;margin-bottom:10px;">';
-            // Grey background (estimated cost = full width)
-            s += '<div style="position:absolute;top:0;left:0;height:100%;width:100%;background:#555f6e;border-radius:4px;"></div>';
-            // Actual vs estimated comparison
-            if (actCostW !== null) {
-                if (actCostDiff > 0) {
-                    // Actual > estimated: red extension from right edge
-                    var redW = Math.min(actCostDiff / scale * 100, 35).toFixed(2);
-                    s += '<div style="position:absolute;top:0;right:0;height:100%;width:'+redW+'%;background:#ef5350;border-radius:0 4px 4px 0;"></div>';
-                } else {
-                    // Actual < estimated: green savings at right end of grey bar
-                    var gSavW = Math.min((estimatedCost - actualCostOfActivity) / scale * 100, 100).toFixed(2);
-                    s += '<div style="position:absolute;top:0;right:0;height:100%;width:'+gSavW+'%;background:#66bb6a;border-radius:0 4px 4px 0;"></div>';
-                }
-            }
-            // Blue overlay = estimated work done (on top)
-            s += '<div style="position:absolute;top:0;left:0;height:100%;width:'+Math.min(plW,100).toFixed(2)+'%;background:#2979FF;border-radius:4px 0 0 4px;"></div>';
-            s += '</div>';
-            return s;
-          })()
+        + '<div style="width:100%;height:20px;border-radius:4px;background:#555f6e;margin-bottom:10px;"></div>'
 
         + '<table style="width:100%;border-collapse:collapse;">'
         + '<tbody>'
-        + legendRow('#555f6e', 'Estimated Cost of Activity', estimatedCost)
-        + (actualCostOfActivity !== null ? legendRow(actCostDiff > 0 ? '#ef5350' : '#66bb6a', 'Actual Cost of Activity', actualCostOfActivity) : '')
-        + legendRow('#2979FF', 'Estimated Cost of Work Done', estWorkDone)
-        + (hasActual ? legendRow('#00838f', 'Actual Cost of Work Done', actualWorkDone) : '')
+        + '<tr>'
+        + '<td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#555f6e;"></span></td>'
+        + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">Estimated Cost of Activity</td>'
+        + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">' + fmC(estimatedCost) + '</td>'
+        + '</tr>'
         + '</tbody>'
         + '</table>'
 
-        // Activity name footer
         + (an ? '<div style="margin-top:auto;padding-top:6px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + an + unitLbl + '</div>' : '')
 
         + '</div>';
