@@ -166,7 +166,7 @@ function loadCdActivityData(actId){
             renderCdResourceConsumption(d.items || [], d.activity_name || '', +d.last_report_qty || 0, d.unit || '');
             renderCdResourceCost(d.items || [], d.activity_name || '');
             renderCdUnitCostOfActivity(d.items || [], d.activity_name || '', d.unit || '', +d.last_report_qty || 0);
-            renderCdCostOfActivity(d.items || [], d.activity_name || '', +d.last_report_qty || 0, +d.activity_qty || 0, d.unit || '');
+            renderCdCostOfActivity(d.items || [], d.activity_name || '', +d.last_report_qty || 0, +d.activity_qty || 0, +d.schedule_qty || 0, d.unit || '');
             renderCdCostOnCompletion(d.items || [], d.activity_name || '', +d.activity_qty || 0);
             renderCdValueOfWorkDone(d);
         },
@@ -524,7 +524,7 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, lastQty){
     chip.addEventListener('mouseleave', function(){ chipTip.style.display = 'none'; });
 }
 
-function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
+function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, actUnit){
     var el = document.getElementById('cd-g2');
     if (!el) return;
 
@@ -550,6 +550,11 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
         estWorkDone = plannedUnitCostForBar * lastQty;
     }
 
+    // Actual Cost of Activity = Actual Unit Cost × (estActQty / schedQty)
+    var actualUnitCost      = (hasActual && lastQty > 0) ? actualWorkDone / lastQty : null;
+    var ratio               = (schedQty > 0) ? estActQty / schedQty : 0;
+    var actualCostOfActivity = (actualUnitCost !== null) ? actualUnitCost * ratio : null;
+
     if (!estimatedCost){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No estimate data</div>';
         return;
@@ -559,6 +564,8 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
     var plW     = Math.min(estWorkDone    / scale * 100, 100);
     var acW     = hasActual ? Math.min(actualWorkDone / scale * 100, 200) : null;
     var diff    = hasActual ? actualWorkDone - estWorkDone : null;
+    var actCostW = actualCostOfActivity !== null ? actualCostOfActivity / scale * 100 : null;
+    var actCostDiff = actualCostOfActivity !== null ? actualCostOfActivity - estimatedCost : null;
     var an      = sh(actName || '', 40);
     var unitLbl = actUnit ? ' / ' + actUnit : '';
 
@@ -611,9 +618,29 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, actUnit){
             return s;
           })()
 
+        + (function(){
+            if (actCostW === null) return '';
+            var s = '<div style="position:relative;width:100%;height:20px;border-radius:4px;background:#555f6e;margin-bottom:10px;overflow:hidden;">';
+            if (actCostDiff > 0) {
+                // Actual cost > estimated — orange (100%) + red extension (capped at visible)
+                var redW = Math.min(actCostDiff / scale * 100, 30).toFixed(2);
+                s += '<div style="position:absolute;top:0;left:0;height:100%;width:100%;background:#F57C00;"></div>';
+                s += '<div style="position:absolute;top:0;right:0;height:100%;width:'+redW+'%;background:#ef5350;border-radius:0 4px 4px 0;"></div>';
+            } else {
+                // Actual cost < estimated — orange + green savings
+                var oW   = Math.min(actCostW, 100).toFixed(2);
+                var gW   = Math.min((estimatedCost - actualCostOfActivity) / scale * 100, 100 - parseFloat(oW)).toFixed(2);
+                s += '<div style="position:absolute;top:0;left:0;height:100%;width:'+oW+'%;background:#F57C00;border-radius:4px 0 0 4px;"></div>';
+                s += '<div style="position:absolute;top:0;left:'+oW+'%;height:100%;width:'+gW+'%;background:#66bb6a;border-radius:0 4px 4px 0;"></div>';
+            }
+            s += '</div>';
+            return s;
+          })()
+
         + '<table style="width:100%;border-collapse:collapse;">'
         + '<tbody>'
         + legendRow('#555f6e', 'Estimated Cost of Activity', estimatedCost)
+        + (actualCostOfActivity !== null ? legendRow(actCostDiff > 0 ? '#ef5350' : '#66bb6a', 'Actual Cost of Activity', actualCostOfActivity) : '')
         + legendRow('#2979FF', 'Estimated Cost of Work Done', estWorkDone)
         + (hasActual ? legendRow(diff > 0 ? '#ef5350' : '#66bb6a', 'Actual Cost of Work Done', actualWorkDone) : '')
         + '</tbody>'
