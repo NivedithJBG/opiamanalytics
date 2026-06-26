@@ -580,7 +580,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
     items.forEach(function(r){ unitCost += (+r.res_qty || 0) * (+r.rate || 0); });
     var estimatedCost = unitCost * estActQty;
 
-    // Actual Cost of Activity = Actual Unit Cost × schedQty
+    // Actual Cost of Activity = Actual Unit Cost × Schedule Quantity
     var actualWorkDone = 0, hasActual = false;
     items.forEach(function(r){
         if (r.actual_unit_cost != null && r.actual_consumption != null) {
