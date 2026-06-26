@@ -118,7 +118,7 @@ function renderCdBars(){
         c2el.style.display        = 'flex';
         c2el.style.flexDirection  = 'column';
         c2el.style.justifyContent = 'flex-start';
-        c2el.style.paddingTop     = '18%';
+        c2el.style.paddingTop     = '14px';
 
         var brow = c2el.querySelector('.brow');
         if (brow) brow.style.marginTop = '0';
