@@ -87,27 +87,30 @@ $(document).on('click', '#cd-close, #cd-bk', function(){
 
 function renderCdBars(){
     // IOW costs = sum of activity costs under each IOW
-    var iowCostMap = {}, iowActualMap = {};
+    var iowCostMap = {}, iowActualMap = {}, iowWorkDoneMap = {};
     _iow_items.forEach(function(iow){
         var sid = String(iow.id);
         var acts = _all.filter(function(a){ return String(a.scheduleitem_id) === sid; });
-        iowCostMap[sid]   = acts.reduce(function(s, a){ return s + (+a.activity_cost || 0); }, 0);
-        iowActualMap[sid] = acts.reduce(function(s, a){ return s + (+a.actual_cost   || 0); }, 0);
+        iowCostMap[sid]     = acts.reduce(function(s, a){ return s + (+a.activity_cost || 0); }, 0);
+        iowActualMap[sid]   = acts.reduce(function(s, a){ return s + (+a.actual_cost   || 0); }, 0);
+        iowWorkDoneMap[sid] = acts.reduce(function(s, a){ return s + ((+a.unit_cost||0)*(+a.cumulated_qty||0)); }, 0);
     });
 
     // Group costs = sum of IOW costs under each group
     var groupItems = _groups.map(function(g){
         var iows = _iow_items.filter(function(i){ return String(i.group_id) === String(g.id); });
-        var cost   = iows.reduce(function(s, i){ return s + (iowCostMap[String(i.id)]   || 0); }, 0);
-        var actual = iows.reduce(function(s, i){ return s + (iowActualMap[String(i.id)] || 0); }, 0);
-        return {name: g.name, cost: cost, actual_cost: actual, id: g.id};
+        var cost      = iows.reduce(function(s, i){ return s + (iowCostMap[String(i.id)]     || 0); }, 0);
+        var actual    = iows.reduce(function(s, i){ return s + (iowActualMap[String(i.id)]   || 0); }, 0);
+        var workDone  = iows.reduce(function(s, i){ return s + (iowWorkDoneMap[String(i.id)] || 0); }, 0);
+        return {name: g.name, cost: cost, actual_cost: actual, est_work_done: workDone, id: g.id};
     });
 
     // Project Cost = sum of group costs
-    var totalCost   = groupItems.reduce(function(s, g){ return s + g.cost; }, 0);
-    var totalActual = groupItems.reduce(function(s, g){ return s + g.actual_cost; }, 0);
+    var totalCost     = groupItems.reduce(function(s, g){ return s + g.cost; }, 0);
+    var totalActual   = groupItems.reduce(function(s, g){ return s + g.actual_cost; }, 0);
+    var totalWorkDone = groupItems.reduce(function(s, g){ return s + g.est_work_done; }, 0);
 
-    renderCostBars('cd-c2', [{name: _cdProjectName || 'Project', cost: totalCost, actual_cost: totalActual, id: 0}], null);
+    renderCostBars('cd-c2', [{name: _cdProjectName || 'Project', cost: totalCost, actual_cost: totalActual, est_work_done: totalWorkDone, id: 0}], null);
     var c2el = document.getElementById('cd-c2');
     if (c2el) { c2el.style.display = 'flex'; c2el.style.flexDirection = 'column'; c2el.style.justifyContent = 'center'; }
     renderCostBars('cd-c1', groupItems, filterByGroupCd);
@@ -123,9 +126,10 @@ function filterByGroupCd(groupId){
     var iowItems = filtered.map(function(iow){
         var sid  = String(iow.id);
         var acts = _all.filter(function(a){ return String(a.scheduleitem_id) === sid; });
-        var cost   = acts.reduce(function(s, a){ return s + (+a.activity_cost || 0); }, 0);
-        var actual = acts.reduce(function(s, a){ return s + (+a.actual_cost   || 0); }, 0);
-        return {name: iow.name, cost: cost, actual_cost: actual, id: iow.id};
+        var cost     = acts.reduce(function(s, a){ return s + (+a.activity_cost || 0); }, 0);
+        var actual   = acts.reduce(function(s, a){ return s + (+a.actual_cost   || 0); }, 0);
+        var workDone = acts.reduce(function(s, a){ return s + ((+a.unit_cost||0)*(+a.cumulated_qty||0)); }, 0);
+        return {name: iow.name, cost: cost, actual_cost: actual, est_work_done: workDone, id: iow.id};
     });
     renderCostBars('cd-c3', iowItems, filterByIowCd);
 
@@ -1022,10 +1026,11 @@ function toBarItems(acts, isUpcoming){
 function toCostBarItems(acts){
     return acts.map(function(r){
         return {
-            name:        r.name,
-            cost:        +r.activity_cost || 0,
-            actual_cost: +r.actual_cost   || 0,
-            id:          r.id
+            name:          r.name,
+            cost:          +r.activity_cost  || 0,
+            actual_cost:   +r.actual_cost    || 0,
+            est_work_done: (+r.unit_cost || 0) * (+r.cumulated_qty || 0),
+            id:            r.id
         };
     });
 }
@@ -1052,22 +1057,32 @@ function renderCostBars(containerId, items, onRowClick){
         var act = r.actual_cost || 0;
         var rowMax = Math.max(est, act, 1);
         var bar = '', disp = '';
+        var ewd = r.est_work_done || 0;
         if (act === 0) {
-            var pct = (est / maxVal * 100).toFixed(1);
+            var pct    = (est / maxVal * 100).toFixed(1);
+            var ewdPct = Math.min(ewd / maxVal * 100, parseFloat(pct)).toFixed(1);
             bar  = est > 0
-                ? '<div class="bs" style="width:'+pct+'%;background:#607D8B;"></div>'
+                ? '<div class="bs" style="width:'+pct+'%;background:#607D8B;position:relative;">'
+                  + (ewd > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct+'%;background:#2979FF;opacity:0.85;"></div>' : '')
+                  + '</div>'
                 : '<div class="bs" style="width:2%;background:#ccc;"></div>';
             disp = fmtCost(est);
         } else if (act > est) {
             var estPct  = (est / maxVal * 100).toFixed(1);
             var overPct = ((act - est) / maxVal * 100).toFixed(1);
-            bar  = '<div class="bs" style="width:'+estPct+'%;background:#607D8B;"></div>'
+            var ewdPct  = Math.min(ewd / maxVal * 100, parseFloat(estPct)).toFixed(1);
+            bar  = '<div class="bs" style="width:'+estPct+'%;background:#607D8B;position:relative;">'
+                 + (ewd > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct+'%;background:#2979FF;opacity:0.85;"></div>' : '')
+                 + '</div>'
                  + '<div class="bs" style="width:'+overPct+'%;background:#c62828;"></div>';
             disp = fmtCost(act);
         } else {
             var actPct  = (act  / maxVal * 100).toFixed(1);
             var savePct = ((est - act) / maxVal * 100).toFixed(1);
-            bar  = '<div class="bs" style="width:'+actPct+'%;background:#607D8B;"></div>'
+            var ewdPct  = Math.min(ewd / maxVal * 100, parseFloat(actPct)).toFixed(1);
+            bar  = '<div class="bs" style="width:'+actPct+'%;background:#607D8B;position:relative;">'
+                 + (ewd > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct+'%;background:#2979FF;opacity:0.85;"></div>' : '')
+                 + '</div>'
                  + '<div class="bs" style="width:'+savePct+'%;background:#2e7d32;"></div>';
             disp = fmtCost(est);
         }
@@ -1089,25 +1104,34 @@ function renderActivityCostBars(containerId, items, onRowClick){
     if (!el) return;
     var html = '';
     items.forEach(function(r){
-        var est = r.cost || 0, act = r.actual_cost || 0;
+        var est = r.cost || 0, act = r.actual_cost || 0, ewd = r.est_work_done || 0;
         var rowMax = Math.max(est, act, 1);
         var bar = '';
         var dispVal = '';
         if (act === 0) {
+            var ewdPct = Math.min(ewd / rowMax * 100, 100).toFixed(1);
             bar = est > 0
-                ? '<div class="bs" style="width:100%;background:#607D8B;"></div>'
+                ? '<div class="bs" style="width:100%;background:#607D8B;position:relative;">'
+                  + (ewd > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct+'%;background:#2979FF;opacity:0.85;"></div>' : '')
+                  + '</div>'
                 : '<div class="bs" style="width:2%;background:#ccc"></div>';
             dispVal = fmtCost(est);
         } else if (act > est) {
             var estPct  = (est / rowMax * 100).toFixed(1);
             var overPct = ((act - est) / rowMax * 100).toFixed(1);
-            bar = '<div class="bs" style="width:'+estPct+'%;background:#607D8B;"></div>'
+            var ewdPct  = Math.min(ewd / rowMax * 100, parseFloat(estPct)).toFixed(1);
+            bar = '<div class="bs" style="width:'+estPct+'%;background:#607D8B;position:relative;">'
+                + (ewd > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct+'%;background:#2979FF;opacity:0.85;"></div>' : '')
+                + '</div>'
                 + '<div class="bs" style="width:'+overPct+'%;background:#c62828;"></div>';
             dispVal = fmtCost(act);
         } else {
             var actPct  = (act  / rowMax * 100).toFixed(1);
             var savePct = ((est - act) / rowMax * 100).toFixed(1);
-            bar = '<div class="bs" style="width:'+actPct+'%;background:#607D8B;"></div>'
+            var ewdPct  = Math.min(ewd / rowMax * 100, parseFloat(actPct)).toFixed(1);
+            bar = '<div class="bs" style="width:'+actPct+'%;background:#607D8B;position:relative;">'
+                + (ewd > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct+'%;background:#2979FF;opacity:0.85;"></div>' : '')
+                + '</div>'
                 + '<div class="bs" style="width:'+savePct+'%;background:#2e7d32;"></div>';
             dispVal = fmtCost(est);
         }
