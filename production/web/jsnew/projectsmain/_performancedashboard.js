@@ -613,12 +613,14 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
     // Grey bar = estimated cost; overlays inside for est work done and actual cost
     var ewdW = estimatedCost > 0 ? Math.min(estWorkDone / estimatedCost * 100, 100).toFixed(2) : '0';
     var barHtml = '<div style="position:relative;width:100%;height:20px;border-radius:4px;background:#555f6e;margin-bottom:10px;overflow:hidden;">';
-    if (estWorkDone > 0) {
-        barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdW+'%;background:#0D47A1;border-radius:4px 0 0 4px;"></div>';
-    }
+    // Actual cost rendered first (bottom layer)
     if (actualCostOfActivity !== null) {
         var actW = Math.min(actualCostOfActivity / estimatedCost * 100, 100).toFixed(2);
         barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+actW+'%;background:#40C4FF;border-radius:4px 0 0 4px;opacity:0.85;"></div>';
+    }
+    // Est work done on top of actual cost
+    if (estWorkDone > 0) {
+        barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdW+'%;background:#0D47A1;border-radius:4px 0 0 4px;"></div>';
     }
     barHtml += '</div>';
 
