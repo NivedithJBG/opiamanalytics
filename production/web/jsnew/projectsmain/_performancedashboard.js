@@ -126,14 +126,14 @@ function renderCdBars(){
         // Append 4 legend rows
         function legendHtml(col, label, val){
             var full = '&#8377;' + Math.round(+val).toLocaleString();
-            return '<div style="display:flex;align-items:center;padding:1px 2px;gap:2px;">'
+            return '<div style="display:flex;align-items:center;padding:2px 3px;gap:4px;">'
                 + '<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+col+';flex-shrink:0;"></span>'
                 + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+label+'</span>'
                 + '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;white-space:nowrap;padding-left:2px;">'+full+'</span>'
                 + '</div>';
         }
         var leg = document.createElement('div');
-        leg.style.cssText = 'margin-top:5px;padding-left:164px;display:flex;gap:4px;';
+        leg.style.cssText = 'margin-top:12px;padding-left:164px;display:flex;gap:6px;';
         var leftCol  = '<div style="flex:1;min-width:0;">'
                      + legendHtml('#607D8B', 'Estimated Cost', totalCost)
                      + legendHtml(totalGrnOnly > totalCost ? '#c62828' : '#2e7d32', 'Actual Cost', totalGrnOnly)
