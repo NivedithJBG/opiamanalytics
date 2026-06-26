@@ -93,7 +93,10 @@ function renderCdBars(){
         var acts = _all.filter(function(a){ return String(a.scheduleitem_id) === sid; });
         iowCostMap[sid]     = acts.reduce(function(s, a){ return s + (+a.activity_cost   || 0); }, 0);
         iowActualMap[sid]   = acts.reduce(function(s, a){ return s + (+a.actual_work_done || +a.actual_cost || 0); }, 0);
-        iowWorkDoneMap[sid] = acts.reduce(function(s, a){ return s + ((+a.unit_cost||0)*(+a.cumulated_qty||0)); }, 0);
+        iowWorkDoneMap[sid] = acts.reduce(function(s, a){
+            var sc = +a.quantity || 1;
+            return s + ((+a.activity_cost || 0) * (+a.cumulated_qty || 0) / sc);
+        }, 0);
     });
 
     // Group costs = sum of IOW costs under each group
@@ -165,7 +168,10 @@ function filterByGroupCd(groupId){
         var acts = _all.filter(function(a){ return String(a.scheduleitem_id) === sid; });
         var cost     = acts.reduce(function(s, a){ return s + (+a.activity_cost || 0); }, 0);
         var actual   = acts.reduce(function(s, a){ return s + (+a.actual_work_done || +a.actual_cost || 0); }, 0);
-        var workDone = acts.reduce(function(s, a){ return s + ((+a.unit_cost||0)*(+a.cumulated_qty||0)); }, 0);
+        var workDone = acts.reduce(function(s, a){
+            var sc = +a.quantity || 1;
+            return s + ((+a.activity_cost || 0) * (+a.cumulated_qty || 0) / sc);
+        }, 0);
         return {name: iow.name, cost: cost, actual_cost: actual, est_work_done: workDone, id: iow.id};
     });
     renderCostBars('cd-c3', iowItems, filterByIowCd);
@@ -1066,7 +1072,7 @@ function toCostBarItems(acts){
             name:             r.name,
             cost:             +r.activity_cost   || 0,
             actual_cost:      +r.actual_work_done || +r.actual_cost || 0,
-            est_work_done:    (+r.unit_cost || 0) * (+r.cumulated_qty || 0),
+            est_work_done:    (+r.activity_cost || 0) * (+r.cumulated_qty || 0) / (+r.quantity || 1),
             id:               r.id
         };
     });
