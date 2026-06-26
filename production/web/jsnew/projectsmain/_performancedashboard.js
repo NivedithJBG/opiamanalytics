@@ -133,7 +133,7 @@ function renderCdBars(){
                 + '</div>';
         }
         var leg = document.createElement('div');
-        leg.style.cssText = 'margin-top:12px;padding-left:164px;display:flex;gap:6px;';
+        leg.style.cssText = 'margin-top:12px;padding-left:70px;display:flex;gap:6px;';
         var leftCol  = '<div style="flex:1;min-width:0;">'
                      + legendHtml('#607D8B', 'Estimated Cost', totalCost)
                      + legendHtml(totalGrnOnly > totalCost ? '#c62828' : '#2e7d32', 'Actual Cost', totalGrnOnly)
