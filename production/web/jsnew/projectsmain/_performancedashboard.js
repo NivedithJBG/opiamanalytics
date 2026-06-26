@@ -120,9 +120,9 @@ function renderCdBars(){
         c2el.style.justifyContent = 'flex-start';
         c2el.style.paddingTop     = '4px';
 
-        // Raise bar by 2px
+        // Position bar 1px up
         var brow = c2el.querySelector('.brow');
-        if (brow) brow.style.marginTop = '-2px';
+        if (brow) brow.style.marginTop = '-1px';
 
         // Append 4 legend rows
         function fmL(v){ return v >= 1e7 ? (v/1e7).toFixed(1)+'Cr' : v >= 1e5 ? (v/1e5).toFixed(1)+'L' : v >= 1e3 ? (v/1e3).toFixed(1)+'K' : Math.round(v); }
@@ -134,7 +134,7 @@ function renderCdBars(){
                 + '</div>';
         }
         var leg = document.createElement('div');
-        leg.style.cssText = 'margin-top:6px;border-top:1px solid #e0e4ec;padding-top:4px;display:flex;gap:4px;';
+        leg.style.cssText = 'margin-top:7px;border-top:1px solid #e0e4ec;padding-top:4px;display:flex;gap:4px;';
         var leftCol  = '<div style="flex:1;min-width:0;">'
                      + legendHtml('#607D8B', 'Estimated Cost', totalCost)
                      + legendHtml(totalGrnOnly > totalCost ? '#c62828' : '#2e7d32', 'Actual Cost', totalGrnOnly)
