@@ -627,19 +627,21 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
     el.style.position = 'relative';
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:16px 4px 6px;">'
         + barHtml
-        + '<table style="width:100%;border-collapse:collapse;"><tbody>'
-        + '<tr><td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#555f6e;"></span></td>'
-        + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">Estimated Cost of Activity</td>'
-        + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;text-align:right;white-space:nowrap;">' + fmC(estimatedCost) + '</td></tr>'
-        + (estWorkDone > 0 ? '<tr><td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2979FF;"></span></td>'
-        + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">Est. Cost of Work Done</td>'
-        + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#2979FF;text-align:right;white-space:nowrap;">' + fmC(estWorkDone) + '</td></tr>' : '')
-        + (actualCostOfActivity !== null
-            ? '<tr><td style="padding:4px 6px 4px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#40C4FF;"></span></td>'
-            + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">Actual Cost of Activity</td>'
-            + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#0288D1;text-align:right;white-space:nowrap;">' + fmC(actualCostOfActivity) + '</td></tr>'
-            : '')
-        + '</tbody></table>'
+        + (function(){
+            function lr(col, label, val, txtCol){
+                return '<tr>'
+                    + '<td style="padding:3px 6px 3px 0;width:12px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+col+';"></span></td>'
+                    + '<td style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;">'+label+'</td>'
+                    + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+(txtCol||'#1a2540')+';text-align:right;white-space:nowrap;">'+fmC(val)+'</td>'
+                    + '</tr>';
+            }
+            return '<table style="width:100%;border-collapse:collapse;"><tbody>'
+                + lr('#555f6e', 'Estimated Cost of Activity',  estimatedCost)
+                + (actualCostOfActivity !== null ? lr('#40C4FF', 'Actual Cost of Activity', actualCostOfActivity, '#0288D1') : '')
+                + (estWorkDone > 0            ? lr('#2979FF', 'Est. Cost of Work Done',   estWorkDone,          '#2979FF') : '')
+                + (hasActual                  ? lr('#00838f', 'Actual Cost of Work Done',  actualWorkDone,       '#00838f') : '')
+                + '</tbody></table>';
+          })()
         + (an ? '<div style="margin-top:auto;padding-top:6px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + an + unitLbl + '</div>' : '')
         + '</div>';
 }
