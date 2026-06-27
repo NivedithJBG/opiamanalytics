@@ -207,16 +207,17 @@ function filterByIowCd(iowId){
     var actList = fOngoing.concat(fUpcoming);
     renderActivityCostBars('cd-c4', toCostBarItems(actList), loadCdActivityData);
     var firstAct = fOngoing.length ? fOngoing[0] : (fUpcoming.length ? fUpcoming[0] : null);
-    if (firstAct) loadCdActivityData(firstAct.id);
-    // Load exact cost data for all activities (staggered to avoid hammering server)
-    actList.forEach(function(a, idx){
-        if (a.id == (firstAct ? firstAct.id : null)) return; // already loaded above
-        setTimeout(function(){ loadCdActivityData(a.id); }, 300 + idx * 200);
-    });
-    else {
+    if (firstAct) {
+        loadCdActivityData(firstAct.id);
+    } else {
         var el = document.getElementById('cd-c6');
         if (el) el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">Select an activity</div>';
     }
+    // Load exact cost data for all activities (staggered to avoid hammering server)
+    actList.forEach(function(a, idx){
+        if (a.id == (firstAct ? firstAct.id : null)) return;
+        setTimeout(function(){ loadCdActivityData(a.id); }, 400 + idx * 250);
+    });
 }
 
 function loadCdActivityData(actId){
