@@ -565,7 +565,7 @@ function renderCdUnitCostOfResource(items, actName){
 
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:6px 4px;overflow-y:auto;">'
         + rowsHtml
-        + (actName ? '<div class="resfoot" style="margin-top:4px;">' + sh(actName, 32) + '</div>' : '')
+        + (actName ? '<div class="resfoot" style="margin-top:4px;">' + actName + '</div>' : '')
         + '</div>';
 
     var tipEl6 = document.getElementById('uc-res-tip');
@@ -1059,7 +1059,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
 
     el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;padding:6px 4px;overflow-y:auto;">'
         + rowsHtml
-        + (actName ? '<div class="resfoot" style="margin-top:4px;">' + sh(actName, 32) + '</div>' : '')
+        + (actName ? '<div class="resfoot" style="margin-top:4px;">' + actName + '</div>' : '')
         + '</div>';
 
     var tipEl7 = document.getElementById('rc-cons-tip');
