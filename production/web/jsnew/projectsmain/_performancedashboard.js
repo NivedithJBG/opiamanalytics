@@ -1284,7 +1284,7 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
             row.addEventListener('mouseenter', function(){
                 function fmFull(v){ return '&#8377;' + Math.round(+v).toLocaleString(); }
                 var iows = getTooltipItems(grpItem);
-                var tipW = 420;
+                var tipW = 560;
                 var rect = row.getBoundingClientRect();
                 grpTip.style.width = tipW + 'px';
                 grpTip.style.left = Math.max(4, Math.min(rect.left, window.innerWidth - tipW - 4)) + 'px';
@@ -1306,30 +1306,38 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
                     var iowMap = {};
                     allActs.forEach(function(entry, i){
                         var d = results[i] || {};
-                        var it=d.items||[], aq=+d.activity_qty||0, uc=0;
+                        var it=d.items||[], aq=+d.activity_qty||0, lq=+d.last_report_qty||0, sq=+d.schedule_qty||0, uc=0;
                         it.forEach(function(r){ uc+=(+r.res_qty||0)*(+r.rate||0); });
-                        var est2=uc*aq, awd2=0;
+                        var est2=uc*aq, awd2=0, ewd2=0;
                         it.forEach(function(r){ if(r.actual_unit_cost!=null&&r.actual_consumption!=null) awd2+=(+r.actual_unit_cost)*(+r.actual_consumption); });
+                        if(lq>0){ it.forEach(function(r){ ewd2+=(+r.rate||0)*(+r.planned_consumption||0); }); ewd2*=lq; }
+                        var acoa2=(awd2>0&&lq>0)?(awd2/lq)*sq:0;
                         var sid = String(entry.iow.id);
-                        if(!iowMap[sid]) iowMap[sid]={name:entry.iow.name, est:0, awd:0};
-                        iowMap[sid].est += est2;
-                        iowMap[sid].awd += awd2;
+                        if(!iowMap[sid]) iowMap[sid]={name:entry.iow.name, est:0, acoa:0, ewd:0, awd:0};
+                        iowMap[sid].est  += est2;
+                        iowMap[sid].acoa += acoa2;
+                        iowMap[sid].ewd  += ewd2;
+                        iowMap[sid].awd  += awd2;
                     });
                     var rows='';
                     iows.forEach(function(iow){
-                        var d = iowMap[String(iow.id)] || {est:0, awd:0};
+                        var d = iowMap[String(iow.id)] || {est:0, acoa:0, ewd:0, awd:0};
                         rows += '<tr>'
-                            + '<td style="padding:4px 10px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;white-space:nowrap;">'+sh(iow.name,24)+'</td>'
-                            + '<td style="padding:4px 10px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(d.est)+'</td>'
+                            + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;white-space:nowrap;">'+sh(iow.name,20)+'</td>'
+                            + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(d.est)+'</td>'
+                            + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(d.acoa)+'</td>'
+                            + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(d.ewd)+'</td>'
                             + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(d.awd)+'</td>'
                             + '</tr>';
                     });
                     if(grpTip.style.display==='block')
                         grpTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:8px;">'+sh(grpItem.name,30)+'</div>'
                             + '<table style="width:100%;border-collapse:collapse;"><thead><tr>'
-                            + '<th style="padding:3px 10px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:left;">IOW</th>'
-                            + '<th style="padding:3px 10px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Estimated</th>'
-                            + '<th style="padding:3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Actual Work Done</th>'
+                            + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:left;">IOW</th>'
+                            + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Estimated</th>'
+                            + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Actual Cost</th>'
+                            + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Est.Work Done</th>'
+                            + '<th style="padding:3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Act.Work Done</th>'
                             + '</tr></thead><tbody style="border-top:1px solid rgba(100,130,170,0.3);">'+rows+'</tbody></table>';
                 });
             });
