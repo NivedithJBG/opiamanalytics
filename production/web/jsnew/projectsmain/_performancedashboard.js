@@ -658,7 +658,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
     var actColour = actDiff === null ? '#1a2540' : (actDiff > 0 ? '#c62828' : '#2e7d32');
 
     el.style.position = 'relative';
-    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:16px 12px 6px;">'
+    el.innerHTML = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;padding:16px 14px 6px 12px;">'
         + barHtml
         + (function(){
             function lr(col, label, val, txtCol){
