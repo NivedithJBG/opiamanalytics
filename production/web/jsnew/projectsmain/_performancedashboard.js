@@ -1196,18 +1196,18 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
             acts.forEach(function(a){
                 var est2 = +a.activity_cost||0;
                 var awd2 = +a.actual_work_done||+a.actual_cost||0;
-                var estPct = Math.max(est2/tipMax*100,0.5).toFixed(2);
-                var awdPct2= Math.max(awd2/tipMax*100,0.5).toFixed(2);
-                var spEst = Math.max(100-parseFloat(estPct),0).toFixed(2);
-                var spAwd = Math.max(100-parseFloat(awdPct2),0).toFixed(2);
-                tbH += '<div style="flex:1;min-width:0;display:flex;gap:3px;align-items:flex-end;padding:0 3px;">'
+                var estPct = Math.max(est2/tipMax*100, 0.5);
+                var awdPct2= Math.max(awd2/tipMax*100, 0.5);
+                var spEst  = Math.max(100-estPct,  0);
+                var spAwd  = Math.max(100-awdPct2, 0);
+                tbH += '<div style="flex:1;min-width:0;display:flex;flex-direction:row;gap:4px;padding:0 4px;">'
                     + '<div style="flex:1;display:flex;flex-direction:column;align-items:center;">'
-                    +   '<div style="flex:'+spEst+' 1 0;min-height:0;"></div>'
-                    +   '<div style="flex:'+estPct+' 1 0;width:80%;background:#00BCD4;border-radius:2px 2px 0 0;"></div>'
+                    +   '<div style="flex:'+spEst.toFixed(2)+' 1 0;min-height:0;"></div>'
+                    +   '<div style="flex:'+estPct.toFixed(2)+' 1 0;width:70%;min-height:4px;background:#00BCD4;border-radius:2px 2px 0 0;"></div>'
                     + '</div>'
                     + '<div style="flex:1;display:flex;flex-direction:column;align-items:center;">'
-                    +   '<div style="flex:'+spAwd+' 1 0;min-height:0;"></div>'
-                    +   '<div style="flex:'+awdPct2+' 1 0;width:80%;background:#FF6D00;border-radius:2px 2px 0 0;"></div>'
+                    +   '<div style="flex:'+spAwd.toFixed(2)+' 1 0;min-height:0;"></div>'
+                    +   '<div style="flex:'+awdPct2.toFixed(2)+' 1 0;width:70%;min-height:4px;background:#FF6D00;border-radius:2px 2px 0 0;"></div>'
                     + '</div>'
                     + '</div>';
                 lblH += '<div style="flex:1;min-width:0;text-align:center;padding:2px 2px 0;">'
@@ -1223,7 +1223,7 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
                 + '<span><span style="display:inline-block;width:8px;height:8px;background:#00BCD4;border-radius:1px;margin-right:3px;vertical-align:middle;"></span>Estimated</span>'
                 + '<span><span style="display:inline-block;width:8px;height:8px;background:#FF6D00;border-radius:1px;margin-right:3px;vertical-align:middle;"></span>Actual</span>'
                 + '</div>'
-                + '<div style="display:flex;height:120px;">'
+                + '<div style="display:flex;height:160px;">'
                 + '<div style="width:28px;position:relative;flex-shrink:0;">'+tsH+'</div>'
                 + '<div style="flex:1;position:relative;min-width:0;">'+tgH
                 + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">'+tbH+'</div>'
