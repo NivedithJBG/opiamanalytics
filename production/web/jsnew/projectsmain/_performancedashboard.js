@@ -215,10 +215,48 @@ function filterByIowCd(iowId){
         var el = document.getElementById('cd-c6');
         if (el) el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">Select an activity</div>';
     }
-    // Load exact cost data for all activities (staggered to avoid hammering server)
+    // Update bars only (not panels) for remaining activities
     actList.forEach(function(a, idx){
         if (a.id == (firstAct ? firstAct.id : null)) return;
-        setTimeout(function(){ loadCdActivityData(a.id); }, 400 + idx * 250);
+        setTimeout(function(){ updateActivityBar(a.id); }, 400 + idx * 250);
+    });
+}
+
+function updateActivityBar(actId){
+    $.ajax({
+        type:'POST', url:'../projectsmain/costdashboardactivity',
+        data:{actid: actId}, dataType:'json',
+        success: function(d){
+            var items = d.items || [];
+            var lastQty = +d.last_report_qty || 0;
+            var estActQty = +d.activity_qty || 0;
+            var schedQty  = +d.schedule_qty || 0;
+            var unitCost = 0;
+            items.forEach(function(r){ unitCost += (+r.res_qty||0)*(+r.rate||0); });
+            var est  = unitCost * estActQty;
+            var ewd  = 0;
+            if (lastQty > 0) { items.forEach(function(r){ ewd += (+r.rate||0)*(+r.planned_consumption||0); }); ewd *= lastQty; }
+            var awd = 0, hasA = false;
+            items.forEach(function(r){ if(r.actual_unit_cost!=null&&r.actual_consumption!=null){ awd+=(+r.actual_unit_cost)*(+r.actual_consumption); hasA=true; } });
+            var auCost = (hasA && lastQty > 0) ? awd/lastQty : null;
+            var acoa = auCost !== null ? auCost * schedQty : 0;
+            _actExactCost[actId] = {est:est, acoa:acoa, ewd:ewd, awd:hasA?awd:0};
+            var brow = document.querySelector('#cd-c4 .brow[data-aid="'+actId+'"]');
+            if (brow && est > 0) {
+                var acoaPct = Math.min(acoa/est*100,100).toFixed(1);
+                var ewdPct  = Math.min(ewd /est*100,100).toFixed(1);
+                var awdPct  = Math.min(awd /est*100,100).toFixed(1);
+                var trk = brow.querySelector('.btrk');
+                if (trk) { trk.style.overflow='visible'; trk.innerHTML = '<div class="bs" style="width:100%;background:#555f6e;position:relative;overflow:visible;">'
+                    + '<div style="position:absolute;top:0;left:0;height:100%;width:100%;background:#555f6e;border-radius:2px;"></div>'
+                    + (acoa>0?'<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#78909C;opacity:0.9;border-radius:2px 0 0 2px;"></div>':'')
+                    + (acoa>est?'<div style="position:absolute;top:0;left:100%;height:100%;width:'+((acoa-est)/est*100).toFixed(1)+'%;background:#FF7043;border-radius:0 2px 2px 0;"></div>':'')
+                    + (ewd >0?'<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct +'%;background:#0D47A1;border-radius:2px 0 0 2px;"></div>':'')
+                    + (awd >0?'<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#455A64;opacity:0.9;border-radius:2px 0 0 2px;"></div>':'')
+                    + (awd>ewd?'<div style="position:absolute;top:0;left:'+ewdPct+'%;height:100%;width:'+((awd-ewd)/est*100).toFixed(1)+'%;background:#ef5350;opacity:0.9;"></div>':'')
+                    + '</div>'; }
+            }
+        }
     });
 }
 
