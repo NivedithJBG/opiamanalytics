@@ -623,22 +623,35 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
 
     function fmC(v){ return '&#8377; ' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
-    // Grey bar = estimated cost; overlays inside for est work done and actual cost
-    var ewdW = estimatedCost > 0 ? Math.min(estWorkDone / estimatedCost * 100, 100).toFixed(2) : '0';
-    var barHtml = '<div style="position:relative;width:100%;height:20px;border-radius:4px;background:#555f6e;margin-bottom:10px;overflow:hidden;">';
-    // Actual cost rendered first (bottom layer)
+    // Grey bar = estimated cost; overlays + red extensions where actuals exceed planned
+    var ewdPct = estimatedCost > 0 ? Math.min(estWorkDone  / estimatedCost * 100, 100) : 0;
+    var barHtml = '<div style="position:relative;width:100%;height:20px;border-radius:4px;background:#555f6e;margin-bottom:10px;overflow:visible;">';
+    // Grey base
+    barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:100%;background:#555f6e;border-radius:4px;"></div>';
+    // Light blue = actual cost of activity
     if (actualCostOfActivity !== null) {
         var actW = Math.min(actualCostOfActivity / estimatedCost * 100, 100).toFixed(2);
         barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+actW+'%;background:#40C4FF;border-radius:4px 0 0 4px;opacity:0.85;"></div>';
+        // Red extension if actual cost of activity > estimated cost
+        if (actualCostOfActivity > estimatedCost) {
+            var redActW = ((actualCostOfActivity - estimatedCost) / estimatedCost * 100).toFixed(2);
+            barHtml += '<div style="position:absolute;top:0;left:100%;height:100%;width:'+redActW+'%;background:#ef5350;border-radius:0 4px 4px 0;"></div>';
+        }
     }
-    // Est work done on top of actual cost
+    // Dark navy = est cost of work done
     if (estWorkDone > 0) {
-        barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdW+'%;background:#0D47A1;border-radius:4px 0 0 4px;"></div>';
+        barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct.toFixed(2)+'%;background:#0D47A1;border-radius:4px 0 0 4px;"></div>';
     }
-    // Actual cost of work done (yellow) on top of est work done
+    // Yellow = actual cost of work done; red extension if actual work done > est work done
     if (hasActual && estimatedCost > 0) {
-        var aWdW = Math.min(actualWorkDone / estimatedCost * 100, 100).toFixed(2);
-        barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+aWdW+'%;background:#FFD600;border-radius:4px 0 0 4px;opacity:0.9;"></div>';
+        if (actualWorkDone <= estWorkDone || estWorkDone === 0) {
+            var aWdW = Math.min(actualWorkDone / estimatedCost * 100, 100).toFixed(2);
+            barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+aWdW+'%;background:#FFD600;border-radius:4px 0 0 4px;opacity:0.9;"></div>';
+        } else {
+            barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct.toFixed(2)+'%;background:#FFD600;border-radius:4px 0 0 4px;opacity:0.9;"></div>';
+            var redWdW = ((actualWorkDone - estWorkDone) / estimatedCost * 100).toFixed(2);
+            barHtml += '<div style="position:absolute;top:0;left:'+ewdPct.toFixed(2)+'%;height:100%;width:'+redWdW+'%;background:#ef5350;border-radius:0 4px 4px 0;opacity:0.9;"></div>';
+        }
     }
     barHtml += '</div>';
 
