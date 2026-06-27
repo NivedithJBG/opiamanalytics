@@ -114,7 +114,14 @@ function renderCdBars(){
             acoa:          iows.reduce(function(s, i){ return s + (iowAcoaMap[String(i.id)]     || 0); }, 0),
             est_work_done: iows.reduce(function(s, i){ return s + (iowWorkDoneMap[String(i.id)] || 0); }, 0),
             awd:           iows.reduce(function(s, i){ return s + (iowAwdMap[String(i.id)]      || 0); }, 0),
-            id:            g.id
+            id:            g.id,
+            iows:          iows.map(function(i){ return {
+                name: i.name, id: i.id,
+                cost: iowCostMap[String(i.id)]     || 0,
+                acoa: iowAcoaMap[String(i.id)]     || 0,
+                ewd:  iowWorkDoneMap[String(i.id)] || 0,
+                awd:  iowAwdMap[String(i.id)]      || 0
+            }; })
         };
     });
 
@@ -163,7 +170,7 @@ function renderCdBars(){
         leg.innerHTML = leftCol + rightCol;
         c2el.appendChild(leg);
     }
-    renderSimpleCostBars('cd-c1', groupItems, filterByGroupCd);
+    renderSimpleCostBars('cd-c1', groupItems, filterByGroupCd, false, function(g){ return g.iows || []; }, true);
     if (_groups.length) filterByGroupCd(_groups[0].id);
 }
 
@@ -1176,7 +1183,7 @@ function fmtCost(v){
     return Math.round(v).toString();
 }
 
-function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTooltipItems){
+function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTooltipItems, isGroupTip){
     var el = document.getElementById(containerId);
     if (!el) return;
     var maxVal = 0;
@@ -1260,6 +1267,55 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
         });
         row.addEventListener('mouseleave', function(){ actTipEl.style.display='none'; });
     });
+
+    // Group tooltip (shows IOW breakdown)
+    if (isGroupTip && getTooltipItems) {
+        var grpTip = document.getElementById('grp-cost-tip');
+        if (!grpTip){
+            grpTip = document.createElement('div');
+            grpTip.id = 'grp-cost-tip';
+            grpTip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
+                + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:10px 14px;min-width:560px;';
+            document.body.appendChild(grpTip);
+        }
+        el.querySelectorAll('.brow[data-aid]').forEach(function(row){
+            var grpItem = items.filter(function(r){ return String(r.id)===String($(row).data('aid')); })[0];
+            if (!grpItem) return;
+            row.addEventListener('mouseenter', function(){
+                function fmFull(v){ return '&#8377;' + Math.round(+v).toLocaleString(); }
+                var iows = getTooltipItems(grpItem);
+                var rows = '';
+                iows.forEach(function(iow){
+                    rows += '<tr>'
+                        + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;white-space:nowrap;">'+sh(iow.name,20)+'</td>'
+                        + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(iow.cost)+'</td>'
+                        + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(iow.acoa)+'</td>'
+                        + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(iow.ewd)+'</td>'
+                        + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(iow.awd)+'</td>'
+                        + '</tr>';
+                });
+                grpTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:8px;">'+sh(grpItem.name,30)+'</div>'
+                    + '<table style="width:100%;border-collapse:collapse;">'
+                    + '<thead><tr>'
+                    + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:left;">IOW</th>'
+                    + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Estimated</th>'
+                    + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Actual Cost</th>'
+                    + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Est.Work Done</th>'
+                    + '<th style="padding:3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Act.Work Done</th>'
+                    + '</tr></thead>'
+                    + '<tbody style="border-top:1px solid rgba(100,130,170,0.3);">'+rows+'</tbody>'
+                    + '</table>';
+                var rect = row.getBoundingClientRect();
+                var tipW = 560;
+                var left = Math.max(4, Math.min(rect.left, window.innerWidth - tipW - 4));
+                grpTip.style.left = left + 'px';
+                grpTip.style.top  = (rect.top - 8) + 'px';
+                grpTip.style.transform = 'translateY(-100%)';
+                grpTip.style.display = 'block';
+            });
+            row.addEventListener('mouseleave', function(){ grpTip.style.display='none'; });
+        });
+    }
 
     // IOW Tooltip
     if (!getTooltipItems) return;
