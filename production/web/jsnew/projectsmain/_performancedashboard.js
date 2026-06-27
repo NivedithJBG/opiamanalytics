@@ -1355,8 +1355,22 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
             sTip.style.left = Math.max(4, Math.min(rect.left, window.innerWidth - 324)) + 'px';
             sTip.style.top  = (rect.top - 8) + 'px';
             sTip.style.transform = 'translateY(-100%)';
-            // For IOW bars: SUM(actual cost per activity, fallback to estimated if no actual)
-            if (getTooltipItems && !isGroupTip) {
+            if (isGroupTip) {
+                // Group: sum IOW actuals (fallback to IOW estimated where no actual)
+                var iows = _iow_items.filter(function(i){ return String(i.group_id) === String(item.id); });
+                var totEst = 0, totAct = 0;
+                iows.forEach(function(iow){
+                    var acts = _all.filter(function(a){ return String(a.scheduleitem_id) === String(iow.id); });
+                    acts.forEach(function(a){
+                        var est = +a.activity_cost || 0;
+                        var c   = _actExactCost[a.id];
+                        totEst += est;
+                        totAct += (c && c.acoa > 0) ? c.acoa : est;
+                    });
+                });
+                showTip(totEst, totAct);
+            } else if (getTooltipItems) {
+                // IOW: sum activity actuals (fallback to activity estimated where no actual)
                 var acts = getTooltipItems(item);
                 var totEst = 0, totAct = 0;
                 acts.forEach(function(a){
