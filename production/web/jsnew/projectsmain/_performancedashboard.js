@@ -1207,13 +1207,14 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
     if (!maxVal) maxVal = 1;
     var html = '';
     items.forEach(function(r){
-        var est = r.cost || 0;
-        var awd = showOverlay ? (r.awd || 0) : 0;
-        var pct    = (est / maxVal * 100).toFixed(1);
-        var awdPct = Math.min(awd / maxVal * 100, parseFloat(pct)).toFixed(1);
+        var est  = r.cost || 0;
+        var acoa = showOverlay ? (r.acoa || 0) : 0;
+        var pct     = (est / maxVal * 100).toFixed(1);
+        var acoaPct = Math.min(acoa / maxVal * 100, parseFloat(pct)).toFixed(1);
         var bar = est > 0
-            ? '<div class="bs" style="width:'+pct+'%;background:#4A5568;position:relative;">'
-              + (awd > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct+'%;background:#78909C;border-radius:2px 0 0 2px;"></div>' : '')
+            ? '<div class="bs" style="width:'+pct+'%;background:#4A5568;position:relative;overflow:visible;">'
+              + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#78909C;border-radius:2px 0 0 2px;opacity:0.9;"></div>' : '')
+              + (acoa > est ? '<div style="position:absolute;top:0;left:'+pct+'%;height:100%;width:'+((acoa-est)/maxVal*100).toFixed(1)+'%;background:#FF7043;border-radius:0 2px 2px 0;"></div>' : '')
               + '</div>'
             : '<div class="bs" style="width:2%;background:#ccc;"></div>';
         html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
@@ -1438,12 +1439,9 @@ function renderCostBars(containerId, items, onRowClick){
             bar = '<div class="bs" style="width:2%;background:#ccc;"></div>';
         } else {
             var acoaPct = Math.min(acoa / est * 100, 100).toFixed(1);
-            var ewdPct  = Math.min(ewd  / est * 100, 100).toFixed(1);
-            var awdPct  = Math.min(awd  / est * 100, 100).toFixed(1);
-            bar = '<div class="bs" style="width:100%;background:#4A5568;position:relative;">'
-                + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#40C4FF;opacity:0.85;"></div>' : '')
-                + (ewd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct +'%;background:#0D47A1;"></div>' : '')
-                + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#455A64;opacity:0.9;"></div>' : '')
+            bar = '<div class="bs" style="width:100%;background:#4A5568;position:relative;overflow:visible;">'
+                + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#78909C;opacity:0.9;border-radius:2px 0 0 2px;"></div>' : '')
+                + (acoa > est ? '<div style="position:absolute;top:0;left:100%;height:100%;width:'+((acoa-est)/est*100).toFixed(1)+'%;background:#FF7043;border-radius:0 2px 2px 0;"></div>' : '')
                 + '</div>';
         }
         html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
