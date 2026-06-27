@@ -24,6 +24,7 @@ function loadBatchCosts(){
             refreshProjectLegends();
             refreshIowBars();
             refreshGroupBars();
+            refreshProjectBar();
         }
     });
 }
@@ -102,6 +103,34 @@ function refreshGroupBars(){
             + (totAct > totEst ? '<div style="position:absolute;top:0;left:100%;height:100%;width:'+((totAct-totEst)/totEst*100).toFixed(1)+'%;background:#FF7043;border-radius:0 2px 2px 0;"></div>' : '')
             + '</div>';
     });
+}
+
+function refreshProjectBar(){
+    var trk = document.querySelector('#cd-c2 .brow .btrk');
+    if (!trk) return;
+    var totEst = 0, totAct = 0;
+    _groups.forEach(function(g){
+        var iows = _iow_items.filter(function(i){ return String(i.group_id) === String(g.id); });
+        var groupEst = 0, groupAct = 0, hasActual = false;
+        iows.forEach(function(iow){
+            _all.filter(function(a){ return String(a.scheduleitem_id) === String(iow.id); })
+                .forEach(function(a){
+                    var est = +a.activity_cost || 0;
+                    var c   = _actExactCost[a.id];
+                    groupEst += est;
+                    if (c && c.acoa > 0) { groupAct += c.acoa; hasActual = true; }
+                    else                 { groupAct += est; }
+                });
+        });
+        totEst += groupEst;
+        totAct += hasActual ? groupAct : groupEst;
+    });
+    if (!totEst) return;
+    var acoaPct = Math.min(totAct / totEst * 100, 100).toFixed(1);
+    trk.innerHTML = '<div class="bs" style="width:100%;background:#4A5568;position:relative;overflow:visible;">'
+        + (totAct > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#78909C;opacity:0.9;border-radius:2px 0 0 2px;"></div>' : '')
+        + (totAct > totEst ? '<div style="position:absolute;top:0;left:100%;height:100%;width:'+((totAct-totEst)/totEst*100).toFixed(1)+'%;background:#FF7043;border-radius:0 2px 2px 0;"></div>' : '')
+        + '</div>';
 }
 
 function refreshProjectLegends(){
