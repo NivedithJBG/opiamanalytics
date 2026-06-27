@@ -1317,8 +1317,8 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
         });
     }
 
-    // IOW Tooltip
-    if (!getTooltipItems) return;
+    // IOW Tooltip (skip for group bars which have their own tooltip)
+    if (!getTooltipItems || isGroupTip) return;
     var tipEl = document.getElementById('iow-cost-tip');
     if (!tipEl){
         tipEl = document.createElement('div');
