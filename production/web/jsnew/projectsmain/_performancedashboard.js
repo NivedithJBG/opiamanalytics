@@ -1636,7 +1636,7 @@ function renderCdResourceCost(items, actName){
         + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">'+barsHtml+'</div>'
         + '</div></div>'
         + '<div style="display:flex;padding-left:28px;">'+labelsHtml+'</div>'
-        + (actName ? '<div class="resfoot">'+sh(actName,32)+'</div>' : '')
+        + (actName ? '<div class="resfoot">'+actName+'</div>' : '')
         + '</div>';
 
     // Tooltip
