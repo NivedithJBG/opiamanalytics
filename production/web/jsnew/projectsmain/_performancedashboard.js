@@ -188,7 +188,7 @@ function filterByGroupCd(groupId){
         }, 0);
         return {name: iow.name, cost: cost, acoa: acoa, est_work_done: workDone, awd: awd, id: iow.id};
     });
-    renderSimpleCostBars('cd-c3', iowItems, filterByIowCd);
+    renderSimpleCostBars('cd-c3', iowItems, filterByIowCd, true);
 
     $('#cd-c1 .brow').removeClass('brow-active');
     $('#cd-c1 .brow[data-aid="' + groupId + '"]').addClass('brow-active');
@@ -1136,7 +1136,7 @@ function fmtCost(v){
     return Math.round(v).toString();
 }
 
-function renderSimpleCostBars(containerId, items, onRowClick){
+function renderSimpleCostBars(containerId, items, onRowClick, showOverlay){
     var el = document.getElementById(containerId);
     if (!el) return;
     var maxVal = 0;
@@ -1145,9 +1145,13 @@ function renderSimpleCostBars(containerId, items, onRowClick){
     var html = '';
     items.forEach(function(r){
         var est = r.cost || 0;
-        var pct = (est / maxVal * 100).toFixed(1);
+        var awd = showOverlay ? (r.awd || 0) : 0;
+        var pct    = (est / maxVal * 100).toFixed(1);
+        var awdPct = Math.min(awd / maxVal * 100, parseFloat(pct)).toFixed(1);
         var bar = est > 0
-            ? '<div class="bs" style="width:'+pct+'%;background:#4A5568;"></div>'
+            ? '<div class="bs" style="width:'+pct+'%;background:#4A5568;position:relative;">'
+              + (awd > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct+'%;background:#455A64;border-radius:2px 0 0 2px;"></div>' : '')
+              + '</div>'
             : '<div class="bs" style="width:2%;background:#ccc;"></div>';
         html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
               + '<div class="blbl" style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
