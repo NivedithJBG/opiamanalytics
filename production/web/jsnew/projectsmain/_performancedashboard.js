@@ -337,12 +337,8 @@ function loadCdActivityData(actId){
                     var awdPct  = Math.min(awd  / est * 100, 100).toFixed(1);
                     var trk = brow.querySelector('.btrk');
                     if (trk) { trk.style.overflow = 'visible'; trk.innerHTML = '<div class="bs" style="width:100%;background:#555f6e;position:relative;overflow:visible;">'
-                        + '<div style="position:absolute;top:0;left:0;height:100%;width:100%;background:#555f6e;border-radius:2px;"></div>'
                         + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#78909C;opacity:0.9;border-radius:2px 0 0 2px;"></div>' : '')
                         + (acoa > est ? '<div style="position:absolute;top:0;left:100%;height:100%;width:'+((acoa-est)/est*100).toFixed(1)+'%;background:#FF7043;border-radius:0 2px 2px 0;"></div>' : '')
-                        + (ewd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct +'%;background:#0D47A1;border-radius:2px 0 0 2px;"></div>' : '')
-                        + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#455A64;opacity:0.9;border-radius:2px 0 0 2px;"></div>' : '')
-                        + (awd > ewd ? '<div style="position:absolute;top:0;left:'+ewdPct+'%;height:100%;width:'+((awd-ewd)/est*100).toFixed(1)+'%;background:#ef5350;opacity:0.9;"></div>' : '')
                         + '</div>'; }
                 }
             })();
