@@ -1275,7 +1275,7 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
         html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
               + '<div class="blbl" style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
               + '<div class="btrk" style="flex:1;">'+bar+'</div>'
-              + '<div style="font-size:11px;color:#000;font-weight:700;min-width:38px;text-align:right;padding-left:5px;white-space:nowrap;">'+fmtCost(est)+'</div>'
+              + ''
               + '</div>';
     });
     el.innerHTML = html;
@@ -1356,7 +1356,7 @@ function renderCostBars(containerId, items, onRowClick){
         html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
               + '<div class="blbl" style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
               + '<div class="btrk" style="flex:1;">'+bar+'</div>'
-              + '<div style="font-size:11px;color:#000;font-weight:700;min-width:38px;text-align:right;padding-left:5px;white-space:nowrap;">'+fmtCost(est)+'</div>'
+              + ''
               + '</div>';
     });
     el.innerHTML = html;
@@ -1392,7 +1392,7 @@ function renderActivityCostBars(containerId, items, onRowClick){
         html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
               + '<div class="blbl" style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
               + '<div class="btrk" style="flex:1;overflow:visible;">'+bar+'</div>'
-              + '<div style="font-size:11px;color:#000;font-weight:700;min-width:38px;text-align:right;padding-left:5px;white-space:nowrap;">'+fmtCost(est)+'</div>'
+              + ''
               + '</div>';
     });
     el.innerHTML = html;
