@@ -262,10 +262,13 @@ function loadCdActivityData(actId){
                     var ewdPct  = Math.min(ewd  / est * 100, 100).toFixed(1);
                     var awdPct  = Math.min(awd  / est * 100, 100).toFixed(1);
                     var trk = brow.querySelector('.btrk');
-                    if (trk) trk.innerHTML = '<div class="bs" style="width:100%;background:#4A5568;position:relative;">'
-                        + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#78909C;opacity:0.85;"></div>' : '')
-                        + (ewd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct +'%;background:#0D47A1;"></div>' : '')
-                        + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#455A64;opacity:0.9;"></div>' : '')
+                    if (trk) trk.innerHTML = '<div class="bs" style="width:100%;background:#555f6e;position:relative;overflow:visible;">'
+                        + '<div style="position:absolute;top:0;left:0;height:100%;width:100%;background:#555f6e;border-radius:2px;"></div>'
+                        + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#78909C;opacity:0.9;border-radius:2px 0 0 2px;"></div>' : '')
+                        + (acoa > est ? '<div style="position:absolute;top:0;left:100%;height:100%;width:'+((acoa-est)/est*100).toFixed(1)+'%;background:#FF7043;border-radius:0 2px 2px 0;"></div>' : '')
+                        + (ewd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct +'%;background:#0D47A1;border-radius:2px 0 0 2px;"></div>' : '')
+                        + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#455A64;opacity:0.9;border-radius:2px 0 0 2px;"></div>' : '')
+                        + (awd > ewd ? '<div style="position:absolute;top:0;left:'+ewdPct+'%;height:100%;width:'+((awd-ewd)/est*100).toFixed(1)+'%;background:#ef5350;opacity:0.9;"></div>' : '')
                         + '</div>';
                 }
             })();
@@ -1171,18 +1174,21 @@ function renderActivityCostBars(containerId, items, onRowClick){
         var awd  = r.actual_work_done    || 0;  // actual cost of work done
         var rowMax = Math.max(est, acoa, 1);
 
-        // 4-layer bar: grey → light blue → dark navy → yellow
+        // Same 4-layer bar as Cost of Activity panel (cd-g2), scale = est
         var bar = '';
         if (!est) {
             bar = '<div class="bs" style="width:2%;background:#ccc"></div>';
         } else {
-            var acoaPct = Math.min(acoa / rowMax * 100, 100).toFixed(1);
-            var ewdPct  = Math.min(ewd  / rowMax * 100, 100).toFixed(1);
-            var awdPct  = Math.min(awd  / rowMax * 100, 100).toFixed(1);
-            bar = '<div class="bs" style="width:100%;background:#4A5568;position:relative;">'
-                + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#40C4FF;opacity:0.85;"></div>' : '')
-                + (ewd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct +'%;background:#0D47A1;"></div>' : '')
-                + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#455A64;opacity:0.9;"></div>' : '')
+            var acoaPct = Math.min(acoa / est * 100, 100).toFixed(1);
+            var ewdPct  = Math.min(ewd  / est * 100, 100).toFixed(1);
+            var awdPct  = Math.min(awd  / est * 100, 100).toFixed(1);
+            bar = '<div class="bs" style="width:100%;background:#555f6e;position:relative;overflow:visible;">'
+                + '<div style="position:absolute;top:0;left:0;height:100%;width:100%;background:#555f6e;border-radius:2px;"></div>'
+                + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#78909C;opacity:0.9;border-radius:2px 0 0 2px;"></div>' : '')
+                + (acoa > est ? '<div style="position:absolute;top:0;left:100%;height:100%;width:'+((acoa-est)/est*100).toFixed(1)+'%;background:#FF7043;border-radius:0 2px 2px 0;"></div>' : '')
+                + (ewd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct +'%;background:#0D47A1;border-radius:2px 0 0 2px;"></div>' : '')
+                + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#455A64;opacity:0.9;border-radius:2px 0 0 2px;"></div>' : '')
+                + (awd > ewd ? '<div style="position:absolute;top:0;left:'+ewdPct+'%;height:100%;width:'+((awd-ewd)/est*100).toFixed(1)+'%;background:#ef5350;opacity:0.9;"></div>' : '')
                 + '</div>';
         }
 
