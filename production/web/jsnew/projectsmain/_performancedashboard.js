@@ -262,15 +262,14 @@ function loadCdActivityData(actId){
                     var ewdPct  = Math.min(ewd  / est * 100, 100).toFixed(1);
                     var awdPct  = Math.min(awd  / est * 100, 100).toFixed(1);
                     var trk = brow.querySelector('.btrk');
-                    if (trk) trk.innerHTML = '<div class="bs" style="width:100%;background:#555f6e;position:relative;overflow:visible;">'
+                    if (trk) { trk.style.overflow = 'visible'; trk.innerHTML = '<div class="bs" style="width:100%;background:#555f6e;position:relative;overflow:visible;">'
                         + '<div style="position:absolute;top:0;left:0;height:100%;width:100%;background:#555f6e;border-radius:2px;"></div>'
                         + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#78909C;opacity:0.9;border-radius:2px 0 0 2px;"></div>' : '')
                         + (acoa > est ? '<div style="position:absolute;top:0;left:100%;height:100%;width:'+((acoa-est)/est*100).toFixed(1)+'%;background:#FF7043;border-radius:0 2px 2px 0;"></div>' : '')
                         + (ewd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct +'%;background:#0D47A1;border-radius:2px 0 0 2px;"></div>' : '')
                         + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#455A64;opacity:0.9;border-radius:2px 0 0 2px;"></div>' : '')
                         + (awd > ewd ? '<div style="position:absolute;top:0;left:'+ewdPct+'%;height:100%;width:'+((awd-ewd)/est*100).toFixed(1)+'%;background:#ef5350;opacity:0.9;"></div>' : '')
-                        + '</div>';
-                }
+                        + '</div>'; }
             })();
         },
         error: function(){
@@ -1195,7 +1194,7 @@ function renderActivityCostBars(containerId, items, onRowClick){
 
         html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
               + '<div class="blbl" style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
-              + '<div class="btrk" style="flex:1;">'+bar+'</div>'
+              + '<div class="btrk" style="flex:1;overflow:visible;">'+bar+'</div>'
               + '<div style="font-size:11px;color:#000;font-weight:700;min-width:38px;text-align:right;padding-left:5px;white-space:nowrap;">'+fmtCost(est)+'</div>'
               + '</div>';
     });
