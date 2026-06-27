@@ -1341,9 +1341,10 @@ function renderCdResourceCost(items, actName){
                 var valLine = 'Planned: '+fmFull(planned)
                     + ' &nbsp;&nbsp;Actual: '+(actual !== null ? fmFull(actual) : '—')
                     + (diff !== null ? ' &nbsp;&nbsp;Difference: '+(diff>0?'+':'')+fmFull(diff) : '');
-                lblHtml += '<div style="flex:1;min-width:0;text-align:center;padding:3px 2px 0;border-top:2px solid '+rCol+';">'
-                    + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.name+'">'+sh(r.name,13)+'</div>'
-                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;white-space:nowrap;">'+valLine+'</div>'
+                lblHtml += '<div style="display:flex;align-items:center;gap:5px;padding:3px 2px;border-bottom:1px solid rgba(100,130,170,0.2);">'
+                    + '<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+rCol+';flex-shrink:0;"></span>'
+                    + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:#fff;flex:0 0 auto;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.name+'">'+sh(r.name,15)+'</span>'
+                    + '<span style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#cfd8e3;white-space:nowrap;margin-left:auto;">'+valLine+'</span>'
                     + '</div>';
             });
 
@@ -1353,12 +1354,12 @@ function renderCdResourceCost(items, actName){
                 + '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+col+';flex-shrink:0;"></span>'
                 + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;letter-spacing:.3px;">'+t.name+'</span>'
                 + '</div>'
-                + '<div style="display:flex;height:140px;">'
+                + '<div style="display:flex;height:200px;">'
                 + '<div style="width:30px;position:relative;flex-shrink:0;">'+tsHtml+'</div>'
                 + '<div style="flex:1;position:relative;min-width:0;">'+tgHtml
                 + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">'+tbHtml+'</div>'
                 + '</div></div>'
-                + '<div style="display:flex;padding-left:30px;margin-top:6px;border-top:1px solid rgba(100,130,170,0.3);padding-top:6px;">'+lblHtml+'</div>';
+                + '<div style="margin-top:8px;border-top:1px solid rgba(100,130,170,0.3);padding-top:4px;">'+lblHtml+'</div>';
 
             var rect = barCol.getBoundingClientRect();
             var left = rect.left + rect.width / 2 - tipW / 2;
