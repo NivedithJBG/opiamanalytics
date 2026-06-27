@@ -54,20 +54,17 @@ function refreshIowBars(){
         var acoaInnerPct = Math.min(totAct/totEst*100, 100).toFixed(1);
         var trk = row.querySelector('.btrk');
         if(!trk) return;
+        var actColor = totAct > totEst ? '#FF7043' : '#E0E0E0';
+        trk.style.position = 'relative';
         var barHtml = '<div class="bs" style="width:'+pct+'%;background:#4A5568;position:relative;overflow:visible;">'
             + (totAct > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaInnerPct+'%;background:#78909C;opacity:0.9;border-radius:2px 0 0 2px;"></div>' : '')
             + (totAct > totEst ? '<div style="position:absolute;top:0;left:100%;height:100%;width:'+((totAct-totEst)/totEst*100).toFixed(1)+'%;background:#FF7043;border-radius:0 2px 2px 0;"></div>' : '')
+            + '</div>'
+            + '<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);white-space:nowrap;pointer-events:none;z-index:2;display:flex;gap:8px;">'
+            +   '<span style="font-size:9px;color:#fff;font-weight:600;">Est:&#8201;&#8377;'+fmtCost(totEst)+'</span>'
+            +   '<span style="font-size:9px;color:'+actColor+';font-weight:700;">Act:&#8201;&#8377;'+fmtCost(totAct)+'</span>'
             + '</div>';
         trk.innerHTML = barHtml;
-        // Update right-side value column: show Est and Act stacked
-        var valDiv = trk.nextElementSibling;
-        if (valDiv) {
-            var actColor = totAct > totEst ? '#FF7043' : '#555f6e';
-            valDiv.style.minWidth = '55px';
-            valDiv.style.whiteSpace = 'normal';
-            valDiv.innerHTML = '<div style="font-size:10px;color:#444;font-weight:600;line-height:1.3;text-align:right;">Est:&#8201;'+fmtCost(totEst)+'</div>'
-                + '<div style="font-size:10px;color:'+actColor+';font-weight:700;line-height:1.3;text-align:right;">Act:&#8201;'+fmtCost(totAct)+'</div>';
-        }
     });
 }
 
