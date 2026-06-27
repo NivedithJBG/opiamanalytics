@@ -715,6 +715,145 @@ class ProjectsmainController extends Controller
         ];
     }
 
+    public function actionCostdashboardbatch()
+    {
+        $uid      = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return json_encode(['error' => 'No project selected', 'data' => []]);
+        $pid = (int)$projuser->projectid;
+        $db  = \Yii::$app->db;
+
+        // Load all schedule activities for the project
+        $schedActs = $db->createCommand(
+            "SELECT sa.id, sa.activity_id, sa.quantity, sa.name
+             FROM scheduleactivities sa WHERE sa.projectId=:pid AND sa.status=0",
+            [':pid' => $pid]
+        )->queryAll();
+        if (!$schedActs) return json_encode(['error' => 'No', 'data' => []]);
+
+        $actIds    = array_column($schedActs, 'id');
+        $wbIds     = array_unique(array_column($schedActs, 'activity_id'));
+        $actMap    = [];  // schedId => sa row
+        foreach ($schedActs as $sa) { $actMap[(int)$sa['id']] = $sa; }
+
+        // Last reported qty per schedule activity
+        $lqRows = $db->createCommand(
+            "SELECT activity_id, MAX(cumulated_qty) AS lq FROM schedule_progress_report
+             WHERE activity_id IN (".implode(',', $actIds).") GROUP BY activity_id"
+        )->queryAll();
+        $lastQtyMap = [];
+        foreach ($lqRows as $r) { $lastQtyMap[(int)$r['activity_id']] = (float)$r['lq']; }
+
+        // Estimate activity qty per WBS id
+        $penRows = $db->createCommand(
+            "SELECT activity_Id, activity_qty FROM pricing_estimate_new
+             WHERE activity_Id IN (".implode(',', array_map('intval', $wbIds)).") AND project_Id=:pid AND pricing_status=0",
+            [':pid' => $pid]
+        )->queryAll();
+        $estQtyMap = [];
+        foreach ($penRows as $r) { $estQtyMap[(int)$r['activity_Id']] = (float)$r['activity_qty']; }
+
+        // All resources per WBS id
+        $resRows = $db->createCommand(
+            "SELECT pern.activity_id, pern.pricing_resourceid, pern.resourcetype_Id AS type_id,
+                    pern.rate, pern.quantity AS res_qty, pern.task_ids,
+                    grn.actual_unit_cost, grn.grn_qty,
+                    si.stock_at_site
+             FROM pricing_estimate_resources_new pern
+             LEFT JOIN (
+                 SELECT por.allocation_id,
+                        SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))*por.rate)/NULLIF(SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))),0) AS actual_unit_cost,
+                        SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))) AS grn_qty
+                 FROM purchase_order_resources por
+                 JOIN goods_received_note g ON g.GRN_Purchase_Order=por.order_id AND g.GRN_Item=por.resource_id
+                 JOIN purchase_orders po ON po.order_id=por.order_id
+                 WHERE po.project_id=:pid2 AND po.delete_status=0 AND por.delete_status=0
+                 GROUP BY por.allocation_id
+             ) grn ON grn.allocation_id=pern.pricing_resourceid
+             LEFT JOIN (
+                 SELECT si2.pricing_resourceid, si2.stock_at_site FROM store_indents si2
+                 INNER JOIN (SELECT pricing_resourceid, MAX(id) AS mx FROM store_indents WHERE project_id=:pid3 GROUP BY pricing_resourceid) lsi
+                 ON lsi.pricing_resourceid=si2.pricing_resourceid AND si2.id=lsi.mx
+             ) si ON si.pricing_resourceid=pern.pricing_resourceid
+             WHERE pern.activity_id IN (".implode(',', array_map('intval', $wbIds)).") AND pern.project_id=:pid AND pern.pricing_status=0",
+            [':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid]
+        )->queryAll();
+
+        // Group resources by WBS id
+        $resByWbs = [];
+        foreach ($resRows as $r) {
+            $resByWbs[(int)$r['activity_id']][] = $r;
+        }
+
+        // MB data: task amounts and work done by task_id
+        $taskAmountById = []; $taskWorkDoneById = []; $mbQtyByWbs = [];
+        $mbs = $db->createCommand(
+            "SELECT entries FROM wo_measurement_book WHERE project_id=:pid AND sent_status=1 AND delete_status=0",
+            [':pid' => $pid]
+        )->queryAll();
+        foreach ($mbs as $mb) {
+            foreach (json_decode($mb['entries'] ?? '[]', true) ?: [] as $entry) {
+                $wbsId = (int)($entry['activity_id'] ?? 0);
+                if (!$wbsId) continue;
+                $mbQtyByWbs[$wbsId] = ($mbQtyByWbs[$wbsId] ?? 0.0) + (float)($entry['qty'] ?? 0);
+                foreach ($entry['tasks'] ?? [] as $task) {
+                    $wd = (float)($task['work_done'] ?? 0);
+                    $rt = (float)($task['rate']      ?? 0);
+                    $tid = (int)($task['task_id']    ?? 0);
+                    if ($tid) {
+                        $taskAmountById[$tid]   = ($taskAmountById[$tid]   ?? 0.0) + $rt * $wd;
+                        $taskWorkDoneById[$tid] = ($taskWorkDoneById[$tid] ?? 0.0) + $wd;
+                    }
+                }
+            }
+        }
+
+        // Compute est and acoa per schedule activity
+        $data = [];
+        foreach ($schedActs as $sa) {
+            $schedId = (int)$sa['id'];
+            $wbId    = (int)$sa['activity_id'];
+            $schedQty = (float)$sa['quantity'];
+            $estQty   = $estQtyMap[$wbId] ?? 0;
+            $lastQty  = $lastQtyMap[$schedId] ?? 0;
+            $resources = $resByWbs[$wbId] ?? [];
+            $mbQty    = $mbQtyByWbs[$wbId] ?? 0.0;
+
+            $unitCost = 0.0;
+            foreach ($resources as $r) { $unitCost += (float)$r['res_qty'] * (float)$r['rate']; }
+            $est = $unitCost * $estQty;
+
+            // Actual: SUM(actual_unit_cost × actual_consumption) / lastQty × schedQty
+            $actualWorkDone = 0.0;
+            foreach ($resources as $r) {
+                $typeId = (int)$r['type_id'];
+                $grnQty = (float)($r['grn_qty'] ?? 0);
+                $stock  = (float)($r['stock_at_site'] ?? 0);
+                if ($typeId === 4) {
+                    // SC: from MB
+                    $tids = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
+                    foreach ($tids as $tid) {
+                        $wdQty = $taskWorkDoneById[$tid] ?? 0.0;
+                        $wdAmt = $taskAmountById[$tid]   ?? 0.0;
+                        $mbQ   = $mbQtyByWbs[$wbId] ?? 0.0;
+                        if ($wdQty > 0 && $mbQ > 0) {
+                            $actualWorkDone += ($wdAmt / $wdQty) * ($wdQty / $mbQ);
+                        }
+                    }
+                } elseif (in_array($typeId, [2,6,7]) && $grnQty > 0 && $lastQty > 0) {
+                    $actUnitCost = (float)($r['actual_unit_cost'] ?? 0);
+                    $actCons     = max(0, $grnQty - $stock) / $lastQty;
+                    $actualWorkDone += $actUnitCost * $actCons;
+                }
+            }
+            $acoa = ($actualWorkDone > 0 && $lastQty > 0) ? ($actualWorkDone / $lastQty) * $schedQty : 0;
+
+            $data[$schedId] = ['est' => round($est,2), 'acoa' => round($acoa,2)];
+        }
+
+        return json_encode(['error' => 'No', 'data' => $data]);
+    }
+
     public function actionCostdashboardactivity()
     {
         $uid      = Yii::$app->user->Id;

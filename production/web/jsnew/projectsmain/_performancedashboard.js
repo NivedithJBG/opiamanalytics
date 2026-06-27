@@ -9,6 +9,24 @@ var _iow_items = [];   // wbsscheduleitems rows with group_id
 var _all       = [];   // all scheduleactivities
 var _actExactCost = {}; // cache: actId => {est, acoa, ewd, awd} from exact per-resource data
 
+function loadBatchCosts(){
+    $.ajax({
+        type:'POST', url:'../projectsmain/costdashboardbatch', dataType:'json',
+        success: function(d){
+            if (!d || d.error !== 'No') return;
+            var data = d.data || {};
+            Object.keys(data).forEach(function(actId){
+                var v = data[actId];
+                if (!_actExactCost[actId]) _actExactCost[actId] = {est:0, acoa:0, ewd:0, awd:0};
+                _actExactCost[actId].est  = v.est  || 0;
+                _actExactCost[actId].acoa = v.acoa || 0;
+            });
+            refreshProjectLegends();
+            refreshIowBars();
+        }
+    });
+}
+
 function refreshIowBars(){
     // Update each IOW bar overlay using exact formula: SUM(acoa or est fallback) per activity
     var iowBars = document.querySelectorAll('#cd-c3 .brow[data-aid]');
@@ -123,6 +141,7 @@ $(document).on('click', '.cost-dashboard-btn', function(e){
         _cdLoaded = true;
         if (_loaded) {
             renderCdBars();
+            loadBatchCosts();
         } else {
             $.ajax({
                 type:'POST', url:'../projectsmain/performancedashboard', dataType:'json',
@@ -133,6 +152,7 @@ $(document).on('click', '.cost-dashboard-btn', function(e){
                     if (!_all.length)       _all       = d.activities  || [];
                     if (!_cdProjectName)    _cdProjectName = d.project_name || '';
                     renderCdBars();
+                    loadBatchCosts();
                 }
             });
         }
