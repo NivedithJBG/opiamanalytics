@@ -1228,6 +1228,39 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
         if (onRowClick) onRowClick($(this).data('aid'));
     });
 
+    // Simple tooltip: Estimated Cost + Actual Cost
+    var sTip = document.getElementById('simple-bar-tip');
+    if (!sTip){
+        sTip = document.createElement('div');
+        sTip.id = 'simple-bar-tip';
+        sTip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
+            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.5);padding:10px 14px;min-width:240px;';
+        document.body.appendChild(sTip);
+    }
+    el.querySelectorAll('.brow[data-aid]').forEach(function(row){
+        var rowId = $(row).data('aid');
+        var item  = items.filter(function(r){ return String(r.id)===String(rowId); })[0];
+        if (!item) return;
+        row.addEventListener('mouseenter', function(){
+            function fmF(v){ return '&#8377;' + Math.round(+v).toLocaleString(); }
+            sTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#fff;margin-bottom:6px;">'+sh(item.name||'',36)+'</div>'
+                + '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(100,130,170,0.2);">'
+                +   '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Estimated Cost</span>'
+                +   '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;">'+fmF(item.cost||0)+'</span>'
+                + '</div>'
+                + '<div style="display:flex;justify-content:space-between;padding:3px 0;">'
+                +   '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost</span>'
+                +   '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;">'+fmF(item.acoa||0)+'</span>'
+                + '</div>';
+            var rect = row.getBoundingClientRect();
+            sTip.style.left = Math.max(4, Math.min(rect.left, window.innerWidth - 244)) + 'px';
+            sTip.style.top  = (rect.top - 8) + 'px';
+            sTip.style.transform = 'translateY(-100%)';
+            sTip.style.display = 'block';
+        });
+        row.addEventListener('mouseleave', function(){ sTip.style.display = 'none'; });
+    });
+
 }
 
 function renderCostBars(containerId, items, onRowClick){
