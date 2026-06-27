@@ -1258,30 +1258,21 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
             sTip.style.left = Math.max(4, Math.min(rect.left, window.innerWidth - 244)) + 'px';
             sTip.style.top  = (rect.top - 8) + 'px';
             sTip.style.transform = 'translateY(-100%)';
-            // If IOW bars (getTooltipItems available, not group): fetch exact formula per activity
+            // For IOW bars: SUM(actual cost per activity, fallback to estimated if no actual)
             if (getTooltipItems && !isGroupTip) {
-                sTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#fff;padding:4px;">Loading…</div>';
-                sTip.style.display = 'block';
                 var acts = getTooltipItems(item);
-                var requests = acts.map(function(a){ return $.ajax({type:'POST',url:'../projectsmain/costdashboardactivity',data:{actid:a.id},dataType:'json'}); });
-                $.when.apply($, requests).then(function(){
-                    var results = requests.length===1 ? [arguments[0]] : Array.prototype.slice.call(arguments).map(function(r){return r[0];});
-                    var totEst=0, totAct=0;
-                    acts.forEach(function(a,i){
-                        var d=results[i]||{}, it=d.items||[], aq=+d.activity_qty||0, lq=+d.last_report_qty||0, sq=+d.schedule_qty||0;
-                        var uc=0; it.forEach(function(r){ uc+=(+r.res_qty||0)*(+r.rate||0); });
-                        totEst += uc*aq;
-                        var awd=0,hasA=false;
-                        it.forEach(function(r){ if(r.actual_unit_cost!=null&&r.actual_consumption!=null){awd+=(+r.actual_unit_cost)*(+r.actual_consumption);hasA=true;} });
-                        if(hasA&&lq>0){ totAct += (awd/lq)*sq; }
-                        else { totAct += uc*sq; } // fallback: planned unit cost × schedQty
-                    });
-                    if(sTip.style.display==='block') showTip(totEst, totAct);
+                var totEst = 0, totAct = 0;
+                acts.forEach(function(a){
+                    var est = +a.activity_cost || 0;
+                    var c   = _actExactCost[a.id];
+                    totEst += est;
+                    totAct += (c && c.acoa > 0) ? c.acoa : est;
                 });
+                showTip(totEst, totAct);
             } else {
                 showTip(item.cost||0, item.acoa||0);
-                sTip.style.display = 'block';
             }
+            sTip.style.display = 'block';
         });
         row.addEventListener('mouseleave', function(){ sTip.style.display = 'none'; });
     });
