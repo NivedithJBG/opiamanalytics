@@ -1341,10 +1341,15 @@ function renderCdResourceCost(items, actName){
                 var valLine = 'Planned: '+fmFull(planned)
                     + ' &nbsp;&nbsp;Actual: '+(actual !== null ? fmFull(actual) : '—')
                     + (diff !== null ? ' &nbsp;&nbsp;Difference: '+(diff>0?'+':'')+fmFull(diff) : '');
-                lblHtml += '<div style="display:flex;align-items:center;gap:5px;padding:3px 2px;border-bottom:1px solid rgba(100,130,170,0.2);">'
-                    + '<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+rCol+';flex-shrink:0;"></span>'
-                    + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:#fff;flex:0 0 auto;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.name+'">'+sh(r.name,15)+'</span>'
-                    + '<span style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#cfd8e3;white-space:nowrap;margin-left:auto;">'+valLine+'</span>'
+                var dCol = diff === null ? '' : (diff > 0 ? '#ef9a9a' : '#a5d6a7');
+                lblHtml += '<div style="padding:4px 2px 6px;border-bottom:1px solid rgba(100,130,170,0.2);margin-bottom:2px;">'
+                    + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;">'
+                    +   '<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+rCol+';flex-shrink:0;"></span>'
+                    +   '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.name+'">'+sh(r.name,18)+'</span>'
+                    + '</div>'
+                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#cfd8e3;padding-left:13px;">Planned: '+fmFull(planned)+'</div>'
+                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;padding-left:13px;">Actual: '+(actual !== null ? fmFull(actual) : '—')+'</div>'
+                    + (diff !== null ? '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:'+dCol+';padding-left:13px;">Diff: '+(diff>0?'+':'')+fmFull(diff)+'</div>' : '')
                     + '</div>';
             });
 
