@@ -1215,12 +1215,12 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
     }
     el.querySelectorAll('.brow[data-aid]').forEach(function(row){
         var actId = $(row).data('aid');
-        var actItem = items.filter(function(r){ return String(r.id)===String(actId); })[0];
-        if (!actItem) return;
+        var blbl  = row.querySelector('.blbl');
+        var actName = blbl ? (blbl.title || blbl.textContent || '') : '';
         row.addEventListener('mouseenter', function(){
             function fmFull(v){ return '&#8377;' + Math.round(+v).toLocaleString(); }
             function buildTip(est, acoa, ewd, awd){
-                actTipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:8px;">'+sh(actItem.name||'',36)+'</div>'
+                actTipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:8px;">'+sh(actName,36)+'</div>'
                     + '<table style="width:100%;border-collapse:collapse;">'
                     + '<thead><tr>'
                     + '<th style="padding:3px 10px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:left;">Metric</th>'
@@ -1242,7 +1242,7 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
                 var c = _actExactCost[actId];
                 buildTip(c.est, c.acoa, c.ewd, c.awd);
             } else {
-                actTipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:6px;">'+sh(actItem.name||'',36)+'</div>'
+                actTipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:6px;">'+sh(actName,36)+'</div>'
                     + '<div style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#8a9bb0;text-align:center;padding:8px;">Loading…</div>';
                 $.ajax({ type:'POST', url:'../projectsmain/costdashboardactivity', data:{actid:actId}, dataType:'json',
                     success: function(d){
