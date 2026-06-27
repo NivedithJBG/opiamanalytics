@@ -1300,8 +1300,8 @@ function renderCdResourceCost(items, actName){
             // Vertical bar per resource — distinct colours
             var tipPalMap = {
                 'materials':       ['#42A5F5','#26C6DA','#66BB6A','#AB47BC','#FFA726','#7E57C2','#26A69A','#5C6BC0','#9CCC65','#78909C'],
-                'sub contractors': ['#B0BEC5','#CFD8DC','#90A4AE','#ECEFF1','#78909C','#B0BEC5','#CFD8DC','#90A4AE','#78909C','#607D8B'],
-                'sub contractor':  ['#B0BEC5','#CFD8DC','#90A4AE','#ECEFF1','#78909C','#B0BEC5','#CFD8DC','#90A4AE','#78909C','#607D8B']
+                'sub contractors': ['#546E7A','#607D8B','#455A64','#78909C','#37474F','#546E7A','#607D8B','#455A64','#78909C','#37474F'],
+                'sub contractor':  ['#546E7A','#607D8B','#455A64','#78909C','#37474F','#546E7A','#607D8B','#455A64','#78909C','#37474F']
             };
             var tipPal = tipPalMap[t.name.toLowerCase().trim()] || ['#FFA726','#FFEE58','#9CCC65','#26C6DA','#42A5F5','#AB47BC','#7E57C2','#26A69A','#8D6E63','#78909C'];
             var tbHtml = '', lblHtml = '';
