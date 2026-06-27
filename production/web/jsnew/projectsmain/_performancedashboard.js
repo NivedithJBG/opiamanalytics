@@ -1257,11 +1257,8 @@ function renderCdResourceCost(items, actName){
         barsHtml += '<div data-rc-idx="'+i+'" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 3px;cursor:pointer;">'
             + barInner + '</div>';
 
-        var actColour = actual !== null ? (actual > planned ? '#c62828' : '#2e7d32') : '#5a6e8c';
         labelsHtml += '<div style="flex:1;min-width:0;text-align:center;padding:2px 2px 0;">'
             + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+t.name+'</div>'
-            + '<div style="font-family:\'Nunito\',sans-serif;font-size:10px;color:#5a6e8c;white-space:nowrap;">P:'+fmRs(planned)+'</div>'
-            + (actual !== null ? '<div style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:'+actColour+';white-space:nowrap;">A:'+fmRs(actual)+'</div>' : '')
             + '</div>';
     });
 
