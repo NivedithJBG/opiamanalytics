@@ -152,7 +152,7 @@ function renderCdBars(){
         var leg = document.createElement('div');
         leg.style.cssText = 'margin-top:12px;padding-left:70px;display:flex;gap:6px;';
         var leftCol  = '<div style="flex:1;min-width:0;">'
-                     + legendHtml('#708090', 'Estimated Cost of Project',    totalCost)
+                     + legendHtml('#4A5568', 'Estimated Cost of Project',    totalCost)
                      + legendHtml('#40C4FF', 'Actual Cost of Project',       totalAcoa)
                      + '</div>';
         var rightCol = '<div style="flex:1;min-width:0;border-left:1px solid #e0e4ec;padding-left:4px;">'
@@ -1102,7 +1102,7 @@ function renderCostBars(containerId, items, onRowClick){
             var acoaPct = Math.min(acoa / est * 100, 100).toFixed(1);
             var ewdPct  = Math.min(ewd  / est * 100, 100).toFixed(1);
             var awdPct  = Math.min(awd  / est * 100, 100).toFixed(1);
-            bar = '<div class="bs" style="width:100%;background:#708090;position:relative;">'
+            bar = '<div class="bs" style="width:100%;background:#4A5568;position:relative;">'
                 + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#40C4FF;opacity:0.85;"></div>' : '')
                 + (ewd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct +'%;background:#0D47A1;"></div>' : '')
                 + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#455A64;opacity:0.9;"></div>' : '')
@@ -1140,7 +1140,7 @@ function renderActivityCostBars(containerId, items, onRowClick){
             var acoaPct = Math.min(acoa / rowMax * 100, 100).toFixed(1);
             var ewdPct  = Math.min(ewd  / rowMax * 100, 100).toFixed(1);
             var awdPct  = Math.min(awd  / rowMax * 100, 100).toFixed(1);
-            bar = '<div class="bs" style="width:100%;background:#708090;position:relative;">'
+            bar = '<div class="bs" style="width:100%;background:#4A5568;position:relative;">'
                 + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#40C4FF;opacity:0.85;"></div>' : '')
                 + (ewd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct +'%;background:#0D47A1;"></div>' : '')
                 + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#455A64;opacity:0.9;"></div>' : '')
