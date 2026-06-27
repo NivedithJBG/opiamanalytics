@@ -23,6 +23,7 @@ function loadBatchCosts(){
             });
             refreshProjectLegends();
             refreshIowBars();
+            refreshGroupBars();
         }
     });
 }
@@ -59,6 +60,47 @@ function refreshIowBars(){
             + (totAct > totEst ? '<div style="position:absolute;top:0;left:100%;height:100%;width:'+((totAct-totEst)/totEst*100).toFixed(1)+'%;background:#FF7043;border-radius:0 2px 2px 0;"></div>' : '')
             + '</div>';
         trk.innerHTML = barHtml;
+    });
+}
+
+function refreshGroupBars(){
+    var groupBars = document.querySelectorAll('#cd-c1 .brow[data-aid]');
+    if (!groupBars.length) return;
+    // Max estimated cost across all groups (for proportional bar width)
+    var maxEst = 0;
+    _groups.forEach(function(g){
+        var iows = _iow_items.filter(function(i){ return String(i.group_id) === String(g.id); });
+        var totEst = iows.reduce(function(s, iow){
+            return s + _all.filter(function(a){ return String(a.scheduleitem_id) === String(iow.id); })
+                           .reduce(function(s2, a){ return s2 + (+a.activity_cost || 0); }, 0);
+        }, 0);
+        if (totEst > maxEst) maxEst = totEst;
+    });
+    if (!maxEst) return;
+    groupBars.forEach(function(row){
+        var groupId = String($(row).data('aid'));
+        var iows = _iow_items.filter(function(i){ return String(i.group_id) === groupId; });
+        var totEst = 0, totAct = 0;
+        iows.forEach(function(iow){
+            var acts = _all.filter(function(a){ return String(a.scheduleitem_id) === String(iow.id); });
+            var iowEst = acts.reduce(function(s, a){ return s + (+a.activity_cost || 0); }, 0);
+            // IOW actual = sum of activity actuals; fallback to IOW estimated if no actual data
+            var iowAct = acts.reduce(function(s, a){
+                var c = _actExactCost[a.id];
+                return s + ((c && c.acoa > 0) ? c.acoa : (+a.activity_cost || 0));
+            }, 0);
+            totEst += iowEst;
+            totAct += iowAct;
+        });
+        if (!totEst) return;
+        var pct          = (totEst / maxEst * 100).toFixed(1);
+        var acoaInnerPct = Math.min(totAct / totEst * 100, 100).toFixed(1);
+        var trk = row.querySelector('.btrk');
+        if (!trk) return;
+        trk.innerHTML = '<div class="bs" style="width:'+pct+'%;background:#4A5568;position:relative;overflow:visible;">'
+            + (totAct > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaInnerPct+'%;background:#78909C;opacity:0.9;border-radius:2px 0 0 2px;"></div>' : '')
+            + (totAct > totEst ? '<div style="position:absolute;top:0;left:100%;height:100%;width:'+((totAct-totEst)/totEst*100).toFixed(1)+'%;background:#FF7043;border-radius:0 2px 2px 0;"></div>' : '')
+            + '</div>';
     });
 }
 
