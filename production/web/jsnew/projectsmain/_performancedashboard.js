@@ -163,7 +163,7 @@ function renderCdBars(){
         leg.innerHTML = leftCol + rightCol;
         c2el.appendChild(leg);
     }
-    renderCostBars('cd-c1', groupItems, filterByGroupCd);
+    renderSimpleCostBars('cd-c1', groupItems, filterByGroupCd);
     if (_groups.length) filterByGroupCd(_groups[0].id);
 }
 
@@ -188,7 +188,7 @@ function filterByGroupCd(groupId){
         }, 0);
         return {name: iow.name, cost: cost, acoa: acoa, est_work_done: workDone, awd: awd, id: iow.id};
     });
-    renderCostBars('cd-c3', iowItems, filterByIowCd);
+    renderSimpleCostBars('cd-c3', iowItems, filterByIowCd);
 
     $('#cd-c1 .brow').removeClass('brow-active');
     $('#cd-c1 .brow[data-aid="' + groupId + '"]').addClass('brow-active');
@@ -1134,6 +1134,31 @@ function fmtCost(v){
     if (v >= 1e5) return (v/1e5).toFixed(1)+'L';
     if (v >= 1e3) return (v/1e3).toFixed(1)+'K';
     return Math.round(v).toString();
+}
+
+function renderSimpleCostBars(containerId, items, onRowClick){
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    var maxVal = 0;
+    items.forEach(function(r){ if ((r.cost||0) > maxVal) maxVal = r.cost||0; });
+    if (!maxVal) maxVal = 1;
+    var html = '';
+    items.forEach(function(r){
+        var est = r.cost || 0;
+        var pct = (est / maxVal * 100).toFixed(1);
+        var bar = est > 0
+            ? '<div class="bs" style="width:'+pct+'%;background:#4A5568;"></div>'
+            : '<div class="bs" style="width:2%;background:#ccc;"></div>';
+        html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
+              + '<div class="blbl" style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
+              + '<div class="btrk" style="flex:1;">'+bar+'</div>'
+              + '<div style="font-size:11px;color:#000;font-weight:700;min-width:38px;text-align:right;padding-left:5px;white-space:nowrap;">'+fmtCost(est)+'</div>'
+              + '</div>';
+    });
+    el.innerHTML = html;
+    $(el).find('.brow[data-aid]').on('click', function(){
+        if (onRowClick) onRowClick($(this).data('aid'));
+    });
 }
 
 function renderCostBars(containerId, items, onRowClick){
