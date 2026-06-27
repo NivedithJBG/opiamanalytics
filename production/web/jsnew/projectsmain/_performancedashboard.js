@@ -1103,19 +1103,20 @@ function toBarItems(acts, isUpcoming){
 
 function toCostBarItems(acts){
     return acts.map(function(r){
-        var est      = +r.activity_cost   || 0;
-        var awd      = +r.actual_work_done || +r.actual_cost || 0; // actual cost of work done
-        var cumQty   = +r.cumulated_qty   || 0;
-        var schedQty = +r.quantity        || 1;
-        var ewd      = est * cumQty / schedQty;                    // est cost of work done
-        var acoa     = cumQty > 0 ? awd * schedQty / cumQty : 0;  // actual cost of activity
+        var est      = +r.activity_cost    || 0;
+        var unitCost = +r.unit_cost        || 0;  // SUM(res_qty × rate) per schedule unit
+        var awd      = +r.actual_work_done || +r.actual_cost || 0;
+        var cumQty   = +r.cumulated_qty    || 0;
+        var schedQty = +r.quantity         || 1;
+        var ewd      = unitCost * cumQty;                             // planned unit cost × lastQty
+        var acoa     = (awd > 0 && cumQty > 0) ? (awd / cumQty) * schedQty : 0;
         return {
-            name:                  r.name,
-            cost:                  est,
-            actual_cost_of_act:    acoa,
-            est_work_done:         ewd,
-            actual_work_done:      awd,
-            id:                    r.id
+            name:               r.name,
+            cost:               est,
+            actual_cost_of_act: acoa,
+            est_work_done:      ewd,
+            actual_work_done:   awd,
+            id:                 r.id
         };
     });
 }
