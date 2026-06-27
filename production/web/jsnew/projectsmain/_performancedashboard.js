@@ -1,4 +1,4 @@
-/* Performance Dashboard — popup modal */
+/* Performance Dashboard Ã¢â‚¬â€ popup modal */
 (function(){
 'use strict';
 
@@ -30,15 +30,15 @@ function refreshProjectLegends(){
         + '</div>';
 }
 
-// ── Date formatter ────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Date formatter Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 var _months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fmtDate(d){
-    if (!d || d === '0000-00-00') return '—';
+    if (!d || d === '0000-00-00') return 'Ã¢â‚¬â€';
     var p = d.split('-');
     return p[2] + ' ' + (_months[parseInt(p[1],10)-1]||'') + ' ' + p[0];
 }
 
-// ── Floating tooltip ──────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Floating tooltip Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 $(document).on('mouseenter', '#pd-modal [data-tip]', function(e){
     var $t = $('#pd-tip');
     if (!$t.length) $t = $('<div id="pd-tip"></div>').appendTo('body');
@@ -52,7 +52,7 @@ $(document).on('mouseenter', '#pd-modal [data-tip]', function(e){
     $('#pd-tip').hide();
 });
 
-// ── Open / Close ──────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Open / Close Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 $(document).on('click', '.perf-dashboard-btn', function(e){
     e.preventDefault();
     $('#pd-modal, #pd-bk').addClass('pd-open');
@@ -62,12 +62,12 @@ $(document).on('click', '#pd-close, #pd-bk', function(){
     $('#pd-modal, #pd-bk').removeClass('pd-open');
 });
 
-// ── Cost Dashboard ────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Cost Dashboard Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 var _cdLoaded = false;
 var _cdProjectName = '';
 var _cdTotalCost = 0;
 
-// Resource type colour map (name → bar colour)
+// Resource type colour map (name Ã¢â€ â€™ bar colour)
 var _resTypeColours = {
     'materials':         '#3E4A5C',   // Dark greyed navy
     'purchased inputs':  '#9E9E9E',   // Grey
@@ -201,7 +201,7 @@ function filterByGroupCd(groupId){
     var filtered = _iow_items.filter(function(i){ return String(i.group_id) === gid; });
     if (!filtered.length) filtered = _iow_items;
 
-    // IOW Cost — sum activity costs per IOW
+    // IOW Cost Ã¢â‚¬â€ sum activity costs per IOW
     var iowItems = filtered.map(function(iow){
         var sid  = String(iow.id);
         var acts = _all.filter(function(a){ return String(a.scheduleitem_id) === sid; });
@@ -290,7 +290,7 @@ function loadCdActivityData(actId){
     $('#cd-c4 .brow, #cd-c5 .brow').removeClass('brow-active');
     $('#cd-c4 .brow[data-aid="' + actId + '"], #cd-c5 .brow[data-aid="' + actId + '"]').addClass('brow-active');
     var el = document.getElementById('cd-c6');
-    if (el) el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">Loading…</div>';
+    if (el) el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">LoadingÃ¢â‚¬Â¦</div>';
     $.ajax({
         type: 'POST',
         url: '../projectsmain/costdashboardactivity',
@@ -394,13 +394,13 @@ function renderCdUnitCostOfResource(items, actName){
         var uSfx    = r.unit ? ' / ' + r.unit : '';
         var barHtml = '';
         if (actual === null) {
-            // No actual — plain planned bar
+            // No actual Ã¢â‚¬â€ plain planned bar
             barHtml = '<div style="width:' + plW + '%;height:100%;background:' + col + ';border-radius:0 3px 3px 0;'
                 + 'display:flex;align-items:center;padding-left:5px;overflow:hidden;">'
                 + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">&#8377;' + fmRK(planned) + uSfx + '</span>'
                 + '</div>';
         } else if (actual > planned) {
-            // Over planned — planned + red excess
+            // Over planned Ã¢â‚¬â€ planned + red excess
             var exW = ((actual - planned) / maxVal * 100).toFixed(1);
             barHtml = '<div style="width:' + plW + '%;height:100%;background:' + col + ';display:flex;align-items:center;padding-left:5px;overflow:hidden;">'
                 + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">&#8377;' + fmRK(planned) + uSfx + '</span>'
@@ -409,7 +409,7 @@ function renderCdUnitCostOfResource(items, actName){
                 + '<span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;padding-left:3px;">+&#8377;' + fmRK(actual-planned) + uSfx + '</span>'
                 + '</div>';
         } else {
-            // Under planned — actual bar + green saving
+            // Under planned Ã¢â‚¬â€ actual bar + green saving
             var acW  = (actual / maxVal * 100).toFixed(1);
             var savW = ((planned - actual) / maxVal * 100).toFixed(1);
             barHtml = '<div style="width:' + acW + '%;height:100%;background:' + col + ';display:flex;align-items:center;padding-left:5px;overflow:hidden;">'
@@ -452,7 +452,7 @@ function renderCdUnitCostOfResource(items, actName){
                 + '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Planned</td>'
                 + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">&#8377;'+fmR(r.planned)+'</td></tr>'
                 + '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual</td>'
-                + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+(r.actual !== null ? '#fff' : '#5a6e8c')+';text-align:right;white-space:nowrap;">'+(r.actual !== null ? '&#8377;'+fmR(r.actual) : '—')+'</td></tr>'
+                + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+(r.actual !== null ? '#fff' : '#5a6e8c')+';text-align:right;white-space:nowrap;">'+(r.actual !== null ? '&#8377;'+fmR(r.actual) : 'Ã¢â‚¬â€')+'</td></tr>'
                 + (diff !== null ? '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Diff</td>'
                 + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+dCol+';text-align:right;white-space:nowrap;">'+dTxt+'</td></tr>' : '')
                 + '</table>';
@@ -513,8 +513,8 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, lastQty){
     var el = document.getElementById('cd-g5');
     if (!el) return;
 
-    // Planned = SUM(rate × planned_consumption) / lastQty
-    // Actual  = SUM(actual_unit_cost × actual_consumption) / lastQty
+    // Planned = SUM(rate Ãƒâ€” planned_consumption) / lastQty
+    // Actual  = SUM(actual_unit_cost Ãƒâ€” actual_consumption) / lastQty
     var plannedCost = 0, actualCost = 0, hasActual = false;
     items.forEach(function(r){
         plannedCost += (+r.rate || 0) * (+r.planned_consumption || 0);
@@ -560,9 +560,9 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, lastQty){
         +(actualUnitCost !== null ? '<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>' : '')
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
-        +'<text x="'+cx+'" y="'+(cy-10)+'" text-anchor="middle" font-size="15" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+(actualUnitCost !== null ? '&#8377; '+fmCost(actualUnitCost) : '—')+(actUnit?' / '+actUnit:'')+'</text>'
+        +'<text x="'+cx+'" y="'+(cy-10)+'" text-anchor="middle" font-size="15" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+(actualUnitCost !== null ? '&#8377; '+fmCost(actualUnitCost) : 'Ã¢â‚¬â€')+(actUnit?' / '+actUnit:'')+'</text>'
         +'<text x="55" y="114" text-anchor="middle" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">Planned <tspan font-weight="700">&#8377; '+fmCost(plannedUnitCost)+'</tspan></text>'
-        +'<text x="155" y="114" text-anchor="middle" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">'+(actualUnitCost !== null ? '&#8377; '+fmCost(actualUnitCost) : '—')+'</tspan></text>'
+        +'<text x="155" y="114" text-anchor="middle" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">'+(actualUnitCost !== null ? '&#8377; '+fmCost(actualUnitCost) : 'Ã¢â‚¬â€')+'</tspan></text>'
         +(an?'<text x="'+cx+'" y="128" text-anchor="middle" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +'</svg>';
 
@@ -589,7 +589,7 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, lastQty){
         + 'font-size:10px;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.4px;'
         + 'padding:2px 9px;cursor:pointer;user-select:none;">&#9776; Breakdown</div>';
 
-    // Chip tooltip — shared
+    // Chip tooltip Ã¢â‚¬â€ shared
     var chipTip = document.getElementById('uc-act-tip');
     if (!chipTip){
         chipTip = document.createElement('div');
@@ -600,7 +600,7 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, lastQty){
         document.body.appendChild(chipTip);
     }
 
-    // Secondary resource tooltip — shared
+    // Secondary resource tooltip Ã¢â‚¬â€ shared
     var resTip = document.getElementById('uc-act-res-tip');
     if (!resTip){
         resTip = document.createElement('div');
@@ -633,7 +633,7 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, lastQty){
         tgHtml += '<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
         tgHtml += '<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,130,170,0.7);pointer-events:none;"></div>';
 
-        // Y-axis scale — actual amounts
+        // Y-axis scale Ã¢â‚¬â€ actual amounts
         var tsHtml = '';
         [100,75,50,25,0].forEach(function(g){
             tsHtml += '<div style="position:absolute;right:2px;bottom:calc(' + g + '% - 5px);'
@@ -646,7 +646,7 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, lastQty){
             var pct = maxAmt > 0 ? r.amount / maxAmt * 100 : 0;
             var sp  = Math.max(100 - pct, 0).toFixed(2);
             var bp  = Math.max(pct, 0.5).toFixed(2);
-            // Clean bar — no text on skin
+            // Clean bar Ã¢â‚¬â€ no text on skin
             tbHtml += '<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0 4px;">'
                 + '<div style="flex:' + sp + ' 1 0;min-height:0;"></div>'
                 + '<div style="flex:' + bp + ' 1 0;width:40%;min-height:0;background:' + r.col + ';border-radius:2px 2px 0 0;"></div>'
@@ -705,7 +705,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
     items.forEach(function(r){ unitCost += (+r.res_qty || 0) * (+r.rate || 0); });
     var estimatedCost = unitCost * estActQty;
 
-    // Estimated Cost of Work Done = Planned Unit Cost × lastQty
+    // Estimated Cost of Work Done = Planned Unit Cost Ãƒâ€” lastQty
     var estWorkDone = 0;
     if (lastQty > 0) {
         var plannedUnitCostForBar = 0;
@@ -713,7 +713,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
         estWorkDone = plannedUnitCostForBar * lastQty;
     }
 
-    // Actual Cost of Activity = Actual Unit Cost × Schedule Quantity
+    // Actual Cost of Activity = Actual Unit Cost Ãƒâ€” Schedule Quantity
     var actualWorkDone = 0, hasActual = false;
     items.forEach(function(r){
         if (r.actual_unit_cost != null && r.actual_consumption != null) {
@@ -834,7 +834,7 @@ function renderCdCostOnCompletion(items, actName, estQty){
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
         +'<text x="'+cx+'" y="'+(cy-20)+'" text-anchor="middle" font-size="18" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+fmCost(cost)+'</text>'
         +'<text x="'+cx+'" y="'+(cy-5)+'" text-anchor="middle" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Est. Cost</text>'
-        +'<text x="8" y="112" text-anchor="start" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">—</tspan></text>'
+        +'<text x="8" y="112" text-anchor="start" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">Ã¢â‚¬â€</tspan></text>'
         +'<text x="202" y="112" text-anchor="end" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">CoC <tspan font-weight="700">'+fmCost(cost)+'</tspan></text>'
         +(an?'<text x="'+cx+'" y="128" text-anchor="middle" font-size="13" fill="#111" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +'</svg>';
@@ -881,7 +881,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
 
     function fmQ(v){ return v >= 1000 ? (v/1000).toFixed(1)+'K' : (+v).toFixed(2); }
 
-    // Horizontal bars — name left, bar right
+    // Horizontal bars Ã¢â‚¬â€ name left, bar right
     var rowsHtml = '';
     resources.forEach(function(r, ri){
         var col     = _resTypeCol(r.type_name, '#90caf9');
@@ -949,7 +949,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
                 + '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Planned</td>'
                 + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">'+fmQ(r.qty)+uSfx+'</td></tr>'
                 + '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual</td>'
-                + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+(r.actual !== null ? '#fff' : '#5a6e8c')+';text-align:right;white-space:nowrap;">'+(r.actual !== null ? fmQ(r.actual)+uSfx : '—')+'</td></tr>'
+                + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+(r.actual !== null ? '#fff' : '#5a6e8c')+';text-align:right;white-space:nowrap;">'+(r.actual !== null ? fmQ(r.actual)+uSfx : 'Ã¢â‚¬â€')+'</td></tr>'
                 + (diff !== null ? '<tr><td style="padding:3px 14px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Diff</td>'
                 + '<td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:'+dCol+';text-align:right;white-space:nowrap;">'+dTxt+'</td></tr>' : '')
                 + '</table>';
@@ -967,7 +967,7 @@ function renderCdResourceConsumption(items, actName, lastQty, actUnit){
     });
 }
 
-// ── Current Project Cost panel (#cd-g1) ──────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Current Project Cost panel (#cd-g1) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function renderCdCurrentProjectCost(activities){
     var el = document.getElementById('cd-g1');
     if (!el) return;
@@ -1015,21 +1015,21 @@ function renderCdCurrentProjectCost(activities){
         + '</div>';
 }
 
-// ── Data fetch ────────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Data fetch Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function loadAll(){
     $.ajax({
         type:'POST', url:'../projectsmain/performancedashboard', dataType:'json',
         success: function(d){
             if (!d || d.error === undefined) return;
             var name = d.project_name || 'Project';
-            $('#pd-title').text(name + ' — Performance Dashboard');
+            $('#pd-title').text(name + ' Ã¢â‚¬â€ Performance Dashboard');
             if (!_cdProjectName) _cdProjectName = name;
 
             _groups    = d.iow_groups  || [];
             _iow_items = d.iow_items   || [];
             _all       = d.activities  || [];
 
-            // IOW Groups in pd-c1 — clicking a group loads its IOW items into pd-c3
+            // IOW Groups in pd-c1 Ã¢â‚¬â€ clicking a group loads its IOW items into pd-c3
             renderBars('pd-c1', _groups.map(function(r){
                 return {name:r.name, scheduled:+r.scheduled||0, delay:+r.delay||0, id:r.id,
                         critical:groupIsCritical(r.id),
@@ -1048,7 +1048,7 @@ function loadAll(){
                 (d.project_bar&&d.project_bar.a_end_date)||''
             );
 
-            // Default: first group → its IOW items → first IOW's activities
+            // Default: first group Ã¢â€ â€™ its IOW items Ã¢â€ â€™ first IOW's activities
             if (_groups.length) filterByGroup(_groups[0].id, d.default_iow_id);
 
             if (d.kpi) doKpi(d.kpi);
@@ -1065,7 +1065,7 @@ function loadKpi(actid){
     });
 }
 
-// ── Group click → show IOW items for that group in pd-c3 ──────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Group click Ã¢â€ â€™ show IOW items for that group in pd-c3 Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function filterByGroup(groupId, preselectIowId){
     var gid = String(groupId);
     var filtered = _iow_items.filter(function(i){ return String(i.group_id) === gid; });
@@ -1084,7 +1084,7 @@ function filterByGroup(groupId, preselectIowId){
     if (firstId) filterByIow(firstId);
 }
 
-// ── IOW click → show ongoing / upcoming activities ────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ IOW click Ã¢â€ â€™ show ongoing / upcoming activities Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function filterByIow(iowId){
     var sid = String(iowId);
     $('#pd-c3 .brow').removeClass('brow-active');
@@ -1101,7 +1101,7 @@ function filterByIow(iowId){
     if (filtered.length) loadKpi(filtered[0].id);
 }
 
-// ── Criticality propagation: activity → IOW → IOW group ──────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Criticality propagation: activity Ã¢â€ â€™ IOW Ã¢â€ â€™ IOW group Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function isCriticalActivity(a){
     return a.critical_status === 'Yes' || a.critical_status === 1 || a.critical_status === '1';
 }
@@ -1174,11 +1174,11 @@ function toBarItems(acts, isUpcoming){
 function toCostBarItems(acts){
     return acts.map(function(r){
         var est      = +r.activity_cost    || 0;
-        var unitCost = +r.unit_cost        || 0;  // SUM(res_qty × rate) per schedule unit
+        var unitCost = +r.unit_cost        || 0;  // SUM(res_qty Ãƒâ€” rate) per schedule unit
         var awd      = +r.actual_work_done || +r.actual_cost || 0;
         var cumQty   = +r.cumulated_qty    || 0;
         var schedQty = +r.quantity         || 1;
-        var ewd      = unitCost * cumQty;                             // planned unit cost × lastQty
+        var ewd      = unitCost * cumQty;                             // planned unit cost Ãƒâ€” lastQty
         var acoa     = (awd > 0 && cumQty > 0) ? (awd / cumQty) * schedQty : 0;
         return {
             name:               r.name,
@@ -1228,201 +1228,6 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
         if (onRowClick) onRowClick($(this).data('aid'));
     });
 
-    // Activity tooltip
-    var actTipEl = document.getElementById('act-cost-tip');
-    if (!actTipEl){
-        actTipEl = document.createElement('div');
-        actTipEl.id = 'act-cost-tip';
-        actTipEl.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:10px 14px;min-width:380px;';
-        document.body.appendChild(actTipEl);
-    }
-    el.querySelectorAll('.brow[data-aid]').forEach(function(row){
-        var actId = $(row).data('aid');
-        var blbl  = row.querySelector('.blbl');
-        var actName = blbl ? (blbl.title || blbl.textContent || '') : '';
-        row.addEventListener('mouseenter', function(){
-            function fmFull(v){ return '&#8377;' + Math.round(+v).toLocaleString(); }
-            function buildTip(est, acoa, ewd, awd){
-                actTipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:8px;">'+sh(actName,36)+'</div>'
-                    + '<table style="width:100%;border-collapse:collapse;">'
-                    + '<thead><tr>'
-                    + '<th style="padding:3px 10px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:left;">Metric</th>'
-                    + '<th style="padding:3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Value</th>'
-                    + '</tr></thead>'
-                    + '<tbody style="border-top:1px solid rgba(100,130,170,0.3);">'
-                    + '<tr><td style="padding:4px 10px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Estimated Cost</td><td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(est)+'</td></tr>'
-                    + '<tr><td style="padding:4px 10px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost</td><td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(acoa)+'</td></tr>'
-                    + '<tr><td style="padding:4px 10px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Est. Cost of Work Done</td><td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(ewd)+'</td></tr>'
-                    + '<tr><td style="padding:4px 10px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost of Work Done</td><td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(awd)+'</td></tr>'
-                    + '</tbody></table>';
-            }
-            var rect = row.getBoundingClientRect();
-            actTipEl.style.left = Math.max(4, Math.min(rect.left, window.innerWidth - 400)) + 'px';
-            actTipEl.style.top  = (rect.top - 8) + 'px';
-            actTipEl.style.transform = 'translateY(-100%)';
-            actTipEl.style.display = 'block';
-            if (_actExactCost[actId]) {
-                var c = _actExactCost[actId];
-                buildTip(c.est, c.acoa, c.ewd, c.awd);
-            } else {
-                actTipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:6px;">'+sh(actName,36)+'</div>'
-                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;text-align:center;padding:8px;">Loading…</div>';
-                $.ajax({ type:'POST', url:'../projectsmain/costdashboardactivity', data:{actid:actId}, dataType:'json',
-                    success: function(d){
-                        var items2=d.items||[], lastQty2=+d.last_report_qty||0, estActQty2=+d.activity_qty||0, schedQty2=+d.schedule_qty||0;
-                        var uc2=0; items2.forEach(function(r){ uc2+=(+r.res_qty||0)*(+r.rate||0); });
-                        var est2=uc2*estActQty2, ewd2=0, awd2=0, hasA=false;
-                        if(lastQty2>0){ items2.forEach(function(r){ ewd2+=(+r.rate||0)*(+r.planned_consumption||0); }); ewd2*=lastQty2; }
-                        items2.forEach(function(r){ if(r.actual_unit_cost!=null&&r.actual_consumption!=null){ awd2+=(+r.actual_unit_cost)*(+r.actual_consumption); hasA=true; } });
-                        var acoa2=(hasA&&lastQty2>0)?(awd2/lastQty2)*schedQty2:0;
-                        _actExactCost[actId]={est:est2,acoa:acoa2,ewd:ewd2,awd:hasA?awd2:0};
-                        if(actTipEl.style.display==='block') buildTip(est2,acoa2,ewd2,hasA?awd2:0);
-                    }
-                });
-            }
-        });
-        row.addEventListener('mouseleave', function(){ actTipEl.style.display='none'; });
-    });
-
-    // Group tooltip (shows IOW breakdown)
-    if (isGroupTip && getTooltipItems) {
-        var grpTip = document.getElementById('grp-cost-tip');
-        if (!grpTip){
-            grpTip = document.createElement('div');
-            grpTip.id = 'grp-cost-tip';
-            grpTip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-                + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:10px 14px;min-width:560px;';
-            document.body.appendChild(grpTip);
-        }
-        el.querySelectorAll('.brow[data-aid]').forEach(function(row){
-            var grpItem = items.filter(function(r){ return String(r.id)===String($(row).data('aid')); })[0];
-            if (!grpItem) return;
-            row.addEventListener('mouseenter', function(){
-                function fmFull(v){ return '&#8377;' + Math.round(+v).toLocaleString(); }
-                var iows = getTooltipItems(grpItem);
-                var tipW = 560;
-                var rect = row.getBoundingClientRect();
-                grpTip.style.width = tipW + 'px';
-                grpTip.style.left = Math.max(4, Math.min(rect.left, window.innerWidth - tipW - 4)) + 'px';
-                grpTip.style.top  = (rect.top - 8) + 'px';
-                grpTip.style.transform = 'translateY(-100%)';
-                grpTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:6px;">'+sh(grpItem.name,30)+'</div>'
-                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:10px;color:#8a9bb0;text-align:center;padding:6px;">Loading…</div>';
-                grpTip.style.display = 'block';
-                // Fetch exact data for all activities across all IOWs
-                var allActs = [];
-                iows.forEach(function(iow){
-                    _all.filter(function(a){ return String(a.scheduleitem_id)===String(iow.id); }).forEach(function(a){ allActs.push({act:a, iow:iow}); });
-                });
-                var requests = allActs.map(function(entry){
-                    return $.ajax({ type:'POST', url:'../projectsmain/costdashboardactivity', data:{actid: entry.act.id}, dataType:'json' });
-                });
-                $.when.apply($, requests).then(function(){
-                    var results = requests.length===1 ? [arguments[0]] : Array.prototype.slice.call(arguments).map(function(r){ return r[0]; });
-                    var iowMap = {};
-                    allActs.forEach(function(entry, i){
-                        var d = results[i] || {};
-                        var it=d.items||[], aq=+d.activity_qty||0, lq=+d.last_report_qty||0, sq=+d.schedule_qty||0, uc=0;
-                        it.forEach(function(r){ uc+=(+r.res_qty||0)*(+r.rate||0); });
-                        var est2=uc*aq, awd2=0, ewd2=0;
-                        it.forEach(function(r){ if(r.actual_unit_cost!=null&&r.actual_consumption!=null) awd2+=(+r.actual_unit_cost)*(+r.actual_consumption); });
-                        if(lq>0){ it.forEach(function(r){ ewd2+=(+r.rate||0)*(+r.planned_consumption||0); }); ewd2*=lq; }
-                        var acoa2=(awd2>0&&lq>0)?(awd2/lq)*sq:0;
-                        var sid = String(entry.iow.id);
-                        if(!iowMap[sid]) iowMap[sid]={name:entry.iow.name, est:0, acoa:0, ewd:0, awd:0};
-                        iowMap[sid].est  += est2;
-                        iowMap[sid].acoa += acoa2;
-                        iowMap[sid].ewd  += ewd2;
-                        iowMap[sid].awd  += awd2;
-                    });
-                    var rows='';
-                    iows.forEach(function(iow){
-                        var d = iowMap[String(iow.id)] || {est:0, acoa:0, ewd:0, awd:0};
-                        rows += '<div style="padding:6px 0;border-bottom:1px solid rgba(100,130,170,0.2);">'
-                            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#fff;margin-bottom:4px;">'+sh(iow.name,30)+'</div>'
-                            + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Estimated Cost</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(d.est)+'</span></div>'
-                            + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(d.acoa)+'</span></div>'
-                            + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Est. Cost of Work Done</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(d.ewd)+'</span></div>'
-                            + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost of Work Done</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(d.awd)+'</span></div>'
-                            + '</div>';
-                    });
-                    if(grpTip.style.display==='block')
-                        grpTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:8px;">'+sh(grpItem.name,30)+'</div>'
-                            + '<div style="max-height:400px;overflow-y:auto;">'+rows+'</div>';
-                });
-            });
-            row.addEventListener('mouseleave', function(){ grpTip.style.display='none'; });
-        });
-    }
-
-    // IOW Tooltip (skip for group bars which have their own tooltip)
-    if (!getTooltipItems || isGroupTip) return;
-    var tipEl = document.getElementById('iow-cost-tip');
-    if (!tipEl){
-        tipEl = document.createElement('div');
-        tipEl.id = 'iow-cost-tip';
-        tipEl.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:14px 18px;min-width:320px;';
-        document.body.appendChild(tipEl);
-    }
-    el.querySelectorAll('.brow[data-aid]').forEach(function(row){
-        var iowItem = items.filter(function(r){ return String(r.id) === String($(row).data('aid')); })[0];
-        if (!iowItem) return;
-        row.addEventListener('mouseenter', function(){
-            var acts = getTooltipItems(iowItem);
-            if (!acts || !acts.length){ tipEl.style.display='none'; return; }
-            function fmFull(v){ return '&#8377;' + Math.round(+v).toLocaleString(); }
-            var tipW = 560;
-            tipEl.style.width = tipW+'px';
-            var rect = row.getBoundingClientRect();
-            var left = Math.max(4, Math.min(rect.left, window.innerWidth - tipW - 4));
-            tipEl.style.left = left+'px';
-            tipEl.style.top  = (rect.top - 8)+'px';
-            tipEl.style.transform = 'translateY(-100%)';
-            tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:6px;">'+sh(iowItem.name,30)+'</div>'
-                + '<div style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;text-align:center;padding:8px;">Loading…</div>';
-            tipEl.style.display = 'block';
-            // Fetch exact data for each activity
-            var requests = acts.map(function(a){
-                return $.ajax({ type:'POST', url:'../projectsmain/costdashboardactivity', data:{actid: a.id}, dataType:'json' });
-            });
-            $.when.apply($, requests).then(function(){
-                var results = requests.length === 1 ? [arguments[0]] : Array.prototype.slice.call(arguments).map(function(r){ return r[0]; });
-                var rows = '';
-                acts.forEach(function(a, i){
-                    var d = results[i] || {};
-                    var items = d.items || [];
-                    var est2 = 0;
-                    items.forEach(function(r){ est2 += (+r.res_qty||0)*(+r.rate||0); });
-                    est2 *= (+d.activity_qty||0);
-                    var awd2 = 0;
-                    items.forEach(function(r){
-                        if (r.actual_unit_cost != null && r.actual_consumption != null)
-                            awd2 += (+r.actual_unit_cost)*(+r.actual_consumption);
-                    });
-                    var lastQty2  = +d.last_report_qty || 0;
-                    var schedQty2 = +d.schedule_qty   || 0;
-                    var acoa2 = (lastQty2 > 0) ? (awd2 / lastQty2) * schedQty2 : 0;
-                    var ewd2  = 0;
-                    if (lastQty2 > 0) {
-                        items.forEach(function(r){ ewd2 += (+r.rate||0) * (+r.planned_consumption||0); });
-                        ewd2 *= lastQty2;
-                    }
-                    rows += '<div style="padding:6px 0;border-bottom:1px solid rgba(100,130,170,0.2);">'
-                        + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#fff;margin-bottom:4px;">'+sh(a.name,30)+'</div>'
-                        + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Estimated Cost</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(est2)+'</span></div>'
-                        + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(acoa2)+'</span></div>'
-                        + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Est. Cost of Work Done</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(ewd2)+'</span></div>'
-                        + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost of Work Done</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(awd2)+'</span></div>'
-                        + '</div>';
-                });
-                tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:8px;">'+sh(iowItem.name,30)+'</div>'
-                    + '<div style="max-height:360px;overflow-y:auto;">'+rows+'</div>';
-            });
-        });
-        row.addEventListener('mouseleave', function(){ tipEl.style.display='none'; });
-    });
 }
 
 function renderCostBars(containerId, items, onRowClick){
@@ -1491,61 +1296,9 @@ function renderActivityCostBars(containerId, items, onRowClick){
         if (onRowClick) onRowClick($(this).data('aid'));
     });
 
-    // Activity cost tooltip
-    var actTip = document.getElementById('act-cost-tip2');
-    if (!actTip){
-        actTip = document.createElement('div');
-        actTip.id = 'act-cost-tip2';
-        actTip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:14px 18px;min-width:300px;';
-        document.body.appendChild(actTip);
-    }
-    el.querySelectorAll('.brow[data-aid]').forEach(function(row){
-        var actId   = $(row).data('aid');
-        var blbl    = row.querySelector('.blbl');
-        var actName = blbl ? (blbl.title || blbl.textContent || '') : '';
-        row.addEventListener('mouseenter', function(){
-            function fmFull(v){ return '&#8377;' + Math.round(+v).toLocaleString(); }
-            function buildActTip(est, acoa, ewd, awd){
-                actTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#fff;font-weight:700;margin-bottom:6px;">'+sh(actName,36)+'</div>'
-                    + '<table style="width:100%;border-collapse:collapse;">'
-                    + '<tbody style="border-top:1px solid rgba(100,130,170,0.3);">'
-                    + '<tr><td style="padding:5px 12px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#fff;">Estimated Cost</td><td style="padding:5px 0;font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;text-align:right;">'+fmFull(est)+'</td></tr>'
-                    + '<tr><td style="padding:5px 12px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#fff;">Actual Cost</td><td style="padding:5px 0;font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;text-align:right;">'+fmFull(acoa)+'</td></tr>'
-                    + '<tr><td style="padding:5px 12px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#fff;">Est. Cost of Work Done</td><td style="padding:5px 0;font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;text-align:right;">'+fmFull(ewd)+'</td></tr>'
-                    + '<tr><td style="padding:5px 12px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#fff;">Actual Cost of Work Done</td><td style="padding:5px 0;font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;text-align:right;">'+fmFull(awd)+'</td></tr>'
-                    + '</tbody></table>';
-            }
-            var rect = row.getBoundingClientRect();
-            actTip.style.left = Math.max(4, Math.min(rect.left, window.innerWidth - 310)) + 'px';
-            actTip.style.top  = (rect.top - 8) + 'px';
-            actTip.style.transform = 'translateY(-100%)';
-            actTip.style.display = 'block';
-            if (_actExactCost[actId]) {
-                var c = _actExactCost[actId];
-                buildActTip(c.est, c.acoa, c.ewd, c.awd);
-            } else {
-                actTip.innerHTML = '<div style="color:#fff;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;margin-bottom:4px;">'+sh(actName,36)+'</div>'
-                    + '<div style="color:#8a9bb0;font-size:11px;text-align:center;padding:6px;">Loading…</div>';
-                $.ajax({ type:'POST', url:'../projectsmain/costdashboardactivity', data:{actid:actId}, dataType:'json',
-                    success: function(d){
-                        var it=d.items||[], lq=+d.last_report_qty||0, aq=+d.activity_qty||0, sq=+d.schedule_qty||0;
-                        var uc=0; it.forEach(function(r){ uc+=(+r.res_qty||0)*(+r.rate||0); });
-                        var est2=uc*aq, ewd2=0, awd2=0, hasA=false;
-                        if(lq>0){ it.forEach(function(r){ ewd2+=(+r.rate||0)*(+r.planned_consumption||0); }); ewd2*=lq; }
-                        it.forEach(function(r){ if(r.actual_unit_cost!=null&&r.actual_consumption!=null){ awd2+=(+r.actual_unit_cost)*(+r.actual_consumption); hasA=true; } });
-                        var acoa2=(hasA&&lq>0)?(awd2/lq)*sq:0;
-                        _actExactCost[actId]={est:est2,acoa:acoa2,ewd:ewd2,awd:hasA?awd2:0};
-                        if(actTip.style.display==='block') buildActTip(est2,acoa2,ewd2,hasA?awd2:0);
-                    }
-                });
-            }
-        });
-        row.addEventListener('mouseleave', function(){ actTip.style.display='none'; });
-    });
 }
 
-// ── Resource Cost panel (#cd-g3) ─────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Resource Cost panel (#cd-g3) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function renderCdResourceCost(items, actName){
     var el = document.getElementById('cd-rcost');
     if (!el) return;
@@ -1558,7 +1311,7 @@ function renderCdResourceCost(items, actName){
         return;
     }
 
-    // Group by type: planned = SUM(rate × planned_consumption), actual = SUM(actual_unit_cost × actual_consumption)
+    // Group by type: planned = SUM(rate Ãƒâ€” planned_consumption), actual = SUM(actual_unit_cost Ãƒâ€” actual_consumption)
     var typeMap = {}, typeOrder = [];
     items.forEach(function(r){
         var tid = r.type_id != null ? String(r.type_id) : '0';
@@ -1693,7 +1446,7 @@ function renderCdResourceCost(items, actName){
                 tsHtml += '<div style="position:absolute;right:2px;bottom:calc('+g+'% - 5px);font-family:\'Nunito\',sans-serif;font-size:8px;color:#8a9bb0;line-height:1;white-space:nowrap;">'+fmR(tipMax*g/100)+'</div>';
             });
 
-            // Vertical bar per resource — distinct colours
+            // Vertical bar per resource Ã¢â‚¬â€ distinct colours
             var tipPalMap = {
                 'materials':       ['#42A5F5','#26C6DA','#66BB6A','#AB47BC','#FFA726','#7E57C2','#26A69A','#5C6BC0','#9CCC65','#78909C'],
                 'sub contractors': ['#546E7A','#607D8B','#455A64','#78909C','#37474F','#546E7A','#607D8B','#455A64','#78909C','#37474F'],
@@ -1735,7 +1488,7 @@ function renderCdResourceCost(items, actName){
 
                 var fmFull = function(v){ return '&#8377;'+(+v).toFixed(2); };
                 var valLine = 'Planned: '+fmFull(planned)
-                    + ' &nbsp;&nbsp;Actual: '+(actual !== null ? fmFull(actual) : '—')
+                    + ' &nbsp;&nbsp;Actual: '+(actual !== null ? fmFull(actual) : 'Ã¢â‚¬â€')
                     + (diff !== null ? ' &nbsp;&nbsp;Difference: '+(diff>0?'+':'')+fmFull(diff) : '');
                 var dCol = diff === null ? '' : (diff > 0 ? '#ef9a9a' : '#a5d6a7');
                 lblHtml += '<div style="padding:4px 2px 6px;border-bottom:1px solid rgba(100,130,170,0.2);margin-bottom:2px;">'
@@ -1744,7 +1497,7 @@ function renderCdResourceCost(items, actName){
                     +   '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.name+'">'+sh(r.name,18)+'</span>'
                     + '</div>'
                     + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#cfd8e3;padding-left:13px;">Planned: '+fmFull(planned)+'</div>'
-                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;padding-left:13px;">Actual: '+(actual !== null ? fmFull(actual) : '—')+'</div>'
+                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;color:#fff;padding-left:13px;">Actual: '+(actual !== null ? fmFull(actual) : 'Ã¢â‚¬â€')+'</div>'
                     + (diff !== null ? '<div style="font-family:\'Nunito\',sans-serif;font-size:9px;font-weight:700;color:'+dCol+';padding-left:13px;">Diff: '+(diff>0?'+':'')+fmFull(diff)+'</div>' : '')
                     + '</div>';
             });
@@ -1774,11 +1527,11 @@ function renderCdResourceCost(items, actName){
     });
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function sh(str,n){ str=str||''; return str.length>n ? str.substring(0,n-1)+'…' : str; }
+// Ã¢â€â‚¬Ã¢â€â‚¬ Helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+function sh(str,n){ str=str||''; return str.length>n ? str.substring(0,n-1)+'Ã¢â‚¬Â¦' : str; }
 function fm(v){ v=+v||0; return Number.isInteger(v)?v:v.toFixed(1); }
 
-// ── Unit shortener — abbreviate lengthy unit names for compact panels ─────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Unit shortener Ã¢â‚¬â€ abbreviate lengthy unit names for compact panels Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 var UNIT_ABBR = {
     'numbers':'Nos','number':'Nos','nos':'Nos','each':'Ea',
     'cubic meter':'Cum','cubic meters':'Cum','cubic metre':'Cum','cubic metres':'Cum',
@@ -1801,7 +1554,7 @@ function shu(u){
     if (!u) return '';
     var key = u.toLowerCase();
     if (UNIT_ABBR[key]) return UNIT_ABBR[key];
-    // "No of Panels" / "Number of Panels" → "Panels"
+    // "No of Panels" / "Number of Panels" Ã¢â€ â€™ "Panels"
     var stripped = u.replace(/^(?:no\.?s?|number)\s+of\s+/i, '');
     if (stripped !== u) return shu(stripped);
     return u.length > 8 ? sh(u, 8) : u;
@@ -1821,7 +1574,7 @@ function niceAxis(maxVal){
     return ticks;
 }
 
-// ── Project Duration bar (pd-c2) ──────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Project Duration bar (pd-c2) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function fmDate(s){
     if (!s) return '';
     var d=new Date(s);
@@ -1858,14 +1611,14 @@ function renderProjectBar(el, budgeted, actual, label, bEndDate, aEndDate){
     // Dates + delay row
     var delay = actual>0 ? actual-budgeted : 0;
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c">';
-    html+='<span>Budget end: <b style="color:#1a2540">'+(fmDate(bEndDate)||'—')+'</b>';
+    html+='<span>Budget end: <b style="color:#1a2540">'+(fmDate(bEndDate)||'Ã¢â‚¬â€')+'</b>';
     if (budgeted) html+=' &nbsp;<b style="color:#1a2540">'+budgeted+' d</b>';
     html+='</span>';
     if (actual>0){
         html+='<span>';
         if (delay>0) html+='<b style="color:#e53935">+'+delay+' d delayed</b> &nbsp;';
         else if (delay<0) html+='<b style="color:#27ae60">'+Math.abs(delay)+' d ahead</b> &nbsp;';
-        html+='Projected: <b style="color:#1a2540">'+(fmDate(aEndDate)||'—')+'</b>';
+        html+='Projected: <b style="color:#1a2540">'+(fmDate(aEndDate)||'Ã¢â‚¬â€')+'</b>';
         html+='</span>';
     }
     html+='</div>';
@@ -1878,8 +1631,8 @@ function renderProjectBar(el, budgeted, actual, label, bEndDate, aEndDate){
     el.innerHTML=html;
 }
 
-// ── CSS horizontal bar chart ──────────────────────────────────────────────────
-// onRowClick: optional callback(id) — defaults to loadKpi
+// Ã¢â€â‚¬Ã¢â€â‚¬ CSS horizontal bar chart Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// onRowClick: optional callback(id) Ã¢â‚¬â€ defaults to loadKpi
 function renderBars(containerId, items, onRowClick){
     var el = document.getElementById(containerId);
     if (!el) return;
@@ -1907,7 +1660,7 @@ function renderBars(containerId, items, onRowClick){
         if (r.start_date)    tipLines.push('Planned Start:  ' + fmtDate(r.start_date));
         if (r.end_date)      tipLines.push('Planned End:    ' + fmtDate(r.end_date));
         if (r.proj_end_date) tipLines.push('Projected End:  ' + fmtDate(r.proj_end_date));
-        else                 tipLines.push('Actual End:     ' + (r.actual_end_date ? fmtDate(r.actual_end_date) : '—'));
+        else                 tipLines.push('Actual End:     ' + (r.actual_end_date ? fmtDate(r.actual_end_date) : 'Ã¢â‚¬â€'));
         if (r.duration_days) tipLines.push('Planned Dur:    ' + r.duration_days + ' days');
         if (r.startDelayed)  tipLines.push('Start Delay:    ' + r.startDelayDays + ' days');
         else if (dl > 0)     tipLines.push('Delay:          ' + dl + ' days');
@@ -1935,7 +1688,7 @@ function renderBars(containerId, items, onRowClick){
     });
 }
 
-// ── Work Done — custom semicircular gauge with Start/Complete/Achieved ────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Work Done Ã¢â‚¬â€ custom semicircular gauge with Start/Complete/Achieved Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function doWorkDone(k){
     var el = document.getElementById('pd-g1');
     if (!el) return;
@@ -1985,7 +1738,7 @@ function doTargetProduction(k){
     var u   = shu(k.unit);
     var an  = sh(k.activity_name || '', 38);
 
-    // Target to date = Elapsed days × (Schedule Qty / B. Duration)
+    // Target to date = Elapsed days Ãƒâ€” (Schedule Qty / B. Duration)
     var asd = k.act_start_date     || '';
     var lrd = k.last_reported_date || '';
     var elapsedDays  = (asd && lrd) ? Math.max(0, (new Date(lrd) - new Date(asd)) / 86400000) : 0;
@@ -2025,7 +1778,7 @@ function doTargetProduction(k){
     el.innerHTML = svg;
 }
 
-// ── Productivity gauge ────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Productivity gauge Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function doProductivity(k) {
     var el = document.getElementById('pd-g3');
     if (!el) return;
@@ -2072,7 +1825,7 @@ function doProductivity(k) {
     chip.addEventListener('mouseleave', function() { pdHideTipSoon(); });
 }
 
-// ── Tasks tooltip helpers ─────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Tasks tooltip helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 var _pdTipTimer = null;
 function pdGetTip() {
     var tip = document.getElementById('pd-tasks-tip');
@@ -2130,7 +1883,7 @@ function pdShowTasksTip(items, anchor, mode) {
             +   sh(r.name || '', 35)
             + '</td>'
             + '<td style="text-align:right;font-weight:700;color:#e8f0fc;white-space:nowrap;">' + fmtNum(tgt) + u + '</td>'
-            + '<td style="text-align:right;font-weight:700;color:' + actCol + ';white-space:nowrap;">' + (act > 0 ? fmtNum(act) + u : '—') + '</td>'
+            + '<td style="text-align:right;font-weight:700;color:' + actCol + ';white-space:nowrap;">' + (act > 0 ? fmtNum(act) + u : 'Ã¢â‚¬â€') + '</td>'
             + '</tr>';
     });
     if (!items.length) {
@@ -2163,7 +1916,7 @@ function pdHideTipSoon() {
     }, 150);
 }
 
-// ── Cycle Time gauge ──────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Cycle Time gauge Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function doCycleTime(k) {
     var el = document.getElementById('pd-g4');
     if (!el) return;
@@ -2209,7 +1962,7 @@ function doCycleTime(k) {
     chip.addEventListener('mouseleave', function() { pdHideTipSoon(); });
 }
 
-// ── Capacity Utilisation gauge ────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Capacity Utilisation gauge Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function doCapacity(k) {
     var el = document.getElementById('pd-g5');
     if (!el) return;
@@ -2247,7 +2000,7 @@ function doCapacity(k) {
     el.innerHTML = svg;
 }
 
-// ── Activity Duration bar (pd-g6) ─────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Activity Duration bar (pd-g6) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function doActivityDuration(k) {
     var el = document.getElementById('pd-g6');
     if (!el) return;
@@ -2311,7 +2064,7 @@ function doActivityDuration(k) {
         + '</div>';
 }
 
-// ── KPI render ────────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ KPI render Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function doKpi(k){
     var u = k.unit||'', an = sh(k.activity_name||'',38);
 
@@ -2325,7 +2078,7 @@ function doKpi(k){
     doRes(k.tasks);
 }
 
-// ── SVG Needle Gauge ──────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ SVG Needle Gauge Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function gauge(gwId, val, maxVal, trackStyle, targetFrac, lbl1, v1, lbl2, v2, actName){
     var el = document.getElementById(gwId);
     if (!el) return;
@@ -2389,7 +2142,7 @@ function gauge(gwId, val, maxVal, trackStyle, targetFrac, lbl1, v1, lbl2, v2, ac
     el.innerHTML = svg;
 }
 
-// ── Resource Capacity — task quantities ───────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Resource Capacity Ã¢â‚¬â€ task quantities Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function doTaskQty(items){
     var el=document.getElementById('pd-c6'); if(!el) return;
     var cols=['#d4845a','#f0c419','#8fa3bc','#7c5cbf','#3461b8','#27afc4','#ec407a','#26a69a'];
@@ -2421,7 +2174,7 @@ function doTaskQty(items){
         +'<div class="resfoot">Tasks</div>';
 }
 
-// ── Cause of Delay ────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Cause of Delay Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function doCod(items){
     var cv=document.getElementById('pd-c6'); if(!cv) return;
     if (_ch['pd-c6']) { _ch['pd-c6'].destroy(); delete _ch['pd-c6']; }
@@ -2445,7 +2198,7 @@ function doCod(items){
     });
 }
 
-// ── Task Productivity ─────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Task Productivity Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function doRes(items){
     var el=document.getElementById('pd-c7'); if(!el) return;
     var cols=['#d4845a','#f0c419','#8fa3bc','#7c5cbf','#3461b8','#27afc4','#ec407a','#26a69a'];
