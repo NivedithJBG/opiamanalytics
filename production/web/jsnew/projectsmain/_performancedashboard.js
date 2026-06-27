@@ -1413,6 +1413,59 @@ function renderActivityCostBars(containerId, items, onRowClick){
     $(el).find('.brow[data-aid]').on('click', function(){
         if (onRowClick) onRowClick($(this).data('aid'));
     });
+
+    // Activity cost tooltip
+    var actTip = document.getElementById('act-cost-tip2');
+    if (!actTip){
+        actTip = document.createElement('div');
+        actTip.id = 'act-cost-tip2';
+        actTip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
+            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:10px 14px;min-width:300px;';
+        document.body.appendChild(actTip);
+    }
+    el.querySelectorAll('.brow[data-aid]').forEach(function(row){
+        var actId   = $(row).data('aid');
+        var blbl    = row.querySelector('.blbl');
+        var actName = blbl ? (blbl.title || blbl.textContent || '') : '';
+        row.addEventListener('mouseenter', function(){
+            function fmFull(v){ return '&#8377;' + Math.round(+v).toLocaleString(); }
+            function buildActTip(est, acoa, ewd, awd){
+                actTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#fff;font-weight:700;margin-bottom:6px;">'+sh(actName,36)+'</div>'
+                    + '<table style="width:100%;border-collapse:collapse;">'
+                    + '<tbody style="border-top:1px solid rgba(100,130,170,0.3);">'
+                    + '<tr><td style="padding:3px 12px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Estimated Cost</td><td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(est)+'</td></tr>'
+                    + '<tr><td style="padding:3px 12px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost</td><td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(acoa)+'</td></tr>'
+                    + '<tr><td style="padding:3px 12px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Est. Cost of Work Done</td><td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(ewd)+'</td></tr>'
+                    + '<tr><td style="padding:3px 12px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost of Work Done</td><td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(awd)+'</td></tr>'
+                    + '</tbody></table>';
+            }
+            var rect = row.getBoundingClientRect();
+            actTip.style.left = Math.max(4, Math.min(rect.left, window.innerWidth - 310)) + 'px';
+            actTip.style.top  = (rect.top - 8) + 'px';
+            actTip.style.transform = 'translateY(-100%)';
+            actTip.style.display = 'block';
+            if (_actExactCost[actId]) {
+                var c = _actExactCost[actId];
+                buildActTip(c.est, c.acoa, c.ewd, c.awd);
+            } else {
+                actTip.innerHTML = '<div style="color:#fff;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;margin-bottom:4px;">'+sh(actName,36)+'</div>'
+                    + '<div style="color:#8a9bb0;font-size:11px;text-align:center;padding:6px;">Loading…</div>';
+                $.ajax({ type:'POST', url:'../projectsmain/costdashboardactivity', data:{actid:actId}, dataType:'json',
+                    success: function(d){
+                        var it=d.items||[], lq=+d.last_report_qty||0, aq=+d.activity_qty||0, sq=+d.schedule_qty||0;
+                        var uc=0; it.forEach(function(r){ uc+=(+r.res_qty||0)*(+r.rate||0); });
+                        var est2=uc*aq, ewd2=0, awd2=0, hasA=false;
+                        if(lq>0){ it.forEach(function(r){ ewd2+=(+r.rate||0)*(+r.planned_consumption||0); }); ewd2*=lq; }
+                        it.forEach(function(r){ if(r.actual_unit_cost!=null&&r.actual_consumption!=null){ awd2+=(+r.actual_unit_cost)*(+r.actual_consumption); hasA=true; } });
+                        var acoa2=(hasA&&lq>0)?(awd2/lq)*sq:0;
+                        _actExactCost[actId]={est:est2,acoa:acoa2,ewd:ewd2,awd:hasA?awd2:0};
+                        if(actTip.style.display==='block') buildActTip(est2,acoa2,ewd2,hasA?awd2:0);
+                    }
+                });
+            }
+        });
+        row.addEventListener('mouseleave', function(){ actTip.style.display='none'; });
+    });
 }
 
 // ── Resource Cost panel (#cd-g3) ─────────────────────────────────────────────
