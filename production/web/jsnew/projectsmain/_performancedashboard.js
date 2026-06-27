@@ -7,6 +7,7 @@ var _loaded = false;
 var _groups    = [];   // iow_groups rows
 var _iow_items = [];   // wbsscheduleitems rows with group_id
 var _all       = [];   // all scheduleactivities
+var _actExactCost = {}; // cache: actId => {est, acoa, ewd, awd} from exact per-resource data
 
 // ── Date formatter ────────────────────────────────────────────────────────────
 var _months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -230,6 +231,44 @@ function loadCdActivityData(actId){
             renderCdCostOfActivity(d.items || [], d.activity_name || '', +d.last_report_qty || 0, +d.activity_qty || 0, +d.schedule_qty || 0, d.unit || '');
             renderCdCostOnCompletion(d.items || [], d.activity_name || '', +d.activity_qty || 0);
             renderCdValueOfWorkDone(d);
+
+            // Cache exact cost values for this activity and update its bar in cd-c4
+            (function(){
+                var items   = d.items || [];
+                var lastQty = +d.last_report_qty || 0;
+                var estActQty = +d.activity_qty  || 0;
+                var schedQty  = +d.schedule_qty  || 0;
+                var unitCost  = 0;
+                items.forEach(function(r){ unitCost += (+r.res_qty || 0) * (+r.rate || 0); });
+                var est = unitCost * estActQty;
+                var ewd = 0;
+                if (lastQty > 0) {
+                    items.forEach(function(r){ ewd += (+r.rate || 0) * (+r.planned_consumption || 0); });
+                    ewd *= lastQty;
+                }
+                var awd = 0, hasA = false;
+                items.forEach(function(r){
+                    if (r.actual_unit_cost != null && r.actual_consumption != null){
+                        awd += (+r.actual_unit_cost) * (+r.actual_consumption); hasA = true;
+                    }
+                });
+                var auCost = (hasA && lastQty > 0) ? awd / lastQty : null;
+                var acoa   = auCost !== null ? auCost * schedQty : 0;
+                _actExactCost[actId] = {est: est, acoa: acoa, ewd: ewd, awd: hasA ? awd : 0};
+                // Update bar in cd-c4
+                var brow = document.querySelector('#cd-c4 .brow[data-aid="'+actId+'"]');
+                if (brow && est > 0) {
+                    var acoaPct = Math.min(acoa / est * 100, 100).toFixed(1);
+                    var ewdPct  = Math.min(ewd  / est * 100, 100).toFixed(1);
+                    var awdPct  = Math.min(awd  / est * 100, 100).toFixed(1);
+                    var trk = brow.querySelector('.btrk');
+                    if (trk) trk.innerHTML = '<div class="bs" style="width:100%;background:#4A5568;position:relative;">'
+                        + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#78909C;opacity:0.85;"></div>' : '')
+                        + (ewd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct +'%;background:#0D47A1;"></div>' : '')
+                        + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#455A64;opacity:0.9;"></div>' : '')
+                        + '</div>';
+                }
+            })();
         },
         error: function(){
             var el2 = document.getElementById('cd-c6');
