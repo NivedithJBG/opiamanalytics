@@ -204,9 +204,15 @@ function filterByIowCd(iowId){
     var fOngoing  = filtered.filter(function(a){ return parseInt(a.pr_report_count, 10) > 0; });
     var fUpcoming = filtered.filter(function(a){ return !(parseInt(a.pr_report_count, 10) > 0); });
     fUpcoming.sort(function(a, b){ return (a.start_date || '').localeCompare(b.start_date || ''); });
-    renderActivityCostBars('cd-c4', toCostBarItems(fOngoing.concat(fUpcoming)), loadCdActivityData);
+    var actList = fOngoing.concat(fUpcoming);
+    renderActivityCostBars('cd-c4', toCostBarItems(actList), loadCdActivityData);
     var firstAct = fOngoing.length ? fOngoing[0] : (fUpcoming.length ? fUpcoming[0] : null);
     if (firstAct) loadCdActivityData(firstAct.id);
+    // Load exact cost data for all activities (staggered to avoid hammering server)
+    actList.forEach(function(a, idx){
+        if (a.id == (firstAct ? firstAct.id : null)) return; // already loaded above
+        setTimeout(function(){ loadCdActivityData(a.id); }, 300 + idx * 200);
+    });
     else {
         var el = document.getElementById('cd-c6');
         if (el) el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">Select an activity</div>';

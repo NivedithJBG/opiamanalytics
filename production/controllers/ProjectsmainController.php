@@ -236,7 +236,7 @@ class ProjectsmainController extends Controller
                    AND po.delete_status = 0
                    AND por.delete_status = 0
                  GROUP BY pern.activity_id
-             ) ac ON ac.activity_id = sa.id
+             ) ac ON ac.activity_id = sa.activity_id
              LEFT JOIN workgroup_activities_new wa ON wa.id = sa.activity_id
              WHERE sa.projectId=$pid AND sa.status=0
              ORDER BY COALESCE(wa.sortorder, 999999) ASC, sa.id ASC"
