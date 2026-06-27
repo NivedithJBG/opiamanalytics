@@ -9,6 +9,27 @@ var _iow_items = [];   // wbsscheduleitems rows with group_id
 var _all       = [];   // all scheduleactivities
 var _actExactCost = {}; // cache: actId => {est, acoa, ewd, awd} from exact per-resource data
 
+function refreshProjectLegends(){
+    var leg = document.getElementById('cd-c2-legend');
+    if (!leg) return;
+    var totAcoa = 0, totAwd = 0;
+    _all.forEach(function(a){
+        var c = _actExactCost[a.id];
+        if (c){ totAcoa += (c.acoa || 0); totAwd += (c.awd || 0); }
+    });
+    if (!totAcoa && !totAwd) return; // nothing loaded yet
+    function inrFmt2(v){ v=Math.round(+v); if(!v) return '0'; var s=v.toString(),r=s.slice(-3),rem=s.slice(0,-3); while(rem.length>2){r=rem.slice(-2)+','+r;rem=rem.slice(0,-2);} return (rem.length?rem+',':'')+r; }
+    function lRow(col,label,val){ return '<div style="display:flex;align-items:baseline;padding:2px 3px;gap:4px;"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+col+';flex-shrink:0;margin-bottom:1px;"></span><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#445;flex:1;white-space:nowrap;">'+label+'</span><span style="font-family:\'Nunito\',sans-serif;font-size:10px;font-weight:700;color:#1a2540;white-space:nowrap;">&#8377;'+inrFmt2(val)+'</span></div>'; }
+    leg.innerHTML = '<div style="flex:1;min-width:0;">'
+        + lRow('#4A5568','Estimated Cost of Project', _all.reduce(function(s,a){ var c=_actExactCost[a.id]; return s+(c?c.est:0); },0))
+        + lRow('#40C4FF','Actual Cost of Project',    totAcoa)
+        + '</div>'
+        + '<div style="flex:1;min-width:0;border-left:1px solid #e0e4ec;padding-left:4px;">'
+        + lRow('#0D47A1','Est. Cost of Work Done',   _all.reduce(function(s,a){ var c=_actExactCost[a.id]; return s+(c?c.ewd:0); },0))
+        + lRow('#455A64','Actual Cost of Work Done',  totAwd)
+        + '</div>';
+}
+
 // ── Date formatter ────────────────────────────────────────────────────────────
 var _months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fmtDate(d){
@@ -158,6 +179,7 @@ function renderCdBars(){
                 + '</div>';
         }
         var leg = document.createElement('div');
+        leg.id = 'cd-c2-legend';
         leg.style.cssText = 'margin-top:12px;padding-left:70px;display:flex;gap:6px;';
         var leftCol  = '<div style="flex:1;min-width:0;">'
                      + legendHtml('#4A5568', 'Estimated Cost of Project',    totalCost)
@@ -248,6 +270,7 @@ function updateActivityBar(actId){
             var auCost = (hasA && lastQty > 0) ? awd/lastQty : null;
             var acoa = auCost !== null ? auCost * schedQty : 0;
             _actExactCost[actId] = {est:est, acoa:acoa, ewd:ewd, awd:hasA?awd:0};
+            refreshProjectLegends();
             var brow = document.querySelector('#cd-c4 .brow[data-aid="'+actId+'"]');
             if (brow && est > 0) {
                 var acoaPct = Math.min(acoa/est*100,100).toFixed(1);
@@ -309,6 +332,7 @@ function loadCdActivityData(actId){
                 var auCost = (hasA && lastQty > 0) ? awd / lastQty : null;
                 var acoa   = auCost !== null ? auCost * schedQty : 0;
                 _actExactCost[actId] = {est: est, acoa: acoa, ewd: ewd, awd: hasA ? awd : 0};
+                refreshProjectLegends();
                 // Update bar in cd-c4
                 var brow = document.querySelector('#cd-c4 .brow[data-aid="'+actId+'"]');
                 if (brow && est > 0) {
