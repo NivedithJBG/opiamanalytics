@@ -1731,7 +1731,7 @@ if($action=='login')
 .dash-modal .brow.brow-active{background:#e8f0fe;border-radius:3px}
 .dash-modal .brow.brow-active .blbl{color:#0d1f6e;font-weight:700}
 .dash-modal .blbl{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#4a5a72;width:160px;min-width:160px;text-align:left;padding-left:4px;padding-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dash-modal .btrk{flex:1;min-width:40px;height:17px;background:transparent;border-radius:2px;display:flex;overflow:visible}
+.dash-modal .btrk{flex:1;min-width:40px;max-width:60%;height:17px;background:transparent;border-radius:2px;display:flex;overflow:visible}
 .dash-modal .bs{height:100%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;min-width:14px}
 /* bar colors set inline by renderBars */
 .dash-modal .baxis{display:flex;justify-content:space-between;padding-left:166px;margin-top:2px;font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#5a6e8c}
