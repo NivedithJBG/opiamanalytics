@@ -1204,7 +1204,64 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
         if (onRowClick) onRowClick($(this).data('aid'));
     });
 
-    // Tooltip
+    // Activity tooltip
+    var actTipEl = document.getElementById('act-cost-tip');
+    if (!actTipEl){
+        actTipEl = document.createElement('div');
+        actTipEl.id = 'act-cost-tip';
+        actTipEl.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
+            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:10px 14px;min-width:380px;';
+        document.body.appendChild(actTipEl);
+    }
+    el.querySelectorAll('.brow[data-aid]').forEach(function(row){
+        var actId = $(row).data('aid');
+        var actItem = items.filter(function(r){ return String(r.id)===String(actId); })[0];
+        if (!actItem) return;
+        row.addEventListener('mouseenter', function(){
+            function fmFull(v){ return '&#8377;' + Math.round(+v).toLocaleString(); }
+            function buildTip(est, acoa, ewd, awd){
+                actTipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:8px;">'+sh(actItem.name||'',36)+'</div>'
+                    + '<table style="width:100%;border-collapse:collapse;">'
+                    + '<thead><tr>'
+                    + '<th style="padding:3px 10px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:left;">Metric</th>'
+                    + '<th style="padding:3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Value</th>'
+                    + '</tr></thead>'
+                    + '<tbody style="border-top:1px solid rgba(100,130,170,0.3);">'
+                    + '<tr><td style="padding:4px 10px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Estimated Cost</td><td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(est)+'</td></tr>'
+                    + '<tr><td style="padding:4px 10px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost</td><td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(acoa)+'</td></tr>'
+                    + '<tr><td style="padding:4px 10px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Est. Cost of Work Done</td><td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(ewd)+'</td></tr>'
+                    + '<tr><td style="padding:4px 10px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost of Work Done</td><td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(awd)+'</td></tr>'
+                    + '</tbody></table>';
+            }
+            var rect = row.getBoundingClientRect();
+            actTipEl.style.left = Math.max(4, Math.min(rect.left, window.innerWidth - 400)) + 'px';
+            actTipEl.style.top  = (rect.top - 8) + 'px';
+            actTipEl.style.transform = 'translateY(-100%)';
+            actTipEl.style.display = 'block';
+            if (_actExactCost[actId]) {
+                var c = _actExactCost[actId];
+                buildTip(c.est, c.acoa, c.ewd, c.awd);
+            } else {
+                actTipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:6px;">'+sh(actItem.name||'',36)+'</div>'
+                    + '<div style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#8a9bb0;text-align:center;padding:8px;">Loading…</div>';
+                $.ajax({ type:'POST', url:'../projectsmain/costdashboardactivity', data:{actid:actId}, dataType:'json',
+                    success: function(d){
+                        var items2=d.items||[], lastQty2=+d.last_report_qty||0, estActQty2=+d.activity_qty||0, schedQty2=+d.schedule_qty||0;
+                        var uc2=0; items2.forEach(function(r){ uc2+=(+r.res_qty||0)*(+r.rate||0); });
+                        var est2=uc2*estActQty2, ewd2=0, awd2=0, hasA=false;
+                        if(lastQty2>0){ items2.forEach(function(r){ ewd2+=(+r.rate||0)*(+r.planned_consumption||0); }); ewd2*=lastQty2; }
+                        items2.forEach(function(r){ if(r.actual_unit_cost!=null&&r.actual_consumption!=null){ awd2+=(+r.actual_unit_cost)*(+r.actual_consumption); hasA=true; } });
+                        var acoa2=(hasA&&lastQty2>0)?(awd2/lastQty2)*schedQty2:0;
+                        _actExactCost[actId]={est:est2,acoa:acoa2,ewd:ewd2,awd:hasA?awd2:0};
+                        if(actTipEl.style.display==='block') buildTip(est2,acoa2,ewd2,hasA?awd2:0);
+                    }
+                });
+            }
+        });
+        row.addEventListener('mouseleave', function(){ actTipEl.style.display='none'; });
+    });
+
+    // IOW Tooltip
     if (!getTooltipItems) return;
     var tipEl = document.getElementById('iow-cost-tip');
     if (!tipEl){
