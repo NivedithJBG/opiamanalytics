@@ -9,6 +9,41 @@ var _iow_items = [];   // wbsscheduleitems rows with group_id
 var _all       = [];   // all scheduleactivities
 var _actExactCost = {}; // cache: actId => {est, acoa, ewd, awd} from exact per-resource data
 
+function refreshIowBars(){
+    // Update each IOW bar overlay using exact formula: SUM(acoa or est fallback) per activity
+    var iowBars = document.querySelectorAll('#cd-c3 .brow[data-aid]');
+    if (!iowBars.length) return;
+    // Compute max est across all IOWs (for proportional bar width)
+    var maxEst = 0;
+    _iow_items.forEach(function(iow){
+        var totEst = _all.filter(function(a){ return String(a.scheduleitem_id)===String(iow.id); })
+            .reduce(function(s,a){ return s+(+a.activity_cost||0); },0);
+        if(totEst > maxEst) maxEst = totEst;
+    });
+    if(!maxEst) return;
+    iowBars.forEach(function(row){
+        var iowId = $(row).data('aid');
+        var acts  = _all.filter(function(a){ return String(a.scheduleitem_id)===String(iowId); });
+        var totEst=0, totAct=0;
+        acts.forEach(function(a){
+            var est = +a.activity_cost||0;
+            var c   = _actExactCost[a.id];
+            totEst += est;
+            totAct += (c && c.acoa > 0) ? c.acoa : est;
+        });
+        if(!totEst) return;
+        var pct     = (totEst/maxEst*100).toFixed(1);
+        var acoaInnerPct = Math.min(totAct/totEst*100, 100).toFixed(1);
+        var trk = row.querySelector('.btrk');
+        if(!trk) return;
+        var barHtml = '<div class="bs" style="width:'+pct+'%;background:#4A5568;position:relative;overflow:visible;">'
+            + (totAct > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaInnerPct+'%;background:#78909C;opacity:0.9;border-radius:2px 0 0 2px;"></div>' : '')
+            + (totAct > totEst ? '<div style="position:absolute;top:0;left:100%;height:100%;width:'+((totAct-totEst)/totEst*100).toFixed(1)+'%;background:#FF7043;border-radius:0 2px 2px 0;"></div>' : '')
+            + '</div>';
+        trk.innerHTML = barHtml;
+    });
+}
+
 function refreshProjectLegends(){
     var leg = document.getElementById('cd-c2-legend');
     if (!leg) return;
@@ -328,7 +363,7 @@ function loadCdActivityData(actId){
                 var auCost = (hasA && lastQty > 0) ? awd / lastQty : null;
                 var acoa   = auCost !== null ? auCost * schedQty : 0;
                 _actExactCost[actId] = {est: est, acoa: acoa, ewd: ewd, awd: hasA ? awd : 0};
-                refreshProjectLegends();
+                refreshProjectLegends(); refreshIowBars();
                 // Update bar in cd-c4
                 var brow = document.querySelector('#cd-c4 .brow[data-aid="'+actId+'"]');
                 if (brow && est > 0) {
