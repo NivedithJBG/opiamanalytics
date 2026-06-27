@@ -1243,20 +1243,45 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
         if (!item) return;
         row.addEventListener('mouseenter', function(){
             function fmF(v){ return '&#8377;' + Math.round(+v).toLocaleString(); }
-            sTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#fff;margin-bottom:6px;">'+sh(item.name||'',36)+'</div>'
-                + '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(100,130,170,0.2);">'
-                +   '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Estimated Cost</span>'
-                +   '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;">'+fmF(item.cost||0)+'</span>'
-                + '</div>'
-                + '<div style="display:flex;justify-content:space-between;padding:3px 0;">'
-                +   '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost</span>'
-                +   '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;">'+fmF(item.acoa||0)+'</span>'
-                + '</div>';
+            function showTip(est, act){
+                sTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#fff;margin-bottom:6px;">'+sh(item.name||'',36)+'</div>'
+                    + '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(100,130,170,0.2);">'
+                    +   '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Estimated Cost</span>'
+                    +   '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;">'+fmF(est)+'</span>'
+                    + '</div>'
+                    + '<div style="display:flex;justify-content:space-between;padding:3px 0;">'
+                    +   '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost</span>'
+                    +   '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;">'+fmF(act)+'</span>'
+                    + '</div>';
+            }
             var rect = row.getBoundingClientRect();
             sTip.style.left = Math.max(4, Math.min(rect.left, window.innerWidth - 244)) + 'px';
             sTip.style.top  = (rect.top - 8) + 'px';
             sTip.style.transform = 'translateY(-100%)';
-            sTip.style.display = 'block';
+            // If IOW bars (getTooltipItems available, not group): fetch exact formula per activity
+            if (getTooltipItems && !isGroupTip) {
+                sTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#fff;padding:4px;">Loading…</div>';
+                sTip.style.display = 'block';
+                var acts = getTooltipItems(item);
+                var requests = acts.map(function(a){ return $.ajax({type:'POST',url:'../projectsmain/costdashboardactivity',data:{actid:a.id},dataType:'json'}); });
+                $.when.apply($, requests).then(function(){
+                    var results = requests.length===1 ? [arguments[0]] : Array.prototype.slice.call(arguments).map(function(r){return r[0];});
+                    var totEst=0, totAct=0;
+                    acts.forEach(function(a,i){
+                        var d=results[i]||{}, it=d.items||[], aq=+d.activity_qty||0, lq=+d.last_report_qty||0, sq=+d.schedule_qty||0;
+                        var uc=0; it.forEach(function(r){ uc+=(+r.res_qty||0)*(+r.rate||0); });
+                        totEst += uc*aq;
+                        var awd=0,hasA=false;
+                        it.forEach(function(r){ if(r.actual_unit_cost!=null&&r.actual_consumption!=null){awd+=(+r.actual_unit_cost)*(+r.actual_consumption);hasA=true;} });
+                        if(hasA&&lq>0){ totAct += (awd/lq)*sq; }
+                        else { totAct += uc*sq; } // fallback: planned unit cost × schedQty
+                    });
+                    if(sTip.style.display==='block') showTip(totEst, totAct);
+                });
+            } else {
+                showTip(item.cost||0, item.acoa||0);
+                sTip.style.display = 'block';
+            }
         });
         row.addEventListener('mouseleave', function(){ sTip.style.display = 'none'; });
     });
