@@ -1182,53 +1182,28 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
         row.addEventListener('mouseenter', function(){
             var acts = getTooltipItems(iowItem);
             if (!acts || !acts.length){ tipEl.style.display='none'; return; }
-            var tipMax = 0;
-            acts.forEach(function(a){ var v=Math.max(+a.activity_cost||0,+a.actual_work_done||+a.actual_cost||0); if(v>tipMax) tipMax=v; });
-            if(!tipMax) tipMax=1;
-            // Grid
-            var tgH='', tsH='';
-            [75,50,25].forEach(function(g){ tgH+='<div style="position:absolute;left:0;right:0;bottom:'+g+'%;border-top:1px dashed rgba(100,130,170,0.4);pointer-events:none;"></div>'; });
-            tgH+='<div style="position:absolute;left:0;right:0;top:0;border-top:1px solid rgba(100,130,170,0.5);pointer-events:none;"></div>';
-            tgH+='<div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid rgba(100,130,170,0.5);pointer-events:none;"></div>';
-            [100,75,50,25,0].forEach(function(g){ tsH+='<div style="position:absolute;right:2px;bottom:calc('+g+'% - 5px);font-family:\'Nunito\',sans-serif;font-size:8px;color:#8a9bb0;line-height:1;white-space:nowrap;">'+fmtCost(tipMax*g/100)+'</div>'; });
-            // Bars
-            var tbH='', lblH='';
+            function fmFull(v){ return '&#8377;' + Math.round(+v).toLocaleString(); }
+            var rows = '';
             acts.forEach(function(a){
-                var est2 = +a.activity_cost||0;
-                var awd2 = +a.actual_work_done||+a.actual_cost||0;
-                var estPct = Math.max(est2/tipMax*100, 0.5);
-                var awdPct2= Math.max(awd2/tipMax*100, 0.5);
-                var spEst  = Math.max(100-estPct,  0);
-                var spAwd  = Math.max(100-awdPct2, 0);
-                tbH += '<div style="flex:1;min-width:0;display:flex;flex-direction:row;gap:4px;padding:0 4px;">'
-                    + '<div style="flex:1;display:flex;flex-direction:column;align-items:center;">'
-                    +   '<div style="flex:'+spEst.toFixed(2)+' 1 0;min-height:0;"></div>'
-                    +   '<div style="flex:'+estPct.toFixed(2)+' 1 0;width:70%;min-height:4px;background:#00BCD4;border-radius:2px 2px 0 0;"></div>'
-                    + '</div>'
-                    + '<div style="flex:1;display:flex;flex-direction:column;align-items:center;">'
-                    +   '<div style="flex:'+spAwd.toFixed(2)+' 1 0;min-height:0;"></div>'
-                    +   '<div style="flex:'+awdPct2.toFixed(2)+' 1 0;width:70%;min-height:4px;background:#FF6D00;border-radius:2px 2px 0 0;"></div>'
-                    + '</div>'
-                    + '</div>';
-                lblH += '<div style="flex:1;min-width:0;text-align:center;padding:2px 2px 0;">'
-                    + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:9px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+sh(a.name,10)+'</div>'
-                    + '</div>';
+                var est2 = +a.activity_cost || 0;
+                var awd2 = +a.actual_work_done || +a.actual_cost || 0;
+                rows += '<tr>'
+                    + '<td style="padding:4px 10px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#cfd8e3;white-space:nowrap;">'+sh(a.name,22)+'</td>'
+                    + '<td style="padding:4px 10px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#00BCD4;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(est2)+'</td>'
+                    + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#FF6D00;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(awd2)+'</td>'
+                    + '</tr>';
             });
-            var tipW = Math.max(260, acts.length * 50 + 40);
+            var tipW = 340;
             tipEl.style.width = tipW+'px';
-            tipEl.innerHTML = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
-                + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;">'+sh(iowItem.name,30)+'</span>'
-                + '</div>'
-                + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#8a9bb0;">'
-                + '<span><span style="display:inline-block;width:8px;height:8px;background:#00BCD4;border-radius:1px;margin-right:3px;vertical-align:middle;"></span>Estimated</span>'
-                + '<span><span style="display:inline-block;width:8px;height:8px;background:#FF6D00;border-radius:1px;margin-right:3px;vertical-align:middle;"></span>Actual</span>'
-                + '</div>'
-                + '<div style="display:flex;height:160px;">'
-                + '<div style="width:28px;position:relative;flex-shrink:0;">'+tsH+'</div>'
-                + '<div style="flex:1;position:relative;min-width:0;">'+tgH
-                + '<div style="position:absolute;inset:0;display:flex;align-items:stretch;padding:0 2px;">'+tbH+'</div>'
-                + '</div></div>'
-                + '<div style="display:flex;padding-left:28px;margin-top:2px;">'+lblH+'</div>';
+            tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:8px;">'+sh(iowItem.name,30)+'</div>'
+                + '<table style="width:100%;border-collapse:collapse;">'
+                + '<thead><tr>'
+                + '<th style="padding:3px 10px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#8a9bb0;font-weight:600;text-align:left;">Activity</th>'
+                + '<th style="padding:3px 10px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#00BCD4;font-weight:600;text-align:right;">Estimated</th>'
+                + '<th style="padding:3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#FF6D00;font-weight:600;text-align:right;">Actual</th>'
+                + '</tr></thead>'
+                + '<tbody style="border-top:1px solid rgba(100,130,170,0.3);">'+rows+'</tbody>'
+                + '</table>';
             var rect = row.getBoundingClientRect();
             var left = rect.left;
             left = Math.max(4, Math.min(left, window.innerWidth - tipW - 4));
