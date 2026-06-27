@@ -1346,23 +1346,17 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
                     var rows='';
                     iows.forEach(function(iow){
                         var d = iowMap[String(iow.id)] || {est:0, acoa:0, ewd:0, awd:0};
-                        rows += '<tr>'
-                            + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;white-space:nowrap;">'+sh(iow.name,20)+'</td>'
-                            + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(d.est)+'</td>'
-                            + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(d.acoa)+'</td>'
-                            + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(d.ewd)+'</td>'
-                            + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(d.awd)+'</td>'
-                            + '</tr>';
+                        rows += '<div style="padding:6px 0;border-bottom:1px solid rgba(100,130,170,0.2);">'
+                            + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#fff;margin-bottom:4px;">'+sh(iow.name,30)+'</div>'
+                            + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8a9bb0;">Estimated Cost</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(d.est)+'</span></div>'
+                            + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8a9bb0;">Actual Cost</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(d.acoa)+'</span></div>'
+                            + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8a9bb0;">Est. Cost of Work Done</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(d.ewd)+'</span></div>'
+                            + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8a9bb0;">Actual Cost of Work Done</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(d.awd)+'</span></div>'
+                            + '</div>';
                     });
                     if(grpTip.style.display==='block')
                         grpTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:8px;">'+sh(grpItem.name,30)+'</div>'
-                            + '<table style="width:100%;border-collapse:collapse;"><thead><tr>'
-                            + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:left;">IOW</th>'
-                            + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Estimated</th>'
-                            + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Actual Cost</th>'
-                            + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Est.Work Done</th>'
-                            + '<th style="padding:3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Act.Work Done</th>'
-                            + '</tr></thead><tbody style="border-top:1px solid rgba(100,130,170,0.3);">'+rows+'</tbody></table>';
+                            + '<div style="max-height:400px;overflow-y:auto;">'+rows+'</div>';
                 });
             });
             row.addEventListener('mouseleave', function(){ grpTip.style.display='none'; });
@@ -1376,7 +1370,7 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
         tipEl = document.createElement('div');
         tipEl.id = 'iow-cost-tip';
         tipEl.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:10px 14px;';
+            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:14px 18px;min-width:320px;';
         document.body.appendChild(tipEl);
     }
     el.querySelectorAll('.brow[data-aid]').forEach(function(row){
@@ -1422,25 +1416,16 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
                         items.forEach(function(r){ ewd2 += (+r.rate||0) * (+r.planned_consumption||0); });
                         ewd2 *= lastQty2;
                     }
-                    rows += '<tr>'
-                        + '<td style="padding:4px 8px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;white-space:nowrap;">'+sh(a.name,18)+'</td>'
-                        + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(est2)+'</td>'
-                        + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(acoa2)+'</td>'
-                        + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(ewd2)+'</td>'
-                        + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(awd2)+'</td>'
-                        + '</tr>';
+                    rows += '<div style="padding:6px 0;border-bottom:1px solid rgba(100,130,170,0.2);">'
+                        + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#fff;margin-bottom:4px;">'+sh(a.name,30)+'</div>'
+                        + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8a9bb0;">Estimated Cost</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(est2)+'</span></div>'
+                        + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8a9bb0;">Actual Cost</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(acoa2)+'</span></div>'
+                        + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8a9bb0;">Est. Cost of Work Done</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(ewd2)+'</span></div>'
+                        + '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8a9bb0;">Actual Cost of Work Done</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;">'+fmFull(awd2)+'</span></div>'
+                        + '</div>';
                 });
                 tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:8px;">'+sh(iowItem.name,30)+'</div>'
-                    + '<table style="width:100%;border-collapse:collapse;">'
-                    + '<thead><tr>'
-                    + '<th style="padding:3px 10px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:left;">Activity</th>'
-                    + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Estimated</th>'
-                    + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Actual Cost</th>'
-                    + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Est.Work Done</th>'
-                    + '<th style="padding:3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#fff;font-weight:600;text-align:right;">Act.Work Done</th>'
-                    + '</tr></thead>'
-                    + '<tbody style="border-top:1px solid rgba(100,130,170,0.3);">'+rows+'</tbody>'
-                    + '</table>';
+                    + '<div style="max-height:360px;overflow-y:auto;">'+rows+'</div>';
             });
         });
         row.addEventListener('mouseleave', function(){ tipEl.style.display='none'; });
@@ -1528,7 +1513,7 @@ function renderActivityCostBars(containerId, items, onRowClick){
         actTip = document.createElement('div');
         actTip.id = 'act-cost-tip2';
         actTip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:10px 14px;min-width:300px;';
+            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.5);padding:14px 18px;min-width:300px;';
         document.body.appendChild(actTip);
     }
     el.querySelectorAll('.brow[data-aid]').forEach(function(row){
@@ -1541,10 +1526,10 @@ function renderActivityCostBars(containerId, items, onRowClick){
                 actTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#fff;font-weight:700;margin-bottom:6px;">'+sh(actName,36)+'</div>'
                     + '<table style="width:100%;border-collapse:collapse;">'
                     + '<tbody style="border-top:1px solid rgba(100,130,170,0.3);">'
-                    + '<tr><td style="padding:3px 12px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Estimated Cost</td><td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(est)+'</td></tr>'
-                    + '<tr><td style="padding:3px 12px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost</td><td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(acoa)+'</td></tr>'
-                    + '<tr><td style="padding:3px 12px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Est. Cost of Work Done</td><td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(ewd)+'</td></tr>'
-                    + '<tr><td style="padding:3px 12px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost of Work Done</td><td style="padding:3px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#fff;font-weight:700;text-align:right;">'+fmFull(awd)+'</td></tr>'
+                    + '<tr><td style="padding:5px 12px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#fff;">Estimated Cost</td><td style="padding:5px 0;font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;text-align:right;">'+fmFull(est)+'</td></tr>'
+                    + '<tr><td style="padding:5px 12px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#fff;">Actual Cost</td><td style="padding:5px 0;font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;text-align:right;">'+fmFull(acoa)+'</td></tr>'
+                    + '<tr><td style="padding:5px 12px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#fff;">Est. Cost of Work Done</td><td style="padding:5px 0;font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;text-align:right;">'+fmFull(ewd)+'</td></tr>'
+                    + '<tr><td style="padding:5px 12px 5px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#fff;">Actual Cost of Work Done</td><td style="padding:5px 0;font-family:\'Nunito\',sans-serif;font-size:11px;color:#fff;font-weight:700;text-align:right;">'+fmFull(awd)+'</td></tr>'
                     + '</tbody></table>';
             }
             var rect = row.getBoundingClientRect();
