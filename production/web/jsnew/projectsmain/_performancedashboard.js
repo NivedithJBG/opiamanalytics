@@ -270,6 +270,7 @@ function loadCdActivityData(actId){
                         + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#455A64;opacity:0.9;border-radius:2px 0 0 2px;"></div>' : '')
                         + (awd > ewd ? '<div style="position:absolute;top:0;left:'+ewdPct+'%;height:100%;width:'+((awd-ewd)/est*100).toFixed(1)+'%;background:#ef5350;opacity:0.9;"></div>' : '')
                         + '</div>'; }
+                }
             })();
         },
         error: function(){
