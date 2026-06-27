@@ -152,12 +152,12 @@ function renderCdBars(){
         var leg = document.createElement('div');
         leg.style.cssText = 'margin-top:12px;padding-left:70px;display:flex;gap:6px;';
         var leftCol  = '<div style="flex:1;min-width:0;">'
-                     + legendHtml('#607D8B', 'Estimated Cost',    totalCost)
-                     + legendHtml('#40C4FF', 'Actual Cost of Act', totalAcoa)
+                     + legendHtml('#607D8B', 'Estimated Cost of Project',    totalCost)
+                     + legendHtml('#40C4FF', 'Actual Cost of Project',       totalAcoa)
                      + '</div>';
         var rightCol = '<div style="flex:1;min-width:0;border-left:1px solid #e0e4ec;padding-left:4px;">'
-                     + legendHtml('#0D47A1', 'Est. Work Done',    totalWorkDone)
-                     + legendHtml('#FFD600', 'Act. Work Done',    totalAwd)
+                     + legendHtml('#0D47A1', 'Estimated Cost of Work Done',  totalWorkDone)
+                     + legendHtml('#FFD600', 'Actual Cost of Work Done',     totalAwd)
                      + '</div>';
         leg.innerHTML = leftCol + rightCol;
         c2el.appendChild(leg);
