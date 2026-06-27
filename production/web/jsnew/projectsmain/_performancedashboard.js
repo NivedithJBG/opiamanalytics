@@ -1244,7 +1244,7 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
         row.addEventListener('mouseenter', function(){
             function fmF(v){ return '&#8377;' + Math.round(+v).toLocaleString(); }
             function showTip(est, act){
-                sTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#fff;margin-bottom:6px;">'+sh(item.name||'',36)+'</div>'
+                sTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#fff;margin-bottom:6px;word-break:break-word;">'+(item.name||'')+'</div>'
                     + '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(100,130,170,0.2);">'
                     +   '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Estimated Cost</span>'
                     +   '<span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;">'+fmF(est)+'</span>'
@@ -1361,7 +1361,7 @@ function renderActivityCostBars(containerId, items, onRowClick){
         row.addEventListener('mouseenter', function(){
             function fmF(v){ return '₹' + Math.round(+v).toLocaleString(); }
             var c = _actExactCost[actId] || {};
-            aTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#fff;margin-bottom:6px;">' + sh(nm,36) + '</div>'
+            aTip.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#fff;margin-bottom:6px;word-break:break-word;">' + nm + '</div>'
                 + '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(100,130,170,0.2);"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Estimated Cost</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;">' + (c.est!=null?fmF(c.est):'--') + '</span></div>'
                 + '<div style="display:flex;justify-content:space-between;padding:3px 0;"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#fff;">Actual Cost</span><span style="font-family:\'Nunito\',sans-serif;font-size:11px;font-weight:700;color:#fff;">' + (c.acoa!=null?fmF(c.acoa):'--') + '</span></div>';
             var rect = row.getBoundingClientRect();
