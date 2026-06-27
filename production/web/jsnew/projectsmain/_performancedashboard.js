@@ -1183,7 +1183,7 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
             var acts = getTooltipItems(iowItem);
             if (!acts || !acts.length){ tipEl.style.display='none'; return; }
             function fmFull(v){ return '&#8377;' + Math.round(+v).toLocaleString(); }
-            var tipW = 340;
+            var tipW = 460;
             tipEl.style.width = tipW+'px';
             var rect = row.getBoundingClientRect();
             var left = Math.max(4, Math.min(rect.left, window.innerWidth - tipW - 4));
@@ -1211,18 +1211,23 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
                         if (r.actual_unit_cost != null && r.actual_consumption != null)
                             awd2 += (+r.actual_unit_cost)*(+r.actual_consumption);
                     });
+                    var lastQty2 = +d.last_report_qty || 0;
+                    var schedQty2 = +d.schedule_qty || 0;
+                    var acoa2 = (lastQty2 > 0) ? (awd2 / lastQty2) * schedQty2 : 0;
                     rows += '<tr>'
-                        + '<td style="padding:4px 10px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#cfd8e3;white-space:nowrap;">'+sh(a.name,22)+'</td>'
-                        + '<td style="padding:4px 10px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#00BCD4;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(est2)+'</td>'
-                        + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#FF6D00;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(awd2)+'</td>'
+                        + '<td style="padding:4px 10px 4px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#cfd8e3;white-space:nowrap;">'+sh(a.name,20)+'</td>'
+                        + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#00BCD4;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(est2)+'</td>'
+                        + '<td style="padding:4px 8px 4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#FF6D00;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(acoa2)+'</td>'
+                        + '<td style="padding:4px 0;font-family:\'Nunito\',sans-serif;font-size:10px;color:#78909C;font-weight:700;text-align:right;white-space:nowrap;">'+fmFull(awd2)+'</td>'
                         + '</tr>';
                 });
                 tipEl.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#fff;font-weight:700;margin-bottom:8px;">'+sh(iowItem.name,30)+'</div>'
                     + '<table style="width:100%;border-collapse:collapse;">'
                     + '<thead><tr>'
                     + '<th style="padding:3px 10px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#8a9bb0;font-weight:600;text-align:left;">Activity</th>'
-                    + '<th style="padding:3px 10px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#00BCD4;font-weight:600;text-align:right;">Estimated</th>'
-                    + '<th style="padding:3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#FF6D00;font-weight:600;text-align:right;">Actual Work Done</th>'
+                    + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#00BCD4;font-weight:600;text-align:right;">Estimated</th>'
+                    + '<th style="padding:3px 8px 3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#FF6D00;font-weight:600;text-align:right;">Actual Cost</th>'
+                    + '<th style="padding:3px 0;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#78909C;font-weight:600;text-align:right;">Act.Work Done</th>'
                     + '</tr></thead>'
                     + '<tbody style="border-top:1px solid rgba(100,130,170,0.3);">'+rows+'</tbody>'
                     + '</table>';
