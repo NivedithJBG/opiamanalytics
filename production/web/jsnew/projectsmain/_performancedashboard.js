@@ -628,14 +628,14 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
     var barHtml = '<div style="position:relative;width:100%;height:20px;border-radius:4px;background:#555f6e;margin-bottom:10px;overflow:visible;">';
     // Grey base
     barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:100%;background:#555f6e;border-radius:4px;"></div>';
-    // Light blue = actual cost of activity
+    // Light grey = actual cost of activity
     if (actualCostOfActivity !== null) {
         var actW = Math.min(actualCostOfActivity / estimatedCost * 100, 100).toFixed(2);
-        barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+actW+'%;background:#40C4FF;border-radius:4px 0 0 4px;opacity:0.85;"></div>';
-        // Red extension if actual cost of activity > estimated cost
+        barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+actW+'%;background:#B0BEC5;border-radius:4px 0 0 4px;opacity:0.9;"></div>';
+        // Orange extension if actual cost of activity > estimated cost
         if (actualCostOfActivity > estimatedCost) {
             var redActW = ((actualCostOfActivity - estimatedCost) / estimatedCost * 100).toFixed(2);
-            barHtml += '<div style="position:absolute;top:0;left:100%;height:100%;width:'+redActW+'%;background:#ef5350;border-radius:0 4px 4px 0;"></div>';
+            barHtml += '<div style="position:absolute;top:0;left:100%;height:100%;width:'+redActW+'%;background:#FF7043;border-radius:0 4px 4px 0;"></div>';
         }
     }
     // Dark navy = est cost of work done
@@ -670,7 +670,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
             }
             return '<table style="width:100%;border-collapse:collapse;"><tbody>'
                 + lr('#555f6e', 'Estimated Cost of Activity',  estimatedCost)
-                + (actualCostOfActivity !== null ? lr('#40C4FF', 'Actual Cost of Activity', actualCostOfActivity, '#0288D1') : '')
+                + (actualCostOfActivity !== null ? lr('#B0BEC5', 'Actual Cost of Activity', actualCostOfActivity, '#546E7A') : '')
                 + (estWorkDone > 0            ? lr('#0D47A1', 'Est. Cost of Work Done',   estWorkDone,          '#0D47A1') : '')
                 + (hasActual                  ? lr('#FFD600', 'Actual Cost of Work Done',  actualWorkDone,       '#B8A000') : '')
                 + '</tbody></table>';
