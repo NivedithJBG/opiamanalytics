@@ -1234,7 +1234,7 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
         sTip = document.createElement('div');
         sTip.id = 'simple-bar-tip';
         sTip.style.cssText = 'position:fixed;z-index:9999;display:none;pointer-events:none;'
-            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.5);padding:10px 14px;min-width:240px;';
+            + 'background:#0d1a2e;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.5);padding:10px 16px;min-width:320px;';
         document.body.appendChild(sTip);
     }
     el.querySelectorAll('.brow[data-aid]').forEach(function(row){
@@ -1255,7 +1255,7 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay, getTo
                     + '</div>';
             }
             var rect = row.getBoundingClientRect();
-            sTip.style.left = Math.max(4, Math.min(rect.left, window.innerWidth - 244)) + 'px';
+            sTip.style.left = Math.max(4, Math.min(rect.left, window.innerWidth - 324)) + 'px';
             sTip.style.top  = (rect.top - 8) + 'px';
             sTip.style.transform = 'translateY(-100%)';
             // For IOW bars: SUM(actual cost per activity, fallback to estimated if no actual)
