@@ -157,7 +157,7 @@ function renderCdBars(){
                      + '</div>';
         var rightCol = '<div style="flex:1;min-width:0;border-left:1px solid #e0e4ec;padding-left:4px;">'
                      + legendHtml('#0D47A1', 'Estimated Cost of Work Done',  totalWorkDone)
-                     + legendHtml('#FFD600', 'Actual Cost of Work Done',     totalAwd)
+                     + legendHtml('#708090', 'Actual Cost of Work Done',     totalAwd)
                      + '</div>';
         leg.innerHTML = leftCol + rightCol;
         c2el.appendChild(leg);
@@ -631,7 +631,7 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
     // Light grey = actual cost of activity
     if (actualCostOfActivity !== null) {
         var actW = Math.min(actualCostOfActivity / estimatedCost * 100, 100).toFixed(2);
-        barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+actW+'%;background:#B0BEC5;border-radius:4px 0 0 4px;opacity:0.9;"></div>';
+        barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+actW+'%;background:#78909C;border-radius:4px 0 0 4px;opacity:0.9;"></div>';
         // Orange extension if actual cost of activity > estimated cost
         if (actualCostOfActivity > estimatedCost) {
             var redActW = ((actualCostOfActivity - estimatedCost) / estimatedCost * 100).toFixed(2);
@@ -646,9 +646,9 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
     if (hasActual && estimatedCost > 0) {
         if (actualWorkDone <= estWorkDone || estWorkDone === 0) {
             var aWdW = Math.min(actualWorkDone / estimatedCost * 100, 100).toFixed(2);
-            barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+aWdW+'%;background:#FFD600;border-radius:4px 0 0 4px;opacity:0.9;"></div>';
+            barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+aWdW+'%;background:#708090;border-radius:4px 0 0 4px;opacity:0.9;"></div>';
         } else {
-            barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct.toFixed(2)+'%;background:#FFD600;border-radius:4px 0 0 4px;opacity:0.9;"></div>';
+            barHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct.toFixed(2)+'%;background:#708090;border-radius:4px 0 0 4px;opacity:0.9;"></div>';
             var redWdW = ((actualWorkDone - estWorkDone) / estimatedCost * 100).toFixed(2);
             barHtml += '<div style="position:absolute;top:0;left:'+ewdPct.toFixed(2)+'%;height:100%;width:'+redWdW+'%;background:#ef5350;border-radius:0 4px 4px 0;opacity:0.9;"></div>';
         }
@@ -670,9 +670,9 @@ function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, ac
             }
             return '<table style="width:100%;border-collapse:collapse;"><tbody>'
                 + lr('#555f6e', 'Estimated Cost of Activity',  estimatedCost)
-                + (actualCostOfActivity !== null ? lr('#B0BEC5', 'Actual Cost of Activity', actualCostOfActivity, '#546E7A') : '')
+                + (actualCostOfActivity !== null ? lr('#78909C', 'Actual Cost of Activity', actualCostOfActivity, '#546E7A') : '')
                 + (estWorkDone > 0            ? lr('#0D47A1', 'Est. Cost of Work Done',   estWorkDone,          '#0D47A1') : '')
-                + (hasActual                  ? lr('#FFD600', 'Actual Cost of Work Done',  actualWorkDone,       '#B8A000') : '')
+                + (hasActual                  ? lr('#708090', 'Actual Cost of Work Done',  actualWorkDone,       '#546E7A') : '')
                 + '</tbody></table>';
           })()
         + (an ? '<div style="margin-top:auto;padding-top:6px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + an + unitLbl + '</div>' : '')
@@ -1105,7 +1105,7 @@ function renderCostBars(containerId, items, onRowClick){
             bar = '<div class="bs" style="width:100%;background:#607D8B;position:relative;">'
                 + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#40C4FF;opacity:0.85;"></div>' : '')
                 + (ewd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct +'%;background:#0D47A1;"></div>' : '')
-                + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#FFD600;opacity:0.9;"></div>' : '')
+                + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#708090;opacity:0.9;"></div>' : '')
                 + '</div>';
         }
         html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
@@ -1143,7 +1143,7 @@ function renderActivityCostBars(containerId, items, onRowClick){
             bar = '<div class="bs" style="width:100%;background:#607D8B;position:relative;">'
                 + (acoa > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+acoaPct+'%;background:#40C4FF;opacity:0.85;"></div>' : '')
                 + (ewd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+ewdPct +'%;background:#0D47A1;"></div>' : '')
-                + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#FFD600;opacity:0.9;"></div>' : '')
+                + (awd  > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct +'%;background:#708090;opacity:0.9;"></div>' : '')
                 + '</div>';
         }
 
