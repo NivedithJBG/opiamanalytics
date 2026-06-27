@@ -1150,7 +1150,7 @@ function renderSimpleCostBars(containerId, items, onRowClick, showOverlay){
         var awdPct = Math.min(awd / maxVal * 100, parseFloat(pct)).toFixed(1);
         var bar = est > 0
             ? '<div class="bs" style="width:'+pct+'%;background:#4A5568;position:relative;">'
-              + (awd > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct+'%;background:#455A64;border-radius:2px 0 0 2px;"></div>' : '')
+              + (awd > 0 ? '<div style="position:absolute;top:0;left:0;height:100%;width:'+awdPct+'%;background:#78909C;border-radius:2px 0 0 2px;"></div>' : '')
               + '</div>'
             : '<div class="bs" style="width:2%;background:#ccc;"></div>';
         html += '<div class="brow" data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;">'
