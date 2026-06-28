@@ -670,9 +670,7 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, lastQty){
         return;
     }
 
-    // When no progress reported, use plannedCost as unit cost (qty treated as 1)
-    var plannedUnitCost = (lastQty > 0) ? plannedCost / lastQty : plannedCost;
-    // When no actual data or no progress yet, actual = planned
+    var plannedUnitCost = plannedCost;
     var actualUnitCost  = (hasActual && lastQty > 0) ? actualCost / lastQty : plannedUnitCost;
 
     var maxVal = plannedUnitCost * 2;

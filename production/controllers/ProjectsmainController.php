@@ -771,10 +771,10 @@ class ProjectsmainController extends Controller
                  GROUP BY por.allocation_id
              ) grn ON grn.allocation_id=pern.pricing_resourceid
              LEFT JOIN (
-                 SELECT si2.pricing_resourceid, si2.stock_at_site FROM store_indents si2
-                 INNER JOIN (SELECT pricing_resourceid, MAX(id) AS mx FROM store_indents WHERE project_id=:pid3 GROUP BY pricing_resourceid) lsi
-                 ON lsi.pricing_resourceid=si2.pricing_resourceid AND si2.id=lsi.mx
-             ) si ON si.pricing_resourceid=pern.pricing_resourceid
+                 SELECT si2.resource_id, si2.stock_at_site FROM store_indents si2
+                 INNER JOIN (SELECT resource_id, MAX(id) AS mx FROM store_indents WHERE project_id=:pid3 GROUP BY resource_id) lsi
+                 ON lsi.resource_id=si2.resource_id AND si2.id=lsi.mx
+             ) si ON si.resource_id=pern.resource_Id
              WHERE pern.activity_id IN (".implode(',', array_map('intval', $wbIds)).") AND pern.project_id=:pid AND pern.pricing_status=0",
             [':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid]
         )->queryAll();
@@ -822,6 +822,7 @@ class ProjectsmainController extends Controller
             $unitCost = 0.0;
             foreach ($resources as $r) { $unitCost += (float)$r['res_qty'] * (float)$r['rate']; }
             $est = $unitCost * $estQty;
+            $ratio = ($schedQty > 0) ? $estQty / $schedQty : 0.0;
 
             // Actual: SUM(actual_unit_cost × actual_consumption) / lastQty × schedQty
             $actualWorkDone = 0.0;
@@ -840,9 +841,13 @@ class ProjectsmainController extends Controller
                             $actualWorkDone += ($wdAmt / $wdQty) * ($wdQty / $mbQ);
                         }
                     }
-                } elseif (in_array($typeId, [2,6,7]) && $grnQty > 0 && $lastQty > 0) {
+                } elseif (in_array($typeId, [2,6,7]) && $lastQty > 0) {
                     $actUnitCost = (float)($r['actual_unit_cost'] ?? 0);
-                    $actCons     = max(0, $grnQty - $stock) / $lastQty;
+                    if ($stock == 0) {
+                        $actCons = (float)($r['res_qty'] ?? 0) * $ratio;
+                    } else {
+                        $actCons = max(0, $grnQty - $stock) / $lastQty;
+                    }
                     $actualWorkDone += $actUnitCost * $actCons;
                 }
             }
@@ -922,16 +927,16 @@ class ProjectsmainController extends Controller
                      GROUP BY por.allocation_id
                  ) grn_cost ON grn_cost.allocation_id = pern.pricing_resourceid
                  LEFT JOIN (
-                     SELECT si.pricing_resourceid, si.stock_at_site
+                     SELECT si.resource_id, si.stock_at_site
                      FROM store_indents si
                      INNER JOIN (
-                         SELECT pricing_resourceid, MAX(id) AS max_id
+                         SELECT resource_id, MAX(id) AS max_id
                          FROM store_indents
                          WHERE project_id = :pid3
-                         GROUP BY pricing_resourceid
-                     ) latest ON latest.pricing_resourceid = si.pricing_resourceid
+                         GROUP BY resource_id
+                     ) latest ON latest.resource_id = si.resource_id
                               AND si.id = latest.max_id
-                 ) si ON si.pricing_resourceid = pern.pricing_resourceid
+                 ) si ON si.resource_id = pern.resource_Id
                  WHERE pern.activity_id = :wid AND pern.project_id = :pid AND pern.pricing_status = 0
                  ORDER BY pern.rate DESC",
                 [':wid' => $wbId, ':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid]
@@ -1012,8 +1017,12 @@ class ProjectsmainController extends Controller
                     $actualResQty = isset($taskWorkMap[$nameKey])
                         ? $taskWorkMap[$nameKey] / $lastQty
                         : null;
-                } elseif (in_array($typeId, [2, 6, 7]) && $lastQty > 0 && $grnQty > 0) {
-                    $actualResQty = ($grnQty - $stockQty) / $lastQty;
+                } elseif (in_array($typeId, [2, 6, 7]) && $lastQty > 0) {
+                    if ($stockQty == 0) {
+                        $actualResQty = $resQty * $ratio;
+                    } else {
+                        $actualResQty = ($grnQty - $stockQty) / $lastQty;
+                    }
                 } else {
                     $actualResQty = null;
                 }
@@ -1039,10 +1048,13 @@ class ProjectsmainController extends Controller
                     $plannedConsumption = ($taskQtyPerUnit !== null)
                         ? round($resQty * $taskQtyPerUnit, 3)
                         : round($resQty * $ratio, 3);
-                    // actual = (GRN_qty − stock) / lastQty
-                    // if no GRN data (or Tools type): default actual = planned
-                    if (in_array($typeId, [2, 6, 7]) && $grnQty > 0 && $lastQty > 0) {
-                        $actualConsumption = round(max(0, $grnQty - $stockQty) / $lastQty, 3);
+                    // actual = (GRN_qty − stock) / lastQty; fallback to res_qty when stock = 0
+                    if (in_array($typeId, [2, 6, 7]) && $lastQty > 0) {
+                        if ($stockQty == 0) {
+                            $actualConsumption = round($resQty * $ratio, 3);
+                        } else {
+                            $actualConsumption = round(max(0, $grnQty - $stockQty) / $lastQty, 3);
+                        }
                     } else {
                         $actualConsumption = $plannedConsumption;
                     }
@@ -1055,9 +1067,13 @@ class ProjectsmainController extends Controller
                     foreach ($scTaskIds as $stid) {
                         $actualContrib += ($taskAmountById[$stid] ?? 0.0) / $lastQty;
                     }
-                } elseif (in_array($typeId, [2, 6, 7]) && $lastQty > 0 && $grnQty > 0 && $actUnit !== null) {
-                    $consumed       = max(0, $grnQty - $stockQty);
-                    $actualContrib  = (float)$actUnit * $consumed / $lastQty;
+                } elseif (in_array($typeId, [2, 6, 7]) && $lastQty > 0 && $actUnit !== null) {
+                    if ($stockQty == 0) {
+                        $actualContrib = (float)$actUnit * $resQty * $ratio;
+                    } else {
+                        $consumed      = max(0, $grnQty - $stockQty);
+                        $actualContrib = (float)$actUnit * $consumed / $lastQty;
+                    }
                 }
                 $actualUnitCostTotal += $actualContrib;
 
