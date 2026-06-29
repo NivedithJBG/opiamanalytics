@@ -671,7 +671,7 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, lastQty){
     }
 
     var plannedUnitCost = plannedCost;
-    var actualUnitCost  = (hasActual && lastQty > 0) ? actualCost / lastQty : plannedUnitCost;
+    var actualUnitCost  = hasActual ? actualCost : plannedUnitCost;
 
     var maxVal = plannedUnitCost * 2;
     var f      = actualUnitCost !== null ? Math.max(0, Math.min(1, actualUnitCost / maxVal)) : 0;
