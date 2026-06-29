@@ -1549,8 +1549,8 @@ function renderCdResourceCost(items, actName){
             typeOrder.push(tid);
         }
         var rPlanned = (+r.rate || 0) * (+r.planned_consumption || 0);
-        var rActual  = (r.actual_consumption != null)
-            ? (+r.rate || 0) * (+r.actual_consumption) : null;
+        var rActual  = (r.actual_unit_cost != null && r.actual_consumption != null)
+            ? (+r.actual_unit_cost) * (+r.actual_consumption) : null;
         typeMap[tid].planned += rPlanned;
         if (rActual !== null) { typeMap[tid].actual += rActual; typeMap[tid].hasActual = true; }
         typeMap[tid].resources.push({ name: r.name || '', planned: rPlanned, actual: rActual });
