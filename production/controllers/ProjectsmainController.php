@@ -844,7 +844,7 @@ class ProjectsmainController extends Controller
                 } elseif (in_array($typeId, [2,6,7]) && $lastQty > 0) {
                     $actUnitCost = (float)($r['actual_unit_cost'] ?? 0);
                     if ($stock == 0) {
-                        $actCons = (float)($r['res_qty'] ?? 0) * $ratio;
+                        $actCons = (float)($r['res_qty'] ?? 0) * $ratio * $lastQty;
                     } else {
                         $actCons = max(0, $grnQty - $stock) / $lastQty;
                     }
@@ -1019,7 +1019,7 @@ class ProjectsmainController extends Controller
                         : null;
                 } elseif (in_array($typeId, [2, 6, 7]) && $lastQty > 0) {
                     if ($stockQty == 0) {
-                        $actualResQty = $resQty * $ratio;
+                        $actualResQty = $resQty * $ratio * $lastQty;
                     } else {
                         $actualResQty = ($grnQty - $stockQty) / $lastQty;
                     }
@@ -1051,7 +1051,7 @@ class ProjectsmainController extends Controller
                     // actual = (GRN_qty − stock) / lastQty; fallback to res_qty when stock = 0
                     if (in_array($typeId, [2, 6, 7]) && $lastQty > 0) {
                         if ($stockQty == 0) {
-                            $actualConsumption = round($resQty * $ratio, 3);
+                            $actualConsumption = round($resQty * $ratio * $lastQty, 3);
                         } else {
                             $actualConsumption = round(max(0, $grnQty - $stockQty) / $lastQty, 3);
                         }
@@ -1069,7 +1069,7 @@ class ProjectsmainController extends Controller
                     }
                 } elseif (in_array($typeId, [2, 6, 7]) && $lastQty > 0 && $actUnit !== null) {
                     if ($stockQty == 0) {
-                        $actualContrib = (float)$actUnit * $resQty * $ratio;
+                        $actualContrib = (float)$actUnit * $resQty * $ratio * $lastQty;
                     } else {
                         $consumed      = max(0, $grnQty - $stockQty);
                         $actualContrib = (float)$actUnit * $consumed / $lastQty;
