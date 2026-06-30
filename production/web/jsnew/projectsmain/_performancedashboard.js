@@ -659,8 +659,9 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, lastQty){
     var plannedCost = 0, actualCost = 0, hasActual = false;
     items.forEach(function(r){
         plannedCost += (+r.rate || 0) * (+r.planned_consumption || 0);
-        if (r.actual_unit_cost != null && r.actual_consumption != null) {
-            actualCost  += (+r.actual_unit_cost) * (+r.actual_consumption);
+        if (r.actual_consumption != null) {
+            var aRate = (r.actual_unit_cost != null) ? +r.actual_unit_cost : (+r.rate || 0);
+            actualCost  += aRate * (+r.actual_consumption);
             hasActual    = true;
         }
     });
