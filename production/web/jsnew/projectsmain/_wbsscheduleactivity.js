@@ -135,7 +135,6 @@ $(function(){
         var type=$(this).attr('data-type');
         type = type.replace(/ +/g, "");
        // $('#edit'+type+'activityname'+id).show();
-        $('#edit'+type+'activityunit'+id).show();
         $('#edit'+type+'activityduration'+id).show();
         $('#edit'+type+'activitystartdate'+id).show();
         $('#edit'+type+'activityenddate'+id).show();
@@ -144,7 +143,6 @@ $(function(){
         $("input#estimate"+id).removeAttr("disabled");
         $('#save'+type+'activitybutton'+id).show();
        // $('#'+type+'activityname'+id).hide();
-        $('#'+type+'activityunit'+id).hide();
         $('#'+type+'activityduration'+id).hide();
         $('#'+type+'activitystartdate'+id).hide();
         $('#'+type+'activityenddate'+id).hide();

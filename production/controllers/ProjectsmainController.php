@@ -2925,8 +2925,8 @@ class ProjectsmainController extends Controller
     									<span class="error"></span>
     								</td>
     								<td>
-    									<span id="'.str_replace(' ','',$data['process']).'activityunit'.$data['id'].'">'.$data['unit'].'</span>
-    									<input class="form-control editenggactivityunit" style="display:none;" type="text" id="edit'.str_replace(' ','',$data['process']).'activityunit'.$data['id'].'" value="'.$data['unit'].'">
+    									<span id="'.str_replace(' ','',$data['process']).'activityunit'.$data['id'].'" style="display:none;">'.$data['unit'].'</span>
+    									<input class="form-control editenggactivityunit" type="text" id="edit'.str_replace(' ','',$data['process']).'activityunit'.$data['id'].'" value="'.$data['unit'].'">
     									<span class="error"></span>
     								</td>
     								<td>
