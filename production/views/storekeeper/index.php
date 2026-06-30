@@ -698,9 +698,6 @@
             var cancelled  = (r.delete_status == 1 || r.delete_status === '1');
             var rowStyle   = cancelled ? 'background:#f5f5f5;color:#bbb;' : '';
             var viewBtn    = '<button type="button" class="sk-mb-view-btn" data-id="' + r.id + '" style="' + btnStyle + 'background:#072c47;color:#fff;">View M.Book</button>';
-            var actionBtn  = cancelled
-                ? '<button type="button" class="sk-mb-recover-btn" data-id="' + r.id + '" style="' + btnStyle + 'background:#27ae60;color:#fff;">Recover</button>'
-                : '<button type="button" class="sk-mb-cancel-btn"  data-id="' + r.id + '" style="' + btnStyle + 'background:#c0392b;color:#fff;">Cancel</button>';
             html += '<tr class="' + ((i + 1) % 2 === 0 && !cancelled ? 'procu-even' : '') + '" style="' + rowStyle + '">'
                 + '<td>' + (i + 1) + '</td>'
                 + '<td style="font-weight:600;color:' + (cancelled ? '#bbb' : '#072c47') + ';">' + r.mb_number + '</td>'
@@ -709,7 +706,7 @@
                 + '<td>' + (r.vendor_name || '—') + '</td>'
                 + '<td style="color:#465365;">' + (r.activity_name || '—') + '</td>'
                 + '<td style="font-size:12px;color:#465365;">' + createdAt + '</td>'
-                + '<td style="padding:3px 8px;text-align:center;">' + viewBtn + actionBtn + '</td>'
+                + '<td style="padding:3px 8px;text-align:center;">' + viewBtn + '</td>'
                 + '</tr>';
         });
         html += '</tbody></table>';
