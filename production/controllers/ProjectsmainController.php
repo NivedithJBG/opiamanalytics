@@ -3169,6 +3169,8 @@ class ProjectsmainController extends Controller
                         [':wid' => $estimate['activity_id'], ':tid' => $task['Id'], ':pid' => $projuser->projectid]
                     )->queryScalar() ?: 0);
                     $computedTaskQty = round($scResQty * $taskRatio, 3);
+                    // DEBUG per task
+                    $form_debug_task = '<!-- DEBUG task='.$task['Id'].' scResQty='.$scResQty.' computedQty='.$computedTaskQty.' savedQty='.($sche_tasks['task_qty'] ?? 'null').' -->';
 
                     $repquery = "SELECT reportid FROM new_report WHERE activity_Id='".$activityid."' AND status=0 AND totalduration!=0";
                     $command = $connection->createCommand($repquery);
@@ -3288,6 +3290,11 @@ class ProjectsmainController extends Controller
                         <option value="24" '.(($activeWork=="24")?"selected":"").'>24</option>
                     </select>
                 </div>
+            </div>';
+
+            // DEBUG
+            $form .= '<div style="background:#fffde7;border:1px solid #ccc;padding:6px;font-size:11px;margin-bottom:6px;">
+                DEBUG: schedQty='.$schedQtyForTask.' | estQty='.$estActQtyForTask.' | taskRatio='.$taskRatio.'
             </div>';
 
             // Task table
