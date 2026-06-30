@@ -843,10 +843,10 @@ class ProjectsmainController extends Controller
                     }
                 } elseif (in_array($typeId, [2,6,7]) && $lastQty > 0) {
                     $actUnitCost = (float)($r['actual_unit_cost'] ?? 0);
-                    if ($stock == 0) {
-                        $actCons = (float)($r['res_qty'] ?? 0) * $ratio;
-                    } else {
+                    if ($grnQty > 0) {
                         $actCons = max(0, $grnQty - $stock) / $lastQty;
+                    } else {
+                        $actCons = (float)($r['res_qty'] ?? 0) * $ratio;
                     }
                     $actualWorkDone += $actUnitCost * $actCons;
                 }
@@ -1018,10 +1018,10 @@ class ProjectsmainController extends Controller
                         ? $taskWorkMap[$nameKey] / $lastQty
                         : null;
                 } elseif (in_array($typeId, [2, 6, 7]) && $lastQty > 0) {
-                    if ($stockQty == 0) {
-                        $actualResQty = $resQty * $ratio;
+                    if ($grnQty > 0) {
+                        $actualResQty = max(0, $grnQty - $stockQty) / $lastQty;
                     } else {
-                        $actualResQty = ($grnQty - $stockQty) / $lastQty;
+                        $actualResQty = $resQty * $ratio;
                     }
                 } else {
                     $actualResQty = null;
@@ -1050,10 +1050,10 @@ class ProjectsmainController extends Controller
                         : round($resQty * $ratio, 3);
                     // actual = (GRN_qty − stock) / lastQty; fallback to res_qty when stock = 0
                     if (in_array($typeId, [2, 6, 7]) && $lastQty > 0) {
-                    if ($stockQty == 0) {
-                            $actualConsumption = round($resQty * $ratio, 3);
-                        } else {
+                        if ($grnQty > 0) {
                             $actualConsumption = round(max(0, $grnQty - $stockQty) / $lastQty, 3);
+                        } else {
+                            $actualConsumption = round($resQty * $ratio, 3);
                         }
                     } else {
                         $actualConsumption = $plannedConsumption;
@@ -1068,11 +1068,11 @@ class ProjectsmainController extends Controller
                         $actualContrib += ($taskAmountById[$stid] ?? 0.0) / $lastQty;
                     }
                 } elseif (in_array($typeId, [2, 6, 7]) && $lastQty > 0 && $actUnit !== null) {
-                    if ($stockQty == 0) {
-                        $actualContrib = (float)$actUnit * $resQty * $ratio;
-                    } else {
+                    if ($grnQty > 0) {
                         $consumed      = max(0, $grnQty - $stockQty);
                         $actualContrib = (float)$actUnit * $consumed / $lastQty;
+                    } else {
+                        $actualContrib = (float)$actUnit * $resQty * $ratio;
                     }
                 }
                 $actualUnitCostTotal += $actualContrib;
