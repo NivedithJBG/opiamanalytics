@@ -29,7 +29,7 @@ div.gantt {
 .gtaskcellwkend {
   height: 19px;
   font-size: 12px;
-  border: #aaaaaa 1px solid;
+  border: #666666 1px solid;
   text-align: center;
   cursor: default
 }
@@ -40,7 +40,7 @@ div.gantt {
   min-width: 5px;
   max-width: 5px;
   width: 5px;
-  border: #aaaaaa 1px solid;
+  border: #666666 1px solid;
   border-right: none;
 }
 
@@ -63,7 +63,7 @@ div.gantt {
 .gtaskcellwkend,
 .gtaskcellcurrent,
 .gminorheadingwkend {
-  background-color: #aaaaaa;
+  background-color: #666666;
   font-weight: bold;
   font-size: 9px;
   white-space: nowrap;
@@ -101,8 +101,8 @@ td.gspanning {
 .genddate {
   height: 18px;
   white-space: nowrap;
-  /*border: #aaaaaa 1px solid;*/
-  border: #aaaaaa 1px solid;
+  /*border: #666666 1px solid;*/
+  border: #666666 1px solid;
 }
 
 .gtaskheading div,
@@ -206,7 +206,7 @@ span.gfoldercollapse {
 
 .gtasktableh,
 .gtasktable {
-  border-right: #aaaaaa 1px solid;
+  border-right: #666666 1px solid;
   width: 100%;
 }
 
@@ -223,8 +223,8 @@ span.gfoldercollapse {
 }
 
 .gcharttable {
-  /*border: #aaaaaa 1px solid;*/
-  border: #aaaaaa 1px solid;
+  /*border: #666666 1px solid;*/
+  border: #666666 1px solid;
 }
 
 /* for some reason firefox needs this */
@@ -765,8 +765,8 @@ td.gspanning div {
 }
 
 .gadditional {
-  /*/*border: #aaaaaa 1px solid;*/
-  border: #aaaaaa 1px solid;*/
+  /*/*border: #666666 1px solid;*/
+  border: #666666 1px solid;*/
 
 }
 
@@ -798,19 +798,19 @@ td.gspanning div {
 /* if using setUseSingleCell(1) the following is a suggested set of CSS3 styles to recreate the table grid - won't work on old browsers
 .ggrouphour td,
 .gmilehour td,
-.gitemhour td			{ background-size: 19px 1px; background-image: linear-gradient(to left, #aaaaaa, transparent 1px, transparent 18px); width: 100%; height: 19px; }
+.gitemhour td			{ background-size: 19px 1px; background-image: linear-gradient(to left, #666666, transparent 1px, transparent 18px); width: 100%; height: 19px; }
 .ggroupday td,
 .gmileday td,
-.gitemday td			{ background-size: 19px 1px, 133px 1px; background-image: linear-gradient(to left, #aaaaaa, transparent 1px, transparent 18px), linear-gradient(to left, #aaaaaa 39px, transparent 1px, transparent 92px); width: 100%; height: 19px; }
+.gitemday td			{ background-size: 19px 1px, 133px 1px; background-image: linear-gradient(to left, #666666, transparent 1px, transparent 18px), linear-gradient(to left, #666666 39px, transparent 1px, transparent 92px); width: 100%; height: 19px; }
 .ggroupweek td,
 .gmileweek td,
-.gitemweek td			{ background-size: 37px 1px; background-image: linear-gradient(to left, #aaaaaa, transparent 1px, transparent 36px); width: 100%; height: 19px; }
+.gitemweek td			{ background-size: 37px 1px; background-image: linear-gradient(to left, #666666, transparent 1px, transparent 36px); width: 100%; height: 19px; }
 .ggroupmonth td,
 .gmilemonth td,
-.gitemmonth td			{ background-size: 37px 1px; background-image: linear-gradient(to left, #aaaaaa, transparent 1px, transparent 36px); width: 100%; height: 19px; }
+.gitemmonth td			{ background-size: 37px 1px; background-image: linear-gradient(to left, #666666, transparent 1px, transparent 36px); width: 100%; height: 19px; }
 .ggroupquarter td,
 .gmilequarter td,
-.gitemquarter td		{ background-size: 19px 1px; background-image: linear-gradient(to left, #aaaaaa, transparent 1px, transparent 18px); width: 100%; height: 19px; }
+.gitemquarter td		{ background-size: 19px 1px; background-image: linear-gradient(to left, #666666, transparent 1px, transparent 18px); width: 100%; height: 19px; }
 */
 
 .gmain {
