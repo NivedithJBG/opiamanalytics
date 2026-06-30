@@ -114,8 +114,9 @@ $(function() {
             var editingId = $('#editingActivityId').val();
             var url = editingId ? '../projects/updateactivitywithtasks' : '../projects/createactivity';
 
-            var taskNames = [], taskUnits = [], taskProds = [];
+            var taskIds = [], taskNames = [], taskUnits = [], taskProds = [];
             $('#task-rows-container .task-row').each(function(){
+                taskIds.push($(this).find('.task-id').val() || 0);
                 taskNames.push($(this).find('.task-name').val());
                 taskUnits.push($(this).find('.task-unit').val());
                 taskProds.push($(this).find('.task-productivity').val());
@@ -127,6 +128,7 @@ $(function() {
                 working_hours:        $('#est_working_hours').val(),
                 'estactivityname[]':  [$('#estactivityname1').val()],
                 'estactivityunit[]':  [$('#estactivityunit1').val()],
+                'task_id[]':          taskIds,
                 'task_name[]':        taskNames,
                 'task_unit[]':        taskUnits,
                 'task_productivity[]':taskProds
@@ -311,6 +313,7 @@ $(document).on('click', '.editactivitybutton', function(){
                             ? '<button type="button" class="add-task-row" style="background:none;border:none;padding:6px 4px;"><span class="icon-add" style="color:#337ab7;font-size:18px;"></span></button>'
                             : '<button type="button" class="remove-task-row" style="background:none;border:none;padding:6px 4px;"><span class="icon-minus" style="color:#d9534f;font-size:18px;"></span></button>';
                         var row = '<div class="row task-row" id="task-row-' + taskRowCount + '" style="margin-top:4px;">' +
+                            '<input type="hidden" class="task-id" name="task_id[]" value="' + (task.id || 0) + '">' +
                             '<div class="col-md-1"></div>' +
                             '<div class="col-md-4"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name" value="' + $('<div/>').text(task.task_name).html() + '"></div>' +
                             '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit" value="' + $('<div/>').text(task.task_unit).html() + '"></div>' +

@@ -21646,18 +21646,38 @@ public function actionActivitymusterprocess()
             'activity_unit' => $_POST['estactivityunit'][0],
             'working_hours' => $workingHours,
         ], 'activity_id = ' . $activityId)->execute();
-        $connection->createCommand("DELETE FROM activity_tasks WHERE activity_id = $activityId")->execute();
+        $submittedIds = [];
         if (!empty($_POST['task_name'])) {
             foreach ($_POST['task_name'] as $j => $taskName) {
                 if (trim($taskName) === '') continue;
-                $connection->createCommand()->insert('activity_tasks', [
-                    'activity_id'  => $activityId,
-                    'task_name'    => $taskName,
-                    'task_unit'    => $_POST['task_unit'][$j] ?? '',
-                    'productivity' => $_POST['task_productivity'][$j] ?? 0,
-                    'sort_order'   => $j,
-                ])->execute();
+                $existingId = (int)($_POST['task_id'][$j] ?? 0);
+                if ($existingId > 0) {
+                    $connection->createCommand()->update('activity_tasks', [
+                        'task_name'    => $taskName,
+                        'task_unit'    => $_POST['task_unit'][$j] ?? '',
+                        'productivity' => $_POST['task_productivity'][$j] ?? 0,
+                        'sort_order'   => $j,
+                    ], 'id = ' . $existingId)->execute();
+                    $submittedIds[] = $existingId;
+                } else {
+                    $connection->createCommand()->insert('activity_tasks', [
+                        'activity_id'  => $activityId,
+                        'task_name'    => $taskName,
+                        'task_unit'    => $_POST['task_unit'][$j] ?? '',
+                        'productivity' => $_POST['task_productivity'][$j] ?? 0,
+                        'sort_order'   => $j,
+                    ])->execute();
+                    $submittedIds[] = (int)$connection->lastInsertID;
+                }
             }
+        }
+        // Delete only tasks that were removed (not in submitted list)
+        if (!empty($submittedIds)) {
+            $connection->createCommand(
+                "DELETE FROM activity_tasks WHERE activity_id = $activityId AND id NOT IN (" . implode(',', $submittedIds) . ")"
+            )->execute();
+        } else {
+            $connection->createCommand("DELETE FROM activity_tasks WHERE activity_id = $activityId")->execute();
         }
         return json_encode(['error' => 'No']);
     }
