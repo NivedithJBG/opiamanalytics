@@ -2930,9 +2930,9 @@ class ProjectsmainController extends Controller
     									<span class="error"></span>
     								</td>
     								<td>
-    									<span id="'.str_replace(' ','',$data['process']).'activityquantity'.$data['id'].'">'.$est_qtyy.'</span>
+    									<span id="'.str_replace(' ','',$data['process']).'activityquantity'.$data['id'].'" style="display:none;">'.$est_qtyy.'</span>
     									<input type="hidden" id="cumulatedqty'.$data['id'].'" value="'.$cumulatedQty.'">
-    									<input class="form-control editenggactivityquantity" style="display:none;" type="text" id="edit'.str_replace(' ','',$data['process']).'activityquantity'.$data['id'].'" value="'.$est_qtyy.'" data-original="'.$est_qtyy.'">
+    									<input class="form-control editenggactivityquantity" type="text" id="edit'.str_replace(' ','',$data['process']).'activityquantity'.$data['id'].'" value="'.$est_qtyy.'" data-original="'.$est_qtyy.'">
     									<span class="error"></span>
     								</td>
     								<td>

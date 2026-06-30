@@ -136,7 +136,6 @@ $(function(){
         type = type.replace(/ +/g, "");
        // $('#edit'+type+'activityname'+id).show();
         $('#edit'+type+'activityunit'+id).show();
-        $('#edit'+type+'activityquantity'+id).show();
         $('#edit'+type+'activityduration'+id).show();
         $('#edit'+type+'activitystartdate'+id).show();
         $('#edit'+type+'activityenddate'+id).show();
@@ -146,7 +145,6 @@ $(function(){
         $('#save'+type+'activitybutton'+id).show();
        // $('#'+type+'activityname'+id).hide();
         $('#'+type+'activityunit'+id).hide();
-        $('#'+type+'activityquantity'+id).hide();
         $('#'+type+'activityduration'+id).hide();
         $('#'+type+'activitystartdate'+id).hide();
         $('#'+type+'activityenddate'+id).hide();
