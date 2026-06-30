@@ -825,33 +825,14 @@ class ProjectsmainController extends Controller
             $ratio = ($schedQty > 0) ? $estQty / $schedQty : 0.0;
 
             // Actual: SUM(actual_unit_cost × actual_consumption)
+            // Actual cost = SUM(actual_unit_cost × res_qty × ratio) for all resources
             $actualWorkDone = 0.0;
             foreach ($resources as $r) {
-                $typeId = (int)$r['type_id'];
-                $grnQty = (float)($r['grn_qty'] ?? 0);
-                $stock  = (float)($r['stock_at_site'] ?? 0);
-                if ($typeId === 4) {
-                    // SC: from MB
-                    $tids = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
-                    foreach ($tids as $tid) {
-                        $wdQty = $taskWorkDoneById[$tid] ?? 0.0;
-                        $wdAmt = $taskAmountById[$tid]   ?? 0.0;
-                        $mbQ   = $mbQtyByWbs[$wbId] ?? 0.0;
-                        if ($wdQty > 0 && $mbQ > 0) {
-                            $actualWorkDone += ($wdAmt / $wdQty) * ($wdQty / $mbQ);
-                        }
-                    }
-                } elseif (in_array($typeId, [2,6,7]) && $lastQty > 0) {
-                    $actUnitCost = (float)($r['actual_unit_cost'] ?? 0);
-                    if ($stock > 0) {
-                        $actCons = max(0, $grnQty - $stock) / $lastQty;
-                    } else {
-                        $actCons = (float)($r['res_qty'] ?? 0) * $ratio;
-                    }
-                    $actualWorkDone += $actUnitCost * $actCons;
-                }
+                $actUnitCost = (float)($r['actual_unit_cost'] ?? 0);
+                $actCons     = (float)($r['res_qty'] ?? 0) * $ratio;
+                $actualWorkDone += $actUnitCost * $actCons;
             }
-            $acoa = ($actualWorkDone > 0 && $lastQty > 0) ? ($actualWorkDone / $lastQty) * $schedQty : 0;
+            $acoa = round($actualWorkDone, 2);
 
             $data[$schedId] = ['est' => round($est,2), 'acoa' => round($acoa,2)];
         }
@@ -1011,66 +992,15 @@ class ProjectsmainController extends Controller
                         : null);
                 }
                 $grnQty   = (float)($r['grn_qty'] ?? 0);
-                $stockQty = (float)($r['stock_at_site'] ?? 0);
-                if ($typeId === 4 && $lastQty > 0) {
-                    $nameKey = strtolower(trim($r['name']));
-                    $actualResQty = isset($taskWorkMap[$nameKey])
-                        ? $taskWorkMap[$nameKey] / $lastQty
-                        : null;
-                } elseif (in_array($typeId, [2, 6, 7]) && $lastQty > 0) {
-                    if ($stockQty > 0) {
-                        $actualResQty = max(0, $grnQty - $stockQty) / $lastQty;
-                    } else {
-                        $actualResQty = $resQty * $ratio;
-                    }
-                } else {
-                    $actualResQty = null;
-                }
+                // Actual/Planned Consumption = res_qty × (estQty / schedQty) for ALL resource types
+                $actualResQty       = $resQty * $ratio;
+                $plannedConsumption = round($resQty * $ratio, 3);
+                $actualConsumption  = round($resQty * $ratio, 3);
 
-                $mappedTaskId   = (int)trim($r['task_ids'] ?? '');
-                $taskWorkDone   = ($mappedTaskId > 0 && isset($taskWorkDoneById[$mappedTaskId]))
-                    ? (float)$taskWorkDoneById[$mappedTaskId] : null;
-                $taskQtyPerUnit = $mappedTaskId > 0 ? ($taskQtyMap[$mappedTaskId] ?? null) : null;
-
-                if ($typeId === 4) {
-                    // SC: planned = res_qty (resource page) × task_qty_per_unit (schedule task page)
-                    //     actual  = MB work_done / MB reported qty (per schedule unit)
-                    $plannedConsumption = $taskQtyPerUnit !== null
-                        ? round($resQty * $taskQtyPerUnit, 3)
-                        : null;
-                    $actualConsumption = ($taskWorkDone !== null && $mbQty > 0)
-                        ? round($taskWorkDone / $mbQty, 3)
-                        : null;
-                } else {
-                    // Materials/Consumables/Purchased Inputs/Tools:
-                    // planned = res_qty × (estQty/schedQty)
-                    $plannedConsumption = round($resQty * $ratio, 3);
-                    // actual = (GRN_qty − stock)/lastQty when stock>0; res_qty×(estQty/schedQty) when stock=0
-                    if (in_array($typeId, [2, 6, 7]) && $lastQty > 0) {
-                        if ($stockQty > 0) {
-                            $actualConsumption = round(max(0, $grnQty - $stockQty) / $lastQty, 3);
-                        } else {
-                            $actualConsumption = round($resQty * $ratio, 3);
-                        }
-                    } else {
-                        $actualConsumption = $plannedConsumption;
-                    }
-                }
-
-                // Actual unit cost contribution for this resource (per estimate unit)
+                // Actual cost contribution = actual_unit_cost × actual_consumption
                 $actualContrib = 0.0;
-                if ($typeId === 4 && $lastQty > 0) {
-                    $scTaskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
-                    foreach ($scTaskIds as $stid) {
-                        $actualContrib += ($taskAmountById[$stid] ?? 0.0) / $lastQty;
-                    }
-                } elseif (in_array($typeId, [2, 6, 7]) && $lastQty > 0 && $actUnit !== null) {
-                    if ($stockQty > 0) {
-                        $consumed      = max(0, $grnQty - $stockQty);
-                        $actualContrib = (float)$actUnit * $consumed / $lastQty;
-                    } else {
-                        $actualContrib = (float)$actUnit * $resQty * $ratio;
-                    }
+                if ($actUnit !== null) {
+                    $actualContrib = (float)$actUnit * $resQty * $ratio;
                 }
                 $actualUnitCostTotal += $actualContrib;
 
