@@ -949,34 +949,33 @@ class ProjectsmainController extends Controller
                 $taskUnitMap[(int)$stn['task_id']] = $stn['task_unit'] ?? '';
             }
 
-            $mbAmount = 0.0; $mbQty = 0.0; $taskWorkMap = [];
-            $taskAmountById   = []; // task_id => SUM(rate × work_done)
-            $taskWorkDoneById = []; // task_id => SUM(work_done)
-            $mbs = $db->createCommand(
-                "SELECT entries FROM wo_measurement_book WHERE project_id=:pid AND sent_status=1 AND delete_status=0",
+            // Get the LAST sent MB for this activity — work_done is Qty-Till-Today (cumulative)
+            $taskWorkDoneById = []; // task_id => work_done from last MB
+            $taskAmountById   = []; // task_id => rate × work_done from last MB
+            $mbQty = 0.0; $mbAmount = 0.0;
+            $lastMb = $db->createCommand(
+                "SELECT id, entries FROM wo_measurement_book
+                 WHERE project_id=:pid AND sent_status=1 AND delete_status=0
+                 ORDER BY id DESC LIMIT 1",
                 [':pid' => $pid]
-            )->queryAll();
-            foreach ($mbs as $mb) {
-                foreach (json_decode($mb['entries'] ?? '[]', true) ?: [] as $entry) {
+            )->queryOne();
+            if ($lastMb) {
+                foreach (json_decode($lastMb['entries'] ?? '[]', true) ?: [] as $entry) {
                     if ((int)($entry['activity_id'] ?? 0) !== $wbId) continue;
-                    $mbQty += (float)($entry['qty'] ?? 0);
+                    $mbQty = (float)($entry['qty'] ?? 0);
                     foreach ($entry['tasks'] ?? [] as $task) {
                         $wd  = (float)($task['work_done'] ?? 0);
                         $rt  = (float)($task['rate']      ?? 0);
-                        $mbAmount += $rt * $wd;
-                        $key = strtolower(trim($task['task_name'] ?? ''));
-                        if ($key !== '') {
-                            $taskWorkMap[$key] = ($taskWorkMap[$key] ?? 0.0) + $wd;
-                        }
-                        $tid = (int)($task['task_id'] ?? 0);
+                        $tid = (int)($task['task_id']     ?? 0);
                         if ($tid) {
-                            $taskAmountById[$tid]   = ($taskAmountById[$tid]   ?? 0.0) + $rt * $wd;
-                            $taskWorkDoneById[$tid] = ($taskWorkDoneById[$tid] ?? 0.0) + $wd;
+                            $taskWorkDoneById[$tid] = $wd;
+                            $taskAmountById[$tid]   = $rt * $wd;
+                            $mbAmount += $rt * $wd;
                         }
                     }
                 }
             }
-            $scActualUnitCost    = $mbQty > 0 ? $mbAmount / $mbQty : null;
+            $scActualUnitCost = $mbQty > 0 ? $mbAmount / $mbQty : null;
             $actualUnitCostTotal = 0.0;
             $schedQty = (float)($sa['quantity'] ?? 0);
             $ratio    = ($schedQty > 0) ? $actQty / $schedQty : 0.0;
@@ -1011,11 +1010,22 @@ class ProjectsmainController extends Controller
                 $plannedConsumption = round($resQty * $ratio, 3);
 
                 // Actual Consumption:
-                // Materials (type 2,6,7,8): conditional on stock
+                // Actual Consumption by resource type:
+                // SC (type 4): task Qty-Till-Today from last MB / lastReportedQty
+                // Materials/Consumables/Purchased Inputs/Tools (type 2,6,7,8):
                 //   stock=0 or no indent → res_qty × (estQty/schedQty)
                 //   stock>0              → (GRN_qty - stock) / lastQty
                 // All other types: same as planned
-                if (in_array($typeId, [2, 6, 7, 8])) {
+                if ($typeId === 4) {
+                    $scTaskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
+                    $scWorkDone = 0.0;
+                    foreach ($scTaskIds as $stid) {
+                        $scWorkDone += $taskWorkDoneById[$stid] ?? 0.0;
+                    }
+                    $actualConsumption = ($lastQty > 0 && $scWorkDone > 0)
+                        ? round($scWorkDone / $lastQty, 3)
+                        : $plannedConsumption;
+                } elseif (in_array($typeId, [2, 6, 7, 8])) {
                     if ($stockQty > 0) {
                         $actualConsumption = round(max(0, $grnQty - $stockQty) / $lastQty, 3);
                     } else {
