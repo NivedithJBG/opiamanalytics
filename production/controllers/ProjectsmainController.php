@@ -1043,11 +1043,8 @@ class ProjectsmainController extends Controller
                         : null;
                 } else {
                     // Materials/Consumables/Purchased Inputs/Tools:
-                    // planned = res_qty × task_qty_per_unit (schedule-activity-task Qty/Unit for mapped task)
-                    //           fallback to res_qty × (estQty/schedQty) if no task mapped
-                    $plannedConsumption = ($taskQtyPerUnit !== null)
-                        ? round($resQty * $taskQtyPerUnit, 3)
-                        : round($resQty * $ratio, 3);
+                    // planned = res_qty × (estQty/schedQty)
+                    $plannedConsumption = round($resQty * $ratio, 3);
                     // actual = (GRN_qty − stock)/lastQty when stock>0; res_qty×(estQty/schedQty) when stock=0
                     if (in_array($typeId, [2, 6, 7]) && $lastQty > 0) {
                         if ($stockQty > 0) {
