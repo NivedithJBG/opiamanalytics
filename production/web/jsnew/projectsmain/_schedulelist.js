@@ -302,8 +302,9 @@ $(document).on( "click", ".viewwbsestimatetasks", function(){
                 $("#scheduleactpage").hide();
                 $("#tasklistt").show();
                 
-                $('#wbsestimateactivities').html(data.result);    
+                $('#wbsestimateactivities').html(data.result);
                 $('#activityid').val(wrkactivityid);
+                $('.tastrow').each(function(){ calcTaskDuration($(this)); });
             }
             else
             {
