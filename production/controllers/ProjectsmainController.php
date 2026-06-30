@@ -825,11 +825,23 @@ class ProjectsmainController extends Controller
             $ratio = ($schedQty > 0) ? $estQty / $schedQty : 0.0;
 
             // Actual: SUM(actual_unit_cost × actual_consumption)
-            // Actual cost = SUM(actual_unit_cost × res_qty × ratio) for all resources
+            // Actual cost = SUM(actual_unit_cost × actual_consumption)
+            // Materials (type 2,6,7,8): stock=0/no indent → res_qty×ratio; stock>0 → (GRN-stock)/lastQty
             $actualWorkDone = 0.0;
             foreach ($resources as $r) {
+                $typeId      = (int)$r['type_id'];
+                $grnQty      = (float)($r['grn_qty'] ?? 0);
+                $stock       = (float)($r['stock_at_site'] ?? 0);
                 $actUnitCost = (float)($r['actual_unit_cost'] ?? 0);
-                $actCons     = (float)($r['res_qty'] ?? 0) * $ratio;
+                if (in_array($typeId, [2, 6, 7, 8])) {
+                    if ($stock > 0 && $lastQty > 0) {
+                        $actCons = max(0, $grnQty - $stock) / $lastQty;
+                    } else {
+                        $actCons = (float)($r['res_qty'] ?? 0) * $ratio;
+                    }
+                } else {
+                    $actCons = (float)($r['res_qty'] ?? 0) * $ratio;
+                }
                 $actualWorkDone += $actUnitCost * $actCons;
             }
             $acoa = round($actualWorkDone, 2);
@@ -987,20 +999,38 @@ class ProjectsmainController extends Controller
                         }
                     }
                 } else {
-                    $actUnit = (in_array($typeId, [2, 6, 7]) && $r['actual_unit_cost'] !== null
+                    $actUnit = (in_array($typeId, [2, 6, 7, 8]) && $r['actual_unit_cost'] !== null
                         ? (float)$r['actual_unit_cost']
                         : null);
                 }
                 $grnQty   = (float)($r['grn_qty'] ?? 0);
-                // Actual/Planned Consumption = res_qty × (estQty / schedQty) for ALL resource types
-                $actualResQty       = $resQty * $ratio;
+                $stockQty = (float)($r['stock_at_site'] ?? 0);
+                $noIndent = ($r['stock_at_site'] === null);
+
+                // Planned Consumption = res_qty × (estQty / schedQty) for ALL resource types
                 $plannedConsumption = round($resQty * $ratio, 3);
-                $actualConsumption  = round($resQty * $ratio, 3);
+
+                // Actual Consumption:
+                // Materials (type 2,6,7,8): conditional on stock
+                //   stock=0 or no indent → res_qty × (estQty/schedQty)
+                //   stock>0              → (GRN_qty - stock) / lastQty
+                // All other types: same as planned
+                if (in_array($typeId, [2, 6, 7, 8])) {
+                    if ($stockQty > 0) {
+                        $actualConsumption = round(max(0, $grnQty - $stockQty) / $lastQty, 3);
+                    } else {
+                        $actualConsumption = round($resQty * $ratio, 3);
+                    }
+                } else {
+                    $actualConsumption = $plannedConsumption;
+                }
+
+                $actualResQty = $actualConsumption;
 
                 // Actual cost contribution = actual_unit_cost × actual_consumption
                 $actualContrib = 0.0;
                 if ($actUnit !== null) {
-                    $actualContrib = (float)$actUnit * $resQty * $ratio;
+                    $actualContrib = (float)$actUnit * $actualConsumption;
                 }
                 $actualUnitCostTotal += $actualContrib;
 
