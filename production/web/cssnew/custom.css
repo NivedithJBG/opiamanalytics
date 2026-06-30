@@ -404,7 +404,12 @@ select option:disabled {
     color: #7e7e7e !important;
 }
 
-input.form-control, select.form-control, textarea.form-control, input[type="text"], input[type="number"], input[type="email"], input[type="date"], select, textarea {
+input.form-control, select.form-control, textarea.form-control,
+input[type="text"], input[type="number"], input[type="email"], input[type="date"],
+select, textarea,
+.modal input, .modal select, .modal textarea,
+.modal input.form-control, .modal select.form-control, .modal textarea.form-control,
+.modal label, .form-group label {
     color: #000 !important;
 }
 
