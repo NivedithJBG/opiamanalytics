@@ -824,7 +824,7 @@ class ProjectsmainController extends Controller
             $est = $unitCost * $estQty;
             $ratio = ($schedQty > 0) ? $estQty / $schedQty : 0.0;
 
-            // Actual: SUM(actual_unit_cost × actual_consumption) / lastQty × schedQty
+            // Actual: SUM(actual_unit_cost × actual_consumption)
             $actualWorkDone = 0.0;
             foreach ($resources as $r) {
                 $typeId = (int)$r['type_id'];
@@ -1048,7 +1048,7 @@ class ProjectsmainController extends Controller
                     $plannedConsumption = ($taskQtyPerUnit !== null)
                         ? round($resQty * $taskQtyPerUnit, 3)
                         : round($resQty * $ratio, 3);
-                    // actual = (GRN_qty − stock) / lastQty; fallback to res_qty when stock = 0
+                    // actual = (GRN_qty − stock)/lastQty when stock>0; res_qty×(estQty/schedQty) when stock=0
                     if (in_array($typeId, [2, 6, 7]) && $lastQty > 0) {
                         if ($stockQty > 0) {
                             $actualConsumption = round(max(0, $grnQty - $stockQty) / $lastQty, 3);
