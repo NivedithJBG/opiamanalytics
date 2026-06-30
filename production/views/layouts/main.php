@@ -119,6 +119,10 @@ $subDomain = array_shift(($HTTP_HOST));
     <script type="text/javascript" src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/custom.js"></script>
     
     <style type="text/css">
+        input, select, textarea,
+        input.form-control, select.form-control, textarea.form-control {
+            color: #000 !important;
+        }
         span#clearnotif:hover {
             text-decoration: underline;
         }
