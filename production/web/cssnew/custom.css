@@ -404,6 +404,10 @@ select option:disabled {
     color: #7e7e7e !important;
 }
 
+input.form-control, select.form-control, textarea.form-control, input[type="text"], input[type="number"], input[type="email"], input[type="date"], select, textarea {
+    color: #000 !important;
+}
+
 .dashboardPopup .modal-dialog{
   width: 85%;
   margin-top: 10px;
