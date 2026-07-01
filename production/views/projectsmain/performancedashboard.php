@@ -126,10 +126,10 @@ body{
   <div class="dcard">
     <div class="dcard-hdr">Project</div>
     <div class="dcard-body">
-      <div class="leg">
-        <span><i style="background:#2878c0"></i>Planned Duration</span>
-        <span><i style="background:#e55353"></i>Actual Duration</span>
-        <span><i style="background:#f0c419"></i>Difference</span>
+      <div class="leg" style="flex-wrap:wrap;gap:6px 12px;">
+        <span><i style="background:#2878c0"></i>Planned Duration: <b id="leg-planned-dur" style="font-size:13px;font-weight:700;color:#1a2540;">—</b></span>
+        <span><i style="background:#e55353"></i>Actual Duration: <b id="leg-actual-dur" style="font-size:13px;font-weight:700;color:#1a2540;">—</b></span>
+        <span><i style="background:#f0c419"></i>Difference: <b id="leg-diff-dur" style="font-size:13px;font-weight:700;color:#1a2540;">—</b></span>
       </div>
       <div class="cv-area"><canvas id="ch-project"></canvas></div>
     </div>
@@ -238,6 +238,16 @@ post('/projectsmain/performancedashboard', null, function(d){
     if (!d || d.error === undefined) return;
     hbar('ch-iow-grp',  grpDs(d.iow_groups),         true);
     hbar('ch-project',  projDs(d.project_name, d.project_bar), false);
+    if (d.project_bar) {
+        var pb = d.project_bar;
+        var planned = +pb.budgeted || 0;
+        var actual  = +pb.actual  || 0;
+        var diff    = actual - planned;
+        document.getElementById('leg-planned-dur').textContent = planned > 0 ? planned + ' days' : '—';
+        document.getElementById('leg-actual-dur').textContent  = actual  > 0 ? actual  + ' days' : '—';
+        document.getElementById('leg-diff-dur').textContent    = actual  > 0 ? (diff > 0 ? '+' : '') + diff + ' days' : '—';
+        document.getElementById('leg-diff-dur').style.color    = diff > 0 ? '#e55353' : diff < 0 ? '#27ae60' : '#1a2540';
+    }
     hbar('ch-iow',      actDs(d.iow_items),           true);
     hbar('ch-ongoing',  actDs(d.ongoing),             true);
     hbar('ch-upcoming', actDs(d.upcoming),            true);
