@@ -949,27 +949,26 @@ class ProjectsmainController extends Controller
                 $taskUnitMap[(int)$stn['task_id']] = $stn['task_unit'] ?? '';
             }
 
-            // Get the LAST sent MB for this activity — work_done is Qty-Till-Today (cumulative)
-            $taskWorkDoneById = []; // task_id => work_done from last MB
-            $taskAmountById   = []; // task_id => rate × work_done from last MB
+            // Cumulate work_done across ALL sent MBs — cum_work_done = Qty Till Today
+            $taskWorkDoneById = []; // task_id => SUM(work_done) across all MBs
+            $taskAmountById   = []; // task_id => SUM(rate × work_done) across all MBs
             $mbQty = 0.0; $mbAmount = 0.0;
-            $lastMb = $db->createCommand(
-                "SELECT id, entries FROM wo_measurement_book
-                 WHERE project_id=:pid AND sent_status=1 AND delete_status=0
-                 ORDER BY id DESC LIMIT 1",
+            $allMbs = $db->createCommand(
+                "SELECT entries FROM wo_measurement_book
+                 WHERE project_id=:pid AND sent_status=1 AND delete_status=0",
                 [':pid' => $pid]
-            )->queryOne();
-            if ($lastMb) {
-                foreach (json_decode($lastMb['entries'] ?? '[]', true) ?: [] as $entry) {
+            )->queryAll();
+            foreach ($allMbs as $mb) {
+                foreach (json_decode($mb['entries'] ?? '[]', true) ?: [] as $entry) {
                     if ((int)($entry['activity_id'] ?? 0) !== $wbId) continue;
-                    $mbQty = (float)($entry['qty'] ?? 0);
+                    $mbQty += (float)($entry['qty'] ?? 0);
                     foreach ($entry['tasks'] ?? [] as $task) {
                         $wd  = (float)($task['work_done'] ?? 0);
                         $rt  = (float)($task['rate']      ?? 0);
                         $tid = (int)($task['task_id']     ?? 0);
                         if ($tid) {
-                            $taskWorkDoneById[$tid] = $wd;
-                            $taskAmountById[$tid]   = $rt * $wd;
+                            $taskWorkDoneById[$tid] = ($taskWorkDoneById[$tid] ?? 0.0) + $wd;
+                            $taskAmountById[$tid]   = ($taskAmountById[$tid]   ?? 0.0) + $rt * $wd;
                             $mbAmount += $rt * $wd;
                         }
                     }
