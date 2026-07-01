@@ -1162,7 +1162,7 @@ function loadAll(){
         success: function(d){
             if (!d || d.error === undefined) return;
             var name = d.project_name || 'Project';
-            $('#pd-title').text(name + ' ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Performance Dashboard');
+            $('#pd-title').text(name + ' - Performance Dashboard');
             if (!_cdProjectName) _cdProjectName = name;
 
             _groups    = d.iow_groups  || [];
