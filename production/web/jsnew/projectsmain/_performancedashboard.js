@@ -1841,7 +1841,7 @@ function renderProjectBar(el, budgeted, actual, label, bEndDate, aEndDate){
     // Dates + delay row
     var delay = actual>0 ? actual-budgeted : 0;
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c">';
-    html+='<span>Budget end: <b style="color:#1a2540">'+(fmDate(bEndDate)||'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â')+'</b>';
+    html+='<span>Planned End: <b style="color:#1a2540">'+(fmDate(bEndDate)||'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â')+'</b>';
     if (budgeted) html+=' &nbsp;<b style="color:#1a2540">'+budgeted+' d</b>';
     html+='</span>';
     if (actual>0){
@@ -1853,9 +1853,9 @@ function renderProjectBar(el, budgeted, actual, label, bEndDate, aEndDate){
     }
     html+='</div>';
     html+='<div style="display:flex;gap:10px;margin-top:5px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#5a6e8c">'
-        +'<span><span style="display:inline-block;width:10px;height:8px;background:#00838f;margin-right:3px;border-radius:1px"></span>Budgeted</span>'
-        +'<span><span style="display:inline-block;width:10px;height:8px;background:#e53935;margin-right:3px;border-radius:1px"></span>Overrun</span>'
-        +'<span><span style="display:inline-block;width:10px;height:8px;background:#f0c419;margin-right:3px;border-radius:1px"></span>Ahead</span>'
+        +'<span><span style="display:inline-block;width:10px;height:8px;background:#00838f;margin-right:3px;border-radius:1px"></span>Planned Duration</span>'
+        +'<span><span style="display:inline-block;width:10px;height:8px;background:#e53935;margin-right:3px;border-radius:1px"></span>Actual Duration</span>'
+        +'<span><span style="display:inline-block;width:10px;height:8px;background:#f0c419;margin-right:3px;border-radius:1px"></span>Difference</span>'
         +'</div>';
     html+='</div>';
     el.innerHTML=html;
