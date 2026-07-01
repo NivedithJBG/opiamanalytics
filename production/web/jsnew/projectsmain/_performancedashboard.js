@@ -1820,7 +1820,7 @@ function renderProjectBar(el, budgeted, actual, label, bEndDate, aEndDate){
     }
     var maxVal = Math.max(budgeted, actual, 1);
     var lbl='font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:0 4px';
-    var html='<div style="display:flex;flex-direction:column;justify-content:center;height:100%;padding:6px 10px;box-sizing:border-box">';
+    var html='<div style="display:flex;flex-direction:column;justify-content:flex-start;height:100%;padding:6px 10px;box-sizing:border-box;overflow:auto">';
     html+='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#1a2540;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+label+'</div>';
     html+='<div style="display:flex;align-items:stretch;height:22px;border-radius:3px;overflow:hidden">';
     if (actual>0 && actual>budgeted){
