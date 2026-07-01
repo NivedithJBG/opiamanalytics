@@ -8,7 +8,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?= htmlspecialchars($projectName) ?> — Performance Dashboard</title>
+<title><?= htmlspecialchars($projectName) ?> - Performance Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -103,7 +103,7 @@ body{
 <body>
 
 <div id="dash-header">
-  <h1 id="dash-title"><?= htmlspecialchars($projectName) ?> &mdash; Performance Dashboard</h1>
+  <h1 id="dash-title"><?= htmlspecialchars($projectName) ?> - Performance Dashboard</h1>
   <span id="dash-hint">Click an activity bar to update KPI panels</span>
   <button id="dash-back" onclick="history.back()">&#8592; Back</button>
 </div>
