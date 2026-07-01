@@ -127,8 +127,9 @@ body{
     <div class="dcard-hdr">Project</div>
     <div class="dcard-body">
       <div class="leg">
-        <span><i style="background:#2878c0"></i>Scheduled</span>
-        <span><i style="background:#e55353"></i>Delay</span>
+        <span><i style="background:#2878c0"></i>Planned Duration</span>
+        <span><i style="background:#e55353"></i>Actual Duration</span>
+        <span><i style="background:#f0c419"></i>Difference</span>
       </div>
       <div class="cv-area"><canvas id="ch-project"></canvas></div>
     </div>
