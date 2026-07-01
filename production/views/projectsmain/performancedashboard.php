@@ -267,9 +267,12 @@ function grpDs(g){
     ]};
 }
 function projDs(name,bar){
+    var planned = +bar.budgeted || 0;
+    var actual  = +bar.actual  || 0;
+    var delay   = Math.max(0, actual - planned);
     return {labels:[s(name||'Project',26)],_ids:null,datasets:[
-        {label:'Scheduled',data:[+bar.scheduled||0],backgroundColor:'#2878c0',borderWidth:0,barThickness:18},
-        {label:'Delay',    data:[+bar.delay||0],    backgroundColor:'#e55353',borderWidth:0,barThickness:18}
+        {label:'Planned Duration', data:[planned], backgroundColor:'#2878c0', borderWidth:0, barThickness:18},
+        {label:'Actual Duration',  data:[delay],   backgroundColor:'#e55353', borderWidth:0, barThickness:18}
     ]};
 }
 function actDs(items){
