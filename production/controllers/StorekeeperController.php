@@ -104,6 +104,7 @@ class StorekeeperController extends Controller
                 at.id             AS task_id,
                 at.task_name,
                 at.task_unit,
+                pern.activity_id,
                 wan.activity_Name AS activity_name
             FROM pricing_estimate_resources_new pern
             JOIN activity_tasks at        ON FIND_IN_SET(at.id, pern.task_ids) > 0
@@ -113,7 +114,7 @@ class StorekeeperController extends Controller
               AND pern.pricing_status = 0
               AND pern.task_ids IS NOT NULL
               AND pern.task_ids != ''
-            GROUP BY at.id, at.task_name, at.task_unit, wan.activity_Name
+            GROUP BY at.id, at.task_name, at.task_unit, pern.activity_id, wan.activity_Name
             ORDER BY wan.activity_Name ASC, at.sort_order ASC, at.task_name ASC
         ", [':pid' => $projectid, ':rid' => $rid])->queryAll();
 
@@ -182,20 +183,73 @@ class StorekeeperController extends Controller
 
         $saved = 0;
         foreach ($items as $item) {
-            $rid      = (int)($item['id'] ?? 0);
-            $taskId   = !empty($item['task_id'])   ? (int)$item['task_id']   : null;
-            $taskName = !empty($item['task_name']) ? trim($item['task_name']) : null;
-            $stock    = (float)($item['stock']   ?? 0);
-            $reorder  = (float)($item['reorder'] ?? 0);
+            $rid        = (int)($item['id'] ?? 0);
+            $taskId     = !empty($item['task_id'])    ? (int)$item['task_id']    : null;
+            $taskName   = !empty($item['task_name'])  ? trim($item['task_name']) : null;
+            $activityId = (int)($item['activity_id'] ?? 0);
+            $stock      = (float)($item['stock']   ?? 0);
+            $reorder    = (float)($item['reorder'] ?? 0);
             if (!$rid) continue;
 
-            $exists = $db->createCommand(
-                'SELECT id FROM store_indents WHERE project_id = :pid AND resource_id = :rid',
+            // Calculate avg_consumption at indent time
+            // Step 1: Get cumulative GRN qty for this resource in this project
+            $grnQty = (float)($db->createCommand(
+                "SELECT COALESCE(SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))), 0)
+                 FROM goods_received_note g
+                 JOIN purchase_order_resources por ON g.GRN_Purchase_Order = por.order_id AND g.GRN_Item = por.resource_id
+                 JOIN purchase_orders po ON po.order_id = por.order_id
+                 WHERE po.project_id = :pid AND po.delete_status = 0 AND por.delete_status = 0 AND por.resource_id = :rid",
                 [':pid' => $projectid, ':rid' => $rid]
+            )->queryScalar() ?: 0);
+
+            // Step 2: Get last reported qty for this activity
+            $lastQty = 0.0;
+            if ($activityId) {
+                // Find schedule activity id for this WBS activity
+                $schedAct = $db->createCommand(
+                    "SELECT id FROM scheduleactivities WHERE activity_id = :aid AND projectId = :pid LIMIT 1",
+                    [':aid' => $activityId, ':pid' => $projectid]
+                )->queryOne();
+                if ($schedAct) {
+                    $lastQty = (float)($db->createCommand(
+                        "SELECT COALESCE(cumulated_qty, 0) FROM schedule_progress_report
+                         WHERE activity_id = :actid ORDER BY updated_at DESC LIMIT 1",
+                        [':actid' => $schedAct['id']]
+                    )->queryScalar() ?: 0);
+                }
+            }
+
+            // Step 3: Get planned consumption as fallback (res_qty × estQty / schedQty)
+            $plannedConsumption = null;
+            if ($activityId) {
+                $pernRow = $db->createCommand(
+                    "SELECT pern.quantity, pen.activity_qty, sa.quantity AS sched_qty
+                     FROM pricing_estimate_resources_new pern
+                     JOIN pricing_estimate_new pen ON pen.activity_Id = pern.activity_id AND pen.project_Id = :pid AND pen.pricing_status = 0
+                     JOIN scheduleactivities sa ON sa.activity_id = pern.activity_id AND sa.projectId = :pid2
+                     WHERE pern.resource_Id = :rid AND pern.activity_id = :aid AND pern.pricing_status = 0
+                     LIMIT 1",
+                    [':pid' => $projectid, ':pid2' => $projectid, ':rid' => $rid, ':aid' => $activityId]
+                )->queryOne();
+                if ($pernRow && $pernRow['sched_qty'] > 0) {
+                    $plannedConsumption = (float)$pernRow['quantity'] * ((float)$pernRow['activity_qty'] / (float)$pernRow['sched_qty']);
+                }
+            }
+
+            // Step 4: Calculate avg_consumption
+            if ($grnQty > 0 && $lastQty > 0) {
+                $avgConsumption = ($grnQty - $stock) / $lastQty;
+            } else {
+                $avgConsumption = $plannedConsumption; // null if no estimate data
+            }
+
+            $exists = $db->createCommand(
+                'SELECT id FROM store_indents WHERE project_id = :pid AND resource_id = :rid AND activity_id = :aid',
+                [':pid' => $projectid, ':rid' => $rid, ':aid' => $activityId]
             )->queryOne();
             if ($exists) {
                 $db->createCommand()->update('store_indents',
-                    ['task_id' => $taskId, 'task_name' => $taskName, 'stock_at_site' => $stock, 'reorder_quantity' => $reorder, 'raised_by' => $uid, 'raised_at' => date('Y-m-d H:i:s')],
+                    ['task_id' => $taskId, 'task_name' => $taskName, 'stock_at_site' => $stock, 'avg_consumption' => $avgConsumption, 'reorder_quantity' => $reorder, 'raised_by' => $uid, 'raised_at' => date('Y-m-d H:i:s')],
                     ['id' => $exists['id']]
                 )->execute();
                 $saved++;
@@ -212,6 +266,7 @@ class StorekeeperController extends Controller
 
             $db->createCommand()->insert('store_indents', [
                 'project_id'         => $projectid,
+                'activity_id'        => $activityId,
                 'resource_id'        => $rid,
                 'task_id'            => $taskId,
                 'task_name'          => $taskName,
@@ -220,6 +275,7 @@ class StorekeeperController extends Controller
                 'resource_type'      => $res['rt_name'],
                 'unit'               => $res['Unit'],
                 'stock_at_site'      => $stock,
+                'avg_consumption'    => $avgConsumption,
                 'reorder_quantity'   => $reorder,
                 'raised_by'          => $uid,
                 'raised_at'          => date('Y-m-d H:i:s'),

@@ -1680,7 +1680,7 @@
                 $.each(tasks, function(i, t) {
                     var bg      = i % 2 === 1 ? 'background:#f7f7f7;' : 'background:#fff;';
                     var checked = (String(t.task_id) === selId) ? ' checked' : '';
-                    html += '<tr style="' + bg + '" class="sk-indent-task-row" data-task-id="' + t.task_id + '" data-task-name="' + String(t.task_name || '').replace(/"/g, '&quot;') + '" data-activity-name="' + String(t.activity_name || '').replace(/"/g, '&quot;') + '">'
+                    html += '<tr style="' + bg + '" class="sk-indent-task-row" data-task-id="' + t.task_id + '" data-task-name="' + String(t.task_name || '').replace(/"/g, '&quot;') + '" data-activity-id="' + (t.activity_id || 0) + '" data-activity-name="' + String(t.activity_name || '').replace(/"/g, '&quot;') + '">'
                         + '<td style="padding:7px 12px;border:1px solid #e0e0e0;text-align:center;">'
                         +   '<input type="radio" name="sk-indent-task-radio" value="' + t.task_id + '"' + checked + ' style="width:14px;height:14px;cursor:pointer;accent-color:#072c47;">'
                         + '</td>'
@@ -1710,8 +1710,9 @@
         var $btn    = $('#sk-indent-task-modal').data('btn');
         var tid     = $radio.val();
         var tname   = $radio.closest('tr').data('task-name');
+        var actid   = $radio.closest('tr').data('activity-id') || 0;
         var actname = $radio.closest('tr').data('activity-name') || '';
-        $btn.data('task-id', tid).data('task-name', tname).data('activity-name', actname);
+        $btn.data('task-id', tid).data('task-name', tname).data('activity-id', actid).data('activity-name', actname);
         $btn.closest('tr').find('td:eq(1) .sk-indent-task-sub').remove();
         $btn.closest('tr').find('td:eq(1)').append('<div class="sk-indent-task-sub" style="font-size:10px;color:#072c47;margin-top:2px;">&#9656; ' + tname + '</div>');
         $('#sk-indent-task-modal').hide();
@@ -1799,11 +1800,12 @@
             var id  = $(this).data('resource-id').toString();
             var $tb = $('.sk-indent-task-btn[data-id="' + id + '"]');
             selected.push({
-                id:        id,
-                task_id:   $tb.data('task-id')   || '',
-                task_name: $tb.data('task-name')  || '',
-                stock:     parseFloat($('.sk-popup-stock[data-id="'   + id + '"]').val()) || 0,
-                reorder:   parseFloat($('.sk-popup-reorder[data-id="' + id + '"]').val()) || 0
+                id:          id,
+                task_id:     $tb.data('task-id')    || '',
+                task_name:   $tb.data('task-name')  || '',
+                activity_id: $tb.data('activity-id') || 0,
+                stock:       parseFloat($('.sk-popup-stock[data-id="'   + id + '"]').val()) || 0,
+                reorder:     parseFloat($('.sk-popup-reorder[data-id="' + id + '"]').val()) || 0
             });
         });
         var $btn = $(this).prop('disabled', true).text('Saving...');

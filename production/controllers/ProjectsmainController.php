@@ -920,19 +920,19 @@ class ProjectsmainController extends Controller
                      GROUP BY por.allocation_id
                  ) grn_cost ON grn_cost.allocation_id = pern.pricing_resourceid
                  LEFT JOIN (
-                     SELECT si.resource_id, si.stock_at_site
+                     SELECT si.resource_id, si.stock_at_site, si.avg_consumption
                      FROM store_indents si
                      INNER JOIN (
                          SELECT resource_id, MAX(id) AS max_id
                          FROM store_indents
-                         WHERE project_id = :pid3
+                         WHERE project_id = :pid3 AND activity_id = :wid2
                          GROUP BY resource_id
                      ) latest ON latest.resource_id = si.resource_id
                               AND si.id = latest.max_id
                  ) si ON si.resource_id = pern.resource_Id
                  WHERE pern.activity_id = :wid AND pern.project_id = :pid AND pern.pricing_status = 0
                  ORDER BY pern.rate DESC",
-                [':wid' => $wbId, ':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid]
+                [':wid' => $wbId, ':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid, ':wid2' => $wbId]
             )->queryAll();
             // Build task planned qty per unit from schedule_task_new (Schedule tab → Activity → Task → Qty/Unit)
             $taskQtyMap  = [];  // task_id => task_qty (planned qty per activity unit)
@@ -1002,19 +1002,14 @@ class ProjectsmainController extends Controller
                         ? (float)$r['actual_unit_cost']
                         : null);
                 }
-                $grnQty   = (float)($r['grn_qty'] ?? 0);
-                $stockQty = (float)($r['stock_at_site'] ?? 0);
-                $noIndent = ($r['stock_at_site'] === null);
-
                 // Planned Consumption = res_qty × (estQty / schedQty) for ALL resource types
                 $plannedConsumption = round($resQty * $ratio, 3);
 
                 // Actual Consumption:
-                // Actual Consumption by resource type:
                 // SC (type 4): task Qty-Till-Today from last MB / lastReportedQty
                 // Materials/Consumables/Purchased Inputs/Tools (type 2,6,7,8):
-                //   stock=0 or no indent → res_qty × (estQty/schedQty)
-                //   stock>0              → (GRN_qty - stock) / lastQty
+                //   Use saved avg_consumption from store_indents (calculated at indent time)
+                //   If no indent raised: use planned consumption
                 // All other types: same as planned
                 if ($typeId === 4) {
                     $scTaskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
@@ -1026,11 +1021,10 @@ class ProjectsmainController extends Controller
                         ? round($scWorkDone / $lastQty, 3)
                         : $plannedConsumption;
                 } elseif (in_array($typeId, [2, 6, 7, 8])) {
-                    if ($stockQty > 0) {
-                        $actualConsumption = round(max(0, $grnQty - $stockQty) / $lastQty, 3);
-                    } else {
-                        $actualConsumption = round($resQty * $ratio, 3);
-                    }
+                    $savedAvg = $r['avg_consumption'] ?? null;
+                    $actualConsumption = ($savedAvg !== null)
+                        ? round((float)$savedAvg, 3)
+                        : $plannedConsumption;
                 } else {
                     $actualConsumption = $plannedConsumption;
                 }
