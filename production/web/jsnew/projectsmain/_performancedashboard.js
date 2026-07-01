@@ -215,8 +215,8 @@ var _resTypeColours = {
     'purchased inputs':  '#9E9E9E',   // Grey
     'consumables':       '#80CBC4',   // Grey Green (teal)
     'tools and tackles': '#607D8B',   // Blue Grey
-    'sub contractors':   '#455A64',   // Slate
-    'sub contractor':    '#455A64'    // Slate (singular)
+    'sub contractors':   '#78909C',   // Bluish Grey
+    'sub contractor':    '#78909C'    // Bluish Grey (singular)
 };
 function _resTypeCol(name, fallback){
     var k = (name || '').toLowerCase().trim();
