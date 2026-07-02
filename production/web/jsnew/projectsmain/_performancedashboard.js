@@ -2311,9 +2311,6 @@ function doActivityDuration(k) {
         + (aDur !== bDur ? '<span>Projected: <b style="color:' + (isOver ? '#e53935' : '#27ae60') + '">' + aDur + ' d</b></span>' : '')
         + '</div>'
         + divider
-        + row('Elapsed', elapsed + ' days', '#0d3b8e')
-        + row('Remaining', remaining + ' days', '#546e7a')
-        + divider
         + row('Work done',      wDone   + '%', '#27ae60')
         + row('Remaining work', wRemain + '%', '#e67e22')
         + '</div>';
