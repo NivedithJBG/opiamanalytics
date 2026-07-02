@@ -2314,7 +2314,7 @@ function doActivityDuration(k) {
         + '<span>End: <b style="color:#1a2540;">' + (fmDate(k.adj_end_date)||'-') + '</b></span>'
         + '</div>'
         + '<div>Act. Start: <b style="color:' + (k.reported_start_date ? '#1a2540' : '#e53935') + ';">'
-        + (k.reported_start_date ? fmDate(k.reported_start_date) : 'Activity Not Started')
+        + (k.reported_start_date ? fmDate(k.reported_start_date) : 'Not Started')
         + '</b></div>'
         + '</div>'
         + '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:11px;color:#5a6e8c;">'
@@ -2323,6 +2323,7 @@ function doActivityDuration(k) {
         + '</div>'
         + divider
         + row('Work done',      wDone   + '%', '#27ae60')
+        + divider
         + row('Remaining work', wRemain + '%', '#e67e22')
         + '</div>';
 }
