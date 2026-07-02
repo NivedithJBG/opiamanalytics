@@ -2241,9 +2241,10 @@ function doCapacity(k) {
 function doActivityDuration(k) {
     var el = document.getElementById('pd-g6');
     if (!el) return;
-    var bDur     = +k.b_duration || +k.duration || 0;   // old_duration, fall back to duration
-    var aDur     = +k.projected_duration || 0;
-    var elapsed  = +k.elapsed            || 0;
+    var bDur       = +k.b_duration || +k.duration || 0;
+    var aDur       = +k.projected_duration || 0;
+    var elapsed    = +k.elapsed     || 0;
+    var startDelay = +k.start_delay || 0;
     var wDone    = +(+k.work_done_pct || 0).toFixed(1);
     var wRemain  = Math.max(0, +(100 - wDone).toFixed(1));
     var baseCol  = k.critical ? '#00838f' : '#607D8B';  // blue if critical, dark grey otherwise
@@ -2293,7 +2294,7 @@ function doActivityDuration(k) {
         + (aDur !== bDur ? '<span>Projected: <b style="color:' + (isOver ? '#e53935' : '#27ae60') + '">' + aDur + ' d</b></span>' : '')
         + '</div>'
         + divider
-        + row('Elapsed',        elapsed   + ' days', '#0d3b8e')
+        + row(startDelay > 0 ? 'Start Delay' : 'Elapsed', elapsed + ' days', startDelay > 0 ? '#e53935' : '#0d3b8e')
         + row('Remaining',      remaining + ' days', '#546e7a')
         + divider
         + row('Work done',      wDone   + '%', '#27ae60')

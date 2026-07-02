@@ -633,16 +633,21 @@ class ProjectsmainController extends Controller
 
         $target_prod = $planned_per_day;
         $elapsed = 0;
+        $start_delay = 0;
         if ($act_start_date && $last_reported_date && $actual_qty > 0) {
             $elapsed = max(1, (strtotime($last_reported_date) - strtotime($act_start_date)) / 86400);
             $actual_prod  = round($actual_qty / $elapsed, 3);
             $actual_cycle = round($elapsed / $actual_qty, 3);
             $cap_max  = round($elapsed * $wh, 2);
             $cap_used = round(max(0, $cap_max - $cum_break), 2);
+        } elseif ($planned_start && $actual_qty == 0 && strtotime($planned_start) < strtotime(date('Y-m-d'))) {
+            // No progress yet but start date has passed — count start delay as elapsed
+            $start_delay = (int)floor((strtotime(date('Y-m-d')) - strtotime($planned_start)) / 86400);
+            $elapsed     = $start_delay;
         }
         $projected_duration = ($actual_qty > 0 && $elapsed > 0)
             ? (int)round($elapsed / $actual_qty * $target_qty)
-            : 0;
+            : ($start_delay > 0 ? $b_duration + $start_delay : 0);
 
         // Tasks for Resource Productivity panel
         $sa_act = $connection->createCommand(
@@ -720,6 +725,7 @@ class ProjectsmainController extends Controller
             'resources'            => $res_rows,
             'tasks'                => $tasks,
             'elapsed'              => (int)round($elapsed),
+            'start_delay'          => $start_delay,
             'projected_duration'   => $projected_duration,
             'planned_end_date'     => ($act['end_date'] ?? ''),
             'critical'             => (($act['critical_status'] ?? '') === 'Yes'),
