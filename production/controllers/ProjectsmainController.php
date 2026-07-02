@@ -405,6 +405,11 @@ class ProjectsmainController extends Controller
         $proj_b_start_date = ($proj_b_start_raw && $proj_delay > 0)
             ? date('Y-m-d', strtotime($proj_b_start_raw . ' +' . $proj_delay . ' days'))
             : $proj_b_start_raw;
+        // End date = adjusted start + actual duration (planned + delay)
+        $actual_duration = $proj_budgeted + $proj_delay;
+        $proj_b_end_computed = $proj_b_start_date
+            ? date('Y-m-d', strtotime($proj_b_start_date . ' +' . ($actual_duration - 1) . ' days'))
+            : $proj_b_end_date;
 
         // Per-activity overrun (projected_duration - old_duration, floored at 0) using the
         // IOW/Group-level delay: if any critical activity underneath has a delay, surface
@@ -506,7 +511,7 @@ class ProjectsmainController extends Controller
                 'actual'        => $proj_actual,
                 'delay'         => $proj_delay,
                 'b_start_date'  => $proj_b_start_date,
-                'b_end_date'    => $proj_b_end_date,
+                'b_end_date'    => $proj_b_end_computed,
                 'a_end_date'    => $proj_a_end_date,
             ],
             'iow_groups'     => $groups_raw,
