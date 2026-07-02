@@ -1189,7 +1189,7 @@ function loadAll(){
                 (d.project_bar&&d.project_bar.b_end_date)||'',
                 (d.project_bar&&d.project_bar.a_end_date)||''
             );
-            console.log('project_bar:', d.project_bar);
+
 
             // Default: first group ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ its IOW items ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ first IOW's activities
             if (_groups.length) filterByGroup(_groups[0].id, d.default_iow_id);
@@ -1858,12 +1858,12 @@ function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, 
 
     // Legends
     function lgRow(col, lbl, val){ return '<span><span style="display:inline-block;width:9px;height:9px;background:'+col+';margin-right:4px;border-radius:2px;vertical-align:middle;"></span>'+lbl+': <b style="color:#1a2540;">'+val+'</b></span>'; }
+
     html += '<div style="'+F+'display:flex;flex-direction:column;gap:2px;font-size:11px;">'
-          + lgRow('#00838f','DEBUG: budgeted='+budgeted+' actual='+actual+' serverDelay='+serverDelay+' startDelay='+startDelay+' actVal='+actVal')
+          + lgRow('#00838f','Planned',budgeted+' days')
           + lgRow('#e53935','Actual',actVal+' days')
           + '<span><span style="display:inline-block;width:9px;height:9px;background:#f0c419;margin-right:4px;border-radius:2px;vertical-align:middle;"></span>Difference: <b style="color:'+diffCol+';">'+diffStr+'</b></span>'
           + '</div>';
-
     html += '</div>';
     el.innerHTML = html;
 
