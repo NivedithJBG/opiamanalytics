@@ -403,6 +403,16 @@ class ProjectsmainController extends Controller
         $proj_delay = max(0, (int)($proj_delay_row['project_delay'] ?? 0));
         // Start date = planned start date (no adjustment)
         $proj_b_start_date = $proj_b_start_raw;
+        // Actual start = earliest reported start date across all activities
+        $actual_start_row = $connection->createCommand(
+            "SELECT MIN(spr.start_date) AS actual_start
+             FROM schedule_progress_report spr
+             JOIN scheduleactivities sa ON sa.id = spr.activity_id
+             WHERE sa.projectId = $pid AND sa.status = 0
+               AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'"
+        )->queryOne();
+        $proj_actual_start = ($actual_start_row && !empty($actual_start_row['actual_start']))
+            ? $actual_start_row['actual_start'] : '';
         // End date = planned start + actual duration (budgeted + delay)
         $actual_duration = $proj_budgeted + $proj_delay;
         $proj_b_end_computed = $proj_b_start_raw
@@ -509,6 +519,7 @@ class ProjectsmainController extends Controller
                 'actual'        => $proj_actual,
                 'delay'         => $proj_delay,
                 'b_start_date'  => $proj_b_start_date,
+                'actual_start'  => $proj_actual_start,
                 'b_end_date'    => $proj_b_end_computed,
                 'a_end_date'    => $proj_a_end_date,
             ],

@@ -1188,9 +1188,9 @@ function loadAll(){
                 (d.project_bar&&d.project_bar.b_start_date)||'',
                 (d.project_bar&&d.project_bar.b_end_date)||'',
                 (d.project_bar&&d.project_bar.a_end_date)||''
+                (d.project_bar&&d.project_bar.a_end_date)||'',
+                (d.project_bar&&d.project_bar.actual_start)||''
             );
-
-
             // Default: first group ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ its IOW items ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ first IOW's activities
             if (_groups.length) filterByGroup(_groups[0].id, d.default_iow_id);
 
@@ -1815,7 +1815,7 @@ function fmDate(s){
     var mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return d.getDate()+' '+mo[d.getMonth()]+' '+d.getFullYear();
 }
-function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, bEndDate, aEndDate){
+function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, bEndDate, aEndDate, actualStart){
     if (!el) return;
     if (!budgeted){ el.innerHTML='<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No data</div>'; return; }
     var startDelay = serverDelay || 0;
@@ -1852,11 +1852,16 @@ function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, 
     html += '</div>';
 
     // Start / End dates
-    html += '<div style="'+F+'display:flex;justify-content:space-between;font-size:10px;color:#5a6e8c;">'
-          + '<span>'+(fmDate(bStartDate)||'-')+'</span>'
-          + '<span>'+(fmDate(bEndDate)||'-')+'</span>'
+    // Start / End dates
+    html += '<div style="'+F+'font-size:10px;color:#5a6e8c;margin-top:2px;">';
+    html += '<div style="display:flex;justify-content:space-between;">'
+          + '<span>Plan Start: <b style="color:#1a2540;">'+( fmDate(bStartDate)||'-')+'</b></span>'
+          + '<span>End: <b style="color:#1a2540;">'+( fmDate(bEndDate)||'-')+'</b></span>'
           + '</div>';
-
+    html += '<div>Act. Start: <b style="color:'+(actualStart?'#1a2540':'#e53935')+';">'
+          + (actualStart ? fmDate(actualStart) : 'Not Started')
+          + '</b></div>';
+    html += '</div>';
     // Legends
     function lgRow(col, lbl, val){ return '<span><span style="display:inline-block;width:9px;height:9px;background:'+col+';margin-right:4px;border-radius:2px;vertical-align:middle;"></span>'+lbl+': <b style="color:#1a2540;">'+val+'</b></span>'; }
     html += '<div style="'+F+'display:flex;flex-direction:column;gap:2px;font-size:11px;">'
