@@ -682,6 +682,7 @@ class ProjectsmainController extends Controller
         $task_rows = $masterActId ? $connection->createCommand(
             "SELECT at.id AS task_id, at.task_name, at.task_unit,
                     COALESCE(stn.task_productivity, at.productivity, 0) AS productivity,
+                    COALESCE(stn.task_resource_units, 1) AS resource_units,
                     COALESCE(stn.task_qty, 0) AS task_qty,
                     COALESCE(stn.Budgeted_Duration, 0) AS planned_duration
              FROM activity_tasks at
@@ -714,7 +715,7 @@ class ProjectsmainController extends Controller
             return [
                 'name'             => $t['task_name'],
                 'unit'             => $t['task_unit'],
-                'val'              => (float)$t['productivity'],
+                'val'              => round((float)$t['productivity'] * max(1, (float)$t['resource_units']), 3),
                 'actual'           => $actual,
                 'qty'              => round($tqu * $target_qty, 3),
                 'planned_duration' => (float)$t['planned_duration'],
