@@ -2303,7 +2303,6 @@ function doActivityDuration(k) {
     } else {
         bar += '<div style="width:100%;background:' + baseCol + ';' + seg + '"></div>';
     }
-    bar += '<div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(elapsed) + ';background:#0d3b8e;opacity:0.55;pointer-events:none"></div>';
     bar += '</div>';
 
     var actName = k.activity_name || '';
