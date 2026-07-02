@@ -2063,7 +2063,7 @@ function doProductivity(k) {
 
     var svg='<svg width="210" height="138" viewBox="0 0 210 138" xmlns="http://www.w3.org/2000/svg">'
         +arc(0, 0.5, '#FFA726')
-        +arc(0.5, 1,  '#FF8F00')
+        +arc(0.5, 1,  '#81C784')
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
