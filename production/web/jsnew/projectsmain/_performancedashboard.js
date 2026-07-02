@@ -1823,20 +1823,34 @@ function renderProjectBar(el, budgeted, actual, label, bStartDate, bEndDate, aEn
     var lbl='font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:0 4px';
     var html='<div style="display:flex;flex-direction:column;justify-content:flex-start;height:100%;padding:6px 10px;box-sizing:border-box;overflow:auto">';
     html+='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#1a2540;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+label+'</div>';
+    // Duration labels above the bar
+    if (actual>0 && actual>budgeted){
+        html+='<div style="display:flex;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;margin-bottom:2px;">'
+            +'<span style="flex:'+budgeted+'">'+budgeted+' d</span>'
+            +'<span style="flex:'+(actual-budgeted)+'">+'+(actual-budgeted)+' d</span>'
+            +'</div>';
+    } else if (actual>0 && actual<budgeted){
+        html+='<div style="display:flex;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;margin-bottom:2px;">'
+            +'<span style="flex:'+actual+'">'+actual+' d</span>'
+            +'<span style="flex:'+(budgeted-actual)+'">-'+(budgeted-actual)+' d</span>'
+            +'</div>';
+    } else {
+        html+='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;margin-bottom:2px;">'+budgeted+' d</div>';
+    }
     html+='<div style="display:flex;align-items:stretch;height:22px;border-radius:3px;overflow:hidden">';
     if (actual>0 && actual>budgeted){
         var bPct=(budgeted/maxVal*100).toFixed(1);
         var rPct=((actual-budgeted)/maxVal*100).toFixed(1);
-        html+='<div style="width:'+bPct+'%;background:#00838f;min-width:3px;'+lbl+';color:#fff">'+budgeted+' d</div>';
-        html+='<div style="width:'+rPct+'%;background:#e53935;min-width:3px;'+lbl+';color:#fff">+'+(actual-budgeted)+' d</div>';
+        html+='<div style="width:'+bPct+'%;background:#00838f;min-width:3px;"></div>';
+        html+='<div style="width:'+rPct+'%;background:#e53935;min-width:3px;"></div>';
     } else if (actual>0 && actual<budgeted){
         var aPct=(actual/maxVal*100).toFixed(1);
         var yPct=((budgeted-actual)/maxVal*100).toFixed(1);
-        html+='<div style="width:'+aPct+'%;background:#00838f;min-width:3px;'+lbl+';color:#fff">'+actual+' d</div>';
-        html+='<div style="width:'+yPct+'%;background:#f0c419;min-width:3px;'+lbl+';color:#1a2540">-'+(budgeted-actual)+' d</div>';
+        html+='<div style="width:'+aPct+'%;background:#00838f;min-width:3px;"></div>';
+        html+='<div style="width:'+yPct+'%;background:#f0c419;min-width:3px;"></div>';
     } else {
         var boPct=(budgeted/maxVal*100).toFixed(1);
-        html+='<div style="width:'+boPct+'%;background:#00838f;min-width:3px;'+lbl+';color:#fff">'+budgeted+' d</div>';
+        html+='<div style="width:'+boPct+'%;background:#00838f;min-width:3px;"></div>';
     }
     html+='</div>';
     // Dates + delay row
@@ -1854,7 +1868,7 @@ function renderProjectBar(el, budgeted, actual, label, bStartDate, bEndDate, aEn
     var diffVal = actVal - budgeted;
     var diffCol = diffVal > 0 ? '#e53935' : diffVal < 0 ? '#27ae60' : '#1a2540';
     var diffStr = diffVal > 0 ? '+'+diffVal+' d' : diffVal+' d';
-    html+='<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;font-family:\'Barlow Condensed\',sans-serif;font-size:14px;">'
+    html+='<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;font-family:\'Barlow Condensed\',sans-serif;font-size:13px;">'
         +'<span><span style="display:inline-block;width:11px;height:11px;background:#00838f;margin-right:5px;border-radius:2px;vertical-align:middle;"></span>Planned Duration: <b style="color:#1a2540;">'+budgeted+' days</b></span>'
         +'<span><span style="display:inline-block;width:11px;height:11px;background:#e53935;margin-right:5px;border-radius:2px;vertical-align:middle;"></span>Actual Duration: <b style="color:#1a2540;">'+actVal+' days</b></span>'
         +'<span><span style="display:inline-block;width:11px;height:11px;background:#f0c419;margin-right:5px;border-radius:2px;vertical-align:middle;"></span>Difference: <b style="color:'+diffCol+';">'+diffStr+'</b></span>'
