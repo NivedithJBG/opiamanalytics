@@ -2300,7 +2300,13 @@ function doActivityDuration(k) {
     var actName = k.activity_name || '';
     el.innerHTML =
         '<div style="display:flex;flex-direction:column;justify-content:flex-start;height:100%;padding:4px 10px;box-sizing:border-box;gap:3px;">'
-        + (actName ? '<div style="' + fam + 'font-size:12px;font-weight:700;color:#1a2540;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + actName + '</div>' : '')
+        + '<div style="display:flex;justify-content:space-between;align-items:baseline;' + fam + 'font-size:11px;font-weight:700;margin-bottom:2px;">'
+        + '<span style="color:#1a2540;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;padding-right:6px;">' + (actName||'') + '</span>'
+        + '<span style="white-space:nowrap;color:#1a2540;">' + bDur + ' d'
+        + (isOver ? ' &nbsp;<span style="color:#e53935;">+' + (aDur-bDur) + ' d</span>' : isUnder ? ' &nbsp;<span style="color:#27ae60;">-' + (bDur-aDur) + ' d</span>' : '')
+        + (startDelay > 0 && !isOver && !isUnder ? ' &nbsp;<span style="color:#e53935;">+' + startDelay + ' d</span>' : '')
+        + '</span>'
+        + '</div>'
         + bar
         + '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:11px;color:#5a6e8c;margin-top:3px">'
         + '<span>' + (fmDate(k.adj_start_date) || '-') + '</span>'
