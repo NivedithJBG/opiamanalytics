@@ -322,7 +322,6 @@ class ProjectsmainController extends Controller
                 CASE WHEN MIN(wbs.a_start) IS NOT NULL AND MAX(wbs.a_end) IS NOT NULL
                      THEN DATEDIFF(MAX(wbs.a_end), MIN(wbs.a_start)) + 1
                      ELSE NULL END AS actual,
-                COALESCE(MAX($anchorOverrunExpr), 0) AS project_delay,
                 MIN(wbs.b_start) AS b_start_date,
                 MAX(wbs.b_end) AS b_end_date,
                 MAX(wbs.a_end) AS a_end_date
@@ -388,6 +387,19 @@ class ProjectsmainController extends Controller
         $proj_actual      = max(0, (int)($dur_row['actual']    ?? 0));
         $proj_b_end_date  = $dur_row['b_end_date'] ?? '';
         $proj_a_end_date  = $dur_row['a_end_date'] ?? '';
+
+        // Project delay — max overrun across all activities (same formula as IOW groups)
+        $proj_delay_row = $connection->createCommand("
+            SELECT COALESCE(MAX($anchorOverrunExpr), 0) AS project_delay
+            FROM scheduleactivities sa
+            LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
+            LEFT JOIN (
+                SELECT activity_id, MAX(report_date) AS last_report_date, SUM(currentqty) AS cumulated_qty
+                FROM schedule_progress_report_log GROUP BY activity_id
+            ) rpt ON rpt.activity_id = sa.id
+            WHERE sa.projectId = $pid AND sa.status = 0
+        ")->queryOne();
+        $proj_delay = max(0, (int)($proj_delay_row['project_delay'] ?? 0));
 
         // Per-activity overrun (projected_duration - old_duration, floored at 0) using the
         // IOW/Group-level delay: if any critical activity underneath has a delay, surface
@@ -487,7 +499,7 @@ class ProjectsmainController extends Controller
             'project_bar'    => [
                 'budgeted'      => $proj_budgeted,
                 'actual'        => $proj_actual,
-                'delay'         => max(0, (int)($dur_row['project_delay'] ?? 0)),
+                'delay'         => $proj_delay,
                 'b_start_date'  => $dur_row['b_start_date'] ?? '',
                 'b_end_date'    => $proj_b_end_date,
                 'a_end_date'    => $proj_a_end_date,
