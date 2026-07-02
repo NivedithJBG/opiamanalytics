@@ -2303,6 +2303,10 @@ function doActivityDuration(k) {
     } else {
         bar += '<div style="width:100%;background:' + baseCol + ';' + seg + '"></div>';
     }
+    // Progress overlay — white semi-transparent showing % work done
+    if (wDone > 0) {
+        bar += '<div style="position:absolute;left:0;top:0;bottom:0;width:' + Math.min(wDone, 100).toFixed(1) + '%;background:rgba(255,255,255,0.35);pointer-events:none"></div>';
+    }
     bar += '</div>';
 
     var actName = k.activity_name || '';
