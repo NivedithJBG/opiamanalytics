@@ -401,13 +401,12 @@ class ProjectsmainController extends Controller
             WHERE sa.projectId = $pid AND sa.status = 0
         ")->queryOne();
         $proj_delay = max(0, (int)($proj_delay_row['project_delay'] ?? 0));
-        // Adjusted start date = planned start + delay days
-        $proj_b_start_date = ($proj_b_start_raw && $proj_delay > 0)
-            ? date('Y-m-d', strtotime($proj_b_start_raw . ' +' . $proj_delay . ' days'))
-            : $proj_b_start_raw;
-        // End date = actual end date - start delay = original planned end date
-        $proj_b_end_computed = ($proj_b_end_date && $proj_delay > 0)
-            ? date('Y-m-d', strtotime($proj_b_end_date . ' -' . $proj_delay . ' days'))
+        // Start date = planned start date (no adjustment)
+        $proj_b_start_date = $proj_b_start_raw;
+        // End date = planned start + actual duration (budgeted + delay)
+        $actual_duration = $proj_budgeted + $proj_delay;
+        $proj_b_end_computed = $proj_b_start_raw
+            ? date('Y-m-d', strtotime($proj_b_start_raw . ' +' . ($actual_duration - 1) . ' days'))
             : $proj_b_end_date;
 
         // Per-activity overrun (projected_duration - old_duration, floored at 0) using the
