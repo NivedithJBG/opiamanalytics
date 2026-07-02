@@ -1841,7 +1841,7 @@ function renderProjectBar(el, budgeted, actual, label, bStartDate, bEndDate, aEn
     html+='</div>';
     // Dates + delay row
     var delay = actual>0 ? actual-budgeted : 0;
-    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;font-family:\\'Barlow Condensed\\',sans-serif;font-size:11px;color:#5a6e8c">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;font-family:Barlow Condensed,sans-serif;font-size:11px;color:#5a6e8c">';
     html+='<span>Start: <b style="color:#1a2540">'+(fmDate(bStartDate)||'-')+'</b></span>';
     html+='<span>End: <b style="color:#1a2540">'+(fmDate(bEndDate)||'-')+'</b></span>';
     html+='</div>';
