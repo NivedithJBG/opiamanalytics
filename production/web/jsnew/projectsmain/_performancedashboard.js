@@ -2295,7 +2295,6 @@ function doActivityDuration(k) {
         + '</div>'
         + divider
         + row('Elapsed', elapsed + ' days', '#0d3b8e')
-        + (startDelay > 0 ? row('Start Delay', startDelay + ' days', '#e53935') : '')
         + row('Remaining', remaining + ' days', '#546e7a')
         + divider
         + row('Work done',      wDone   + '%', '#27ae60')
