@@ -1183,6 +1183,7 @@ function loadAll(){
                 document.getElementById('pd-c2'),
                 +(d.project_bar&&d.project_bar.budgeted)||0,
                 +(d.project_bar&&d.project_bar.actual)||0,
+                +(d.project_bar&&d.project_bar.delay)||0,
                 name,
                 (d.project_bar&&d.project_bar.b_start_date)||'',
                 (d.project_bar&&d.project_bar.b_end_date)||'',
@@ -1813,7 +1814,7 @@ function fmDate(s){
     var mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return d.getDate()+' '+mo[d.getMonth()]+' '+d.getFullYear();
 }
-function renderProjectBar(el, budgeted, actual, label, bStartDate, bEndDate, aEndDate){
+function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, bEndDate, aEndDate){
     if (!el) return;
     if (!budgeted){
         el.innerHTML='<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No data</div>';
@@ -1823,15 +1824,10 @@ function renderProjectBar(el, budgeted, actual, label, bStartDate, bEndDate, aEn
     var lbl='font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:0 4px';
     var html='<div style="display:flex;flex-direction:column;justify-content:flex-start;height:100%;padding:6px 10px;box-sizing:border-box;overflow:auto">';
     html+='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#1a2540;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+label+'</div>';
-    // Calculate start delay: days past planned start with no progress
-    var startDelay = 0;
-    if (actual === 0 && bStartDate) {
-        var today = new Date(); today.setHours(0,0,0,0);
-        var sd = new Date(bStartDate);
-        if (today > sd) startDelay = Math.round((today - sd) / 86400000);
-    }
-    var effActual = actual > 0 ? actual : (startDelay > 0 ? startDelay : 0);
-    var effMax    = Math.max(budgeted, effActual, 1);
+    // Use server-computed delay (same formula as IOW groups: includes start delay + overrun)
+    var startDelay = serverDelay || 0;
+    var effActual  = actual > 0 ? actual : 0;
+    var effMax     = Math.max(budgeted, budgeted + startDelay, effActual, 1);
 
     // Duration labels above the bar
     if (actual > 0 && actual > budgeted){
@@ -1846,8 +1842,8 @@ function renderProjectBar(el, budgeted, actual, label, bStartDate, bEndDate, aEn
             +'</div>';
     } else if (startDelay > 0){
         html+='<div style="display:flex;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;margin-bottom:2px;">'
-            +'<span style="flex:'+budgeted+';color:#1a2540">'+budgeted+' d planned</span>'
-            +'<span style="flex:'+startDelay+';color:#e53935">+'+startDelay+' d start delay</span>'
+            +'<span style="flex:'+budgeted+';color:#1a2540">'+budgeted+' d</span>'
+            +'<span style="flex:'+startDelay+';color:#e53935">+'+startDelay+' d delay</span>'
             +'</div>';
     } else {
         html+='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;margin-bottom:2px;">'+budgeted+' d</div>';

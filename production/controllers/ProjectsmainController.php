@@ -294,6 +294,7 @@ class ProjectsmainController extends Controller
                 CASE WHEN MIN(wbs.a_start) IS NOT NULL AND MAX(wbs.a_end) IS NOT NULL
                      THEN DATEDIFF(MAX(wbs.a_end), MIN(wbs.a_start)) + 1
                      ELSE NULL END AS actual,
+                COALESCE(MAX($anchorOverrunExpr), 0) AS project_delay,
                 MIN(wbs.b_start) AS b_start_date,
                 MAX(wbs.b_end) AS b_end_date,
                 MAX(wbs.a_end) AS a_end_date
@@ -488,11 +489,12 @@ class ProjectsmainController extends Controller
             'error'          => 'No',
             'project_name'   => $project ? $project['Name'] : '',
             'project_bar'    => [
-                'budgeted'     => $proj_budgeted,
-                'actual'       => $proj_actual,
-                'b_start_date' => $dur_row['b_start_date'] ?? '',
-                'b_end_date'   => $proj_b_end_date,
-                'a_end_date'   => $proj_a_end_date,
+                'budgeted'      => $proj_budgeted,
+                'actual'        => $proj_actual,
+                'delay'         => max(0, (int)($dur_row['project_delay'] ?? 0)),
+                'b_start_date'  => $dur_row['b_start_date'] ?? '',
+                'b_end_date'    => $proj_b_end_date,
+                'a_end_date'    => $proj_a_end_date,
             ],
             'iow_groups'     => $groups_raw,
             'iow_items'      => $iow_items_raw,
