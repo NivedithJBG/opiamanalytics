@@ -241,11 +241,11 @@ post('/projectsmain/performancedashboard', null, function(d){
     if (d.project_bar) {
         var pb = d.project_bar;
         var planned = +pb.budgeted || 0;
-        var actual  = +pb.actual  || 0;
+        var actual  = +pb.actual  > 0 ? +pb.actual : planned;
         var diff    = actual - planned;
         document.getElementById('leg-planned-dur').textContent = planned > 0 ? planned + ' days' : '—';
         document.getElementById('leg-actual-dur').textContent  = actual  > 0 ? actual  + ' days' : '—';
-        document.getElementById('leg-diff-dur').textContent    = actual  > 0 ? (diff > 0 ? '+' : '') + diff + ' days' : '—';
+        document.getElementById('leg-diff-dur').textContent    = planned > 0 ? (diff > 0 ? '+' : '') + diff + ' days' : '—';
         document.getElementById('leg-diff-dur').style.color    = diff > 0 ? '#e55353' : diff < 0 ? '#27ae60' : '#1a2540';
     }
     hbar('ch-iow',      actDs(d.iow_items),           true);
