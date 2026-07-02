@@ -2308,11 +2308,16 @@ function doActivityDuration(k) {
         + '</span>'
         + '</div>'
         + bar
-        + '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:11px;color:#5a6e8c;margin-top:3px">'
-        + '<span>' + (fmDate(k.adj_start_date) || '-') + '</span>'
-        + '<span>' + (fmDate(k.adj_end_date)   || '-') + '</span>'
+        + '<div style="' + fam + 'font-size:10px;color:#5a6e8c;">'
+        + '<div style="display:flex;justify-content:space-between;">'
+        + '<span>Plan Start: <b style="color:#1a2540;">' + (fmDate(k.adj_start_date)||'-') + '</b></span>'
+        + '<span>End: <b style="color:#1a2540;">' + (fmDate(k.adj_end_date)||'-') + '</b></span>'
         + '</div>'
-        + '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:11px;color:#5a6e8c;margin-top:2px">'
+        + '<div>Act. Start: <b style="color:' + (k.reported_start_date ? '#1a2540' : '#e53935') + ';">'
+        + (k.reported_start_date ? fmDate(k.reported_start_date) : 'Activity Not Started')
+        + '</b></div>'
+        + '</div>'
+        + '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:11px;color:#5a6e8c;">'
         + '<span>Planned: <b style="color:#1a2540">' + bDur + ' d</b></span>'
         + (aDur !== bDur ? '<span>Projected: <b style="color:' + (isOver ? '#e53935' : '#27ae60') + '">' + aDur + ' d</b></span>' : '')
         + '</div>'

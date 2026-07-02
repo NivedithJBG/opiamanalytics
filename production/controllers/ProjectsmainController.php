@@ -747,6 +747,7 @@ class ProjectsmainController extends Controller
             'start_delay'          => $start_delay,
             'projected_duration'   => $projected_duration,
             'planned_end_date'     => ($act['end_date'] ?? ''),
+            'reported_start_date'  => $reported_start ?: '',
             'adj_start_date'       => $planned_start ?: $act_start_date,
             'adj_end_date'         => $planned_start
                 ? date('Y-m-d', strtotime($planned_start . ' +' . (max(1, $projected_duration ?: $b_duration) - 1) . ' days'))
