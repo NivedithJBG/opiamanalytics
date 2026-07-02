@@ -1859,7 +1859,7 @@ function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, 
     // Legends
     function lgRow(col, lbl, val){ return '<span><span style="display:inline-block;width:9px;height:9px;background:'+col+';margin-right:4px;border-radius:2px;vertical-align:middle;"></span>'+lbl+': <b style="color:#1a2540;">'+val+'</b></span>'; }
     html += '<div style="'+F+'display:flex;flex-direction:column;gap:2px;font-size:11px;">'
-          + lgRow('#00838f','Planned',budgeted+' days')
+          + lgRow('#00838f','DEBUG: budgeted='+budgeted+' actual='+actual+' serverDelay='+serverDelay+' startDelay='+startDelay+' actVal='+actVal')
           + lgRow('#e53935','Actual',actVal+' days')
           + '<span><span style="display:inline-block;width:9px;height:9px;background:#f0c419;margin-right:4px;border-radius:2px;vertical-align:middle;"></span>Difference: <b style="color:'+diffCol+';">'+diffStr+'</b></span>'
           + '</div>';
