@@ -1823,8 +1823,8 @@ function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, 
     }
     var startDelay = serverDelay || 0;
     var effMax     = Math.max(budgeted, budgeted + startDelay, actual, 1);
-    var actVal     = actual > 0 ? actual : (startDelay > 0 ? budgeted + startDelay : budgeted);
-    var diffVal    = (startDelay > 0 && actual === 0) ? startDelay : actVal - budgeted;
+    var actVal  = startDelay > 0 ? budgeted + startDelay : (actual > 0 ? actual : budgeted);
+    var diffVal = actVal - budgeted;
     var diffCol    = diffVal > 0 ? '#e53935' : diffVal < 0 ? '#27ae60' : '#1a2540';
     var diffStr    = diffVal > 0 ? '+'+diffVal+' d' : diffVal+' d';
     var F          = "font-family:'Barlow Condensed',sans-serif;";
