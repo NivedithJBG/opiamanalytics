@@ -2117,61 +2117,53 @@ function pdShowTasksTip(items, anchor, mode) {
     var fmtNum = isDuration ? function(v){ return (+v||0).toFixed(4); } : fm;
     var tip = pdGetTip();
     var cols = ['#d4845a','#f0c419','#8fa3bc','#7c5cbf','#3461b8','#27afc4','#ec407a','#26a69a'];
-    var bars = '', taskRows = '';
-    var segPct = function(v, tot) { return tot > 0 ? (v / tot * 100).toFixed(1) + '%' : '0%'; };
+    var taskRows = '';
+    var chartH = 180; var gridLines = 5;
+    var maxVal2 = 0;
+    items.forEach(function(r) { maxVal2 = Math.max(maxVal2, +(r[valKey])||0, +(r[actKey])||0); });
+    if (!maxVal2) maxVal2 = 1;
+    var step2 = maxVal2 / gridLines;
+    var yAxis = '<div style="display:flex;flex-direction:column;justify-content:space-between;height:'+chartH+'px;padding-right:6px;text-align:right;font-size:10px;color:#8ab4d8;">';
+    for (var g=gridLines; g>=0; g--) yAxis += '<span>'+fm(step2*g)+'</span>';
+    yAxis += '</div>';
+    var grids2 = '<div style="position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none;">';
+    for (var g2=0; g2<=gridLines; g2++) grids2 += '<div style="position:absolute;left:0;right:0;top:'+(((gridLines-g2)/gridLines)*100).toFixed(1)+'%;border-top:1px solid rgba(255,255,255,0.1);"></div>';
+    grids2 += '</div>';
+    var bars2 = '';
     items.forEach(function(r, i) {
-        var tgt = +(r[valKey]) || 0, act = +(r[actKey]) || 0;
-        var col = cols[i % cols.length];
-        var u = isDuration ? ' d' : (r.unit ? ' ' + shu(r.unit) : '');
-        var isOver  = act > 0 && act > tgt;
-        var isUnder = act > 0 && act < tgt;
-        var actCol  = isOver ? overCol : (isUnder ? underCol : '#e8f0fc');
-        if (isOver) {
-            bars += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;">'
-                + '<div style="height:' + segPct(act - tgt, act) + ';background:' + overCol + ';border-radius:3px 3px 0 0;min-height:3px;"></div>'
-                + '<div style="height:' + segPct(tgt, act) + ';background:' + col + ';min-height:4px;"></div>'
-                + '</div>';
-        } else if (isUnder) {
-            bars += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;">'
-                + '<div style="height:' + segPct(tgt - act, tgt) + ';background:' + underBarCol + ';border-radius:3px 3px 0 0;min-height:3px;"></div>'
-                + '<div style="height:' + segPct(act, tgt) + ';background:' + col + ';min-height:4px;"></div>'
-                + '</div>';
-        } else {
-            bars += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;">'
-                + '<div style="height:100%;background:' + col + ';border-radius:3px 3px 0 0;min-height:4px;"></div>'
-                + '</div>';
-        }
-        taskRows += '<tr>'
-            + '<td style="white-space:nowrap;">'
-            +   '<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:' + col + ';margin-right:10px;vertical-align:middle;"></span>'
-            +   sh(r.name || '', 35)
-            + '</td>'
-            + '<td style="text-align:right;font-weight:700;color:#e8f0fc;white-space:nowrap;">' + fmtNum(tgt) + u + '</td>'
-            + '<td style="text-align:right;font-weight:700;color:' + actCol + ';white-space:nowrap;">' + (act > 0 ? fmtNum(act) + u : 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â') + '</td>'
-            + '</tr>';
+        var tgt = +(r[valKey])||0, act = +(r[actKey])||0;
+        var col = cols[i%cols.length];
+        var u2 = isDuration ? ' d' : (r.unit ? ' '+shu(r.unit) : '');
+        var isOver=act>0&&act>tgt, isUnder=act>0&&act<tgt;
+        var actCol = isOver?overCol:(isUnder?underCol:'#e8f0fc');
+        var tH = (tgt/maxVal2*100).toFixed(1)+'%', aH = (act/maxVal2*100).toFixed(1)+'%';
+        bars2 += '<div style="flex:1;display:flex;gap:2px;align-items:flex-end;height:100%;padding:0 2px;">';
+        bars2 += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;"><div style="height:'+tH+';background:'+col+';border-radius:3px 3px 0 0;min-height:3px;opacity:0.6;"></div></div>';
+        if (act>0) bars2 += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;"><div style="height:'+aH+';background:'+(isOver?overCol:isUnder?underCol:col)+';border-radius:3px 3px 0 0;min-height:3px;"></div></div>';
+        bars2 += '</div>';
+        taskRows += '<tr><td style="white-space:nowrap;"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:'+col+';margin-right:8px;vertical-align:middle;"></span>'+sh(r.name||'',30)+'</td>'
+            +'<td style="text-align:right;font-weight:700;color:#e8f0fc;white-space:nowrap;">'+fmtNum(tgt)+u2+'</td>'
+            +'<td style="text-align:right;font-weight:700;color:'+actCol+';white-space:nowrap;">'+( act>0?fmtNum(act)+u2:'-')+'</td></tr>';
     });
     if (!items.length) {
-        tip.innerHTML = '<div class="tip-title">' + title + '</div><div style="font-size:17px;color:#aaa;padding:20px 0;text-align:center">No task data</div>';
+        tip.innerHTML = '<div class="tip-title">'+title+'</div><div style="font-size:15px;color:#aaa;padding:20px 0;text-align:center">No task data</div>';
     } else {
-        tip.innerHTML = '<div class="tip-title">' + title + '</div>'
-            + '<div style="display:flex;gap:8px;align-items:flex-end;height:90px;margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.12);">' + bars + '</div>'
-            + '<table>'
-            +   '<thead><tr>'
-            +     '<th style="text-align:left;">Task</th>'
-            +     '<th style="text-align:right;">' + tgtLbl + '</th>'
-            +     '<th style="text-align:right;">Actual</th>'
-            +   '</tr></thead>'
-            +   '<tbody>' + taskRows + '</tbody>'
-            + '</table>';
+        tip.innerHTML = '<div class="tip-title">'+title+'</div>'
+            +'<div style="display:flex;gap:0;margin-bottom:10px;">'+yAxis
+            +'<div style="flex:1;position:relative;"><div style="display:flex;gap:4px;align-items:flex-end;height:'+chartH+'px;background:rgba(255,255,255,0.03);border-left:1px solid rgba(255,255,255,0.15);border-bottom:1px solid rgba(255,255,255,0.15);">'+grids2+bars2+'</div></div></div>'
+            +'<div style="font-size:10px;color:#8ab4d8;margin-bottom:6px;"><span style="margin-right:10px;"><span style="display:inline-block;width:16px;height:8px;background:rgba(255,255,255,0.4);border-radius:2px;margin-right:4px;vertical-align:middle;"></span>'+tgtLbl+'</span><span><span style="display:inline-block;width:16px;height:8px;background:#66bb6a;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Actual</span></div>'
+            +'<table><thead><tr><th style="text-align:left;">Task</th><th style="text-align:right;">'+tgtLbl+'</th><th style="text-align:right;">Actual</th></tr></thead><tbody>'+taskRows+'</tbody></table>';
     }
     var gp = anchor.closest ? anchor.closest('.gp') : null;
     var gpRect = gp ? gp.getBoundingClientRect() : anchor.getBoundingClientRect();
-    var tipW = Math.round(gpRect.width * 0.82);
+    var tipW = Math.min(420, Math.max(320, Math.round(gpRect.width * 1.5)));
     tip.style.width = tipW + 'px';
     tip.style.display = 'block';
-    var tipH = tip.offsetHeight;
-    tip.style.left = Math.max(4, Math.round(gpRect.left) - tipW) + 'px';
-    tip.style.top  = Math.max(4, Math.round(gpRect.top) - tipH - 8) + 'px';
+    var tipH2 = tip.offsetHeight;
+    var tipLeft = Math.max(4, Math.round(gpRect.left + gpRect.width/2 - tipW/2));
+    if (tipLeft + tipW > window.innerWidth - 4) tipLeft = window.innerWidth - tipW - 4;
+    tip.style.left = tipLeft + 'px';
+    tip.style.top  = Math.max(4, Math.round(gpRect.top) - tipH2 - 8) + 'px';
 }
 function pdHideTipSoon() {
     _pdTipTimer = setTimeout(function() {
