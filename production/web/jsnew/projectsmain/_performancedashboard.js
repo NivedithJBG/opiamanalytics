@@ -1823,34 +1823,48 @@ function renderProjectBar(el, budgeted, actual, label, bStartDate, bEndDate, aEn
     var lbl='font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:0 4px';
     var html='<div style="display:flex;flex-direction:column;justify-content:flex-start;height:100%;padding:6px 10px;box-sizing:border-box;overflow:auto">';
     html+='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#1a2540;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+label+'</div>';
+    // Calculate start delay: days past planned start with no progress
+    var startDelay = 0;
+    if (actual === 0 && bStartDate) {
+        var today = new Date(); today.setHours(0,0,0,0);
+        var sd = new Date(bStartDate);
+        if (today > sd) startDelay = Math.round((today - sd) / 86400000);
+    }
+    var effActual = actual > 0 ? actual : (startDelay > 0 ? startDelay : 0);
+    var effMax    = Math.max(budgeted, effActual, 1);
+
     // Duration labels above the bar
-    if (actual>0 && actual>budgeted){
+    if (actual > 0 && actual > budgeted){
         html+='<div style="display:flex;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;margin-bottom:2px;">'
             +'<span style="flex:'+budgeted+'">'+budgeted+' d</span>'
-            +'<span style="flex:'+(actual-budgeted)+'">+'+(actual-budgeted)+' d</span>'
+            +'<span style="flex:'+(actual-budgeted)+';color:#e53935">+'+(actual-budgeted)+' d</span>'
             +'</div>';
-    } else if (actual>0 && actual<budgeted){
+    } else if (actual > 0 && actual < budgeted){
         html+='<div style="display:flex;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;margin-bottom:2px;">'
             +'<span style="flex:'+actual+'">'+actual+' d</span>'
-            +'<span style="flex:'+(budgeted-actual)+'">-'+(budgeted-actual)+' d</span>'
+            +'<span style="flex:'+(budgeted-actual)+';color:#27ae60">-'+(budgeted-actual)+' d</span>'
+            +'</div>';
+    } else if (startDelay > 0){
+        html+='<div style="display:flex;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;margin-bottom:2px;">'
+            +'<span style="flex:'+budgeted+';color:#1a2540">'+budgeted+' d planned</span>'
+            +'<span style="flex:'+startDelay+';color:#e53935">+'+startDelay+' d start delay</span>'
             +'</div>';
     } else {
         html+='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;margin-bottom:2px;">'+budgeted+' d</div>';
     }
+
     html+='<div style="display:flex;align-items:stretch;height:22px;border-radius:3px;overflow:hidden">';
-    if (actual>0 && actual>budgeted){
-        var bPct=(budgeted/maxVal*100).toFixed(1);
-        var rPct=((actual-budgeted)/maxVal*100).toFixed(1);
-        html+='<div style="width:'+bPct+'%;background:#00838f;min-width:3px;"></div>';
-        html+='<div style="width:'+rPct+'%;background:#e53935;min-width:3px;"></div>';
-    } else if (actual>0 && actual<budgeted){
-        var aPct=(actual/maxVal*100).toFixed(1);
-        var yPct=((budgeted-actual)/maxVal*100).toFixed(1);
-        html+='<div style="width:'+aPct+'%;background:#00838f;min-width:3px;"></div>';
-        html+='<div style="width:'+yPct+'%;background:#f0c419;min-width:3px;"></div>';
+    if (actual > 0 && actual > budgeted){
+        html+='<div style="width:'+(budgeted/effMax*100).toFixed(1)+'%;background:#00838f;min-width:3px;"></div>';
+        html+='<div style="width:'+((actual-budgeted)/effMax*100).toFixed(1)+'%;background:#e53935;min-width:3px;"></div>';
+    } else if (actual > 0 && actual < budgeted){
+        html+='<div style="width:'+(actual/effMax*100).toFixed(1)+'%;background:#00838f;min-width:3px;"></div>';
+        html+='<div style="width:'+((budgeted-actual)/effMax*100).toFixed(1)+'%;background:#f0c419;min-width:3px;"></div>';
+    } else if (startDelay > 0){
+        html+='<div style="width:'+(budgeted/effMax*100).toFixed(1)+'%;background:#00838f;min-width:3px;"></div>';
+        html+='<div style="width:'+(startDelay/effMax*100).toFixed(1)+'%;background:#e53935;min-width:3px;"></div>';
     } else {
-        var boPct=(budgeted/maxVal*100).toFixed(1);
-        html+='<div style="width:'+boPct+'%;background:#00838f;min-width:3px;"></div>';
+        html+='<div style="width:100%;background:#00838f;min-width:3px;"></div>';
     }
     html+='</div>';
     // Dates + delay row
