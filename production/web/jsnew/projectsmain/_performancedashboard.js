@@ -1856,10 +1856,10 @@ function renderProjectBar(el, budgeted, actual, label, bEndDate, aEndDate){
     var diffVal = actVal - budgeted;
     var diffCol = diffVal > 0 ? '#e53935' : diffVal < 0 ? '#27ae60' : '#1a2540';
     var diffStr = diffVal > 0 ? '+'+diffVal+' d' : diffVal+' d';
-    html+='<div style="display:flex;gap:10px;margin-top:5px;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;flex-wrap:wrap;">'
-        +'<span><span style="display:inline-block;width:10px;height:8px;background:#00838f;margin-right:3px;border-radius:1px"></span>Planned: <b style="color:#1a2540;">'+budgeted+' d</b></span>'
-        +'<span><span style="display:inline-block;width:10px;height:8px;background:#e53935;margin-right:3px;border-radius:1px"></span>Actual: <b style="color:#1a2540;">'+actVal+' d</b></span>'
-        +'<span><span style="display:inline-block;width:10px;height:8px;background:#f0c419;margin-right:3px;border-radius:1px"></span>Diff: <b style="color:'+diffCol+';">'+diffStr+'</b></span>'
+    html+='<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;font-family:\'Barlow Condensed\',sans-serif;font-size:15px;">'
+        +'<span><span style="display:inline-block;width:11px;height:11px;background:#00838f;margin-right:5px;border-radius:2px;vertical-align:middle;"></span>Planned Duration: <b style="color:#1a2540;">'+budgeted+' days</b></span>'
+        +'<span><span style="display:inline-block;width:11px;height:11px;background:#e53935;margin-right:5px;border-radius:2px;vertical-align:middle;"></span>Actual Duration: <b style="color:#1a2540;">'+actVal+' days</b></span>'
+        +'<span><span style="display:inline-block;width:11px;height:11px;background:#f0c419;margin-right:5px;border-radius:2px;vertical-align:middle;"></span>Difference: <b style="color:'+diffCol+';">'+diffStr+'</b></span>'
         +'</div>';
     html+='</div>';
     el.innerHTML=html;
