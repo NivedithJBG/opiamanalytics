@@ -1184,6 +1184,7 @@ function loadAll(){
                 +(d.project_bar&&d.project_bar.budgeted)||0,
                 +(d.project_bar&&d.project_bar.actual)||0,
                 name,
+                (d.project_bar&&d.project_bar.b_start_date)||'',
                 (d.project_bar&&d.project_bar.b_end_date)||'',
                 (d.project_bar&&d.project_bar.a_end_date)||''
             );
@@ -1812,7 +1813,7 @@ function fmDate(s){
     var mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return d.getDate()+' '+mo[d.getMonth()]+' '+d.getFullYear();
 }
-function renderProjectBar(el, budgeted, actual, label, bEndDate, aEndDate){
+function renderProjectBar(el, budgeted, actual, label, bStartDate, bEndDate, aEndDate){
     if (!el) return;
     if (!budgeted){
         el.innerHTML='<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No data</div>';
@@ -1840,23 +1841,20 @@ function renderProjectBar(el, budgeted, actual, label, bEndDate, aEndDate){
     html+='</div>';
     // Dates + delay row
     var delay = actual>0 ? actual-budgeted : 0;
-    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#5a6e8c">';
-    html+='<span>Planned End: <b style="color:#1a2540">'+(fmDate(bEndDate)||'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â')+'</b>';
-    if (budgeted) html+=' &nbsp;<b style="color:#1a2540">'+budgeted+' d</b>';
-    html+='</span>';
-    if (actual>0){
-        html+='<span>';
-        if (delay>0) html+='<b style="color:#e53935">+'+delay+' d delayed</b> &nbsp;';
-        else if (delay<0) html+='<b style="color:#27ae60">'+Math.abs(delay)+' d ahead</b> &nbsp;';
-        html+='Projected: <b style="color:#1a2540">'+(fmDate(aEndDate)||'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â')+'</b>';
-        html+='</span>';
-    }
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;font-family:\\'Barlow Condensed\\',sans-serif;font-size:11px;color:#5a6e8c">';
+    html+='<span>Start: <b style="color:#1a2540">'+(fmDate(bStartDate)||'-')+'</b></span>';
+    html+='<span>End: <b style="color:#1a2540">'+(fmDate(bEndDate)||'-')+'</b></span>';
     html+='</div>';
+
+
+
+
+
     var actVal  = actual > 0 ? actual : budgeted;
     var diffVal = actVal - budgeted;
     var diffCol = diffVal > 0 ? '#e53935' : diffVal < 0 ? '#27ae60' : '#1a2540';
     var diffStr = diffVal > 0 ? '+'+diffVal+' d' : diffVal+' d';
-    html+='<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;font-family:\'Barlow Condensed\',sans-serif;font-size:15px;">'
+    html+='<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;font-family:\'Barlow Condensed\',sans-serif;font-size:14px;">'
         +'<span><span style="display:inline-block;width:11px;height:11px;background:#00838f;margin-right:5px;border-radius:2px;vertical-align:middle;"></span>Planned Duration: <b style="color:#1a2540;">'+budgeted+' days</b></span>'
         +'<span><span style="display:inline-block;width:11px;height:11px;background:#e53935;margin-right:5px;border-radius:2px;vertical-align:middle;"></span>Actual Duration: <b style="color:#1a2540;">'+actVal+' days</b></span>'
         +'<span><span style="display:inline-block;width:11px;height:11px;background:#f0c419;margin-right:5px;border-radius:2px;vertical-align:middle;"></span>Difference: <b style="color:'+diffCol+';">'+diffStr+'</b></span>'
