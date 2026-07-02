@@ -84,7 +84,7 @@ class ReportController extends Controller
         }
 
         $html = '<style>
-            .iow-group-header{background:#001033;color:#fff;padding:8px 14px;font-weight:600;font-size:13px;border-radius:3px;margin:12px 0 0;}
+            .iow-group-header{background:#e0e0e0;color:#333;padding:8px 14px;font-weight:600;font-size:13px;border-radius:3px;margin:12px 0 0;}
             .iow-act-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;margin-bottom:4px;}
             .iow-act-table thead th{background:#555;color:#fff;padding:8px 10px;border:1px solid #444;white-space:nowrap;}
             .iow-act-table tbody td{padding:7px 10px;border:1px solid #ddd;vertical-align:middle;}
