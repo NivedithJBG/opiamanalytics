@@ -1820,71 +1820,52 @@ function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, 
         el.innerHTML='<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No data</div>';
         return;
     }
-    var maxVal = Math.max(budgeted, actual, 1);
-    var lbl='font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:0 4px';
-    var html='<div style="display:flex;flex-direction:column;justify-content:flex-start;height:100%;padding:6px 10px;box-sizing:border-box;overflow:auto">';
-    html+='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:#1a2540;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+label+'</div>';
-    // Use server-computed delay (same formula as IOW groups: includes start delay + overrun)
     var startDelay = serverDelay || 0;
-    var effActual  = actual > 0 ? actual : 0;
-    var effMax     = Math.max(budgeted, budgeted + startDelay, effActual, 1);
+    var effMax     = Math.max(budgeted, budgeted + startDelay, actual, 1);
+    var actVal     = actual > 0 ? actual : budgeted;
+    var diffVal    = (startDelay > 0 && actual === 0) ? startDelay : actVal - budgeted;
+    var diffCol    = diffVal > 0 ? '#e53935' : diffVal < 0 ? '#27ae60' : '#1a2540';
+    var diffStr    = diffVal > 0 ? '+'+diffVal+' d' : diffVal+' d';
+    var F          = "font-family:'Barlow Condensed',sans-serif;";
 
-    // Duration labels above the bar
+    var html = '<div style="'+F+'display:flex;flex-direction:column;height:100%;padding:4px 10px;box-sizing:border-box;gap:3px;">';
+
+    // Project name
+    html += '<div style="'+F+'font-size:12px;font-weight:700;color:#1a2540;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+label+'</div>';
+
+    // Bar
+    html += '<div style="display:flex;align-items:stretch;height:18px;border-radius:3px;overflow:hidden;">';
     if (actual > 0 && actual > budgeted){
-        html+='<div style="display:flex;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;margin-bottom:2px;">'
-            +'<span style="flex:'+budgeted+'">'+budgeted+' d</span>'
-            +'<span style="flex:'+(actual-budgeted)+';color:#e53935">+'+(actual-budgeted)+' d</span>'
-            +'</div>';
+        html += '<div style="width:'+(budgeted/effMax*100).toFixed(1)+'%;background:#00838f;min-width:3px;"></div>';
+        html += '<div style="width:'+((actual-budgeted)/effMax*100).toFixed(1)+'%;background:#e53935;min-width:3px;"></div>';
     } else if (actual > 0 && actual < budgeted){
-        html+='<div style="display:flex;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;margin-bottom:2px;">'
-            +'<span style="flex:'+actual+'">'+actual+' d</span>'
-            +'<span style="flex:'+(budgeted-actual)+';color:#27ae60">-'+(budgeted-actual)+' d</span>'
-            +'</div>';
+        html += '<div style="width:'+(actual/effMax*100).toFixed(1)+'%;background:#00838f;min-width:3px;"></div>';
+        html += '<div style="width:'+((budgeted-actual)/effMax*100).toFixed(1)+'%;background:#f0c419;min-width:3px;"></div>';
     } else if (startDelay > 0){
-        html+='<div style="display:flex;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;margin-bottom:2px;">'
-            +'<span style="flex:'+budgeted+';color:#1a2540">'+budgeted+' d</span>'
-            +'<span style="flex:'+startDelay+';color:#e53935">+'+startDelay+' d delay</span>'
-            +'</div>';
+        html += '<div style="width:'+(budgeted/effMax*100).toFixed(1)+'%;background:#00838f;min-width:3px;"></div>';
+        html += '<div style="width:'+(startDelay/effMax*100).toFixed(1)+'%;background:#e53935;min-width:3px;"></div>';
     } else {
-        html+='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#1a2540;margin-bottom:2px;">'+budgeted+' d</div>';
+        html += '<div style="width:100%;background:#00838f;min-width:3px;"></div>';
     }
+    html += '</div>';
 
-    html+='<div style="display:flex;align-items:stretch;height:22px;border-radius:3px;overflow:hidden">';
-    if (actual > 0 && actual > budgeted){
-        html+='<div style="width:'+(budgeted/effMax*100).toFixed(1)+'%;background:#00838f;min-width:3px;"></div>';
-        html+='<div style="width:'+((actual-budgeted)/effMax*100).toFixed(1)+'%;background:#e53935;min-width:3px;"></div>';
-    } else if (actual > 0 && actual < budgeted){
-        html+='<div style="width:'+(actual/effMax*100).toFixed(1)+'%;background:#00838f;min-width:3px;"></div>';
-        html+='<div style="width:'+((budgeted-actual)/effMax*100).toFixed(1)+'%;background:#f0c419;min-width:3px;"></div>';
-    } else if (startDelay > 0){
-        html+='<div style="width:'+(budgeted/effMax*100).toFixed(1)+'%;background:#00838f;min-width:3px;"></div>';
-        html+='<div style="width:'+(startDelay/effMax*100).toFixed(1)+'%;background:#e53935;min-width:3px;"></div>';
-    } else {
-        html+='<div style="width:100%;background:#00838f;min-width:3px;"></div>';
-    }
-    html+='</div>';
-    // Dates + delay row
-    var delay = actual>0 ? actual-budgeted : 0;
-    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;font-family:Barlow Condensed,sans-serif;font-size:11px;color:#5a6e8c">';
-    html+='<span>Start: <b style="color:#1a2540">'+(fmDate(bStartDate)||'-')+'</b></span>';
-    html+='<span>End: <b style="color:#1a2540">'+(fmDate(bEndDate)||'-')+'</b></span>';
-    html+='</div>';
+    // Start / End dates
+    html += '<div style="'+F+'display:flex;justify-content:space-between;font-size:10px;color:#5a6e8c;">'
+          + '<span>'+(fmDate(bStartDate)||'-')+'</span>'
+          + '<span>'+(fmDate(bEndDate)||'-')+'</span>'
+          + '</div>';
 
+    // Legends
+    function lgRow(col, lbl, val){ return '<span><span style="display:inline-block;width:9px;height:9px;background:'+col+';margin-right:4px;border-radius:2px;vertical-align:middle;"></span>'+lbl+': <b style="color:#1a2540;">'+val+'</b></span>'; }
+    html += '<div style="'+F+'display:flex;flex-direction:column;gap:2px;font-size:11px;">'
+          + lgRow('#00838f','Planned',budgeted+' days')
+          + lgRow('#e53935','Actual',actVal+' days')
+          + '<span><span style="display:inline-block;width:9px;height:9px;background:#f0c419;margin-right:4px;border-radius:2px;vertical-align:middle;"></span>Difference: <b style="color:'+diffCol+';">'+diffStr+'</b></span>'
+          + '</div>';
 
-
-
-
-    var actVal  = actual > 0 ? actual : budgeted;
-    var diffVal = actVal - budgeted;
-    var diffCol = diffVal > 0 ? '#e53935' : diffVal < 0 ? '#27ae60' : '#1a2540';
-    var diffStr = diffVal > 0 ? '+'+diffVal+' d' : diffVal+' d';
-    html+='<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;font-family:\'Barlow Condensed\',sans-serif;font-size:13px;">'
-        +'<span><span style="display:inline-block;width:11px;height:11px;background:#00838f;margin-right:5px;border-radius:2px;vertical-align:middle;"></span>Planned Duration: <b style="color:#1a2540;">'+budgeted+' days</b></span>'
-        +'<span><span style="display:inline-block;width:11px;height:11px;background:#e53935;margin-right:5px;border-radius:2px;vertical-align:middle;"></span>Actual Duration: <b style="color:#1a2540;">'+actVal+' days</b></span>'
-        +'<span><span style="display:inline-block;width:11px;height:11px;background:#f0c419;margin-right:5px;border-radius:2px;vertical-align:middle;"></span>Difference: <b style="color:'+diffCol+';">'+diffStr+'</b></span>'
-        +'</div>';
-    html+='</div>';
-    el.innerHTML=html;
+    html += '</div>';
+    el.innerHTML = html;
+}
 }
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ CSS horizontal bar chart ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
