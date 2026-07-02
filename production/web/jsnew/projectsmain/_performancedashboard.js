@@ -1817,24 +1817,25 @@ function fmDate(s){
 }
 function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, bEndDate, aEndDate){
     if (!el) return;
-    if (!budgeted){
-        el.innerHTML='<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No data</div>';
-        return;
-    }
+    if (!budgeted){ el.innerHTML='<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No data</div>'; return; }
     var startDelay = serverDelay || 0;
     var effMax     = Math.max(budgeted, budgeted + startDelay, actual, 1);
-    var actVal  = startDelay > 0 ? budgeted + startDelay : (actual > 0 ? actual : budgeted);
-    var diffVal = actVal - budgeted;
+    var actVal     = startDelay > 0 ? budgeted + startDelay : (actual > 0 ? actual : budgeted);
+    var diffVal    = actVal - budgeted;
     var diffCol    = diffVal > 0 ? '#e53935' : diffVal < 0 ? '#27ae60' : '#1a2540';
     var diffStr    = diffVal > 0 ? '+'+diffVal+' d' : diffVal+' d';
-    var F          = "font-family:'Barlow Condensed',sans-serif;";
-
+    var F          = 'font-family:Barlow Condensed,sans-serif;';
     var html = '<div style="'+F+'display:flex;flex-direction:column;height:100%;padding:4px 10px;box-sizing:border-box;gap:3px;">';
 
-    // Project name
-    html += '<div style="'+F+'font-size:12px;font-weight:700;color:#1a2540;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+label+'</div>';
+    // Project name + durations on same line above bar
+    html += '<div style="'+F+'display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:700;margin-bottom:2px;">'
+          + '<span style="color:#1a2540;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;padding-right:6px;">'+label+'</span>'
+          + '<span style="white-space:nowrap;color:#1a2540;">'+budgeted+' d'
+          + (diffVal > 0 ? ' &nbsp;<span style="color:#e53935;">+'+diffVal+' d</span>' : diffVal < 0 ? ' &nbsp;<span style="color:#27ae60;">'+diffVal+' d</span>' : '')
+          + '</span>'
+          + '</div>';
 
-    // Bar
+    // Bar - same height as before
     html += '<div style="display:flex;align-items:stretch;height:18px;border-radius:3px;overflow:hidden;">';
     if (actual > 0 && actual > budgeted){
         html += '<div style="width:'+(budgeted/effMax*100).toFixed(1)+'%;background:#00838f;min-width:3px;"></div>';
@@ -1858,15 +1859,14 @@ function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, 
 
     // Legends
     function lgRow(col, lbl, val){ return '<span><span style="display:inline-block;width:9px;height:9px;background:'+col+';margin-right:4px;border-radius:2px;vertical-align:middle;"></span>'+lbl+': <b style="color:#1a2540;">'+val+'</b></span>'; }
-
     html += '<div style="'+F+'display:flex;flex-direction:column;gap:2px;font-size:11px;">'
           + lgRow('#00838f','Planned',budgeted+' days')
           + lgRow('#e53935','Actual',actVal+' days')
           + '<span><span style="display:inline-block;width:9px;height:9px;background:#f0c419;margin-right:4px;border-radius:2px;vertical-align:middle;"></span>Difference: <b style="color:'+diffCol+';">'+diffStr+'</b></span>'
           + '</div>';
+
     html += '</div>';
     el.innerHTML = html;
-
 }
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ CSS horizontal bar chart ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 // onRowClick: optional callback(id) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â defaults to loadKpi
