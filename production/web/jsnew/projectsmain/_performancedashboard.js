@@ -2294,8 +2294,9 @@ function doActivityDuration(k) {
         + (aDur !== bDur ? '<span>Projected: <b style="color:' + (isOver ? '#e53935' : '#27ae60') + '">' + aDur + ' d</b></span>' : '')
         + '</div>'
         + divider
-        + row(startDelay > 0 ? 'Start Delay' : 'Elapsed', elapsed + ' days', startDelay > 0 ? '#e53935' : '#0d3b8e')
-        + row('Remaining',      remaining + ' days', '#546e7a')
+        + row('Elapsed', elapsed + ' days', '#0d3b8e')
+        + (startDelay > 0 ? row('Start Delay', startDelay + ' days', '#e53935') : '')
+        + row('Remaining', remaining + ' days', '#546e7a')
         + divider
         + row('Work done',      wDone   + '%', '#27ae60')
         + row('Remaining work', wRemain + '%', '#e67e22')
