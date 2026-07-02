@@ -1852,7 +1852,6 @@ function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, 
     html += '</div>';
 
     // Start / End dates
-    // Start / End dates
     html += '<div style="'+F+'font-size:10px;color:#5a6e8c;margin-top:2px;">';
     html += '<div style="display:flex;justify-content:space-between;">'
           + '<span>Plan Start: <b style="color:#1a2540;">'+( fmDate(bStartDate)||'-')+'</b></span>'
@@ -1863,16 +1862,16 @@ function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, 
           + '</b></div>';
     html += '</div>';
     // Legends — with top margin and divider lines between items
-    var div = '<div style="border-top:1px solid #d0d8e8;margin:2px 0;"></div>';
-    function lgRow(col, lbl, val){ return '<div style="display:flex;justify-content:space-between;padding:2px 0;">'
+    var lgDivider = '<div style="border-top:1px solid #d0d8e8;margin:2px 0;"></div>';
+    var lgRow = function(col, lbl, val){ return '<div style="display:flex;justify-content:space-between;padding:2px 0;">'
         + '<span><span style="display:inline-block;width:9px;height:9px;background:'+col+';margin-right:4px;border-radius:2px;vertical-align:middle;"></span>'+lbl+'</span>'
         + '<b style="color:#1a2540;">'+val+'</b>'
-        + '</div>'; }
+        + '</div>'; };
     html += '<div style="'+F+'font-size:11px;margin-top:6px;border-top:2px solid #d0d8e8;padding-top:4px;">'
           + lgRow('#00838f','Planned',budgeted+' days')
-          + div
+          + lgDivider
           + lgRow('#e53935','Actual',actVal+' days')
-          + div
+          + lgDivider
           + '<div style="display:flex;justify-content:space-between;padding:2px 0;">'
           + '<span><span style="display:inline-block;width:9px;height:9px;background:#f0c419;margin-right:4px;border-radius:2px;vertical-align:middle;"></span>Difference</span>'
           + '<b style="color:'+diffCol+';">'+diffStr+'</b>'
