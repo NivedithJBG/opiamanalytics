@@ -2160,8 +2160,8 @@ function pdShowTasksTip(items, anchor, mode) {
     tip.style.width = tipW + 'px';
     tip.style.display = 'block';
     var tipH2 = tip.offsetHeight;
-    var tipLeft = Math.max(4, Math.round(gpRect.left + gpRect.width/2 - tipW/2));
-    if (tipLeft + tipW > window.innerWidth - 4) tipLeft = window.innerWidth - tipW - 4;
+    var tipLeft = Math.max(4, Math.round(gpRect.left) - tipW - 8);
+    if (tipLeft < 4) tipLeft = Math.min(4, Math.round(gpRect.right) + 8);
     tip.style.left = tipLeft + 'px';
     tip.style.top  = Math.max(4, Math.round(gpRect.top) - tipH2 - 8) + 'px';
 }
