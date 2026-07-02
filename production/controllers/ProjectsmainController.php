@@ -405,10 +405,9 @@ class ProjectsmainController extends Controller
         $proj_b_start_date = ($proj_b_start_raw && $proj_delay > 0)
             ? date('Y-m-d', strtotime($proj_b_start_raw . ' +' . $proj_delay . ' days'))
             : $proj_b_start_raw;
-        // End date = adjusted start + actual duration (planned + delay)
-        $actual_duration = $proj_budgeted + $proj_delay;
-        $proj_b_end_computed = $proj_b_start_date
-            ? date('Y-m-d', strtotime($proj_b_start_date . ' +' . ($actual_duration - 1) . ' days'))
+        // End date = actual end date - start delay = original planned end date
+        $proj_b_end_computed = ($proj_b_end_date && $proj_delay > 0)
+            ? date('Y-m-d', strtotime($proj_b_end_date . ' -' . $proj_delay . ' days'))
             : $proj_b_end_date;
 
         // Per-activity overrun (projected_duration - old_duration, floored at 0) using the
@@ -741,12 +740,8 @@ class ProjectsmainController extends Controller
             'adj_start_date'       => ($planned_start && $start_delay > 0)
                 ? date('Y-m-d', strtotime($planned_start . ' +' . $start_delay . ' days'))
                 : $act_start_date,
-            'adj_end_date'         => ($planned_start)
-                ? date('Y-m-d', strtotime(
-                    (($planned_start && $start_delay > 0)
-                        ? date('Y-m-d', strtotime($planned_start . ' +' . $start_delay . ' days'))
-                        : $act_start_date)
-                    . ' +' . (max(1, $projected_duration ?: $b_duration) - 1) . ' days'))
+            'adj_end_date'         => (!empty($act['end_date']) && $start_delay > 0)
+                ? date('Y-m-d', strtotime($act['end_date'] . ' -' . $start_delay . ' days'))
                 : ($act['end_date'] ?? ''),
             'critical'             => (($act['critical_status'] ?? '') === 'Yes'),
             'project_name'         => $project_name,
