@@ -2177,7 +2177,7 @@ function doCycleTime(k) {
     var el = document.getElementById('pd-g4');
     if (!el) return;
     var tc  = +k.target_cycle_time || 0;
-    var ac  = +k.actual_cycle_time || 0;
+    var ac  = +k.actual_cycle_time > 0 ? +k.actual_cycle_time : tc; // when no progress, actual = target
     var an  = sh(k.activity_name || '', 28);
     var maxVal = tc > 0 ? tc * 2 : 1;
     var f   = Math.max(0, Math.min(1, ac / maxVal));
@@ -2199,9 +2199,12 @@ function doCycleTime(k) {
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
-        +'<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">'+fm(ac)+' d</tspan></text>'
-        +'<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Target <tspan font-weight="700">'+fm(tc)+' d</tspan></text>'
-        +'<text x="'+cx+'" y="'+(cy-18)+'" text-anchor="middle" font-size="18" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+fm(ac)+' Days</text>'
+        +'<text x="105" y="40" text-anchor="middle" font-size="10" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Target</text>'
+        +'<text x="105" y="53" text-anchor="middle" font-size="15" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+fm(tc)+' d</text>'
+        +'<text x="105" y="66" text-anchor="middle" font-size="10" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual</text>'
+        +'<text x="105" y="79" text-anchor="middle" font-size="15" font-weight="700" fill="'+(ac>tc?'#e53935':ac<tc?'#27ae60':'#1a2540')+'" font-family="Barlow Condensed,Arial">'+fm(ac)+' d</text>'
+        +'<text x="8" y="112" text-anchor="start" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Fast</text>'
+        +'<text x="202" y="112" text-anchor="end" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Slow</text>'
         +(an?'<text x="'+cx+'" y="135" text-anchor="middle" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +'</svg>';
 
