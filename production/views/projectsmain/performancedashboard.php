@@ -66,16 +66,17 @@ body{
 /* card body — flex column, must not grow past its cell */
 .dcard-body{
     flex:1;min-height:0;overflow:hidden;
-    padding:3px 5px;
+    padding:4px 6px;
     display:flex;flex-direction:column
 }
+#ch-project-card .dcard-body{overflow:visible;}
 
 /* ── Bar chart cards ── */
 .leg{
-    display:flex;gap:6px;font-size:8.5px;color:#556;
-    flex-shrink:0;margin-bottom:1px
+    display:flex;gap:6px;font-size:11px;color:#1a2540;
+    flex-shrink:0;margin-bottom:3px;flex-wrap:wrap;
 }
-.leg i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:2px;vertical-align:middle}
+.leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px;vertical-align:middle}
 .cv-area{flex:1;min-height:0;position:relative}
 .cv-area canvas{position:absolute;inset:0;width:100%!important;height:100%!important}
 
@@ -123,7 +124,7 @@ body{
   </div>
 
   <!-- R1C2 Project -->
-  <div class="dcard">
+  <div class="dcard" id="ch-project-card">
     <div class="dcard-hdr">Project</div>
     <div class="dcard-body">
       <div class="leg" style="flex-wrap:wrap;gap:6px 12px;">
