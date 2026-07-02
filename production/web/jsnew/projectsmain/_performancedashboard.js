@@ -2284,7 +2284,7 @@ function doActivityDuration(k) {
     var divider = '<div style="border-top:1px solid #d0d8e8;margin:3px 4px"></div>';
 
     // Single bar: base colour (grey or blue) + overrun (red) or slack (yellow), dark overlay for elapsed
-    var bar = '<div style="position:relative;display:flex;align-items:stretch;height:22px;border-radius:3px;overflow:hidden;">';
+    var bar = '<div style="position:relative;display:flex;align-items:stretch;height:18px;border-radius:3px;overflow:hidden;">';
     if (isOver) {
         bar += '<div style="width:' + (bDur/maxDur*100).toFixed(1) + '%;background:' + baseCol + ';min-width:3px;' + seg + '"></div>';
         bar += '<div style="width:' + ((aDur-bDur)/maxDur*100).toFixed(1) + '%;background:#e53935;min-width:3px;' + seg + '"></div>';
