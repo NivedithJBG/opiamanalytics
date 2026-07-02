@@ -2114,7 +2114,7 @@ function pdShowTasksTip(items, anchor, mode) {
     var overCol  = isDuration ? '#ef5350' : '#66bb6a';
     var underCol = isDuration ? '#f0c419' : '#ef5350';
     var underBarCol = isDuration ? 'rgba(240,196,25,.3)' : 'rgba(239,83,80,.3)';
-    var fmtNum = isDuration ? function(v){ return (+v||0).toFixed(4); } : fm;
+    var fmtNum = isDuration ? function(v){ return (+v||0).toFixed(2); } : fm;
     var tip = pdGetTip();
     var cols = ['#d4845a','#f0c419','#8fa3bc','#7c5cbf','#3461b8','#27afc4','#ec407a','#26a69a'];
     var taskRows = '';
