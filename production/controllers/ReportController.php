@@ -302,7 +302,7 @@ class ReportController extends Controller
 
         // Row 2: Data row — dark navy background (sleek/compact)
         $inputStyle = 'background:#fff;color:#001033;border:none;padding:3px 6px;height:26px;font-size:12px;border-radius:3px;';
-        $labelStyle = 'font-size:10px;color:#fff;display:block;margin-bottom:2px;line-height:1.2;';
+        $labelStyle = 'font-size:12px;color:#cce0ff;font-weight:600;display:block;margin-bottom:3px;line-height:1.3;';
         $dispStyle  = 'font-size:13px;font-weight:600;padding:3px 6px;height:26px;color:#001033;background:#f0f4f8;border-radius:3px;display:flex;align-items:center;';
 
         $html .= '<div style="background:#001033;color:#fff;padding:8px 14px;border-radius:0 0 4px 4px;">';
