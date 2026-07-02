@@ -1862,12 +1862,21 @@ function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, 
           + (actualStart ? fmDate(actualStart) : 'Not Started')
           + '</b></div>';
     html += '</div>';
-    // Legends
-    function lgRow(col, lbl, val){ return '<span><span style="display:inline-block;width:9px;height:9px;background:'+col+';margin-right:4px;border-radius:2px;vertical-align:middle;"></span>'+lbl+': <b style="color:#1a2540;">'+val+'</b></span>'; }
-    html += '<div style="'+F+'display:flex;flex-direction:column;gap:2px;font-size:11px;">'
+    // Legends — with top margin and divider lines between items
+    var div = '<div style="border-top:1px solid #d0d8e8;margin:2px 0;"></div>';
+    function lgRow(col, lbl, val){ return '<div style="display:flex;justify-content:space-between;padding:2px 0;">'
+        + '<span><span style="display:inline-block;width:9px;height:9px;background:'+col+';margin-right:4px;border-radius:2px;vertical-align:middle;"></span>'+lbl+'</span>'
+        + '<b style="color:#1a2540;">'+val+'</b>'
+        + '</div>'; }
+    html += '<div style="'+F+'font-size:11px;margin-top:6px;border-top:2px solid #d0d8e8;padding-top:4px;">'
           + lgRow('#00838f','Planned',budgeted+' days')
+          + div
           + lgRow('#e53935','Actual',actVal+' days')
-          + '<span><span style="display:inline-block;width:9px;height:9px;background:#f0c419;margin-right:4px;border-radius:2px;vertical-align:middle;"></span>Difference: <b style="color:'+diffCol+';">'+diffStr+'</b></span>'
+          + div
+          + '<div style="display:flex;justify-content:space-between;padding:2px 0;">'
+          + '<span><span style="display:inline-block;width:9px;height:9px;background:#f0c419;margin-right:4px;border-radius:2px;vertical-align:middle;"></span>Difference</span>'
+          + '<b style="color:'+diffCol+';">'+diffStr+'</b>'
+          + '</div>'
           + '</div>';
 
     html += '</div>';
