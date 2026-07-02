@@ -1174,7 +1174,7 @@ function loadAll(){
                 return {name:r.name, scheduled:+r.scheduled||0, delay:+r.delay||0, id:r.id,
                         critical:groupIsCritical(r.id),
                         start_date:r.start_date||'', end_date:r.end_date||'',
-                        actual_end_date:(r.actual_end_date&&r.actual_end_date!=='0000-00-00')?r.actual_end_date:'',
+                        actual_end_date:(r.proj_end_date&&r.proj_end_date!=='0000-00-00')?r.proj_end_date:((r.actual_end_date&&r.actual_end_date!=='0000-00-00')?r.actual_end_date:''),
                         duration_days:+r.scheduled||0};
             }), filterByGroup);
 
@@ -1218,7 +1218,7 @@ function filterByGroup(groupId, preselectIowId){
         return {name:r.name, scheduled:+r.scheduled||0, delay:+r.delay||0, id:r.id,
                 critical:iowIsCritical(r.id),
                 start_date:r.start_date||'', end_date:r.end_date||'',
-                actual_end_date:(r.actual_end_date&&r.actual_end_date!=='0000-00-00')?r.actual_end_date:'',
+                actual_end_date:(r.proj_end_date&&r.proj_end_date!=='0000-00-00')?r.proj_end_date:((r.actual_end_date&&r.actual_end_date!=='0000-00-00')?r.actual_end_date:''),
                 duration_days:+r.scheduled||0};
     }), filterByIow);
     $('#pd-c1 .brow').removeClass('brow-active');
@@ -1294,6 +1294,12 @@ function toBarItems(acts, isUpcoming){
             } else {
                 sc = projDur || planned;
                 dl = 0;
+                // No overrun but check for start delay in ongoing
+                if (!projEndDate && r.delay > 0 && r.end_date && r.end_date !== '0000-00-00') {
+                    var pe3 = new Date(r.end_date);
+                    pe3.setDate(pe3.getDate() + Math.round(r.delay));
+                    projEndDate = pe3.toISOString().slice(0, 10);
+                }
             }
         }
 

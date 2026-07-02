@@ -436,7 +436,14 @@ class ProjectsmainController extends Controller
                     COALESCE($iowDelayExpr,0) AS delay,
                     MIN(sa.start_date) AS start_date,
                     MAX(sa.end_date) AS end_date,
-                    MAX(sa.actual_end_date) AS actual_end_date
+                    MAX(sa.actual_end_date) AS actual_end_date,
+                    MAX(DATE_ADD(
+                        LEAST(
+                            COALESCE(sa.start_date,'9999-12-31'),
+                            COALESCE(NULLIF(spr.start_date,'0000-00-00'),'9999-12-31')
+                        ),
+                        INTERVAL GREATEST(0, ROUND($anchorOverrunExpr)) DAY
+                    )) AS proj_end_date
              FROM iow_groups g
              JOIN workgroups_new wn ON wn.iowGroupid = g.id
                                     AND wn.Project_Id = $pid AND wn.Status = 0
@@ -461,7 +468,14 @@ class ProjectsmainController extends Controller
                     COALESCE($iowDelayExpr,0) AS delay,
                     MIN(sa.start_date) AS start_date,
                     MAX(sa.end_date) AS end_date,
-                    MAX(sa.actual_end_date) AS actual_end_date
+                    MAX(sa.actual_end_date) AS actual_end_date,
+                    MAX(DATE_ADD(
+                        LEAST(
+                            COALESCE(sa.start_date,'9999-12-31'),
+                            COALESCE(NULLIF(spr.start_date,'0000-00-00'),'9999-12-31')
+                        ),
+                        INTERVAL GREATEST(0, ROUND($anchorOverrunExpr)) DAY
+                    )) AS proj_end_date
              FROM wbsscheduleitems w
              JOIN workgroups_new wn ON wn.Workgroup_Id = w.wbsid
                                     AND wn.Project_Id = $pid AND wn.Status = 0
