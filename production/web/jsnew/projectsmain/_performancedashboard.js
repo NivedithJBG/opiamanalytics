@@ -2290,6 +2290,10 @@ function doActivityDuration(k) {
         + (actName ? '<div style="' + fam + 'font-size:12px;font-weight:700;color:#1a2540;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + actName + '</div>' : '')
         + bar
         + '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:11px;color:#5a6e8c;margin-top:3px">'
+        + '<span>' + (fmDate(k.adj_start_date) || '-') + '</span>'
+        + '<span>' + (fmDate(k.adj_end_date)   || '-') + '</span>'
+        + '</div>'
+        + '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:11px;color:#5a6e8c;margin-top:2px">'
         + '<span>Planned: <b style="color:#1a2540">' + bDur + ' d</b></span>'
         + (aDur !== bDur ? '<span>Projected: <b style="color:' + (isOver ? '#e53935' : '#27ae60') + '">' + aDur + ' d</b></span>' : '')
         + '</div>'
