@@ -1189,6 +1189,7 @@ function loadAll(){
                 (d.project_bar&&d.project_bar.b_end_date)||'',
                 (d.project_bar&&d.project_bar.a_end_date)||''
             );
+            console.log('project_bar:', d.project_bar);
 
             // Default: first group ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ its IOW items ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ first IOW's activities
             if (_groups.length) filterByGroup(_groups[0].id, d.default_iow_id);
