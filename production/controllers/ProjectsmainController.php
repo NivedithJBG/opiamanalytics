@@ -285,6 +285,34 @@ class ProjectsmainController extends Controller
         }
         unset($a);
 
+        // Anchor overrun expression — used by project bar, IOW groups and IOW items
+        // Two cases: progress reported = projected overrun; no progress = start delay
+        $anchorOverrunExpr = "
+            GREATEST(0, ROUND(
+                CASE
+                    WHEN rpt.cumulated_qty > 0 AND sa.quantity > 0
+                         AND (
+                             (sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00')
+                             OR (spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00')
+                         )
+                    THEN (
+                        (DATEDIFF(rpt.last_report_date,
+                            CASE WHEN sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                                      AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                 THEN LEAST(sa.start_date, spr.start_date)
+                                 WHEN spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                 THEN spr.start_date
+                                 ELSE sa.start_date END
+                        ) + 1) / rpt.cumulated_qty * sa.quantity
+                    ) - sa.old_duration
+                    WHEN (rpt.cumulated_qty IS NULL OR rpt.cumulated_qty = 0)
+                         AND sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                         AND sa.start_date < CURDATE()
+                    THEN DATEDIFF(CURDATE(), sa.start_date)
+                    ELSE 0
+                END
+            ))";
+
         // Project-level duration bar — matches Gantt B./A. Duration columns exactly:
         // B. Duration = span from earliest schedule start to latest schedule end across all WBS items
         // A. Duration = span from earliest actual start to latest actual/projected end
@@ -362,38 +390,6 @@ class ProjectsmainController extends Controller
         $proj_a_end_date  = $dur_row['a_end_date'] ?? '';
 
         // Per-activity overrun (projected_duration - old_duration, floored at 0) using the
-        // canonical start anchor (earlier of planned start and reported start) — reused by
-        // both IOW Groups and IOW Items below so their "delay" matches the per-activity figure
-        // shown in the Ongoing/Upcoming bar lists instead of the legacy scheduleactivities.delay
-        // column. Two cases, same as toBarItems() on the frontend:
-        //   - progress reported:    overrun = projected_duration - old_duration
-        //   - no progress reported: overrun = today - planned start (if start date has passed)
-        $anchorOverrunExpr = "
-            GREATEST(0, ROUND(
-                CASE
-                    WHEN rpt.cumulated_qty > 0 AND sa.quantity > 0
-                         AND (
-                             (sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00')
-                             OR (spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00')
-                         )
-                    THEN (
-                        (DATEDIFF(rpt.last_report_date,
-                            CASE WHEN sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
-                                      AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
-                                 THEN LEAST(sa.start_date, spr.start_date)
-                                 WHEN spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
-                                 THEN spr.start_date
-                                 ELSE sa.start_date END
-                        ) + 1) / rpt.cumulated_qty * sa.quantity
-                    ) - sa.old_duration
-                    WHEN (rpt.cumulated_qty IS NULL OR rpt.cumulated_qty = 0)
-                         AND sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
-                         AND sa.start_date < CURDATE()
-                    THEN DATEDIFF(CURDATE(), sa.start_date)
-                    ELSE 0
-                END
-            ))";
-
         // IOW/Group-level delay: if any critical activity underneath has a delay, surface
         // that (critical path drives the schedule); otherwise fall back to any activity's
         // delay so a non-critical overrun still isn't hidden.
