@@ -2027,8 +2027,10 @@ function doTargetProduction(k){
         +(tq>0?'<text x="105" y="53" text-anchor="middle" font-size="15" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+fm(compTarget)+(u?' '+u:'')+'</text>':'')
         +'<text x="105" y="66" text-anchor="middle" font-size="10" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual</text>'
         +'<text x="105" y="79" text-anchor="middle" font-size="15" font-weight="700" fill="'+(aq<compTarget?'#e53935':aq>compTarget?'#27ae60':'#1a2540')+'" font-family="Barlow Condensed,Arial">'+fm(aq)+(u?' '+u:'')+'</text>'
-        +'<text x="8" y="112" text-anchor="start" font-size="13" fill="#111" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700">'+fm(aq)+(u?' '+u:'')+'</tspan></text>'
-        +'<text x="202" y="112" text-anchor="end" font-size="13" fill="#111" font-family="Barlow Condensed,Arial">Target <tspan font-weight="700">'+fm(compTarget)+(u?' '+u:'')+'</tspan></text>'
+        +'<text x="8" y="112" text-anchor="start" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Start</text>'
+        +'<text x="8" y="123" text-anchor="start" font-size="12" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">0</text>'
+        +'<text x="202" y="112" text-anchor="end" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Schedule Qty</text>'
+        +'<text x="202" y="123" text-anchor="end" font-size="12" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+fm(tq)+(u?' '+u:'')+'</text>'
         +(an?'<text x="105" y="128" text-anchor="middle" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +'</svg>';
 
