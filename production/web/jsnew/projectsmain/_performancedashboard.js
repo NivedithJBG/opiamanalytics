@@ -2299,8 +2299,8 @@ function doActivityDuration(k) {
 
     var actName = k.activity_name || '';
     el.innerHTML =
-        '<div style="display:flex;flex-direction:column;justify-content:center;height:100%;padding:6px 10px;box-sizing:border-box">'
-        + (actName ? '<div style="' + fam + 'font-size:12px;font-weight:700;color:#1a2540;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + actName + '</div>' : '')
+        '<div style="display:flex;flex-direction:column;justify-content:flex-start;height:100%;padding:4px 10px;box-sizing:border-box;gap:3px;">'
+        + (actName ? '<div style="' + fam + 'font-size:12px;font-weight:700;color:#1a2540;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + actName + '</div>' : '')
         + bar
         + '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:11px;color:#5a6e8c;margin-top:3px">'
         + '<span>' + (fmDate(k.adj_start_date) || '-') + '</span>'
