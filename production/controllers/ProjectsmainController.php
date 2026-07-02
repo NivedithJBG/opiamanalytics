@@ -385,6 +385,7 @@ class ProjectsmainController extends Controller
         ")->queryOne();
         $proj_budgeted    = max(1, (int)($dur_row['budgeted']  ?? 0));
         $proj_actual      = max(0, (int)($dur_row['actual']    ?? 0));
+        $proj_b_start_raw = $dur_row['b_start_date'] ?? '';
         $proj_b_end_date  = $dur_row['b_end_date'] ?? '';
         $proj_a_end_date  = $dur_row['a_end_date'] ?? '';
 
@@ -400,6 +401,10 @@ class ProjectsmainController extends Controller
             WHERE sa.projectId = $pid AND sa.status = 0
         ")->queryOne();
         $proj_delay = max(0, (int)($proj_delay_row['project_delay'] ?? 0));
+        // Adjusted start date = planned start + delay days
+        $proj_b_start_date = ($proj_b_start_raw && $proj_delay > 0)
+            ? date('Y-m-d', strtotime($proj_b_start_raw . ' +' . $proj_delay . ' days'))
+            : $proj_b_start_raw;
 
         // Per-activity overrun (projected_duration - old_duration, floored at 0) using the
         // IOW/Group-level delay: if any critical activity underneath has a delay, surface
@@ -500,7 +505,7 @@ class ProjectsmainController extends Controller
                 'budgeted'      => $proj_budgeted,
                 'actual'        => $proj_actual,
                 'delay'         => $proj_delay,
-                'b_start_date'  => $dur_row['b_start_date'] ?? '',
+                'b_start_date'  => $proj_b_start_date,
                 'b_end_date'    => $proj_b_end_date,
                 'a_end_date'    => $proj_a_end_date,
             ],
