@@ -303,7 +303,7 @@ class ReportController extends Controller
 
         // Row 2: Data row — dark navy background (sleek/compact)
         $inputStyle = 'background:#fff;color:#001033;border:none;padding:3px 6px;height:26px;font-size:12px;border-radius:3px;';
-        $labelStyle = 'font-size:12px;color:#ffffff;font-weight:700;display:block;margin-bottom:4px;line-height:1.3;letter-spacing:0.2px;';
+        $labelStyle = 'font-size:12px;color:#ffffff !important;font-weight:700;display:block;margin-bottom:4px;line-height:1.3;letter-spacing:0.2px;';
         $dispStyle  = 'font-size:13px;font-weight:600;padding:3px 6px;height:26px;color:#001033;background:#f0f4f8;border-radius:3px;display:flex;align-items:center;';
 
         $html .= '<div style="background:#001033;color:#fff;padding:8px 14px;border-radius:0 0 4px 4px;">';
@@ -311,7 +311,7 @@ class ReportController extends Controller
         // Line 1: Activity Start Date | Last Reported Date | Last Reported Qty
         $html .= '<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;">';
 
-        $html .= '<div style="flex:0 0 130px;">';
+        $html .= '<div style="flex:0 0 145px;">';
         $html .= '<label style="' . $labelStyle . '">Activity Start Date <span style="color:#ff8888;">*</span></label>';
         $html .= '<input type="text" name="start_date" id="start_date_' . $actid . '"'
             . ' class="form-control edit_start_date datepicker" data-id="' . $actid . '"'
@@ -319,12 +319,12 @@ class ReportController extends Controller
             . ' style="' . $inputStyle . 'width:100%;">';
         $html .= '</div>';
 
-        $html .= '<div style="flex:0 0 130px;">';
+        $html .= '<div style="flex:0 0 140px;">';
         $html .= '<label style="' . $labelStyle . '">Last Reported Date</label>';
         $html .= '<div style="' . $dispStyle . 'width:100%;">' . ($lastReportDate ?: '-') . '</div>';
         $html .= '</div>';
 
-        $html .= '<div style="flex:0 0 120px;">';
+        $html .= '<div style="flex:0 0 130px;">';
         $html .= '<label style="' . $labelStyle . '">Last Reported Qty</label>';
         $html .= '<div style="' . $dispStyle . 'width:100%;" id="reportqty' . $actid . '">' . $cumQty . '</div>';
         $html .= '<input type="hidden" name="prev_cumqty" value="' . $cumQty . '">';
@@ -335,20 +335,20 @@ class ReportController extends Controller
         // Line 2: Report Date | Break Days | Unit | Current Quantity | Up-To-Date Qty
         $html .= '<div style="display:flex;gap:8px;align-items:flex-start;">';
 
-        $html .= '<div style="flex:0 0 130px;">';
+        $html .= '<div style="flex:0 0 110px;">';
         $html .= '<label style="' . $labelStyle . '">Report Date</label>';
         $html .= '<input type="text" name="reportdate" class="form-control datepicker" value="' . $todayDisp . '" autocomplete="off"'
             . ' style="' . $inputStyle . 'width:100%;">';
         $html .= '</div>';
 
-        $html .= '<div style="flex:0 0 80px;">';
+        $html .= '<div style="flex:0 0 85px;">';
         $html .= '<label style="' . $labelStyle . '">Break Days</label>';
         $html .= '<input type="number" name="break_days" id="break_days_' . $actid . '"'
             . ' class="form-control" step="0.5" min="0" placeholder="0"'
             . ' style="' . $inputStyle . 'width:100%;">';
         $html .= '</div>';
 
-        $html .= '<div style="flex:0 0 120px;">';
+        $html .= '<div style="flex:0 0 60px;">';
         $html .= '<label style="' . $labelStyle . '">Unit</label>';
         $html .= '<div title="' . $unit . '" style="background:#fff;border-radius:3px;height:26px;display:flex;align-items:center;padding:0 6px;overflow:hidden;">'
             . '<span style="font-size:12px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' . $unit . '</span>'
