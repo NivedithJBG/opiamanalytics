@@ -294,8 +294,12 @@ class ReportController extends Controller
         $html .= '<strong style="font-size:13px;">' . $actName . '</strong>';
         $html .= '<div style="display:flex;align-items:center;gap:5px;font-size:12px;">'
             . '<span style="color:#000;font-weight:600;">Working Hours/Day:</span>'
-            . '<input type="number" id="workhours" name="workhours" value="8" min="1" max="24"'
-            . ' style="width:48px;text-align:center;border:1px solid #ccc;border-radius:3px;padding:1px 4px;font-size:12px;color:#000;"></div>';
+            . '<select id="workhours" name="workhours" style="border:1px solid #ccc;border-radius:3px;padding:1px 4px;font-size:12px;color:#000;background:#fff;">'
+            . '<option value="8">8</option>'
+            . '<option value="10">10</option>'
+            . '<option value="12">12</option>'
+            . '<option value="24">24</option>'
+            . '</select></div>';
         $html .= '</div>';
 
         // 4px spacer
