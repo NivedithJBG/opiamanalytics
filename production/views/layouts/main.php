@@ -547,9 +547,12 @@ if($action=='login')
 
 
                  ?>
-                    <li><a class="icon-tools overNow4" title="Activity Library" href="<?php echo Yii::$app->urlManager->createUrl('projects/projectmasters')?>"> 
+                    <li><a class="icon-tools overNow4" title="Activity Library" href="<?php echo Yii::$app->urlManager->createUrl('projects/projectmasters')?>">
                         </a>
                     </li>
+                    <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
                 <?php  } } } ?>
 
 
