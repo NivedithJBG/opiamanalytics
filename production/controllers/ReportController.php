@@ -306,9 +306,11 @@ class ReportController extends Controller
         $dispStyle  = 'font-size:13px;font-weight:600;padding:3px 6px;height:26px;color:#001033;background:#f0f4f8;border-radius:3px;display:flex;align-items:center;';
 
         $html .= '<div style="background:#001033;color:#fff;padding:8px 14px;border-radius:0 0 4px 4px;">';
-        $html .= '<div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:nowrap;">';
 
-        $html .= '<div style="flex:0 0 120px;">';
+        // Line 1: Activity Start Date | Last Reported Date | Last Reported Qty
+        $html .= '<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;">';
+
+        $html .= '<div style="flex:0 0 130px;">';
         $html .= '<label style="' . $labelStyle . '">Activity Start Date <span style="color:#ff8888;">*</span></label>';
         $html .= '<input type="text" name="start_date" id="start_date_' . $actid . '"'
             . ' class="form-control edit_start_date datepicker" data-id="' . $actid . '"'
@@ -316,38 +318,43 @@ class ReportController extends Controller
             . ' style="' . $inputStyle . 'width:100%;">';
         $html .= '</div>';
 
-        $html .= '<div style="flex:0 0 110px;">';
+        $html .= '<div style="flex:0 0 130px;">';
         $html .= '<label style="' . $labelStyle . '">Last Reported Date</label>';
         $html .= '<div style="' . $dispStyle . 'width:100%;">' . ($lastReportDate ?: '-') . '</div>';
         $html .= '</div>';
 
-        $html .= '<div style="flex:0 0 100px;">';
+        $html .= '<div style="flex:0 0 120px;">';
+        $html .= '<label style="' . $labelStyle . '">Last Reported Qty</label>';
+        $html .= '<div style="' . $dispStyle . 'width:100%;" id="reportqty' . $actid . '">' . $cumQty . '</div>';
+        $html .= '<input type="hidden" name="prev_cumqty" value="' . $cumQty . '">';
+        $html .= '</div>';
+
+        $html .= '</div>'; // Line 1
+
+        // Line 2: Report Date | Break Days | Unit | Current Quantity | Up-To-Date Qty
+        $html .= '<div style="display:flex;gap:8px;align-items:flex-start;">';
+
+        $html .= '<div style="flex:0 0 130px;">';
         $html .= '<label style="' . $labelStyle . '">Report Date</label>';
         $html .= '<input type="text" name="reportdate" class="form-control datepicker" value="' . $todayDisp . '" autocomplete="off"'
             . ' style="' . $inputStyle . 'width:100%;">';
         $html .= '</div>';
 
-        $html .= '<div style="flex:0 0 65px;">';
+        $html .= '<div style="flex:0 0 80px;">';
         $html .= '<label style="' . $labelStyle . '">Break Days</label>';
         $html .= '<input type="number" name="break_days" id="break_days_' . $actid . '"'
             . ' class="form-control" step="0.5" min="0" placeholder="0"'
             . ' style="' . $inputStyle . 'width:100%;">';
         $html .= '</div>';
 
-        $html .= '<div style="flex:0 0 130px;">';
+        $html .= '<div style="flex:0 0 120px;">';
         $html .= '<label style="' . $labelStyle . '">Unit</label>';
         $html .= '<div title="' . $unit . '" style="background:#fff;border-radius:3px;height:26px;display:flex;align-items:center;padding:0 6px;overflow:hidden;">'
-            . '<span style="font-size:10px;color:#777;font-weight:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' . $unit . '</span>'
+            . '<span style="font-size:12px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' . $unit . '</span>'
             . '</div>';
         $html .= '</div>';
 
-        $html .= '<div style="flex:1;min-width:70px;">';
-        $html .= '<label style="' . $labelStyle . '">Last Reported Qty</label>';
-        $html .= '<div style="' . $dispStyle . 'width:100%;" id="reportqty' . $actid . '">' . $cumQty . '</div>';
-        $html .= '<input type="hidden" name="prev_cumqty" value="' . $cumQty . '">';
-        $html .= '</div>';
-
-        $html .= '<div style="flex:1;min-width:70px;">';
+        $html .= '<div style="flex:1;min-width:80px;">';
         $html .= '<label style="' . $labelStyle . '">Current Quantity <span style="color:#ff8888;">*</span></label>';
         $html .= '<input type="number" name="currentqnty" id="currentqnty' . $actid . '"'
             . ' class="form-control currentqnty" data-id="' . $actid . '"'
@@ -355,12 +362,12 @@ class ReportController extends Controller
             . ' style="' . $inputStyle . 'width:100%;">';
         $html .= '</div>';
 
-        $html .= '<div style="flex:1;min-width:70px;">';
+        $html .= '<div style="flex:1;min-width:80px;">';
         $html .= '<label style="' . $labelStyle . '">Up-To-Date Qty</label>';
         $html .= '<div style="' . $dispStyle . 'width:100%;" id="cumqty' . $actid . '">' . $cumQty . '</div>';
         $html .= '</div>';
 
-        $html .= '</div>'; // flex row
+        $html .= '</div>'; // Line 2
         $html .= '</div>'; // navy div
 
         // Live up-to-date qty update
