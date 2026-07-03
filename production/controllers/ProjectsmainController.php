@@ -162,6 +162,33 @@ class ProjectsmainController extends Controller
         ]);
     }
 
+    public function actionGetiowlist()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return ['items' => []];
+        $pid = (int)$projuser->projectid;
+        $connection = \Yii::$app->db;
+        $rows = $connection->createCommand(
+            "SELECT w.Workgroup_Id AS id, w.Name AS name
+             FROM workgroups_new w
+             WHERE w.Project_Id = $pid AND w.Status = 0
+             ORDER BY w.Name ASC"
+        )->queryAll();
+        return ['items' => $rows];
+    }
+
+    public function actionGetrestypelist()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $connection = \Yii::$app->db;
+        $rows = $connection->createCommand(
+            "SELECT ResourceType_Id AS id, Name AS name FROM resourcetype WHERE Status=0 ORDER BY sortorder ASC"
+        )->queryAll();
+        return ['items' => $rows];
+    }
+
     public function actionPerformancedashboard()
     {
         $uid  = Yii::$app->user->Id;

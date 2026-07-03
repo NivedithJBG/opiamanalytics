@@ -141,7 +141,8 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-wrench.overNow,
         .round-icons .icon-document.overNow8,
         .round-icons .perf-dashboard-btn,
-        .round-icons .cost-dashboard-btn { color: #fff !important; }
+        .round-icons .cost-dashboard-btn,
+        .round-icons .qe-btn { color: #fff !important; }
 
         .round-icons .icon-chart3            { background-color: #003580 !important; }
         .round-icons .icon-calendar          { background-color: #B8860B !important; }
@@ -151,6 +152,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-document.overNow8 { background-color: #000000 !important; }
         .round-icons .perf-dashboard-btn     { background-color: #2e7d32 !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
         .round-icons .cost-dashboard-btn     { background-color: #7b1fa2 !important; height: 26px !important; width: 26px !important; font-size: 9px !important; padding: 0 !important; box-sizing: content-box !important; }
+        .round-icons .qe-btn                 { background-color: #00838f !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
         /* Keep coloured backgrounds on hover/focus */
         .round-icons .icon-chart3:hover,            .round-icons .icon-chart3:focus            { background: #002060 !important; }
         .round-icons .icon-calendar:hover,          .round-icons .icon-calendar:focus          { background: #8a6200 !important; }
@@ -160,6 +162,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-document.overNow8:hover, .round-icons .icon-document.overNow8:focus { background: #222222 !important; }
         .round-icons .perf-dashboard-btn:hover,     .round-icons .perf-dashboard-btn:focus     { background: #1b5e20 !important; }
         .round-icons .cost-dashboard-btn:hover,     .round-icons .cost-dashboard-btn:focus     { background: #4a148c !important; }
+        .round-icons .qe-btn:hover,                 .round-icons .qe-btn:focus                 { background: #005f6b !important; }
     </style>
 
     <?php $this->registerCsrfMetaTags() ?>
@@ -406,6 +409,7 @@ if($action=='login')
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -421,6 +425,7 @@ if($action=='login')
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1555" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -493,6 +498,7 @@ if($action=='login')
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -1834,4 +1840,322 @@ if($action=='login')
 </div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/_performancedashboard.js?v=<?php echo time();?>"></script>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     QUICK ENTRY MODAL
+════════════════════════════════════════════════════════════════════════ -->
+<style>
+#qe-bk{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000}
+#qe-bk.qe-open{display:block}
+#qe-modal{
+  display:none;position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:860px;max-width:96vw;max-height:90vh;
+  z-index:10001;border-radius:10px;overflow:hidden;
+  background:#f4f6fb;box-shadow:0 12px 40px rgba(0,0,0,.75);
+  flex-direction:column;
+  font-family:'Barlow',sans-serif;
+}
+#qe-modal.qe-open{display:flex}
+#qe-hdr{
+  background:linear-gradient(135deg,#004d56 0%,#00838f 100%);
+  padding:10px 18px;display:flex;align-items:center;
+  border-bottom:2px solid #006570;flex-shrink:0;
+}
+#qe-hdr span{flex:1;color:#fff;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;letter-spacing:.6px;text-align:center;text-transform:uppercase}
+#qe-close{background:none;border:none;color:#fff;font-size:22px;line-height:1;cursor:pointer;padding:0 4px;opacity:.85}
+#qe-close:hover{opacity:1}
+#qe-body{flex:1;overflow-y:auto;padding:18px 22px 22px;display:flex;flex-direction:column;gap:0}
+
+/* Section wrapper */
+.qe-section{background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:0;overflow:hidden}
+.qe-section+.qe-section{margin-top:16px}
+.qe-sec-hdr{
+  background:linear-gradient(90deg,#00838f 0%,#00acc1 100%);
+  padding:7px 14px;
+  font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;
+  color:#fff;letter-spacing:1px;text-transform:uppercase;
+}
+.qe-sec-body{padding:14px 16px}
+
+/* Label + field */
+.qe-row{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end}
+.qe-field{display:flex;flex-direction:column;min-width:120px}
+.qe-field.wide{flex:1 1 220px}
+.qe-field.med{flex:1 1 140px}
+.qe-field.sm{flex:0 0 110px}
+.qe-field.xs{flex:0 0 80px}
+.qe-label{font-size:10px;font-weight:700;color:#546e7a;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.qe-input,.qe-select{
+  width:100%;padding:6px 10px;font-size:13px;color:#1a2540;
+  border:1.5px solid #cfd8dc;border-radius:5px;background:#f9fafb;
+  outline:none;box-sizing:border-box;font-family:'Barlow',sans-serif;
+  transition:border-color .15s;
+}
+.qe-input:focus,.qe-select:focus{border-color:#00838f;background:#fff}
+.qe-input[readonly]{background:#eef1f3;color:#546e7a;cursor:default}
+
+/* Divider between sections */
+.qe-divider{border:none;border-top:2px dashed #b0bec5;margin:0}
+
+/* Repeating rows (tasks / resources) */
+.qe-repeat-tbl{width:100%;border-collapse:collapse}
+.qe-repeat-tbl th{
+  font-size:10px;font-weight:700;color:#546e7a;text-transform:uppercase;
+  letter-spacing:.5px;padding:0 8px 6px 0;border-bottom:1.5px solid #eceff1;
+  white-space:nowrap;
+}
+.qe-repeat-tbl td{padding:6px 8px 6px 0;vertical-align:middle}
+.qe-repeat-tbl td:last-child{padding-right:0}
+.qe-repeat-tbl input,.qe-repeat-tbl select{
+  width:100%;padding:5px 8px;font-size:13px;color:#1a2540;
+  border:1.5px solid #cfd8dc;border-radius:5px;background:#f9fafb;
+  outline:none;font-family:'Barlow',sans-serif;transition:border-color .15s;
+  box-sizing:border-box;
+}
+.qe-repeat-tbl input:focus,.qe-repeat-tbl select:focus{border-color:#00838f;background:#fff}
+.qe-repeat-tbl input[readonly]{background:#eef1f3;color:#546e7a;cursor:default}
+.qe-add-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;border-radius:50%;border:none;cursor:pointer;
+  background:#00838f;color:#fff;font-size:18px;line-height:1;
+  box-shadow:0 2px 6px rgba(0,131,143,.4);transition:background .15s;
+  flex-shrink:0;
+}
+.qe-add-btn:hover{background:#006570}
+.qe-del-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:24px;height:24px;border-radius:50%;border:none;cursor:pointer;
+  background:#ef5350;color:#fff;font-size:16px;line-height:1;
+  flex-shrink:0;opacity:.8;
+}
+.qe-del-btn:hover{opacity:1}
+</style>
+
+<div id="qe-bk"></div>
+<div id="qe-modal">
+  <div id="qe-hdr">
+    <span>Quick Entry</span>
+    <button id="qe-close">&times;</button>
+  </div>
+  <div id="qe-body">
+
+    <!-- ── SECTION 1 : Activity ─────────────────────────────────────── -->
+    <div class="qe-section">
+      <div class="qe-sec-hdr">Section 1 &mdash; Activity</div>
+      <div class="qe-sec-body">
+        <div class="qe-row">
+          <div class="qe-field wide">
+            <span class="qe-label">IOW Name</span>
+            <select id="qe-iow" class="qe-select">
+              <option value="">— Select IOW —</option>
+            </select>
+          </div>
+          <div class="qe-field wide">
+            <span class="qe-label">Activity Name</span>
+            <input id="qe-actname" type="text" class="qe-input" placeholder="Enter activity name">
+          </div>
+        </div>
+        <div class="qe-row" style="margin-top:12px">
+          <div class="qe-field sm">
+            <span class="qe-label">Unit</span>
+            <input id="qe-unit" type="text" class="qe-input" placeholder="e.g. m³">
+          </div>
+          <div class="qe-field xs">
+            <span class="qe-label">Quantity</span>
+            <input id="qe-qty" type="number" class="qe-input" placeholder="0">
+          </div>
+          <div class="qe-field sm">
+            <span class="qe-label">Alternate Unit / Nos</span>
+            <input id="qe-altunit" type="text" class="qe-input" placeholder="e.g. Nos">
+          </div>
+          <div class="qe-field xs">
+            <span class="qe-label">Quantity</span>
+            <input id="qe-altqty" type="number" class="qe-input" placeholder="0">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECTION 2 : Tasks ────────────────────────────────────────── -->
+    <div class="qe-section">
+      <div class="qe-sec-hdr">Section 2 &mdash; Tasks</div>
+      <div class="qe-sec-body">
+        <table class="qe-repeat-tbl" id="qe-task-tbl">
+          <thead>
+            <tr>
+              <th style="width:40%">Task Name</th>
+              <th style="width:20%">Unit</th>
+              <th style="width:25%">Productivity / Day</th>
+              <th style="width:15%;text-align:right">
+                <button class="qe-add-btn" id="qe-task-add" title="Add row">+</button>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="qe-task-body">
+            <!-- rows injected by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── SECTION 3 : Resources ─────────────────────────────────────── -->
+    <div class="qe-section">
+      <div class="qe-sec-hdr">Section 3 &mdash; Resources</div>
+      <div class="qe-sec-body">
+        <table class="qe-repeat-tbl" id="qe-res-tbl">
+          <thead>
+            <tr>
+              <th style="width:22%">Resource Type</th>
+              <th style="width:28%">Resource Name</th>
+              <th style="width:12%">Quantity</th>
+              <th style="width:14%">Rate</th>
+              <th style="width:14%">Amount</th>
+              <th style="width:10%;text-align:right">
+                <button class="qe-add-btn" id="qe-res-add" title="Add row">+</button>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="qe-res-body">
+            <!-- rows injected by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /qe-body -->
+</div><!-- /qe-modal -->
+
+<script>
+(function(){
+'use strict';
+
+/* ── helpers ── */
+function openModal(){
+  document.getElementById('qe-bk').classList.add('qe-open');
+  document.getElementById('qe-modal').classList.add('qe-open');
+  loadIowOptions();
+  if(!document.querySelector('#qe-task-body tr')) addTaskRow();
+  if(!document.querySelector('#qe-res-body tr'))  addResRow();
+}
+function closeModal(){
+  document.getElementById('qe-bk').classList.remove('qe-open');
+  document.getElementById('qe-modal').classList.remove('qe-open');
+}
+
+/* ── IOW dropdown ── */
+function loadIowOptions(){
+  var sel = document.getElementById('qe-iow');
+  if(sel.options.length > 1) return; // already loaded
+  $.ajax({
+    type:'POST', url:'../projectsmain/getiowlist', dataType:'json',
+    success: function(d){
+      (d.items||[]).forEach(function(item){
+        var o = document.createElement('option');
+        o.value = item.id;
+        o.textContent = item.name;
+        sel.appendChild(o);
+      });
+    }
+  });
+}
+
+/* ── Resource Types ── */
+var _resTypes = [];
+function loadResTypes(cb){
+  if(_resTypes.length){ if(cb) cb(); return; }
+  $.ajax({
+    type:'POST', url:'../projectsmain/getrestypelist', dataType:'json',
+    success: function(d){
+      _resTypes = d.items || [];
+      if(cb) cb();
+    }
+  });
+}
+
+/* ── Task rows ── */
+function addTaskRow(){
+  var tbody = document.getElementById('qe-task-body');
+  var tr = document.createElement('tr');
+  tr.innerHTML =
+    '<td><input type="text" class="qe-task-name" placeholder="Task name"></td>'+
+    '<td><input type="text" class="qe-task-unit" placeholder="Unit"></td>'+
+    '<td><input type="number" class="qe-task-prod" placeholder="0.00" step="0.01"></td>'+
+    '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
+  tbody.appendChild(tr);
+  tr.querySelector('.qe-task-del').addEventListener('click', function(){
+    if(document.querySelectorAll('#qe-task-body tr').length > 1) tr.remove();
+  });
+}
+
+/* ── Resource rows ── */
+function makeResTypeOptions(){
+  var html = '<option value="">— Type —</option>';
+  _resTypes.forEach(function(t){ html += '<option value="'+t.id+'">'+t.name+'</option>'; });
+  return html;
+}
+
+function addResRow(){
+  var tbody = document.getElementById('qe-res-body');
+  var tr = document.createElement('tr');
+  tr.innerHTML =
+    '<td><select class="qe-res-type">'+makeResTypeOptions()+'</select></td>'+
+    '<td><input type="text" class="qe-res-name" placeholder="Resource name"></td>'+
+    '<td><input type="number" class="qe-res-qty" placeholder="0" step="0.001"></td>'+
+    '<td><input type="number" class="qe-res-rate" placeholder="0.00" step="0.01"></td>'+
+    '<td><input type="number" class="qe-res-amt" placeholder="0.00" readonly></td>'+
+    '<td style="text-align:right"><button class="qe-del-btn qe-res-del" title="Remove">&times;</button></td>';
+  tbody.appendChild(tr);
+
+  var qtyEl  = tr.querySelector('.qe-res-qty');
+  var rateEl = tr.querySelector('.qe-res-rate');
+  var amtEl  = tr.querySelector('.qe-res-amt');
+  function calcAmt(){
+    var q = parseFloat(qtyEl.value)||0;
+    var r = parseFloat(rateEl.value)||0;
+    amtEl.value = (q*r).toFixed(2);
+  }
+  qtyEl.addEventListener('input', calcAmt);
+  rateEl.addEventListener('input', calcAmt);
+
+  tr.querySelector('.qe-res-del').addEventListener('click', function(){
+    if(document.querySelectorAll('#qe-res-body tr').length > 1) tr.remove();
+  });
+}
+
+/* ── Bind ── */
+document.addEventListener('DOMContentLoaded', function(){
+
+  /* open */
+  document.addEventListener('click', function(e){
+    if(e.target.closest('.qe-btn')){
+      e.preventDefault();
+      loadResTypes(function(){
+        // rebuild existing res rows' selects after types loaded
+        document.querySelectorAll('#qe-res-body .qe-res-type').forEach(function(sel){
+          var cur = sel.value;
+          sel.innerHTML = makeResTypeOptions();
+          sel.value = cur;
+        });
+      });
+      openModal();
+    }
+  });
+
+  /* close */
+  document.getElementById('qe-close').addEventListener('click', closeModal);
+  document.getElementById('qe-bk').addEventListener('click', closeModal);
+
+  /* add task row */
+  document.getElementById('qe-task-add').addEventListener('click', addTaskRow);
+
+  /* add resource row */
+  document.getElementById('qe-res-add').addEventListener('click', function(){
+    loadResTypes(function(){ addResRow(); });
+    if(_resTypes.length) addResRow();
+  });
+});
+
+})();
+</script>
 <?php $this->endPage() ?>
