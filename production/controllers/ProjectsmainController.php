@@ -391,7 +391,7 @@ class ProjectsmainController extends Controller
         $proj_b_end_date  = $dur_row['b_end_date'] ?? '';
         $proj_a_end_date  = $dur_row['a_end_date'] ?? '';
 
-        // Project delay — max overrun across all activities (same formula as IOW groups)
+        // Project delay — only from critical activities (only critical path drives project delay)
         $proj_delay_row = $connection->createCommand("
             SELECT COALESCE(MAX($anchorOverrunExpr), 0) AS project_delay
             FROM scheduleactivities sa
@@ -400,7 +400,7 @@ class ProjectsmainController extends Controller
                 SELECT activity_id, MAX(report_date) AS last_report_date, SUM(currentqty) AS cumulated_qty
                 FROM schedule_progress_report_log GROUP BY activity_id
             ) rpt ON rpt.activity_id = sa.id
-            WHERE sa.projectId = $pid AND sa.status = 0
+            WHERE sa.projectId = $pid AND sa.status = 0 AND sa.critical_status = 'Yes'
         ")->queryOne();
         $proj_delay = max(0, (int)($proj_delay_row['project_delay'] ?? 0));
         // Start date = planned start date (no adjustment)
