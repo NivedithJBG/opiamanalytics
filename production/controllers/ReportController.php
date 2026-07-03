@@ -59,6 +59,62 @@ class ReportController extends Controller
         return date('d-m-Y', strtotime($dbDate));
     }
 
+    // ─── Mobile progress reporting page ─────────────────────────────────────
+
+    public function actionMobile()
+    {
+        $this->layout = '@app/views/layouts/mobile';
+        $projectid = $this->getCurrentProjectId();
+        $db = Yii::$app->db;
+        $project = $projectid ? $db->createCommand("SELECT Name FROM projects WHERE Project_Id=:pid", [':pid'=>$projectid])->queryOne() : null;
+        $projectName = $project ? $project['Name'] : 'No Project Selected';
+        return $this->render('mobile', ['projectName' => $projectName]);
+    }
+
+    // ─── Mobile: clean JSON activity list ───────────────────────────────────
+
+    public function actionMobileactivities()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $projectid = $this->getCurrentProjectId();
+        if (!$projectid) return ['activities' => []];
+
+        $db = Yii::$app->db;
+
+        $rows = $db->createCommand("
+            SELECT
+                sa.id,
+                wa.activity_Name AS name,
+                COALESCE(sa.unit, wa.activity_Unit, '') AS unit,
+                sa.quantity AS b_qty,
+                sa.completed_status AS completed,
+                spr.start_date,
+                spr.cumulated_qty AS cum_qty,
+                COALESCE(MAX(sprl.report_date), spr.updated_at) AS last_date,
+                wn.Name AS iow
+            FROM workgroup_activities_new wa
+            JOIN scheduleactivities sa ON sa.activity_id = wa.id AND sa.projectId = :pid
+            JOIN workgroups_new wn ON wn.Workgroup_Id = wa.wbs_id AND wn.Project_Id = :pid2
+            LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
+            LEFT JOIN schedule_progress_report_log sprl ON sprl.activity_id = sa.id
+            WHERE wa.project_Id = :pid3 AND wn.Status = 0
+            GROUP BY sa.id, wa.activity_Name, sa.unit, wa.activity_Unit, sa.quantity, sa.completed_status, spr.start_date, spr.cumulated_qty, spr.updated_at, wn.Name
+            ORDER BY wn.sortorder ASC, wa.sortorder ASC
+        ", [':pid' => $projectid, ':pid2' => $projectid, ':pid3' => $projectid])->queryAll();
+
+        foreach ($rows as &$r) {
+            $r['cum_qty']    = $r['cum_qty']    ? round((float)$r['cum_qty'], 3)    : null;
+            $r['b_qty']      = $r['b_qty']      ? round((float)$r['b_qty'], 3)      : null;
+            $r['completed']  = (int)$r['completed'];
+            $r['start_date'] = ($r['start_date'] && $r['start_date'] !== '0000-00-00')
+                ? date('Y-m-d', strtotime($r['start_date'])) : '';
+            $r['last_date']  = ($r['last_date'] && $r['last_date'] !== '0000-00-00')
+                ? date('d-m-Y', strtotime($r['last_date'])) : null;
+        }
+
+        return ['activities' => $rows];
+    }
+
     // ─── Main activity listing (IOW-grouped) ────────────────────────────────
 
     public function actionScheduleprogressactivities()
