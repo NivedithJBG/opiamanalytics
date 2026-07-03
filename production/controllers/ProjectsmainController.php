@@ -318,15 +318,17 @@ class ProjectsmainController extends Controller
         // A. Duration = span from earliest actual start to latest actual/projected end
         $dur_row = $connection->createCommand("
             SELECT
-                DATEDIFF(MAX(wbs.b_end), MIN(wbs.b_start)) + 1 AS budgeted,
+                DATEDIFF(MAX(wbs.b_end_plain), MIN(wbs.b_start_plain)) + 1 AS budgeted,
                 CASE WHEN MIN(wbs.a_start) IS NOT NULL AND MAX(wbs.a_end) IS NOT NULL
                      THEN DATEDIFF(MAX(wbs.a_end), MIN(wbs.a_start)) + 1
                      ELSE NULL END AS actual,
-                MIN(wbs.b_start) AS b_start_date,
-                MAX(wbs.b_end) AS b_end_date,
+                MIN(wbs.b_start_plain) AS b_start_date,
+                MAX(wbs.b_end_plain) AS b_end_date,
                 MAX(wbs.a_end) AS a_end_date
             FROM (
                 SELECT
+                    MIN(sa.start_date) AS b_start_plain,
+                    MAX(sa.end_date)   AS b_end_plain,
                     MIN(sa.actual_start_date) AS b_start,
                     MAX(sa.actual_end_date)   AS b_end,
                     MIN(COALESCE(
