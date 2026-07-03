@@ -1942,7 +1942,7 @@ if($action=='login')
   </div>
   <div id="qe-body">
 
-    <!-- ── SECTION 1 : Activity ─────────────────────────────────────── -->
+    <!-- ── SECTION 1 : Activity + Tasks ─────────────────────────────── -->
     <div class="qe-section">
       <div class="qe-sec-hdr">Section 1 &mdash; Activity</div>
       <div class="qe-sec-body">
@@ -1958,7 +1958,7 @@ if($action=='login')
             <input id="qe-actname" type="text" class="qe-input" placeholder="Enter activity name">
           </div>
         </div>
-        <div class="qe-row" style="margin-top:12px">
+        <div class="qe-row" style="margin-top:8px">
           <div class="qe-field sm">
             <span class="qe-label">Unit</span>
             <input id="qe-unit" type="text" class="qe-input" placeholder="e.g. m³">
@@ -1976,13 +1976,7 @@ if($action=='login')
             <input id="qe-altqty" type="number" class="qe-input" placeholder="0">
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- ── SECTION 2 : Tasks ────────────────────────────────────────── -->
-    <div class="qe-section">
-      <div class="qe-sec-hdr">Section 2 &mdash; Tasks</div>
-      <div class="qe-sec-body">
+        <div style="border-top:1px solid #ccc;margin:10px 0 8px"></div>
         <table class="qe-repeat-tbl" id="qe-task-tbl">
           <thead>
             <tr>
@@ -2001,9 +1995,9 @@ if($action=='login')
       </div>
     </div>
 
-    <!-- ── SECTION 3 : Resources ─────────────────────────────────────── -->
+    <!-- ── SECTION 2 : Resources ─────────────────────────────────────── -->
     <div class="qe-section">
-      <div class="qe-sec-hdr">Section 3 &mdash; Resources</div>
+      <div class="qe-sec-hdr">Section 2 &mdash; Resources</div>
       <div class="qe-sec-body">
         <table class="qe-repeat-tbl" id="qe-res-tbl">
           <thead>
