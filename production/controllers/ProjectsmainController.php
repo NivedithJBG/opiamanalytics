@@ -587,7 +587,7 @@ class ProjectsmainController extends Controller
         $actual_prod = 0;
 
         $target_cycle = ($target_qty > 0)
-            ? round((float)($act['old_duration'] ?? 0) / $target_qty, 3) : 0;
+            ? round(((float)($act['old_duration'] ?? 0) / $target_qty) * $wh, 3) : 0;
         $resource_units = max(1, (float)($act['resource_units'] ?? 1));
         $actual_cycle = 0;
 
@@ -658,7 +658,7 @@ class ProjectsmainController extends Controller
         if ($act_start_date && $last_reported_date && $actual_qty > 0) {
             $elapsed = max(1, (strtotime($last_reported_date) - strtotime($act_start_date)) / 86400);
             $actual_prod  = round($actual_qty / $elapsed, 3);
-            $actual_cycle = round($elapsed / $actual_qty, 3);
+            $actual_cycle = round(($elapsed / $actual_qty) * $wh, 3);
             $cap_max  = round($elapsed * $wh, 2);
             $cap_used = round(max(0, $cap_max - $cum_break), 2);
         } elseif ($planned_start && $actual_qty == 0 && strtotime($planned_start) < strtotime(date('Y-m-d'))) {
