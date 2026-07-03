@@ -51,8 +51,6 @@
 .dot-normal    { background: #337ab7; }
 /* Critical path bar colour — overrides external CSS (needed when view loads without full layout) */
 .gtaskpink, div.gtaskpink.gplan { background: #00ACC1 !important; border-color: #0097A7 !important; }
-/* Disable Gantt bar tooltips */
-div[id$='tt'] { display: none !important; visibility: hidden !important; }
 </style>
 
 <div class="container-fluid">
@@ -184,6 +182,7 @@ div[id$='tt'] { display: none !important; visibility: hidden !important; }
     var g = new JSGantt.GanttChart(document.getElementById('gantt-container'), 'week');
     if (!g.getDivId()) return;
 
+    g.setUseToolTip(0);
     g.setUseSort(0);
     g.setUseToolTip(1);
     g.setCaptionType('None');
