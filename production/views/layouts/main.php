@@ -1967,6 +1967,14 @@ if($action=='login')
             <span class="qe-label">Quantity</span>
             <input id="qe-qty" type="number" class="qe-input" placeholder="0">
           </div>
+          <div class="qe-field xs">
+            <span class="qe-label">Rate</span>
+            <input id="qe-rate" type="number" class="qe-input" placeholder="0.00" step="0.01">
+          </div>
+          <div class="qe-field xs">
+            <span class="qe-label">Amount</span>
+            <input id="qe-amount" type="number" class="qe-input" placeholder="0.00" readonly>
+          </div>
           <div class="qe-field sm">
             <span class="qe-label">Alternate Unit / Nos</span>
             <input id="qe-altunit" type="text" class="qe-input" placeholder="e.g. Nos">
@@ -2142,6 +2150,15 @@ document.addEventListener('DOMContentLoaded', function(){
   /* close */
   document.getElementById('qe-close').addEventListener('click', closeModal);
   document.getElementById('qe-bk').addEventListener('click', closeModal);
+
+  /* activity amount = qty × rate */
+  function calcActivityAmount(){
+    var q = parseFloat(document.getElementById('qe-qty').value)  || 0;
+    var r = parseFloat(document.getElementById('qe-rate').value) || 0;
+    document.getElementById('qe-amount').value = (q * r).toFixed(2);
+  }
+  document.getElementById('qe-qty').addEventListener('input', calcActivityAmount);
+  document.getElementById('qe-rate').addEventListener('input', calcActivityAmount);
 
   /* add task row */
   document.getElementById('qe-task-add').addEventListener('click', addTaskRow);
