@@ -292,7 +292,8 @@ class ReportController extends Controller
         // Row 1: Activity header — light grey background
         $html .= '<div style="background:#d8d8d8;padding:7px 14px;border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:space-between;">';
         $html .= '<strong style="font-size:13px;">' . $actName . '</strong>';
-        $html .= '<div style="display:flex;align-items:center;gap:5px;font-size:12px;"><span style="color:#000;font-weight:600;">WH:</span>'
+        $html .= '<div style="display:flex;align-items:center;gap:5px;font-size:12px;">'
+            . '<span style="color:#000;font-weight:600;">Working Hours/Day:</span>'
             . '<input type="number" id="workhours" name="workhours" value="8" min="1" max="24"'
             . ' style="width:48px;text-align:center;border:1px solid #ccc;border-radius:3px;padding:1px 4px;font-size:12px;color:#000;"></div>';
         $html .= '</div>';
@@ -302,7 +303,7 @@ class ReportController extends Controller
 
         // Row 2: Data row — dark navy background (sleek/compact)
         $inputStyle = 'background:#fff;color:#001033;border:none;padding:3px 6px;height:26px;font-size:12px;border-radius:3px;';
-        $labelStyle = 'font-size:12px;color:#cce0ff;font-weight:600;display:block;margin-bottom:3px;line-height:1.3;';
+        $labelStyle = 'font-size:12px;color:#ffffff;font-weight:700;display:block;margin-bottom:4px;line-height:1.3;letter-spacing:0.2px;';
         $dispStyle  = 'font-size:13px;font-weight:600;padding:3px 6px;height:26px;color:#001033;background:#f0f4f8;border-radius:3px;display:flex;align-items:center;';
 
         $html .= '<div style="background:#001033;color:#fff;padding:8px 14px;border-radius:0 0 4px 4px;">';
