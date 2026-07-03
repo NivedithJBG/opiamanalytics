@@ -2041,6 +2041,7 @@ function openModal(){
   if(!document.querySelector('#qe-task-body tr')) addTaskRow();
   if(!document.querySelector('#qe-res-body tr'))  addResRow();
 }
+window.openQeModal = openModal;
 function closeModal(){
   document.getElementById('qe-bk').classList.remove('qe-open');
   document.getElementById('qe-modal').classList.remove('qe-open');

@@ -60,6 +60,7 @@
   <div id="gantt-toolbar">
     <button class="btn-opiam" id="btn-manage-relations">Manage Relations</button>
     <button class="btn-opiam" id="btn-refresh-cpm">Refresh Critical Path</button>
+    <button class="btn-opiam" id="btn-quick-entry" style="background:#00838f;" title="Quick Entry">&#9998; Quick Entry</button>
     <span id="gantt-status" style="font-size:12px;color:#666;margin-left:8px;"></span>
   </div>
 
@@ -544,6 +545,16 @@
   $('#btn-refresh-cpm').on('click', function() {
     $('#gantt-status').text('Recalculating critical path…');
     refreshCriticalPath(function() { loadGantt(); });
+  });
+
+  // ---- Quick Entry button ---------------------------------------------------
+  $('#btn-quick-entry').on('click', function() {
+    if (typeof openQeModal === 'function') {
+      openQeModal();
+    } else {
+      $('#qe-bk').addClass('qe-open');
+      $('#qe-modal').addClass('qe-open');
+    }
   });
 
   // ---- Init -----------------------------------------------------------------
