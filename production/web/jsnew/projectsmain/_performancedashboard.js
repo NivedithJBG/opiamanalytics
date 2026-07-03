@@ -1902,7 +1902,7 @@ function renderBars(containerId, items, onRowClick){
     var ticks = niceAxis(maxVal);
 
     var html = '<div class="leg">'
-        +'<span><span class="ld" style="background:#607D8B"></span>Normal</span>'
+        +'<span><span class="ld" style="background:#37474F"></span>Normal</span>'
         +'<span><span class="ld" style="background:#00838f"></span>Critical</span>'
         +'<span><span class="ld" style="background:#FF0000"></span>Delay</span>'
         +'</div>';
@@ -1911,7 +1911,7 @@ function renderBars(containerId, items, onRowClick){
         var sc = r.scheduled, dl = r.delay;
         var scPct = (sc/maxVal*100).toFixed(1);
         var dlPct = (dl/maxVal*100).toFixed(1);
-        var barCol = r.critical ? '#00838f' : '#607D8B';
+        var barCol = r.critical ? '#00838f' : '#37474F';
         var rowCls = 'brow';
         var tipLines = [];
         if (r.start_date)    tipLines.push('Planned Start:  ' + fmtDate(r.start_date));
@@ -2270,7 +2270,7 @@ function doActivityDuration(k) {
     var startDelay = +k.start_delay || 0;
     var wDone    = +(+k.work_done_pct || 0).toFixed(1);
     var wRemain  = Math.max(0, +(100 - wDone).toFixed(1));
-    var baseCol  = k.critical ? '#00838f' : '#607D8B';  // blue if critical, dark grey otherwise
+    var baseCol  = k.critical ? '#00838f' : '#37474F';  // teal if critical, deep slate otherwise
 
     if (!bDur) {
         el.innerHTML = '<div style="font-size:11px;color:#aaa;text-align:center;padding-top:20px">No duration data</div>';
