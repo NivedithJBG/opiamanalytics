@@ -557,6 +557,13 @@
     }
   });
 
+  // ---- Click on any activity bar opens Quick Entry (temporary) -------------
+  $(document).on('click', '#gantt-container .gtaskblue, #gantt-container .gtaskpink', function() {
+    $('#qe-bk').addClass('qe-open');
+    $('#qe-modal').addClass('qe-open');
+    if (typeof window.openQeModal === 'function') window.openQeModal();
+  });
+
   // ---- Init -----------------------------------------------------------------
 
   $(document).ready(function() {
