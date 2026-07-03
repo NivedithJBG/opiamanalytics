@@ -1871,13 +1871,13 @@ if($action=='login')
 #qe-body{flex:1;overflow-y:auto;padding:12px 16px 16px;display:flex;flex-direction:column;gap:0}
 
 /* Section wrapper */
-.qe-section{background:#fff;border-radius:4px;border:1px solid #999;margin-bottom:0;overflow:hidden}
+.qe-section{background:#fff;border-radius:4px;border:1px solid #888;margin-bottom:0;overflow:hidden}
 .qe-section+.qe-section{margin-top:10px}
 .qe-sec-hdr{
-  background:#d0d0d0;border-bottom:1px solid #999;
+  background:#b8b8b8;border-bottom:1px solid #888;
   padding:5px 12px;
   font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;
-  color:#333;letter-spacing:.6px;text-transform:uppercase;
+  color:#222;letter-spacing:.6px;text-transform:uppercase;
 }
 .qe-sec-body{padding:10px 12px}
 
@@ -1891,7 +1891,7 @@ if($action=='login')
 .qe-label{font-size:9px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
 .qe-input,.qe-select{
   width:100%;padding:4px 8px;font-size:12px;color:#1a2540;
-  border:1px solid #999;border-radius:3px;background:#fff;
+  border:1px solid #888;border-radius:3px;background:#fff;
   outline:none;box-sizing:border-box;font-family:'Barlow',sans-serif;
   transition:border-color .15s;
 }
@@ -1905,14 +1905,14 @@ if($action=='login')
 .qe-repeat-tbl{width:100%;border-collapse:collapse}
 .qe-repeat-tbl th{
   font-size:9px;font-weight:700;color:#444;text-transform:uppercase;
-  letter-spacing:.4px;padding:0 6px 5px 0;border-bottom:1px solid #999;
+  letter-spacing:.4px;padding:0 6px 5px 0;border-bottom:1px solid #888;
   white-space:nowrap;
 }
 .qe-repeat-tbl td{padding:4px 6px 4px 0;vertical-align:middle}
 .qe-repeat-tbl td:last-child{padding-right:0}
 .qe-repeat-tbl input,.qe-repeat-tbl select{
   width:100%;padding:4px 7px;font-size:12px;color:#1a2540;
-  border:1px solid #999;border-radius:3px;background:#fff;
+  border:1px solid #888;border-radius:3px;background:#fff;
   outline:none;font-family:'Barlow',sans-serif;transition:border-color .15s;
   box-sizing:border-box;
 }
@@ -1921,17 +1921,17 @@ if($action=='login')
 .qe-add-btn{
   display:inline-flex;align-items:center;justify-content:center;
   width:22px;height:22px;border-radius:50%;border:none;cursor:pointer;
-  background:#666;color:#fff;font-size:16px;line-height:1;
+  background:#0c2461;color:#fff;font-size:16px;line-height:1;
   transition:background .15s;flex-shrink:0;
 }
-.qe-add-btn:hover{background:#444}
+.qe-add-btn:hover{background:#091a45}
 .qe-del-btn{
   display:inline-flex;align-items:center;justify-content:center;
   width:18px;height:18px;border-radius:50%;border:none;cursor:pointer;
-  background:#aaa;color:#fff;font-size:13px;line-height:1;
-  flex-shrink:0;opacity:.8;
+  background:#e67e22;color:#fff;font-size:13px;line-height:1;
+  flex-shrink:0;opacity:.9;
 }
-.qe-del-btn:hover{opacity:1;background:#888}
+.qe-del-btn:hover{opacity:1;background:#ca6f1e}
 </style>
 
 <div id="qe-bk"></div>
