@@ -391,9 +391,12 @@ class ProjectsmainController extends Controller
         $proj_b_end_date  = $dur_row['b_end_date'] ?? '';
         $proj_a_end_date  = $dur_row['a_end_date'] ?? '';
 
-        // Project delay — only from critical activities (only critical path drives project delay)
+        // Project delay = DATEDIFF(actual_end, planned_end) of critical activities
+        // actual_end comes from projected end (anchor_overrun applied to planned end)
         $proj_delay_row = $connection->createCommand("
-            SELECT COALESCE(MAX($anchorOverrunExpr), 0) AS project_delay
+            SELECT
+                MAX(sa.end_date) AS planned_end,
+                MAX(DATE_ADD(sa.end_date, INTERVAL GREATEST(0, ROUND($anchorOverrunExpr)) DAY)) AS actual_end
             FROM scheduleactivities sa
             LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
             LEFT JOIN (
@@ -402,7 +405,11 @@ class ProjectsmainController extends Controller
             ) rpt ON rpt.activity_id = sa.id
             WHERE sa.projectId = $pid AND sa.status = 0 AND sa.critical_status = 'Yes'
         ")->queryOne();
-        $proj_delay = max(0, (int)($proj_delay_row['project_delay'] ?? 0));
+        $proj_planned_end = $proj_delay_row['planned_end'] ?? '';
+        $proj_actual_end  = $proj_delay_row['actual_end']  ?? '';
+        $proj_delay = ($proj_planned_end && $proj_actual_end)
+            ? max(0, (int)((strtotime($proj_actual_end) - strtotime($proj_planned_end)) / 86400))
+            : 0;
         // Start date = planned start date (no adjustment)
         $proj_b_start_date = $proj_b_start_raw;
         // Actual start = earliest reported start date across all activities
@@ -415,10 +422,8 @@ class ProjectsmainController extends Controller
         )->queryOne();
         $proj_actual_start = ($actual_start_row && !empty($actual_start_row['actual_start']))
             ? $actual_start_row['actual_start'] : '';
-        // End date = MAX(end_date) of last activity + delay (from critical path)
-        $proj_b_end_computed = ($proj_b_end_date && $proj_delay > 0)
-            ? date('Y-m-d', strtotime($proj_b_end_date . ' +' . $proj_delay . ' days'))
-            : $proj_b_end_date;
+        // End date = actual end of critical activities (planned end + delay)
+        $proj_b_end_computed = $proj_actual_end ?: $proj_b_end_date;
 
         // Per-activity overrun (projected_duration - old_duration, floored at 0) using the
         // IOW/Group-level delay: if any critical activity underneath has a delay, surface
