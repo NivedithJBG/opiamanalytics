@@ -415,10 +415,9 @@ class ProjectsmainController extends Controller
         )->queryOne();
         $proj_actual_start = ($actual_start_row && !empty($actual_start_row['actual_start']))
             ? $actual_start_row['actual_start'] : '';
-        // End date = planned start + actual duration (budgeted + delay)
-        $actual_duration = $proj_budgeted + $proj_delay;
-        $proj_b_end_computed = $proj_b_start_raw
-            ? date('Y-m-d', strtotime($proj_b_start_raw . ' +' . ($actual_duration - 1) . ' days'))
+        // End date = MAX(end_date) of last activity + delay (from critical path)
+        $proj_b_end_computed = ($proj_b_end_date && $proj_delay > 0)
+            ? date('Y-m-d', strtotime($proj_b_end_date . ' +' . $proj_delay . ' days'))
             : $proj_b_end_date;
 
         // Per-activity overrun (projected_duration - old_duration, floored at 0) using the
