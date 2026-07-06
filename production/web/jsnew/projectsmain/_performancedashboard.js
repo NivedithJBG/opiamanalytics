@@ -199,25 +199,24 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, schedQty){
     items = items || [];
     schedQty = +schedQty || 0;
 
+    // Sum total estimated and actual cost across all resource types (same as renderCdResourceCost groups)
     var estTotal = 0, actTotal = 0, hasActual = false;
     items.forEach(function(r){
         var estUC = +r.rate || 0;
-        var pc = +r.planned_consumption || 0;
-        estTotal += estUC * pc;
+        var estCons = +r.planned_consumption || 0;
+        estTotal += estUC * estCons;
         var hasAct = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
         var actUC = hasAct ? +r.actual_unit_cost : estUC;
-        var ac = +r.actual_consumption || 0;
-        actTotal += actUC * ac;
+        var actCons = +r.actual_consumption || 0;
+        actTotal += actUC * actCons;
         if (hasAct) hasActual = true;
     });
 
+    // Unit cost = total cost / schedule_qty
     var estUCA = schedQty > 0 ? estTotal / schedQty : 0;
-    var actUCA = hasActual ? (schedQty > 0 ? actTotal / schedQty : 0) : estUCA;
+    var actUCA = schedQty > 0 ? actTotal / schedQty : 0;
 
-    // Use same gauge() function as performance dashboard.
-    // maxVal = 2x estimated so estimated sits at the centre (50%).
-    // trackStyle 'cost': left half bluegreen (under), right half orange (over).
-    // targetFrac = 0.5 (centre tick = estimated cost).
+    // maxVal = 2x estimated so estimated sits at centre (50%) of gauge
     var maxVal = estUCA > 0 ? estUCA * 2 : 1;
     var unitLbl = actUnit ? ' /'+actUnit : '';
     gauge('cd-g5', actUCA, maxVal, 'cost', 0.5,
