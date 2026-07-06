@@ -204,17 +204,22 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, schedQty){
     items.forEach(function(r){
         var estUC = +r.rate || 0;
         var estCons = +r.planned_consumption || 0;
-        estTotal += estUC * estCons;
+        var estContrib = estUC * estCons;
+        estTotal += estContrib;
         var hasAct = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
         var actUC = hasAct ? +r.actual_unit_cost : estUC;
         var actCons = +r.actual_consumption || 0;
-        actTotal += actUC * actCons;
+        var actContrib = actUC * actCons;
+        actTotal += actContrib;
         if (hasAct) hasActual = true;
+        console.log('[UCA] '+r.type_name+' | '+r.name+' | rate='+estUC+' pc='+estCons+' estCost='+estContrib.toFixed(2)+' | actUC='+actUC+' ac='+actCons+' actCost='+actContrib.toFixed(2));
     });
+    console.log('[UCA] schedQty='+schedQty+' estTotal='+estTotal.toFixed(2)+' actTotal='+actTotal.toFixed(2));
 
     // Unit cost = total cost / schedule_qty
     var estUCA = schedQty > 0 ? estTotal / schedQty : 0;
     var actUCA = schedQty > 0 ? actTotal / schedQty : 0;
+    console.log('[UCA] estUCA='+estUCA.toFixed(2)+' actUCA='+actUCA.toFixed(2));
 
     // maxVal = 2x estimated so estimated sits at centre (50%) of gauge
     var maxVal = estUCA > 0 ? estUCA * 2 : 1;
