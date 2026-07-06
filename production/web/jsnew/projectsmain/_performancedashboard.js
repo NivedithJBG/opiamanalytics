@@ -1156,7 +1156,7 @@ function gauge(gwId, val, maxVal, trackStyle, targetFrac, lbl1, v1, lbl2, v2, ac
     var trackSvg = (trackStyle==='flat')
         ? arc(0,1,'#a8d4f5')
         : (trackStyle==='cost')
-        ? arc(0,0.5,'#6b8f71')+arc(0.5,1,'#e8820c')
+        ? arc(0,0.5,'#27ae60')+arc(0.5,1,'#e8820c')
         : arc(0,0.5,'#8B0000')+arc(0.5,1,'#81C784');
 
     var tickSvg = '';
