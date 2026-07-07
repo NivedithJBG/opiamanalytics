@@ -235,9 +235,9 @@ function renderCdValueOfWorkDone(d){
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
         // centre: progress %
         +'<text x="'+cx+'" y="'+(cy-22)+'" text-anchor="middle" font-size="22" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+pct+'%</text>'
-        // labels below
-        +'<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Sched <tspan font-weight="700">'+fm(schedQty)+(unit?' '+unit:'')+'</tspan></text>'
-        +'<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Done <tspan font-weight="700">'+fm(lastQty)+(unit?' '+unit:'')+'</tspan></text>'
+        // labels below: Done on left, Sched on right
+        +'<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Done <tspan font-weight="700">'+fm(lastQty)+(unit?' '+unit:'')+'</tspan></text>'
+        +'<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Sched <tspan font-weight="700">'+fm(schedQty)+(unit?' '+unit:'')+'</tspan></text>'
         +'<text x="'+cx+'" y="135" text-anchor="middle" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">'+sh(actName,32)+'</text>'
         +'</svg>';
 
