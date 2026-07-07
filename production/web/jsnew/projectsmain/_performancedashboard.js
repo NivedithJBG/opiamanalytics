@@ -101,28 +101,26 @@ function renderCdBars(){
     var el = document.getElementById('cd-c4');
     if (!el) return;
     var acts = _all || [];
-    console.log('[CD] renderCdBars acts='+acts.length+' costMap keys='+Object.keys(_cdCostMap).length);
     if (!acts.length) {
-        el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No activities ('+Object.keys(_cdCostMap).length+' costs)</div>';
+        el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No activities</div>';
         return;
     }
     var maxEst = 0;
     acts.forEach(function(a){
-        var est = (_cdCostMap[String(a.id)] && _cdCostMap[String(a.id)].est) ? +_cdCostMap[String(a.id)].est : 0;
+        var c = _cdCostMap[String(a.id)];
+        var est = (c && c.est) ? +c.est : 0;
         if (est > maxEst) maxEst = est;
     });
     var html = '';
     acts.forEach(function(a){
-        var cost = _cdCostMap[String(a.id)] || {};
-        var est  = cost.est ? +cost.est : 0;
-        var pct  = maxEst > 0 ? Math.max(2, (est / maxEst * 100)) : 2;
-        html += '<div class="brow" data-aid="' + a.id + '" style="cursor:pointer;padding:3px 6px">'
-            + '<div style="font-size:10px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px" title="' + (a.name||'') + '">' + sh(a.name||'',36) + '</div>'
-            + '<div style="display:flex;align-items:center;gap:6px">'
-            +   '<div style="flex:1;background:#e2e8f0;border-radius:2px;height:8px">'
-            +     '<div style="width:' + pct.toFixed(1) + '%;height:8px;background:#64748b;border-radius:2px"></div>'
-            +   '</div>'
-            +   '<div style="font-size:10px;color:#64748b;flex-shrink:0;min-width:36px;text-align:right">' + fmtCost(est) + '</div>'
+        var c   = _cdCostMap[String(a.id)] || {};
+        var est = (c.est) ? +c.est : 0;
+        var pct = (maxEst > 0 && est > 0) ? Math.max(4, (est / maxEst * 96)) : 4;
+        html += '<div class="brow" data-aid="' + a.id + '" style="cursor:pointer;padding:2px 6px 4px">'
+            + '<div style="font-size:10px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + (a.name||'') + '">' + sh(a.name||'',36) + '</div>'
+            + '<div style="display:flex;align-items:center;gap:4px">'
+            +   '<div style="width:' + pct.toFixed(1) + '%;height:8px;background:#64748b;border-radius:2px;flex-shrink:0"></div>'
+            +   '<div style="font-size:10px;color:#64748b">' + fmtCost(est) + '</div>'
             + '</div>'
             + '</div>';
     });
