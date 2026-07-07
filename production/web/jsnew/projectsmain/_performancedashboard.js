@@ -147,7 +147,7 @@ function renderCdBars(){
         html += '<div class="brow" data-aid="' + a.id + '" style="cursor:pointer;padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box">'
             + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0" title="' + (a.name||'') + '">' + sh(a.name||'',40) + '</div>'
             + '<div style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
-            + '<div style="font-size:12px;color:#111;font-weight:600;flex-shrink:0;min-width:40px;text-align:right">' + fmtCost(est) + '</div>'
+            + ''
             + '</div>';
     });
     el.innerHTML = html;
