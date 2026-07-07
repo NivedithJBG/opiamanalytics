@@ -308,18 +308,18 @@ function renderCdCostOfActivity(d){
     // under: slate bar up to actual + blue-green from right
     var barHtml;
     if (!hasActual || diff === 0) {
-        barHtml = '<div style="width:100%;height:18px;background:#64748b;border-radius:3px"></div>';
+        barHtml = '<div style="width:100%;height:14px;background:#64748b;border-radius:3px"></div>';
     } else if (over) {
         var estPct  = (estCost / actCost * 100).toFixed(1);
         var diffPct = (diff    / actCost * 100).toFixed(1);
-        barHtml = '<div style="display:flex;height:18px;border-radius:3px;overflow:hidden;width:100%">'
+        barHtml = '<div style="display:flex;height:14px;border-radius:3px;overflow:hidden;width:100%">'
             +'<div style="width:'+estPct+'%;background:#64748b;flex-shrink:0"></div>'
             +'<div style="width:'+diffPct+'%;background:#e8820c;flex-shrink:0"></div>'
             +'</div>';
     } else {
         var actPct  = (actCost / estCost * 100).toFixed(1);
         var savePct = (Math.abs(diff) / estCost * 100).toFixed(1);
-        barHtml = '<div style="display:flex;height:18px;border-radius:3px;overflow:hidden;width:100%">'
+        barHtml = '<div style="display:flex;height:14px;border-radius:3px;overflow:hidden;width:100%">'
             +'<div style="width:'+actPct+'%;background:#64748b;flex-shrink:0"></div>'
             +'<div style="width:'+savePct+'%;background:#1b9e8e;flex-shrink:0"></div>'
             +'</div>';
@@ -341,9 +341,16 @@ function renderCdCostOfActivity(d){
         +(diffLabel ? '<span style="color:'+diffCol+'">'+diffLabel+'</span>' : '')
         +'</div>';
 
+    var diffWD = actCostWD - estCostWD;
+    var overWD = diffWD > 0;
+    var diffWDLabel = hasActual && diffWD !== 0
+        ? (overWD ? '+' : '-') + fmtCost(Math.abs(diffWD)) + ' ' + (overWD ? 'over' : 'saving')
+        : '';
+
     var wdRow = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;margin-top:8px;line-height:1.7">'
         +'<div>Estimated Cost of Work Done &nbsp;<span style="color:#111">'+fmtCost(estCostWD)+'</span></div>'
-        +(hasActual ? '<div>Actual Cost of Work Done &nbsp;<span style="color:'+(actCostWD>estCostWD?'#e8820c':'#1b9e8e')+'">'+fmtCost(actCostWD)+'</span></div>' : '')
+        +(hasActual ? '<div>Actual Cost of Work Done &nbsp;<span style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">'+fmtCost(actCostWD)+'</span></div>' : '')
+        +(diffWDLabel ? '<div style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">'+diffWDLabel+'</div>' : '')
         +'</div>';
 
     el.innerHTML =
@@ -743,7 +750,7 @@ function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, 
           + '</div>';
 
     // Bar - same height as before
-    html += '<div style="display:flex;align-items:stretch;height:18px;border-radius:3px;overflow:hidden;">';
+    html += '<div style="display:flex;align-items:stretch;height:14px;border-radius:3px;overflow:hidden;">';
     if (actual > 0 && actual > budgeted){
         html += '<div style="width:'+(budgeted/effMax*100).toFixed(1)+'%;background:#00838f;min-width:3px;"></div>';
         html += '<div style="width:'+((actual-budgeted)/effMax*100).toFixed(1)+'%;background:#e53935;min-width:3px;"></div>';
@@ -1192,7 +1199,7 @@ function doActivityDuration(k) {
     var divider = '<div style="border-top:1px solid #d0d8e8;margin:3px 4px"></div>';
 
     // Single bar: base colour (grey or blue) + overrun (red) or slack (yellow), dark overlay for elapsed
-    var bar = '<div style="position:relative;display:flex;align-items:stretch;height:18px;border-radius:3px;overflow:hidden;">';
+    var bar = '<div style="position:relative;display:flex;align-items:stretch;height:14px;border-radius:3px;overflow:hidden;">';
     if (isOver) {
         bar += '<div style="width:' + (bDur/maxDur*100).toFixed(1) + '%;background:' + baseCol + ';min-width:3px;' + seg + '"></div>';
         bar += '<div style="width:' + ((aDur-bDur)/maxDur*100).toFixed(1) + '%;background:#e53935;min-width:3px;' + seg + '"></div>';
