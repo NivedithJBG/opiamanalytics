@@ -123,6 +123,7 @@ function loadCdActivityData(actId){
             renderCdResourceCost(d.items, d.activity_name);
             renderCdUnitCostOfActivity(d.items, d.activity_name, d.unit, d.schedule_qty);
             renderCdValueOfWorkDone(d);
+            renderCdCostOfActivity(d);
         },
         error: function() {
             if (el) el.innerHTML = '<div style="text-align:center;font-size:12px;color:#c0392b;padding:18px 0">Failed to load</div>';
@@ -274,7 +275,77 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, schedQty){
         hasActual ? 'Act' : '', hasActual ? fmtCost(actUCA)+unitLbl : '',
         sh(actName||'',32));
 }
-function renderCdCostOfActivity(items, actName, lastQty, estActQty, schedQty, actUnit){ /* to be implemented */ }
+function renderCdCostOfActivity(d){
+    var el = document.getElementById('cd-g2');
+    if (!el) return;
+    var items    = d.items || [];
+    var schedQty = +d.schedule_qty || 0;
+    var actName  = d.activity_name || '';
+
+    // Estimated unit cost of activity = sum of all resource type costs (same as UCA dial)
+    var estUCTotal = 0, actUCTotal = 0, hasActual = false;
+    items.forEach(function(r){
+        var estUC  = +r.rate || 0;
+        var estCons = +r.planned_consumption || 0;
+        estUCTotal += estUC * estCons;
+        var hasAct = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+        var actUC  = hasAct ? +r.actual_unit_cost : estUC;
+        var actCons = +r.actual_consumption || 0;
+        actUCTotal += actUC * actCons;
+        if (hasAct) hasActual = true;
+    });
+
+    // Cost of activity = unit cost × schedule qty
+    var estCost = estUCTotal * schedQty;
+    var actCost = hasActual ? actUCTotal * schedQty : estCost;
+    var diff = actCost - estCost;
+    var over = diff > 0;
+
+    // Bar: full width = estimated cost
+    // over: slate base (est) + orange extension
+    // under: slate bar up to actual + blue-green from right
+    var barHtml;
+    if (!hasActual || diff === 0) {
+        barHtml = '<div style="width:100%;height:22px;background:#64748b;border-radius:3px"></div>';
+    } else if (over) {
+        var estPct  = (estCost / actCost * 100).toFixed(1);
+        var diffPct = (diff    / actCost * 100).toFixed(1);
+        barHtml = '<div style="display:flex;height:22px;border-radius:3px;overflow:hidden;width:100%">'
+            +'<div style="width:'+estPct+'%;background:#64748b;flex-shrink:0"></div>'
+            +'<div style="width:'+diffPct+'%;background:#e8820c;flex-shrink:0"></div>'
+            +'</div>';
+    } else {
+        var actPct  = (actCost / estCost * 100).toFixed(1);
+        var savePct = (Math.abs(diff) / estCost * 100).toFixed(1);
+        barHtml = '<div style="display:flex;height:22px;border-radius:3px;overflow:hidden;width:100%">'
+            +'<div style="width:'+actPct+'%;background:#64748b;flex-shrink:0"></div>'
+            +'<div style="width:'+savePct+'%;background:#1b9e8e;flex-shrink:0"></div>'
+            +'</div>';
+    }
+
+    var diffLabel = hasActual && diff !== 0
+        ? (over ? '+' : '-') + fmtCost(Math.abs(diff)) + ' ' + (over ? 'over' : 'saving')
+        : '';
+    var diffCol = over ? '#e8820c' : '#1b9e8e';
+
+    el.innerHTML =
+        '<div style="padding:8px 10px;display:flex;flex-direction:column;justify-content:center;height:100%;gap:8px">'
+        +'<div style="font-size:11px;color:#5a6e8c;font-family:\'Barlow Condensed\',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName,40)+'</div>'
+        +barHtml
+        +'<div style="display:flex;justify-content:space-between;font-family:\'Barlow Condensed\',sans-serif">'
+        +  '<div style="text-align:left">'
+        +    '<div style="font-size:10px;color:#5a6e8c">Estimated</div>'
+        +    '<div style="font-size:14px;font-weight:700;color:#1e293b">'+fmtCost(estCost)+'</div>'
+        +  '</div>'
+        + (hasActual
+        ?  '<div style="text-align:right">'
+        +    '<div style="font-size:10px;color:#5a6e8c">Actual</div>'
+        +    '<div style="font-size:14px;font-weight:700;color:'+(over?'#e8820c':'#1b9e8e')+'">'+fmtCost(actCost)+'</div>'
+        +  '</div>' : '')
+        +'</div>'
+        +(diffLabel?'<div style="font-size:11px;font-weight:600;color:'+diffCol+';font-family:\'Barlow Condensed\',sans-serif">'+diffLabel+'</div>':'')
+        +'</div>';
+}
 function renderCdCostOnCompletion(items, actName, estQty){ /* to be implemented */ }
 function renderCdResourceConsumption(items, actName, lastQty, actUnit){
     var el = document.getElementById('cd-c7');
