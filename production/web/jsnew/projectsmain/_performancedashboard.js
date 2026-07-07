@@ -144,13 +144,37 @@ function renderCdBars(){
                     + '<div style="position:absolute;left:' + actPct.toFixed(1) + '%;top:0;width:' + Math.max(0,savePct).toFixed(1) + '%;height:11px;background:#1b9e8e;border-radius:0 2px 2px 0"></div>';
         }
 
-        html += '<div class="brow" data-aid="' + a.id + '" style="cursor:pointer;padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box">'
-            + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0" title="' + (a.name||'') + '">' + sh(a.name||'',40) + '</div>'
+        var diffLabel = hasAct ? (over ? '+' : '-') + fmtCost(Math.abs(diff)) + (over ? ' over' : ' saving') : 'No actual data';
+        var tipHtml = 'Est: ' + fmtCost(est) + '&#10;Act: ' + (hasAct ? fmtCost(acoa) : '-') + '&#10;' + diffLabel;
+        html += '<div class="brow cd-bar-tip" data-aid="' + a.id + '" data-tip="Est: ' + fmtCost(est) + '|Act: ' + (hasAct ? fmtCost(acoa) : '-') + '|Diff: ' + diffLabel + '" style="cursor:pointer;padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;position:relative">'
+            + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0">' + sh(a.name||'',40) + '</div>'
             + '<div style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
-            + '<div style="font-size:12px;color:#111;font-weight:600;flex-shrink:0;min-width:40px;text-align:right">' + (hasAct ? fmtCost(acoa) : '') + '</div>'
             + '</div>';
     });
     el.innerHTML = html;
+
+    // Tooltip on hover
+    var tip = document.getElementById('cd-bar-tooltip');
+    if (!tip) {
+        tip = document.createElement('div');
+        tip.id = 'cd-bar-tooltip';
+        tip.style.cssText = 'position:fixed;display:none;background:#1e293b;color:#f1f5f9;font-size:12px;font-family:"Barlow Condensed",sans-serif;font-weight:500;padding:7px 10px;border-radius:5px;pointer-events:none;z-index:99999;line-height:1.8;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.4)';
+        document.body.appendChild(tip);
+    }
+    el.querySelectorAll('.cd-bar-tip').forEach(function(row){
+        row.addEventListener('mouseenter', function(e){
+            var parts = (row.getAttribute('data-tip') || '').split('|');
+            tip.innerHTML = parts.join('<br>');
+            tip.style.display = 'block';
+        });
+        row.addEventListener('mousemove', function(e){
+            tip.style.left = (e.clientX + 14) + 'px';
+            tip.style.top  = (e.clientY - 10) + 'px';
+        });
+        row.addEventListener('mouseleave', function(){
+            tip.style.display = 'none';
+        });
+    });
 }
 function filterByGroupCd(groupId){ /* to be implemented */ }
 function filterByIowCd(iowId){ /* to be implemented */ }
