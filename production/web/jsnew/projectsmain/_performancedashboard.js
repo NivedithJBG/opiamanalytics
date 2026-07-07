@@ -62,7 +62,7 @@ $(document).on('click', '.cost-dashboard-btn', function(e){
     if (!_cdLoaded) {
         _cdLoaded = true;
         var done1 = false, done2 = false;
-        function tryRender(){ if (done1 && done2) renderCdBars(); }
+        var tryRender = function(){ if (done1 && done2) renderCdBars(); };
 
         if (_loaded) {
             done1 = true;
