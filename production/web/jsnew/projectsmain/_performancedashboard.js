@@ -116,11 +116,12 @@ function renderCdBars(){
         var c   = _cdCostMap[String(a.id)] || {};
         var est = (c.est) ? +c.est : 0;
         var pct = (maxEst > 0 && est > 0) ? Math.max(4, (est / maxEst * 96)) : 4;
-        html += '<div class="brow" data-aid="' + a.id + '" style="cursor:pointer;padding:2px 6px 3px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box">'
-            + '<div style="font-size:10px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0" title="' + (a.name||'') + '">' + sh(a.name||'',40) + '</div>'
-            + '<div style="flex:1;height:8px;position:relative">'
-            +   '<div style="position:absolute;left:0;top:0;width:' + pct.toFixed(1) + '%;height:8px;background:#64748b;border-radius:2px;min-width:4px"></div>'
+        html += '<div class="brow" data-aid="' + a.id + '" style="cursor:pointer;padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box">'
+            + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0" title="' + (a.name||'') + '">' + sh(a.name||'',40) + '</div>'
+            + '<div style="flex:1;height:11px;position:relative">'
+            +   '<div style="position:absolute;left:0;top:0;width:' + pct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px;min-width:4px"></div>'
             + '</div>'
+            + '<div style="font-size:12px;color:#111;font-weight:600;flex-shrink:0;min-width:40px;text-align:right">' + fmtCost(est) + '</div>'
             + '</div>';
     });
     el.innerHTML = html;
