@@ -949,7 +949,7 @@ class ProjectsmainController extends Controller
                 }
             }
 
-            $data[$schedId] = ['est' => round($est, 2), 'acoa' => round($actualTotal, 2)];
+            $data[$schedId] = ['est' => round($est, 2), 'acoa' => round($actualTotal * $schedQty, 2)];
         }
 
         return json_encode(['error' => 'No', 'data' => $data]);

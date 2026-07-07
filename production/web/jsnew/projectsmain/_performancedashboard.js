@@ -158,7 +158,7 @@ function renderCdBars(){
     if (!tip) {
         tip = document.createElement('div');
         tip.id = 'cd-bar-tooltip';
-        tip.style.cssText = 'position:fixed;display:none;background:#1e293b;color:#f1f5f9;font-size:15px;font-family:"Barlow Condensed",sans-serif;font-weight:500;padding:14px 20px;border-radius:8px;pointer-events:none;z-index:99999;line-height:2.2;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:220px;border:1px solid #334155';
+        tip.style.cssText = 'position:fixed;display:none;background:#1e293b;color:#f1f5f9;font-size:15px;font-family:"Barlow Condensed",sans-serif;font-weight:500;padding:16px 28px;border-radius:8px;pointer-events:none;z-index:99999;line-height:2.4;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:340px;border:1px solid #334155';
         document.body.appendChild(tip);
     }
     el.querySelectorAll('.cd-bar-tip').forEach(function(row){
