@@ -332,7 +332,7 @@ function renderCdCostOfActivity(d){
 
     el.innerHTML =
         '<div style="padding:8px 0;display:flex;flex-direction:column;justify-content:center;height:100%;gap:8px;width:100%;box-sizing:border-box">'
-        +'<div style="font-size:10px;color:#3461b8;font-weight:600;font-family:\'Barlow Condensed\',sans-serif;padding:0 0 4px;border-bottom:1px solid #e8efff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName,40)+'</div>'
+        +'<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName,40)+'</div>'
         +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:700;color:#111;margin-bottom:4px">'
         +  'Est: '+fmtCost(estCost)
         + (hasActual ? '&nbsp;&nbsp;&nbsp;Act: <span style="color:'+(over?'#e8820c':'#1b9e8e')+'">'+fmtCost(actCost)+'</span>' : '')
