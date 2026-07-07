@@ -105,22 +105,48 @@ function renderCdBars(){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No activities</div>';
         return;
     }
-    var maxEst = 0;
+    // Max value = highest actual cost (may exceed est) or est, whichever bigger
+    var maxVal = 0;
     acts.forEach(function(a){
-        var c = _cdCostMap[String(a.id)];
-        var est = (c && c.est) ? +c.est : 0;
-        if (est > maxEst) maxEst = est;
+        var c = _cdCostMap[String(a.id)] || {};
+        var est  = +c.est  || 0;
+        var acoa = +c.acoa || 0;
+        var top  = acoa > est ? acoa : est;
+        if (top > maxVal) maxVal = top;
     });
     var html = '';
     acts.forEach(function(a){
-        var c   = _cdCostMap[String(a.id)] || {};
-        var est = (c.est) ? +c.est : 0;
-        var pct = (maxEst > 0 && est > 0) ? Math.max(4, (est / maxEst * 96)) : 4;
+        var c    = _cdCostMap[String(a.id)] || {};
+        var est  = +c.est  || 0;
+        var acoa = +c.acoa || 0;
+        var hasAct = acoa > 0;
+        var diff = acoa - est;
+        var over = diff > 0;
+
+        // Est bar width as % of bar track
+        var estPct  = maxVal > 0 ? Math.max(2, est  / maxVal * 96) : 2;
+
+        var barHtml;
+        if (!hasAct || diff === 0) {
+            // Only est bar in slate
+            barHtml = '<div style="position:absolute;left:0;top:0;width:' + estPct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px;min-width:4px"></div>';
+        } else if (over) {
+            // Slate up to est width, orange extension for diff
+            var actPct  = maxVal > 0 ? Math.max(2, acoa / maxVal * 96) : 2;
+            var diffPct = actPct - estPct;
+            barHtml = '<div style="position:absolute;left:0;top:0;width:' + estPct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px 0 0 2px;min-width:4px"></div>'
+                    + '<div style="position:absolute;left:' + estPct.toFixed(1) + '%;top:0;width:' + Math.max(0,diffPct).toFixed(1) + '%;height:11px;background:#e8820c;border-radius:0 2px 2px 0"></div>';
+        } else {
+            // Slate up to acoa, teal from acoa to est (saving shown left-to-right)
+            var actPct  = maxVal > 0 ? Math.max(2, acoa / maxVal * 96) : 2;
+            var savePct = estPct - actPct;
+            barHtml = '<div style="position:absolute;left:0;top:0;width:' + actPct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px 0 0 2px;min-width:4px"></div>'
+                    + '<div style="position:absolute;left:' + actPct.toFixed(1) + '%;top:0;width:' + Math.max(0,savePct).toFixed(1) + '%;height:11px;background:#1b9e8e;border-radius:0 2px 2px 0"></div>';
+        }
+
         html += '<div class="brow" data-aid="' + a.id + '" style="cursor:pointer;padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box">'
             + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0" title="' + (a.name||'') + '">' + sh(a.name||'',40) + '</div>'
-            + '<div style="flex:1;height:11px;position:relative">'
-            +   '<div style="position:absolute;left:0;top:0;width:' + pct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px;min-width:4px"></div>'
-            + '</div>'
+            + '<div style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
             + '<div style="font-size:12px;color:#111;font-weight:600;flex-shrink:0;min-width:40px;text-align:right">' + fmtCost(est) + '</div>'
             + '</div>';
     });
