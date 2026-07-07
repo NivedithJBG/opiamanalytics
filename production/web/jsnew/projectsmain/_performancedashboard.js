@@ -306,18 +306,18 @@ function renderCdCostOfActivity(d){
     // under: slate bar up to actual + blue-green from right
     var barHtml;
     if (!hasActual || diff === 0) {
-        barHtml = '<div style="width:100%;height:22px;background:#64748b;border-radius:3px"></div>';
+        barHtml = '<div style="width:100%;height:12px;background:#64748b;border-radius:3px"></div>';
     } else if (over) {
         var estPct  = (estCost / actCost * 100).toFixed(1);
         var diffPct = (diff    / actCost * 100).toFixed(1);
-        barHtml = '<div style="display:flex;height:22px;border-radius:3px;overflow:hidden;width:100%">'
+        barHtml = '<div style="display:flex;height:12px;border-radius:3px;overflow:hidden;width:100%">'
             +'<div style="width:'+estPct+'%;background:#64748b;flex-shrink:0"></div>'
             +'<div style="width:'+diffPct+'%;background:#e8820c;flex-shrink:0"></div>'
             +'</div>';
     } else {
         var actPct  = (actCost / estCost * 100).toFixed(1);
         var savePct = (Math.abs(diff) / estCost * 100).toFixed(1);
-        barHtml = '<div style="display:flex;height:22px;border-radius:3px;overflow:hidden;width:100%">'
+        barHtml = '<div style="display:flex;height:12px;border-radius:3px;overflow:hidden;width:100%">'
             +'<div style="width:'+actPct+'%;background:#64748b;flex-shrink:0"></div>'
             +'<div style="width:'+savePct+'%;background:#1b9e8e;flex-shrink:0"></div>'
             +'</div>';
@@ -329,7 +329,7 @@ function renderCdCostOfActivity(d){
     var diffCol = over ? '#e8820c' : '#1b9e8e';
 
     el.innerHTML =
-        '<div style="padding:8px 10px;display:flex;flex-direction:column;justify-content:center;height:100%;gap:8px">'
+        '<div style="padding:8px 4px;display:flex;flex-direction:column;justify-content:center;height:100%;gap:8px">'
         +'<div style="font-size:11px;color:#5a6e8c;font-family:\'Barlow Condensed\',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName,40)+'</div>'
         +barHtml
         +'<div style="display:flex;justify-content:space-between;font-family:\'Barlow Condensed\',sans-serif">'
