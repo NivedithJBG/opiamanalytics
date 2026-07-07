@@ -144,9 +144,13 @@ function renderCdBars(){
                     + '<div style="position:absolute;left:' + actPct.toFixed(1) + '%;top:0;width:' + Math.max(0,savePct).toFixed(1) + '%;height:11px;background:#1b9e8e;border-radius:0 2px 2px 0"></div>';
         }
 
-        var diffLabel = hasAct ? (over ? '+' : '-') + fmtCost(Math.abs(diff)) + (over ? ' over' : ' saving') : 'No actual data';
-        var tipHtml = 'Est: ' + fmtCost(est) + '&#10;Act: ' + (hasAct ? fmtCost(acoa) : '-') + '&#10;' + diffLabel;
-        html += '<div class="brow cd-bar-tip" data-aid="' + a.id + '" data-tip="Est: ' + fmtCost(est) + '|Act: ' + (hasAct ? fmtCost(acoa) : '-') + '|Diff: ' + diffLabel + '" style="cursor:pointer;padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;position:relative">'
+        var diffLabel = hasAct
+            ? (over ? 'Cost Overrun: +' + fmtCost(Math.abs(diff)) : 'Cost Saving: ' + fmtCost(Math.abs(diff)))
+            : 'No actual data';
+        var tipStr = 'Estimated Cost of Activity: ' + fmtCost(est)
+            + '|Actual Cost of Activity: ' + (hasAct ? fmtCost(acoa) : '-')
+            + '|Difference in Cost: ' + diffLabel;
+        html += '<div class="brow cd-bar-tip" data-aid="' + a.id + '" data-tip="' + tipStr + '" style="cursor:pointer;padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;position:relative">'
             + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0">' + sh(a.name||'',40) + '</div>'
             + '<div style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
             + '</div>';
