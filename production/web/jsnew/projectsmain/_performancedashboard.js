@@ -61,23 +61,33 @@ $(document).on('click', '.cost-dashboard-btn', function(e){
     $('#cd-modal, #cd-bk').addClass('cd-open');
     if (!_cdLoaded) {
         _cdLoaded = true;
-        var loadActivities = _loaded
-            ? $.Deferred().resolve().promise()
-            : $.ajax({ type:'POST', url:'../projectsmain/performancedashboard', dataType:'json',
+        var done1 = false, done2 = false;
+        function tryRender(){ if (done1 && done2) renderCdBars(); }
+
+        if (_loaded) {
+            done1 = true;
+        } else {
+            $.ajax({ type:'POST', url:'../projectsmain/performancedashboard', dataType:'json',
                 success: function(d){
-                    if (!d || d.error === undefined) return;
-                    if (!_groups.length)    _groups    = d.iow_groups  || [];
-                    if (!_iow_items.length) _iow_items = d.iow_items   || [];
-                    if (!_all.length)       _all       = d.activities  || [];
-                    if (!_cdProjectName)    _cdProjectName = d.project_name || '';
-                }
-              });
-        var loadCosts = $.ajax({ type:'POST', url:'../projectsmain/costdashboardbatch', dataType:'json',
+                    if (d) {
+                        if (!_groups.length)    _groups    = d.iow_groups  || [];
+                        if (!_iow_items.length) _iow_items = d.iow_items   || [];
+                        if (!_all.length)       _all       = d.activities  || [];
+                        if (!_cdProjectName)    _cdProjectName = d.project_name || '';
+                    }
+                },
+                complete: function(){ done1 = true; tryRender(); }
+            });
+        }
+
+        $.ajax({ type:'POST', url:'../projectsmain/costdashboardbatch', dataType:'json',
             success: function(d){
                 if (d && d.data) _cdCostMap = d.data;
-            }
+            },
+            complete: function(){ done2 = true; tryRender(); }
         });
-        $.when(loadActivities, loadCosts).always(function(){ renderCdBars(); });
+
+        if (done1) tryRender();
     }
 });
 $(document).on('click', '#cd-close, #cd-bk', function(){
@@ -91,8 +101,9 @@ function renderCdBars(){
     var el = document.getElementById('cd-c4');
     if (!el) return;
     var acts = _all || [];
+    console.log('[CD] renderCdBars acts='+acts.length+' costMap keys='+Object.keys(_cdCostMap).length);
     if (!acts.length) {
-        el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No activities</div>';
+        el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No activities ('+Object.keys(_cdCostMap).length+' costs)</div>';
         return;
     }
     var maxEst = 0;
