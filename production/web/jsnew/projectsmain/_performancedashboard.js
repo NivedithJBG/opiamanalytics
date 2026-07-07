@@ -97,12 +97,12 @@ function renderCdBars(){
     }
     var maxEst = 0;
     acts.forEach(function(a){
-        var est = (_cdCostMap[a.id] && _cdCostMap[a.id].est) ? +_cdCostMap[a.id].est : 0;
+        var est = (_cdCostMap[String(a.id)] && _cdCostMap[String(a.id)].est) ? +_cdCostMap[String(a.id)].est : 0;
         if (est > maxEst) maxEst = est;
     });
     var html = '';
     acts.forEach(function(a){
-        var cost = _cdCostMap[a.id] || {};
+        var cost = _cdCostMap[String(a.id)] || {};
         var est  = cost.est ? +cost.est : 0;
         var pct  = maxEst > 0 ? Math.max(2, (est / maxEst * 100)) : 2;
         html += '<div class="brow" data-aid="' + a.id + '" style="cursor:pointer;padding:3px 6px">'
