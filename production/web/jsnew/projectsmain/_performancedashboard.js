@@ -329,7 +329,7 @@ function renderCdCostOfActivity(d){
     var diffCol = over ? '#e8820c' : '#1b9e8e';
 
     el.innerHTML =
-        '<div style="padding:8px 4px;display:flex;flex-direction:column;justify-content:center;height:100%;gap:8px">'
+        '<div style="padding:8px 0;display:flex;flex-direction:column;justify-content:center;height:100%;gap:8px;width:100%;box-sizing:border-box">'
         +'<div style="font-size:11px;color:#5a6e8c;font-family:\'Barlow Condensed\',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName,40)+'</div>'
         +barHtml
         +'<div style="display:flex;justify-content:space-between;font-family:\'Barlow Condensed\',sans-serif">'
