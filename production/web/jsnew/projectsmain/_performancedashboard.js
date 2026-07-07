@@ -341,9 +341,9 @@ function renderCdCostOfActivity(d){
         +(diffLabel ? '<span style="color:'+diffCol+'">'+diffLabel+'</span>' : '')
         +'</div>';
 
-    var wdRow = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;margin-top:6px">'
-        +'Cost of Work Done &nbsp; Est: '+fmtCost(estCostWD)
-        +(hasActual ? '&nbsp;&nbsp;&nbsp;Act: <span style="color:'+(actCostWD>estCostWD?'#e8820c':'#1b9e8e')+'">'+fmtCost(actCostWD)+'</span>' : '')
+    var wdRow = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;margin-top:8px;line-height:1.7">'
+        +'<div>Estimated Cost of Work Done &nbsp;<span style="color:#111">'+fmtCost(estCostWD)+'</span></div>'
+        +(hasActual ? '<div>Actual Cost of Work Done &nbsp;<span style="color:'+(actCostWD>estCostWD?'#e8820c':'#1b9e8e')+'">'+fmtCost(actCostWD)+'</span></div>' : '')
         +'</div>';
 
     el.innerHTML =
