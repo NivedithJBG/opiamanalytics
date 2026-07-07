@@ -116,12 +116,12 @@ function renderCdBars(){
         var c   = _cdCostMap[String(a.id)] || {};
         var est = (c.est) ? +c.est : 0;
         var pct = (maxEst > 0 && est > 0) ? Math.max(4, (est / maxEst * 96)) : 4;
-        html += '<div class="brow" data-aid="' + a.id + '" style="cursor:pointer;padding:2px 6px 4px">'
+        html += '<div class="brow" data-aid="' + a.id + '" style="cursor:pointer;padding:2px 6px 4px;display:block;width:100%;box-sizing:border-box">'
             + '<div style="font-size:10px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + (a.name||'') + '">' + sh(a.name||'',36) + '</div>'
-            + '<div style="display:flex;align-items:center;gap:4px">'
-            +   '<div style="width:' + pct.toFixed(1) + '%;height:8px;background:#64748b;border-radius:2px;flex-shrink:0"></div>'
-            +   '<div style="font-size:10px;color:#64748b">' + fmtCost(est) + '</div>'
+            + '<div style="width:100%;background:#e2e8f0;border-radius:2px;height:8px;margin:2px 0">'
+            +   '<div style="width:' + pct.toFixed(1) + '%;height:8px;background:#64748b;border-radius:2px;min-width:4px"></div>'
             + '</div>'
+            + '<div style="font-size:10px;color:#64748b;text-align:right">' + fmtCost(est) + '</div>'
             + '</div>';
     });
     el.innerHTML = html;
