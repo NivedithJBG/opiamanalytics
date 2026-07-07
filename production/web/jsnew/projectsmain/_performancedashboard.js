@@ -336,9 +336,9 @@ function renderCdCostOfActivity(d){
         +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:700;color:#111;margin-bottom:4px">'
         +  'Est: '+fmtCost(estCost)
         + (hasActual ? '&nbsp;&nbsp;&nbsp;Act: <span style="color:'+(over?'#e8820c':'#1b9e8e')+'">'+fmtCost(actCost)+'</span>' : '')
+        + (diffLabel ? '&nbsp;&nbsp;&nbsp;<span style="color:'+diffCol+'">'+diffLabel+'</span>' : '')
         +'</div>'
         +barHtml
-        +(diffLabel?'<div style="font-size:11px;font-weight:600;color:'+diffCol+';font-family:\'Barlow Condensed\',sans-serif;margin-top:2px">'+diffLabel+'</div>':'')
         +'</div>';
 }
 function renderCdCostOnCompletion(items, actName, estQty){ /* to be implemented */ }
