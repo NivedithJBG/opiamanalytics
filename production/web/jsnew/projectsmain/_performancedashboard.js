@@ -122,6 +122,7 @@ function loadCdActivityData(actId){
             renderCdResourceConsumption(d.items, d.activity_name, d.last_report_qty, d.unit);
             renderCdResourceCost(d.items, d.activity_name);
             renderCdUnitCostOfActivity(d.items, d.activity_name, d.unit, d.schedule_qty);
+            renderCdValueOfWorkDone(d);
         },
         error: function() {
             if (el) el.innerHTML = '<div style="text-align:center;font-size:12px;color:#c0392b;padding:18px 0">Failed to load</div>';
@@ -194,7 +195,54 @@ function renderCdUnitCostOfResource(items, actName){
         + sh(actName||'',40) + '</div>'
         + '<div style="overflow-y:auto;flex:1;min-height:0">' + rows + '</div>';
 }
-function renderCdValueOfWorkDone(d){ /* to be implemented */ }
+function renderCdValueOfWorkDone(d){
+    var el = document.getElementById('cd-g4');
+    if (!el) return;
+    var schedQty = +d.schedule_qty || 0;
+    var lastQty  = +d.last_report_qty || 0;
+    var unit     = d.unit || '';
+    var actName  = d.activity_name || '';
+
+    var maxVal = schedQty > 0 ? schedQty : 1;
+    var cx=105, cy=92, r=76, sw=14;
+
+    function ptF(frac){ var a=Math.PI*(1-frac); return [(cx+r*Math.cos(a)).toFixed(1),(cy-r*Math.sin(a)).toFixed(1)]; }
+    function arc(f1,f2,col,cap){
+        if(f2<=f1) return '';
+        cap=cap||'butt';
+        var p1=ptF(f1), p2=ptF(f2);
+        if((f2-f1)>=1){
+            var pm=ptF(0.5);
+            return '<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+pm[0]+','+pm[1]+
+                   ' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>';
+        }
+        return '<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>';
+    }
+
+    var f = Math.max(0, Math.min(1, lastQty / maxVal));
+    var nr=r-15, na=Math.PI*(1-f);
+    var nx=(cx+nr*Math.cos(na)).toFixed(1), ny=(cy-nr*Math.sin(na)).toFixed(1);
+    var pct = schedQty > 0 ? (lastQty/schedQty*100).toFixed(1) : '0.0';
+
+    var svg='<svg width="210" height="138" viewBox="0 0 210 138" xmlns="http://www.w3.org/2000/svg">'
+        // full arc = schedule qty (slate)
+        +arc(0,1,'#64748b')
+        // progress overlay (grey)
+        +(f>0?arc(0,f,'#94a3b8','butt'):'')
+        // needle
+        +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
+        +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
+        +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
+        // centre: progress %
+        +'<text x="'+cx+'" y="'+(cy-22)+'" text-anchor="middle" font-size="22" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+pct+'%</text>'
+        // labels below
+        +'<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Sched <tspan font-weight="700">'+fm(schedQty)+(unit?' '+unit:'')+'</tspan></text>'
+        +'<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Done <tspan font-weight="700">'+fm(lastQty)+(unit?' '+unit:'')+'</tspan></text>'
+        +'<text x="'+cx+'" y="135" text-anchor="middle" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">'+sh(actName,32)+'</text>'
+        +'</svg>';
+
+    el.innerHTML = svg;
+}
 function renderCdUnitCostOfActivity(items, actName, actUnit, schedQty){
     items = items || [];
     schedQty = +schedQty || 0;
