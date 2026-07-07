@@ -831,10 +831,10 @@ class ProjectsmainController extends Controller
         $estQtyMap = [];
         foreach ($penRows as $r) { $estQtyMap[(int)$r['activity_Id']] = (float)$r['activity_qty']; }
 
-        // All resources per WBS id
+        // All resources per WBS id — activity-specific store_indents for correct stock
         $resRows = $db->createCommand(
             "SELECT pern.activity_id, pern.pricing_resourceid, pern.resourcetype_Id AS type_id,
-                    pern.rate, pern.quantity AS res_qty, pern.task_ids,
+                    pern.rate, pern.quantity AS res_qty, pern.task_ids, pern.resource_Id,
                     grn.actual_unit_cost, grn.grn_qty,
                     si.stock_at_site
              FROM pricing_estimate_resources_new pern
@@ -849,10 +849,10 @@ class ProjectsmainController extends Controller
                  GROUP BY por.allocation_id
              ) grn ON grn.allocation_id=pern.pricing_resourceid
              LEFT JOIN (
-                 SELECT si2.resource_id, si2.stock_at_site FROM store_indents si2
-                 INNER JOIN (SELECT resource_id, MAX(id) AS mx FROM store_indents WHERE project_id=:pid3 GROUP BY resource_id) lsi
-                 ON lsi.resource_id=si2.resource_id AND si2.id=lsi.mx
-             ) si ON si.resource_id=pern.resource_Id
+                 SELECT si2.resource_id, si2.activity_id AS si_activity_id, si2.stock_at_site FROM store_indents si2
+                 INNER JOIN (SELECT resource_id, activity_id, MAX(id) AS mx FROM store_indents WHERE project_id=:pid3 GROUP BY resource_id, activity_id) lsi
+                 ON lsi.resource_id=si2.resource_id AND lsi.activity_id=si2.activity_id AND si2.id=lsi.mx
+             ) si ON si.resource_id=pern.resource_Id AND si.si_activity_id=pern.activity_id
              WHERE pern.activity_id IN (".implode(',', array_map('intval', $wbIds)).") AND pern.project_id=:pid AND pern.pricing_status=0",
             [':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid]
         )->queryAll();
@@ -863,8 +863,10 @@ class ProjectsmainController extends Controller
             $resByWbs[(int)$r['activity_id']][] = $r;
         }
 
-        // MB data: task amounts and work done by task_id
-        $taskAmountById = []; $taskWorkDoneById = []; $mbQtyByWbs = [];
+        // MB data: task amounts and work done by task_id, grouped by wbsId
+        $taskAmountById   = [];  // task_id => total value
+        $taskWorkDoneById = [];  // task_id => total work_done qty
+        $mbQtyByWbs       = [];  // wbsId   => total MB qty
         $mbs = $db->createCommand(
             "SELECT entries FROM wo_measurement_book WHERE project_id=:pid AND sent_status=1 AND delete_status=0",
             [':pid' => $pid]
@@ -875,9 +877,9 @@ class ProjectsmainController extends Controller
                 if (!$wbsId) continue;
                 $mbQtyByWbs[$wbsId] = ($mbQtyByWbs[$wbsId] ?? 0.0) + (float)($entry['qty'] ?? 0);
                 foreach ($entry['tasks'] ?? [] as $task) {
-                    $wd = (float)($task['work_done'] ?? 0);
-                    $rt = (float)($task['rate']      ?? 0);
-                    $tid = (int)($task['task_id']    ?? 0);
+                    $wd  = (float)($task['work_done'] ?? 0);
+                    $rt  = (float)($task['rate']      ?? 0);
+                    $tid = (int)($task['task_id']     ?? 0);
                     if ($tid) {
                         $taskAmountById[$tid]   = ($taskAmountById[$tid]   ?? 0.0) + $rt * $wd;
                         $taskWorkDoneById[$tid] = ($taskWorkDoneById[$tid] ?? 0.0) + $wd;
@@ -886,45 +888,68 @@ class ProjectsmainController extends Controller
             }
         }
 
-        // Compute est and acoa per schedule activity
+        // Compute est and acoa per schedule activity — same logic as actionCostdashboardactivity
         $data = [];
         foreach ($schedActs as $sa) {
-            $schedId = (int)$sa['id'];
-            $wbId    = (int)$sa['activity_id'];
-            $schedQty = (float)$sa['quantity'];
-            $estQty   = $estQtyMap[$wbId] ?? 0;
-            $lastQty  = $lastQtyMap[$schedId] ?? 0;
+            $schedId   = (int)$sa['id'];
+            $wbId      = (int)$sa['activity_id'];
+            $schedQty  = (float)$sa['quantity'];
+            $estQty    = $estQtyMap[$wbId] ?? 0;
+            $lastQty   = $lastQtyMap[$schedId] ?? 0;
             $resources = $resByWbs[$wbId] ?? [];
-            $mbQty    = $mbQtyByWbs[$wbId] ?? 0.0;
+            $ratio     = ($schedQty > 0) ? $estQty / $schedQty : 0.0;
 
+            // Estimated cost
             $unitCost = 0.0;
             foreach ($resources as $r) { $unitCost += (float)$r['res_qty'] * (float)$r['rate']; }
             $est = $unitCost * $estQty;
-            $ratio = ($schedQty > 0) ? $estQty / $schedQty : 0.0;
 
-            // Actual: SUM(actual_unit_cost × actual_consumption)
-            // Actual cost = SUM(actual_unit_cost × actual_consumption)
-            // Materials (type 2,6,7,8): stock=0/no indent → res_qty×ratio; stock>0 → (GRN-stock)/lastQty
-            $actualWorkDone = 0.0;
+            // Actual cost — mirrors actionCostdashboardactivity logic
+            $actualTotal = 0.0;
             foreach ($resources as $r) {
-                $typeId      = (int)$r['type_id'];
-                $grnQty      = (float)($r['grn_qty'] ?? 0);
-                $stock       = (float)($r['stock_at_site'] ?? 0);
-                $actUnitCost = (float)($r['actual_unit_cost'] ?? 0);
-                if (in_array($typeId, [2, 6, 7, 8])) {
-                    if ($stock > 0 && $lastQty > 0) {
-                        $actCons = max(0, $grnQty - $stock) / $lastQty;
+                $typeId  = (int)$r['type_id'];
+                $resQty  = (float)$r['res_qty'];
+                $plannedConsumption = $resQty * $ratio;
+
+                // Actual unit cost
+                if ($typeId === 4) {
+                    // Subcontractor: weighted avg from MB task work done
+                    $taskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
+                    $wdVal = 0.0; $wdQty = 0.0;
+                    foreach ($taskIds as $tid) {
+                        $wdVal += $taskAmountById[$tid]   ?? 0.0;
+                        $wdQty += $taskWorkDoneById[$tid] ?? 0.0;
+                    }
+                    $actUnit = $wdQty > 0 ? $wdVal / $wdQty : null;
+                } else {
+                    $actUnit = (in_array($typeId, [2, 6, 7, 8]) && $r['actual_unit_cost'] !== null)
+                        ? (float)$r['actual_unit_cost'] : null;
+                }
+
+                // Actual consumption
+                if ($typeId === 4) {
+                    $taskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
+                    $scWd = 0.0;
+                    foreach ($taskIds as $tid) { $scWd += $taskWorkDoneById[$tid] ?? 0.0; }
+                    $actualConsumption = ($lastQty > 0 && $scWd > 0)
+                        ? $scWd / $lastQty : $plannedConsumption;
+                } elseif (in_array($typeId, [2, 6, 7, 8])) {
+                    $indentRaised = ($r['stock_at_site'] !== null);
+                    if ($indentRaised && $lastQty > 0) {
+                        $actualConsumption = max(0, (float)($r['grn_qty'] ?? 0) - (float)($r['stock_at_site'] ?? 0)) / $lastQty;
                     } else {
-                        $actCons = (float)($r['res_qty'] ?? 0) * $ratio;
+                        $actualConsumption = $plannedConsumption;
                     }
                 } else {
-                    $actCons = (float)($r['res_qty'] ?? 0) * $ratio;
+                    $actualConsumption = $plannedConsumption;
                 }
-                $actualWorkDone += $actUnitCost * $actCons;
-            }
-            $acoa = round($actualWorkDone, 2);
 
-            $data[$schedId] = ['est' => round($est,2), 'acoa' => round($acoa,2)];
+                if ($actUnit !== null) {
+                    $actualTotal += $actUnit * $actualConsumption;
+                }
+            }
+
+            $data[$schedId] = ['est' => round($est, 2), 'acoa' => round($actualTotal, 2)];
         }
 
         return json_encode(['error' => 'No', 'data' => $data]);
@@ -1079,7 +1104,7 @@ class ProjectsmainController extends Controller
                         ? (float)$r['actual_unit_cost']
                         : null);
                 }
-                // Planned Consumption = res_qty × (estQty / schedQty) for ALL resource types
+                // Planned Consumption = res_qty × (estQty / schedQty)
                 $plannedConsumption = round($resQty * $ratio, 3);
 
                 // Actual Consumption:
@@ -1098,10 +1123,14 @@ class ProjectsmainController extends Controller
                         ? round($scWorkDone / $lastQty, 3)
                         : $plannedConsumption;
                 } elseif (in_array($typeId, [2, 6, 7, 8])) {
-                    $savedAvg = $r['avg_consumption'] ?? null;
-                    $actualConsumption = ($savedAvg !== null)
-                        ? round((float)$savedAvg, 3)
-                        : $plannedConsumption;
+                    $indentRaised = ($r['stock_at_site'] !== null);
+                    if ($indentRaised && $lastQty > 0) {
+                        $grnQty = (float)($r['grn_qty']       ?? 0);
+                        $stock  = (float)($r['stock_at_site'] ?? 0);
+                        $actualConsumption = round(max(0, $grnQty - $stock) / $lastQty, 3);
+                    } else {
+                        $actualConsumption = $plannedConsumption;
+                    }
                 } else {
                     $actualConsumption = $plannedConsumption;
                 }
@@ -1136,6 +1165,8 @@ class ProjectsmainController extends Controller
                     'actual_res_qty'       => $actualResQty,
                     'planned_consumption'  => $plannedConsumption,
                     'actual_consumption'   => $actualConsumption,
+                    'indent_raised'        => ($r['stock_at_site'] !== null),
+                    'has_mb'               => ($typeId === 4 && isset($taskWorkDoneById) && !empty(array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')), function($tid) use ($taskWorkDoneById){ return ($taskWorkDoneById[$tid] ?? 0) > 0; }))),
                 ];
             }
         }
