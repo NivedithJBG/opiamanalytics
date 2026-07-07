@@ -98,6 +98,7 @@ $(document).on('click', '#cd-c4 .brow[data-aid]', function(){
 });
 
 function renderCdBars(){
+    renderCdIowBars();
     var el = document.getElementById('cd-c4');
     if (!el) return;
     var acts = _all || [];
@@ -180,6 +181,64 @@ function renderCdBars(){
         });
     });
 }
+function renderCdIowBars(){
+    var el = document.getElementById('cd-c3');
+    if (!el) return;
+    if (!_iow_items.length || !_all.length) {
+        el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No IOW data</div>';
+        return;
+    }
+    // Sum estimated cost of all activities per IOW item
+    var iowTotals = {};
+    _all.forEach(function(a){
+        var sid = String(a.scheduleitem_id);
+        var c   = _cdCostMap[String(a.id)] || {};
+        var est = +c.est || 0;
+        iowTotals[sid] = (iowTotals[sid] || 0) + est;
+    });
+    var maxVal = 0;
+    _iow_items.forEach(function(iow){
+        var v = iowTotals[String(iow.id)] || 0;
+        if (v > maxVal) maxVal = v;
+    });
+    var html = '';
+    _iow_items.forEach(function(iow){
+        var est = iowTotals[String(iow.id)] || 0;
+        var pct = maxVal > 0 ? Math.max(2, est / maxVal * 96) : 2;
+        var tipStr = iow.name + '|Estimated IOW Cost: ' + fmtCost(est);
+        html += '<div class="brow cd-iow-tip" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:default">'
+            + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0">' + sh(iow.name||'',40) + '</div>'
+            + '<div style="flex:1;height:11px;position:relative">'
+            +   '<div data-tip="' + tipStr + '" style="position:absolute;left:0;top:0;width:' + pct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px;min-width:4px"></div>'
+            + '</div>'
+            + '</div>';
+    });
+    el.innerHTML = html;
+
+    // Reuse the shared cd-bar-tooltip div
+    var tip = document.getElementById('cd-bar-tooltip');
+    if (!tip) {
+        tip = document.createElement('div');
+        tip.id = 'cd-bar-tooltip';
+        tip.style.cssText = 'position:fixed;display:none;background:#1e293b;color:#f1f5f9;font-size:15px;font-family:"Barlow Condensed",sans-serif;font-weight:500;padding:16px 28px;border-radius:8px;pointer-events:none;z-index:99999;line-height:2.4;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:340px;border:1px solid #334155';
+        document.body.appendChild(tip);
+    }
+    el.querySelectorAll('[data-tip]').forEach(function(bar){
+        bar.addEventListener('mouseenter', function(e){
+            var parts = (bar.getAttribute('data-tip') || '').split('|');
+            tip.innerHTML = parts.join('<br>');
+            tip.style.display = 'block';
+        });
+        bar.addEventListener('mousemove', function(e){
+            tip.style.left = (e.clientX + 14) + 'px';
+            tip.style.top  = (e.clientY - 10) + 'px';
+        });
+        bar.addEventListener('mouseleave', function(){
+            tip.style.display = 'none';
+        });
+    });
+}
+
 function filterByGroupCd(groupId){ /* to be implemented */ }
 function filterByIowCd(iowId){ /* to be implemented */ }
 
