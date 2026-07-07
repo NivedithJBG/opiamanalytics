@@ -1157,7 +1157,7 @@ function gauge(gwId, val, maxVal, trackStyle, targetFrac, lbl1, v1, lbl2, v2, ac
         : arc(0,0.5,'#8B0000')+arc(0.5,1,'#81C784');
 
     var tickSvg = '';
-    if (targetFrac && targetFrac>0 && targetFrac<=1){
+    if (trackStyle!=='cost' && targetFrac && targetFrac>0 && targetFrac<=1){
         var ta = Math.PI*(1-targetFrac);
         var tx1=(cx+(r-10)*Math.cos(ta)).toFixed(1), ty1=(cy-(r-10)*Math.sin(ta)).toFixed(1);
         var tx2=(cx+(r+10)*Math.cos(ta)).toFixed(1), ty2=(cy-(r+10)*Math.sin(ta)).toFixed(1);
@@ -1169,6 +1169,7 @@ function gauge(gwId, val, maxVal, trackStyle, targetFrac, lbl1, v1, lbl2, v2, ac
     var fillCol = (trackStyle==='flat') ? '#0d1f6e' : '#1a3a6b';
     var dotCol  = (trackStyle==='flat') ? '#a8d4f5' : '#dce3ef';
 
+    var centreVal = (trackStyle==='cost') ? fmtCost(val) : fm(val);
     var lblSvg='';
     if (lbl1) lblSvg+='<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">'+lbl1+' <tspan font-weight="700">'+v1+'</tspan></text>';
     if (lbl2) lblSvg+='<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">'+lbl2+' <tspan font-weight="700">'+v2+'</tspan></text>';
@@ -1182,8 +1183,8 @@ function gauge(gwId, val, maxVal, trackStyle, targetFrac, lbl1, v1, lbl2, v2, ac
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="'+dotCol+'"/>'
         +'<text x="'+(cx-r)+'" y="'+(cy+15)+'" text-anchor="middle" font-size="12" fill="#5a6e8c" font-family="Barlow Condensed,Arial">0</text>'
-        +'<text x="'+(cx+r)+'" y="'+(cy+15)+'" text-anchor="middle" font-size="12" fill="#5a6e8c" font-family="Barlow Condensed,Arial">'+fm(maxVal)+'</text>'
-        +'<text x="'+cx+'" y="'+(cy-18)+'" text-anchor="middle" font-size="22" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+fm(val)+'</text>'
+        +(trackStyle!=='cost'?'<text x="'+(cx+r)+'" y="'+(cy+15)+'" text-anchor="middle" font-size="12" fill="#5a6e8c" font-family="Barlow Condensed,Arial">'+fm(maxVal)+'</text>':'')
+        +'<text x="'+cx+'" y="'+(cy-18)+'" text-anchor="middle" font-size="22" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+centreVal+'</text>'
         +lblSvg+anSvg
         +'</svg>';
 
