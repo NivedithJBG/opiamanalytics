@@ -1166,7 +1166,7 @@ function gauge(gwId, val, maxVal, trackStyle, targetFrac, lbl1, v1, lbl2, v2, ac
 
     var nr=r-15, na=Math.PI*(1-f);
     var nx=(cx+nr*Math.cos(na)).toFixed(1), ny=(cy-nr*Math.sin(na)).toFixed(1);
-    var fillCol = (trackStyle==='flat') ? '#0d1f6e' : '#1a3a6b';
+    var fillCol = (trackStyle==='flat') ? '#0d1f6e' : (trackStyle==='cost') ? '#1b9e8e' : '#1a3a6b';
     var dotCol  = (trackStyle==='flat') ? '#a8d4f5' : '#dce3ef';
 
     var centreVal = (trackStyle==='cost') ? fmtCost(val) : fm(val);
