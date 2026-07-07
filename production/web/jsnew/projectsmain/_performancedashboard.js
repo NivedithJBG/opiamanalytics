@@ -7,6 +7,7 @@ var _loaded = false;
 var _groups    = [];
 var _iow_items = [];
 var _all       = [];
+var _cdCostMap = {};
 
 var _months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fmtDate(d){
@@ -60,21 +61,23 @@ $(document).on('click', '.cost-dashboard-btn', function(e){
     $('#cd-modal, #cd-bk').addClass('cd-open');
     if (!_cdLoaded) {
         _cdLoaded = true;
-        if (_loaded) {
-            renderCdBars();
-        } else {
-            $.ajax({
-                type:'POST', url:'../projectsmain/performancedashboard', dataType:'json',
+        var loadActivities = _loaded
+            ? $.Deferred().resolve().promise()
+            : $.ajax({ type:'POST', url:'../projectsmain/performancedashboard', dataType:'json',
                 success: function(d){
                     if (!d || d.error === undefined) return;
                     if (!_groups.length)    _groups    = d.iow_groups  || [];
                     if (!_iow_items.length) _iow_items = d.iow_items   || [];
                     if (!_all.length)       _all       = d.activities  || [];
                     if (!_cdProjectName)    _cdProjectName = d.project_name || '';
-                    renderCdBars();
                 }
-            });
-        }
+              });
+        var loadCosts = $.ajax({ type:'POST', url:'../projectsmain/costdashboardbatch', dataType:'json',
+            success: function(d){
+                if (d && d.data) _cdCostMap = d.data;
+            }
+        });
+        $.when(loadActivities, loadCosts).always(function(){ renderCdBars(); });
     }
 });
 $(document).on('click', '#cd-close, #cd-bk', function(){
@@ -92,10 +95,24 @@ function renderCdBars(){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No activities</div>';
         return;
     }
+    var maxEst = 0;
+    acts.forEach(function(a){
+        var est = (_cdCostMap[a.id] && _cdCostMap[a.id].est) ? +_cdCostMap[a.id].est : 0;
+        if (est > maxEst) maxEst = est;
+    });
     var html = '';
-    acts.forEach(function(a) {
-        html += '<div class="brow" data-aid="' + a.id + '" style="cursor:pointer">'
-            + '<div class="blbl" style="width:100%;max-width:100%" title="' + (a.name || '') + '">' + sh(a.name || '', 32) + '</div>'
+    acts.forEach(function(a){
+        var cost = _cdCostMap[a.id] || {};
+        var est  = cost.est ? +cost.est : 0;
+        var pct  = maxEst > 0 ? Math.max(2, (est / maxEst * 100)) : 2;
+        html += '<div class="brow" data-aid="' + a.id + '" style="cursor:pointer;padding:3px 6px">'
+            + '<div style="font-size:10px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px" title="' + (a.name||'') + '">' + sh(a.name||'',36) + '</div>'
+            + '<div style="display:flex;align-items:center;gap:6px">'
+            +   '<div style="flex:1;background:#e2e8f0;border-radius:2px;height:8px">'
+            +     '<div style="width:' + pct.toFixed(1) + '%;height:8px;background:#64748b;border-radius:2px"></div>'
+            +   '</div>'
+            +   '<div style="font-size:10px;color:#64748b;flex-shrink:0;min-width:36px;text-align:right">' + fmtCost(est) + '</div>'
+            + '</div>'
             + '</div>';
     });
     el.innerHTML = html;
