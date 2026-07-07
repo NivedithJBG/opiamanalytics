@@ -356,7 +356,7 @@ function renderCdCostOfActivity(d){
     el.innerHTML =
         '<div style="padding:0 6px;display:flex;flex-direction:column;height:100%;width:100%;box-sizing:border-box">'
         +'<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;margin-left:-6px;margin-right:-6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName,40)+'</div>'
-        +'<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-start;padding-top:10px">'
+        +'<div style="flex-shrink:0;display:flex;flex-direction:column;padding-top:10px">'
         +  valRow
         +  barHtml
         +  wdRow
