@@ -239,10 +239,10 @@ function renderCdValueOfWorkDone(d){
         // labels below: Done on left, Sched on right
         +'<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Done <tspan font-weight="700">'+fm(lastQty)+(unit?' '+unit:'')+'</tspan></text>'
         +'<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Sched <tspan font-weight="700">'+fm(schedQty)+(unit?' '+unit:'')+'</tspan></text>'
-        +'<text x="'+cx+'" y="135" text-anchor="middle" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">'+sh(actName,32)+'</text>'
         +'</svg>';
 
-    el.innerHTML = svg;
+    el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName,40)+'</div>'
+        + svg;
 }
 function renderCdUnitCostOfActivity(items, actName, actUnit, schedQty){
     items = items || [];
@@ -270,10 +270,12 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, schedQty){
 
     var maxVal = estUCA > 0 ? estUCA * 2 : 1;
     var unitLbl = actUnit ? ' /'+actUnit : '';
+    var el5 = document.getElementById('cd-g5');
+    if (el5) el5.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName||'',40)+'</div>';
     gauge('cd-g5', actUCA, maxVal, 'cost', 0.5,
         'Est', fmtCost(estUCA)+unitLbl,
         hasActual ? 'Act' : '', hasActual ? fmtCost(actUCA)+unitLbl : '',
-        sh(actName||'',32));
+        '');
 }
 function renderCdCostOfActivity(d){
     var el = document.getElementById('cd-g2');
@@ -330,7 +332,7 @@ function renderCdCostOfActivity(d){
 
     el.innerHTML =
         '<div style="padding:8px 0;display:flex;flex-direction:column;justify-content:center;height:100%;gap:8px;width:100%;box-sizing:border-box">'
-        +'<div style="font-size:11px;color:#5a6e8c;font-family:\'Barlow Condensed\',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName,40)+'</div>'
+        +'<div style="font-size:10px;color:#3461b8;font-weight:600;font-family:\'Barlow Condensed\',sans-serif;padding:0 0 4px;border-bottom:1px solid #e8efff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName,40)+'</div>'
         +barHtml
         +'<div style="display:flex;justify-content:space-between;font-family:\'Barlow Condensed\',sans-serif">'
         +  '<div style="text-align:left">'
