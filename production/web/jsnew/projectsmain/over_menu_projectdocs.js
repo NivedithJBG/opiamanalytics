@@ -64,9 +64,11 @@ $(function(){
                             '<th style="' + thStyle + '">Project</th>' +
                             '<th style="' + thStyle + '">Date</th>' +
                             '<th style="' + thStyle + '"></th>' +
-                        '</tr></thead><tbody>';
+                        '</tr>' +
+                        '<tr><td colspan="5" style="padding:0;height:3px;background:#3a3d4a;border:none;"></td></tr>' +
+                        '</thead><tbody>';
                     var tdStyle = 'border:1px solid #9a9ea8;padding:7px 10px;vertical-align:middle;';
-                    var tdFirstRowStyle = 'border:1px solid #9a9ea8;border-top:3px solid #3a3d4a;padding:7px 10px;vertical-align:middle;';
+                    var tdFirstRowStyle = tdStyle;
                     $.each(data.files, function(i, f){
                         var rowBg = i % 2 === 0 ? '#ffffff' : '#f5f6f8';
                         var td = i === 0 ? tdFirstRowStyle : tdStyle;
