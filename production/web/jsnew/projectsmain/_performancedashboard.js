@@ -321,7 +321,7 @@ function renderCdProjectBar(){
         : '';
 
     var html = ''
-        + '<div style="padding:6px 8px 4px;box-sizing:border-box;display:flex;flex-direction:column">'
+        + '<div style="padding:6px 8px 4px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;height:100%">'
         +   '<div style="height:13px;position:relative;margin-bottom:10px;flex-shrink:0">' + barHtml + '</div>'
         +   '<div style="display:flex;gap:0;font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;line-height:1.9">'
         +     '<div style="flex:1;border-right:1px solid #e2e8f0;padding-right:10px">'
