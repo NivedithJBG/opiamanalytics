@@ -153,7 +153,7 @@ function renderCdBars(){
         var tipStr = 'Estimated Cost of Activity: ' + fmtCost(est)
             + '|Actual Cost of Activity: ' + (hasAct ? fmtCost(acoa) : '-')
             + '|Difference in Cost: ' + diffLabel;
-        html += '<div class="brow cd-bar-tip" data-aid="' + a.id + '" data-tip="' + tipStr + '" style="cursor:pointer;padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;position:relative">'
+        html += '<div class="brow cd-bar-tip" data-aid="' + a.id + '" data-tip="' + tipStr + '" style="cursor:pointer;padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;position:relative;border-top:1px solid #cbd5e1">'
             + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0">' + sh(a.name||'',40) + '</div>'
             + '<div style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
             + '</div>';
@@ -242,7 +242,7 @@ function renderCdIowBars(){
             + '|Actual IOW Cost: ' + (hasReal ? fmtCost(acoa) : 'Using estimate as proxy')
             + '|Difference in Cost: ' + diffLabel;
 
-        html += '<div class="brow cd-iow-tip" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:default">'
+        html += '<div class="brow cd-iow-tip" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:default;border-top:1px solid #cbd5e1">'
             + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0">' + sh(iow.name||'',40) + '</div>'
             + '<div data-tip="' + tipStr + '" style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
             + '</div>';
@@ -436,7 +436,7 @@ function renderCdGroupBars(){
             + '|Actual Group Cost: ' + (hasReal ? fmtCost(acoa) : 'Using estimate as proxy')
             + '|Difference in Cost: ' + diffLabel;
 
-        html += '<div class="brow" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:default">'
+        html += '<div class="brow" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:default;border-top:1px solid #cbd5e1">'
             + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0">' + sh(g.name||'',40) + '</div>'
             + '<div data-tip="' + tipStr + '" style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
             + '</div>';
