@@ -1542,18 +1542,24 @@ if($action=='login')
         var typing = addMsg('Thinking...', 'bot typing');
 
         var xhr = new XMLHttpRequest();
-        xhr.open('POST', '<?php echo Yii::$app->request->baseUrl; ?>/../chatbot/chat', true);
+        var chatUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/chatbot/chat"]); ?>';
+        xhr.open('POST', chatUrl, true);
         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
         xhr.onload = function(){
             msgs.removeChild(typing);
+            if (xhr.status !== 200) {
+                addMsg('Server error (' + xhr.status + '). Please try again.', 'bot');
+                return;
+            }
             try {
                 var d = JSON.parse(xhr.responseText);
-                var reply = d.reply || d.error || 'Sorry, something went wrong.';
+                if (d.error) { addMsg('Error: ' + d.error, 'bot'); return; }
+                var reply = d.reply || 'Sorry, something went wrong.';
                 addMsg(reply, 'bot');
                 history.push({role:'assistant', content:reply});
                 if(history.length > 20) history = history.slice(-20);
             } catch(e) {
-                addMsg('Sorry, something went wrong.', 'bot');
+                addMsg('Parse error: ' + xhr.responseText.substring(0, 200), 'bot');
             }
         };
         xhr.onerror = function(){

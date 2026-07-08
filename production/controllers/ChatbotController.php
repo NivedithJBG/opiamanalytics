@@ -78,10 +78,10 @@ class ChatbotController extends Controller
 
         // All projects summary
         $projects = $db->createCommand("
-            SELECT p.id, p.Name, p.start_date, p.end_date, p.status,
-                   p.client, p.location
+            SELECT p.Project_Id, p.Name, p.start_date, p.end_date, p.Status,
+                   p.client_name, p.location
             FROM projects p
-            WHERE p.status = 0
+            WHERE p.Status = 0
             ORDER BY p.Name ASC
             LIMIT 50
         ")->queryAll();
@@ -89,7 +89,7 @@ class ChatbotController extends Controller
         if ($projects) {
             $context .= "=== PROJECTS ===\n";
             foreach ($projects as $p) {
-                $context .= "- {$p['Name']} (ID:{$p['id']}) | Start: {$p['start_date']} | End: {$p['end_date']} | Client: {$p['client']} | Location: {$p['location']}\n";
+                $context .= "- {$p['Name']} (ID:{$p['Project_Id']}) | Start: {$p['start_date']} | End: {$p['end_date']} | Client: {$p['client_name']} | Location: {$p['location']}\n";
             }
             $context .= "\n";
         }
@@ -100,7 +100,7 @@ class ChatbotController extends Controller
                    sa.completed_status, sa.critical_status,
                    p.Name AS project_name
             FROM scheduleactivities sa
-            JOIN projects p ON p.id = sa.projectId
+            JOIN projects p ON p.Project_Id = sa.projectId
             WHERE sa.status = 0
             ORDER BY p.Name, sa.start_date
             LIMIT 200
@@ -110,22 +110,22 @@ class ChatbotController extends Controller
             $context .= "=== ACTIVITIES ===\n";
             foreach ($activities as $a) {
                 $status = $a['completed_status'] == 1 ? 'Completed' : 'Ongoing';
-                $critical = $a['critical_status'] == 1 ? ' [CRITICAL]' : '';
+                $critical = $a['critical_status'] == 'yes' ? ' [CRITICAL]' : '';
                 $context .= "- [{$a['project_name']}] {$a['name']} | {$a['start_date']} to {$a['end_date']} | {$a['duration']}d | {$status}{$critical}\n";
             }
             $context .= "\n";
         }
 
-        // Cost summary per project
+        // Cost summary per project (estimated vs actual)
         $costs = $db->createCommand("
             SELECT p.Name AS project_name,
-                   COALESCE(SUM(pen.total_cost), 0) AS estimated_cost,
-                   COALESCE(SUM(pern.total_cost), 0) AS actual_cost
+                   COALESCE(SUM(pen.specific_rate * pen.activity_qty), 0) AS estimated_cost,
+                   COALESCE(SUM(pern.actual_amount), 0) AS actual_cost
             FROM projects p
-            LEFT JOIN pricing_estimate_new pen ON pen.projectid = p.id
-            LEFT JOIN pricing_estimate_resources_new pern ON pern.projectid = p.id
-            WHERE p.status = 0
-            GROUP BY p.id, p.Name
+            LEFT JOIN pricing_estimate_new pen ON pen.project_Id = p.Project_Id
+            LEFT JOIN pricing_estimate_resources_new pern ON pern.project_id = p.Project_Id
+            WHERE p.Status = 0
+            GROUP BY p.Project_Id, p.Name
             ORDER BY p.Name
             LIMIT 50
         ")->queryAll();
@@ -143,7 +143,7 @@ class ChatbotController extends Controller
             SELECT pf.original_name, pf.filename, pf.uploaded_at,
                    p.Name AS project_name
             FROM project_files pf
-            LEFT JOIN projects p ON p.id = pf.project_id
+            LEFT JOIN projects p ON p.Project_Id = pf.project_id
             WHERE pf.file_type = 'documents'
             ORDER BY pf.uploaded_at DESC
             LIMIT 50
