@@ -190,15 +190,18 @@ function renderCdIowBars(){
         return;
     }
     // Sum estimated and actual cost of all activities per IOW item
-    var iowEst  = {};
-    var iowAct  = {};
+    // If activity has no actual yet, use estimated as proxy
+    var iowEst     = {};
+    var iowAct     = {};
+    var iowHasReal = {}; // true if at least one activity has real actual
     _all.forEach(function(a){
         var sid  = String(a.scheduleitem_id);
         var c    = _cdCostMap[String(a.id)] || {};
         var est  = +c.est  || 0;
         var acoa = +c.acoa || 0;
-        iowEst[sid]  = (iowEst[sid]  || 0) + est;
-        iowAct[sid]  = (iowAct[sid]  || 0) + acoa;
+        iowEst[sid] = (iowEst[sid] || 0) + est;
+        iowAct[sid] = (iowAct[sid] || 0) + (acoa > 0 ? acoa : est);
+        if (acoa > 0) iowHasReal[sid] = true;
     });
     var maxVal = 0;
     _iow_items.forEach(function(iow){
@@ -208,16 +211,16 @@ function renderCdIowBars(){
     });
     var html = '';
     _iow_items.forEach(function(iow){
-        var sid    = String(iow.id);
-        var est    = iowEst[sid]  || 0;
-        var acoa   = iowAct[sid]  || 0;
-        var hasAct = acoa > 0;
-        var diff   = acoa - est;
-        var over   = diff > 0;
-        var estPct = maxVal > 0 ? Math.max(2, est / maxVal * 96) : 2;
+        var sid      = String(iow.id);
+        var est      = iowEst[sid]     || 0;
+        var acoa     = iowAct[sid]     || 0;
+        var hasReal  = iowHasReal[sid] || false;
+        var diff     = acoa - est;
+        var over     = diff > 0;
+        var estPct   = maxVal > 0 ? Math.max(2, est / maxVal * 96) : 2;
 
         var barHtml;
-        if (!hasAct || diff === 0) {
+        if (!hasReal || diff === 0) {
             barHtml = '<div style="position:absolute;left:0;top:0;width:' + estPct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px;min-width:4px"></div>';
         } else if (over) {
             var actPct  = maxVal > 0 ? Math.max(2, acoa / maxVal * 96) : 2;
@@ -231,11 +234,11 @@ function renderCdIowBars(){
                     + '<div style="position:absolute;left:' + actPct.toFixed(1) + '%;top:0;width:' + Math.max(0,savePct).toFixed(1) + '%;height:11px;background:#1b9e8e;border-radius:0 2px 2px 0"></div>';
         }
 
-        var diffLabel = hasAct
+        var diffLabel = hasReal
             ? (over ? 'Cost Overrun: +' + fmtCost(Math.abs(diff)) : 'Cost Saving: ' + fmtCost(Math.abs(diff)))
-            : 'No actual data';
+            : 'Actual not yet available (showing estimate)';
         var tipStr = 'Estimated IOW Cost: ' + fmtCost(est)
-            + '|Actual IOW Cost: ' + (hasAct ? fmtCost(acoa) : '-')
+            + '|Actual IOW Cost: ' + (hasReal ? fmtCost(acoa) : 'Using estimate as proxy')
             + '|Difference in Cost: ' + diffLabel;
 
         html += '<div class="brow cd-iow-tip" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:default">'
@@ -276,21 +279,25 @@ function renderCdGroupBars(){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No group data</div>';
         return;
     }
-    // Sum est and actual per IOW first
-    var iowEst = {}, iowAct = {};
+    // Sum est and actual per IOW first; use est as proxy when no actual yet
+    var iowEst = {}, iowAct = {}, iowReal = {};
     _all.forEach(function(a){
         var sid  = String(a.scheduleitem_id);
         var c    = _cdCostMap[String(a.id)] || {};
-        iowEst[sid] = (iowEst[sid] || 0) + (+c.est  || 0);
-        iowAct[sid] = (iowAct[sid] || 0) + (+c.acoa || 0);
+        var est  = +c.est  || 0;
+        var acoa = +c.acoa || 0;
+        iowEst[sid] = (iowEst[sid] || 0) + est;
+        iowAct[sid] = (iowAct[sid] || 0) + (acoa > 0 ? acoa : est);
+        if (acoa > 0) iowReal[sid] = true;
     });
     // Sum IOW totals per group
-    var grpEst = {}, grpAct = {};
+    var grpEst = {}, grpAct = {}, grpHasReal = {};
     _iow_items.forEach(function(iow){
         var gid = String(iow.group_id);
         var sid = String(iow.id);
         grpEst[gid] = (grpEst[gid] || 0) + (iowEst[sid] || 0);
         grpAct[gid] = (grpAct[gid] || 0) + (iowAct[sid] || 0);
+        if (iowReal[sid]) grpHasReal[gid] = true;
     });
     var maxVal = 0;
     _groups.forEach(function(g){
@@ -299,16 +306,16 @@ function renderCdGroupBars(){
     });
     var html = '';
     _groups.forEach(function(g){
-        var gid    = String(g.id);
-        var est    = grpEst[gid] || 0;
-        var acoa   = grpAct[gid] || 0;
-        var hasAct = acoa > 0;
-        var diff   = acoa - est;
-        var over   = diff > 0;
-        var estPct = maxVal > 0 ? Math.max(2, est / maxVal * 96) : 2;
+        var gid     = String(g.id);
+        var est     = grpEst[gid]     || 0;
+        var acoa    = grpAct[gid]     || 0;
+        var hasReal = grpHasReal[gid] || false;
+        var diff    = acoa - est;
+        var over    = diff > 0;
+        var estPct  = maxVal > 0 ? Math.max(2, est / maxVal * 96) : 2;
 
         var barHtml;
-        if (!hasAct || diff === 0) {
+        if (!hasReal || diff === 0) {
             barHtml = '<div style="position:absolute;left:0;top:0;width:' + estPct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px;min-width:4px"></div>';
         } else if (over) {
             var actPct  = maxVal > 0 ? Math.max(2, acoa / maxVal * 96) : 2;
@@ -322,11 +329,11 @@ function renderCdGroupBars(){
                     + '<div style="position:absolute;left:' + actPct.toFixed(1) + '%;top:0;width:' + Math.max(0,savePct).toFixed(1) + '%;height:11px;background:#1b9e8e;border-radius:0 2px 2px 0"></div>';
         }
 
-        var diffLabel = hasAct
+        var diffLabel = hasReal
             ? (over ? 'Cost Overrun: +' + fmtCost(Math.abs(diff)) : 'Cost Saving: ' + fmtCost(Math.abs(diff)))
-            : 'No actual data';
+            : 'Actual not yet available (showing estimate)';
         var tipStr = 'Estimated Group Cost: ' + fmtCost(est)
-            + '|Actual Group Cost: ' + (hasAct ? fmtCost(acoa) : '-')
+            + '|Actual Group Cost: ' + (hasReal ? fmtCost(acoa) : 'Using estimate as proxy')
             + '|Difference in Cost: ' + diffLabel;
 
         html += '<div class="brow" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:default">'
