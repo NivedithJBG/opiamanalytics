@@ -9,6 +9,11 @@ class ChatbotController extends Controller
 {
     public $enableCsrfValidation = false;
 
+    public function behaviors()
+    {
+        return [];
+    }
+
     private function getApiKey()
     {
         $secrets = @include(Yii::getAlias('@app') . '/config/secrets.php');
