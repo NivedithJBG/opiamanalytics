@@ -49,7 +49,7 @@ $(function(){
             success: function(data){
                 $('#docs_search_btn').attr('disabled', false).html('<span class="icon-search5"></span> Search');
                 if(data.files && data.files.length > 0){
-                    var thStyle = 'background:#b0b4c0;color:#111;font-weight:700;border:1px solid #6e7280;padding:8px 10px;';
+                    var thStyle = 'background:#b0b4c0;color:#111;font-weight:700;border:1px solid #6e7280;border-bottom:3px solid #3a3d4a;padding:8px 10px;';
                     var html = '<table style="font-size:13px;color:#000;table-layout:fixed;width:100%;border-collapse:collapse;">' +
                         '<colgroup>' +
                             '<col style="width:5%;">' +
