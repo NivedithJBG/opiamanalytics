@@ -1174,7 +1174,7 @@ function renderBars(containerId, items, onRowClick){
     items = items||[];
 
     var maxVal = 0;
-    items.forEach(function(r){ maxVal = Math.max(maxVal, r.scheduled+r.delay); });
+    items.forEach(function(r){ maxVal = Math.max(maxVal, r.scheduled + Math.abs(r.delay)); });
     if (!maxVal) maxVal = 1;
 
     var ticks = niceAxis(maxVal);
