@@ -1592,6 +1592,12 @@ function doActivityDuration(k) {
         + '</span>'
         + '</div>'
         + bar
+        + '<div style="display:flex;gap:10px;' + fam + 'font-size:9px;color:#444;margin-top:2px;">'
+        + '<span><span style="display:inline-block;width:10px;height:8px;background:' + baseCol + ';border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Planned</span>'
+        + (isOver ? '<span><span style="display:inline-block;width:10px;height:8px;background:#e53935;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Overrun</span>' : '')
+        + (isUnder ? '<span><span style="display:inline-block;width:10px;height:8px;background:#f0c419;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Slack</span>' : '')
+        + '<span><span style="display:inline-block;width:10px;height:8px;background:rgba(255,255,255,0.6);border:1px solid #bbb;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Work done</span>'
+        + '</div>'
         + '<div style="' + fam + 'font-size:10px;color:#5a6e8c;">'
         + '<div style="display:flex;justify-content:space-between;">'
         + '<span>Plan Start: <b style="color:#1a2540;">' + (fmDate(k.adj_start_date)||'-') + '</b></span>'
@@ -1600,10 +1606,6 @@ function doActivityDuration(k) {
         + '<div>Act. Start: <b style="color:' + (k.reported_start_date ? '#1a2540' : '#e53935') + ';">'
         + (k.reported_start_date ? fmDate(k.reported_start_date) : 'Not Started')
         + '</b></div>'
-        + '</div>'
-        + '<div style="display:flex;justify-content:space-between;' + fam + 'font-size:11px;color:#5a6e8c;">'
-        + '<span>Planned: <b style="color:#1a2540">' + bDur + ' d</b></span>'
-        + (aDur !== bDur ? '<span>Projected: <b style="color:' + (isOver ? '#e53935' : '#27ae60') + '">' + aDur + ' d</b></span>' : '')
         + '</div>'
         + divider
         + row('Work done',      wDone   + '%', '#27ae60')
