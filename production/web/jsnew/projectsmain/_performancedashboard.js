@@ -856,6 +856,7 @@ function filterByIow(iowId){
     var sid = String(iowId);
     $('#pd-c3 .brow').removeClass('brow-active');
     $('#pd-c3 .brow[data-aid="' + iowId + '"]').addClass('brow-active');
+    console.log('filterByIow called, iowId='+iowId+', _all.length='+_all.length+', sample scheduleitem_ids='+_all.slice(0,5).map(function(a){return a.scheduleitem_id;}).join(','));
     var filtered  = _all.filter(function(a){ return String(a.scheduleitem_id) === sid; });
     var fOngoing  = filtered.filter(function(a){
         return parseInt(a.pr_report_count, 10) > 0;
