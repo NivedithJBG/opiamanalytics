@@ -4,20 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Opiam Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#f0f3fa;font-family:Arial,sans-serif;height:100vh;display:flex;flex-direction:column}
-#cb-hdr{background:#1a2540;color:#fff;padding:14px 16px;font-size:17px;font-weight:700;display:flex;align-items:center;gap:10px;flex-shrink:0}
-#cb-hdr .dot{width:10px;height:10px;border-radius:50%;background:#4ade80}
-#cb-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
-.cb-msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:16px;line-height:1.5;word-wrap:break-word}
-.cb-msg.user{background:#1a2540;color:#fff;align-self:flex-end;border-bottom-right-radius:3px}
-.cb-msg.bot{background:#fff;color:#111;align-self:flex-start;border-bottom-left-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+body{background:#f0f3fa;font-family:'Inter',sans-serif;height:100vh;display:flex;flex-direction:column}
+#cb-hdr{background:#1a2540;color:#fff;padding:14px 16px;font-size:18px;font-weight:600;display:flex;align-items:center;gap:10px;flex-shrink:0}
+#cb-hdr .dot{width:10px;height:10px;border-radius:50%;background:#4ade80;flex-shrink:0}
+#cb-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.cb-msg{max-width:85%;padding:12px 16px;border-radius:14px;font-size:17px;line-height:1.6;word-wrap:break-word;font-family:'Inter',sans-serif}
+.cb-msg.user{background:#1a2540;color:#fff;align-self:flex-end;border-bottom-right-radius:3px;font-weight:500}
+.cb-msg.bot{background:#fff;color:#1a1a1a;align-self:flex-start;border-bottom-left-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.1)}
 .cb-msg.typing{color:#888;font-style:italic;background:#fff}
 #cb-foot{display:flex;gap:8px;padding:12px;background:#fff;border-top:1px solid #e8ecf4;flex-shrink:0}
-#cb-input{flex:1;border:1px solid #cbd5e1;border-radius:24px;padding:10px 16px;font-size:16px;outline:none;font-family:inherit}
+#cb-input{flex:1;border:1px solid #cbd5e1;border-radius:24px;padding:11px 18px;font-size:16px;outline:none;font-family:'Inter',sans-serif}
 #cb-input:focus{border-color:#1a2540}
-#cb-send{background:#1a2540;color:#fff;border:none;border-radius:24px;padding:10px 20px;font-size:15px;cursor:pointer;white-space:nowrap}
+#cb-send{background:#1a2540;color:#fff;border:none;border-radius:24px;padding:11px 22px;font-size:16px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif}
 #cb-send:active{background:#2d3f6e}
 </style>
 </head>
