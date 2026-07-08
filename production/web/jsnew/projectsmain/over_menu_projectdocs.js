@@ -127,8 +127,17 @@ $(function(){
     // Open viewer
     $(document).on('click', '.open-doc-viewer-docs', function(){
         var filename = $(this).data('filename');
+        var title    = $(this).data('title');
         var fullUrl  = window.location.origin + '/production/web/uploads/projects/' + filename;
-        window.open(fullUrl, '_blank');
+        $('#docViewerTitle').text(title);
+        $('#docViewerFrame').attr('src', fullUrl);
+        $('#docDownloadBtn').attr('href', fullUrl);
+        $('#docViewerOverlay').fadeIn(200);
+    });
+
+    $(document).on('click', '#docViewerClose', function(){
+        $('#docViewerOverlay').fadeOut(200);
+        $('#docViewerFrame').attr('src', '');
     });
 
     // Remove document

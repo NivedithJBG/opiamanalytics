@@ -45,32 +45,18 @@ $allProjects = Projects::find()->orderBy(['Name' => SORT_ASC])->all();
     </div>
 </div>
 
-<!-- Document viewer modal -->
-<div class="modal fade" id="docViewerModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" style="width:90%; margin:40px auto;">
-        <div class="modal-content" style="height:82vh;">
-            <div class="modal-header">
-                <h4 class="modal-title" id="docViewerTitle">Document</h4>
-                <button type="button" class="close" data-dismiss="modal" style="font-size:28px;">×</button>
+<!-- Document viewer overlay -->
+<div id="docViewerOverlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:99999;">
+    <div style="position:absolute;top:30px;left:5%;right:5%;bottom:30px;background:#fff;border-radius:6px;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 15px;background:#4a4e5a;border-radius:6px 6px 0 0;">
+            <span id="docViewerTitle" style="color:#fff;font-weight:700;font-size:15px;"></span>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <a id="docDownloadBtn" href="#" target="_blank" style="background:#337ab7;color:#fff;border:none;border-radius:50px;padding:5px 14px;font-size:13px;text-decoration:none;"><span class="icon-download"></span> Download</a>
+                <button id="docViewerClose" style="background:#d9534f;color:#fff;border:none;border-radius:50px;padding:5px 14px;font-size:13px;cursor:pointer;">&#10005; Close</button>
             </div>
-            <div class="modal-body" style="padding:0; height:calc(100% - 115px); overflow:hidden;">
-                <iframe id="docViewerFrame" src="" style="width:100%;height:100%;border:0;"></iframe>
-            </div>
-            <div class="modal-footer" style="padding:8px 15px;">
-                <a id="docShareWhatsapp" href="#" target="_blank" class="btn btn-success btn-sm">
-                    <span class="icon-whatsapp"></span> WhatsApp
-                </a>
-                <a id="docShareEmail" href="#" class="btn btn-default btn-sm">
-                    <span class="icon-mail"></span> Email
-                </a>
-                <button id="docPrintBtn" class="btn btn-default btn-sm">
-                    <span class="icon-print"></span> Print
-                </button>
-                <a id="docDownloadBtn" href="#" target="_blank" class="btn btn-primary btn-sm">
-                    <span class="icon-download"></span> Download
-                </a>
-                <button type="button" class="btn btn-danger btn-sm" data-dismiss="modal">Close</button>
-            </div>
+        </div>
+        <div style="flex:1;overflow:hidden;">
+            <iframe id="docViewerFrame" src="" style="width:100%;height:100%;border:0;"></iframe>
         </div>
     </div>
 </div>
