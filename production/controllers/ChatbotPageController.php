@@ -15,6 +15,8 @@ class ChatbotPageController extends Controller
 
     public function actionIndex()
     {
-        return $this->render('index');
+        Yii::$app->response->format = \yii\web\Response::FORMAT_RAW;
+        Yii::$app->response->headers->set('Content-Type', 'text/html; charset=utf-8');
+        return $this->renderFile('@app/views/chatbot/index.php');
     }
 }
