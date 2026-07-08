@@ -1289,7 +1289,8 @@ function doTargetProduction(k){
     var nr=r-15, na=Math.PI*(1-fTarget);
     var nx=(cx+nr*Math.cos(na)).toFixed(1), ny=(cy-nr*Math.sin(na)).toFixed(1);
 
-    var svg='<svg width="100%" height="100%" viewBox="0 0 210 134" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
+    var svg='<svg width="100%" height="100%" viewBox="0 -12 210 146" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
+        +(an?'<text x="105" y="-2" text-anchor="middle" font-size="10" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +arc(0,1,'#a8aeb8')
         +(fActual>0?arc(0,fActual,'#0d1f6e','butt'):'')
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
@@ -1303,7 +1304,6 @@ function doTargetProduction(k){
         +'<text x="8" y="123" text-anchor="start" font-size="12" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">0</text>'
         +'<text x="202" y="112" text-anchor="end" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Schedule Qty</text>'
         +'<text x="202" y="123" text-anchor="end" font-size="12" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+fm(tq)+(u?' '+u:'')+'</text>'
-        +(an?'<text x="105" y="128" text-anchor="middle" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +'</svg>';
 
     el.style.flexDirection='';
@@ -1333,7 +1333,8 @@ function doProductivity(k) {
     var nr=r-15, na=Math.PI*(1-f);
     var nx=(cx+nr*Math.cos(na)).toFixed(1), ny=(cy-nr*Math.sin(na)).toFixed(1);
 
-    var svg='<svg width="210" height="138" viewBox="0 0 210 138" xmlns="http://www.w3.org/2000/svg">'
+    var svg='<svg width="210" height="150" viewBox="0 -12 210 150" xmlns="http://www.w3.org/2000/svg">'
+        +(an?'<text x="'+cx+'" y="-2" text-anchor="middle" font-size="10" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +arc(0, 0.5, '#E65100')
         +arc(0.5, 1,  '#00695C')
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
@@ -1345,7 +1346,6 @@ function doProductivity(k) {
         +'<text x="105" y="79" text-anchor="middle" font-size="15" font-weight="700" fill="'+(ap<tp?'#e53935':ap>tp?'#27ae60':'#1a2540')+'" font-family="Barlow Condensed,Arial">'+fm(ap)+(u?' '+u+'/d':'')+'</text>'
         +'<text x="8" y="112" text-anchor="start" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Low</text>'
         +'<text x="202" y="112" text-anchor="end" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">High</text>'
-        +(an?'<text x="'+cx+'" y="135" text-anchor="middle" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +'</svg>';
 
     el.innerHTML = svg;
@@ -1465,7 +1465,8 @@ function doCycleTime(k) {
     var nr=r-15, na=Math.PI*(1-f);
     var nx=(cx+nr*Math.cos(na)).toFixed(1), ny=(cy-nr*Math.sin(na)).toFixed(1);
 
-    var svg='<svg width="210" height="138" viewBox="0 0 210 138" xmlns="http://www.w3.org/2000/svg">'
+    var svg='<svg width="210" height="150" viewBox="0 -12 210 150" xmlns="http://www.w3.org/2000/svg">'
+        +(an?'<text x="'+cx+'" y="-2" text-anchor="middle" font-size="10" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +arc(0, 0.5, '#00838f')
         +arc(0.5, 1,  '#FF6D00')
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
@@ -1477,7 +1478,6 @@ function doCycleTime(k) {
         +'<text x="105" y="79" text-anchor="middle" font-size="15" font-weight="700" fill="'+(ac>tc?'#e53935':ac<tc?'#27ae60':'#1a2540')+'" font-family="Barlow Condensed,Arial">'+fm(ac)+' Hrs</text>'
         +'<text x="8" y="112" text-anchor="start" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Fast</text>'
         +'<text x="202" y="112" text-anchor="end" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Slow</text>'
-        +(an?'<text x="'+cx+'" y="135" text-anchor="middle" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +'</svg>';
 
     el.innerHTML = svg;
@@ -1516,7 +1516,8 @@ function doCapacity(k) {
     var nr=r-15, na=Math.PI*(1-f);
     var nx=(cx+nr*Math.cos(na)).toFixed(1), ny=(cy-nr*Math.sin(na)).toFixed(1);
 
-    var svg='<svg width="210" height="138" viewBox="0 0 210 138" xmlns="http://www.w3.org/2000/svg">'
+    var svg='<svg width="210" height="150" viewBox="0 -12 210 150" xmlns="http://www.w3.org/2000/svg">'
+        +(an?'<text x="'+cx+'" y="-2" text-anchor="middle" font-size="10" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +arc(0, 1, '#FFD700')
         +(f>0 ? arc(0, f, '#90EE90', 'butt') : '')
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
@@ -1525,7 +1526,6 @@ function doCapacity(k) {
         +'<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Used <tspan font-weight="700">'+fm(used)+' h</tspan></text>'
         +'<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Max <tspan font-weight="700">'+fm(maxVal)+' h</tspan></text>'
         +'<text x="'+cx+'" y="'+(cy-18)+'" text-anchor="middle" font-size="22" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+(maxVal>0?((used/maxVal)*100).toFixed(1):0)+'%</text>'
-        +(an?'<text x="'+cx+'" y="135" text-anchor="middle" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +'</svg>';
 
     el.innerHTML = svg;
