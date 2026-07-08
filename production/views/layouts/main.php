@@ -1482,7 +1482,7 @@ if($action=='login')
 #cb-hdr span{font-size:13px;opacity:.7;font-weight:400}
 #cb-close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1;padding:0}
 #cb-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:200px;max-height:380px}
-.cb-msg{max-width:85%;padding:8px 12px;border-radius:10px;font-size:13px;line-height:1.5;word-wrap:break-word}
+.cb-msg{max-width:85%;padding:8px 12px;border-radius:10px;font-size:15px;line-height:1.5;word-wrap:break-word}
 .cb-msg.user{background:#1a2540;color:#fff;align-self:flex-end;border-bottom-right-radius:3px}
 .cb-msg.bot{background:#f0f3fa;color:#111;align-self:flex-start;border-bottom-left-radius:3px}
 .cb-msg.typing{color:#888;font-style:italic}

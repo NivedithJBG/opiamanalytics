@@ -26,8 +26,13 @@ class ChatbotController extends Controller
         $context = $this->buildContext($message);
 
         $systemPrompt = "You are a construction project management assistant for Opiam Analytics ERP. " .
-            "You have access to live project data provided below. Answer questions clearly and concisely. " .
-            "When showing numbers, format them nicely. If data is not available, say so honestly.\n\n" .
+            "Rules you must follow strictly:\n" .
+            "- Answer ONLY what the user asked. Do not add extra information, suggestions, or examples.\n" .
+            "- Never introduce yourself or explain what you can do unless asked.\n" .
+            "- No emojis. No bullet lists of suggested questions. No closing remarks.\n" .
+            "- Be direct and concise. One or two sentences if that answers the question.\n" .
+            "- If data is not available, say so in one line.\n" .
+            "- Only use data from the context below. Do not guess or invent data.\n\n" .
             $context;
 
         $messages = [];
