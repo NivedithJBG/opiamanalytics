@@ -49,7 +49,7 @@ $(function(){
             success: function(data){
                 $('#docs_search_btn').attr('disabled', false).html('<span class="icon-search5"></span> Search');
                 if(data.files && data.files.length > 0){
-                    var thStyle = 'background:#4a4e5a;color:#fff;font-weight:700;border:1px solid #3a3d4a;padding:8px 10px;';
+                    var thStyle = 'background:#4a4e5a;color:#fff;font-weight:700;border:none;border-bottom:1px solid #3a3d4a;padding:8px 10px;';
                     var html = '<table style="font-size:13px;color:#000;table-layout:fixed;width:100%;border-collapse:collapse;">' +
                         '<colgroup>' +
                             '<col style="width:5%;">' +
@@ -67,7 +67,7 @@ $(function(){
                         '</tr>' +
                         '<tr><td colspan="5" style="padding:0;height:3px;background:#3a3d4a;border:none;"></td></tr>' +
                         '</thead><tbody>';
-                    var tdStyle = 'border:1px solid #3a3d4a;border-bottom:2px solid #3a3d4a;padding:7px 10px;vertical-align:middle;';
+                    var tdStyle = 'border:none;border-bottom:1px solid #d0d3da;padding:7px 10px;vertical-align:middle;';
                     var tdFirstRowStyle = tdStyle;
                     $.each(data.files, function(i, f){
                         var rowBg = i % 2 === 0 ? '#ffffff' : '#f5f6f8';
