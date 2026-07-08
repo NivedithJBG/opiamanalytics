@@ -949,8 +949,10 @@ class ProjectsmainController extends Controller
                 }
             }
 
+            // estUnitCostPerUnit = unit cost per 1 unit of work done
+            $estUnitCostPerUnit = $estQty > 0 ? $unitCost / $estQty : 0.0;
             $acoa    = round($actualTotal * $schedQty, 2);
-            $estwd   = round($unitCost * $lastQty, 2);
+            $estwd   = round($estUnitCostPerUnit * $lastQty, 2);
             $actwd   = $actualTotal > 0 ? round($actualTotal * $lastQty, 2) : $estwd;
             $data[$schedId] = ['est' => round($est, 2), 'acoa' => $acoa, 'estwd' => $estwd, 'actwd' => $actwd];
         }
