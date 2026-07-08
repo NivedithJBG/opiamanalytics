@@ -49,7 +49,7 @@ $(function(){
             success: function(data){
                 $('#docs_search_btn').attr('disabled', false).html('<span class="icon-search5"></span> Search');
                 if(data.files && data.files.length > 0){
-                    var thStyle = 'background:#b0b4c0;color:#111;font-weight:700;border:1px solid #6e7280;border-bottom:3px solid #3a3d4a;padding:8px 10px;';
+                    var thStyle = 'background:#b0b4c0;color:#111;font-weight:700;border:1px solid #6e7280;padding:8px 10px;';
                     var html = '<table style="font-size:13px;color:#000;table-layout:fixed;width:100%;border-collapse:collapse;">' +
                         '<colgroup>' +
                             '<col style="width:5%;">' +
@@ -66,14 +66,16 @@ $(function(){
                             '<th style="' + thStyle + '"></th>' +
                         '</tr></thead><tbody>';
                     var tdStyle = 'border:1px solid #9a9ea8;padding:7px 10px;vertical-align:middle;';
+                    var tdFirstRowStyle = 'border:1px solid #9a9ea8;border-top:3px solid #3a3d4a;padding:7px 10px;vertical-align:middle;';
                     $.each(data.files, function(i, f){
                         var rowBg = i % 2 === 0 ? '#ffffff' : '#f5f6f8';
+                        var td = i === 0 ? tdFirstRowStyle : tdStyle;
                         html += '<tr id="doc-row-' + f.id + '" style="background:' + rowBg + ';">' +
-                            '<td style="' + tdStyle + 'color:#000;">' + (i + 1) + '</td>' +
-                            '<td style="' + tdStyle + 'color:#000;word-wrap:break-word;">' + $('<span>').text(f.original_name).html() + '</td>' +
-                            '<td style="' + tdStyle + 'color:#000;word-wrap:break-word;">' + $('<span>').text(f.project_name).html() + '</td>' +
-                            '<td style="' + tdStyle + 'color:#000;">' + f.uploaded_at + '</td>' +
-                            '<td style="' + tdStyle + '">' +
+                            '<td style="' + td + 'color:#000;">' + (i + 1) + '</td>' +
+                            '<td style="' + td + 'color:#000;word-wrap:break-word;">' + $('<span>').text(f.original_name).html() + '</td>' +
+                            '<td style="' + td + 'color:#000;word-wrap:break-word;">' + $('<span>').text(f.project_name).html() + '</td>' +
+                            '<td style="' + td + 'color:#000;">' + f.uploaded_at + '</td>' +
+                            '<td style="' + td + '">' +
                                 '<div style="display:flex; justify-content:flex-end; gap:8px; align-items:center;">' +
                                     '<button class="btn btn-sm open-doc-viewer-docs" ' +
                                         'data-filename="' + f.filename + '" ' +
