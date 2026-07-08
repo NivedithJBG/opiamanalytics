@@ -2,7 +2,7 @@
 use app\models\Projects;
 $allProjects = Projects::find()->orderBy(['Name' => SORT_ASC])->all();
 ?>
-<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/over_menu_projectdocs.js" type="text/javascript"></script>
+<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/over_menu_projectdocs.js?v=<?php echo time(); ?>" type="text/javascript"></script>
 
 <div class="menu8-popup-cntnr">
     <div class="menu8-cntnt-wrpr">
