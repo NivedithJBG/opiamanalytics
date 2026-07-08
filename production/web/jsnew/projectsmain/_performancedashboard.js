@@ -321,20 +321,21 @@ function renderCdProjectBar(){
         : '';
 
     var html = ''
-        + '<div style="padding:6px 8px 4px;box-sizing:border-box;display:flex;gap:10px;height:100%">'
-        +   '<div style="flex:1;display:flex;flex-direction:column;border-right:1px solid #e2e8f0;padding-right:8px">'
-        +     '<div style="height:13px;position:relative;margin-bottom:8px;flex-shrink:0">' + barHtml + '</div>'
-        +     '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;line-height:1.9">'
-        +       '<div style="display:flex;justify-content:space-between"><span>Estimated Cost</span><span style="color:#111">' + fmtCost(totEst) + '</span></div>'
-        +       '<div style="display:flex;justify-content:space-between"><span>Actual Cost</span><span style="color:' + (hasReal ? (over?'#e8820c':'#1b9e8e') : '#111') + '">' + (hasReal ? fmtCost(totAcoa) : 'Using estimate') + '</span></div>'
+        + '<div style="padding:6px 8px 4px;box-sizing:border-box;display:flex;flex-direction:column">'
+        +   '<div style="height:13px;position:relative;margin-bottom:10px;flex-shrink:0">' + barHtml + '</div>'
+        +   '<div style="display:flex;gap:0;font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;line-height:1.9">'
+        +     '<div style="flex:1;border-right:1px solid #e2e8f0;padding-right:10px">'
+        +       '<div style="font-size:11px;color:#3461b8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Project Cost</div>'
+        +       '<div style="display:flex;justify-content:space-between"><span>Estimated</span><span style="color:#111">' + fmtCost(totEst) + '</span></div>'
+        +       '<div style="display:flex;justify-content:space-between"><span>Actual</span><span style="color:' + (hasReal ? (over?'#e8820c':'#1b9e8e') : '#111') + '">' + (hasReal ? fmtCost(totAcoa) : 'Using estimate') + '</span></div>'
         +       (diffLabel ? '<div style="color:' + (over?'#e8820c':'#1b9e8e') + ';font-size:12px">' + diffLabel + '</div>' : '')
         +     '</div>'
-        +   '</div>'
-        +   '<div style="flex:1;font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;line-height:1.9">'
-        +     '<div style="font-size:11px;color:#3461b8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Cost of Work Done</div>'
-        +     '<div style="display:flex;justify-content:space-between"><span>Estimated</span><span style="color:#111">' + fmtCost(totEstWD) + '</span></div>'
-        +     '<div style="display:flex;justify-content:space-between"><span>Actual</span><span style="color:' + (overWD?'#e8820c':'#1b9e8e') + '">' + fmtCost(totActWD) + '</span></div>'
-        +     (diffWDLabel ? '<div style="color:' + (overWD?'#e8820c':'#1b9e8e') + ';font-size:12px">' + diffWDLabel + '</div>' : '')
+        +     '<div style="flex:1;padding-left:10px">'
+        +       '<div style="font-size:11px;color:#3461b8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Cost of Work Done</div>'
+        +       '<div style="display:flex;justify-content:space-between"><span>Estimated</span><span style="color:#111">' + fmtCost(totEstWD) + '</span></div>'
+        +       '<div style="display:flex;justify-content:space-between"><span>Actual</span><span style="color:' + (overWD?'#e8820c':'#1b9e8e') + '">' + fmtCost(totActWD) + '</span></div>'
+        +       (diffWDLabel ? '<div style="color:' + (overWD?'#e8820c':'#1b9e8e') + ';font-size:12px">' + diffWDLabel + '</div>' : '')
+        +     '</div>'
         +   '</div>'
         + '</div>';
 
