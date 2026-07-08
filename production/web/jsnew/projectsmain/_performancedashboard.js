@@ -1450,7 +1450,7 @@ function doCycleTime(k) {
     if (!el) return;
     var tc  = +k.target_cycle_time || 0;
     var ac  = +k.actual_cycle_time > 0 ? +k.actual_cycle_time : tc; // when no progress, actual = target
-    var an  = sh(k.activity_name || '', 28);
+    var an  = sh(k.activity_name || '', 38);
     var maxVal = tc > 0 ? tc * 2 : 1;
     var f   = Math.max(0, Math.min(1, ac / maxVal));
     var cx=105, cy=92, r=76, sw=14;
