@@ -1794,6 +1794,7 @@ if($action=='login')
 #cd-modal .ph{background:#222222;}
 #cd-modal .panel{border-right:3px solid #a0aec0}
 #cd-c2{overflow-y:auto !important;}
+#cd-c4 .brow, #cd-c3 .brow, #cd-c1 .brow{margin-bottom:0 !important;}
 
 </style>
 <div id="cd-bk"></div>
