@@ -82,12 +82,12 @@ $(function(){
                                     '<button class="btn btn-sm open-doc-viewer-docs" ' +
                                         'data-filename="' + f.filename + '" ' +
                                         'data-title="' + $('<span>').text(f.original_name).html() + '" ' +
-                                        'style="background:#337ab7;color:#fff;border:1px solid #2e6da4;border-radius:4px;padding:5px 12px;">' +
+                                        'style="background:#337ab7;color:#fff;border:1px solid #2e6da4;border-radius:50px;padding:5px 14px;">' +
                                         '<span class="icon-eye"></span> Open</button>' +
                                     '<button class="btn btn-sm remove-doc-file" ' +
                                         'data-id="' + f.id + '" ' +
                                         'data-filename="' + $('<span>').text(f.original_name).html() + '" ' +
-                                        'style="background:#d9534f;color:#fff;border:1px solid #c9302c;border-radius:4px;padding:5px 12px;">' +
+                                        'style="background:#d9534f;color:#fff;border:1px solid #c9302c;border-radius:50px;padding:5px 14px;">' +
                                         '<span class="icon-trash"></span> Remove</button>' +
                                 '</div>' +
                             '</td>' +
