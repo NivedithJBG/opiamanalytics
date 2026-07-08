@@ -16,16 +16,16 @@ function fmtDate(d){
     return p[2] + ' ' + (_months[parseInt(p[1],10)-1]||'') + ' ' + p[0];
 }
 
-$(document).on('mouseenter', '#pd-modal [data-tip], #cd-modal [data-tip]', function(e){
+$(document).on('mouseenter', '#pd-modal .blbl[data-tip], #cd-modal .blbl[data-tip]', function(e){
     var $t = $('#pd-tip');
     if (!$t.length) $t = $('<div id="pd-tip"></div>').appendTo('body');
     $t.text($(this).attr('data-tip')).css({display:'block',left:e.clientX+14,top:e.clientY+14});
-}).on('mousemove', '#pd-modal [data-tip], #cd-modal [data-tip]', function(e){
+}).on('mousemove', '#pd-modal .blbl[data-tip], #cd-modal .blbl[data-tip]', function(e){
     var $t = $('#pd-tip');
     var x = e.clientX + 14, y = e.clientY + 14;
     if (x + $t.outerWidth() + 10 > window.innerWidth) x = e.clientX - $t.outerWidth() - 6;
     $t.css({left:x, top:y});
-}).on('mouseleave', '#pd-modal [data-tip], #cd-modal [data-tip]', function(){
+}).on('mouseleave', '#pd-modal .blbl[data-tip], #cd-modal .blbl[data-tip]', function(){
     $('#pd-tip').hide();
 });
 
@@ -1208,8 +1208,8 @@ function renderBars(containerId, items, onRowClick){
         var dispVal = sc > 0 ? (String(sc)
             + (dl > 0  ? '<span style="color:#FF0000;margin-left:3px;">+' + dl + '</span>' : '')
             + (isSlack ? '<span style="color:#27ae60;margin-left:3px;">-' + dlAbs + '</span>' : '')) : '';
-        html += '<div class="'+rowCls+'"'+tipAttr+' '+(r.id?'data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;"':'style="display:flex;align-items:center;"')+'>'
-            +'<div class="blbl" style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
+        html += '<div class="'+rowCls+'" '+(r.id?'data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;"':'style="display:flex;align-items:center;"')+'>'
+            +'<div class="blbl"'+tipAttr+' style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
             +'<div class="btrk" style="flex:1;">'
             +(sc>0?'<div class="bs" style="width:'+scPct+'%;background:'+barCol+'"></div>':'')
             +(dl>0?'<div class="bs" style="width:'+dlPct+'%;background:#FF0000"></div>':'')
