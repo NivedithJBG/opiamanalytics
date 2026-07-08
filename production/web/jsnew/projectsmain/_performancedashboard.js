@@ -188,29 +188,58 @@ function renderCdIowBars(){
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No IOW data</div>';
         return;
     }
-    // Sum estimated cost of all activities per IOW item
-    var iowTotals = {};
+    // Sum estimated and actual cost of all activities per IOW item
+    var iowEst  = {};
+    var iowAct  = {};
     _all.forEach(function(a){
-        var sid = String(a.scheduleitem_id);
-        var c   = _cdCostMap[String(a.id)] || {};
-        var est = +c.est || 0;
-        iowTotals[sid] = (iowTotals[sid] || 0) + est;
+        var sid  = String(a.scheduleitem_id);
+        var c    = _cdCostMap[String(a.id)] || {};
+        var est  = +c.est  || 0;
+        var acoa = +c.acoa || 0;
+        iowEst[sid]  = (iowEst[sid]  || 0) + est;
+        iowAct[sid]  = (iowAct[sid]  || 0) + acoa;
     });
     var maxVal = 0;
     _iow_items.forEach(function(iow){
-        var v = iowTotals[String(iow.id)] || 0;
-        if (v > maxVal) maxVal = v;
+        var sid  = String(iow.id);
+        var top  = Math.max(iowEst[sid] || 0, iowAct[sid] || 0);
+        if (top > maxVal) maxVal = top;
     });
     var html = '';
     _iow_items.forEach(function(iow){
-        var est = iowTotals[String(iow.id)] || 0;
-        var pct = maxVal > 0 ? Math.max(2, est / maxVal * 96) : 2;
-        var tipStr = iow.name + '|Estimated IOW Cost: ' + fmtCost(est);
+        var sid    = String(iow.id);
+        var est    = iowEst[sid]  || 0;
+        var acoa   = iowAct[sid]  || 0;
+        var hasAct = acoa > 0;
+        var diff   = acoa - est;
+        var over   = diff > 0;
+        var estPct = maxVal > 0 ? Math.max(2, est / maxVal * 96) : 2;
+
+        var barHtml;
+        if (!hasAct || diff === 0) {
+            barHtml = '<div style="position:absolute;left:0;top:0;width:' + estPct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px;min-width:4px"></div>';
+        } else if (over) {
+            var actPct  = maxVal > 0 ? Math.max(2, acoa / maxVal * 96) : 2;
+            var diffPct = actPct - estPct;
+            barHtml = '<div style="position:absolute;left:0;top:0;width:' + estPct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px 0 0 2px;min-width:4px"></div>'
+                    + '<div style="position:absolute;left:' + estPct.toFixed(1) + '%;top:0;width:' + Math.max(0,diffPct).toFixed(1) + '%;height:11px;background:#e8820c;border-radius:0 2px 2px 0"></div>';
+        } else {
+            var actPct  = maxVal > 0 ? Math.max(2, acoa / maxVal * 96) : 2;
+            var savePct = estPct - actPct;
+            barHtml = '<div style="position:absolute;left:0;top:0;width:' + actPct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px 0 0 2px;min-width:4px"></div>'
+                    + '<div style="position:absolute;left:' + actPct.toFixed(1) + '%;top:0;width:' + Math.max(0,savePct).toFixed(1) + '%;height:11px;background:#1b9e8e;border-radius:0 2px 2px 0"></div>';
+        }
+
+        var diffLabel = hasAct
+            ? (over ? 'Cost Overrun: +' + fmtCost(Math.abs(diff)) : 'Cost Saving: ' + fmtCost(Math.abs(diff)))
+            : 'No actual data';
+        var tipStr = 'Estimated IOW Cost: ' + fmtCost(est)
+            + '|Actual IOW Cost: ' + (hasAct ? fmtCost(acoa) : '-')
+            + '|Difference in Cost: ' + diffLabel;
+
         html += '<div class="brow cd-iow-tip" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:default">'
             + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0">' + sh(iow.name||'',40) + '</div>'
-            + '<div style="flex:1;height:11px;position:relative">'
-            +   '<div data-tip="' + tipStr + '" style="position:absolute;left:0;top:0;width:' + pct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px;min-width:4px"></div>'
-            + '</div>'
+            + '<div data-tip="' + tipStr + '" style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
             + '</div>';
     });
     el.innerHTML = html;
