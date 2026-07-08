@@ -127,23 +127,8 @@ $(function(){
     // Open viewer
     $(document).on('click', '.open-doc-viewer-docs', function(){
         var filename = $(this).data('filename');
-        var title    = $(this).data('title');
-        var url      = '../uploads/projects/' + filename;
         var fullUrl  = window.location.origin + '/production/web/uploads/projects/' + filename;
-
-        $('#docViewerTitle').text(title);
-        $('#docViewerFrame').attr('src', url);
-        $('#docDownloadBtn').attr('href', url);
-        $('#docShareWhatsapp').attr('href',
-            'https://api.whatsapp.com/send?text=' + encodeURIComponent(title + ' ' + fullUrl));
-        $('#docShareEmail').attr('href',
-            'mailto:?subject=' + encodeURIComponent(title) +
-            '&body=' + encodeURIComponent('Please find the document here: ' + fullUrl));
-        $('#docPrintBtn').off('click').on('click', function(){
-            var w = window.open(url);
-            if(w){ w.onload = function(){ w.print(); }; }
-        });
-        $('#docViewerModal').modal('show');
+        window.open(fullUrl, '_blank');
     });
 
     // Remove document
