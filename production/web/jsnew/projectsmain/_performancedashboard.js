@@ -101,9 +101,12 @@ function renderCdBars(){
     renderCdProjectBar();
     renderCdGroupBars();
     renderCdIowBars();
+    renderCdActivityBars(_all || []);
+}
+
+function renderCdActivityBars(acts){
     var el = document.getElementById('cd-c4');
     if (!el) return;
-    var acts = _all || [];
     if (!acts.length) {
         el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No activities</div>';
         return;
@@ -220,12 +223,23 @@ function renderCdIowBars(){
             + '|Actual IOW Cost: ' + (hasReal ? fmtCost(acoa) : 'Using estimate as proxy')
             + '|Difference in Cost: ' + diffLabel;
 
-        html += '<div class="brow cd-iow-tip" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:default;border-top:1px solid #cbd5e1">'
+        html += '<div class="brow cd-iow-row" data-iowid="' + iow.id + '" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:pointer;border-top:1px solid #cbd5e1">'
             + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0">' + sh(iow.name||'',40) + '</div>'
             + '<div style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
             + '</div>';
     });
     el.innerHTML = html;
+
+    // Wire IOW clicks to filter cd-c4 activities
+    el.querySelectorAll('.cd-iow-row').forEach(function(row){
+        row.addEventListener('click', function(){
+            var iowId = String(row.getAttribute('data-iowid'));
+            el.querySelectorAll('.cd-iow-row').forEach(function(r){ r.style.background = ''; });
+            row.style.background = '#dbeafe';
+            var filtered = (_all || []).filter(function(a){ return String(a.scheduleitem_id) === iowId; });
+            renderCdActivityBars(filtered);
+        });
+    });
 }
 
 function renderCdProjectBar(){
@@ -367,16 +381,32 @@ function renderCdGroupBars(){
             + '|Actual Group Cost: ' + (hasReal ? fmtCost(acoa) : 'Using estimate as proxy')
             + '|Difference in Cost: ' + diffLabel;
 
-        html += '<div class="brow" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:default;border-top:1px solid #cbd5e1">'
+        html += '<div class="brow cd-grp-row" data-grpid="' + g.id + '" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:pointer;border-top:1px solid #cbd5e1">'
             + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0">' + sh(g.name||'',40) + '</div>'
             + '<div style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
             + '</div>';
     });
     el.innerHTML = html;
+
+    // Wire group clicks to filter IOW panel and activity panel
+    el.querySelectorAll('.cd-grp-row').forEach(function(row){
+        row.addEventListener('click', function(){
+            var gid = String(row.getAttribute('data-grpid'));
+            el.querySelectorAll('.cd-grp-row').forEach(function(r){ r.style.background = ''; });
+            row.style.background = '#dbeafe';
+            filterByGroupCd(gid);
+        });
+    });
 }
 
-function filterByGroupCd(groupId){ /* to be implemented */ }
-function filterByIowCd(iowId){ /* to be implemented */ }
+function filterByGroupCd(groupId){
+    var gid = String(groupId);
+    var filteredIows = _iow_items.filter(function(i){ return String(i.group_id) === gid; });
+    var iowIds = filteredIows.map(function(i){ return String(i.id); });
+    var filteredActs = (_all || []).filter(function(a){ return iowIds.indexOf(String(a.scheduleitem_id)) !== -1; });
+    renderCdActivityBars(filteredActs);
+}
+function filterByIowCd(iowId){ /* handled inline in renderCdIowBars */ }
 
 function loadCdActivityData(actId){
     $('#cd-c4 .brow').removeClass('brow-active');
@@ -856,7 +886,6 @@ function filterByIow(iowId){
     var sid = String(iowId);
     $('#pd-c3 .brow').removeClass('brow-active');
     $('#pd-c3 .brow[data-aid="' + iowId + '"]').addClass('brow-active');
-    console.log('filterByIow called, iowId='+iowId+', _all.length='+_all.length+', sample scheduleitem_ids='+_all.slice(0,5).map(function(a){return a.scheduleitem_id;}).join(','));
     var filtered  = _all.filter(function(a){ return String(a.scheduleitem_id) === sid; });
     var fOngoing  = filtered.filter(function(a){
         return parseInt(a.pr_report_count, 10) > 0;
