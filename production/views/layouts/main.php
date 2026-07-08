@@ -1793,6 +1793,7 @@ if($action=='login')
 #cd-grid{flex:1;min-height:0;display:grid;grid-template-columns:1.8fr 1.1fr 1.1fr;grid-template-rows:repeat(12,1fr);row-gap:0;column-gap:0}
 #cd-modal .ph{background:#222222;}
 #cd-modal .panel{border-right:3px solid #a0aec0}
+#cd-c2{overflow-y:auto !important;}
 
 </style>
 <div id="cd-bk"></div>
@@ -1803,10 +1804,10 @@ if($action=='login')
   </div>
   <div id="cd-body">
     <div id="cd-grid">
-      <div class="panel" style="grid-column:1;grid-row:1/span 3"><div class="ph">Project Cost</div><div class="pb" id="cd-c2"></div></div>
-      <div class="panel" style="grid-column:1;grid-row:4/span 2"><div class="ph">Group Cost</div><div class="pb" id="cd-c1"></div></div>
-      <div class="panel" style="grid-column:1;grid-row:6/span 3"><div class="ph">IOW Cost</div><div class="pb" id="cd-c3"></div></div>
-      <div class="panel" style="grid-column:1;grid-row:9/span 5"><div class="ph">Activity Costs</div><div class="pb" id="cd-c4"></div></div>
+      <div class="panel" style="grid-column:1;grid-row:1/span 4"><div class="ph">Project Cost</div><div class="pb" id="cd-c2"></div></div>
+      <div class="panel" style="grid-column:1;grid-row:5/span 2"><div class="ph">Group Cost</div><div class="pb" id="cd-c1"></div></div>
+      <div class="panel" style="grid-column:1;grid-row:7/span 2"><div class="ph">IOW Cost</div><div class="pb" id="cd-c3"></div></div>
+      <div class="panel" style="grid-column:1;grid-row:9/span 4"><div class="ph">Activity Costs</div><div class="pb" id="cd-c4"></div></div>
       <div class="panel" style="grid-column:2;grid-row:1/span 4"><div class="ph">Cost of Activity</div><div class="gp" id="cd-g2"></div></div>
       <div class="panel" style="grid-column:3;grid-row:1/span 4"><div class="ph">Quantity of Work Done</div><div class="gp" id="cd-g4"></div></div>
       <div class="panel" style="grid-column:2;grid-row:5/span 4"><div class="ph">Unit Cost of Activity</div><div class="gp" id="cd-g5"></div></div>
