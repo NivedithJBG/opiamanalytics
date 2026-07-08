@@ -6,7 +6,7 @@ $allProjects = Projects::find()->orderBy(['Name' => SORT_ASC])->all();
 
 <div class="menu8-popup-cntnr">
     <div class="menu8-cntnt-wrpr">
-        <div style="background:#d0d3dc;padding:12px 15px 14px;">
+        <div style="background:#b0b4c0;padding:12px 15px 14px;">
             <div style="text-align:center; padding:4px 0 10px;">
                 <h4 style="margin:0;"><span class="icon-document"></span> Project Documents</h4>
             </div>
