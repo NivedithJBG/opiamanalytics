@@ -49,7 +49,8 @@ $(function(){
             success: function(data){
                 $('#docs_search_btn').attr('disabled', false).html('<span class="icon-search5"></span> Search');
                 if(data.files && data.files.length > 0){
-                    var html = '<table class="table table-hover table-bordered" style="font-size:13px; color:#000; table-layout:fixed; width:100%;">' +
+                    var thStyle = 'background:#b0b4c0;color:#111;font-weight:700;border:1px solid #6e7280;padding:8px 10px;';
+                    var html = '<table style="font-size:13px;color:#000;table-layout:fixed;width:100%;border-collapse:collapse;">' +
                         '<colgroup>' +
                             '<col style="width:5%;">' +
                             '<col style="width:36%;">' +
@@ -58,19 +59,21 @@ $(function(){
                             '<col style="width:13%;">' +
                         '</colgroup>' +
                         '<thead><tr>' +
-                            '<th>Sl No</th>' +
-                            '<th>Name of the Document</th>' +
-                            '<th>Project</th>' +
-                            '<th>Date</th>' +
-                            '<th></th>' +
+                            '<th style="' + thStyle + '">Sl No</th>' +
+                            '<th style="' + thStyle + '">Name of the Document</th>' +
+                            '<th style="' + thStyle + '">Project</th>' +
+                            '<th style="' + thStyle + '">Date</th>' +
+                            '<th style="' + thStyle + '"></th>' +
                         '</tr></thead><tbody>';
+                    var tdStyle = 'border:1px solid #9a9ea8;padding:7px 10px;vertical-align:middle;';
                     $.each(data.files, function(i, f){
-                        html += '<tr id="doc-row-' + f.id + '">' +
-                            '<td style="color:#000;">' + (i + 1) + '</td>' +
-                            '<td style="color:#000; word-wrap:break-word;">' + $('<span>').text(f.original_name).html() + '</td>' +
-                            '<td style="color:#000; word-wrap:break-word;">' + $('<span>').text(f.project_name).html() + '</td>' +
-                            '<td style="color:#000;">' + f.uploaded_at + '</td>' +
-                            '<td style="vertical-align:middle;">' +
+                        var rowBg = i % 2 === 0 ? '#ffffff' : '#f5f6f8';
+                        html += '<tr id="doc-row-' + f.id + '" style="background:' + rowBg + ';">' +
+                            '<td style="' + tdStyle + 'color:#000;">' + (i + 1) + '</td>' +
+                            '<td style="' + tdStyle + 'color:#000;word-wrap:break-word;">' + $('<span>').text(f.original_name).html() + '</td>' +
+                            '<td style="' + tdStyle + 'color:#000;word-wrap:break-word;">' + $('<span>').text(f.project_name).html() + '</td>' +
+                            '<td style="' + tdStyle + 'color:#000;">' + f.uploaded_at + '</td>' +
+                            '<td style="' + tdStyle + '">' +
                                 '<div style="display:flex; justify-content:flex-end; gap:8px; align-items:center;">' +
                                     '<button class="btn btn-sm open-doc-viewer-docs" ' +
                                         'data-filename="' + f.filename + '" ' +
