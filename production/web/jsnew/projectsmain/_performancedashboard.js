@@ -153,35 +153,13 @@ function renderCdBars(){
         var tipStr = 'Estimated Cost of Activity: ' + fmtCost(est)
             + '|Actual Cost of Activity: ' + (hasAct ? fmtCost(acoa) : '-')
             + '|Difference in Cost: ' + diffLabel;
-        html += '<div class="brow cd-bar-tip" data-aid="' + a.id + '" data-tip="' + tipStr + '" style="cursor:pointer;padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;position:relative;border-top:1px solid #cbd5e1">'
+        html += '<div class="brow cd-bar-tip" data-aid="' + a.id + '" style="cursor:pointer;padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;position:relative;border-top:1px solid #cbd5e1">'
             + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0">' + sh(a.name||'',40) + '</div>'
             + '<div style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
             + '</div>';
     });
     el.innerHTML = html;
 
-    // Tooltip on hover
-    var tip = document.getElementById('cd-bar-tooltip');
-    if (!tip) {
-        tip = document.createElement('div');
-        tip.id = 'cd-bar-tooltip';
-        tip.style.cssText = 'position:fixed;display:none;background:#1e293b;color:#f1f5f9;font-size:15px;font-family:"Barlow Condensed",sans-serif;font-weight:500;padding:16px 28px;border-radius:8px;pointer-events:none;z-index:99999;line-height:2.4;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:340px;border:1px solid #334155';
-        document.body.appendChild(tip);
-    }
-    el.querySelectorAll('.cd-bar-tip').forEach(function(row){
-        row.addEventListener('mouseenter', function(e){
-            var parts = (row.getAttribute('data-tip') || '').split('|');
-            tip.innerHTML = parts.join('<br>');
-            tip.style.display = 'block';
-        });
-        row.addEventListener('mousemove', function(e){
-            tip.style.left = (e.clientX + 14) + 'px';
-            tip.style.top  = (e.clientY - 10) + 'px';
-        });
-        row.addEventListener('mouseleave', function(){
-            tip.style.display = 'none';
-        });
-    });
 }
 function renderCdIowBars(){
     var el = document.getElementById('cd-c3');
@@ -244,33 +222,10 @@ function renderCdIowBars(){
 
         html += '<div class="brow cd-iow-tip" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:default;border-top:1px solid #cbd5e1">'
             + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0">' + sh(iow.name||'',40) + '</div>'
-            + '<div data-tip="' + tipStr + '" style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
+            + '<div style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
             + '</div>';
     });
     el.innerHTML = html;
-
-    // Reuse the shared cd-bar-tooltip div
-    var tip = document.getElementById('cd-bar-tooltip');
-    if (!tip) {
-        tip = document.createElement('div');
-        tip.id = 'cd-bar-tooltip';
-        tip.style.cssText = 'position:fixed;display:none;background:#1e293b;color:#f1f5f9;font-size:15px;font-family:"Barlow Condensed",sans-serif;font-weight:500;padding:16px 28px;border-radius:8px;pointer-events:none;z-index:99999;line-height:2.4;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:340px;border:1px solid #334155';
-        document.body.appendChild(tip);
-    }
-    el.querySelectorAll('[data-tip]').forEach(function(bar){
-        bar.addEventListener('mouseenter', function(e){
-            var parts = (bar.getAttribute('data-tip') || '').split('|');
-            tip.innerHTML = parts.join('<br>');
-            tip.style.display = 'block';
-        });
-        bar.addEventListener('mousemove', function(e){
-            tip.style.left = (e.clientX + 14) + 'px';
-            tip.style.top  = (e.clientY - 10) + 'px';
-        });
-        bar.addEventListener('mouseleave', function(){
-            tip.style.display = 'none';
-        });
-    });
 }
 
 function renderCdProjectBar(){
@@ -328,7 +283,7 @@ function renderCdProjectBar(){
     var html = ''
         + '<div style="padding:6px 8px 4px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;height:100%">'
         +   (projName ? '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700;color:#1e293b;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + projName + '</div>' : '')
-        +   '<div data-tip="' + tipStr + '" style="height:13px;position:relative;margin-bottom:10px;flex-shrink:0;cursor:pointer">' + barHtml + '</div>'
+        +   '<div style="height:13px;position:relative;margin-bottom:10px;flex-shrink:0">' + barHtml + '</div>'
         +   '<div style="display:flex;gap:0;font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;line-height:1">'
         +     '<div style="flex:1;border-right:1px solid #cbd5e1;padding-right:10px">'
         +       '<div style="font-size:11px;color:#3461b8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding-bottom:3px">Project Cost</div>'
@@ -346,30 +301,6 @@ function renderCdProjectBar(){
         + '</div>';
 
     el.innerHTML = html;
-
-    // Tooltip on bar hover
-    var tip = document.getElementById('cd-bar-tooltip');
-    if (!tip) {
-        tip = document.createElement('div');
-        tip.id = 'cd-bar-tooltip';
-        tip.style.cssText = 'position:fixed;display:none;background:#1e293b;color:#f1f5f9;font-size:15px;font-family:"Barlow Condensed",sans-serif;font-weight:500;padding:16px 28px;border-radius:8px;pointer-events:none;z-index:99999;line-height:2.4;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:340px;border:1px solid #334155';
-        document.body.appendChild(tip);
-    }
-    var barEl = el.querySelector('[data-tip]');
-    if (barEl) {
-        barEl.addEventListener('mouseenter', function(e){
-            var parts = (barEl.getAttribute('data-tip') || '').split('|');
-            tip.innerHTML = parts.join('<br>');
-            tip.style.display = 'block';
-        });
-        barEl.addEventListener('mousemove', function(e){
-            tip.style.left = (e.clientX + 14) + 'px';
-            tip.style.top  = (e.clientY - 10) + 'px';
-        });
-        barEl.addEventListener('mouseleave', function(){
-            tip.style.display = 'none';
-        });
-    }
 }
 
 function renderCdGroupBars(){
@@ -438,32 +369,10 @@ function renderCdGroupBars(){
 
         html += '<div class="brow" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:default;border-top:1px solid #cbd5e1">'
             + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0">' + sh(g.name||'',40) + '</div>'
-            + '<div data-tip="' + tipStr + '" style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
+            + '<div style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
             + '</div>';
     });
     el.innerHTML = html;
-
-    var tip = document.getElementById('cd-bar-tooltip');
-    if (!tip) {
-        tip = document.createElement('div');
-        tip.id = 'cd-bar-tooltip';
-        tip.style.cssText = 'position:fixed;display:none;background:#1e293b;color:#f1f5f9;font-size:15px;font-family:"Barlow Condensed",sans-serif;font-weight:500;padding:16px 28px;border-radius:8px;pointer-events:none;z-index:99999;line-height:2.4;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:340px;border:1px solid #334155';
-        document.body.appendChild(tip);
-    }
-    el.querySelectorAll('[data-tip]').forEach(function(bar){
-        bar.addEventListener('mouseenter', function(e){
-            var parts = (bar.getAttribute('data-tip') || '').split('|');
-            tip.innerHTML = parts.join('<br>');
-            tip.style.display = 'block';
-        });
-        bar.addEventListener('mousemove', function(e){
-            tip.style.left = (e.clientX + 14) + 'px';
-            tip.style.top  = (e.clientY - 10) + 'px';
-        });
-        bar.addEventListener('mouseleave', function(){
-            tip.style.display = 'none';
-        });
-    });
 }
 
 function filterByGroupCd(groupId){ /* to be implemented */ }
