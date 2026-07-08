@@ -35,6 +35,7 @@ tests/_support/_generated
 
 /config/db.php
 /config/web.php
+/config/secrets.php
 /ckeditor
 /web/.htaccess
 /web/pdf

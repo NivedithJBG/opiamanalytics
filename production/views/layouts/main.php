@@ -1473,6 +1473,108 @@ if($action=='login')
             <!-- <a href="https://www.opiamanalytics.com" target="_blank"><img src="<?php echo Yii::$app->request->baseUrl; ?>/images/opiam-analytics-logo-trans.png" width="10%" height="" alt /></a> -->
         </div>
 
+<!-- ── Chatbot ─────────────────────────────────────────────────────────── -->
+<style>
+#cb-btn{position:fixed;bottom:24px;right:24px;z-index:99999;width:52px;height:52px;border-radius:50%;background:#1a2540;color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;transition:background .2s}
+#cb-btn:hover{background:#2d3f6e}
+#cb-win{position:fixed;bottom:88px;right:24px;z-index:99999;width:380px;max-height:560px;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.25);display:none;flex-direction:column;font-family:'Barlow Condensed',Arial,sans-serif;overflow:hidden}
+#cb-hdr{background:#1a2540;color:#fff;padding:12px 16px;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:space-between}
+#cb-hdr span{font-size:13px;opacity:.7;font-weight:400}
+#cb-close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1;padding:0}
+#cb-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:200px;max-height:380px}
+.cb-msg{max-width:85%;padding:8px 12px;border-radius:10px;font-size:13px;line-height:1.5;word-wrap:break-word}
+.cb-msg.user{background:#1a2540;color:#fff;align-self:flex-end;border-bottom-right-radius:3px}
+.cb-msg.bot{background:#f0f3fa;color:#111;align-self:flex-start;border-bottom-left-radius:3px}
+.cb-msg.typing{color:#888;font-style:italic}
+#cb-foot{display:flex;gap:6px;padding:10px;border-top:1px solid #e8ecf4}
+#cb-input{flex:1;border:1px solid #cbd5e1;border-radius:20px;padding:7px 14px;font-size:13px;outline:none;font-family:inherit}
+#cb-input:focus{border-color:#1a2540}
+#cb-send{background:#1a2540;color:#fff;border:none;border-radius:20px;padding:7px 16px;font-size:13px;cursor:pointer;white-space:nowrap}
+#cb-send:hover{background:#2d3f6e}
+#cb-clear{background:none;border:none;color:#aaa;font-size:11px;cursor:pointer;padding:0 4px;align-self:center}
+#cb-clear:hover{color:#e53935}
+</style>
+
+<button id="cb-btn" title="Ask Opiam Assistant"><span class="icon-bubbles4"></span></button>
+
+<div id="cb-win">
+    <div id="cb-hdr">
+        <div><div>Opiam Assistant</div><span>Ask anything about your projects</span></div>
+        <button id="cb-close">&times;</button>
+    </div>
+    <div id="cb-msgs">
+        <div class="cb-msg bot">Hi! I can answer questions about your projects, costs, activities, schedules and documents. What would you like to know?</div>
+    </div>
+    <div id="cb-foot">
+        <input id="cb-input" type="text" placeholder="Ask a question..." autocomplete="off">
+        <button id="cb-send">Send</button>
+        <button id="cb-clear" title="Clear chat">&#10005;</button>
+    </div>
+</div>
+
+<script>
+(function(){
+    var history = [];
+    var win  = document.getElementById('cb-win');
+    var msgs = document.getElementById('cb-msgs');
+    var inp  = document.getElementById('cb-input');
+
+    document.getElementById('cb-btn').addEventListener('click', function(){
+        win.style.display = win.style.display === 'flex' ? 'none' : 'flex';
+        if(win.style.display === 'flex') inp.focus();
+    });
+    document.getElementById('cb-close').addEventListener('click', function(){
+        win.style.display = 'none';
+    });
+    document.getElementById('cb-clear').addEventListener('click', function(){
+        history = [];
+        msgs.innerHTML = '<div class="cb-msg bot">Chat cleared. How can I help you?</div>';
+    });
+    document.getElementById('cb-send').addEventListener('click', sendMsg);
+    inp.addEventListener('keydown', function(e){ if(e.key==='Enter') sendMsg(); });
+
+    function sendMsg(){
+        var text = inp.value.trim();
+        if(!text) return;
+        inp.value = '';
+        addMsg(text, 'user');
+        history.push({role:'user', content:text});
+        var typing = addMsg('Thinking...', 'bot typing');
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '<?php echo Yii::$app->request->baseUrl; ?>/../chatbot/chat', true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.onload = function(){
+            msgs.removeChild(typing);
+            try {
+                var d = JSON.parse(xhr.responseText);
+                var reply = d.reply || d.error || 'Sorry, something went wrong.';
+                addMsg(reply, 'bot');
+                history.push({role:'assistant', content:reply});
+                if(history.length > 20) history = history.slice(-20);
+            } catch(e) {
+                addMsg('Sorry, something went wrong.', 'bot');
+            }
+        };
+        xhr.onerror = function(){
+            msgs.removeChild(typing);
+            addMsg('Network error. Please try again.', 'bot');
+        };
+        xhr.send('message=' + encodeURIComponent(text) + '&history=' + encodeURIComponent(JSON.stringify(history.slice(0,-1))));
+    }
+
+    function addMsg(text, cls){
+        var d = document.createElement('div');
+        d.className = 'cb-msg ' + cls;
+        d.textContent = text;
+        msgs.appendChild(d);
+        msgs.scrollTop = msgs.scrollHeight;
+        return d;
+    }
+})();
+</script>
+<!-- ── End Chatbot ─────────────────────────────────────────────────────── -->
+
 </body>
 </html>
 
