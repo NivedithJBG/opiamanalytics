@@ -999,6 +999,7 @@ function toBarItems(acts, isUpcoming){
             // start anchor (earlier of planned start and reported start)
             var projDur = +r.projected_duration || 0;
             if (projDur > planned && planned > 0) {
+                // Overrun: planned bar + red extension
                 sc = planned;
                 dl = projDur - planned;
                 if (r.spr_start_date && r.spr_start_date !== '0000-00-00') {
@@ -1006,6 +1007,10 @@ function toBarItems(acts, isUpcoming){
                     pe2.setDate(pe2.getDate() + Math.round(projDur) - 1);
                     projEndDate = pe2.toISOString().slice(0, 10);
                 }
+            } else if (projDur > 0 && projDur < planned) {
+                // Under plan: projected bar + yellow slack
+                sc = projDur;
+                dl = -(planned - projDur); // negative signals slack (yellow)
             } else {
                 sc = projDur || planned;
                 dl = 0;
@@ -1178,6 +1183,7 @@ function renderBars(containerId, items, onRowClick){
         +'<span><span class="ld" style="background:#37474F"></span>Normal</span>'
         +'<span><span class="ld" style="background:#00838f"></span>Critical</span>'
         +'<span><span class="ld" style="background:#FF0000"></span>Delay</span>'
+        +'<span><span class="ld" style="background:#f0c419"></span>Saving</span>'
         +'</div>';
 
     items.forEach(function(r){
@@ -1194,13 +1200,20 @@ function renderBars(containerId, items, onRowClick){
         if (r.duration_days) tipLines.push('Planned Dur:    ' + r.duration_days + ' days');
         if (r.startDelayed)  tipLines.push('Start Delay:    ' + r.startDelayDays + ' days');
         else if (dl > 0)     tipLines.push('Delay:          ' + dl + ' days');
+        else if (dl < 0)     tipLines.push('Saving:         ' + Math.abs(dl) + ' days');
         var tipAttr = tipLines.length ? ' data-tip="' + tipLines.join('&#10;') + '"' : '';
-        var dispVal = sc > 0 ? (String(sc) + (dl > 0 ? '<span style="color:#FF0000;margin-left:3px;">+' + dl + '</span>' : '')) : '';
+        var isSlack = dl < 0;
+        var dlAbs   = Math.abs(dl);
+        var dlAbsPct = (dlAbs/maxVal*100).toFixed(1);
+        var dispVal = sc > 0 ? (String(sc)
+            + (dl > 0  ? '<span style="color:#FF0000;margin-left:3px;">+' + dl + '</span>' : '')
+            + (isSlack ? '<span style="color:#27ae60;margin-left:3px;">-' + dlAbs + '</span>' : '')) : '';
         html += '<div class="'+rowCls+'"'+tipAttr+' '+(r.id?'data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;"':'style="display:flex;align-items:center;"')+'>'
             +'<div class="blbl" style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
             +'<div class="btrk" style="flex:1;">'
             +(sc>0?'<div class="bs" style="width:'+scPct+'%;background:'+barCol+'"></div>':'')
             +(dl>0?'<div class="bs" style="width:'+dlPct+'%;background:#FF0000"></div>':'')
+            +(isSlack?'<div class="bs" style="width:'+dlAbsPct+'%;background:#f0c419"></div>':'')
             +'</div>'
             +'<div style="font-size:11px;color:#000;font-weight:700;min-width:38px;text-align:right;padding-left:5px;white-space:nowrap;">'+dispVal+'</div>'
             +'</div>';
