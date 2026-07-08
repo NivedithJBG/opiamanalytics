@@ -328,15 +328,15 @@ function renderCdProjectBar(){
         +   '<div style="display:flex;gap:0;font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;line-height:1.9">'
         +     '<div style="flex:1;border-right:1px solid #e2e8f0;padding-right:10px">'
         +       '<div style="font-size:11px;color:#3461b8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Project Cost</div>'
-        +       '<div style="display:flex;justify-content:space-between"><span>Estimated</span><span style="color:#111">' + fmtCost(totEst) + '</span></div>'
-        +       '<div style="display:flex;justify-content:space-between"><span>Actual</span><span style="color:' + (hasReal ? (over?'#e8820c':'#1b9e8e') : '#111') + '">' + (hasReal ? fmtCost(totAcoa) : 'Using estimate') + '</span></div>'
-        +       (diffLabel ? '<div style="display:flex;justify-content:space-between"><span>' + (over?'Overrun':'Saving') + '</span><span style="color:' + (over?'#e8820c':'#1b9e8e') + '">' + fmtCost(Math.abs(diff)) + '</span></div>' : '')
+        +       '<div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding:2px 0"><span>Estimated</span><span style="color:#111">' + fmtCost(totEst) + '</span></div>'
+        +       '<div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding:2px 0"><span>Actual</span><span style="color:' + (hasReal ? (over?'#e8820c':'#1b9e8e') : '#111') + '">' + (hasReal ? fmtCost(totAcoa) : 'Using estimate') + '</span></div>'
+        +       (diffLabel ? '<div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding:2px 0"><span>' + (over?'Overrun':'Saving') + '</span><span style="color:' + (over?'#e8820c':'#1b9e8e') + '">' + fmtCost(Math.abs(diff)) + '</span></div>' : '')
         +     '</div>'
         +     '<div style="flex:1;padding-left:10px">'
         +       '<div style="font-size:11px;color:#3461b8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Cost of Work Done</div>'
-        +       '<div style="display:flex;justify-content:space-between"><span>Estimated</span><span style="color:#111">' + fmtCost(totEstWD) + '</span></div>'
-        +       '<div style="display:flex;justify-content:space-between"><span>Actual</span><span style="color:' + (overWD?'#e8820c':'#1b9e8e') + '">' + fmtCost(totActWD) + '</span></div>'
-        +       (diffWDLabel ? '<div style="display:flex;justify-content:space-between"><span>' + (overWD?'Overrun':'Saving') + '</span><span style="color:' + (overWD?'#e8820c':'#1b9e8e') + '">' + fmtCost(Math.abs(diffWD)) + '</span></div>' : '')
+        +       '<div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding:2px 0"><span>Estimated</span><span style="color:#111">' + fmtCost(totEstWD) + '</span></div>'
+        +       '<div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding:2px 0"><span>Actual</span><span style="color:' + (overWD?'#e8820c':'#1b9e8e') + '">' + fmtCost(totActWD) + '</span></div>'
+        +       (diffWDLabel ? '<div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding:2px 0"><span>' + (overWD?'Overrun':'Saving') + '</span><span style="color:' + (overWD?'#e8820c':'#1b9e8e') + '">' + fmtCost(Math.abs(diffWD)) + '</span></div>' : '')
         +     '</div>'
         +   '</div>'
         + '</div>';
