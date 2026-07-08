@@ -6,35 +6,39 @@ $allProjects = Projects::find()->orderBy(['Name' => SORT_ASC])->all();
 
 <div class="menu8-popup-cntnr">
     <div class="menu8-cntnt-wrpr">
-        <div style="text-align:center; padding:15px 0 5px;">
-            <h4><span class="icon-document"></span> Project Documents</h4>
-        </div>
-        <div class="container-fluid">
-            <div class="row" style="padding:0 15px 10px;">
-                <div class="col-md-3">
-                    <input type="text" id="docs_search_subject" class="form-control" placeholder="Subject / Filename">
-                </div>
-                <div class="col-md-2">
-                    <select id="docs_search_ref" class="form-control">
-                        <option value="">All Projects</option>
-                        <?php foreach($allProjects as $proj): ?>
-                        <option value="<?php echo htmlspecialchars($proj->Name); ?>"><?php echo htmlspecialchars($proj->Name); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <input type="date" id="docs_search_date" class="form-control">
-                </div>
-                <div class="col-md-3">
-                    <input type="text" id="docs_search_keywords" class="form-control" placeholder="Keywords">
-                </div>
-                <div class="col-md-2">
-                    <button id="docs_search_btn" class="btn btn-primary btn-block">
-                        <span class="icon-search5"></span> Search
-                    </button>
+        <div style="background:#d0d3dc;padding:12px 15px 14px;">
+            <div style="text-align:center; padding:4px 0 10px;">
+                <h4 style="margin:0;"><span class="icon-document"></span> Project Documents</h4>
+            </div>
+            <div class="container-fluid" style="padding:0;">
+                <div class="row" style="margin:0;">
+                    <div class="col-md-3">
+                        <input type="text" id="docs_search_subject" class="form-control" placeholder="Subject / Filename">
+                    </div>
+                    <div class="col-md-2">
+                        <select id="docs_search_ref" class="form-control">
+                            <option value="">All Projects</option>
+                            <?php foreach($allProjects as $proj): ?>
+                            <option value="<?php echo htmlspecialchars($proj->Name); ?>"><?php echo htmlspecialchars($proj->Name); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" id="docs_search_date" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" id="docs_search_keywords" class="form-control" placeholder="Keywords">
+                    </div>
+                    <div class="col-md-2">
+                        <button id="docs_search_btn" class="btn btn-primary btn-block">
+                            <span class="icon-search5"></span> Search
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div id="docs_results" style="padding:0 15px;">
+        </div>
+        <div style="background:#ffffff; padding:15px;">
+            <div id="docs_results">
                 <p class="text-muted">Enter a search term and click Search.</p>
             </div>
         </div>
