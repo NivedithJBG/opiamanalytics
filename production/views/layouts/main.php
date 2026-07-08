@@ -1805,9 +1805,9 @@ if($action=='login')
   </div>
   <div id="cd-body">
     <div id="cd-grid">
-      <div class="panel" style="grid-column:1;grid-row:1/span 4"><div class="ph">Project Cost</div><div class="pb" id="cd-c2"></div></div>
-      <div class="panel" style="grid-column:1;grid-row:5/span 2"><div class="ph">Group Cost</div><div class="pb" id="cd-c1"></div></div>
-      <div class="panel" style="grid-column:1;grid-row:7/span 2"><div class="ph">IOW Cost</div><div class="pb" id="cd-c3"></div></div>
+      <div class="panel" style="grid-column:1;grid-row:1/span 2"><div class="ph">Project Cost</div><div class="pb" id="cd-c2"></div></div>
+      <div class="panel" style="grid-column:1;grid-row:3/span 2"><div class="ph">Group Cost</div><div class="pb" id="cd-c1"></div></div>
+      <div class="panel" style="grid-column:1;grid-row:5/span 4"><div class="ph">IOW Cost</div><div class="pb" id="cd-c3"></div></div>
       <div class="panel" style="grid-column:1;grid-row:9/span 4"><div class="ph">Activity Costs</div><div class="pb" id="cd-c4"></div></div>
       <div class="panel" style="grid-column:2;grid-row:1/span 4"><div class="ph">Cost of Activity</div><div class="gp" id="cd-g2"></div></div>
       <div class="panel" style="grid-column:3;grid-row:1/span 4"><div class="ph">Quantity of Work Done</div><div class="gp" id="cd-g4"></div></div>
