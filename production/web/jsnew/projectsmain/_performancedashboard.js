@@ -98,6 +98,7 @@ $(document).on('click', '#cd-c4 .brow[data-aid]', function(){
 });
 
 function renderCdBars(){
+    renderCdProjectBar();
     renderCdGroupBars();
     renderCdIowBars();
     var el = document.getElementById('cd-c4');
@@ -270,6 +271,70 @@ function renderCdIowBars(){
             tip.style.display = 'none';
         });
     });
+}
+
+function renderCdProjectBar(){
+    var el = document.getElementById('cd-c2');
+    if (!el) return;
+
+    // Sum est, acoa, estwd, actwd across all activities
+    var totEst = 0, totAcoa = 0, totEstWD = 0, totActWD = 0, hasReal = false;
+    (_all || []).forEach(function(a){
+        var c    = _cdCostMap[String(a.id)] || {};
+        var est  = +c.est   || 0;
+        var acoa = +c.acoa  || 0;
+        var estwd = +c.estwd || 0;
+        var actwd = +c.actwd || 0;
+        totEst   += est;
+        totAcoa  += acoa > 0 ? acoa : est;
+        totEstWD += estwd;
+        totActWD += actwd;
+        if (acoa > 0) hasReal = true;
+    });
+
+    var diff  = totAcoa - totEst;
+    var over  = diff > 0;
+    var pct   = 96; // project bar always full width (it's the only bar)
+    var acoaPct = totEst > 0 ? Math.max(2, totAcoa / totEst * 96) : 96;
+
+    var barHtml;
+    if (!hasReal || diff === 0) {
+        barHtml = '<div style="position:absolute;left:0;top:0;width:96%;height:13px;background:#64748b;border-radius:3px;min-width:4px"></div>';
+    } else if (over) {
+        var diffPct = acoaPct - pct;
+        barHtml = '<div style="position:absolute;left:0;top:0;width:' + pct + '%;height:13px;background:#64748b;border-radius:3px 0 0 3px;min-width:4px"></div>'
+                + '<div style="position:absolute;left:' + pct + '%;top:0;width:' + Math.max(0,diffPct).toFixed(1) + '%;height:13px;background:#e8820c;border-radius:0 3px 3px 0"></div>';
+    } else {
+        var savePct = pct - acoaPct;
+        barHtml = '<div style="position:absolute;left:0;top:0;width:' + acoaPct.toFixed(1) + '%;height:13px;background:#64748b;border-radius:3px 0 0 3px;min-width:4px"></div>'
+                + '<div style="position:absolute;left:' + acoaPct.toFixed(1) + '%;top:0;width:' + Math.max(0,savePct).toFixed(1) + '%;height:13px;background:#1b9e8e;border-radius:0 3px 3px 0"></div>';
+    }
+
+    var diffLabel = hasReal
+        ? (over ? 'Cost Overrun: +' + fmtCost(Math.abs(diff)) : 'Cost Saving: ' + fmtCost(Math.abs(diff)))
+        : '';
+
+    var diffWD    = totActWD - totEstWD;
+    var overWD    = diffWD > 0;
+    var diffWDLabel = hasReal && diffWD !== 0
+        ? (overWD ? 'Work Done Cost Overrun: +' : 'Work Done Cost Saving: ') + fmtCost(Math.abs(diffWD))
+        : '';
+
+    var html = ''
+        + '<div style="padding:6px 8px 4px;box-sizing:border-box">'
+        +   '<div style="height:13px;position:relative;margin-bottom:10px">' + barHtml + '</div>'
+        +   '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;line-height:1.9">'
+        +     '<div style="display:flex;justify-content:space-between"><span>Estimated Cost of Project</span><span style="color:#111">' + fmtCost(totEst) + '</span></div>'
+        +     '<div style="display:flex;justify-content:space-between"><span>Actual Cost of Project</span><span style="color:' + (hasReal ? (over?'#e8820c':'#1b9e8e') : '#111') + '">' + (hasReal ? fmtCost(totAcoa) : 'Using estimate') + '</span></div>'
+        +     (diffLabel ? '<div style="color:' + (over?'#e8820c':'#1b9e8e') + '">' + diffLabel + '</div>' : '')
+        +     '<div style="border-top:1px solid #e2e8f0;margin:4px 0"></div>'
+        +     '<div style="display:flex;justify-content:space-between"><span>Estimated Cost of Work Done</span><span style="color:#111">' + fmtCost(totEstWD) + '</span></div>'
+        +     '<div style="display:flex;justify-content:space-between"><span>Actual Cost of Work Done</span><span style="color:' + (overWD?'#e8820c':'#1b9e8e') + '">' + fmtCost(totActWD) + '</span></div>'
+        +     (diffWDLabel ? '<div style="color:' + (overWD?'#e8820c':'#1b9e8e') + '">' + diffWDLabel + '</div>' : '')
+        +   '</div>'
+        + '</div>';
+
+    el.innerHTML = html;
 }
 
 function renderCdGroupBars(){
