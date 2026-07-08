@@ -321,27 +321,55 @@ function renderCdProjectBar(){
         : '';
 
     var projName = _cdProjectName || '';
+    var tipStr = 'Estimated Cost of Project: ' + fmtCost(totEst)
+        + '|Actual Cost of Project: ' + (hasReal ? fmtCost(totAcoa) : 'Using estimate')
+        + '|Difference in Cost: ' + (diffLabel || 'No actual data');
+
     var html = ''
         + '<div style="padding:6px 8px 4px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end;height:100%">'
         +   (projName ? '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700;color:#1e293b;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + projName + '</div>' : '')
-        +   '<div style="height:13px;position:relative;margin-bottom:10px;flex-shrink:0">' + barHtml + '</div>'
+        +   '<div data-tip="' + tipStr + '" style="height:13px;position:relative;margin-bottom:10px;flex-shrink:0;cursor:pointer">' + barHtml + '</div>'
         +   '<div style="display:flex;gap:0;font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;line-height:1.9">'
-        +     '<div style="flex:1;border-right:1px solid #e2e8f0;padding-right:10px">'
+        +     '<div style="flex:1;border-right:1px solid #cbd5e1;padding-right:10px">'
         +       '<div style="font-size:11px;color:#3461b8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Project Cost</div>'
-        +       '<div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding:2px 0"><span>Estimated</span><span style="color:#111">' + fmtCost(totEst) + '</span></div>'
-        +       '<div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding:2px 0"><span>Actual</span><span style="color:' + (hasReal ? (over?'#e8820c':'#1b9e8e') : '#111') + '">' + (hasReal ? fmtCost(totAcoa) : 'Using estimate') + '</span></div>'
-        +       (diffLabel ? '<div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding:2px 0"><span>' + (over?'Overrun':'Saving') + '</span><span style="color:' + (over?'#e8820c':'#1b9e8e') + '">' + fmtCost(Math.abs(diff)) + '</span></div>' : '')
+        +       '<div style="display:flex;justify-content:space-between;border-top:1px solid #cbd5e1;padding:2px 0"><span>Estimated</span><span style="color:#111">' + fmtCost(totEst) + '</span></div>'
+        +       '<div style="display:flex;justify-content:space-between;border-top:1px solid #cbd5e1;padding:2px 0"><span>Actual</span><span style="color:' + (hasReal ? (over?'#e8820c':'#1b9e8e') : '#111') + '">' + (hasReal ? fmtCost(totAcoa) : 'Using estimate') + '</span></div>'
+        +       (diffLabel ? '<div style="display:flex;justify-content:space-between;border-top:1px solid #cbd5e1;padding:2px 0"><span>' + (over?'Overrun':'Saving') + '</span><span style="color:' + (over?'#e8820c':'#1b9e8e') + '">' + fmtCost(Math.abs(diff)) + '</span></div>' : '')
         +     '</div>'
         +     '<div style="flex:1;padding-left:10px">'
         +       '<div style="font-size:11px;color:#3461b8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Cost of Work Done</div>'
-        +       '<div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding:2px 0"><span>Estimated</span><span style="color:#111">' + fmtCost(totEstWD) + '</span></div>'
-        +       '<div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding:2px 0"><span>Actual</span><span style="color:' + (overWD?'#e8820c':'#1b9e8e') + '">' + fmtCost(totActWD) + '</span></div>'
-        +       (diffWDLabel ? '<div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding:2px 0"><span>' + (overWD?'Overrun':'Saving') + '</span><span style="color:' + (overWD?'#e8820c':'#1b9e8e') + '">' + fmtCost(Math.abs(diffWD)) + '</span></div>' : '')
+        +       '<div style="display:flex;justify-content:space-between;border-top:1px solid #cbd5e1;padding:2px 0"><span>Estimated</span><span style="color:#111">' + fmtCost(totEstWD) + '</span></div>'
+        +       '<div style="display:flex;justify-content:space-between;border-top:1px solid #cbd5e1;padding:2px 0"><span>Actual</span><span style="color:' + (overWD?'#e8820c':'#1b9e8e') + '">' + fmtCost(totActWD) + '</span></div>'
+        +       (diffWDLabel ? '<div style="display:flex;justify-content:space-between;border-top:1px solid #cbd5e1;padding:2px 0"><span>' + (overWD?'Overrun':'Saving') + '</span><span style="color:' + (overWD?'#e8820c':'#1b9e8e') + '">' + fmtCost(Math.abs(diffWD)) + '</span></div>' : '')
         +     '</div>'
         +   '</div>'
         + '</div>';
 
     el.innerHTML = html;
+
+    // Tooltip on bar hover
+    var tip = document.getElementById('cd-bar-tooltip');
+    if (!tip) {
+        tip = document.createElement('div');
+        tip.id = 'cd-bar-tooltip';
+        tip.style.cssText = 'position:fixed;display:none;background:#1e293b;color:#f1f5f9;font-size:15px;font-family:"Barlow Condensed",sans-serif;font-weight:500;padding:16px 28px;border-radius:8px;pointer-events:none;z-index:99999;line-height:2.4;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:340px;border:1px solid #334155';
+        document.body.appendChild(tip);
+    }
+    var barEl = el.querySelector('[data-tip]');
+    if (barEl) {
+        barEl.addEventListener('mouseenter', function(e){
+            var parts = (barEl.getAttribute('data-tip') || '').split('|');
+            tip.innerHTML = parts.join('<br>');
+            tip.style.display = 'block';
+        });
+        barEl.addEventListener('mousemove', function(e){
+            tip.style.left = (e.clientX + 14) + 'px';
+            tip.style.top  = (e.clientY - 10) + 'px';
+        });
+        barEl.addEventListener('mouseleave', function(){
+            tip.style.display = 'none';
+        });
+    }
 }
 
 function renderCdGroupBars(){
