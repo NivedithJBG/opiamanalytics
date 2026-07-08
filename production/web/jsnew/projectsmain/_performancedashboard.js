@@ -1575,10 +1575,6 @@ function doActivityDuration(k) {
     } else {
         bar += '<div style="width:100%;background:' + baseCol + ';' + seg + '"></div>';
     }
-    // Progress overlay — white semi-transparent showing % work done
-    if (wDone > 0) {
-        bar += '<div style="position:absolute;left:0;top:0;bottom:0;width:' + Math.min(wDone, 100).toFixed(1) + '%;background:rgba(255,255,255,0.35);pointer-events:none"></div>';
-    }
     bar += '</div>';
 
     var actName = k.activity_name || '';
@@ -1596,7 +1592,7 @@ function doActivityDuration(k) {
         + '<span><span style="display:inline-block;width:10px;height:8px;background:' + baseCol + ';border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Planned</span>'
         + (isOver ? '<span><span style="display:inline-block;width:10px;height:8px;background:#e53935;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Overrun</span>' : '')
         + (isUnder ? '<span><span style="display:inline-block;width:10px;height:8px;background:#f0c419;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Slack</span>' : '')
-        + '<span><span style="display:inline-block;width:10px;height:8px;background:rgba(255,255,255,0.6);border:1px solid #bbb;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Work done</span>'
+        + ''
         + '</div>'
         + '<div style="' + fam + 'font-size:10px;color:#5a6e8c;">'
         + '<div style="display:flex;justify-content:space-between;">'
