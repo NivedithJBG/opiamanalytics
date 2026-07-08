@@ -98,6 +98,7 @@ $(document).on('click', '#cd-c4 .brow[data-aid]', function(){
 });
 
 function renderCdBars(){
+    renderCdGroupBars();
     renderCdIowBars();
     var el = document.getElementById('cd-c4');
     if (!el) return;
@@ -245,6 +246,96 @@ function renderCdIowBars(){
     el.innerHTML = html;
 
     // Reuse the shared cd-bar-tooltip div
+    var tip = document.getElementById('cd-bar-tooltip');
+    if (!tip) {
+        tip = document.createElement('div');
+        tip.id = 'cd-bar-tooltip';
+        tip.style.cssText = 'position:fixed;display:none;background:#1e293b;color:#f1f5f9;font-size:15px;font-family:"Barlow Condensed",sans-serif;font-weight:500;padding:16px 28px;border-radius:8px;pointer-events:none;z-index:99999;line-height:2.4;white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:340px;border:1px solid #334155';
+        document.body.appendChild(tip);
+    }
+    el.querySelectorAll('[data-tip]').forEach(function(bar){
+        bar.addEventListener('mouseenter', function(e){
+            var parts = (bar.getAttribute('data-tip') || '').split('|');
+            tip.innerHTML = parts.join('<br>');
+            tip.style.display = 'block';
+        });
+        bar.addEventListener('mousemove', function(e){
+            tip.style.left = (e.clientX + 14) + 'px';
+            tip.style.top  = (e.clientY - 10) + 'px';
+        });
+        bar.addEventListener('mouseleave', function(){
+            tip.style.display = 'none';
+        });
+    });
+}
+
+function renderCdGroupBars(){
+    var el = document.getElementById('cd-c1');
+    if (!el) return;
+    if (!_groups.length || !_iow_items.length || !_all.length) {
+        el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No group data</div>';
+        return;
+    }
+    // Sum est and actual per IOW first
+    var iowEst = {}, iowAct = {};
+    _all.forEach(function(a){
+        var sid  = String(a.scheduleitem_id);
+        var c    = _cdCostMap[String(a.id)] || {};
+        iowEst[sid] = (iowEst[sid] || 0) + (+c.est  || 0);
+        iowAct[sid] = (iowAct[sid] || 0) + (+c.acoa || 0);
+    });
+    // Sum IOW totals per group
+    var grpEst = {}, grpAct = {};
+    _iow_items.forEach(function(iow){
+        var gid = String(iow.group_id);
+        var sid = String(iow.id);
+        grpEst[gid] = (grpEst[gid] || 0) + (iowEst[sid] || 0);
+        grpAct[gid] = (grpAct[gid] || 0) + (iowAct[sid] || 0);
+    });
+    var maxVal = 0;
+    _groups.forEach(function(g){
+        var top = Math.max(grpEst[String(g.id)] || 0, grpAct[String(g.id)] || 0);
+        if (top > maxVal) maxVal = top;
+    });
+    var html = '';
+    _groups.forEach(function(g){
+        var gid    = String(g.id);
+        var est    = grpEst[gid] || 0;
+        var acoa   = grpAct[gid] || 0;
+        var hasAct = acoa > 0;
+        var diff   = acoa - est;
+        var over   = diff > 0;
+        var estPct = maxVal > 0 ? Math.max(2, est / maxVal * 96) : 2;
+
+        var barHtml;
+        if (!hasAct || diff === 0) {
+            barHtml = '<div style="position:absolute;left:0;top:0;width:' + estPct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px;min-width:4px"></div>';
+        } else if (over) {
+            var actPct  = maxVal > 0 ? Math.max(2, acoa / maxVal * 96) : 2;
+            var diffPct = actPct - estPct;
+            barHtml = '<div style="position:absolute;left:0;top:0;width:' + estPct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px 0 0 2px;min-width:4px"></div>'
+                    + '<div style="position:absolute;left:' + estPct.toFixed(1) + '%;top:0;width:' + Math.max(0,diffPct).toFixed(1) + '%;height:11px;background:#e8820c;border-radius:0 2px 2px 0"></div>';
+        } else {
+            var actPct  = maxVal > 0 ? Math.max(2, acoa / maxVal * 96) : 2;
+            var savePct = estPct - actPct;
+            barHtml = '<div style="position:absolute;left:0;top:0;width:' + actPct.toFixed(1) + '%;height:11px;background:#64748b;border-radius:2px 0 0 2px;min-width:4px"></div>'
+                    + '<div style="position:absolute;left:' + actPct.toFixed(1) + '%;top:0;width:' + Math.max(0,savePct).toFixed(1) + '%;height:11px;background:#1b9e8e;border-radius:0 2px 2px 0"></div>';
+        }
+
+        var diffLabel = hasAct
+            ? (over ? 'Cost Overrun: +' + fmtCost(Math.abs(diff)) : 'Cost Saving: ' + fmtCost(Math.abs(diff)))
+            : 'No actual data';
+        var tipStr = 'Estimated Group Cost: ' + fmtCost(est)
+            + '|Actual Group Cost: ' + (hasAct ? fmtCost(acoa) : '-')
+            + '|Difference in Cost: ' + diffLabel;
+
+        html += '<div class="brow" style="padding:3px 6px 4px;display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;cursor:default">'
+            + '<div style="font-size:12px;color:#111;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:45%;flex-shrink:0">' + sh(g.name||'',40) + '</div>'
+            + '<div data-tip="' + tipStr + '" style="flex:1;height:11px;position:relative">' + barHtml + '</div>'
+            + '</div>';
+    });
+    el.innerHTML = html;
+
     var tip = document.getElementById('cd-bar-tooltip');
     if (!tip) {
         tip = document.createElement('div');
