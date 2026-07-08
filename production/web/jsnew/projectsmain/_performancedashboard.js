@@ -1241,7 +1241,8 @@ function doWorkDone(k){
     var nr=r-15, na=Math.PI*(1-f);
     var nx=(cx+nr*Math.cos(na)).toFixed(1), ny=(cy-nr*Math.sin(na)).toFixed(1);
 
-    var svg='<svg width="210" height="130" viewBox="0 0 210 130" xmlns="http://www.w3.org/2000/svg">'
+    var svg='<svg width="210" height="142" viewBox="0 -12 210 142" xmlns="http://www.w3.org/2000/svg">'
+        +(an?'<text x="'+cx+'" y="-2" text-anchor="middle" font-size="10" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +arc(0,1,'#a8d4f5')
         +(f>0?arc(0,f,'#0d1f6e','butt'):'')
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
@@ -1251,7 +1252,6 @@ function doWorkDone(k){
         +'<text x="'+(cx+r)+'" y="'+(cy+15)+'" text-anchor="middle" font-size="13" fill="#111" font-family="Barlow Condensed,Arial">Complete '+fm(tq)+(u?' '+u:'')+'</text>'
         +'<text x="'+cx+'" y="'+(cy-26)+'" text-anchor="middle" font-size="18" font-weight="700" fill="#111" font-family="Barlow Condensed,Arial">'+fm(aq)+' '+u+' | '+pct+'%</text>'
         +'<text x="'+cx+'" y="'+(cy-12)+'" text-anchor="middle" font-size="12" fill="#111" font-family="Barlow Condensed,Arial">Achieved</text>'
-        +(an?'<text x="'+cx+'" y="128" text-anchor="middle" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">'+an+'</text>':'')
         +'</svg>';
 
     el.innerHTML = svg;
@@ -1584,7 +1584,7 @@ function doActivityDuration(k) {
     var actName = k.activity_name || '';
     el.innerHTML =
         '<div style="display:flex;flex-direction:column;justify-content:flex-start;height:100%;padding:4px 10px;box-sizing:border-box;gap:3px;">'
-        + '<div style="display:flex;justify-content:space-between;align-items:baseline;' + fam + 'font-size:11px;font-weight:700;margin-bottom:2px;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:baseline;' + fam + 'font-size:10px;font-weight:700;margin-bottom:2px;">'
         + '<span style="color:#1a2540;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;padding-right:6px;">' + (actName||'') + '</span>'
         + '<span style="white-space:nowrap;color:#1a2540;">' + bDur + ' d'
         + (isOver ? ' &nbsp;<span style="color:#e53935;">+' + (aDur-bDur) + ' d</span>' : isUnder ? ' &nbsp;<span style="color:#27ae60;">-' + (bDur-aDur) + ' d</span>' : '')
