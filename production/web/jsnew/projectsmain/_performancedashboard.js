@@ -1588,13 +1588,7 @@ function doActivityDuration(k) {
         + '</span>'
         + '</div>'
         + bar
-        + '<div style="display:flex;gap:10px;' + fam + 'font-size:9px;color:#444;margin-top:2px;">'
-        + '<span><span style="display:inline-block;width:10px;height:8px;background:' + baseCol + ';border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Planned</span>'
-        + (isOver ? '<span><span style="display:inline-block;width:10px;height:8px;background:#e53935;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Overrun</span>' : '')
-        + (isUnder ? '<span><span style="display:inline-block;width:10px;height:8px;background:#f0c419;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Slack</span>' : '')
-        + ''
-        + '</div>'
-        + '<div style="' + fam + 'font-size:10px;color:#5a6e8c;">'
+        + '<div style="' + fam + 'font-size:10px;color:#5a6e8c;margin-top:2px;">'
         + '<div style="display:flex;justify-content:space-between;">'
         + '<span>Plan Start: <b style="color:#1a2540;">' + (fmDate(k.adj_start_date)||'-') + '</b></span>'
         + '<span>End: <b style="color:#1a2540;">' + (fmDate(k.adj_end_date)||'-') + '</b></span>'
@@ -1603,10 +1597,29 @@ function doActivityDuration(k) {
         + (k.reported_start_date ? fmDate(k.reported_start_date) : 'Not Started')
         + '</b></div>'
         + '</div>'
-        + divider
-        + row('Work done',      wDone   + '%', '#27ae60')
-        + divider
-        + row('Remaining work', wRemain + '%', '#e67e22')
+        + (function(){
+            var actDur  = aDur;
+            var diffD   = actDur - bDur;
+            var diffCol = diffD > 0 ? '#e53935' : diffD < 0 ? '#27ae60' : '#1a2540';
+            var diffStr = diffD > 0 ? '+' + diffD + ' d' : diffD + ' d';
+            var lgDiv   = '<div style="border-top:1px solid #d0d8e8;margin:2px 0;"></div>';
+            var lgRow2  = function(col, lbl, val){
+                return '<div style="display:flex;justify-content:space-between;padding:2px 0;">'
+                    + '<span><span style="display:inline-block;width:9px;height:9px;background:' + col + ';margin-right:4px;border-radius:2px;vertical-align:middle;"></span>' + lbl + '</span>'
+                    + '<b style="color:#1a2540;">' + val + '</b>'
+                    + '</div>';
+            };
+            return '<div style="' + fam + 'font-size:11px;margin-top:6px;border-top:2px solid #d0d8e8;padding-top:4px;">'
+                + lgRow2(baseCol, 'Planned', bDur + ' d')
+                + lgDiv
+                + lgRow2('#e53935', 'Actual', actDur + ' d')
+                + lgDiv
+                + '<div style="display:flex;justify-content:space-between;padding:2px 0;">'
+                + '<span><span style="display:inline-block;width:9px;height:9px;background:#f0c419;margin-right:4px;border-radius:2px;vertical-align:middle;"></span>Difference</span>'
+                + '<b style="color:' + diffCol + ';">' + diffStr + '</b>'
+                + '</div>'
+                + '</div>';
+        })()
         + '</div>';
 }
 
