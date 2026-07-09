@@ -44,9 +44,9 @@ class ChatbotController extends Controller
             "- If the user's latest question is a follow-up, apply the same project/activity from history.\n\n" .
             "FIELD DEFINITIONS — map user questions to the EXACT field label in CONTEXT:\n" .
             "- 'target qty' / 'target quantity' / 'planned quantity' / 'how many planned' → field label 'Target Qty' in SCHEDULE ACTIVITIES\n" .
-            "- 'target production' / 'production target' / 'daily target' / 'planned production rate' → field label 'KPI_TARGET_PRODUCTION' in ACTIVITY TASKS\n" .
-            "- 'productivity per unit' / 'unit productivity' → field label 'KPI_PRODUCTIVITY_PER_UNIT' in ACTIVITY TASKS\n" .
-            "- 'resource units' / 'number of resources' → field label 'KPI_RESOURCE_UNITS' in ACTIVITY TASKS\n" .
+            "- 'target production' / 'production target' / 'daily target' / 'planned production rate' → field label 'TARGET PRODUCTION (daily output of this task)' in ACTIVITY TASKS\n" .
+            "- 'productivity per unit' / 'unit productivity' → field label 'PRODUCTIVITY PER RESOURCE UNIT' in ACTIVITY TASKS\n" .
+            "- 'resource units' / 'number of resources' → field label 'NUMBER OF RESOURCE UNITS' in ACTIVITY TASKS\n" .
             "- 'qty done' / 'work done' / 'completed qty' / 'how many done' / 'nos done' → field label 'Qty Done' in SCHEDULE ACTIVITIES\n" .
             "- 'progress %' / 'percent complete' / 'how much complete' → field label 'Progress' in SCHEDULE ACTIVITIES or PHYSICAL PROGRESS section\n" .
             "- 'planned duration' / 'budgeted duration' → field label 'Planned Duration' or 'Task Budgeted Duration'\n" .
@@ -478,14 +478,11 @@ class ChatbotController extends Controller
             $context .= "=== ACTIVITY TASKS (Planned) ===\n";
             foreach ($tasks as $t) {
                 $targetProd = round((float)$t['task_productivity'] * max(1, (float)$t['task_resource_units']), 3);
-                $context .= "- [{$t['project_name']}] Activity: {$t['activity_name']}"
-                    . " | Task: {$t['task_name']}"
-                    . " | Task Unit: {$t['task_unit']}"
-                    . " | Task Planned Qty: {$t['task_qty']}"
-                    . " | KPI_TARGET_PRODUCTION: {$targetProd} {$t['task_unit']}/day (=productivity x resource_units)"
-                    . " | KPI_PRODUCTIVITY_PER_UNIT: {$t['task_productivity']} {$t['task_unit']}/day"
-                    . " | KPI_RESOURCE_UNITS: {$t['task_resource_units']}"
-                    . " | Task Budgeted Duration: {$t['Budgeted_Duration']} days\n";
+                $context .= "- [{$t['project_name']}] Activity: {$t['activity_name']} | Task: {$t['task_name']} | Unit: {$t['task_unit']}\n"
+                    . "  TARGET PRODUCTION (daily output of this task) = {$targetProd} {$t['task_unit']}/day\n"
+                    . "  PRODUCTIVITY PER RESOURCE UNIT = {$t['task_productivity']} {$t['task_unit']}/day\n"
+                    . "  NUMBER OF RESOURCE UNITS = {$t['task_resource_units']}\n"
+                    . "  TASK PLANNED QTY = {$t['task_qty']} | TASK BUDGETED DURATION = {$t['Budgeted_Duration']} days\n";
             }
             $context .= "\n";
         }
