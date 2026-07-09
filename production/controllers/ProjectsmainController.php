@@ -977,6 +977,18 @@ class ProjectsmainController extends Controller
             $data[$schedId] = ['est' => round($est, 2), 'acoa' => $acoa, 'estwd' => $estwd, 'actwd' => $actwd];
         }
 
+        // Cache the project-level totals so the chatbot reads the same numbers the UI displays
+        $totalEstWd = 0.0;
+        $totalActWd = 0.0;
+        foreach ($data as $row) {
+            $totalEstWd += (float)$row['estwd'];
+            $totalActWd += (float)$row['actwd'];
+        }
+        \app\components\MetricsCacheHelper::writeMetrics($pid, [
+            'estimated_cost_work_done'  => $totalEstWd,
+            'actual_cost_work_done'     => $totalActWd,
+        ]);
+
         return json_encode(['error' => 'No', 'data' => $data]);
     }
 

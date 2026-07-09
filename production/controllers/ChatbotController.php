@@ -160,23 +160,26 @@ class ChatbotController extends Controller
         // --- COST (from cache) ---
         if ($wantsCost) {
             $hasCost = false;
-            $costBlock = "=== COST DASHBOARD ===\n";
+            $costBlock = "=== COST OF WORK DONE (from cost dashboard) ===\n";
             foreach ($projects as $p) {
                 $pid = $p['Project_Id'];
-                $est = $cv($pid, 'estimated_cost');
-                if ($est === null) continue;
-                $actualWorkDone = (float)($cv($pid, 'actual_cost_work_done') ?? 0);
-                $variance = $est - $actualWorkDone;
+                // Use the cost-dashboard computed values (actual_cost_work_done set by actionCostdashboardbatch)
+                $estWd  = $cv($pid, 'estimated_cost_work_done');
+                $actWd  = $cv($pid, 'actual_cost_work_done');
+                if ($estWd === null && $actWd === null) continue;
+                $estWd  = (float)($estWd ?? 0);
+                $actWd  = (float)($actWd ?? 0);
+                $variance = $estWd - $actWd;
                 $vLabel   = $variance >= 0 ? 'Under Budget' : 'Over Budget';
                 $updated  = $cu($pid) ?? 'unknown';
                 $costBlock .= "- {$p['Name']}"
-                    . " | Estimated Cost: " . number_format($est, 2)
-                    . " | Actual Cost of Work Done: " . number_format($actualWorkDone, 2)
-                    . " | Budget Variance: " . number_format(abs($variance), 2) . " ({$vLabel})"
+                    . " | Estimated Cost of Work Done: ₹" . number_format($estWd, 2)
+                    . " | Actual Cost of Work Done: ₹" . number_format($actWd, 2)
+                    . " | Budget Variance: ₹" . number_format(abs($variance), 2) . " ({$vLabel})"
                     . " | As of: {$updated}\n";
                 $hasCost = true;
             }
-            $context .= $hasCost ? $costBlock . "\n" : "=== COST DASHBOARD ===\n[NO COST DATA IN CACHE — SELECT A PROJECT TO REFRESH]\n\n";
+            $context .= $hasCost ? $costBlock . "\n" : "=== COST OF WORK DONE ===\n[NO COST DATA IN CACHE — OPEN THE COST DASHBOARD FOR THIS PROJECT FIRST]\n\n";
         }
 
         // --- PROGRESS (from cache) ---
