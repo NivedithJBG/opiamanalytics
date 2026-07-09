@@ -165,15 +165,13 @@ class ChatbotController extends Controller
                 $pid = $p['Project_Id'];
                 $est = $cv($pid, 'estimated_cost');
                 if ($est === null) continue;
-                $actPo  = (float)($cv($pid, 'actual_cost_po')  ?? 0);
-                $actGrn = (float)($cv($pid, 'actual_cost_grn') ?? 0);
-                $variance = $est - $actPo;
+                $actualWorkDone = (float)($cv($pid, 'actual_cost_work_done') ?? 0);
+                $variance = $est - $actualWorkDone;
                 $vLabel   = $variance >= 0 ? 'Under Budget' : 'Over Budget';
                 $updated  = $cu($pid) ?? 'unknown';
                 $costBlock .= "- {$p['Name']}"
                     . " | Estimated Cost: " . number_format($est, 2)
-                    . " | Actual Cost (PO committed / total work ordered): " . number_format($actPo, 2)
-                    . " | Actual Cost (GRN received / work done to date): " . number_format($actGrn, 2)
+                    . " | Actual Cost of Work Done: " . number_format($actualWorkDone, 2)
                     . " | Budget Variance: " . number_format(abs($variance), 2) . " ({$vLabel})"
                     . " | As of: {$updated}\n";
                 $hasCost = true;

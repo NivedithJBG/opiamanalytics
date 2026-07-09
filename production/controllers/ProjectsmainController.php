@@ -547,6 +547,24 @@ class ProjectsmainController extends Controller
         $kpi_act = !empty($ongoing) ? $ongoing[0] : (!empty($activities) ? $activities[0] : null);
         $kpi = $this->_buildKpi($kpi_act, $pid, $connection);
 
+        // Write dashboard-computed totals to chatbot cache — exactly what the UI displays
+        $cache_estimated   = 0.0;
+        $cache_actual_work = 0.0;
+        $cache_completed   = 0;
+        $cache_total       = 0;
+        foreach ($activities as $a) {
+            $cache_estimated   += (float)($a['activity_cost']    ?? 0);
+            $cache_actual_work += (float)($a['actual_work_done'] ?? 0);
+            $cache_total++;
+            if (!empty($a['completed_status'])) $cache_completed++;
+        }
+        MetricsCacheHelper::writeMetrics($pid, [
+            'estimated_cost'       => $cache_estimated,
+            'actual_cost_work_done'=> $cache_actual_work,
+            'total_activities'     => $cache_total,
+            'completed_activities' => $cache_completed,
+        ]);
+
         return json_encode([
             'error'          => 'No',
             'project_name'   => $project ? $project['Name'] : '',

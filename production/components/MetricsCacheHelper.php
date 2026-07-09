@@ -167,6 +167,23 @@ class MetricsCacheHelper
     }
 
     /**
+     * Write a specific set of metrics directly to cache.
+     * Used by actionPerformancedashboard to store exactly what the UI computed.
+     */
+    public static function writeMetrics($projectId, array $metrics)
+    {
+        $db  = Yii::$app->db;
+        $pid = (int)$projectId;
+        foreach ($metrics as $name => $value) {
+            $db->createCommand("
+                INSERT INTO chatbot_metrics_cache (project_id, metric_name, metric_value, updated_at)
+                VALUES (:pid, :name, :val, NOW())
+                ON DUPLICATE KEY UPDATE metric_value = :val, updated_at = NOW()
+            ", [':pid' => $pid, ':name' => $name, ':val' => (float)$value])->execute();
+        }
+    }
+
+    /**
      * Refresh cache for ALL active projects. Used by hourly cron.
      */
     public static function refreshAll()
