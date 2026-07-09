@@ -115,12 +115,18 @@ class ChatbotController extends Controller
 
         // Load all cached metrics for all projects in one query
         $projectIds = array_column($projects, 'Project_Id');
-        $placeholders = implode(',', array_fill(0, count($projectIds), '?'));
+        $namedParams = [];
+        $placeholders = [];
+        foreach ($projectIds as $i => $pid) {
+            $key = ':pid' . $i;
+            $namedParams[$key] = $pid;
+            $placeholders[] = $key;
+        }
         $cacheRows = $db->createCommand(
             "SELECT project_id, metric_name, metric_value, updated_at
              FROM chatbot_metrics_cache
-             WHERE project_id IN ($placeholders)",
-            $projectIds
+             WHERE project_id IN (" . implode(',', $placeholders) . ")",
+            $namedParams
         )->queryAll();
 
         // Index cache by project_id => metric_name => {value, updated_at}
