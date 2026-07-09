@@ -132,17 +132,19 @@ class ChatbotController extends Controller
                     COALESCE(est.estimated_cost, 0) - COALESCE(act.actual_cost, 0) AS cost_variance
                 FROM projects p
                 LEFT JOIN (
-                    /* Estimated cost: activity_qty × SUM(resource quantity × rate) */
+                    /* Estimated cost: exactly matches dashboard line 244-251
+                       activity_qty × SUM(pern.quantity * pern.rate)
+                       with pern.pricing_status=0 AND pern.project_id=pen.project_Id */
                     SELECT pen.project_Id,
-                           SUM(pen.activity_qty * COALESCE(res.unit_cost, 0)) AS estimated_cost
+                           SUM(pen.activity_qty * COALESCE(pern_sum.unit_cost, 0)) AS estimated_cost
                     FROM pricing_estimate_new pen
                     LEFT JOIN (
                         SELECT activity_id, project_id, SUM(quantity * rate) AS unit_cost
                         FROM pricing_estimate_resources_new
                         WHERE pricing_status = 0
                         GROUP BY activity_id, project_id
-                    ) res ON res.activity_id = pen.activity_Id
-                         AND res.project_id  = pen.project_Id
+                    ) pern_sum ON pern_sum.activity_id = pen.activity_Id
+                              AND pern_sum.project_id  = pen.project_Id
                     WHERE pen.pricing_status = 0
                     GROUP BY pen.project_Id
                 ) est ON est.project_Id = p.Project_Id
