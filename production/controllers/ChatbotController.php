@@ -96,14 +96,13 @@ class ChatbotController extends Controller
         $msg = strtolower($message);
         $context = '';
 
-        // --- Route question to the right data source ---
-        $wantsCost     = $this->matches($msg, ['cost', 'budget', 'estimat', 'actual', 'spend', 'amount', 'price', 'rate', 'variance', 'overrun', 'financial', 'expenditure', 'money']);
-        $wantsProgress = $this->matches($msg, ['progress', 'physical', 'percent', '%', 'complete', 'done', 'kpi', 'performance', 'how much work', 'work done']);
-        $wantsSchedule = $this->matches($msg, ['delay', 'critical', 'overrun', 'behind', 'on time', 'late', 'cpm', 'float', 'schedule', 'gantt', 'when', 'duration', 'start', 'end', 'activit', 'task']);
+        $wantsCost     = $this->matches($msg, ['cost', 'budget', 'estimat', 'actual', 'spend', 'amount', 'price', 'rate', 'variance', 'overrun', 'financial', 'expenditure', 'money', 'work done']);
+        $wantsProgress = $this->matches($msg, ['progress', 'physical', 'percent', '%', 'complete', 'done', 'kpi', 'performance', 'how much work']);
+        $wantsSchedule = $this->matches($msg, ['delay', 'critical', 'behind', 'on time', 'late', 'schedule', 'gantt', 'when', 'duration', 'start', 'end', 'activit', 'task', 'float']);
         $wantsDocs     = $this->matches($msg, ['document', 'file', 'pdf', 'report', 'letter', 'contract', 'invoice', 'drawing', 'upload']);
         $wantsGeneral  = !$wantsCost && !$wantsProgress && !$wantsSchedule && !$wantsDocs;
 
-        // --- Always include project list as base ---
+        // --- Project list with cached metrics ---
         $projects = $db->createCommand("
             SELECT Project_Id, Name, client_name, location, start_date, end_date, project_value
             FROM projects
@@ -112,141 +111,120 @@ class ChatbotController extends Controller
             LIMIT 50
         ")->queryAll();
 
-        if ($projects) {
-            $context .= "=== PROJECTS ===\n";
-            foreach ($projects as $p) {
-                $context .= "- {$p['Name']} (ID:{$p['Project_Id']}) | Client: {$p['client_name']} | Location: {$p['location']} | Start: {$p['start_date']} | End: {$p['end_date']}\n";
-            }
-            $context .= "\n";
+        if (!$projects) return '';
+
+        // Load all cached metrics for all projects in one query
+        $projectIds = array_column($projects, 'Project_Id');
+        $placeholders = implode(',', array_fill(0, count($projectIds), '?'));
+        $cacheRows = $db->createCommand(
+            "SELECT project_id, metric_name, metric_value, updated_at
+             FROM chatbot_metrics_cache
+             WHERE project_id IN ($placeholders)",
+            $projectIds
+        )->queryAll();
+
+        // Index cache by project_id => metric_name => {value, updated_at}
+        $cache = [];
+        foreach ($cacheRows as $r) {
+            $cache[$r['project_id']][$r['metric_name']] = [
+                'value'      => $r['metric_value'],
+                'updated_at' => $r['updated_at'],
+            ];
         }
 
-        // -------------------------------------------------------------------
-        // COST DASHBOARD QUERIES
-        // Source: KPI dashboard loop (ProjectsmainController lines 1741-1758)
-        // Estimated = SUM(round(pern.rate,2) * round(pern.quantity * pen.activity_qty,2))
-        //             for all activities WHERE wa.estimate=1 AND pricing_status=0
-        //             NO process_Id filter — matches dashboard exactly
-        // Actual    = SUM(GRN_Quantity * po_rate) via GRN + purchase orders
-        // -------------------------------------------------------------------
+        // Helper: get cached value or null
+        $cv = function($pid, $metric) use ($cache) {
+            return isset($cache[$pid][$metric]) ? $cache[$pid][$metric]['value'] : null;
+        };
+        $cu = function($pid) use ($cache) {
+            // updated_at of any metric for this project
+            if (!empty($cache[$pid])) {
+                return reset($cache[$pid])['updated_at'];
+            }
+            return null;
+        };
+
+        // --- PROJECTS section ---
+        $context .= "=== PROJECTS ===\n";
+        foreach ($projects as $p) {
+            $context .= "- {$p['Name']} (ID:{$p['Project_Id']}) | Client: {$p['client_name']} | Location: {$p['location']} | Start: {$p['start_date']} | End: {$p['end_date']}\n";
+        }
+        $context .= "\n";
+
+        // --- COST (from cache) ---
         if ($wantsCost) {
-            $costs = $db->createCommand("
-                SELECT
-                    p.Name AS project_name,
-                    COALESCE(est.estimated_cost, 0) AS estimated_cost,
-                    COALESCE(act.actual_cost, 0)    AS actual_cost,
-                    COALESCE(est.estimated_cost, 0) - COALESCE(act.actual_cost, 0) AS cost_variance
-                FROM projects p
-                LEFT JOIN (
-                    /* Estimated cost: exact formula from KPI dashboard
-                       SUM(round(rate,2) * round(quantity * activity_qty, 2))
-                       Only estimate=1, pricing_status=0 activities */
-                    SELECT wa.project_Id,
-                           SUM(ROUND(pern.rate, 2) * ROUND(pern.quantity * pen.activity_qty, 2)) AS estimated_cost
-                    FROM workgroup_activities_new wa
-                    JOIN pricing_estimate_new pen
-                        ON pen.activity_Id = wa.id
-                       AND pen.project_Id  = wa.project_Id
-                       AND pen.pricing_status = 0
-                    JOIN pricing_estimate_resources_new pern
-                        ON pern.activity_id = wa.id
-                       AND pern.project_id  = wa.project_Id
-                       AND pern.pricing_status = 0
-                    WHERE wa.estimate = 1
-                      AND wa.pricing_status = 0
-                    GROUP BY wa.project_Id
-                ) est ON est.project_Id = p.Project_Id
-                LEFT JOIN (
-                    /* Actual cost: GRN_Quantity × PO rate (same as cost dashboard) */
-                    SELECT pern.project_id,
-                           SUM(g.GRN_Quantity * por.rate) AS actual_cost
-                    FROM pricing_estimate_resources_new pern
-                    JOIN purchase_order_resources por ON por.allocation_id = pern.pricing_resourceid
-                    JOIN goods_received_note g         ON g.GRN_Purchase_Order = por.order_id
-                                                      AND g.GRN_Item = pern.resource_Id
-                    JOIN purchase_orders po            ON po.order_id = por.order_id
-                    WHERE po.delete_status  = 0
-                      AND por.delete_status = 0
-                    GROUP BY pern.project_id
-                ) act ON act.project_id = p.Project_Id
-                WHERE p.Status = 0
-                ORDER BY p.Name
-            ")->queryAll();
-
-            if ($costs) {
-                $context .= "=== COST DASHBOARD ===\n";
-                foreach ($costs as $c) {
-                    $variance_label = $c['cost_variance'] >= 0 ? 'Under Budget' : 'Over Budget';
-                    $context .= "- {$c['project_name']}"
-                        . " | Estimated: " . number_format($c['estimated_cost'], 2)
-                        . " | Actual: "    . number_format($c['actual_cost'], 2)
-                        . " | Variance: "  . number_format(abs($c['cost_variance']), 2) . " ({$variance_label})\n";
-                }
-                $context .= "\n";
-            } else {
-                $context .= "=== COST DASHBOARD ===\n[NO COST DATA FOUND]\n\n";
+            $hasCost = false;
+            $costBlock = "=== COST DASHBOARD ===\n";
+            foreach ($projects as $p) {
+                $pid = $p['Project_Id'];
+                $est = $cv($pid, 'estimated_cost');
+                if ($est === null) continue;
+                $actPo  = (float)($cv($pid, 'actual_cost_po')  ?? 0);
+                $actGrn = (float)($cv($pid, 'actual_cost_grn') ?? 0);
+                $variance = $est - $actPo;
+                $vLabel   = $variance >= 0 ? 'Under Budget' : 'Over Budget';
+                $updated  = $cu($pid) ?? 'unknown';
+                $costBlock .= "- {$p['Name']}"
+                    . " | Estimated Cost: " . number_format($est, 2)
+                    . " | Committed (PO): " . number_format($actPo, 2)
+                    . " | Received (GRN): " . number_format($actGrn, 2)
+                    . " | Variance: " . number_format(abs($variance), 2) . " ({$vLabel})"
+                    . " | As of: {$updated}\n";
+                $hasCost = true;
             }
+            $context .= $hasCost ? $costBlock . "\n" : "=== COST DASHBOARD ===\n[NO COST DATA IN CACHE — SELECT A PROJECT TO REFRESH]\n\n";
         }
 
-        // -------------------------------------------------------------------
-        // KPI DASHBOARD — PHYSICAL PROGRESS
-        // Source: ProjectsmainController::actionPerformancedashboard() lines 207-241
-        // Formula: progress% = SUM(cumulated_qty / quantity) / count(activities) * 100
-        //          cumulated_qty from schedule_progress_report_log (SUM of currentqty)
-        // -------------------------------------------------------------------
+        // --- PROGRESS (from cache) ---
         if ($wantsProgress) {
-            $progress = $db->createCommand("
-                SELECT
-                    p.Name AS project_name,
-                    COUNT(sa.id)  AS total_activities,
-                    SUM(CASE WHEN sa.completed_status = 1 THEN 1 ELSE 0 END) AS completed_activities,
-                    ROUND(
-                        SUM(
-                            CASE
-                                WHEN sa.quantity > 0
-                                THEN LEAST(COALESCE(rpt.cumulated_qty, 0) / sa.quantity, 1.0)
-                                ELSE (CASE WHEN sa.completed_status = 1 THEN 1.0 ELSE 0.0 END)
-                            END
-                        ) / NULLIF(COUNT(sa.id), 0) * 100, 1
-                    ) AS physical_progress_pct
-                FROM projects p
-                JOIN scheduleactivities sa ON sa.projectId = p.Project_Id AND sa.status = 0
-                LEFT JOIN (
-                    SELECT activity_id, SUM(currentqty) AS cumulated_qty
-                    FROM schedule_progress_report_log
-                    GROUP BY activity_id
-                ) rpt ON rpt.activity_id = sa.id
-                WHERE p.Status = 0
-                GROUP BY p.Project_Id, p.Name
-                ORDER BY p.Name
-            ")->queryAll();
-
-            if ($progress) {
-                $context .= "=== KPI — PHYSICAL PROGRESS ===\n";
-                foreach ($progress as $r) {
-                    $context .= "- {$r['project_name']}"
-                        . " | Physical Progress: {$r['physical_progress_pct']}%"
-                        . " | Completed: {$r['completed_activities']} of {$r['total_activities']} activities\n";
-                }
-                $context .= "\n";
-            } else {
-                $context .= "=== KPI — PHYSICAL PROGRESS ===\n[NO PROGRESS DATA FOUND]\n\n";
+            $hasProgress = false;
+            $progBlock = "=== KPI — PHYSICAL PROGRESS ===\n";
+            foreach ($projects as $p) {
+                $pid  = $p['Project_Id'];
+                $pct  = $cv($pid, 'physical_progress_pct');
+                if ($pct === null) continue;
+                $total     = (int)($cv($pid, 'total_activities') ?? 0);
+                $completed = (int)($cv($pid, 'completed_activities') ?? 0);
+                $updated   = $cu($pid) ?? 'unknown';
+                $progBlock .= "- {$p['Name']}"
+                    . " | Physical Progress: {$pct}%"
+                    . " | Completed: {$completed} of {$total} activities"
+                    . " | As of: {$updated}\n";
+                $hasProgress = true;
             }
+            $context .= $hasProgress ? $progBlock . "\n" : "=== KPI — PHYSICAL PROGRESS ===\n[NO PROGRESS DATA IN CACHE]\n\n";
         }
 
-        // -------------------------------------------------------------------
-        // GANTT / SCHEDULE STATUS — CRITICAL PATH & DELAY
-        // Source: ProjectsmainController::actionPerformancedashboard() lines 421-463
-        // Formula: delay = projected_end (planned_end + overrun) - planned_end
-        //          overrun = (elapsed_days / cumulated_qty) * quantity - old_duration
-        //          Project delay uses critical_status = 'Yes' activities only
-        // -------------------------------------------------------------------
+        // --- SCHEDULE (cache for summary + live query for activity list) ---
         if ($wantsSchedule) {
-            // Activity list with critical status and progress
+            $hasDelay = false;
+            $schedBlock = "=== SCHEDULE STATUS (Critical Path) ===\n";
+            foreach ($projects as $p) {
+                $pid      = $p['Project_Id'];
+                $critical = $cv($pid, 'critical_count');
+                if ($critical === null) continue;
+                $delayed  = (int)($cv($pid, 'delayed_critical') ?? 0);
+                $maxDays  = (int)($cv($pid, 'max_delay_days')   ?? 0);
+                $endTs    = (int)($cv($pid, 'planned_end_date') ?? 0);
+                $endStr   = $endTs ? date('Y-m-d', $endTs) : 'N/A';
+                $updated  = $cu($pid) ?? 'unknown';
+                $status   = $delayed > 0
+                    ? "DELAYED — {$delayed} critical activities overdue by up to {$maxDays} days"
+                    : "On Schedule";
+                $schedBlock .= "- {$p['Name']}"
+                    . " | Critical Activities: {$critical}"
+                    . " | Planned End: {$endStr}"
+                    . " | Status: {$status}"
+                    . " | As of: {$updated}\n";
+                $hasDelay = true;
+            }
+            $context .= $hasDelay ? $schedBlock . "\n" : "=== SCHEDULE STATUS ===\n[NO SCHEDULE DATA IN CACHE]\n\n";
+
+            // Live activity list (small, fast query — only name/dates/progress)
             $activities = $db->createCommand("
                 SELECT
                     sa.name, sa.start_date, sa.end_date, sa.old_duration AS planned_duration,
-                    sa.completed_status, sa.critical_status, sa.quantity, sa.unit,
-                    COALESCE(rpt.cumulated_qty, 0) AS reported_qty,
+                    sa.completed_status, sa.critical_status,
                     CASE
                         WHEN sa.quantity > 0 AND COALESCE(rpt.cumulated_qty,0) > 0
                         THEN ROUND(COALESCE(rpt.cumulated_qty,0) / sa.quantity * 100, 1)
@@ -266,53 +244,10 @@ class ChatbotController extends Controller
                 LIMIT 300
             ")->queryAll();
 
-            // Project-level delay (critical path only)
-            $delays = $db->createCommand("
-                SELECT
-                    p.Name AS project_name,
-                    COUNT(sa.id) AS critical_count,
-                    MAX(sa.end_date) AS planned_end,
-                    SUM(CASE
-                        WHEN sa.completed_status = 0
-                         AND sa.end_date < CURDATE()
-                         AND COALESCE(rpt.cumulated_qty, 0) < sa.quantity
-                        THEN 1 ELSE 0
-                    END) AS delayed_count,
-                    MAX(CASE
-                        WHEN sa.completed_status = 0 AND sa.end_date < CURDATE()
-                        THEN DATEDIFF(CURDATE(), sa.end_date) ELSE 0
-                    END) AS max_delay_days
-                FROM projects p
-                JOIN scheduleactivities sa ON sa.projectId = p.Project_Id
-                    AND sa.status = 0 AND sa.critical_status = 'Yes'
-                LEFT JOIN (
-                    SELECT activity_id, SUM(currentqty) AS cumulated_qty
-                    FROM schedule_progress_report_log
-                    GROUP BY activity_id
-                ) rpt ON rpt.activity_id = sa.id
-                WHERE p.Status = 0
-                GROUP BY p.Project_Id, p.Name
-                ORDER BY p.Name
-            ")->queryAll();
-
-            if ($delays) {
-                $context .= "=== SCHEDULE STATUS (Critical Path) ===\n";
-                foreach ($delays as $r) {
-                    $status = $r['delayed_count'] > 0
-                        ? "DELAYED — {$r['delayed_count']} critical activities overdue by up to {$r['max_delay_days']} days"
-                        : "On Schedule";
-                    $context .= "- {$r['project_name']}"
-                        . " | Critical Activities: {$r['critical_count']}"
-                        . " | Planned End: {$r['planned_end']}"
-                        . " | Status: {$status}\n";
-                }
-                $context .= "\n";
-            }
-
             if ($activities) {
                 $context .= "=== ACTIVITIES (Gantt) ===\n";
                 foreach ($activities as $a) {
-                    $critical = (strtolower($a['critical_status']) === 'yes') ? ' [CRITICAL]' : '';
+                    $critical = strtolower($a['critical_status']) === 'yes' ? ' [CRITICAL]' : '';
                     $status   = $a['completed_status'] == 1 ? 'Completed' : 'Ongoing';
                     $context .= "- [{$a['project_name']}] {$a['name']}{$critical}"
                         . " | {$a['start_date']} to {$a['end_date']}"
@@ -321,14 +256,10 @@ class ChatbotController extends Controller
                         . " | {$status}\n";
                 }
                 $context .= "\n";
-            } else {
-                $context .= "=== ACTIVITIES (Gantt) ===\n[NO RECORDS FOUND]\n\n";
             }
         }
 
-        // -------------------------------------------------------------------
-        // DOCUMENTS
-        // -------------------------------------------------------------------
+        // --- DOCUMENTS ---
         if ($wantsDocs) {
             $docs = $db->createCommand("
                 SELECT pf.original_name, pf.uploaded_at, p.Name AS project_name
@@ -350,11 +281,8 @@ class ChatbotController extends Controller
             }
         }
 
-        // -------------------------------------------------------------------
-        // GENERAL DB DATA (procurement, vendors, resources, etc.)
-        // -------------------------------------------------------------------
+        // --- GENERAL (procurement, vendors, resources) ---
         if ($wantsGeneral) {
-            // Purchase orders summary
             if ($this->matches($msg, ['purchase', 'order', 'po', 'vendor', 'supplier', 'procurement'])) {
                 $pos = $db->createCommand("
                     SELECT po.order_id, po.order_date, po.total_amount,
@@ -376,7 +304,6 @@ class ChatbotController extends Controller
                 }
             }
 
-            // Resources
             if ($this->matches($msg, ['resource', 'equipment', 'labour', 'labor', 'manpower', 'worker', 'machine'])) {
                 $resources = $db->createCommand("
                     SELECT r.Name, rt.Name AS type, r.Unit

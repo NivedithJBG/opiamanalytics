@@ -5,6 +5,7 @@ namespace app\controllers;
 use Yii;
 use yii\filters\AccessControl;
 use yii\web\Controller;
+use app\components\MetricsCacheHelper;
 use yii\web\Response;
 use yii\filters\VerbFilter;
 use app\models\Projects;
@@ -2074,7 +2075,7 @@ class ProjectsmainController extends Controller
 
     public function actionUserproject()
     {
-        $uid = Yii::$app->user->Id; 
+        $uid = Yii::$app->user->Id;
         $projectid = $_POST['prjctid'];
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if($projuser){
@@ -2087,6 +2088,8 @@ class ProjectsmainController extends Controller
             $model->projectid = $projectid;
             $model->save(false);
         }
+
+        MetricsCacheHelper::refresh($projectid);
 
         $prjct = Projects::findOne($projectid);
 
@@ -2101,7 +2104,7 @@ class ProjectsmainController extends Controller
     }
      public function actionUserprojectmain()
     {
-        $uid = Yii::$app->user->Id; 
+        $uid = Yii::$app->user->Id;
         $projectid = $_POST['prjctid'];
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if($projuser){
@@ -2114,6 +2117,8 @@ class ProjectsmainController extends Controller
             $model->projectid = $projectid;
             $model->save(false);
         }
+
+        MetricsCacheHelper::refresh($projectid);
 
         $prjct = Projects::findOne($projectid);
 
@@ -2128,7 +2133,7 @@ class ProjectsmainController extends Controller
     }
     public function actionUserprojectprocu()
     {
-        $uid = Yii::$app->user->Id; 
+        $uid = Yii::$app->user->Id;
         $projectid = $_POST['prjctid'];
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if($projuser){
@@ -2141,6 +2146,8 @@ class ProjectsmainController extends Controller
             $model->projectid = $projectid;
             $model->save(false);
         }
+
+        MetricsCacheHelper::refresh($projectid);
 
         $prjct = Projects::findOne($projectid);
 
