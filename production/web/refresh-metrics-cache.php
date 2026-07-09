@@ -95,12 +95,143 @@ foreach ($projects as $pid) {
     $metrics['delayed_critical'] = (int)($row[2] ?? 0);
     $metrics['max_delay_days']   = (int)($row[3] ?? 0);
 
+    // -------------------------------------------------------------------
+    // COST OF WORK DONE — replicates actionCostdashboardbatch logic
+    // -------------------------------------------------------------------
+
+    // Schedule activities
+    $r = $pdo->prepare("SELECT id, activity_id, quantity FROM scheduleactivities WHERE projectId=? AND status=0");
+    $r->execute([$pid]);
+    $schedActs = $r->fetchAll(PDO::FETCH_ASSOC);
+
+    if ($schedActs) {
+        $actIds = array_column($schedActs, 'id');
+        $wbIds  = array_unique(array_column($schedActs, 'activity_id'));
+        $inActs = implode(',', array_map('intval', $actIds));
+        $inWbs  = implode(',', array_map('intval', $wbIds));
+
+        // Last reported qty per schedule activity
+        $r = $pdo->query("SELECT activity_id, MAX(cumulated_qty) AS lq FROM schedule_progress_report WHERE activity_id IN ($inActs) GROUP BY activity_id");
+        $lastQtyMap = [];
+        foreach ($r->fetchAll(PDO::FETCH_ASSOC) as $row) { $lastQtyMap[(int)$row['activity_id']] = (float)$row['lq']; }
+
+        // Estimate activity qty per WBS id
+        $r = $pdo->prepare("SELECT activity_Id, activity_qty FROM pricing_estimate_new WHERE activity_Id IN ($inWbs) AND project_Id=? AND pricing_status=0");
+        $r->execute([$pid]);
+        $estQtyMap = [];
+        foreach ($r->fetchAll(PDO::FETCH_ASSOC) as $row) { $estQtyMap[(int)$row['activity_Id']] = (float)$row['activity_qty']; }
+
+        // Resources per WBS id with GRN actual unit cost and store_indent stock
+        $r = $pdo->prepare("
+            SELECT pern.activity_id, pern.pricing_resourceid, pern.resourcetype_Id AS type_id,
+                   pern.rate, pern.quantity AS res_qty, pern.task_ids, pern.resource_Id,
+                   grn.actual_unit_cost, grn.grn_qty, si.stock_at_site
+            FROM pricing_estimate_resources_new pern
+            LEFT JOIN (
+                SELECT por.allocation_id,
+                       SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))*por.rate)/NULLIF(SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))),0) AS actual_unit_cost,
+                       SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))) AS grn_qty
+                FROM purchase_order_resources por
+                JOIN goods_received_note g ON g.GRN_Purchase_Order=por.order_id AND g.GRN_Item=por.resource_id
+                JOIN purchase_orders po ON po.order_id=por.order_id
+                WHERE po.project_id=? AND po.delete_status=0 AND por.delete_status=0
+                GROUP BY por.allocation_id
+            ) grn ON grn.allocation_id=pern.pricing_resourceid
+            LEFT JOIN (
+                SELECT si2.resource_id, si2.activity_id AS si_act, si2.stock_at_site
+                FROM store_indents si2
+                INNER JOIN (SELECT resource_id, activity_id, MAX(id) AS mx FROM store_indents WHERE project_id=? GROUP BY resource_id, activity_id) lsi
+                ON lsi.resource_id=si2.resource_id AND lsi.activity_id=si2.activity_id AND si2.id=lsi.mx
+            ) si ON si.resource_id=pern.resource_Id AND si.si_act=pern.activity_id
+            WHERE pern.activity_id IN ($inWbs) AND pern.project_id=? AND pern.pricing_status=0
+        ");
+        $r->execute([$pid, $pid, $pid]);
+        $resByWbs = [];
+        foreach ($r->fetchAll(PDO::FETCH_ASSOC) as $row) { $resByWbs[(int)$row['activity_id']][] = $row; }
+
+        // MB data: task amounts and work done by task_id
+        $taskAmountById = [];
+        $taskWorkDoneById = [];
+        $r = $pdo->prepare("SELECT entries FROM wo_measurement_book WHERE project_id=? AND sent_status=1 AND delete_status=0");
+        $r->execute([$pid]);
+        foreach ($r->fetchAll(PDO::FETCH_COLUMN) as $entriesJson) {
+            foreach (json_decode($entriesJson ?? '[]', true) ?: [] as $entry) {
+                foreach ($entry['tasks'] ?? [] as $task) {
+                    $wd  = (float)($task['work_done'] ?? 0);
+                    $rt  = (float)($task['rate']      ?? 0);
+                    $tid = (int)($task['task_id']     ?? 0);
+                    if ($tid) {
+                        $taskAmountById[$tid]   = ($taskAmountById[$tid]   ?? 0.0) + $rt * $wd;
+                        $taskWorkDoneById[$tid] = ($taskWorkDoneById[$tid] ?? 0.0) + $wd;
+                    }
+                }
+            }
+        }
+
+        // Compute estwd and actwd per schedule activity — same formula as actionCostdashboardbatch
+        $totalEstWd = 0.0;
+        $totalActWd = 0.0;
+        foreach ($schedActs as $sa) {
+            $schedId  = (int)$sa['id'];
+            $wbId     = (int)$sa['activity_id'];
+            $schedQty = (float)$sa['quantity'];
+            $estQty   = $estQtyMap[$wbId] ?? 0;
+            $lastQty  = $lastQtyMap[$schedId] ?? 0;
+            $resources = $resByWbs[$wbId] ?? [];
+            $ratio    = ($schedQty > 0) ? $estQty / $schedQty : 0.0;
+
+            $unitCost    = 0.0;
+            $actualTotal = 0.0;
+            foreach ($resources as $res) {
+                $typeId  = (int)$res['type_id'];
+                $resQty  = (float)$res['res_qty'];
+                $unitCost += $resQty * (float)$res['rate'];
+                $plannedConsumption = $resQty * $ratio;
+
+                if ($typeId === 4) {
+                    $taskIds = array_filter(array_map('intval', explode(',', $res['task_ids'] ?? '')));
+                    $wdVal = 0.0; $wdQty = 0.0;
+                    foreach ($taskIds as $tid) {
+                        $wdVal += $taskAmountById[$tid]   ?? 0.0;
+                        $wdQty += $taskWorkDoneById[$tid] ?? 0.0;
+                    }
+                    $actUnit = $wdQty > 0 ? $wdVal / $wdQty : null;
+                    $scWd = 0.0;
+                    foreach ($taskIds as $tid) { $scWd += $taskWorkDoneById[$tid] ?? 0.0; }
+                    $actualConsumption = ($lastQty > 0 && $scWd > 0) ? $scWd / $lastQty : $plannedConsumption;
+                } elseif (in_array($typeId, [2, 6, 7, 8])) {
+                    $actUnit = ($res['actual_unit_cost'] !== null) ? (float)$res['actual_unit_cost'] : null;
+                    $indentRaised = ($res['stock_at_site'] !== null);
+                    if ($indentRaised && $lastQty > 0) {
+                        $actualConsumption = max(0, (float)($res['grn_qty'] ?? 0) - (float)($res['stock_at_site'] ?? 0)) / $lastQty;
+                    } else {
+                        $actualConsumption = $plannedConsumption;
+                    }
+                } else {
+                    $actUnit = null;
+                    $actualConsumption = $plannedConsumption;
+                }
+
+                if ($actUnit !== null) { $actualTotal += $actUnit * $actualConsumption; }
+            }
+
+            $estUCTotal = $unitCost * $ratio;
+            $estwd = $estUCTotal * $lastQty;
+            $actwd = $actualTotal > 0 ? $actualTotal * $lastQty : $estwd;
+            $totalEstWd += $estwd;
+            $totalActWd += $actwd;
+        }
+
+        $metrics['estimated_cost_work_done'] = round($totalEstWd, 2);
+        $metrics['actual_cost_work_done']    = round($totalActWd, 2);
+    }
+
     foreach ($metrics as $name => $val) {
         $upsert->execute([':pid' => $pid, ':name' => $name, ':val' => $val]);
     }
 
-    echo "  Project {$pid}: estimated=" . number_format($metrics['estimated_cost'], 0)
-        . " po=" . number_format($metrics['actual_cost_po'], 0)
+    echo "  Project {$pid}: estimated_cost_work_done=" . number_format($metrics['estimated_cost_work_done'] ?? 0, 0)
+        . " actual_cost_work_done=" . number_format($metrics['actual_cost_work_done'] ?? 0, 0)
         . " progress=" . $metrics['physical_progress_pct'] . "%\n";
 }
 
