@@ -21,16 +21,6 @@ class ChatbotController extends Controller
         return is_array($secrets) ? ($secrets['anthropicApiKey'] ?? '') : '';
     }
 
-    public function actionContextsize()
-    {
-        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $context = $this->buildContext();
-        $chars = strlen($context);
-        $tokens = (int)($chars / 4);
-        $lines = substr_count($context, "\n");
-        return ['chars' => $chars, 'approx_tokens' => $tokens, 'lines' => $lines, 'sections' => array_count_values(array_map(function($l){ return preg_match('/^=== (.+) ===$/', $l, $m) ? $m[1] : ''; }, explode("\n", $context)))];
-    }
-
     public function actionChat()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -52,21 +42,21 @@ class ChatbotController extends Controller
             "- The conversation history shows prior questions and answers. Use it to understand follow-up questions.\n" .
             "- If the user refers to a project or activity without naming it fully, look back at the conversation history to identify which one they mean.\n" .
             "- If the user's latest question is a follow-up, apply the same project/activity from history.\n\n" .
-            "FIELD DEFINITIONS — use these to map user questions to the correct CONTEXT field:\n" .
-            "- 'target qty' / 'target quantity' / 'planned quantity' / 'how many piles planned' → use 'Target Qty' from SCHEDULE ACTIVITIES\n" .
-            "- 'target production' / 'production target' / 'daily target' / 'planned production rate' → use 'Target Production' from ACTIVITY TASKS (this is productivity × resource_units per day)\n" .
-            "- 'actual production' / 'actual productivity' / 'production achieved' → use 'Actual Production' or 'Qty Done' fields\n" .
-            "- 'productivity' alone without 'target' or 'actual' → use 'Productivity' field from ACTIVITY TASKS\n" .
-            "- 'qty done' / 'work done' / 'completed qty' / 'how many done' / 'progress' → use 'Qty Done' from SCHEDULE ACTIVITIES\n" .
-            "- 'progress %' / 'percent complete' → use 'Progress' from SCHEDULE ACTIVITIES or PHYSICAL PROGRESS\n" .
-            "- 'planned duration' / 'budgeted duration' → use 'Planned Duration' or 'Budgeted Duration'\n" .
-            "- 'cost of work done' / 'value of work done' → use COST OF WORK DONE section\n" .
-            "- 'materials received' / 'qty received' / 'purchased' / 'GRN' → use MATERIALS RECEIVED section\n" .
-            "- 'purchase order' / 'PO' / 'ordered qty' → use PURCHASE ORDER LINE ITEMS section\n" .
-            "- 'work order' / 'WO' → use WORK ORDERS section\n" .
-            "- 'measurement book' / 'MB' / 'subcontractor work done' → use MEASUREMENT BOOKS section\n" .
-            "- 'resource allocation' / 'estimate resource' → use RESOURCE ALLOCATIONS section\n" .
-            "- 'stock at site' / 'store indent' / 'material at site' → use STORE INDENTS section\n\n" .
+            "FIELD DEFINITIONS — map user questions to the EXACT field label in CONTEXT:\n" .
+            "- 'target qty' / 'target quantity' / 'planned quantity' / 'how many planned' → field label 'Target Qty' in SCHEDULE ACTIVITIES\n" .
+            "- 'target production' / 'production target' / 'daily target' / 'planned production rate' → field label 'KPI_TARGET_PRODUCTION' in ACTIVITY TASKS\n" .
+            "- 'productivity per unit' / 'unit productivity' → field label 'KPI_PRODUCTIVITY_PER_UNIT' in ACTIVITY TASKS\n" .
+            "- 'resource units' / 'number of resources' → field label 'KPI_RESOURCE_UNITS' in ACTIVITY TASKS\n" .
+            "- 'qty done' / 'work done' / 'completed qty' / 'how many done' / 'nos done' → field label 'Qty Done' in SCHEDULE ACTIVITIES\n" .
+            "- 'progress %' / 'percent complete' / 'how much complete' → field label 'Progress' in SCHEDULE ACTIVITIES or PHYSICAL PROGRESS section\n" .
+            "- 'planned duration' / 'budgeted duration' → field label 'Planned Duration' or 'Task Budgeted Duration'\n" .
+            "- 'cost of work done' / 'value of work done' / 'ACWD' / 'ECWD' → COST OF WORK DONE section\n" .
+            "- 'materials received' / 'qty received' / 'purchased' / 'GRN' → MATERIALS RECEIVED section\n" .
+            "- 'purchase order' / 'PO' / 'ordered qty' → PURCHASE ORDER LINE ITEMS section\n" .
+            "- 'work order' / 'WO' → WORK ORDERS section\n" .
+            "- 'measurement book' / 'MB' / 'subcontractor work done' → MEASUREMENT BOOKS section\n" .
+            "- 'resource allocation' / 'estimate resource' → RESOURCE ALLOCATIONS section\n" .
+            "- 'stock at site' / 'store indent' / 'material at site' → STORE INDENTS section\n\n" .
             "STRICT RULES — violating any rule is forbidden:\n" .
             "1. If the specific answer is not explicitly present in CONTEXT (after checking conversation history for context), reply ONLY with: \"" . self::NO_DATA_REPLY . "\" — nothing else.\n" .
             "2. Never use outside knowledge. Never calculate, estimate, or infer values not in CONTEXT.\n" .
@@ -490,12 +480,12 @@ class ChatbotController extends Controller
                 $targetProd = round((float)$t['task_productivity'] * max(1, (float)$t['task_resource_units']), 3);
                 $context .= "- [{$t['project_name']}] Activity: {$t['activity_name']}"
                     . " | Task: {$t['task_name']}"
-                    . " | Unit: {$t['task_unit']}"
-                    . " | Planned Qty: {$t['task_qty']}"
-                    . " | Target Production: {$targetProd} {$t['task_unit']}/day"
-                    . " | Productivity: {$t['task_productivity']} {$t['task_unit']}/day per unit"
-                    . " | Resource Units: {$t['task_resource_units']}"
-                    . " | Budgeted Duration: {$t['Budgeted_Duration']} days\n";
+                    . " | Task Unit: {$t['task_unit']}"
+                    . " | Task Planned Qty: {$t['task_qty']}"
+                    . " | KPI_TARGET_PRODUCTION: {$targetProd} {$t['task_unit']}/day (=productivity x resource_units)"
+                    . " | KPI_PRODUCTIVITY_PER_UNIT: {$t['task_productivity']} {$t['task_unit']}/day"
+                    . " | KPI_RESOURCE_UNITS: {$t['task_resource_units']}"
+                    . " | Task Budgeted Duration: {$t['Budgeted_Duration']} days\n";
             }
             $context .= "\n";
         }
