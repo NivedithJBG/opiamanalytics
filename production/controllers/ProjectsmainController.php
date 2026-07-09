@@ -602,6 +602,19 @@ class ProjectsmainController extends Controller
         return json_encode(['error'=>'No', 'kpi' => $this->_buildKpi($act, $pid, $connection)]);
     }
 
+    public function actionDebugkpi()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $actid = (int)Yii::$app->request->get('actid', 53);
+        $pid   = (int)Yii::$app->request->get('pid', 59);
+        $connection = \Yii::$app->db;
+        $act = $connection->createCommand(
+            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status
+             FROM scheduleactivities WHERE id=$actid AND projectId=$pid"
+        )->queryOne();
+        return ['act' => $act, 'kpi' => $this->_buildKpi($act, $pid, $connection)];
+    }
+
     private function _buildKpi($act, $pid, $connection)
     {
         if (!$act) return null;
