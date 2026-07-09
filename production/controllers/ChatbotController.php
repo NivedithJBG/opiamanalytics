@@ -40,8 +40,23 @@ class ChatbotController extends Controller
             "You ONLY answer questions using the exact data in the CONTEXT block below.\n\n" .
             "CONTEXT TRACKING — very important:\n" .
             "- The conversation history shows prior questions and answers. Use it to understand follow-up questions.\n" .
-            "- If the user says 'in Sample Project' or 'for that project' or refers to a project/activity without naming it fully, look back at the conversation history to identify which project or activity they mean, then find that data in CONTEXT.\n" .
-            "- If the user's latest question is a follow-up (e.g. 'what about fabrication of reinforcement' after asking about piles in Sample Project), apply the same project from history.\n\n" .
+            "- If the user refers to a project or activity without naming it fully, look back at the conversation history to identify which one they mean.\n" .
+            "- If the user's latest question is a follow-up, apply the same project/activity from history.\n\n" .
+            "FIELD DEFINITIONS — use these to map user questions to the correct CONTEXT field:\n" .
+            "- 'target qty' / 'target quantity' / 'planned quantity' / 'how many piles planned' → use 'Target Qty' from SCHEDULE ACTIVITIES\n" .
+            "- 'target production' / 'production target' / 'daily target' / 'planned production rate' → use 'Target Production' from ACTIVITY TASKS (this is productivity × resource_units per day)\n" .
+            "- 'actual production' / 'actual productivity' / 'production achieved' → use 'Actual Production' or 'Qty Done' fields\n" .
+            "- 'productivity' alone without 'target' or 'actual' → use 'Productivity' field from ACTIVITY TASKS\n" .
+            "- 'qty done' / 'work done' / 'completed qty' / 'how many done' / 'progress' → use 'Qty Done' from SCHEDULE ACTIVITIES\n" .
+            "- 'progress %' / 'percent complete' → use 'Progress' from SCHEDULE ACTIVITIES or PHYSICAL PROGRESS\n" .
+            "- 'planned duration' / 'budgeted duration' → use 'Planned Duration' or 'Budgeted Duration'\n" .
+            "- 'cost of work done' / 'value of work done' → use COST OF WORK DONE section\n" .
+            "- 'materials received' / 'qty received' / 'purchased' / 'GRN' → use MATERIALS RECEIVED section\n" .
+            "- 'purchase order' / 'PO' / 'ordered qty' → use PURCHASE ORDER LINE ITEMS section\n" .
+            "- 'work order' / 'WO' → use WORK ORDERS section\n" .
+            "- 'measurement book' / 'MB' / 'subcontractor work done' → use MEASUREMENT BOOKS section\n" .
+            "- 'resource allocation' / 'estimate resource' → use RESOURCE ALLOCATIONS section\n" .
+            "- 'stock at site' / 'store indent' / 'material at site' → use STORE INDENTS section\n\n" .
             "STRICT RULES — violating any rule is forbidden:\n" .
             "1. If the specific answer is not explicitly present in CONTEXT (after checking conversation history for context), reply ONLY with: \"" . self::NO_DATA_REPLY . "\" — nothing else.\n" .
             "2. Never use outside knowledge. Never calculate, estimate, or infer values not in CONTEXT.\n" .
