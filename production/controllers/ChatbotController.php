@@ -239,10 +239,13 @@ class ChatbotController extends Controller
                 $critical = strtolower($a['critical_status']) === 'yes' ? ' [CRITICAL]' : '';
                 $status   = $a['completed_status'] == 1 ? 'Completed' : 'Ongoing';
                 $overdue  = $a['days_overdue'] > 0 ? " [DELAYED {$a['days_overdue']} days]" : '';
+                $targetProd = ($a['planned_duration'] > 0 && $a['quantity'] > 0)
+                    ? round((float)$a['quantity'] / (float)$a['planned_duration'], 3) : 0;
                 $context .= "- [{$a['project_name']}] {$a['name']}{$critical}{$overdue}"
                     . " | Start: {$a['start_date']} | End: {$a['end_date']}"
                     . " | Planned Duration: {$a['planned_duration']}d"
                     . " | Target Qty: {$a['quantity']} {$a['unit']}"
+                    . " | Target Production: {$targetProd} {$a['unit']}/day"
                     . " | Qty Done: {$a['cumulated_qty']} {$a['unit']}"
                     . " | Progress: {$a['progress_pct']}%"
                     . " | Status: {$status}\n";
