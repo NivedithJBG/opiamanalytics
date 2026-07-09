@@ -308,27 +308,26 @@ class ChatbotController extends Controller
         // ================================================================
         $pos = $db->createCommand("
             SELECT
-                po.order_id, po.order_date, po.total_amount,
+                po.order_id, po.orderdate, po.ordernumber, po.total_amount,
                 v.Name AS vendor_name,
                 p.Name AS project_name,
-                r.Name AS item_name, r.Unit AS item_unit,
-                por.quantity AS ordered_qty, por.rate, por.amount
+                por.resource_name AS item_name, por.unit AS item_unit,
+                por.qnty AS ordered_qty, por.rate, por.amount
             FROM purchase_orders po
-            JOIN purchase_order_resources por ON por.order_id = po.order_id AND por.delete_status = 0
-            LEFT JOIN resources r  ON r.Resource_Id  = por.resource_id
-            LEFT JOIN vendors v    ON v.Vendor_Id    = po.vendor_id
-            JOIN projects p        ON p.Project_Id   = po.project_id AND p.Status = 0
+            JOIN purchase_order_resources por ON por.order_id = po.order_id
+            LEFT JOIN vendors v  ON v.Vendor_Id  = po.vendor_id
+            JOIN projects p      ON p.Project_Id = po.project_id AND p.Status = 0
             WHERE po.delete_status = 0
               AND po.project_id IN ($pidList)
-            ORDER BY po.order_date DESC, po.order_id DESC
+            ORDER BY po.orderdate DESC, po.order_id DESC
             LIMIT 500
         ")->queryAll();
 
         if ($pos) {
             $context .= "=== PURCHASE ORDER LINE ITEMS ===\n";
             foreach ($pos as $po) {
-                $context .= "- [{$po['project_name']}] PO#{$po['order_id']}"
-                    . " | Date: {$po['order_date']}"
+                $context .= "- [{$po['project_name']}] PO#{$po['order_id']} ({$po['ordernumber']})"
+                    . " | Date: {$po['orderdate']}"
                     . " | Vendor: {$po['vendor_name']}"
                     . " | Item: {$po['item_name']} ({$po['item_unit']})"
                     . " | Ordered Qty: " . number_format((float)$po['ordered_qty'], 3)
