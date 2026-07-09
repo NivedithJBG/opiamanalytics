@@ -473,7 +473,7 @@ class ChatbotController extends Controller
         // ================================================================
         $allocs = $db->createCommand("
             SELECT
-                wa.name AS activity_name,
+                wa.activity_Name AS activity_name,
                 r.Name  AS resource_name,
                 rt.Name AS resource_type,
                 r.Unit,
@@ -484,7 +484,7 @@ class ChatbotController extends Controller
             JOIN workgroup_activities_new wa ON wa.id = pern.activity_id
             JOIN projects p                  ON p.Project_Id = pern.project_id AND p.Status = 0
             LEFT JOIN resources r            ON r.Resource_Id = pern.resource_Id
-            LEFT JOIN resourcetype rt        ON rt.Resourcetype_Id = pern.resourcetype_Id
+            LEFT JOIN resourcetype rt        ON rt.ResourceType_Id = pern.resourcetype_Id
             WHERE pern.project_id IN ($pidList)
               AND pern.pricing_status = 0
             ORDER BY p.Name, wa.name, rt.Name, r.Name
