@@ -29,22 +29,23 @@ class ChatbotController extends Controller
         $history = Yii::$app->request->post('history', []);
         if (!$message) return ['error' => 'No message'];
 
-        $context = $this->buildContext($message);
+        $context = $this->buildContext();
 
         if ($context === '') {
             return ['reply' => self::NO_DATA_REPLY];
         }
 
         $systemPrompt =
-            "You are a read-only data assistant for Opiam Analytics ERP.\n" .
+            "You are a read-only data assistant for Opiam Analytics ERP — a construction project management system.\n" .
             "You ONLY answer questions using the exact data in the CONTEXT block below.\n\n" .
             "STRICT RULES — violating any rule is forbidden:\n" .
             "1. If the specific answer is not explicitly present in CONTEXT, reply ONLY with: \"" . self::NO_DATA_REPLY . "\" — nothing else.\n" .
             "2. Never use outside knowledge. Never calculate, estimate, or infer values not in CONTEXT.\n" .
-            "3. Never mention percentages, amounts, dates, or names that are not in CONTEXT.\n" .
+            "3. Never mention percentages, amounts, dates, names, or quantities that are not in CONTEXT.\n" .
             "4. Answer only what was asked — no extra info, no suggestions, no closing remarks, no emojis.\n" .
             "5. One or two sentences maximum unless a list is truly needed.\n" .
-            "6. Money values: show with 2 decimal places and currency symbol (₹ or as provided).\n\n" .
+            "6. Money values: always show ₹ symbol with 2 decimal places.\n" .
+            "7. Quantity values: show with the unit (Ton, m3, Bag, etc.) as given in CONTEXT.\n\n" .
             "CONTEXT:\n" . $context;
 
         $messages = [];
@@ -90,20 +91,14 @@ class ChatbotController extends Controller
         return ['reply' => $data['content'][0]['text']];
     }
 
-    private function buildContext($message)
+    private function buildContext()
     {
-        $db  = Yii::$app->db;
-        $msg = strtolower($message);
+        $db      = Yii::$app->db;
         $context = '';
 
-        $wantsProcure  = $this->matches($msg, ['purchas', 'procure', 'grn', 'received', 'material', 'quantity', 'qty', 'bought', 'buy', 'order', 'po', 'vendor', 'supplier', 'invoice', 'reinforcement', 'cement', 'steel', 'fe ', 'tmt', 'how much', 'ton', 'kg', 'litre', 'bag', 'nos']);
-        $wantsCost     = $this->matches($msg, ['cost', 'budget', 'estimat', 'actual', 'spend', 'amount', 'price', 'rate', 'variance', 'overrun', 'financial', 'expenditure', 'money', 'work done', 'total cost', 'spent', 'paid']);
-        $wantsProgress = $this->matches($msg, ['progress', 'physical', 'percent', '%', 'complete', 'done', 'kpi', 'performance', 'how much work']);
-        $wantsSchedule = $this->matches($msg, ['delay', 'critical', 'behind', 'on time', 'late', 'schedule', 'gantt', 'when', 'duration', 'start', 'end', 'activit', 'task', 'float']);
-        $wantsDocs     = $this->matches($msg, ['document', 'file', 'pdf', 'report', 'letter', 'contract', 'invoice', 'drawing', 'upload']);
-        $wantsGeneral  = !$wantsCost && !$wantsProgress && !$wantsSchedule && !$wantsDocs && !$wantsProcure;
-
-        // --- Project list with cached metrics ---
+        // ================================================================
+        // 1. PROJECTS
+        // ================================================================
         $projects = $db->createCommand("
             SELECT Project_Id, Name, client_name, location, start_date, end_date, project_value
             FROM projects
@@ -114,9 +109,23 @@ class ChatbotController extends Controller
 
         if (!$projects) return '';
 
-        // Load all cached metrics for all projects in one query
         $projectIds = array_column($projects, 'Project_Id');
-        $namedParams = [];
+        $pidList    = implode(',', array_map('intval', $projectIds));
+
+        $context .= "=== PROJECTS ===\n";
+        foreach ($projects as $p) {
+            $context .= "- {$p['Name']} (ID:{$p['Project_Id']})"
+                . " | Client: {$p['client_name']}"
+                . " | Location: {$p['location']}"
+                . " | Start: {$p['start_date']} | End: {$p['end_date']}"
+                . " | Contract Value: ₹" . number_format((float)$p['project_value'], 2) . "\n";
+        }
+        $context .= "\n";
+
+        // ================================================================
+        // 2. COST OF WORK DONE (from cache — set by cost dashboard)
+        // ================================================================
+        $namedParams  = [];
         $placeholders = [];
         foreach ($projectIds as $i => $pid) {
             $key = ':pid' . $i;
@@ -130,7 +139,6 @@ class ChatbotController extends Controller
             $namedParams
         )->queryAll();
 
-        // Index cache by project_id => metric_name => {value, updated_at}
         $cache = [];
         foreach ($cacheRows as $r) {
             $cache[$r['project_id']][$r['metric_name']] = [
@@ -138,252 +146,221 @@ class ChatbotController extends Controller
                 'updated_at' => $r['updated_at'],
             ];
         }
-
-        // Helper: get cached value or null
         $cv = function($pid, $metric) use ($cache) {
-            return isset($cache[$pid][$metric]) ? $cache[$pid][$metric]['value'] : null;
+            return $cache[$pid][$metric]['value'] ?? null;
         };
         $cu = function($pid) use ($cache) {
-            // updated_at of any metric for this project
-            if (!empty($cache[$pid])) {
-                return reset($cache[$pid])['updated_at'];
-            }
-            return null;
+            return !empty($cache[$pid]) ? reset($cache[$pid])['updated_at'] : null;
         };
 
-        // --- PROJECTS section ---
-        $context .= "=== PROJECTS ===\n";
+        $context .= "=== COST OF WORK DONE ===\n";
+        $hasCost = false;
         foreach ($projects as $p) {
-            $context .= "- {$p['Name']} (ID:{$p['Project_Id']}) | Client: {$p['client_name']} | Location: {$p['location']} | Start: {$p['start_date']} | End: {$p['end_date']}\n";
+            $pid   = $p['Project_Id'];
+            $estWd = $cv($pid, 'estimated_cost_work_done');
+            $actWd = $cv($pid, 'actual_cost_work_done');
+            if ($estWd === null && $actWd === null) continue;
+            $estWd    = (float)($estWd ?? 0);
+            $actWd    = (float)($actWd ?? 0);
+            $variance = $estWd - $actWd;
+            $vLabel   = $variance >= 0 ? 'Under Budget' : 'Over Budget';
+            $context .= "- {$p['Name']}"
+                . " | Estimated Cost of Work Done: ₹" . number_format($estWd, 2)
+                . " | Actual Cost of Work Done: ₹" . number_format($actWd, 2)
+                . " | Variance: ₹" . number_format(abs($variance), 2) . " ({$vLabel})"
+                . " | As of: " . ($cu($pid) ?? 'unknown') . "\n";
+            $hasCost = true;
         }
+        if (!$hasCost) $context .= "[Cost data not yet cached — open the cost dashboard to populate]\n";
         $context .= "\n";
 
-        // --- COST (from cache) ---
-        if ($wantsCost) {
-            $hasCost = false;
-            $costBlock = "=== COST OF WORK DONE (from cost dashboard) ===\n";
-            foreach ($projects as $p) {
-                $pid = $p['Project_Id'];
-                // Use the cost-dashboard computed values (actual_cost_work_done set by actionCostdashboardbatch)
-                $estWd  = $cv($pid, 'estimated_cost_work_done');
-                $actWd  = $cv($pid, 'actual_cost_work_done');
-                if ($estWd === null && $actWd === null) continue;
-                $estWd  = (float)($estWd ?? 0);
-                $actWd  = (float)($actWd ?? 0);
-                $variance = $estWd - $actWd;
-                $vLabel   = $variance >= 0 ? 'Under Budget' : 'Over Budget';
-                $updated  = $cu($pid) ?? 'unknown';
-                $costBlock .= "- {$p['Name']}"
-                    . " | Estimated Cost of Work Done: ₹" . number_format($estWd, 2)
-                    . " | Actual Cost of Work Done: ₹" . number_format($actWd, 2)
-                    . " | Budget Variance: ₹" . number_format(abs($variance), 2) . " ({$vLabel})"
-                    . " | As of: {$updated}\n";
-                $hasCost = true;
+        // ================================================================
+        // 3. PHYSICAL PROGRESS (from cache)
+        // ================================================================
+        $context .= "=== PHYSICAL PROGRESS ===\n";
+        $hasProgress = false;
+        foreach ($projects as $p) {
+            $pid = $p['Project_Id'];
+            $pct = $cv($pid, 'physical_progress_pct');
+            if ($pct === null) continue;
+            $total     = (int)($cv($pid, 'total_activities') ?? 0);
+            $completed = (int)($cv($pid, 'completed_activities') ?? 0);
+            $context .= "- {$p['Name']}"
+                . " | Physical Progress: {$pct}%"
+                . " | Activities: {$completed} completed of {$total} total"
+                . " | As of: " . ($cu($pid) ?? 'unknown') . "\n";
+            $hasProgress = true;
+        }
+        if (!$hasProgress) $context .= "[No progress data cached yet]\n";
+        $context .= "\n";
+
+        // ================================================================
+        // 4. SCHEDULE — all activities with dates and progress
+        // ================================================================
+        $activities = $db->createCommand("
+            SELECT
+                sa.name, sa.start_date, sa.end_date,
+                sa.old_duration AS planned_duration,
+                sa.completed_status, sa.critical_status,
+                sa.quantity, sa.unit,
+                COALESCE(rpt.cumulated_qty, 0) AS cumulated_qty,
+                CASE
+                    WHEN sa.quantity > 0 AND COALESCE(rpt.cumulated_qty,0) > 0
+                    THEN ROUND(COALESCE(rpt.cumulated_qty,0) / sa.quantity * 100, 1)
+                    WHEN sa.completed_status = 1 THEN 100
+                    ELSE 0
+                END AS progress_pct,
+                p.Name AS project_name,
+                CASE
+                    WHEN sa.completed_status = 0 AND sa.end_date < CURDATE()
+                    THEN DATEDIFF(CURDATE(), sa.end_date)
+                    ELSE 0
+                END AS days_overdue
+            FROM scheduleactivities sa
+            JOIN projects p ON p.Project_Id = sa.projectId AND p.Status = 0
+            LEFT JOIN (
+                SELECT activity_id, MAX(cumulated_qty) AS cumulated_qty
+                FROM schedule_progress_report
+                GROUP BY activity_id
+            ) rpt ON rpt.activity_id = sa.id
+            WHERE sa.status = 0
+            ORDER BY p.Name, sa.start_date
+            LIMIT 500
+        ")->queryAll();
+
+        if ($activities) {
+            $context .= "=== SCHEDULE ACTIVITIES ===\n";
+            foreach ($activities as $a) {
+                $critical = strtolower($a['critical_status']) === 'yes' ? ' [CRITICAL]' : '';
+                $status   = $a['completed_status'] == 1 ? 'Completed' : 'Ongoing';
+                $overdue  = $a['days_overdue'] > 0 ? " [DELAYED {$a['days_overdue']} days]" : '';
+                $context .= "- [{$a['project_name']}] {$a['name']}{$critical}{$overdue}"
+                    . " | Start: {$a['start_date']} | End: {$a['end_date']}"
+                    . " | Planned Duration: {$a['planned_duration']}d"
+                    . " | Target Qty: {$a['quantity']} {$a['unit']}"
+                    . " | Qty Done: {$a['cumulated_qty']} {$a['unit']}"
+                    . " | Progress: {$a['progress_pct']}%"
+                    . " | Status: {$status}\n";
             }
-            $context .= $hasCost ? $costBlock . "\n" : "=== COST OF WORK DONE ===\n[NO COST DATA IN CACHE — OPEN THE COST DASHBOARD FOR THIS PROJECT FIRST]\n\n";
+            $context .= "\n";
         }
 
-        // --- PROGRESS (from cache) ---
-        if ($wantsProgress) {
-            $hasProgress = false;
-            $progBlock = "=== KPI — PHYSICAL PROGRESS ===\n";
-            foreach ($projects as $p) {
-                $pid  = $p['Project_Id'];
-                $pct  = $cv($pid, 'physical_progress_pct');
-                if ($pct === null) continue;
-                $total     = (int)($cv($pid, 'total_activities') ?? 0);
-                $completed = (int)($cv($pid, 'completed_activities') ?? 0);
-                $updated   = $cu($pid) ?? 'unknown';
-                $progBlock .= "- {$p['Name']}"
-                    . " | Physical Progress: {$pct}%"
-                    . " | Completed: {$completed} of {$total} activities"
-                    . " | As of: {$updated}\n";
-                $hasProgress = true;
+        // ================================================================
+        // 5. MATERIALS RECEIVED (GRN) — every line item
+        // ================================================================
+        $grns = $db->createCommand("
+            SELECT
+                g.GRN_Date, g.grn_number,
+                r.Name AS resource_name, r.Unit,
+                CAST(g.GRN_Quantity AS DECIMAL(15,4)) AS qty,
+                g.GRN_Rate AS rate,
+                CAST(g.GRN_Quantity AS DECIMAL(15,4)) * g.GRN_Rate AS value,
+                v.Vendor_Name,
+                p.Name AS project_name
+            FROM goods_received_note g
+            JOIN resources r ON r.Resource_Id = g.GRN_Item
+            JOIN purchase_orders po ON po.order_id = g.GRN_Purchase_Order
+            JOIN projects p ON p.Project_Id = po.project_id AND p.Status = 0
+            LEFT JOIN vendor v ON v.Vendor_Id = g.GRN_Vendor
+            WHERE g.delete_status = 0
+              AND po.delete_status = 0
+              AND po.project_id IN ($pidList)
+            ORDER BY p.Name, g.GRN_Date DESC
+            LIMIT 500
+        ")->queryAll();
+
+        if ($grns) {
+            $context .= "=== MATERIALS RECEIVED (GRN) ===\n";
+            foreach ($grns as $g) {
+                $context .= "- [{$g['project_name']}] {$g['resource_name']}"
+                    . " | GRN#: {$g['grn_number']}"
+                    . " | Date: {$g['GRN_Date']}"
+                    . " | Qty: " . number_format((float)$g['qty'], 3) . " {$g['Unit']}"
+                    . " | Rate: ₹" . number_format((float)$g['rate'], 2)
+                    . " | Value: ₹" . number_format((float)$g['value'], 2)
+                    . " | Vendor: {$g['Vendor_Name']}\n";
             }
-            $context .= $hasProgress ? $progBlock . "\n" : "=== KPI — PHYSICAL PROGRESS ===\n[NO PROGRESS DATA IN CACHE]\n\n";
+            $context .= "\n";
+
+            // Also add aggregated summary per material per project
+            $context .= "=== MATERIALS RECEIVED — TOTALS PER MATERIAL ===\n";
+            $totals = [];
+            foreach ($grns as $g) {
+                $key = $g['project_name'] . '||' . $g['resource_name'] . '||' . $g['Unit'];
+                if (!isset($totals[$key])) {
+                    $totals[$key] = ['project' => $g['project_name'], 'name' => $g['resource_name'], 'unit' => $g['Unit'], 'qty' => 0.0, 'value' => 0.0];
+                }
+                $totals[$key]['qty']   += (float)$g['qty'];
+                $totals[$key]['value'] += (float)$g['value'];
+            }
+            foreach ($totals as $t) {
+                $context .= "- [{$t['project']}] {$t['name']}"
+                    . " | Total Received: " . number_format($t['qty'], 3) . " {$t['unit']}"
+                    . " | Total Value: ₹" . number_format($t['value'], 2) . "\n";
+            }
+            $context .= "\n";
+        } else {
+            $context .= "=== MATERIALS RECEIVED (GRN) ===\n[No GRN records found]\n\n";
         }
 
-        // --- SCHEDULE (cache for summary + live query for activity list) ---
-        if ($wantsSchedule) {
-            $hasDelay = false;
-            $schedBlock = "=== SCHEDULE STATUS (Critical Path) ===\n";
-            foreach ($projects as $p) {
-                $pid      = $p['Project_Id'];
-                $critical = $cv($pid, 'critical_count');
-                if ($critical === null) continue;
-                $delayed  = (int)($cv($pid, 'delayed_critical') ?? 0);
-                $maxDays  = (int)($cv($pid, 'max_delay_days')   ?? 0);
-                $endTs    = (int)($cv($pid, 'planned_end_date') ?? 0);
-                $endStr   = $endTs ? date('Y-m-d', $endTs) : 'N/A';
-                $updated  = $cu($pid) ?? 'unknown';
-                $status   = $delayed > 0
-                    ? "DELAYED — {$delayed} critical activities overdue by up to {$maxDays} days"
-                    : "On Schedule";
-                $schedBlock .= "- {$p['Name']}"
-                    . " | Critical Activities: {$critical}"
-                    . " | Planned End: {$endStr}"
-                    . " | Status: {$status}"
-                    . " | As of: {$updated}\n";
-                $hasDelay = true;
-            }
-            $context .= $hasDelay ? $schedBlock . "\n" : "=== SCHEDULE STATUS ===\n[NO SCHEDULE DATA IN CACHE]\n\n";
+        // ================================================================
+        // 6. PURCHASE ORDERS — line item detail
+        // ================================================================
+        $pos = $db->createCommand("
+            SELECT
+                po.order_id, po.order_date, po.total_amount,
+                v.Vendor_Name,
+                p.Name AS project_name,
+                r.Name AS item_name, r.Unit AS item_unit,
+                por.quantity AS ordered_qty, por.rate, por.amount
+            FROM purchase_orders po
+            JOIN purchase_order_resources por ON por.order_id = po.order_id AND por.delete_status = 0
+            LEFT JOIN resources r  ON r.Resource_Id  = por.resource_id
+            LEFT JOIN vendor v     ON v.Vendor_Id    = po.vendor_id
+            JOIN projects p        ON p.Project_Id   = po.project_id AND p.Status = 0
+            WHERE po.delete_status = 0
+              AND po.project_id IN ($pidList)
+            ORDER BY po.order_date DESC, po.order_id DESC
+            LIMIT 500
+        ")->queryAll();
 
-            // Live activity list (small, fast query — only name/dates/progress)
-            $activities = $db->createCommand("
-                SELECT
-                    sa.name, sa.start_date, sa.end_date, sa.old_duration AS planned_duration,
-                    sa.completed_status, sa.critical_status,
-                    CASE
-                        WHEN sa.quantity > 0 AND COALESCE(rpt.cumulated_qty,0) > 0
-                        THEN ROUND(COALESCE(rpt.cumulated_qty,0) / sa.quantity * 100, 1)
-                        WHEN sa.completed_status = 1 THEN 100
-                        ELSE 0
-                    END AS progress_pct,
-                    p.Name AS project_name
-                FROM scheduleactivities sa
-                JOIN projects p ON p.Project_Id = sa.projectId AND p.Status = 0
-                LEFT JOIN (
-                    SELECT activity_id, SUM(currentqty) AS cumulated_qty
-                    FROM schedule_progress_report_log
-                    GROUP BY activity_id
-                ) rpt ON rpt.activity_id = sa.id
-                WHERE sa.status = 0
-                ORDER BY p.Name, (sa.critical_status = 'Yes') DESC, sa.start_date
-                LIMIT 300
-            ")->queryAll();
-
-            if ($activities) {
-                $context .= "=== ACTIVITIES (Gantt) ===\n";
-                foreach ($activities as $a) {
-                    $critical = strtolower($a['critical_status']) === 'yes' ? ' [CRITICAL]' : '';
-                    $status   = $a['completed_status'] == 1 ? 'Completed' : 'Ongoing';
-                    $context .= "- [{$a['project_name']}] {$a['name']}{$critical}"
-                        . " | {$a['start_date']} to {$a['end_date']}"
-                        . " | Duration: {$a['planned_duration']}d"
-                        . " | Progress: {$a['progress_pct']}%"
-                        . " | {$status}\n";
-                }
-                $context .= "\n";
+        if ($pos) {
+            $context .= "=== PURCHASE ORDER LINE ITEMS ===\n";
+            foreach ($pos as $po) {
+                $context .= "- [{$po['project_name']}] PO#{$po['order_id']}"
+                    . " | Date: {$po['order_date']}"
+                    . " | Vendor: {$po['Vendor_Name']}"
+                    . " | Item: {$po['item_name']} ({$po['item_unit']})"
+                    . " | Ordered Qty: " . number_format((float)$po['ordered_qty'], 3)
+                    . " | Rate: ₹" . number_format((float)$po['rate'], 2)
+                    . " | Amount: ₹" . number_format((float)$po['amount'], 2) . "\n";
             }
+            $context .= "\n";
+        } else {
+            $context .= "=== PURCHASE ORDER LINE ITEMS ===\n[No purchase orders found]\n\n";
         }
 
-        // --- DOCUMENTS ---
-        if ($wantsDocs) {
-            $docs = $db->createCommand("
-                SELECT pf.original_name, pf.uploaded_at, p.Name AS project_name
-                FROM project_files pf
-                LEFT JOIN projects p ON p.Project_Id = pf.project_id
-                WHERE pf.file_type = 'documents'
-                ORDER BY pf.uploaded_at DESC
-                LIMIT 50
-            ")->queryAll();
+        // ================================================================
+        // 7. DOCUMENTS
+        // ================================================================
+        $docs = $db->createCommand("
+            SELECT pf.original_name, pf.uploaded_at, p.Name AS project_name
+            FROM project_files pf
+            JOIN projects p ON p.Project_Id = pf.project_id AND p.Status = 0
+            WHERE pf.file_type = 'documents'
+              AND p.Project_Id IN ($pidList)
+            ORDER BY pf.uploaded_at DESC
+            LIMIT 100
+        ")->queryAll();
 
-            if ($docs) {
-                $context .= "=== UPLOADED DOCUMENTS ===\n";
-                foreach ($docs as $d) {
-                    $context .= "- {$d['original_name']} | Project: {$d['project_name']} | Uploaded: {$d['uploaded_at']}\n";
-                }
-                $context .= "\n";
-            } else {
-                $context .= "=== UPLOADED DOCUMENTS ===\n[NO RECORDS FOUND]\n\n";
+        if ($docs) {
+            $context .= "=== UPLOADED DOCUMENTS ===\n";
+            foreach ($docs as $d) {
+                $context .= "- [{$d['project_name']}] {$d['original_name']} | Uploaded: {$d['uploaded_at']}\n";
             }
-        }
-
-        // --- PROCUREMENT (GRN received quantities, PO orders, vendors) ---
-        if ($wantsProcure) {
-            // GRN — materials received, grouped by resource and project
-            $grns = $db->createCommand("
-                SELECT r.Name AS resource_name, r.Unit,
-                       p.Name AS project_name,
-                       SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))) AS total_qty,
-                       SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4)) * g.GRN_Rate) AS total_value,
-                       MAX(g.GRN_Date) AS last_received
-                FROM goods_received_note g
-                JOIN resources r ON r.Resource_Id = g.GRN_Item
-                JOIN purchase_orders po ON po.order_id = g.GRN_Purchase_Order
-                JOIN projects p ON p.Project_Id = po.project_id
-                WHERE g.delete_status = 0
-                  AND po.delete_status = 0
-                GROUP BY r.Resource_Id, r.Name, r.Unit, p.Project_Id, p.Name
-                ORDER BY p.Name, r.Name
-                LIMIT 200
-            ")->queryAll();
-
-            if ($grns) {
-                $context .= "=== MATERIALS RECEIVED (GRN) ===\n";
-                foreach ($grns as $g) {
-                    $context .= "- {$g['resource_name']} ({$g['Unit']})"
-                        . " | Project: {$g['project_name']}"
-                        . " | Qty Received: " . number_format((float)$g['total_qty'], 3)
-                        . " {$g['Unit']}"
-                        . " | Total Value: ₹" . number_format((float)$g['total_value'], 2)
-                        . " | Last Received: {$g['last_received']}\n";
-                }
-                $context .= "\n";
-            } else {
-                $context .= "=== MATERIALS RECEIVED (GRN) ===\n[NO GRN RECORDS FOUND]\n\n";
-            }
-
-            // Purchase Orders — with vendor and line items
-            $pos = $db->createCommand("
-                SELECT po.order_id, po.order_date, po.total_amount,
-                       v.Vendor_Name, p.Name AS project_name,
-                       r.Name AS item_name, r.Unit AS item_unit,
-                       por.quantity AS ordered_qty, por.rate, por.amount
-                FROM purchase_orders po
-                JOIN purchase_order_resources por ON por.order_id = po.order_id AND por.delete_status = 0
-                LEFT JOIN resources r ON r.Resource_Id = por.resource_id
-                LEFT JOIN vendor v ON v.Vendor_Id = po.vendor_id
-                LEFT JOIN projects p ON p.Project_Id = po.project_id
-                WHERE po.delete_status = 0
-                ORDER BY po.order_date DESC, po.order_id DESC
-                LIMIT 300
-            ")->queryAll();
-
-            if ($pos) {
-                $context .= "=== PURCHASE ORDER LINE ITEMS ===\n";
-                foreach ($pos as $po) {
-                    $context .= "- PO#{$po['order_id']} | {$po['project_name']} | Vendor: {$po['Vendor_Name']}"
-                        . " | Date: {$po['order_date']}"
-                        . " | Item: {$po['item_name']} ({$po['item_unit']})"
-                        . " | Ordered Qty: " . number_format((float)$po['ordered_qty'], 3)
-                        . " | Rate: ₹" . number_format((float)$po['rate'], 2)
-                        . " | Amount: ₹" . number_format((float)$po['amount'], 2) . "\n";
-                }
-                $context .= "\n";
-            }
-        }
-
-        // --- GENERAL (resources list) ---
-        if ($wantsGeneral) {
-            if ($this->matches($msg, ['resource', 'equipment', 'labour', 'labor', 'manpower', 'worker', 'machine'])) {
-                $resources = $db->createCommand("
-                    SELECT r.Name, rt.Name AS type, r.Unit
-                    FROM resources r
-                    LEFT JOIN resourcetype rt ON rt.Resourcetype_Id = r.Resourcetype_Id
-                    WHERE r.Status = 0
-                    ORDER BY rt.Name, r.Name
-                    LIMIT 100
-                ")->queryAll();
-
-                if ($resources) {
-                    $context .= "=== RESOURCES ===\n";
-                    foreach ($resources as $r) {
-                        $context .= "- {$r['Name']} | Type: {$r['type']} | Unit: {$r['Unit']}\n";
-                    }
-                    $context .= "\n";
-                }
-            }
+            $context .= "\n";
         }
 
         return $context;
-    }
-
-    private function matches($msg, array $keywords)
-    {
-        foreach ($keywords as $kw) {
-            if (strpos($msg, $kw) !== false) return true;
-        }
-        return false;
     }
 }
