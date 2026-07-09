@@ -21,6 +21,16 @@ class ChatbotController extends Controller
         return is_array($secrets) ? ($secrets['anthropicApiKey'] ?? '') : '';
     }
 
+    public function actionContextsize()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $context = $this->buildContext();
+        $chars = strlen($context);
+        $tokens = (int)($chars / 4);
+        $lines = substr_count($context, "\n");
+        return ['chars' => $chars, 'approx_tokens' => $tokens, 'lines' => $lines, 'sections' => array_count_values(array_map(function($l){ return preg_match('/^=== (.+) ===$/', $l, $m) ? $m[1] : ''; }, explode("\n", $context)))];
+    }
+
     public function actionChat()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
