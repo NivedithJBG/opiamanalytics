@@ -36,13 +36,15 @@ class ChatbotController extends Controller
         }
 
         $systemPrompt =
-            "You are a data assistant for Opiam Analytics ERP.\n" .
-            "You ONLY answer using the CONTEXT block below. Rules:\n" .
-            "- If the answer is not present in the CONTEXT, reply exactly: \"" . self::NO_DATA_REPLY . "\"\n" .
-            "- Never use outside knowledge, never guess, never infer beyond what is written.\n" .
-            "- Answer only what was asked. No extra info, no suggestions, no closing remarks, no emojis.\n" .
-            "- Be direct. One or two sentences if that answers the question.\n" .
-            "- When showing money values, format as currency with 2 decimal places.\n\n" .
+            "You are a read-only data assistant for Opiam Analytics ERP.\n" .
+            "You ONLY answer questions using the exact data in the CONTEXT block below.\n\n" .
+            "STRICT RULES — violating any rule is forbidden:\n" .
+            "1. If the specific answer is not explicitly present in CONTEXT, reply ONLY with: \"" . self::NO_DATA_REPLY . "\" — nothing else.\n" .
+            "2. Never use outside knowledge. Never calculate, estimate, or infer values not in CONTEXT.\n" .
+            "3. Never mention percentages, amounts, dates, or names that are not in CONTEXT.\n" .
+            "4. Answer only what was asked — no extra info, no suggestions, no closing remarks, no emojis.\n" .
+            "5. One or two sentences maximum unless a list is truly needed.\n" .
+            "6. Money values: show with 2 decimal places and currency symbol (₹ or as provided).\n\n" .
             "CONTEXT:\n" . $context;
 
         $messages = [];
@@ -119,9 +121,11 @@ class ChatbotController extends Controller
 
         // -------------------------------------------------------------------
         // COST DASHBOARD QUERIES
-        // Source: ProjectsmainController::actionPerformancedashboard() lines 243-266
-        // Formula: estimated = activity_qty * SUM(quantity * rate) per activity
-        //          actual    = SUM(GRN_Quantity * po_rate) via purchase orders + GRN
+        // Source: KPI dashboard loop (ProjectsmainController lines 1741-1758)
+        // Estimated = SUM(round(pern.rate,2) * round(pern.quantity * pen.activity_qty,2))
+        //             for all activities WHERE wa.estimate=1 AND pricing_status=0
+        //             NO process_Id filter — matches dashboard exactly
+        // Actual    = SUM(GRN_Quantity * po_rate) via GRN + purchase orders
         // -------------------------------------------------------------------
         if ($wantsCost) {
             $costs = $db->createCommand("
@@ -132,29 +136,23 @@ class ChatbotController extends Controller
                     COALESCE(est.estimated_cost, 0) - COALESCE(act.actual_cost, 0) AS cost_variance
                 FROM projects p
                 LEFT JOIN (
-                    /* Estimated cost: matches estimate page (ProjectsmainController line 6639-6657)
-                       Only activities with estimate=1 AND pricing_status=0 in workgroup_activities_new
-                       Amount = activity_qty × SUM(rate × quantity) filtered by process_Id */
-                    SELECT pen.project_Id,
-                           SUM(pen.activity_qty * COALESCE(pern_sum.unit_cost, 0)) AS estimated_cost
+                    /* Estimated cost: exact formula from KPI dashboard
+                       SUM(round(rate,2) * round(quantity * activity_qty, 2))
+                       Only estimate=1, pricing_status=0 activities */
+                    SELECT wa.project_Id,
+                           SUM(ROUND(pern.rate, 2) * ROUND(pern.quantity * pen.activity_qty, 2)) AS estimated_cost
                     FROM workgroup_activities_new wa
                     JOIN pricing_estimate_new pen
                         ON pen.activity_Id = wa.id
                        AND pen.project_Id  = wa.project_Id
                        AND pen.pricing_status = 0
-                    LEFT JOIN (
-                        SELECT pern.activity_id, pern.project_id,
-                               pern.process_Id,
-                               SUM(pern.quantity * pern.rate) AS unit_cost
-                        FROM pricing_estimate_resources_new pern
-                        WHERE pern.pricing_status = 0
-                        GROUP BY pern.activity_id, pern.project_id, pern.process_Id
-                    ) pern_sum ON pern_sum.activity_id = wa.id
-                              AND pern_sum.project_id  = wa.project_Id
-                              AND pern_sum.process_Id  = CASE WHEN wa.activitytype_id = 0 THEN wa.process_Id ELSE wa.activitytype_id END
+                    JOIN pricing_estimate_resources_new pern
+                        ON pern.activity_id = wa.id
+                       AND pern.project_id  = wa.project_Id
+                       AND pern.pricing_status = 0
                     WHERE wa.estimate = 1
                       AND wa.pricing_status = 0
-                    GROUP BY pen.project_Id
+                    GROUP BY wa.project_Id
                 ) est ON est.project_Id = p.Project_Id
                 LEFT JOIN (
                     /* Actual cost: GRN_Quantity × PO rate (same as cost dashboard) */
