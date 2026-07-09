@@ -96,11 +96,12 @@ class ChatbotController extends Controller
         $msg = strtolower($message);
         $context = '';
 
-        $wantsCost     = $this->matches($msg, ['cost', 'budget', 'estimat', 'actual', 'spend', 'amount', 'price', 'rate', 'variance', 'overrun', 'financial', 'expenditure', 'money', 'work done', 'total cost', 'how much', 'spent', 'paid', 'purchase', 'invoice']);
+        $wantsProcure  = $this->matches($msg, ['purchas', 'procure', 'grn', 'received', 'material', 'quantity', 'qty', 'bought', 'buy', 'order', 'po', 'vendor', 'supplier', 'invoice', 'reinforcement', 'cement', 'steel', 'fe ', 'tmt', 'how much', 'ton', 'kg', 'litre', 'bag', 'nos']);
+        $wantsCost     = $this->matches($msg, ['cost', 'budget', 'estimat', 'actual', 'spend', 'amount', 'price', 'rate', 'variance', 'overrun', 'financial', 'expenditure', 'money', 'work done', 'total cost', 'spent', 'paid']);
         $wantsProgress = $this->matches($msg, ['progress', 'physical', 'percent', '%', 'complete', 'done', 'kpi', 'performance', 'how much work']);
         $wantsSchedule = $this->matches($msg, ['delay', 'critical', 'behind', 'on time', 'late', 'schedule', 'gantt', 'when', 'duration', 'start', 'end', 'activit', 'task', 'float']);
         $wantsDocs     = $this->matches($msg, ['document', 'file', 'pdf', 'report', 'letter', 'contract', 'invoice', 'drawing', 'upload']);
-        $wantsGeneral  = !$wantsCost && !$wantsProgress && !$wantsSchedule && !$wantsDocs;
+        $wantsGeneral  = !$wantsCost && !$wantsProgress && !$wantsSchedule && !$wantsDocs && !$wantsProcure;
 
         // --- Project list with cached metrics ---
         $projects = $db->createCommand("
@@ -288,29 +289,73 @@ class ChatbotController extends Controller
             }
         }
 
-        // --- GENERAL (procurement, vendors, resources) ---
-        if ($wantsGeneral) {
-            if ($this->matches($msg, ['purchase', 'order', 'po', 'vendor', 'supplier', 'procurement'])) {
-                $pos = $db->createCommand("
-                    SELECT po.order_id, po.order_date, po.total_amount,
-                           v.Vendor_Name, p.Name AS project_name
-                    FROM purchase_orders po
-                    LEFT JOIN vendor v ON v.Vendor_Id = po.vendor_id
-                    LEFT JOIN projects p ON p.Project_Id = po.project_id
-                    WHERE po.delete_status = 0
-                    ORDER BY po.order_date DESC
-                    LIMIT 50
-                ")->queryAll();
+        // --- PROCUREMENT (GRN received quantities, PO orders, vendors) ---
+        if ($wantsProcure) {
+            // GRN — materials received, grouped by resource and project
+            $grns = $db->createCommand("
+                SELECT r.Name AS resource_name, r.Unit,
+                       p.Name AS project_name,
+                       SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))) AS total_qty,
+                       SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4)) * g.GRN_Rate) AS total_value,
+                       MAX(g.GRN_Date) AS last_received
+                FROM goods_received_note g
+                JOIN resources r ON r.Resource_Id = g.GRN_Item
+                JOIN purchase_orders po ON po.order_id = g.GRN_Purchase_Order
+                JOIN projects p ON p.Project_Id = po.project_id
+                WHERE g.delete_status = 0
+                  AND po.delete_status = 0
+                GROUP BY r.Resource_Id, r.Name, r.Unit, p.Project_Id, p.Name
+                ORDER BY p.Name, r.Name
+                LIMIT 200
+            ")->queryAll();
 
-                if ($pos) {
-                    $context .= "=== PURCHASE ORDERS ===\n";
-                    foreach ($pos as $po) {
-                        $context .= "- PO#{$po['order_id']} | {$po['project_name']} | Vendor: {$po['Vendor_Name']} | Date: {$po['order_date']} | Amount: " . number_format($po['total_amount'], 2) . "\n";
-                    }
-                    $context .= "\n";
+            if ($grns) {
+                $context .= "=== MATERIALS RECEIVED (GRN) ===\n";
+                foreach ($grns as $g) {
+                    $context .= "- {$g['resource_name']} ({$g['Unit']})"
+                        . " | Project: {$g['project_name']}"
+                        . " | Qty Received: " . number_format((float)$g['total_qty'], 3)
+                        . " {$g['Unit']}"
+                        . " | Total Value: ₹" . number_format((float)$g['total_value'], 2)
+                        . " | Last Received: {$g['last_received']}\n";
                 }
+                $context .= "\n";
+            } else {
+                $context .= "=== MATERIALS RECEIVED (GRN) ===\n[NO GRN RECORDS FOUND]\n\n";
             }
 
+            // Purchase Orders — with vendor and line items
+            $pos = $db->createCommand("
+                SELECT po.order_id, po.order_date, po.total_amount,
+                       v.Vendor_Name, p.Name AS project_name,
+                       r.Name AS item_name, r.Unit AS item_unit,
+                       por.quantity AS ordered_qty, por.rate, por.amount
+                FROM purchase_orders po
+                JOIN purchase_order_resources por ON por.order_id = po.order_id AND por.delete_status = 0
+                LEFT JOIN resources r ON r.Resource_Id = por.resource_id
+                LEFT JOIN vendor v ON v.Vendor_Id = po.vendor_id
+                LEFT JOIN projects p ON p.Project_Id = po.project_id
+                WHERE po.delete_status = 0
+                ORDER BY po.order_date DESC, po.order_id DESC
+                LIMIT 300
+            ")->queryAll();
+
+            if ($pos) {
+                $context .= "=== PURCHASE ORDER LINE ITEMS ===\n";
+                foreach ($pos as $po) {
+                    $context .= "- PO#{$po['order_id']} | {$po['project_name']} | Vendor: {$po['Vendor_Name']}"
+                        . " | Date: {$po['order_date']}"
+                        . " | Item: {$po['item_name']} ({$po['item_unit']})"
+                        . " | Ordered Qty: " . number_format((float)$po['ordered_qty'], 3)
+                        . " | Rate: ₹" . number_format((float)$po['rate'], 2)
+                        . " | Amount: ₹" . number_format((float)$po['amount'], 2) . "\n";
+                }
+                $context .= "\n";
+            }
+        }
+
+        // --- GENERAL (resources list) ---
+        if ($wantsGeneral) {
             if ($this->matches($msg, ['resource', 'equipment', 'labour', 'labor', 'manpower', 'worker', 'machine'])) {
                 $resources = $db->createCommand("
                     SELECT r.Name, rt.Name AS type, r.Unit
