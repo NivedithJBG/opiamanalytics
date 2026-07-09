@@ -487,7 +487,7 @@ class ChatbotController extends Controller
             LEFT JOIN resourcetype rt        ON rt.ResourceType_Id = pern.resourcetype_Id
             WHERE pern.project_id IN ($pidList)
               AND pern.pricing_status = 0
-            ORDER BY p.Name, wa.name, rt.Name, r.Name
+            ORDER BY p.Name, wa.activity_Name, rt.Name, r.Name
             LIMIT 500
         ")->queryAll();
 
