@@ -132,20 +132,28 @@ class ChatbotController extends Controller
                     COALESCE(est.estimated_cost, 0) - COALESCE(act.actual_cost, 0) AS cost_variance
                 FROM projects p
                 LEFT JOIN (
-                    /* Estimated cost: exactly matches dashboard line 244-251
-                       activity_qty × SUM(pern.quantity * pern.rate)
-                       with pern.pricing_status=0 AND pern.project_id=pen.project_Id */
+                    /* Estimated cost: matches estimate page (ProjectsmainController line 6639-6657)
+                       Only activities with estimate=1 AND pricing_status=0 in workgroup_activities_new
+                       Amount = activity_qty × SUM(rate × quantity) filtered by process_Id */
                     SELECT pen.project_Id,
                            SUM(pen.activity_qty * COALESCE(pern_sum.unit_cost, 0)) AS estimated_cost
-                    FROM pricing_estimate_new pen
+                    FROM workgroup_activities_new wa
+                    JOIN pricing_estimate_new pen
+                        ON pen.activity_Id = wa.id
+                       AND pen.project_Id  = wa.project_Id
+                       AND pen.pricing_status = 0
                     LEFT JOIN (
-                        SELECT activity_id, project_id, SUM(quantity * rate) AS unit_cost
-                        FROM pricing_estimate_resources_new
-                        WHERE pricing_status = 0
-                        GROUP BY activity_id, project_id
-                    ) pern_sum ON pern_sum.activity_id = pen.activity_Id
-                              AND pern_sum.project_id  = pen.project_Id
-                    WHERE pen.pricing_status = 0
+                        SELECT pern.activity_id, pern.project_id,
+                               pern.process_Id,
+                               SUM(pern.quantity * pern.rate) AS unit_cost
+                        FROM pricing_estimate_resources_new pern
+                        WHERE pern.pricing_status = 0
+                        GROUP BY pern.activity_id, pern.project_id, pern.process_Id
+                    ) pern_sum ON pern_sum.activity_id = wa.id
+                              AND pern_sum.project_id  = wa.project_Id
+                              AND pern_sum.process_Id  = CASE WHEN wa.activitytype_id = 0 THEN wa.process_Id ELSE wa.activitytype_id END
+                    WHERE wa.estimate = 1
+                      AND wa.pricing_status = 0
                     GROUP BY pen.project_Id
                 ) est ON est.project_Id = p.Project_Id
                 LEFT JOIN (
