@@ -149,13 +149,20 @@ class ChatbotController extends Controller
         if ($wantsCosts) {
             $costs = $db->createCommand("
                 SELECT p.Name AS project_name,
-                       COALESCE(SUM(pen.specific_rate * pen.activity_qty), 0) AS estimated_cost,
-                       COALESCE(SUM(pern.actual_amount), 0) AS actual_cost
+                       COALESCE(est.estimated_cost, 0) AS estimated_cost,
+                       COALESCE(act.actual_cost, 0) AS actual_cost
                 FROM projects p
-                LEFT JOIN pricing_estimate_new pen ON pen.project_Id = p.Project_Id
-                LEFT JOIN pricing_estimate_resources_new pern ON pern.project_id = p.Project_Id
+                LEFT JOIN (
+                    SELECT project_Id, SUM(specific_rate * activity_qty) AS estimated_cost
+                    FROM pricing_estimate_new
+                    GROUP BY project_Id
+                ) est ON est.project_Id = p.Project_Id
+                LEFT JOIN (
+                    SELECT project_id, SUM(actual_amount) AS actual_cost
+                    FROM pricing_estimate_resources_new
+                    GROUP BY project_id
+                ) act ON act.project_id = p.Project_Id
                 WHERE p.Status = 0
-                GROUP BY p.Project_Id, p.Name
                 ORDER BY p.Name
                 LIMIT 50
             ")->queryAll();
@@ -270,15 +277,21 @@ class ChatbotController extends Controller
             $costVariance = $db->createCommand("
                 SELECT
                     p.Name AS project_name,
-                    COALESCE(SUM(pen.specific_rate * pen.activity_qty), 0) AS estimated_cost,
-                    COALESCE(SUM(pern.actual_amount), 0) AS actual_cost,
-                    COALESCE(SUM(pen.specific_rate * pen.activity_qty), 0)
-                        - COALESCE(SUM(pern.actual_amount), 0) AS cost_variance
+                    COALESCE(est.estimated_cost, 0) AS estimated_cost,
+                    COALESCE(act.actual_cost, 0) AS actual_cost,
+                    COALESCE(est.estimated_cost, 0) - COALESCE(act.actual_cost, 0) AS cost_variance
                 FROM projects p
-                LEFT JOIN pricing_estimate_new pen ON pen.project_Id = p.Project_Id
-                LEFT JOIN pricing_estimate_resources_new pern ON pern.project_id = p.Project_Id
+                LEFT JOIN (
+                    SELECT project_Id, SUM(specific_rate * activity_qty) AS estimated_cost
+                    FROM pricing_estimate_new
+                    GROUP BY project_Id
+                ) est ON est.project_Id = p.Project_Id
+                LEFT JOIN (
+                    SELECT project_id, SUM(actual_amount) AS actual_cost
+                    FROM pricing_estimate_resources_new
+                    GROUP BY project_id
+                ) act ON act.project_id = p.Project_Id
                 WHERE p.Status = 0
-                GROUP BY p.Project_Id, p.Name
                 ORDER BY p.Name
             ")->queryAll();
 
