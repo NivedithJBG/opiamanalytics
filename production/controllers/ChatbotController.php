@@ -361,6 +361,178 @@ class ChatbotController extends Controller
             $context .= "\n";
         }
 
+        // ================================================================
+        // 8. MEASUREMENT BOOKS (Work Orders + MB entries)
+        // ================================================================
+        $wos = $db->createCommand("
+            SELECT wo.WO_Number, wo.Date_requested, wo.Scope, wo.Quantity, wo.Unit,
+                   wo.Rate, wo.Total, wo.Duration, wo.start_date,
+                   v.Vendor_Name, p.Name AS project_name, wo.WO_Subject
+            FROM work_order wo
+            LEFT JOIN vendor v   ON v.Vendor_Id  = wo.WO_Vendor
+            JOIN projects p      ON p.Project_Id = wo.Project_Id AND p.Status = 0
+            WHERE wo.Project_Id IN ($pidList)
+            ORDER BY wo.Date_requested DESC
+            LIMIT 200
+        ")->queryAll();
+
+        if ($wos) {
+            $context .= "=== WORK ORDERS ===\n";
+            foreach ($wos as $wo) {
+                // WO_Subject is JSON with activity/task detail — extract summary
+                $subject = '';
+                $woItems = json_decode($wo['WO_Subject'] ?? '[]', true);
+                if (is_array($woItems)) {
+                    $names = array_column($woItems, 'activity_name');
+                    $subject = implode(', ', array_filter($names));
+                }
+                $context .= "- [{$wo['project_name']}] {$wo['WO_Number']}"
+                    . " | Date: {$wo['Date_requested']}"
+                    . " | Vendor: {$wo['Vendor_Name']}"
+                    . " | Scope: {$wo['Scope']}"
+                    . ($subject ? " | Activities: {$subject}" : '')
+                    . " | Qty: {$wo['Quantity']} {$wo['Unit']}"
+                    . " | Rate: ₹{$wo['Rate']}"
+                    . " | Total: ₹{$wo['Total']}"
+                    . " | Duration: {$wo['Duration']} days"
+                    . " | Start: {$wo['start_date']}\n";
+            }
+            $context .= "\n";
+        }
+
+        $mbs = $db->createCommand("
+            SELECT mb.mb_number, mb.mb_date, mb.wo_number, mb.entries,
+                   p.Name AS project_name
+            FROM wo_measurement_book mb
+            JOIN projects p ON p.Project_Id = mb.project_id AND p.Status = 0
+            WHERE mb.delete_status = 0
+              AND mb.sent_status = 1
+              AND mb.project_id IN ($pidList)
+            ORDER BY mb.mb_date DESC
+            LIMIT 200
+        ")->queryAll();
+
+        if ($mbs) {
+            $context .= "=== MEASUREMENT BOOKS ===\n";
+            foreach ($mbs as $mb) {
+                $entries = json_decode($mb['entries'] ?? '[]', true) ?: [];
+                foreach ($entries as $entry) {
+                    $actName = $entry['activity_name'] ?? '';
+                    $actUnit = $entry['unit'] ?? '';
+                    $actQty  = $entry['qty']  ?? 0;
+                    foreach ($entry['tasks'] ?? [] as $task) {
+                        $context .= "- [{$mb['project_name']}] {$mb['mb_number']}"
+                            . " | WO: {$mb['wo_number']}"
+                            . " | Date: {$mb['mb_date']}"
+                            . " | Activity: {$actName} ({$actQty} {$actUnit})"
+                            . " | Task: {$task['task_name']}"
+                            . " | Work Done: {$task['work_done']} {$task['unit']}"
+                            . " | Rate: ₹{$task['rate']}"
+                            . " | Value: ₹" . number_format((float)$task['work_done'] * (float)$task['rate'], 2) . "\n";
+                    }
+                }
+            }
+            $context .= "\n";
+        }
+
+        // ================================================================
+        // 9. ACTIVITY TASKS (planned tasks per schedule activity)
+        // ================================================================
+        $tasks = $db->createCommand("
+            SELECT
+                sa.name AS activity_name,
+                at.task_name, at.task_unit,
+                stn.task_qty, stn.task_productivity, stn.task_resource_units,
+                stn.Budgeted_Duration,
+                p.Name AS project_name
+            FROM schedule_task_new stn
+            JOIN scheduleactivities sa ON sa.id = stn.activity_Id
+            JOIN projects p            ON p.Project_Id = sa.projectId AND p.Status = 0
+            LEFT JOIN activity_tasks at ON at.id = stn.task_Id
+            WHERE sa.projectId IN ($pidList)
+              AND sa.status = 0
+            ORDER BY p.Name, sa.name, at.task_name
+            LIMIT 500
+        ")->queryAll();
+
+        if ($tasks) {
+            $context .= "=== ACTIVITY TASKS (Planned) ===\n";
+            foreach ($tasks as $t) {
+                $context .= "- [{$t['project_name']}] Activity: {$t['activity_name']}"
+                    . " | Task: {$t['task_name']}"
+                    . " | Unit: {$t['task_unit']}"
+                    . " | Planned Qty: {$t['task_qty']}"
+                    . " | Productivity: {$t['task_productivity']}"
+                    . " | Resource Units: {$t['task_resource_units']}"
+                    . " | Budgeted Duration: {$t['Budgeted_Duration']} days\n";
+            }
+            $context .= "\n";
+        }
+
+        // ================================================================
+        // 10. RESOURCE ALLOCATIONS (estimate resources per activity)
+        // ================================================================
+        $allocs = $db->createCommand("
+            SELECT
+                wa.name AS activity_name,
+                r.Name  AS resource_name,
+                rt.Name AS resource_type,
+                r.Unit,
+                pern.quantity, pern.rate,
+                pern.quantity * pern.rate AS unit_cost,
+                p.Name AS project_name
+            FROM pricing_estimate_resources_new pern
+            JOIN workgroup_activities_new wa ON wa.id = pern.activity_id
+            JOIN projects p                  ON p.Project_Id = pern.project_id AND p.Status = 0
+            LEFT JOIN resources r            ON r.Resource_Id = pern.resource_Id
+            LEFT JOIN resourcetype rt        ON rt.Resourcetype_Id = pern.resourcetype_Id
+            WHERE pern.project_id IN ($pidList)
+              AND pern.pricing_status = 0
+            ORDER BY p.Name, wa.name, rt.Name, r.Name
+            LIMIT 500
+        ")->queryAll();
+
+        if ($allocs) {
+            $context .= "=== RESOURCE ALLOCATIONS (Estimate) ===\n";
+            foreach ($allocs as $a) {
+                $context .= "- [{$a['project_name']}] Activity: {$a['activity_name']}"
+                    . " | Resource: {$a['resource_name']} ({$a['resource_type']})"
+                    . " | Unit: {$a['Unit']}"
+                    . " | Qty per Unit: {$a['quantity']}"
+                    . " | Rate: ₹" . number_format((float)$a['rate'], 2)
+                    . " | Unit Cost: ₹" . number_format((float)$a['unit_cost'], 2) . "\n";
+            }
+            $context .= "\n";
+        }
+
+        // ================================================================
+        // 11. STORE INDENTS (material issue from store)
+        // ================================================================
+        $indents = $db->createCommand("
+            SELECT
+                si.indent_number, si.indent_date, si.quantity, si.stock_at_site,
+                r.Name AS resource_name, r.Unit,
+                p.Name AS project_name
+            FROM store_indents si
+            JOIN projects p   ON p.Project_Id = si.project_id AND p.Status = 0
+            LEFT JOIN resources r ON r.Resource_Id = si.resource_id
+            WHERE si.project_id IN ($pidList)
+            ORDER BY si.indent_date DESC
+            LIMIT 300
+        ")->queryAll();
+
+        if ($indents) {
+            $context .= "=== STORE INDENTS (Material Issues) ===\n";
+            foreach ($indents as $s) {
+                $context .= "- [{$s['project_name']}] {$s['indent_number']}"
+                    . " | Date: {$s['indent_date']}"
+                    . " | Material: {$s['resource_name']} ({$s['Unit']})"
+                    . " | Qty Issued: {$s['quantity']}"
+                    . " | Stock at Site: {$s['stock_at_site']}\n";
+            }
+            $context .= "\n";
+        }
+
         return $context;
     }
 }
