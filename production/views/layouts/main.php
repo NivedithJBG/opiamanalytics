@@ -1478,20 +1478,20 @@ if($action=='login')
 #cb-btn{position:fixed;bottom:24px;right:24px;z-index:99999;width:52px;height:52px;border-radius:50%;background:#1a2540;color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;transition:background .2s}
 #cb-btn:hover{background:#2d3f6e}
 #cb-win{position:fixed;bottom:88px;right:24px;z-index:99999;width:420px;max-height:600px;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.25);display:none;flex-direction:column;font-family:'Times New Roman',Times,serif;overflow:hidden}
-#cb-hdr{background:#1a2540;color:#fff;padding:12px 16px;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:space-between;font-family:'Times New Roman',Times,serif}
-#cb-hdr span{font-size:16px;opacity:.7;font-weight:400;font-family:'Times New Roman',Times,serif}
+#cb-hdr{background:#1a2540;color:#fff;padding:12px 16px;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:space-between;font-family:'Times New Roman',Times,serif}
+#cb-hdr span{font-size:15px;opacity:.7;font-weight:400;font-family:'Times New Roman',Times,serif}
 #cb-close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1;padding:0}
 #cb-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:200px;max-height:420px}
-.cb-msg{max-width:85%;padding:8px 12px;border-radius:10px;font-size:18px;line-height:1.6;word-wrap:break-word;font-family:'Times New Roman',Times,serif}
+.cb-msg{max-width:85%;padding:8px 12px;border-radius:10px;font-size:17px;line-height:1.6;word-wrap:break-word;font-family:'Times New Roman',Times,serif}
 .cb-msg.user{background:#1a2540;color:#fff;align-self:flex-end;border-bottom-right-radius:3px}
 .cb-msg.bot{background:#f0f3fa;color:#111;align-self:flex-start;border-bottom-left-radius:3px}
 .cb-msg.typing{color:#888;font-style:italic}
 #cb-foot{display:flex;gap:6px;padding:10px;border-top:1px solid #e8ecf4}
-#cb-input{flex:1;border:1px solid #cbd5e1;border-radius:20px;padding:7px 14px;font-size:18px;outline:none;font-family:'Times New Roman',Times,serif}
+#cb-input{flex:1;border:1px solid #cbd5e1;border-radius:20px;padding:7px 14px;font-size:17px;outline:none;font-family:'Times New Roman',Times,serif}
 #cb-input:focus{border-color:#1a2540}
-#cb-send{background:#1a2540;color:#fff;border:none;border-radius:20px;padding:7px 16px;font-size:18px;cursor:pointer;white-space:nowrap;font-family:'Times New Roman',Times,serif}
+#cb-send{background:#1a2540;color:#fff;border:none;border-radius:20px;padding:7px 16px;font-size:17px;cursor:pointer;white-space:nowrap;font-family:'Times New Roman',Times,serif}
 #cb-send:hover{background:#2d3f6e}
-#cb-clear{background:none;border:none;color:#aaa;font-size:13px;cursor:pointer;padding:0 4px;align-self:center}
+#cb-clear{background:none;border:none;color:#aaa;font-size:12px;cursor:pointer;padding:0 4px;align-self:center}
 #cb-clear:hover{color:#e53935}
 </style>
 
