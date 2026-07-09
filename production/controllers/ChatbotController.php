@@ -83,7 +83,8 @@ class ChatbotController extends Controller
 
         $data = json_decode($response, true);
         if (!isset($data['content'][0]['text'])) {
-            return ['error' => 'Unexpected API response'];
+            $apiErr = $data['error']['message'] ?? $data['type'] ?? substr($response, 0, 300);
+            return ['error' => 'API: ' . $apiErr];
         }
 
         return ['reply' => $data['content'][0]['text']];
