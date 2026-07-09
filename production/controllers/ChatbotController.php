@@ -239,13 +239,10 @@ class ChatbotController extends Controller
                 $critical = strtolower($a['critical_status']) === 'yes' ? ' [CRITICAL]' : '';
                 $status   = $a['completed_status'] == 1 ? 'Completed' : 'Ongoing';
                 $overdue  = $a['days_overdue'] > 0 ? " [DELAYED {$a['days_overdue']} days]" : '';
-                $targetProd = ($a['planned_duration'] > 0 && $a['quantity'] > 0)
-                    ? round((float)$a['quantity'] / (float)$a['planned_duration'], 3) : 0;
                 $context .= "- [{$a['project_name']}] {$a['name']}{$critical}{$overdue}"
                     . " | Start: {$a['start_date']} | End: {$a['end_date']}"
                     . " | Planned Duration: {$a['planned_duration']}d"
                     . " | Target Qty: {$a['quantity']} {$a['unit']}"
-                    . " | Target Production: {$targetProd} {$a['unit']}/day"
                     . " | Qty Done: {$a['cumulated_qty']} {$a['unit']}"
                     . " | Progress: {$a['progress_pct']}%"
                     . " | Status: {$status}\n";
@@ -465,11 +462,13 @@ class ChatbotController extends Controller
         if ($tasks) {
             $context .= "=== ACTIVITY TASKS (Planned) ===\n";
             foreach ($tasks as $t) {
+                $targetProd = round((float)$t['task_productivity'] * max(1, (float)$t['task_resource_units']), 3);
                 $context .= "- [{$t['project_name']}] Activity: {$t['activity_name']}"
                     . " | Task: {$t['task_name']}"
                     . " | Unit: {$t['task_unit']}"
                     . " | Planned Qty: {$t['task_qty']}"
-                    . " | Productivity: {$t['task_productivity']}"
+                    . " | Target Production: {$targetProd} {$t['task_unit']}/day"
+                    . " | Productivity: {$t['task_productivity']} {$t['task_unit']}/day per unit"
                     . " | Resource Units: {$t['task_resource_units']}"
                     . " | Budgeted Duration: {$t['Budgeted_Duration']} days\n";
             }
