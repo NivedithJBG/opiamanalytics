@@ -1566,7 +1566,10 @@ if($action=='login')
             msgs.removeChild(typing);
             addMsg('Network error. Please try again.', 'bot');
         };
-        xhr.send('message=' + encodeURIComponent(text) + '&history=' + encodeURIComponent(JSON.stringify(history.slice(0,-1))));
+        // Send all prior turns (history already has current user msg pushed before this call)
+        // We send history excluding the last entry (current user msg) as 'history', and current msg separately
+        var priorHistory = history.slice(0, -1);
+        xhr.send('message=' + encodeURIComponent(text) + '&history=' + encodeURIComponent(JSON.stringify(priorHistory)));
     }
 
     function addMsg(text, cls){

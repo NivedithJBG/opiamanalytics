@@ -69,7 +69,8 @@ body{background:#f0f3fa;font-family:'Nunito',sans-serif;height:100vh;display:fle
             }
         };
         xhr.onerror = function(){ msgs.removeChild(typing); addMsg('Network error.', 'bot'); };
-        xhr.send('message=' + encodeURIComponent(text) + '&history=' + encodeURIComponent(JSON.stringify(history.slice(0,-1))));
+        var priorHistory = history.slice(0, -1);
+        xhr.send('message=' + encodeURIComponent(text) + '&history=' + encodeURIComponent(JSON.stringify(priorHistory)));
     }
 
     function addMsg(text, cls){
