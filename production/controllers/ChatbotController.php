@@ -153,14 +153,27 @@ class ChatbotController extends Controller
                        COALESCE(act.actual_cost, 0) AS actual_cost
                 FROM projects p
                 LEFT JOIN (
-                    SELECT project_Id, SUM(specific_rate * activity_qty) AS estimated_cost
-                    FROM pricing_estimate_new
-                    GROUP BY project_Id
+                    SELECT pen.project_Id,
+                           SUM(pen.activity_qty * COALESCE(res.unit_cost, 0)) AS estimated_cost
+                    FROM pricing_estimate_new pen
+                    LEFT JOIN (
+                        SELECT activity_id, project_id, SUM(quantity * rate) AS unit_cost
+                        FROM pricing_estimate_resources_new
+                        WHERE pricing_status = 0
+                        GROUP BY activity_id, project_id
+                    ) res ON res.activity_id = pen.activity_Id AND res.project_id = pen.project_Id
+                    WHERE pen.pricing_status = 0
+                    GROUP BY pen.project_Id
                 ) est ON est.project_Id = p.Project_Id
                 LEFT JOIN (
-                    SELECT project_id, SUM(actual_amount) AS actual_cost
-                    FROM pricing_estimate_resources_new
-                    GROUP BY project_id
+                    SELECT pern.project_id,
+                           SUM(g.GRN_Quantity * por.rate) AS actual_cost
+                    FROM pricing_estimate_resources_new pern
+                    JOIN purchase_order_resources por ON por.allocation_id = pern.pricing_resourceid
+                    JOIN goods_received_note g ON g.GRN_Purchase_Order = por.order_id AND g.GRN_Item = pern.resource_Id
+                    JOIN purchase_orders po ON po.order_id = por.order_id
+                    WHERE po.delete_status = 0 AND por.delete_status = 0
+                    GROUP BY pern.project_id
                 ) act ON act.project_id = p.Project_Id
                 WHERE p.Status = 0
                 ORDER BY p.Name
@@ -272,7 +285,7 @@ class ChatbotController extends Controller
             }
         }
 
-        // === COST VARIANCE (estimated vs actual) ===
+        // === COST VARIANCE (same formula as cost dashboard) ===
         if ($wantsCosts) {
             $costVariance = $db->createCommand("
                 SELECT
@@ -282,14 +295,27 @@ class ChatbotController extends Controller
                     COALESCE(est.estimated_cost, 0) - COALESCE(act.actual_cost, 0) AS cost_variance
                 FROM projects p
                 LEFT JOIN (
-                    SELECT project_Id, SUM(specific_rate * activity_qty) AS estimated_cost
-                    FROM pricing_estimate_new
-                    GROUP BY project_Id
+                    SELECT pen.project_Id,
+                           SUM(pen.activity_qty * COALESCE(res.unit_cost, 0)) AS estimated_cost
+                    FROM pricing_estimate_new pen
+                    LEFT JOIN (
+                        SELECT activity_id, project_id, SUM(quantity * rate) AS unit_cost
+                        FROM pricing_estimate_resources_new
+                        WHERE pricing_status = 0
+                        GROUP BY activity_id, project_id
+                    ) res ON res.activity_id = pen.activity_Id AND res.project_id = pen.project_Id
+                    WHERE pen.pricing_status = 0
+                    GROUP BY pen.project_Id
                 ) est ON est.project_Id = p.Project_Id
                 LEFT JOIN (
-                    SELECT project_id, SUM(actual_amount) AS actual_cost
-                    FROM pricing_estimate_resources_new
-                    GROUP BY project_id
+                    SELECT pern.project_id,
+                           SUM(g.GRN_Quantity * por.rate) AS actual_cost
+                    FROM pricing_estimate_resources_new pern
+                    JOIN purchase_order_resources por ON por.allocation_id = pern.pricing_resourceid
+                    JOIN goods_received_note g ON g.GRN_Purchase_Order = por.order_id AND g.GRN_Item = pern.resource_Id
+                    JOIN purchase_orders po ON po.order_id = por.order_id
+                    WHERE po.delete_status = 0 AND por.delete_status = 0
+                    GROUP BY pern.project_id
                 ) act ON act.project_id = p.Project_Id
                 WHERE p.Status = 0
                 ORDER BY p.Name
