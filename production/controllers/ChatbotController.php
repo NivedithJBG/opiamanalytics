@@ -96,7 +96,7 @@ class ChatbotController extends Controller
         $msg = strtolower($message);
         $context = '';
 
-        $wantsCost     = $this->matches($msg, ['cost', 'budget', 'estimat', 'actual', 'spend', 'amount', 'price', 'rate', 'variance', 'overrun', 'financial', 'expenditure', 'money', 'work done']);
+        $wantsCost     = $this->matches($msg, ['cost', 'budget', 'estimat', 'actual', 'spend', 'amount', 'price', 'rate', 'variance', 'overrun', 'financial', 'expenditure', 'money', 'work done', 'total cost', 'how much', 'spent', 'paid', 'purchase', 'invoice']);
         $wantsProgress = $this->matches($msg, ['progress', 'physical', 'percent', '%', 'complete', 'done', 'kpi', 'performance', 'how much work']);
         $wantsSchedule = $this->matches($msg, ['delay', 'critical', 'behind', 'on time', 'late', 'schedule', 'gantt', 'when', 'duration', 'start', 'end', 'activit', 'task', 'float']);
         $wantsDocs     = $this->matches($msg, ['document', 'file', 'pdf', 'report', 'letter', 'contract', 'invoice', 'drawing', 'upload']);
@@ -172,9 +172,9 @@ class ChatbotController extends Controller
                 $updated  = $cu($pid) ?? 'unknown';
                 $costBlock .= "- {$p['Name']}"
                     . " | Estimated Cost: " . number_format($est, 2)
-                    . " | Committed (PO): " . number_format($actPo, 2)
-                    . " | Received (GRN): " . number_format($actGrn, 2)
-                    . " | Variance: " . number_format(abs($variance), 2) . " ({$vLabel})"
+                    . " | Actual Cost (PO committed / total work ordered): " . number_format($actPo, 2)
+                    . " | Actual Cost (GRN received / work done to date): " . number_format($actGrn, 2)
+                    . " | Budget Variance: " . number_format(abs($variance), 2) . " ({$vLabel})"
                     . " | As of: {$updated}\n";
                 $hasCost = true;
             }
