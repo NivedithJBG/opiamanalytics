@@ -255,13 +255,13 @@ class ChatbotController extends Controller
                 CAST(g.GRN_Quantity AS DECIMAL(15,4)) AS qty,
                 g.GRN_Rate AS rate,
                 CAST(g.GRN_Quantity AS DECIMAL(15,4)) * g.GRN_Rate AS value,
-                v.Vendor_Name,
+                v.Name AS vendor_name,
                 p.Name AS project_name
             FROM goods_received_note g
             JOIN resources r ON r.Resource_Id = g.GRN_Item
             JOIN purchase_orders po ON po.order_id = g.GRN_Purchase_Order
             JOIN projects p ON p.Project_Id = po.project_id AND p.Status = 0
-            LEFT JOIN vendor v ON v.Vendor_Id = g.GRN_Vendor
+            LEFT JOIN vendors v ON v.Vendor_Id = g.GRN_Vendor
             WHERE g.delete_status = 0
               AND po.delete_status = 0
               AND po.project_id IN ($pidList)
@@ -278,7 +278,7 @@ class ChatbotController extends Controller
                     . " | Qty: " . number_format((float)$g['qty'], 3) . " {$g['Unit']}"
                     . " | Rate: ₹" . number_format((float)$g['rate'], 2)
                     . " | Value: ₹" . number_format((float)$g['value'], 2)
-                    . " | Vendor: {$g['Vendor_Name']}\n";
+                    . " | Vendor: {$g['vendor_name']}\n";
             }
             $context .= "\n";
 
@@ -309,14 +309,14 @@ class ChatbotController extends Controller
         $pos = $db->createCommand("
             SELECT
                 po.order_id, po.order_date, po.total_amount,
-                v.Vendor_Name,
+                v.Name AS vendor_name,
                 p.Name AS project_name,
                 r.Name AS item_name, r.Unit AS item_unit,
                 por.quantity AS ordered_qty, por.rate, por.amount
             FROM purchase_orders po
             JOIN purchase_order_resources por ON por.order_id = po.order_id AND por.delete_status = 0
             LEFT JOIN resources r  ON r.Resource_Id  = por.resource_id
-            LEFT JOIN vendor v     ON v.Vendor_Id    = po.vendor_id
+            LEFT JOIN vendors v    ON v.Vendor_Id    = po.vendor_id
             JOIN projects p        ON p.Project_Id   = po.project_id AND p.Status = 0
             WHERE po.delete_status = 0
               AND po.project_id IN ($pidList)
@@ -329,7 +329,7 @@ class ChatbotController extends Controller
             foreach ($pos as $po) {
                 $context .= "- [{$po['project_name']}] PO#{$po['order_id']}"
                     . " | Date: {$po['order_date']}"
-                    . " | Vendor: {$po['Vendor_Name']}"
+                    . " | Vendor: {$po['vendor_name']}"
                     . " | Item: {$po['item_name']} ({$po['item_unit']})"
                     . " | Ordered Qty: " . number_format((float)$po['ordered_qty'], 3)
                     . " | Rate: ₹" . number_format((float)$po['rate'], 2)
@@ -367,9 +367,9 @@ class ChatbotController extends Controller
         $wos = $db->createCommand("
             SELECT wo.WO_Number, wo.Date_requested, wo.Scope, wo.Quantity, wo.Unit,
                    wo.Rate, wo.Total, wo.Duration, wo.start_date,
-                   v.Vendor_Name, p.Name AS project_name, wo.WO_Subject
+                   v.Name AS vendor_name, p.Name AS project_name, wo.WO_Subject
             FROM work_order wo
-            LEFT JOIN vendor v   ON v.Vendor_Id  = wo.WO_Vendor
+            LEFT JOIN vendors v  ON v.Vendor_Id  = wo.WO_Vendor
             JOIN projects p      ON p.Project_Id = wo.Project_Id AND p.Status = 0
             WHERE wo.Project_Id IN ($pidList)
             ORDER BY wo.Date_requested DESC
@@ -388,7 +388,7 @@ class ChatbotController extends Controller
                 }
                 $context .= "- [{$wo['project_name']}] {$wo['WO_Number']}"
                     . " | Date: {$wo['Date_requested']}"
-                    . " | Vendor: {$wo['Vendor_Name']}"
+                    . " | Vendor: {$wo['vendor_name']}"
                     . " | Scope: {$wo['Scope']}"
                     . ($subject ? " | Activities: {$subject}" : '')
                     . " | Qty: {$wo['Quantity']} {$wo['Unit']}"
@@ -510,25 +510,25 @@ class ChatbotController extends Controller
         // ================================================================
         $indents = $db->createCommand("
             SELECT
-                si.indent_number, si.indent_date, si.quantity, si.stock_at_site,
-                r.Name AS resource_name, r.Unit,
+                si.id, si.raised_at, si.stock_at_site, si.avg_consumption,
+                si.resource_name, si.resource_type, si.unit, si.task_name,
                 p.Name AS project_name
             FROM store_indents si
-            JOIN projects p   ON p.Project_Id = si.project_id AND p.Status = 0
-            LEFT JOIN resources r ON r.Resource_Id = si.resource_id
+            JOIN projects p ON p.Project_Id = si.project_id AND p.Status = 0
             WHERE si.project_id IN ($pidList)
-            ORDER BY si.indent_date DESC
+            ORDER BY si.raised_at DESC
             LIMIT 300
         ")->queryAll();
 
         if ($indents) {
-            $context .= "=== STORE INDENTS (Material Issues) ===\n";
+            $context .= "=== STORE INDENTS (Material at Site) ===\n";
             foreach ($indents as $s) {
-                $context .= "- [{$s['project_name']}] {$s['indent_number']}"
-                    . " | Date: {$s['indent_date']}"
-                    . " | Material: {$s['resource_name']} ({$s['Unit']})"
-                    . " | Qty Issued: {$s['quantity']}"
-                    . " | Stock at Site: {$s['stock_at_site']}\n";
+                $context .= "- [{$s['project_name']}] Material: {$s['resource_name']} ({$s['resource_type']})"
+                    . " | Unit: {$s['unit']}"
+                    . " | Task: {$s['task_name']}"
+                    . " | Stock at Site: {$s['stock_at_site']}"
+                    . " | Avg Consumption: {$s['avg_consumption']}"
+                    . " | Raised: {$s['raised_at']}\n";
             }
             $context .= "\n";
         }
