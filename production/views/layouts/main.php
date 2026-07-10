@@ -1480,7 +1480,7 @@ if($action=='login')
 #cb-btn:hover{background:#2d3f6e}
 
 /* Desktop floating panel */
-#cb-win{position:fixed;bottom:92px;right:24px;z-index:99999;width:430px;height:600px;background:#fff;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.28);display:none;flex-direction:column;font-family:'Times New Roman',Times,serif;overflow:hidden}
+#cb-win{position:fixed;bottom:92px;right:24px;z-index:99999;width:370px;height:500px;background:#fff;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.28);display:none;flex-direction:column;font-family:'Times New Roman',Times,serif;overflow:hidden}
 
 /* Mobile: full-screen overlay */
 @media(max-width:600px){
