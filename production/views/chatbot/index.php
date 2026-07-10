@@ -7,8 +7,14 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;display:flex;flex-direction:column}
-#cb-hdr{background:#1a2540;color:#fff;padding:14px 16px;font-size:21px;font-weight:600;display:flex;align-items:center;gap:10px;flex-shrink:0;font-family:'Times New Roman',Times,serif}
+#cb-hdr{background:#1a2540;color:#fff;padding:10px 16px;font-size:21px;font-weight:600;display:flex;align-items:center;gap:10px;flex-shrink:0;font-family:'Times New Roman',Times,serif}
 #cb-hdr .dot{width:10px;height:10px;border-radius:50%;background:#4ade80;flex-shrink:0}
+#cb-hdr-title{flex:1}
+#voice-bar{background:#1e2e55;padding:8px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;border-bottom:1px solid #2d3f6e}
+#voice-bar label{color:#a0b0d0;font-size:13px;font-family:sans-serif;white-space:nowrap}
+#voice-select{flex:1;background:#0f1a35;color:#fff;border:1px solid #2d3f6e;border-radius:8px;padding:5px 8px;font-size:13px;font-family:sans-serif;outline:none}
+#voice-preview{background:none;border:1px solid #2d3f6e;color:#a0b0d0;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:sans-serif;white-space:nowrap}
+#voice-preview:hover{background:#2d3f6e;color:#fff}
 #cb-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
 .cb-msg{max-width:85%;padding:10px 14px;border-radius:14px;font-size:19px;line-height:1.6;word-wrap:break-word;font-family:'Times New Roman',Times,serif}
 .cb-msg.user{background:#1a2540;color:#fff;align-self:flex-end;border-bottom-right-radius:3px;font-weight:500}
@@ -22,7 +28,7 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
 #cb-foot{display:flex;gap:8px;padding:12px;background:#fff;border-top:1px solid #e8ecf4;flex-shrink:0}
 #cb-input{flex:1;border:1px solid #cbd5e1;border-radius:24px;padding:10px 16px;font-size:19px;outline:none;font-family:'Times New Roman',Times,serif}
 #cb-input:focus{border-color:#1a2540}
-#cb-send{background:#1a2540;color:#fff;border:none;border-radius:50%;width:46px;height:46px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Times New Roman',Times,serif}
+#cb-send{background:#1a2540;color:#fff;border:none;border-radius:50%;width:46px;height:46px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 #cb-send:active{background:#2d3f6e}
 #cb-mic{background:#f0f3fa;color:#1a2540;border:1px solid #cbd5e1;border-radius:50%;width:46px;height:46px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 #cb-mic.listening{background:#e53935;color:#fff;border-color:#e53935;animation:cb-pulse 1s infinite}
@@ -32,7 +38,12 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
 <body>
 <div id="cb-hdr">
     <div class="dot"></div>
-    Project Assistant
+    <div id="cb-hdr-title">Project Assistant</div>
+</div>
+<div id="voice-bar">
+    <label>&#128266; Voice:</label>
+    <select id="voice-select"><option>Loading voices…</option></select>
+    <button id="voice-preview">Preview</button>
 </div>
 <div id="cb-msgs">
     <div class="cb-msg bot">Hi! Ask me anything about your projects.</div>
@@ -47,6 +58,41 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
     var history = [];
     var msgs = document.getElementById('cb-msgs');
     var inp  = document.getElementById('cb-input');
+    var voiceSel = document.getElementById('voice-select');
+    var selectedVoice = null;
+
+    /* Load available voices */
+    function loadVoices(){
+        var voices = window.speechSynthesis.getVoices();
+        var english = voices.filter(function(v){ return v.lang.indexOf('en') === 0; });
+        if(!english.length) return;
+        voiceSel.innerHTML = '';
+        english.forEach(function(v, i){
+            var opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = v.name + ' (' + v.lang + ')';
+            voiceSel.appendChild(opt);
+            /* default: prefer en-GB or en-US over en-IN */
+            if(!selectedVoice && (v.lang === 'en-GB' || v.lang === 'en-US' || v.lang === 'en-AU')){
+                selectedVoice = v;
+                opt.selected = true;
+            }
+        });
+        if(!selectedVoice){ selectedVoice = english[0]; voiceSel.selectedIndex = 0; }
+        voiceSel.addEventListener('change', function(){
+            selectedVoice = english[parseInt(voiceSel.value)];
+        });
+    }
+
+    if(window.speechSynthesis){
+        loadVoices();
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+        document.getElementById('voice-preview').addEventListener('click', function(){
+            speak('Hello! This is how I sound.', null);
+        });
+    } else {
+        document.getElementById('voice-bar').style.display = 'none';
+    }
 
     /* Voice input */
     var micBtn = document.getElementById('cb-mic');
@@ -71,7 +117,7 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
             if(e.error === 'not-allowed'){
                 addMsg('Microphone access denied. Please allow mic permission in your browser settings.', 'bot');
             } else if(e.error === 'no-speech'){
-                /* silent — user just didn't speak */
+                /* silent */
             } else {
                 addMsg('Mic error: ' + e.error, 'bot');
             }
@@ -131,7 +177,7 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
         if(!window.speechSynthesis) return;
         window.speechSynthesis.cancel();
         var utt = new SpeechSynthesisUtterance(text);
-        utt.lang = 'en-GB';
+        if(selectedVoice) utt.voice = selectedVoice;
         utt.rate = 1;
         if(btn){ btn.classList.add('speaking'); btn.textContent = '⏹'; }
         utt.onend = utt.onerror = function(){ if(btn){ btn.classList.remove('speaking'); btn.textContent = '🔊'; } };
