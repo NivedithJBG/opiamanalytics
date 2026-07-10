@@ -17,8 +17,11 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
 #cb-foot{display:flex;gap:8px;padding:12px;background:#fff;border-top:1px solid #e8ecf4;flex-shrink:0}
 #cb-input{flex:1;border:1px solid #cbd5e1;border-radius:24px;padding:10px 16px;font-size:19px;outline:none;font-family:'Times New Roman',Times,serif}
 #cb-input:focus{border-color:#1a2540}
-#cb-send{background:#1a2540;color:#fff;border:none;border-radius:24px;padding:10px 20px;font-size:19px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'Times New Roman',Times,serif}
+#cb-send{background:#1a2540;color:#fff;border:none;border-radius:50%;width:46px;height:46px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Times New Roman',Times,serif}
 #cb-send:active{background:#2d3f6e}
+#cb-mic{background:#f0f3fa;color:#1a2540;border:1px solid #cbd5e1;border-radius:50%;width:46px;height:46px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#cb-mic.listening{background:#e53935;color:#fff;border-color:#e53935;animation:cb-pulse 1s infinite}
+@keyframes cb-pulse{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,.4)}50%{box-shadow:0 0 0 8px rgba(229,57,53,0)}}
 </style>
 </head>
 <body>
@@ -30,14 +33,43 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
     <div class="cb-msg bot">Hi! Ask me anything about your projects.</div>
 </div>
 <div id="cb-foot">
-    <input id="cb-input" type="text" placeholder="Ask a question..." autocomplete="off">
-    <button id="cb-send">Send</button>
+    <input id="cb-input" type="text" placeholder="Ask a question…" autocomplete="off">
+    <button id="cb-mic" title="Speak" aria-label="Voice input">&#127908;</button>
+    <button id="cb-send" title="Send" aria-label="Send">&#10148;</button>
 </div>
 <script>
 (function(){
     var history = [];
     var msgs = document.getElementById('cb-msgs');
     var inp  = document.getElementById('cb-input');
+
+    /* Voice input */
+    var micBtn = document.getElementById('cb-mic');
+    var listening = false;
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(SpeechRecognition){
+        var recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = 'en-IN';
+        recognition.onstart = function(){ listening = true; micBtn.classList.add('listening'); };
+        recognition.onend   = function(){ listening = false; micBtn.classList.remove('listening'); };
+        recognition.onerror = function(){ listening = false; micBtn.classList.remove('listening'); };
+        recognition.onresult = function(e){
+            var final = '';
+            for(var i = e.resultIndex; i < e.results.length; i++){
+                if(e.results[i].isFinal) final += e.results[i][0].transcript;
+            }
+            if(final){ inp.value = (inp.value + ' ' + final).trim(); }
+        };
+        micBtn.addEventListener('click', function(){
+            if(listening){ recognition.stop(); }
+            else { inp.focus(); try{ recognition.start(); } catch(ex){} }
+        });
+    } else {
+        micBtn.style.opacity = '0.4';
+        micBtn.style.cursor = 'not-allowed';
+    }
 
     document.getElementById('cb-send').addEventListener('click', sendMsg);
     inp.addEventListener('keydown', function(e){ if(e.key==='Enter') sendMsg(); });
