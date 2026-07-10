@@ -7,24 +7,13 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;display:flex;flex-direction:column}
-#cb-hdr{background:#1a2540;color:#fff;padding:10px 16px;font-size:21px;font-weight:600;display:flex;align-items:center;gap:10px;flex-shrink:0;font-family:'Times New Roman',Times,serif}
+#cb-hdr{background:#1a2540;color:#fff;padding:14px 16px;font-size:21px;font-weight:600;display:flex;align-items:center;gap:10px;flex-shrink:0;font-family:'Times New Roman',Times,serif}
 #cb-hdr .dot{width:10px;height:10px;border-radius:50%;background:#4ade80;flex-shrink:0}
-#cb-hdr-title{flex:1}
-#voice-bar{background:#1e2e55;padding:8px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;border-bottom:1px solid #2d3f6e}
-#voice-bar label{color:#a0b0d0;font-size:13px;font-family:sans-serif;white-space:nowrap}
-#voice-select{flex:1;background:#0f1a35;color:#fff;border:1px solid #2d3f6e;border-radius:8px;padding:5px 8px;font-size:13px;font-family:sans-serif;outline:none}
-#voice-preview{background:none;border:1px solid #2d3f6e;color:#a0b0d0;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:sans-serif;white-space:nowrap}
-#voice-preview:hover{background:#2d3f6e;color:#fff}
 #cb-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
 .cb-msg{max-width:85%;padding:10px 14px;border-radius:14px;font-size:19px;line-height:1.6;word-wrap:break-word;font-family:'Times New Roman',Times,serif}
 .cb-msg.user{background:#1a2540;color:#fff;align-self:flex-end;border-bottom-right-radius:3px;font-weight:500}
 .cb-msg.bot{background:#fff;color:#1a1a1a;align-self:flex-start;border-bottom-left-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.1)}
 .cb-msg.typing{color:#888;font-style:italic;background:#fff}
-.cb-msg-wrap{display:flex;flex-direction:column;align-self:flex-start;max-width:85%}
-.cb-msg-wrap .cb-msg{max-width:100%;align-self:unset}
-.cb-speak{background:none;border:none;cursor:pointer;font-size:15px;color:#aaa;padding:3px 4px;align-self:flex-start;margin-top:3px;line-height:1}
-.cb-speak:hover{color:#1a2540}
-.cb-speak.speaking{color:#e53935}
 #cb-foot{display:flex;gap:8px;padding:12px;background:#fff;border-top:1px solid #e8ecf4;flex-shrink:0}
 #cb-input{flex:1;border:1px solid #cbd5e1;border-radius:24px;padding:10px 16px;font-size:19px;outline:none;font-family:'Times New Roman',Times,serif}
 #cb-input:focus{border-color:#1a2540}
@@ -38,12 +27,7 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
 <body>
 <div id="cb-hdr">
     <div class="dot"></div>
-    <div id="cb-hdr-title">Project Assistant</div>
-</div>
-<div id="voice-bar">
-    <label>&#128266; Voice:</label>
-    <select id="voice-select"><option>Loading voices…</option></select>
-    <button id="voice-preview">Preview</button>
+    Project Assistant
 </div>
 <div id="cb-msgs">
     <div class="cb-msg bot">Hi! Ask me anything about your projects.</div>
@@ -58,60 +42,6 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
     var history = [];
     var msgs = document.getElementById('cb-msgs');
     var inp  = document.getElementById('cb-input');
-    var voiceSel = document.getElementById('voice-select');
-    var selectedVoice = null;
-
-    /* Load available voices */
-    var allEnglish = [];
-    var voiceChangeListenerAdded = false;
-    function loadVoices(){
-        var voices = window.speechSynthesis.getVoices();
-        var english = voices.filter(function(v){ return v.lang.indexOf('en') === 0; });
-        if(!english.length) return;
-
-        /* Sort: prefer en-GB, en-AU, en-US over en-IN etc */
-        var preferred = ['en-GB','en-AU','en-US','en-IE','en-ZA','en-NZ'];
-        english.sort(function(a, b){
-            var ai = preferred.indexOf(a.lang), bi = preferred.indexOf(b.lang);
-            if(ai === -1) ai = 99; if(bi === -1) bi = 99;
-            return ai - bi;
-        });
-
-        allEnglish = english;
-        voiceSel.innerHTML = '';
-        english.forEach(function(v, i){
-            var opt = document.createElement('option');
-            opt.value = i;
-            opt.textContent = v.name + ' (' + v.lang + ')';
-            voiceSel.appendChild(opt);
-        });
-        selectedVoice = english[0];
-        voiceSel.selectedIndex = 0;
-
-        if(!voiceChangeListenerAdded){
-            voiceChangeListenerAdded = true;
-            voiceSel.addEventListener('change', function(){
-                selectedVoice = allEnglish[parseInt(voiceSel.value)];
-            });
-        }
-    }
-
-    if(window.speechSynthesis){
-        loadVoices();
-        /* onvoiceschanged fires on Chrome/Android; iOS Safari loads voices lazily */
-        window.speechSynthesis.onvoiceschanged = loadVoices;
-        /* iOS: retry on first user tap if voices weren't ready on page load */
-        document.addEventListener('touchstart', function retry(){
-            if(!allEnglish.length) loadVoices();
-            document.removeEventListener('touchstart', retry);
-        }, {once: true});
-        document.getElementById('voice-preview').addEventListener('click', function(){
-            loadVoices(); /* re-check in case iOS hadn't loaded them yet */
-            speak('Hello! This is how I sound.', null);
-        });
-    } else {
-        document.getElementById('voice-bar').style.display = 'none';
-    }
 
     /* Voice input */
     var micBtn = document.getElementById('cb-mic');
@@ -191,40 +121,7 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
         xhr.send('message=' + encodeURIComponent(text) + '&history=' + encodeURIComponent(JSON.stringify(priorHistory)));
     }
 
-    /* Text-to-speech */
-    function speak(text, btn){
-        if(!window.speechSynthesis) return;
-        window.speechSynthesis.cancel();
-        var utt = new SpeechSynthesisUtterance(text);
-        if(selectedVoice) utt.voice = selectedVoice;
-        utt.rate = 1;
-        if(btn){ btn.classList.add('speaking'); btn.textContent = '⏹'; }
-        utt.onend = utt.onerror = function(){ if(btn){ btn.classList.remove('speaking'); btn.textContent = '🔊'; } };
-        window.speechSynthesis.speak(utt);
-    }
-
     function addMsg(text, cls){
-        var isBot = cls.indexOf('bot') !== -1 && cls.indexOf('typing') === -1;
-        if(isBot){
-            var wrap = document.createElement('div');
-            wrap.className = 'cb-msg-wrap';
-            var d = document.createElement('div');
-            d.className = 'cb-msg ' + cls;
-            d.textContent = text;
-            var spk = document.createElement('button');
-            spk.className = 'cb-speak';
-            spk.textContent = '🔊';
-            spk.title = 'Read aloud';
-            spk.addEventListener('click', function(){
-                if(window.speechSynthesis && window.speechSynthesis.speaking){ window.speechSynthesis.cancel(); spk.classList.remove('speaking'); spk.textContent='🔊'; }
-                else speak(text, spk);
-            });
-            wrap.appendChild(d);
-            wrap.appendChild(spk);
-            msgs.appendChild(wrap);
-            msgs.scrollTop = msgs.scrollHeight;
-            return wrap;
-        }
         var d = document.createElement('div');
         d.className = 'cb-msg ' + cls;
         d.textContent = text;
