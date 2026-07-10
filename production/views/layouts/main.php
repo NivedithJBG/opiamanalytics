@@ -1476,7 +1476,7 @@ if($action=='login')
 <!-- ── Chatbot ─────────────────────────────────────────────────────────── -->
 <style>
 /* FAB button */
-#cb-btn{position:fixed;bottom:24px;right:24px;z-index:99999;width:56px;height:56px;border-radius:50%;background:#1a2540;color:#fff;border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;transition:background .2s}
+#cb-btn{position:fixed;bottom:24px;right:24px;z-index:99999;width:44px;height:44px;border-radius:50%;background:#1a2540;color:#fff;border:none;font-size:20px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;transition:background .2s}
 #cb-btn:hover{background:#2d3f6e}
 
 /* Desktop floating panel */
@@ -1484,7 +1484,7 @@ if($action=='login')
 
 /* Mobile: full-screen overlay */
 @media(max-width:600px){
-  #cb-btn{width:52px;height:52px;font-size:22px;bottom:16px;right:16px}
+  #cb-btn{width:42px;height:42px;font-size:19px;bottom:16px;right:16px}
   #cb-win{bottom:0;right:0;left:0;top:0;width:100%;height:100%;border-radius:0;box-shadow:none}
 }
 
