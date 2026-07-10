@@ -55,23 +55,40 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
     if(SpeechRecognition){
         var recognition = new SpeechRecognition();
         recognition.continuous = false;
-        recognition.interimResults = true;
+        recognition.interimResults = false;
         recognition.lang = 'en-IN';
-        recognition.onstart = function(){ listening = true; micBtn.classList.add('listening'); };
-        recognition.onend   = function(){ listening = false; micBtn.classList.remove('listening'); };
-        recognition.onerror = function(){ listening = false; micBtn.classList.remove('listening'); };
+        recognition.onstart = function(){ listening = true; micBtn.classList.add('listening'); micBtn.title = 'Tap to stop'; };
+        recognition.onend   = function(){
+            listening = false;
+            micBtn.classList.remove('listening');
+            micBtn.title = 'Speak';
+            if(inp.value.trim()) sendMsg();
+        };
+        recognition.onerror = function(e){
+            listening = false;
+            micBtn.classList.remove('listening');
+            micBtn.title = 'Speak';
+            if(e.error === 'not-allowed'){
+                addMsg('Microphone access denied. Please allow mic permission in your browser settings.', 'bot');
+            } else if(e.error === 'no-speech'){
+                /* silent — user just didn't speak */
+            } else {
+                addMsg('Mic error: ' + e.error, 'bot');
+            }
+        };
         recognition.onresult = function(e){
             var final = '';
             for(var i = e.resultIndex; i < e.results.length; i++){
                 if(e.results[i].isFinal) final += e.results[i][0].transcript;
             }
-            if(final){ inp.value = (inp.value + ' ' + final).trim(); }
+            if(final){ inp.value = final.trim(); }
         };
         micBtn.addEventListener('click', function(){
             if(listening){ recognition.stop(); }
-            else { inp.focus(); try{ recognition.start(); } catch(ex){} }
+            else { try{ recognition.start(); } catch(ex){} }
         });
     } else {
+        micBtn.title = 'Voice not supported in this browser';
         micBtn.style.opacity = '0.4';
         micBtn.style.cursor = 'not-allowed';
     }
