@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Opiam Assistant</title>
+<title>Project Assistant</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;display:flex;flex-direction:column}
@@ -32,7 +32,7 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
 <body>
 <div id="cb-hdr">
     <div class="dot"></div>
-    Opiam Assistant
+    Project Assistant
 </div>
 <div id="cb-msgs">
     <div class="cb-msg bot">Hi! Ask me anything about your projects.</div>

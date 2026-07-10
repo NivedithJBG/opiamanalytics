@@ -1530,12 +1530,12 @@ if($action=='login')
 }
 </style>
 
-<button id="cb-btn" title="Ask Opiam Assistant"><span class="icon-bubbles4"></span></button>
+<button id="cb-btn" title="Ask Project Assistant"><span class="icon-bubbles4"></span></button>
 
-<div id="cb-win" role="dialog" aria-label="Opiam Assistant">
+<div id="cb-win" role="dialog" aria-label="Project Assistant">
     <div id="cb-hdr">
         <div>
-            <div id="cb-hdr-title">Opiam Assistant</div>
+            <div id="cb-hdr-title">Project Assistant</div>
             <div id="cb-hdr-sub">Ask anything about your projects</div>
         </div>
         <div id="cb-hdr-actions">
