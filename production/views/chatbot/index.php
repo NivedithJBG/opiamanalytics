@@ -62,32 +62,51 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
     var selectedVoice = null;
 
     /* Load available voices */
+    var allEnglish = [];
+    var voiceChangeListenerAdded = false;
     function loadVoices(){
         var voices = window.speechSynthesis.getVoices();
         var english = voices.filter(function(v){ return v.lang.indexOf('en') === 0; });
         if(!english.length) return;
+
+        /* Sort: prefer en-GB, en-AU, en-US over en-IN etc */
+        var preferred = ['en-GB','en-AU','en-US','en-IE','en-ZA','en-NZ'];
+        english.sort(function(a, b){
+            var ai = preferred.indexOf(a.lang), bi = preferred.indexOf(b.lang);
+            if(ai === -1) ai = 99; if(bi === -1) bi = 99;
+            return ai - bi;
+        });
+
+        allEnglish = english;
         voiceSel.innerHTML = '';
         english.forEach(function(v, i){
             var opt = document.createElement('option');
             opt.value = i;
             opt.textContent = v.name + ' (' + v.lang + ')';
             voiceSel.appendChild(opt);
-            /* default: prefer en-GB or en-US over en-IN */
-            if(!selectedVoice && (v.lang === 'en-GB' || v.lang === 'en-US' || v.lang === 'en-AU')){
-                selectedVoice = v;
-                opt.selected = true;
-            }
         });
-        if(!selectedVoice){ selectedVoice = english[0]; voiceSel.selectedIndex = 0; }
-        voiceSel.addEventListener('change', function(){
-            selectedVoice = english[parseInt(voiceSel.value)];
-        });
+        selectedVoice = english[0];
+        voiceSel.selectedIndex = 0;
+
+        if(!voiceChangeListenerAdded){
+            voiceChangeListenerAdded = true;
+            voiceSel.addEventListener('change', function(){
+                selectedVoice = allEnglish[parseInt(voiceSel.value)];
+            });
+        }
     }
 
     if(window.speechSynthesis){
         loadVoices();
+        /* onvoiceschanged fires on Chrome/Android; iOS Safari loads voices lazily */
         window.speechSynthesis.onvoiceschanged = loadVoices;
+        /* iOS: retry on first user tap if voices weren't ready on page load */
+        document.addEventListener('touchstart', function retry(){
+            if(!allEnglish.length) loadVoices();
+            document.removeEventListener('touchstart', retry);
+        }, {once: true});
         document.getElementById('voice-preview').addEventListener('click', function(){
+            loadVoices(); /* re-check in case iOS hadn't loaded them yet */
             speak('Hello! This is how I sound.', null);
         });
     } else {
