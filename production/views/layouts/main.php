@@ -1504,6 +1504,11 @@ if($action=='login')
 .cb-msg.user{background:#1a2540;color:#fff;align-self:flex-end;border-bottom-right-radius:3px}
 .cb-msg.bot{background:#f0f3fa;color:#111;align-self:flex-start;border-bottom-left-radius:3px}
 .cb-msg.typing{color:#888;font-style:italic;background:#f0f3fa;align-self:flex-start}
+.cb-msg-wrap{display:flex;flex-direction:column;align-self:flex-start;max-width:86%}
+.cb-msg-wrap .cb-msg{max-width:100%;align-self:unset}
+.cb-speak{background:none;border:none;cursor:pointer;font-size:14px;color:#aaa;padding:2px 4px;align-self:flex-start;margin-top:2px;line-height:1}
+.cb-speak:hover{color:#1a2540}
+.cb-speak.speaking{color:#e53935}
 
 /* Input footer */
 #cb-foot{display:flex;gap:8px;padding:12px;border-top:1px solid #e8ecf4;flex-shrink:0;background:#fff;align-items:flex-end}
@@ -1661,7 +1666,40 @@ if($action=='login')
         xhr.send('message=' + encodeURIComponent(text) + '&history=' + encodeURIComponent(JSON.stringify(priorHistory)));
     }
 
+    /* Text-to-speech */
+    function speak(text, btn){
+        if(!window.speechSynthesis) return;
+        window.speechSynthesis.cancel();
+        var utt = new SpeechSynthesisUtterance(text);
+        utt.lang = 'en-IN';
+        utt.rate = 1;
+        if(btn){ btn.classList.add('speaking'); btn.textContent = '⏹'; }
+        utt.onend = utt.onerror = function(){ if(btn){ btn.classList.remove('speaking'); btn.textContent = '🔊'; } };
+        window.speechSynthesis.speak(utt);
+    }
+
     function addMsg(text, cls){
+        var isBot = cls.indexOf('bot') !== -1 && cls.indexOf('typing') === -1;
+        if(isBot){
+            var wrap = document.createElement('div');
+            wrap.className = 'cb-msg-wrap';
+            var d = document.createElement('div');
+            d.className = 'cb-msg ' + cls;
+            d.textContent = text;
+            var spk = document.createElement('button');
+            spk.className = 'cb-speak';
+            spk.textContent = '🔊';
+            spk.title = 'Read aloud';
+            spk.addEventListener('click', function(){
+                if(window.speechSynthesis && window.speechSynthesis.speaking){ window.speechSynthesis.cancel(); spk.classList.remove('speaking'); spk.textContent='🔊'; }
+                else speak(text, spk);
+            });
+            wrap.appendChild(d);
+            wrap.appendChild(spk);
+            msgs.appendChild(wrap);
+            msgs.scrollTop = msgs.scrollHeight;
+            return wrap;
+        }
         var d = document.createElement('div');
         d.className = 'cb-msg ' + cls;
         d.textContent = text;

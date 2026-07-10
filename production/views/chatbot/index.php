@@ -14,6 +14,11 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
 .cb-msg.user{background:#1a2540;color:#fff;align-self:flex-end;border-bottom-right-radius:3px;font-weight:500}
 .cb-msg.bot{background:#fff;color:#1a1a1a;align-self:flex-start;border-bottom-left-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.1)}
 .cb-msg.typing{color:#888;font-style:italic;background:#fff}
+.cb-msg-wrap{display:flex;flex-direction:column;align-self:flex-start;max-width:85%}
+.cb-msg-wrap .cb-msg{max-width:100%;align-self:unset}
+.cb-speak{background:none;border:none;cursor:pointer;font-size:15px;color:#aaa;padding:3px 4px;align-self:flex-start;margin-top:3px;line-height:1}
+.cb-speak:hover{color:#1a2540}
+.cb-speak.speaking{color:#e53935}
 #cb-foot{display:flex;gap:8px;padding:12px;background:#fff;border-top:1px solid #e8ecf4;flex-shrink:0}
 #cb-input{flex:1;border:1px solid #cbd5e1;border-radius:24px;padding:10px 16px;font-size:19px;outline:none;font-family:'Times New Roman',Times,serif}
 #cb-input:focus{border-color:#1a2540}
@@ -104,7 +109,40 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
         xhr.send('message=' + encodeURIComponent(text) + '&history=' + encodeURIComponent(JSON.stringify(priorHistory)));
     }
 
+    /* Text-to-speech */
+    function speak(text, btn){
+        if(!window.speechSynthesis) return;
+        window.speechSynthesis.cancel();
+        var utt = new SpeechSynthesisUtterance(text);
+        utt.lang = 'en-IN';
+        utt.rate = 1;
+        if(btn){ btn.classList.add('speaking'); btn.textContent = '⏹'; }
+        utt.onend = utt.onerror = function(){ if(btn){ btn.classList.remove('speaking'); btn.textContent = '🔊'; } };
+        window.speechSynthesis.speak(utt);
+    }
+
     function addMsg(text, cls){
+        var isBot = cls.indexOf('bot') !== -1 && cls.indexOf('typing') === -1;
+        if(isBot){
+            var wrap = document.createElement('div');
+            wrap.className = 'cb-msg-wrap';
+            var d = document.createElement('div');
+            d.className = 'cb-msg ' + cls;
+            d.textContent = text;
+            var spk = document.createElement('button');
+            spk.className = 'cb-speak';
+            spk.textContent = '🔊';
+            spk.title = 'Read aloud';
+            spk.addEventListener('click', function(){
+                if(window.speechSynthesis && window.speechSynthesis.speaking){ window.speechSynthesis.cancel(); spk.classList.remove('speaking'); spk.textContent='🔊'; }
+                else speak(text, spk);
+            });
+            wrap.appendChild(d);
+            wrap.appendChild(spk);
+            msgs.appendChild(wrap);
+            msgs.scrollTop = msgs.scrollHeight;
+            return wrap;
+        }
         var d = document.createElement('div');
         d.className = 'cb-msg ' + cls;
         d.textContent = text;
