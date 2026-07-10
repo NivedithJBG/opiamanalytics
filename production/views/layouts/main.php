@@ -1475,100 +1475,152 @@ if($action=='login')
 
 <!-- ── Chatbot ─────────────────────────────────────────────────────────── -->
 <style>
-#cb-btn{position:fixed;bottom:24px;right:24px;z-index:99999;width:52px;height:52px;border-radius:50%;background:#1a2540;color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;transition:background .2s}
+/* FAB button */
+#cb-btn{position:fixed;bottom:24px;right:24px;z-index:99999;width:56px;height:56px;border-radius:50%;background:#1a2540;color:#fff;border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;transition:background .2s}
 #cb-btn:hover{background:#2d3f6e}
-#cb-win{position:fixed;bottom:88px;right:24px;z-index:99999;width:420px;max-height:600px;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.25);display:none;flex-direction:column;font-family:'Times New Roman',Times,serif;overflow:hidden}
-#cb-hdr{background:#1a2540;color:#fff;padding:12px 16px;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:space-between;font-family:'Times New Roman',Times,serif}
-#cb-hdr span{font-size:15px;opacity:.7;font-weight:400;font-family:'Times New Roman',Times,serif}
-#cb-close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1;padding:0}
-#cb-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:200px;max-height:420px}
-.cb-msg{max-width:85%;padding:8px 12px;border-radius:10px;font-size:17px;line-height:1.6;word-wrap:break-word;font-family:'Times New Roman',Times,serif}
+
+/* Desktop floating panel */
+#cb-win{position:fixed;bottom:92px;right:24px;z-index:99999;width:430px;height:600px;background:#fff;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.28);display:none;flex-direction:column;font-family:'Times New Roman',Times,serif;overflow:hidden}
+
+/* Mobile: full-screen overlay */
+@media(max-width:600px){
+  #cb-btn{width:52px;height:52px;font-size:22px;bottom:16px;right:16px}
+  #cb-win{bottom:0;right:0;left:0;top:0;width:100%;height:100%;border-radius:0;box-shadow:none}
+}
+
+/* Header */
+#cb-hdr{background:#1a2540;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;font-family:'Times New Roman',Times,serif;flex-shrink:0}
+#cb-hdr-title{font-size:17px;font-weight:700;line-height:1.2}
+#cb-hdr-sub{font-size:13px;opacity:.65;font-weight:400;margin-top:2px}
+#cb-hdr-actions{display:flex;align-items:center;gap:10px}
+#cb-clear{background:none;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.7);font-size:12px;cursor:pointer;padding:3px 8px;border-radius:4px;white-space:nowrap;font-family:'Times New Roman',Times,serif}
+#cb-clear:hover{color:#fff;border-color:#fff}
+#cb-close{background:none;border:none;color:#fff;font-size:26px;cursor:pointer;line-height:1;padding:0 2px;opacity:.8}
+#cb-close:hover{opacity:1}
+
+/* Message area */
+#cb-msgs{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px}
+.cb-msg{max-width:86%;padding:10px 14px;border-radius:12px;font-size:17px;line-height:1.65;word-wrap:break-word;font-family:'Times New Roman',Times,serif;white-space:pre-wrap}
 .cb-msg.user{background:#1a2540;color:#fff;align-self:flex-end;border-bottom-right-radius:3px}
 .cb-msg.bot{background:#f0f3fa;color:#111;align-self:flex-start;border-bottom-left-radius:3px}
-.cb-msg.typing{color:#888;font-style:italic}
-#cb-foot{display:flex;gap:6px;padding:10px;border-top:1px solid #e8ecf4}
-#cb-input{flex:1;border:1px solid #cbd5e1;border-radius:20px;padding:7px 14px;font-size:17px;outline:none;font-family:'Times New Roman',Times,serif}
+.cb-msg.typing{color:#888;font-style:italic;background:#f0f3fa;align-self:flex-start}
+
+/* Input footer */
+#cb-foot{display:flex;gap:8px;padding:12px;border-top:1px solid #e8ecf4;flex-shrink:0;background:#fff;align-items:flex-end}
+#cb-input{flex:1;border:1px solid #cbd5e1;border-radius:20px;padding:10px 16px;font-size:17px;outline:none;font-family:'Times New Roman',Times,serif;resize:none;max-height:120px;overflow-y:auto;line-height:1.5}
 #cb-input:focus{border-color:#1a2540}
-#cb-send{background:#1a2540;color:#fff;border:none;border-radius:20px;padding:7px 16px;font-size:17px;cursor:pointer;white-space:nowrap;font-family:'Times New Roman',Times,serif}
+#cb-send{background:#1a2540;color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s}
 #cb-send:hover{background:#2d3f6e}
-#cb-clear{background:none;border:none;color:#aaa;font-size:12px;cursor:pointer;padding:0 4px;align-self:center}
-#cb-clear:hover{color:#e53935}
+#cb-send:disabled{background:#b0b8cc;cursor:not-allowed}
+
+@media(max-width:600px){
+  .cb-msg{font-size:17px;max-width:90%}
+  #cb-input{font-size:17px}
+  #cb-foot{padding:10px 10px 18px}
+  #cb-send{width:46px;height:46px}
+}
 </style>
 
 <button id="cb-btn" title="Ask Opiam Assistant"><span class="icon-bubbles4"></span></button>
 
-<div id="cb-win">
+<div id="cb-win" role="dialog" aria-label="Opiam Assistant">
     <div id="cb-hdr">
-        <div><div>Opiam Assistant</div><span>Ask anything about your projects</span></div>
-        <button id="cb-close">&times;</button>
+        <div>
+            <div id="cb-hdr-title">Opiam Assistant</div>
+            <div id="cb-hdr-sub">Ask anything about your projects</div>
+        </div>
+        <div id="cb-hdr-actions">
+            <button id="cb-clear">Clear</button>
+            <button id="cb-close" aria-label="Close">&times;</button>
+        </div>
     </div>
-    <div id="cb-msgs">
+    <div id="cb-msgs" role="log" aria-live="polite">
         <div class="cb-msg bot">Hi! I can answer questions about your projects, costs, activities, schedules and documents. What would you like to know?</div>
     </div>
     <div id="cb-foot">
-        <input id="cb-input" type="text" placeholder="Ask a question..." autocomplete="off">
-        <button id="cb-send">Send</button>
-        <button id="cb-clear" title="Clear chat">&#10005;</button>
+        <textarea id="cb-input" placeholder="Ask a question… (Shift+Enter for new line)" autocomplete="off" rows="1" aria-label="Message"></textarea>
+        <button id="cb-send" title="Send" aria-label="Send">&#10148;</button>
     </div>
 </div>
 
 <script>
 (function(){
-    var history = [];
-    var win  = document.getElementById('cb-win');
-    var msgs = document.getElementById('cb-msgs');
-    var inp  = document.getElementById('cb-input');
+    var cbHistory = [];
+    var win     = document.getElementById('cb-win');
+    var msgs    = document.getElementById('cb-msgs');
+    var inp     = document.getElementById('cb-input');
+    var sendBtn = document.getElementById('cb-send');
+    var chatUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/chatbot/chat"]); ?>';
+
+    /* Auto-grow textarea */
+    inp.addEventListener('input', function(){
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+
+    /* Open / close */
+    function openChat(){
+        win.style.display = 'flex';
+        if(window.innerWidth <= 600) document.body.style.overflow = 'hidden';
+        setTimeout(function(){ inp.focus(); }, 50);
+    }
+    function closeChat(){
+        win.style.display = 'none';
+        if(window.innerWidth <= 600) document.body.style.overflow = '';
+    }
 
     document.getElementById('cb-btn').addEventListener('click', function(){
-        win.style.display = win.style.display === 'flex' ? 'none' : 'flex';
-        if(win.style.display === 'flex') inp.focus();
+        win.style.display === 'flex' ? closeChat() : openChat();
     });
-    document.getElementById('cb-close').addEventListener('click', function(){
-        win.style.display = 'none';
-    });
+    document.getElementById('cb-close').addEventListener('click', closeChat);
+
     document.getElementById('cb-clear').addEventListener('click', function(){
-        history = [];
+        cbHistory = [];
         msgs.innerHTML = '<div class="cb-msg bot">Chat cleared. How can I help you?</div>';
     });
-    document.getElementById('cb-send').addEventListener('click', sendMsg);
-    inp.addEventListener('keydown', function(e){ if(e.key==='Enter') sendMsg(); });
+
+    sendBtn.addEventListener('click', sendMsg);
+    inp.addEventListener('keydown', function(e){
+        if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendMsg(); }
+    });
 
     function sendMsg(){
         var text = inp.value.trim();
-        if(!text) return;
+        if(!text || sendBtn.disabled) return;
         inp.value = '';
+        inp.style.height = 'auto';
         addMsg(text, 'user');
-        history.push({role:'user', content:text});
-        var typing = addMsg('Thinking...', 'bot typing');
+        cbHistory.push({role:'user', content:text});
+        var typing = addMsg('Thinking…', 'bot typing');
+        sendBtn.disabled = true;
 
+        var priorHistory = cbHistory.slice(0, -1);
         var xhr = new XMLHttpRequest();
-        var chatUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/chatbot/chat"]); ?>';
         xhr.open('POST', chatUrl, true);
         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
         xhr.onload = function(){
-            msgs.removeChild(typing);
-            if (xhr.status !== 200) {
+            typing.remove();
+            sendBtn.disabled = false;
+            if(xhr.status !== 200){
                 addMsg('Server error (' + xhr.status + '). Please try again.', 'bot');
                 return;
             }
             try {
                 var d = JSON.parse(xhr.responseText);
-                if (d.error) { addMsg('Error: ' + d.error, 'bot'); return; }
+                if(d.error){ addMsg('Error: ' + d.error, 'bot'); return; }
                 var reply = d.reply || 'Sorry, something went wrong.';
                 addMsg(reply, 'bot');
-                history.push({role:'assistant', content:reply});
-                if(history.length > 20) history = history.slice(-20);
-            } catch(e) {
+                cbHistory.push({role:'assistant', content:reply});
+                if(cbHistory.length > 20) cbHistory = cbHistory.slice(-20);
+            } catch(ex){
                 addMsg('Parse error: ' + xhr.responseText.substring(0, 200), 'bot');
             }
         };
         xhr.onerror = function(){
-            msgs.removeChild(typing);
+            typing.remove();
+            sendBtn.disabled = false;
             addMsg('Network error. Please try again.', 'bot');
         };
-        // Send all prior turns (history already has current user msg pushed before this call)
-        // We send history excluding the last entry (current user msg) as 'history', and current msg separately
-        var priorHistory = history.slice(0, -1);
         xhr.send('message=' + encodeURIComponent(text) + '&history=' + encodeURIComponent(JSON.stringify(priorHistory)));
     }
 

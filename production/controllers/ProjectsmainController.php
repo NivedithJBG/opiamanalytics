@@ -574,7 +574,8 @@ class ProjectsmainController extends Controller
                 'delay'         => $proj_delay,
                 'b_start_date'  => $proj_b_start_date,
                 'actual_start'  => $proj_actual_start,
-                'b_end_date'    => $proj_b_end_computed,
+                'b_end_date'    => $proj_b_end_date,
+                'proj_end_date' => $proj_b_end_computed,
                 'a_end_date'    => $proj_a_end_date,
             ],
             'iow_groups'     => $groups_raw,
@@ -599,7 +600,9 @@ class ProjectsmainController extends Controller
             "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status
              FROM scheduleactivities WHERE id=$actid AND projectId=$pid"
         )->queryOne();
-        return json_encode(['error'=>'No', 'kpi' => $this->_buildKpi($act, $pid, $connection)]);
+        $kpi = $this->_buildKpi($act, $pid, $connection);
+        file_put_contents(Yii::getAlias('@app') . '/runtime/kpi_debug.json', json_encode($kpi, JSON_PRETTY_PRINT));
+        return json_encode(['error'=>'No', 'kpi' => $kpi]);
     }
 
 
@@ -806,7 +809,7 @@ class ProjectsmainController extends Controller
             'reported_start_date'  => $reported_start ?: '',
             'adj_start_date'       => $planned_start ?: $act_start_date,
             'adj_end_date'         => $planned_start
-                ? date('Y-m-d', strtotime($planned_start . ' +' . (max(1, $projected_duration ?: $b_duration) - 1) . ' days'))
+                ? date('Y-m-d', strtotime($planned_start . ' +' . (max(1, $b_duration) - 1) . ' days'))
                 : ($act['end_date'] ?? ''),
             'critical'             => (($act['critical_status'] ?? '') === 'Yes'),
             'project_name'         => $project_name,
@@ -3028,7 +3031,7 @@ class ProjectsmainController extends Controller
                     $est_qtyy = ($data['display_qty'] !== null) ? $data['display_qty'] : 0;
                     $display_duration = $data['old_duration'];
                     
-    				$datarows.='<tr class="activitycontent" id="enggactivities'.$data['id'].'" data-id="'.$data['id'].'">
+    				$datarows.='<tr class="activitycontent activitiess" id="enggactivities'.$data['id'].'" data-id="'.$data['id'].'">
     								<td style="text-align:center;">
     									<span class="number">'.($totalindex).'</span>
     								</td>
@@ -4406,11 +4409,27 @@ class ProjectsmainController extends Controller
             $schedActivity = Scheduleactivities::findOne((int)$ids[$i]);
             if (!$schedActivity || $schedActivity->projectId != $projectId) continue;
 
-            $newQty  = $quantities[$i];
-            $oldQty  = $schedActivity->quantity;
-            $schedActivity->quantity = $newQty;
+            $schedActivity->quantity = (float)$quantities[$i];
             $schedActivity->save(false);
 
+            // Recalculate duration when tasks with cycle time exist (duration = cycleTime × qty)
+            $cycleRow = \Yii::$app->db->createCommand(
+                "SELECT COALESCE(SUM(Budgeted_Duration), 0) AS total FROM schedule_task_new WHERE activity_Id = :id AND status = 0",
+                [':id' => (int)$schedActivity->id]
+            )->queryOne();
+            $cycleTime = $cycleRow ? round((float)$cycleRow['total'], 4) : 0;
+
+            if ($cycleTime > 0) {
+                $actQty = (float)$schedActivity->quantity > 0 ? (float)$schedActivity->quantity : 1;
+                $newDuration = (int)ceil(round($cycleTime * $actQty, 6));
+                $schedActivity->old_duration = $newDuration;
+                $startDate = $schedActivity->actual_start_date ?: date('Y-m-d');
+                $endDateRaw = Yii::$app->helper->getDateAfterHoliday($startDate, $schedActivity->projectId, max(0, $newDuration - 1));
+                $schedActivity->actual_end_date = date('Y-m-d', strtotime($endDateRaw));
+                $schedActivity->end_date = $schedActivity->actual_end_date;
+                $schedActivity->save(false);
+                Yii::$app->helper->GetRelationcorrect($schedActivity->projectId);
+            }
         }
 
         return json_encode(['error' => 'No', 'message' => 'Saved']);

@@ -102,6 +102,28 @@ function renderCdBars(){
     renderCdGroupBars();
     renderCdIowBars();
     renderCdActivityBars(_all || []);
+    // Auto-load metrics for first activity of first IOW
+    var firstIow = _iow_items && _iow_items[0];
+    if (firstIow) {
+        var firstAct = (_all || []).find(function(a){ return String(a.scheduleitem_id) === String(firstIow.id); });
+        if (firstAct) {
+            // Highlight the first IOW row
+            setTimeout(function(){
+                var iowEl = document.getElementById('cd-c3');
+                if (iowEl) {
+                    var firstRow = iowEl.querySelector('.cd-iow-row');
+                    if (firstRow) firstRow.style.background = '#dbeafe';
+                }
+                // Highlight the first activity row
+                var actEl = document.getElementById('cd-c4');
+                if (actEl) {
+                    var firstActRow = actEl.querySelector('.brow[data-aid="' + firstAct.id + '"]');
+                    if (firstActRow) firstActRow.classList.add('brow-active');
+                }
+                loadCdActivityData(firstAct.id);
+            }, 0);
+        }
+    }
 }
 
 function renderCdActivityBars(acts){
@@ -840,8 +862,7 @@ function loadAll(){
                 name,
                 (d.project_bar&&d.project_bar.b_start_date)||'',
                 (d.project_bar&&d.project_bar.b_end_date)||'',
-                (d.project_bar&&d.project_bar.a_end_date)||''
-                (d.project_bar&&d.project_bar.a_end_date)||'',
+                (d.project_bar&&d.project_bar.proj_end_date)||(d.project_bar&&d.project_bar.a_end_date)||'',
                 (d.project_bar&&d.project_bar.actual_start)||''
             );
             // Default: first group ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ its IOW items ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ first IOW's activities
@@ -1075,30 +1096,64 @@ function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, 
     }
     html += '</div>';
 
-    // Start / End dates
-    html += '<div style="'+F+'font-size:10px;color:#5a6e8c;margin-top:2px;">';
-    html += '<div style="display:flex;justify-content:space-between;">'
-          + '<span>Plan Start: <b style="color:#1a2540;">'+( fmDate(bStartDate)||'-')+'</b></span>'
-          + '<span>End: <b style="color:#1a2540;">'+( fmDate(bEndDate)||'-')+'</b></span>'
+    // Start / End dates — plan row + actual row, start on left / end on right
+    var actEndDateD = aEndDate ? new Date(aEndDate) : null;
+    if (actEndDateD) actEndDateD.setHours(0,0,0,0);
+    var planEndDateD = bEndDate ? new Date(bEndDate) : null;
+    if (planEndDateD) planEndDateD.setHours(0,0,0,0);
+    var actEndCol = actEndDateD && planEndDateD
+        ? (actEndDateD <= planEndDateD ? '#27ae60' : '#e53935')
+        : '#aaa';
+    html += '<div style="'+F+'font-size:9px;color:#5a6e8c;margin-top:2px;">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;">'
+          + '<span>Plan Start: <b style="color:#1a2540;">'+(fmDate(bStartDate)||'-')+'</b></span>'
+          + '<span>Plan End: <b style="color:#1a2540;">'+(fmDate(bEndDate)||'-')+'</b></span>'
           + '</div>';
-    html += '<div>Act. Start: <b style="color:'+(actualStart?'#1a2540':'#e53935')+';">'
-          + (actualStart ? fmDate(actualStart) : 'Not Started')
-          + '</b></div>';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;">'
+          + '<span>Act. Start: <b style="color:'+(actualStart?'#1a2540':'#e53935')+'">'+(actualStart?fmDate(actualStart):'Not Started')+'</b></span>'
+          + '<span>Act. End: <b style="color:'+actEndCol+'">'+(aEndDate?fmDate(aEndDate):'-')+'</b></span>'
+          + '</div>';
     html += '</div>';
-    // Legends — with top margin and divider lines between items
-    var lgDivider = '<div style="border-top:1px solid #d0d8e8;margin:2px 0;"></div>';
-    var lgRow = function(col, lbl, val){ return '<div style="display:flex;justify-content:space-between;padding:2px 0;">'
-        + '<span><span style="display:inline-block;width:9px;height:9px;background:'+col+';margin-right:4px;border-radius:2px;vertical-align:middle;"></span>'+lbl+'</span>'
-        + '<b style="color:#1a2540;">'+val+'</b>'
-        + '</div>'; };
-    html += '<div style="'+F+'font-size:11px;margin-top:6px;border-top:2px solid #d0d8e8;padding-top:4px;">'
-          + lgRow('#00838f','Planned',budgeted+' days')
-          + lgDivider
-          + lgRow('#e53935','Actual',actVal+' days')
-          + lgDivider
-          + '<div style="display:flex;justify-content:space-between;padding:2px 0;">'
-          + '<span><span style="display:inline-block;width:9px;height:9px;background:#f0c419;margin-right:4px;border-radius:2px;vertical-align:middle;"></span>Difference</span>'
-          + '<b style="color:'+diffCol+';">'+diffStr+'</b>'
+
+    // Legend — Planned / Elapsed Days / Time to Complete / Difference
+    var lgRow2c = function(col, lbl, val){
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:1px 0;">'
+            + '<span style="font-size:10px;"><span style="display:inline-block;width:8px;height:8px;background:'+col+';margin-right:3px;border-radius:2px;vertical-align:middle;"></span>'+lbl+'</span>'
+            + '<b style="color:#1a2540;font-size:13px;">'+val+'</b>'
+            + '</div>';
+    };
+
+    // Elapsed = today - plan start date of first activity
+    var elapsedProj = 0, elapsedStr = '-';
+    if (bStartDate) {
+        var today3 = new Date(); today3.setHours(0,0,0,0);
+        var ps = new Date(bStartDate); ps.setHours(0,0,0,0);
+        elapsedProj = Math.max(0, Math.round((today3 - ps) / 86400000));
+        elapsedStr = elapsedProj + ' d';
+    }
+
+    // Time to complete = planned duration - elapsed days (so elapsed + ttc = planned)
+    var ttcStr = '-';
+    if (bStartDate) {
+        var ttc = Math.max(0, budgeted - elapsedProj);
+        ttcStr = ttc + ' d';
+    }
+
+    // Difference = projected actual end - planned end
+    var projDiffStr = '-', projDiffCol = '#1a2540';
+    if (actEndDateD && planEndDateD) {
+        var dDiff = Math.round((actEndDateD - planEndDateD) / 86400000);
+        projDiffStr = dDiff > 0 ? '+'+dDiff+' d (overrun)' : dDiff < 0 ? dDiff+' d (ahead)' : '0 d (on time)';
+        projDiffCol = dDiff > 0 ? '#e53935' : dDiff < 0 ? '#27ae60' : '#1a2540';
+    }
+
+    html += '<div style="'+F+'font-size:10px;margin-top:4px;border-top:2px solid #d0d8e8;padding-top:3px;overflow:hidden;">'
+          + lgRow2c('#00838f', 'Planned', budgeted+' d')
+          + lgRow2c('#5c7bd9', 'Elapsed Days', elapsedStr)
+          + lgRow2c('#e53935', 'Time to Complete', ttcStr)
+          + '<div style="display:flex;justify-content:space-between;align-items:center;padding:1px 0;">'
+          + '<span style="font-size:10px;"><span style="display:inline-block;width:8px;height:8px;background:#f0c419;margin-right:3px;border-radius:2px;vertical-align:middle;"></span>Difference</span>'
+          + '<b style="color:'+projDiffCol+';font-size:13px;">'+projDiffStr+'</b>'
           + '</div>'
           + '</div>';
 
@@ -1144,9 +1199,10 @@ function renderBars(containerId, items, onRowClick){
         var isSlack = dl < 0;
         var dlAbs   = Math.abs(dl);
         var dlAbsPct = (dlAbs/maxVal*100).toFixed(1);
-        var dispVal = sc > 0 ? (String(sc)
-            + (dl > 0  ? '<span style="color:#FF0000;margin-left:3px;">+' + dl + '</span>' : '')
-            + (isSlack ? '<span style="color:#27ae60;margin-left:3px;">-' + dlAbs + '</span>' : '')) : '';
+        var fmt2 = function(v){ return Number.isInteger(v) ? v : parseFloat(v).toFixed(2); };
+        var dispVal = sc > 0 ? (fmt2(sc)
+            + (dl > 0  ? '<span style="color:#FF0000;margin-left:3px;">+' + fmt2(dl) + '</span>' : '')
+            + (isSlack ? '<span style="color:#27ae60;margin-left:3px;">-' + fmt2(dlAbs) + '</span>' : '')) : '';
         html += '<div class="'+rowCls+'" '+(r.id?'data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;"':'style="display:flex;align-items:center;"')+'>'
             +'<div class="blbl"'+tipAttr+' style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
             +'<div class="btrk" style="flex:1;">'
@@ -1531,8 +1587,8 @@ function doActivityDuration(k) {
 
     var actName = k.activity_name || '';
     el.innerHTML =
-        '<div style="display:flex;flex-direction:column;justify-content:flex-start;height:100%;padding:4px 10px;box-sizing:border-box;gap:3px;">'
-        + '<div style="display:flex;justify-content:space-between;align-items:baseline;' + fam + 'font-size:10px;font-weight:700;margin-bottom:2px;">'
+        '<div style="display:flex;flex-direction:column;justify-content:flex-start;height:100%;padding:4px 10px;box-sizing:border-box;gap:2px;overflow:hidden;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:baseline;' + fam + 'font-size:10px;font-weight:700;margin-bottom:1px;">'
         + '<span style="color:#1a2540;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;padding-right:6px;">' + (actName||'') + '</span>'
         + '<span style="white-space:nowrap;color:#1a2540;">' + bDur + ' d'
         + (isOver ? ' &nbsp;<span style="color:#e53935;">+' + (aDur-bDur) + ' d</span>' : isUnder ? ' &nbsp;<span style="color:#27ae60;">-' + (bDur-aDur) + ' d</span>' : '')
@@ -1540,35 +1596,97 @@ function doActivityDuration(k) {
         + '</span>'
         + '</div>'
         + bar
-        + '<div style="' + fam + 'font-size:10px;color:#5a6e8c;margin-top:2px;">'
-        + '<div style="display:flex;justify-content:space-between;">'
-        + '<span>Plan Start: <b style="color:#1a2540;">' + (fmDate(k.adj_start_date)||'-') + '</b></span>'
-        + '<span>End: <b style="color:#1a2540;">' + (fmDate(k.adj_end_date)||'-') + '</b></span>'
-        + '</div>'
-        + '<div>Act. Start: <b style="color:' + (k.reported_start_date ? '#1a2540' : '#e53935') + ';">'
-        + (k.reported_start_date ? fmDate(k.reported_start_date) : 'Not Started')
-        + '</b></div>'
-        + '</div>'
         + (function(){
-            var actDur  = aDur;
-            var diffD   = actDur - bDur;
-            var diffCol = diffD > 0 ? '#e53935' : diffD < 0 ? '#27ae60' : '#1a2540';
-            var diffStr = diffD > 0 ? '+' + diffD + ' d' : diffD + ' d';
-            var lgDiv   = '<div style="border-top:1px solid #d0d8e8;margin:2px 0;"></div>';
-            var lgRow2  = function(col, lbl, val){
+            // Projected actual end = actual_start + ceil((elapsed / work_done_qty) × schedule_qty) days
+            var actStartStr = k.reported_start_date || k.act_start_date || '';
+            var tq2 = +k.target_qty || 0;
+            var aq2 = +k.actual_qty || 0;
+            var elDays = +k.elapsed || 0;
+            if (actStartStr && actStartStr !== '0000-00-00') {
+                var today2 = new Date(); today2.setHours(0,0,0,0);
+                var sd2 = new Date(actStartStr); sd2.setHours(0,0,0,0);
+                elDays = Math.max(0, Math.round((today2 - sd2) / 86400000));
+            }
+            var projActEndStr = '-';
+            var projActEndCol = '#aaa';
+            if (actStartStr && actStartStr !== '0000-00-00' && aq2 > 0 && tq2 > 0) {
+                var totalDays = Math.ceil((elDays / aq2) * tq2);
+                var sd3 = new Date(actStartStr); sd3.setHours(0,0,0,0);
+                sd3.setDate(sd3.getDate() + totalDays - 1); // start day counts as day 1
+                var mm = sd3.getMonth()+1, dd2 = sd3.getDate(), yy = sd3.getFullYear();
+                projActEndStr = (dd2<10?'0'+dd2:dd2) + '-' + (mm<10?'0'+mm:mm) + '-' + yy;
+                // Green if finishing earlier than planned, red if later
+                var planEndD = k.adj_end_date ? new Date(k.adj_end_date) : null;
+                planEndD && planEndD.setHours(0,0,0,0);
+                projActEndCol = planEndD
+                    ? (sd3 <= planEndD ? '#27ae60' : '#e53935')
+                    : '#1a2540';
+            }
+            return '<div style="' + fam + 'font-size:9px;color:#5a6e8c;margin-top:1px;">'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+                + '<span>Plan Start: <b style="color:#1a2540;">' + (fmDate(k.adj_start_date)||'-') + '</b></span>'
+                + '<span>Plan End: <b style="color:#1a2540;">' + (fmDate(k.adj_end_date)||'-') + '</b></span>'
+                + '</div>'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+                + '<span>Act. Start: <b style="color:' + (actStartStr ? '#1a2540' : '#e53935') + ';">' + (actStartStr ? fmDate(actStartStr) : 'Not Started') + '</b></span>'
+                + '<span>Act. End: <b style="color:' + projActEndCol + ';">' + projActEndStr + '</b></span>'
+                + '</div>'
+                + '</div>';
+        })()
+        + (function(){
+            var lgDiv  = '<div style="border-top:1px solid #d0d8e8;margin:2px 0;"></div>';
+            var lgRow2 = function(col, lbl, val){
                 return '<div style="display:flex;justify-content:space-between;padding:2px 0;">'
                     + '<span><span style="display:inline-block;width:9px;height:9px;background:' + col + ';margin-right:4px;border-radius:2px;vertical-align:middle;"></span>' + lbl + '</span>'
                     + '<b style="color:#1a2540;">' + val + '</b>'
                     + '</div>';
             };
-            return '<div style="' + fam + 'font-size:11px;margin-top:6px;border-top:2px solid #d0d8e8;padding-top:4px;">'
-                + lgRow2(baseCol, 'Planned', bDur + ' d')
-                + lgDiv
-                + lgRow2('#e53935', 'Actual', actDur + ' d')
-                + lgDiv
-                + '<div style="display:flex;justify-content:space-between;padding:2px 0;">'
-                + '<span><span style="display:inline-block;width:9px;height:9px;background:#f0c419;margin-right:4px;border-radius:2px;vertical-align:middle;"></span>Difference</span>'
-                + '<b style="color:' + diffCol + ';">' + diffStr + '</b>'
+
+            // 1. Elapsed days = today - activity start date
+            var elapsedDays = elapsed; // already computed from act_start_date → last_report_date
+            // For display use today if activity has started
+            if (k.act_start_date && k.act_start_date !== '0000-00-00') {
+                var today = new Date(); today.setHours(0,0,0,0);
+                var startD = new Date(k.act_start_date); startD.setHours(0,0,0,0);
+                elapsedDays = Math.max(0, Math.round((today - startD) / 86400000));
+            }
+
+            // 2. Time required to complete = (schedule_qty - work_done_qty) / actual_productivity
+            var tq   = +k.target_qty       || 0;
+            var aq   = +k.actual_qty       || 0;
+            var prod = +k.actual_productivity || 0;
+            var timeToComplete = 0;
+            var timeToCompleteStr = '-';
+            if (prod > 0) {
+                timeToComplete    = Math.ceil(Math.max(0, tq - aq) / prod);
+                timeToCompleteStr = timeToComplete + ' d';
+            } else if (aq >= tq && tq > 0) {
+                timeToCompleteStr = '0 d (Complete)';
+            } else {
+                timeToCompleteStr = 'N/A (no progress)';
+            }
+
+            // 3. Difference = (elapsed + time_to_complete) - planned_duration
+            var totalProjected = elapsedDays + timeToComplete;
+            var diffD   = (prod > 0) ? Math.round(totalProjected - bDur) : null;
+            var diffStr = (diffD !== null)
+                ? (diffD > 0 ? '+' + diffD + ' d (overrun)' : diffD < 0 ? diffD + ' d (ahead)' : '0 d (on time)')
+                : '-';
+            var diffCol = (diffD !== null) ? (diffD > 0 ? '#e53935' : diffD < 0 ? '#27ae60' : '#1a2540') : '#aaa';
+
+            var lgRow2c = function(col, lbl, val){
+                return '<div style="display:flex;justify-content:space-between;align-items:center;padding:1px 0;">'
+                    + '<span style="font-size:10px;"><span style="display:inline-block;width:8px;height:8px;background:' + col + ';margin-right:3px;border-radius:2px;vertical-align:middle;"></span>' + lbl + '</span>'
+                    + '<b style="color:#1a2540;font-size:13px;">' + val + '</b>'
+                    + '</div>';
+            };
+            return '<div style="' + fam + 'font-size:10px;margin-top:4px;border-top:2px solid #d0d8e8;padding-top:3px;">'
+                + lgRow2c(baseCol, 'Planned', bDur + ' d')
+                + lgRow2c('#5c7bd9', 'Elapsed Days', elapsedDays + ' d')
+                + lgRow2c('#e53935', 'Time to Complete', timeToCompleteStr)
+                + '<div style="display:flex;justify-content:space-between;align-items:center;padding:1px 0;">'
+                + '<span style="font-size:10px;"><span style="display:inline-block;width:8px;height:8px;background:#f0c419;margin-right:3px;border-radius:2px;vertical-align:middle;"></span>Difference</span>'
+                + '<b style="color:' + diffCol + ';font-size:13px;">' + diffStr + '</b>'
                 + '</div>'
                 + '</div>';
         })()

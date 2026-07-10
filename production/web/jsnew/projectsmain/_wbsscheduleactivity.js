@@ -347,19 +347,18 @@ $(function(){
         }
         var ids = [];
         var quantities = [];
+        // Collect ALL quantity inputs (not just changed ones) so save always fires
         $('#scheduleactivityitems .editenggactivityquantity').each(function(){
-            var current  = $(this).val();
-            var original = $(this).data('original');
-            if(current != original){
-                var actId = $(this).closest('.activitiess').attr('data-id');
-                if(actId){
-                    ids.push(actId);
-                    quantities.push(current);
-                }
+            var qty = $(this).val();
+            if(qty === '' || qty === null) return;
+            var actId = $(this).closest('tr').attr('data-id') || $(this).closest('.activitiess').attr('data-id');
+            if(actId){
+                ids.push(actId);
+                quantities.push(qty);
             }
         });
         if(ids.length === 0){
-            alert('No changes to save.');
+            alert('No activities found to save.');
             return;
         }
         $.ajax({
@@ -374,10 +373,11 @@ $(function(){
                 if(data.error == 'No'){
                     $('#listscheduleact').trigger('click');
                 } else {
-                    alert(data.errortext);
+                    alert(data.message || data.errortext || 'Save failed');
                 }
                 $('#savescheduleqty').attr('disabled', false).html('<span class="icon-check"></span> SAVE');
-            }
+            },
+            error: function(xhr){ alert('Server error: ' + xhr.status); }
         });
     });
 
