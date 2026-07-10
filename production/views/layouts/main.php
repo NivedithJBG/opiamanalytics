@@ -1512,12 +1512,16 @@ if($action=='login')
 #cb-send{background:#1a2540;color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s}
 #cb-send:hover{background:#2d3f6e}
 #cb-send:disabled{background:#b0b8cc;cursor:not-allowed}
+#cb-mic{background:#f0f3fa;color:#1a2540;border:1px solid #cbd5e1;border-radius:50%;width:44px;height:44px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s,color .2s,border-color .2s}
+#cb-mic:hover{background:#e2e8f0}
+#cb-mic.listening{background:#e53935;color:#fff;border-color:#e53935;animation:cb-pulse 1s infinite}
+@keyframes cb-pulse{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,.4)}50%{box-shadow:0 0 0 7px rgba(229,57,53,0)}}
 
 @media(max-width:600px){
   .cb-msg{font-size:17px;max-width:90%}
   #cb-input{font-size:17px}
   #cb-foot{padding:10px 10px 18px}
-  #cb-send{width:46px;height:46px}
+  #cb-send,#cb-mic{width:46px;height:46px}
 }
 </style>
 
@@ -1539,6 +1543,7 @@ if($action=='login')
     </div>
     <div id="cb-foot">
         <textarea id="cb-input" placeholder="Ask a question… (Shift+Enter for new line)" autocomplete="off" rows="1" aria-label="Message"></textarea>
+        <button id="cb-mic" title="Speak" aria-label="Voice input">&#127908;</button>
         <button id="cb-send" title="Send" aria-label="Send">&#10148;</button>
     </div>
 </div>
@@ -1578,6 +1583,38 @@ if($action=='login')
         cbHistory = [];
         msgs.innerHTML = '<div class="cb-msg bot">Chat cleared. How can I help you?</div>';
     });
+
+    /* Voice input */
+    var micBtn = document.getElementById('cb-mic');
+    var recognition = null;
+    var listening = false;
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(SpeechRecognition){
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = 'en-IN';
+        var interim = '';
+        recognition.onstart = function(){ listening = true; micBtn.classList.add('listening'); micBtn.title = 'Stop'; };
+        recognition.onend   = function(){ listening = false; micBtn.classList.remove('listening'); micBtn.title = 'Speak'; interim = ''; };
+        recognition.onerror = function(e){ listening = false; micBtn.classList.remove('listening'); micBtn.title = 'Speak'; };
+        recognition.onresult = function(e){
+            var final = '', intr = '';
+            for(var i = e.resultIndex; i < e.results.length; i++){
+                if(e.results[i].isFinal) final += e.results[i][0].transcript;
+                else intr += e.results[i][0].transcript;
+            }
+            if(final){ inp.value = (inp.value + ' ' + final).trim(); inp.style.height='auto'; inp.style.height=Math.min(inp.scrollHeight,120)+'px'; }
+        };
+        micBtn.addEventListener('click', function(){
+            if(listening){ recognition.stop(); }
+            else { inp.focus(); try{ recognition.start(); } catch(ex){} }
+        });
+    } else {
+        micBtn.title = 'Voice not supported in this browser';
+        micBtn.style.opacity = '0.4';
+        micBtn.style.cursor = 'not-allowed';
+    }
 
     sendBtn.addEventListener('click', sendMsg);
     inp.addEventListener('keydown', function(e){
