@@ -1542,7 +1542,7 @@ if($action=='login')
         <div class="cb-msg bot">Hi! I can answer questions about your projects, costs, activities, schedules and documents. What would you like to know?</div>
     </div>
     <div id="cb-foot">
-        <textarea id="cb-input" placeholder="Ask a question… (Shift+Enter for new line)" autocomplete="off" rows="1" aria-label="Message"></textarea>
+        <textarea id="cb-input" placeholder="Ask a question…" autocomplete="off" rows="1" aria-label="Message"></textarea>
         <button id="cb-mic" title="Speak" aria-label="Voice input">&#127908;</button>
         <button id="cb-send" title="Send" aria-label="Send">&#10148;</button>
     </div>
