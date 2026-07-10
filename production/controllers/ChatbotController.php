@@ -1449,7 +1449,8 @@ class ChatbotController extends Controller
             "3. Answer in 1–2 sentences. Show quantities with their units. Show money as ₹ with 2 decimal places.\n" .
             "4. If the tool returns an error or null values, say: 'That information is not available in the system.'\n" .
             "5. Never mention internal field names or JSON keys — translate them to plain English.\n" .
-            "6. Do not add extra commentary, suggestions, or emojis.";
+            "6. Do not add extra commentary, suggestions, or emojis.\n\n" .
+            "TODAY'S DATE: " . date('d F Y') . " (use this as the current date for all elapsed-day and date calculations).";
 
         // Build message list from history
         $messages = [];
