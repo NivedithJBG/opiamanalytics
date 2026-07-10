@@ -131,7 +131,7 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
         if(!window.speechSynthesis) return;
         window.speechSynthesis.cancel();
         var utt = new SpeechSynthesisUtterance(text);
-        utt.lang = 'en-IN';
+        utt.lang = 'en-GB';
         utt.rate = 1;
         if(btn){ btn.classList.add('speaking'); btn.textContent = '⏹'; }
         utt.onend = utt.onerror = function(){ if(btn){ btn.classList.remove('speaking'); btn.textContent = '🔊'; } };
