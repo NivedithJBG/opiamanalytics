@@ -659,7 +659,7 @@ function renderCdCostOfActivity(d){
 
     var workDone = +d.last_report_qty || 0;
     var estCostWD = estUCTotal * workDone;
-    var actCostWD = hasActual ? actUCTotal * workDone : estCostWD;
+    var actCostWD = actUCTotal * workDone;
 
     var valRow = '<div style="display:flex;justify-content:space-between;align-items:baseline;font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:700;color:#111;margin-bottom:6px">'
         +'<span>Est: '+fmtCost(estCost)
@@ -670,14 +670,14 @@ function renderCdCostOfActivity(d){
 
     var diffWD = actCostWD - estCostWD;
     var overWD = diffWD > 0;
-    var diffWDLabel = hasActual && diffWD !== 0
+    var diffWDLabel = diffWD !== 0
         ? (overWD ? '+' : '-') + fmtCost(Math.abs(diffWD)) + ' ' + (overWD ? 'over' : 'saving')
         : '';
 
     var wdRow = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;margin-top:8px;line-height:1.7">'
         +'<div>Estimated Cost of Work Done &nbsp;<span style="color:#111">'+fmtCost(estCostWD)+'</span></div>'
-        +(hasActual ? '<div>Actual Cost of Work Done &nbsp;<span style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">'+fmtCost(actCostWD)+'</span></div>' : '')
-        +(diffWDLabel ? '<div style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">'+diffWDLabel+'</div>' : '')
+        +'<div>Actual Cost of Work Done &nbsp;<span style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">'+fmtCost(actCostWD)+'</span></div>'
+        +(diffWDLabel ? '<div style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">Difference &nbsp;'+diffWDLabel+'</div>' : '')
         +'</div>';
 
     el.style.overflow = 'auto';
