@@ -677,7 +677,7 @@ function renderCdCostOfActivity(d){
     var wdRow = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;margin-top:8px;line-height:1.7">'
         +'<div>Estimated Cost of Work Done &nbsp;<span style="color:#111">'+fmtCost(estCostWD)+'</span></div>'
         +'<div>Actual Cost of Work Done &nbsp;<span style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">'+fmtCost(actCostWD)+'</span></div>'
-        +(diffWDLabel ? '<div style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">Difference &nbsp;'+diffWDLabel+'</div>' : '')
+        +'<div style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">Difference &nbsp;'+(diffWDLabel||fmtCost(0))+'</div>'
         +'</div>';
 
     el.style.overflow = 'auto';
