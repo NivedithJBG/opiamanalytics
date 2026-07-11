@@ -680,14 +680,14 @@ function renderCdCostOfActivity(d){
         +(diffWDLabel ? '<div style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">'+diffWDLabel+'</div>' : '')
         +'</div>';
 
+    el.style.overflow = 'auto';
+    el.style.display  = 'block';
     el.innerHTML =
-        '<div style="padding:0 6px;display:flex;flex-direction:column;height:100%;width:100%;box-sizing:border-box">'
-        +'<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;margin-left:-6px;margin-right:-6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName,40)+'</div>'
-        +'<div style="flex-shrink:0;display:flex;flex-direction:column;padding-top:10px">'
+        '<div style="padding:4px 6px 8px;width:100%;box-sizing:border-box">'
+        +'<div style="font-size:10px;color:#3461b8;font-weight:600;padding-bottom:4px;border-bottom:1px solid #e8efff;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName,40)+'</div>'
         +  valRow
         +  barHtml
         +  wdRow
-        +'</div>'
         +'</div>';
 }
 function renderCdCostOnCompletion(items, actName, estQty){ /* to be implemented */ }
