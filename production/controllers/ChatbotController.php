@@ -248,6 +248,17 @@ class ChatbotController extends Controller
                 ],
             ],
             [
+                'name'        => 'get_project_briefing',
+                'description' => 'Returns the complete project briefing: identity, time position (schedule progress), physical progress, cost position (ECWD/ACWD), procurement health, and a pre-computed alerts list of red flags. ALWAYS call this first before answering any question about a specific project. Do not call other tools until you have called this one.',
+                'input_schema' => [
+                    'type'       => 'object',
+                    'properties' => [
+                        'project_name' => ['type' => 'string', 'description' => 'Full or partial project name'],
+                    ],
+                    'required' => ['project_name'],
+                ],
+            ],
+            [
                 'name'        => 'query_database',
                 'description' => 'Executes a raw SELECT query against the live database and returns up to 50 rows. Use ONLY for questions that no other tool can answer. The query MUST be a SELECT statement — any INSERT/UPDATE/DELETE/DROP will be rejected.',
                 'input_schema' => [
@@ -270,6 +281,7 @@ class ChatbotController extends Controller
         $db = Yii::$app->db;
 
         switch ($name) {
+            case 'get_project_briefing':    return $this->toolGetProjectBriefing($db, $input);
             case 'get_projects':           return $this->toolGetProjects($db);
             case 'get_activity_kpi':       return $this->toolGetActivityKpi($db, $input);
             case 'get_project_progress':   return $this->toolGetProjectProgress($db, $input);
@@ -1377,6 +1389,288 @@ class ChatbotController extends Controller
     }
 
     // -----------------------------------------------------------------------
+    // Tool: get_project_briefing
+    // The "dashboard story" — complete context Claude reads before answering
+    // any project question. PHP computes every metric; Claude only narrates.
+    // -----------------------------------------------------------------------
+    private function toolGetProjectBriefing($db, $input)
+    {
+        $project = $this->resolveProject($db, $input['project_name'] ?? '');
+        if (isset($project['status'])) return $project;
+
+        $pid  = (int)$project['Project_Id'];
+        $today = date('Y-m-d');
+
+        // ── 1. Schedule span ────────────────────────────────────────────────
+        $schedRow = $db->createCommand(
+            "SELECT MIN(start_date)    AS plan_start,
+                    MAX(end_date)      AS plan_end,
+                    DATEDIFF(MAX(end_date), MIN(start_date)) + 1 AS planned_duration_days,
+                    COUNT(*)           AS total_acts,
+                    SUM(completed_status) AS completed_acts,
+                    SUM(CASE WHEN completed_status=0 AND end_date < CURDATE() THEN 1 ELSE 0 END) AS overdue_acts,
+                    SUM(CASE WHEN critical_status='Yes' THEN 1 ELSE 0 END) AS critical_acts,
+                    SUM(CASE WHEN critical_status='Yes' AND completed_status=0 AND end_date < CURDATE() THEN 1 ELSE 0 END) AS critical_overdue
+             FROM scheduleactivities
+             WHERE projectId=:pid AND status=0 AND old_duration > 0",
+            [':pid' => $pid]
+        )->queryOne();
+
+        // ── 2. Physical progress ─────────────────────────────────────────────
+        $progressRow = $db->createCommand(
+            "SELECT
+                AVG(CASE
+                    WHEN sa.quantity > 0 AND rpt.cumulated_qty > 0
+                         THEN LEAST(rpt.cumulated_qty / sa.quantity * 100, 100)
+                    WHEN sa.completed_status = 1 THEN 100
+                    ELSE 0
+                END) AS actual_progress_pct,
+                AVG(CASE
+                    WHEN sa.old_duration > 0 AND sa.start_date <= CURDATE()
+                         THEN LEAST(DATEDIFF(CURDATE(), sa.start_date) / sa.old_duration * 100, 100)
+                    WHEN sa.completed_status = 1 THEN 100
+                    ELSE 0
+                END) AS planned_progress_pct
+             FROM scheduleactivities sa
+             LEFT JOIN (
+                 SELECT activity_id, MAX(cumulated_qty) AS cumulated_qty
+                 FROM schedule_progress_report GROUP BY activity_id
+             ) rpt ON rpt.activity_id = sa.id
+             WHERE sa.projectId=:pid AND sa.status=0",
+            [':pid' => $pid]
+        )->queryOne();
+
+        $actualProg  = round((float)($progressRow['actual_progress_pct']  ?? 0), 1);
+        $plannedProg = round((float)($progressRow['planned_progress_pct'] ?? 0), 1);
+        $schedVariance = round($actualProg - $plannedProg, 1);
+
+        // ── 3. Time position ─────────────────────────────────────────────────
+        $planStart = $schedRow['plan_start'] ?? null;
+        $planEnd   = $schedRow['plan_end']   ?? null;
+        $plannedDays = (int)($schedRow['planned_duration_days'] ?? 0);
+        $elapsedDays = ($planStart && $planStart <= $today)
+            ? (int)((strtotime($today) - strtotime($planStart)) / 86400) + 1
+            : 0;
+        $daysRemaining = $planEnd ? max(0, (int)((strtotime($planEnd) - strtotime($today)) / 86400)) : null;
+        $pctTimeElapsed = ($plannedDays > 0) ? round($elapsedDays / $plannedDays * 100, 1) : 0;
+
+        // Forecast end from critical path delay
+        $critDelayRow = $db->createCommand(
+            "SELECT MAX(DATEDIFF(CURDATE(), end_date)) AS max_delay_days,
+                    MAX(end_date) AS critical_plan_end
+             FROM scheduleactivities
+             WHERE projectId=:pid AND status=0 AND critical_status='Yes'
+               AND completed_status=0 AND end_date < CURDATE()",
+            [':pid' => $pid]
+        )->queryOne();
+        $critDelay   = max(0, (int)($critDelayRow['max_delay_days'] ?? 0));
+        $forecastEnd = ($planEnd && $critDelay > 0)
+            ? date('Y-m-d', strtotime($planEnd . ' +' . $critDelay . ' days'))
+            : $planEnd;
+
+        $scheduleStatus = 'on_track';
+        if ($schedVariance < -5)       $scheduleStatus = 'delayed';
+        elseif ($schedVariance > 5)    $scheduleStatus = 'ahead';
+
+        // ── 4. Cost position ─────────────────────────────────────────────────
+        // Total estimated project cost (BOQ)
+        $estRow = $db->createCommand(
+            "SELECT SUM(pen.activity_qty * COALESCE(res.unit_cost,0)) AS total_estimate
+             FROM pricing_estimate_new pen
+             LEFT JOIN (
+                 SELECT activity_id, SUM(rate * quantity) AS unit_cost
+                 FROM pricing_estimate_resources_new
+                 WHERE project_id=:pid AND pricing_status=0
+                 GROUP BY activity_id
+             ) res ON res.activity_id = pen.activity_Id
+             WHERE pen.project_Id=:pid2 AND pen.pricing_status=0",
+            [':pid' => $pid, ':pid2' => $pid]
+        )->queryOne();
+        $totalEstimate = round((float)($estRow['total_estimate'] ?? 0), 2);
+
+        // ECWD — estimated cost of work done (progress × estimated cost per activity summed)
+        $ecwdRow = $db->createCommand(
+            "SELECT SUM(
+                 LEAST(COALESCE(rpt.cumulated_qty,0) / NULLIF(sa.quantity,0), 1)
+                 * COALESCE(actcost.activity_cost, 0)
+             ) AS ecwd
+             FROM scheduleactivities sa
+             LEFT JOIN (
+                 SELECT activity_id, MAX(cumulated_qty) AS cumulated_qty
+                 FROM schedule_progress_report GROUP BY activity_id
+             ) rpt ON rpt.activity_id = sa.id
+             LEFT JOIN (
+                 SELECT pen.activity_Id,
+                        pen.activity_qty * COALESCE(SUM(pern.rate * pern.quantity), 0) AS activity_cost
+                 FROM pricing_estimate_new pen
+                 LEFT JOIN pricing_estimate_resources_new pern
+                   ON pern.activity_id=pen.activity_Id AND pern.project_id=:pid AND pern.pricing_status=0
+                 WHERE pen.project_Id=:pid2 AND pen.pricing_status=0
+                 GROUP BY pen.activity_Id, pen.activity_qty
+             ) actcost ON actcost.activity_Id = sa.activity_id
+             WHERE sa.projectId=:pid3 AND sa.status=0",
+            [':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid]
+        )->queryOne();
+        $ecwd = round((float)($ecwdRow['ecwd'] ?? 0), 2);
+
+        // ACWD — actual cost of work done (GRN + certified MB)
+        $grnCostRow = $db->createCommand(
+            "SELECT SUM(g.GRN_Quantity * por.rate) AS grn_total
+             FROM goods_received_note g
+             JOIN purchase_order_resources por ON por.order_id = g.GRN_Purchase_Order
+             JOIN purchase_orders po ON po.order_id = por.order_id
+             WHERE po.project_id=:pid AND po.delete_status=0
+               AND por.delete_status=0 AND g.delete_status=0",
+            [':pid' => $pid]
+        )->queryOne();
+        $grnCost = (float)($grnCostRow['grn_total'] ?? 0);
+
+        $mbRows = $db->createCommand(
+            "SELECT entries FROM wo_measurement_book
+             WHERE project_id=:pid AND sent_status=1 AND delete_status=0",
+            [':pid' => $pid]
+        )->queryAll();
+        $mbCost = 0.0;
+        foreach ($mbRows as $mb) {
+            foreach (json_decode($mb['entries'] ?? '[]', true) ?: [] as $entry) {
+                foreach ($entry['tasks'] ?? [] as $task) {
+                    $mbCost += (float)($task['work_done'] ?? 0) * (float)($task['rate'] ?? 0);
+                }
+            }
+        }
+        $acwd = round($grnCost + $mbCost, 2);
+
+        $costVariance = round($ecwd - $acwd, 2);
+        $cpi = ($acwd > 0) ? round($ecwd / $acwd, 3) : null;
+        $costStatus = $cpi === null ? 'no_actuals' : ($cpi >= 1 ? 'under_budget' : 'over_budget');
+
+        // ── 5. Procurement health ────────────────────────────────────────────
+        $poRow = $db->createCommand(
+            "SELECT COUNT(*) AS total_pos,
+                    SUM(CASE WHEN po.delete_status=0 THEN 1 ELSE 0 END) AS active_pos
+             FROM purchase_orders po
+             WHERE po.project_id=:pid",
+            [':pid' => $pid]
+        )->queryOne();
+
+        $grnCountRow = $db->createCommand(
+            "SELECT COUNT(DISTINCT po.order_id) AS pos_with_grn
+             FROM purchase_orders po
+             JOIN goods_received_note g ON g.GRN_Purchase_Order = po.order_id
+             WHERE po.project_id=:pid AND po.delete_status=0 AND g.delete_status=0",
+            [':pid' => $pid]
+        )->queryOne();
+
+        $totalPos     = (int)($poRow['active_pos'] ?? 0);
+        $posWithGrn   = (int)($grnCountRow['pos_with_grn'] ?? 0);
+        $posPending   = max(0, $totalPos - $posWithGrn);
+
+        // ── 6. Top overdue activities (up to 5 for alerts) ──────────────────
+        $overdueActs = $db->createCommand(
+            "SELECT sa.name, sa.end_date,
+                    DATEDIFF(CURDATE(), sa.end_date) AS days_overdue,
+                    sa.critical_status
+             FROM scheduleactivities sa
+             WHERE sa.projectId=:pid AND sa.status=0
+               AND sa.completed_status=0 AND sa.end_date < CURDATE()
+             ORDER BY days_overdue DESC LIMIT 5",
+            [':pid' => $pid]
+        )->queryAll();
+
+        // ── 7. Activities not yet started but past planned start ─────────────
+        $notStartedLate = (int)$db->createCommand(
+            "SELECT COUNT(*) FROM scheduleactivities sa
+             LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
+             WHERE sa.projectId=:pid AND sa.status=0 AND sa.completed_status=0
+               AND sa.start_date < CURDATE()
+               AND (spr.activity_id IS NULL OR spr.cumulated_qty IS NULL OR spr.cumulated_qty=0)",
+            [':pid' => $pid]
+        )->queryScalar();
+
+        // ── 8. Build alerts list ─────────────────────────────────────────────
+        $alerts = [];
+
+        if ($schedVariance < -10) {
+            $alerts[] = "Schedule is behind by " . abs($schedVariance) . "% — actual progress {$actualProg}% vs planned {$plannedProg}%.";
+        }
+        if ((int)($schedRow['critical_overdue'] ?? 0) > 0) {
+            $alerts[] = (int)$schedRow['critical_overdue'] . " critical path activit" .
+                ((int)$schedRow['critical_overdue'] === 1 ? 'y is' : 'ies are') .
+                " overdue — project completion date is at risk.";
+        }
+        if ($critDelay > 0) {
+            $alerts[] = "Forecast project end is {$forecastEnd} — {$critDelay} days later than planned ({$planEnd}).";
+        }
+        if ($cpi !== null && $cpi < 0.9) {
+            $alerts[] = "Cost overrun: CPI = {$cpi} (spending ₹" . number_format(1 / $cpi, 2) . " for every ₹1 of work done). ACWD ₹" . number_format($acwd, 2) . " vs ECWD ₹" . number_format($ecwd, 2) . ".";
+        }
+        if ($notStartedLate > 0) {
+            $alerts[] = "{$notStartedLate} activit" . ($notStartedLate === 1 ? 'y has' : 'ies have') .
+                " not started but past their planned start date.";
+        }
+        foreach ($overdueActs as $oa) {
+            if ((string)$oa['critical_status'] === 'Yes') {
+                $alerts[] = "Critical activity \"{$oa['name']}\" is {$oa['days_overdue']} days overdue (planned end: {$oa['end_date']}).";
+            }
+        }
+        if ($posPending > 0) {
+            $alerts[] = "{$posPending} purchase order" . ($posPending === 1 ? '' : 's') .
+                " raised but no goods received yet.";
+        }
+        if (empty($alerts)) {
+            $alerts[] = "No critical alerts at this time.";
+        }
+
+        // ── 9. Assemble briefing ─────────────────────────────────────────────
+        return [
+            'status'  => 'ok',
+            'project' => [
+                'name'           => $project['Name'],
+                'client'         => $project['client_name'],
+                'location'       => $project['location'],
+                'contract_value' => (float)$project['project_value'],
+            ],
+            'time_position' => [
+                'planned_start'        => $planStart,
+                'planned_end'          => $planEnd,
+                'forecast_end'         => $forecastEnd,
+                'planned_duration_days'=> $plannedDays,
+                'elapsed_days'         => $elapsedDays,
+                'days_remaining'       => $daysRemaining,
+                'pct_time_elapsed'     => $pctTimeElapsed,
+                'schedule_delay_days'  => $critDelay,
+                'schedule_status'      => $scheduleStatus,
+            ],
+            'physical_progress' => [
+                'actual_progress_pct'  => $actualProg,
+                'planned_progress_pct' => $plannedProg,
+                'schedule_variance_pct'=> $schedVariance,
+                'total_activities'     => (int)($schedRow['total_acts']      ?? 0),
+                'completed_activities' => (int)($schedRow['completed_acts']  ?? 0),
+                'overdue_activities'   => (int)($schedRow['overdue_acts']    ?? 0),
+                'critical_activities'  => (int)($schedRow['critical_acts']   ?? 0),
+                'critical_overdue'     => (int)($schedRow['critical_overdue']?? 0),
+                'not_started_late'     => $notStartedLate,
+            ],
+            'cost_position' => [
+                'total_estimate_cost'       => $totalEstimate,
+                'ecwd'                      => $ecwd,
+                'acwd'                      => $acwd,
+                'cost_variance'             => $costVariance,
+                'cpi'                       => $cpi,
+                'cost_status'               => $costStatus,
+                'note'                      => 'ecwd = estimated cost of work done (planned value of progress). acwd = actual cost of work done (GRN + certified MB). cpi = ecwd/acwd; >1 is under budget.',
+            ],
+            'procurement' => [
+                'total_pos'     => $totalPos,
+                'pos_with_grn'  => $posWithGrn,
+                'pos_pending'   => $posPending,
+            ],
+            'alerts' => $alerts,
+        ];
+    }
+
+    // -----------------------------------------------------------------------
     // Tool: query_database — Rule 5: SELECT-only, 50-row cap
     // -----------------------------------------------------------------------
     private function toolQueryDatabase($db, $input)
@@ -1450,17 +1744,35 @@ class ChatbotController extends Controller
             "Never guess, estimate, interpolate, or fill gaps from general knowledge. " .
             "Never perform arithmetic yourself — all computed metrics (costs, variances, productivity, durations, cycle times, progress %) are pre-calculated in the tool result. Read the number; do not recalculate it.\n\n" .
 
+            "PROJECT BRIEFING RULE (MANDATORY):\n" .
+            "When the user asks any question about a specific project — its status, progress, cost, delays, activities, procurement, or performance — " .
+            "you MUST call get_project_briefing FIRST before calling any other tool. " .
+            "The briefing gives you the complete dashboard story: schedule position, physical progress, cost performance (ECWD/ACWD/CPI), procurement health, and a pre-computed list of red-flag alerts. " .
+            "Start your answer by acknowledging the most important alert(s), then answer the specific question in context of the full picture. " .
+            "If the briefing alone answers the question fully, do not call additional tools. " .
+            "Only call additional tools (get_activity_kpi, get_schedule_activities, etc.) when the user asks for detail beyond what the briefing provides.\n\n" .
+
             "TOOL SELECTION RULES:\n" .
-            "1. Always call the most specific tool for the question.\n" .
-            "2. Use get_activity_kpi for any question about a specific activity's production, progress, or duration.\n" .
-            "3. Use get_project_estimate for total project budget, BOQ cost, profitability, or contract margin.\n" .
-            "4. Use get_cost_dashboard for ECWD / ACWD — cost of work completed so far.\n" .
-            "5. Use get_project_progress for overall project status, physical progress %, or schedule health.\n" .
-            "6. Use get_activity_costs for planned/estimated cost of a specific activity or activities ranked by cost.\n" .
-            "7. Use get_activity_actual_cost for how much has actually been spent on an activity.\n" .
-            "8. Use get_stock for materials at site, inventory, stock levels.\n" .
-            "9. Use get_activity_resources for resource breakdown, unit rates, or what materials/labour/equipment are planned.\n" .
-            "10. Use query_database ONLY when no other tool covers the question — and only for SELECT queries.\n\n" .
+            "1. get_project_briefing — ALWAYS first for any project-level question.\n" .
+            "2. get_activity_kpi — specific activity production, cycle time, delay causes, task breakdown.\n" .
+            "3. get_project_estimate — total project BOQ budget, profitability, contract margin.\n" .
+            "4. get_cost_dashboard — cached ECWD/ACWD totals (use briefing.cost_position first).\n" .
+            "5. get_project_progress — deeper schedule health detail beyond what briefing shows.\n" .
+            "6. get_schedule_activities — list of activities with filter (delayed, critical, ongoing, etc.).\n" .
+            "7. get_activity_costs — planned estimated cost of a specific activity or ranked list.\n" .
+            "8. get_activity_actual_cost — actual spend per activity from GRN + MB.\n" .
+            "9. get_stock — materials received at site, inventory levels.\n" .
+            "10. get_activity_resources — planned resource breakdown, unit rates.\n" .
+            "11. query_database — ONLY when no other tool covers the question.\n\n" .
+
+            "HOW TO USE THE BRIEFING:\n" .
+            "- briefing.alerts → read these first. They are PHP-computed red flags. Always mention the most critical ones.\n" .
+            "- briefing.time_position.schedule_status → 'ahead', 'on_track', or 'delayed'.\n" .
+            "- briefing.physical_progress.schedule_variance_pct → positive = ahead, negative = behind.\n" .
+            "- briefing.cost_position.cpi → >1 under budget, <1 over budget, null means no actuals yet.\n" .
+            "- briefing.cost_position.ecwd → estimated cost of work done (earned value).\n" .
+            "- briefing.cost_position.acwd → actual cost of work done (what was spent).\n" .
+            "- briefing.time_position.forecast_end → projected completion date accounting for current delay.\n\n" .
 
             "AMBIGUITY HANDLING:\n" .
             "If get_activity_kpi returns status=ambiguous, present the matched_activities list to the user and ask them to specify which activity they mean. Do not pick one yourself.\n\n" .
@@ -1471,9 +1783,11 @@ class ChatbotController extends Controller
 
             "CRITICAL TERMINOLOGY:\n" .
             "- 'estimated cost of the project' → get_project_estimate → total_estimate_cost\n" .
-            "- 'ECWD' / 'earned cost' → get_cost_dashboard → estimated_cost_work_done\n" .
-            "- 'ACWD' / 'actual spend' → get_cost_dashboard → actual_cost_work_done\n" .
-            "- 'contract value' → contract_value field\n" .
+            "- 'ECWD' / 'earned cost' / 'cost of work done (estimated)' → briefing.cost_position.ecwd\n" .
+            "- 'ACWD' / 'actual spend' / 'cost of work done (actual)' → briefing.cost_position.acwd\n" .
+            "- 'CPI' → briefing.cost_position.cpi\n" .
+            "- 'contract value' → briefing.project.contract_value\n" .
+            "- 'schedule variance' → briefing.physical_progress.schedule_variance_pct\n" .
             "- 'unit cost of activity' → get_activity_costs → unit_cost_per_sched_unit\n" .
             "- 'actual cost of activity' → get_activity_actual_cost → actual_cost\n" .
             "- 'target production' → get_activity_kpi → target_production_per_day\n" .
@@ -1482,9 +1796,10 @@ class ChatbotController extends Controller
 
             "ANSWER FORMAT:\n" .
             "1. Pass project/activity names from context to tools — never ask the user to repeat them.\n" .
-            "2. Answer in 1–2 sentences. Show quantities with units. Show money as ₹ with 2 decimal places.\n" .
-            "3. Never mention internal field names or JSON keys — use plain English.\n" .
-            "4. Do not add commentary, suggestions, or emojis.\n\n" .
+            "2. Answer in clear sentences. Lead with the most important finding from the alerts.\n" .
+            "3. Show quantities with units. Show money as ₹ with 2 decimal places.\n" .
+            "4. Never mention internal field names or JSON keys — use plain English.\n" .
+            "5. Do not add commentary, suggestions, or emojis.\n\n" .
             "TODAY'S DATE: " . date('d F Y') . ".";
 
         $messages = [];
