@@ -601,7 +601,7 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, schedQty){
     if (el5) el5.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName||'',40)+'</div>';
     gauge('cd-g5', actUCA, maxVal, 'cost', 0.5,
         'Est', fmtCost(estUCA)+unitLbl,
-        'Act', fmtCost(actUCA)+unitLbl,
+        hasActual ? 'Act' : '', hasActual ? fmtCost(actUCA)+unitLbl : '',
         '');
 }
 function renderCdCostOfActivity(d){
@@ -661,10 +661,11 @@ function renderCdCostOfActivity(d){
     var estCostWD = estUCTotal * workDone;
     var actCostWD = hasActual ? actUCTotal * workDone : estCostWD;
 
-    var valRow = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:700;color:#111;margin-bottom:5px;line-height:1.6">'
-        +'<div>Est Cost: <span style="color:#1a2540">'+fmtCost(estCost)+'</span></div>'
-        +(hasActual ? '<div>Act Cost: <span style="color:'+(over?'#e8820c':'#1b9e8e')+'">'+fmtCost(actCost)+'</span></div>' : '')
-        +(diffLabel ? '<div style="color:'+diffCol+'">Difference: '+diffLabel+'</div>' : '')
+    var valRow = '<div style="display:flex;justify-content:space-between;align-items:baseline;font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:700;color:#111;margin-bottom:6px">'
+        +'<span>Est: '+fmtCost(estCost)
+        +(hasActual ? '&nbsp;&nbsp;&nbsp;Act: <span style="color:'+(over?'#e8820c':'#1b9e8e')+'">'+fmtCost(actCost)+'</span>' : '')
+        +'</span>'
+        +(diffLabel ? '<span style="color:'+diffCol+'">'+diffLabel+'</span>' : '')
         +'</div>';
 
     var diffWD = actCostWD - estCostWD;
@@ -673,17 +674,21 @@ function renderCdCostOfActivity(d){
         ? (overWD ? '+' : '-') + fmtCost(Math.abs(diffWD)) + ' ' + (overWD ? 'over' : 'saving')
         : '';
 
-    var wdRow = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;margin-top:8px;line-height:1.7;border-top:1px solid #e8efff;padding-top:6px">'
-        +'<div>Est Cost of Work Done: <span style="color:#111">'+fmtCost(estCostWD)+'</span></div>'
-        +(hasActual ? '<div>Act Cost of Work Done: <span style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">'+fmtCost(actCostWD)+'</span></div>' : '')
-        +(diffWDLabel ? '<div style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">Difference: '+diffWDLabel+'</div>' : '')
+    var wdRow = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;margin-top:8px;line-height:1.7">'
+        +'<div>Estimated Cost of Work Done &nbsp;<span style="color:#111">'+fmtCost(estCostWD)+'</span></div>'
+        +(hasActual ? '<div>Actual Cost of Work Done &nbsp;<span style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">'+fmtCost(actCostWD)+'</span></div>' : '')
+        +(diffWDLabel ? '<div style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">'+diffWDLabel+'</div>' : '')
         +'</div>';
 
     el.innerHTML =
-        '<div style="font-size:10px;color:#3461b8;font-weight:600;padding-bottom:5px;border-bottom:1px solid #e8efff;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName,40)+'</div>'
-        + valRow
-        + barHtml
-        + wdRow;
+        '<div style="padding:0 6px;display:flex;flex-direction:column;height:100%;width:100%;box-sizing:border-box">'
+        +'<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;margin-left:-6px;margin-right:-6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName,40)+'</div>'
+        +'<div style="flex-shrink:0;display:flex;flex-direction:column;padding-top:10px">'
+        +  valRow
+        +  barHtml
+        +  wdRow
+        +'</div>'
+        +'</div>';
 }
 function renderCdCostOnCompletion(items, actName, estQty){ /* to be implemented */ }
 function renderCdResourceConsumption(items, actName, lastQty, actUnit){

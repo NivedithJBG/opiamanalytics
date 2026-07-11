@@ -1995,7 +1995,6 @@ if($action=='login')
 #cd-modal .panel{border-right:3px solid #a0aec0}
 #cd-c2,#cd-c1,#cd-c3,#cd-c4{overflow-y:auto !important;}
 #cd-c4 .brow, #cd-c3 .brow, #cd-c1 .brow{margin-bottom:0 !important;}
-#cd-g2{overflow-y:auto !important;font-size:13px;}
 
 </style>
 <div id="cd-bk"></div>
@@ -2010,9 +2009,9 @@ if($action=='login')
       <div class="panel" style="grid-column:1;grid-row:4/span 2"><div class="ph">Group Cost</div><div class="pb" id="cd-c1"></div></div>
       <div class="panel" style="grid-column:1;grid-row:6/span 3"><div class="ph">IOW Cost</div><div class="pb" id="cd-c3"></div></div>
       <div class="panel" style="grid-column:1;grid-row:9/span 4"><div class="ph">Activity Costs</div><div class="pb" id="cd-c4"></div></div>
-      <div class="panel" style="grid-column:2;grid-row:1/span 5"><div class="ph">Cost of Activity</div><div class="pb" id="cd-g2" style="overflow-y:auto;padding:6px 8px"></div></div>
+      <div class="panel" style="grid-column:2;grid-row:1/span 4"><div class="ph">Cost of Activity</div><div class="gp" id="cd-g2"></div></div>
       <div class="panel" style="grid-column:3;grid-row:1/span 4"><div class="ph">Quantity of Work Done</div><div class="gp" id="cd-g4"></div></div>
-      <div class="panel" style="grid-column:2;grid-row:6/span 3"><div class="ph">Unit Cost of Activity</div><div class="gp" id="cd-g5"></div></div>
+      <div class="panel" style="grid-column:2;grid-row:5/span 4"><div class="ph">Unit Cost of Activity</div><div class="gp" id="cd-g5"></div></div>
       <div class="panel" style="grid-column:3;grid-row:5/span 4"><div class="ph">Resource Cost</div><div class="resbody" id="cd-rcost"></div></div>
       <div class="panel" style="grid-column:2;grid-row:9/span 4"><div class="ph">Unit Cost of Resource</div><div class="resbody" id="cd-c6"></div></div>
       <div class="panel" style="grid-column:3;grid-row:9/span 4"><div class="ph">Resource Consumption</div><div class="resbody" id="cd-c7"></div></div>
