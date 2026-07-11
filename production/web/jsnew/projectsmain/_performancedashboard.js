@@ -1605,7 +1605,7 @@ function doActivityDuration(k) {
             if (actStartStr && actStartStr !== '0000-00-00') {
                 var today2 = new Date(); today2.setHours(0,0,0,0);
                 var sd2 = new Date(actStartStr); sd2.setHours(0,0,0,0);
-                elDays = Math.max(0, Math.round((today2 - sd2) / 86400000) - 1);
+                elDays = Math.max(0, Math.round((today2 - sd2) / 86400000));
             }
             var projActEndStr = '-';
             var projActEndCol = '#aaa';
@@ -1648,8 +1648,7 @@ function doActivityDuration(k) {
             if (k.act_start_date && k.act_start_date !== '0000-00-00') {
                 var today = new Date(); today.setHours(0,0,0,0);
                 var startD = new Date(k.act_start_date); startD.setHours(0,0,0,0);
-                // Start date counts as day 1, so elapsed = difference (not difference + 1)
-                elapsedDays = Math.max(0, Math.round((today - startD) / 86400000) - 1);
+                elapsedDays = Math.max(0, Math.round((today - startD) / 86400000));
             }
 
             // 2. Time required to complete = (schedule_qty - work_done_qty) / actual_productivity
