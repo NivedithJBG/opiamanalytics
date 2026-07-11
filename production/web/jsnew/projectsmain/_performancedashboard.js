@@ -1597,22 +1597,18 @@ function doActivityDuration(k) {
         + '</div>'
         + bar
         + (function(){
-            // Projected actual end = actual_start + ceil((elapsed / work_done_qty) × schedule_qty) days
+            // Projected actual end = today + ceil(remaining_qty / actual_productivity) - 1
+            // (today counts as day 1 of remaining period)
             var actStartStr = k.reported_start_date || k.act_start_date || '';
             var tq2 = +k.target_qty || 0;
             var aq2 = +k.actual_qty || 0;
-            var elDays = +k.elapsed || 0;
-            if (actStartStr && actStartStr !== '0000-00-00') {
-                var today2 = new Date(); today2.setHours(0,0,0,0);
-                var sd2 = new Date(actStartStr); sd2.setHours(0,0,0,0);
-                elDays = Math.max(0, Math.round((today2 - sd2) / 86400000));
-            }
+            var actProd = +k.actual_productivity || 0;
             var projActEndStr = '-';
             var projActEndCol = '#aaa';
-            if (actStartStr && actStartStr !== '0000-00-00' && aq2 > 0 && tq2 > 0) {
-                var totalDays = Math.ceil((elDays / aq2) * tq2);
-                var sd3 = new Date(actStartStr); sd3.setHours(0,0,0,0);
-                sd3.setDate(sd3.getDate() + totalDays - 1); // start day counts as day 1
+            if (actStartStr && actStartStr !== '0000-00-00' && aq2 > 0 && tq2 > 0 && actProd > 0) {
+                var remainingDays = Math.ceil(Math.max(0, tq2 - aq2) / actProd);
+                var sd3 = new Date(); sd3.setHours(0,0,0,0);
+                sd3.setDate(sd3.getDate() + remainingDays - 1); // today is day 1
                 var mm = sd3.getMonth()+1, dd2 = sd3.getDate(), yy = sd3.getFullYear();
                 projActEndStr = (dd2<10?'0'+dd2:dd2) + '-' + (mm<10?'0'+mm:mm) + '-' + yy;
                 // Green if finishing earlier than planned, red if later

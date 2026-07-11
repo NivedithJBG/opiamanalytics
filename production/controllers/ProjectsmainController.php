@@ -712,7 +712,7 @@ class ProjectsmainController extends Controller
         $elapsed = 0;
         $start_delay = 0;
         if ($act_start_date && $last_reported_date && $actual_qty > 0) {
-            $elapsed = max(1, (strtotime($last_reported_date) - strtotime($act_start_date)) / 86400);
+            $elapsed = max(1, (strtotime($last_reported_date) - strtotime($act_start_date)) / 86400 + 1);
             $actual_prod  = round($actual_qty / $elapsed, 3);
             $actual_cycle = round(($elapsed / $actual_qty) * $wh, 3);
             $cap_max  = round($elapsed * $wh, 2);
