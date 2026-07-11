@@ -1605,7 +1605,7 @@ function doActivityDuration(k) {
             if (actStartStr && actStartStr !== '0000-00-00') {
                 var today2 = new Date(); today2.setHours(0,0,0,0);
                 var sd2 = new Date(actStartStr); sd2.setHours(0,0,0,0);
-                elDays = Math.max(0, Math.round((today2 - sd2) / 86400000));
+                elDays = Math.max(0, Math.round((today2 - sd2) / 86400000) - 1);
             }
             var projActEndStr = '-';
             var projActEndCol = '#aaa';
