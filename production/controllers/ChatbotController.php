@@ -155,7 +155,7 @@ class ChatbotController extends Controller
             ],
             [
                 'name'        => 'get_cost_dashboard',
-                'description' => 'Returns cost of work done (ECWD = estimated cost, ACWD = actual cost) and variance for a project.',
+                'description' => 'Returns cached ECWD and ACWD totals for a project. DO NOT call this for overall project cost questions — those are already answered in the get_project_briefing cost_sentence. Only call this if the user explicitly asks for a cached cost dashboard refresh.',
                 'input_schema' => [
                     'type'       => 'object',
                     'properties' => [
@@ -213,7 +213,7 @@ class ChatbotController extends Controller
             ],
             [
                 'name'        => 'get_activity_actual_cost',
-                'description' => 'Returns the ACTUAL cost incurred per activity from certified measurement books and GRN receipts. Use when the user asks how much has been spent on an activity.',
+                'description' => 'Returns the actual cost per activity from GRN receipts and certified measurement books. Use ONLY when the user asks about cost of a SPECIFIC activity by name — never for overall project cost totals, which are already in the briefing cost_sentence.',
                 'input_schema' => [
                     'type'       => 'object',
                     'properties' => [
@@ -1621,52 +1621,85 @@ class ChatbotController extends Controller
             $alerts[] = "No critical alerts at this time.";
         }
 
-        // ── 9. Assemble briefing ─────────────────────────────────────────────
+        // ── 9. Pre-narrate every metric as a complete sentence ───────────────
+        // Claude must copy these sentences directly. No arithmetic allowed.
+
+        $fmt = fn($v) => '₹' . number_format((float)$v, 2);
+
+        // Project identity sentence
+        $projectSentence = "{$project['Name']} is a project for {$project['client_name']}"
+            . ($project['location'] ? " located at {$project['location']}" : '')
+            . ". Contract value is " . $fmt($project['project_value']) . ".";
+
+        // Time position sentence
+        $timeSentence = "{$elapsedDays} of {$plannedDays} planned days have elapsed ({$pctTimeElapsed}% of timeline consumed).";
+        if ($planEnd) {
+            $timeSentence .= " Planned completion date is " . date('d M Y', strtotime($planEnd)) . ".";
+        }
+        if ($critDelay > 0 && $forecastEnd) {
+            $timeSentence .= " Current forecast completion is " . date('d M Y', strtotime($forecastEnd))
+                . " — {$critDelay} day" . ($critDelay === 1 ? '' : 's') . " behind plan.";
+        } elseif ($planEnd && $planEnd > $today) {
+            $timeSentence .= " Project is on schedule.";
+        }
+
+        // Physical progress sentence
+        $totalActs     = (int)($schedRow['total_acts']      ?? 0);
+        $completedActs = (int)($schedRow['completed_acts']  ?? 0);
+        $overdueActs2  = (int)($schedRow['overdue_acts']    ?? 0);
+        $critOverdue   = (int)($schedRow['critical_overdue']?? 0);
+
+        $progressSentence = "Physical progress is {$actualProg}% against a planned {$plannedProg}%"
+            . " — schedule variance is " . ($schedVariance >= 0 ? "+{$schedVariance}%" : "{$schedVariance}%")
+            . " (" . ($schedVariance >= 0 ? "ahead of plan" : "behind plan") . ").";
+        $progressSentence .= " {$completedActs} of {$totalActs} activities are complete.";
+        if ($overdueActs2 > 0) {
+            $progressSentence .= " {$overdueActs2} activit" . ($overdueActs2 === 1 ? 'y is' : 'ies are')
+                . " overdue, of which {$critOverdue} " . ($critOverdue === 1 ? 'is' : 'are') . " on the critical path.";
+        }
+        if ($notStartedLate > 0) {
+            $progressSentence .= " {$notStartedLate} activit" . ($notStartedLate === 1 ? 'y has' : 'ies have')
+                . " not started yet but are past their planned start date.";
+        }
+
+        // Cost position sentence
+        if ($acwd > 0 && $ecwd > 0) {
+            $cpiDisp = $cpi !== null ? $cpi : 'N/A';
+            $varianceWord = $costVariance >= 0 ? 'saving' : 'overrun';
+            $costSentence = "Estimated cost of work done (ECWD) is " . $fmt($ecwd)
+                . ". Actual cost of work done (ACWD) is " . $fmt($acwd)
+                . ". Cost variance is " . $fmt(abs($costVariance)) . " " . $varianceWord
+                . " (CPI = {$cpiDisp}).";
+            if ($totalEstimate > 0) {
+                $costSentence .= " Total project estimate (BOQ) is " . $fmt($totalEstimate) . ".";
+            }
+        } elseif ($totalEstimate > 0) {
+            $costSentence = "Total project estimate (BOQ) is " . $fmt($totalEstimate)
+                . ". No actual cost data recorded yet.";
+        } else {
+            $costSentence = "No cost data available for this project.";
+        }
+
+        // Procurement sentence
+        if ($totalPos > 0) {
+            $procSentence = "{$totalPos} purchase order" . ($totalPos === 1 ? '' : 's') . " raised."
+                . " {$posWithGrn} " . ($posWithGrn === 1 ? 'has' : 'have') . " goods received."
+                . " {$posPending} " . ($posPending === 1 ? 'is' : 'are') . " pending delivery.";
+        } else {
+            $procSentence = "No purchase orders raised for this project yet.";
+        }
+
+        // ── 10. Return narrated briefing ──────────────────────────────────────
         return [
-            'status'  => 'ok',
-            'project' => [
-                'name'           => $project['Name'],
-                'client'         => $project['client_name'],
-                'location'       => $project['location'],
-                'contract_value' => (float)$project['project_value'],
-            ],
-            'time_position' => [
-                'planned_start'        => $planStart,
-                'planned_end'          => $planEnd,
-                'forecast_end'         => $forecastEnd,
-                'planned_duration_days'=> $plannedDays,
-                'elapsed_days'         => $elapsedDays,
-                'days_remaining'       => $daysRemaining,
-                'pct_time_elapsed'     => $pctTimeElapsed,
-                'schedule_delay_days'  => $critDelay,
-                'schedule_status'      => $scheduleStatus,
-            ],
-            'physical_progress' => [
-                'actual_progress_pct'  => $actualProg,
-                'planned_progress_pct' => $plannedProg,
-                'schedule_variance_pct'=> $schedVariance,
-                'total_activities'     => (int)($schedRow['total_acts']      ?? 0),
-                'completed_activities' => (int)($schedRow['completed_acts']  ?? 0),
-                'overdue_activities'   => (int)($schedRow['overdue_acts']    ?? 0),
-                'critical_activities'  => (int)($schedRow['critical_acts']   ?? 0),
-                'critical_overdue'     => (int)($schedRow['critical_overdue']?? 0),
-                'not_started_late'     => $notStartedLate,
-            ],
-            'cost_position' => [
-                'total_estimate_cost'       => $totalEstimate,
-                'ecwd'                      => $ecwd,
-                'acwd'                      => $acwd,
-                'cost_variance'             => $costVariance,
-                'cpi'                       => $cpi,
-                'cost_status'               => $costStatus,
-                'note'                      => 'ecwd = estimated cost of work done (planned value of progress). acwd = actual cost of work done (GRN + certified MB). cpi = ecwd/acwd; >1 is under budget.',
-            ],
-            'procurement' => [
-                'total_pos'     => $totalPos,
-                'pos_with_grn'  => $posWithGrn,
-                'pos_pending'   => $posPending,
-            ],
-            'alerts' => $alerts,
+            'status'               => 'ok',
+            'INSTRUCTION'          => 'Copy these sentences directly into your answer. Do NOT recalculate any number. Do NOT rephrase the figures.',
+            'project_sentence'     => $projectSentence,
+            'time_sentence'        => $timeSentence,
+            'progress_sentence'    => $progressSentence,
+            'cost_sentence'        => $costSentence,
+            'procurement_sentence' => $procSentence,
+            'alerts'               => $alerts,
+            'alert_instruction'    => 'Start your answer by stating the most important alert(s) from the alerts list using the exact wording provided.',
         ];
     }
 
@@ -1746,33 +1779,26 @@ class ChatbotController extends Controller
 
             "PROJECT BRIEFING RULE (MANDATORY):\n" .
             "When the user asks any question about a specific project — its status, progress, cost, delays, activities, procurement, or performance — " .
-            "you MUST call get_project_briefing FIRST before calling any other tool. " .
-            "The briefing gives you the complete dashboard story: schedule position, physical progress, cost performance (ECWD/ACWD/CPI), procurement health, and a pre-computed list of red-flag alerts. " .
-            "Start your answer by acknowledging the most important alert(s), then answer the specific question in context of the full picture. " .
-            "If the briefing alone answers the question fully, do not call additional tools. " .
-            "Only call additional tools (get_activity_kpi, get_schedule_activities, etc.) when the user asks for detail beyond what the briefing provides.\n\n" .
+            "you MUST call get_project_briefing FIRST before calling any other tool.\n\n" .
 
-            "TOOL SELECTION RULES:\n" .
-            "1. get_project_briefing — ALWAYS first for any project-level question.\n" .
-            "2. get_activity_kpi — specific activity production, cycle time, delay causes, task breakdown.\n" .
-            "3. get_project_estimate — total project BOQ budget, profitability, contract margin.\n" .
-            "4. get_cost_dashboard — cached ECWD/ACWD totals (use briefing.cost_position first).\n" .
-            "5. get_project_progress — deeper schedule health detail beyond what briefing shows.\n" .
-            "6. get_schedule_activities — list of activities with filter (delayed, critical, ongoing, etc.).\n" .
-            "7. get_activity_costs — planned estimated cost of a specific activity or ranked list.\n" .
-            "8. get_activity_actual_cost — actual spend per activity from GRN + MB.\n" .
-            "9. get_stock — materials received at site, inventory levels.\n" .
-            "10. get_activity_resources — planned resource breakdown, unit rates.\n" .
-            "11. query_database — ONLY when no other tool covers the question.\n\n" .
+            "COPY RULE (ABSOLUTE — NO EXCEPTIONS):\n" .
+            "The briefing returns pre-written sentences: project_sentence, time_sentence, progress_sentence, cost_sentence, procurement_sentence, and alerts. " .
+            "These sentences are written by the system in PHP with all numbers already computed and formatted correctly. " .
+            "You MUST copy these sentences EXACTLY as written into your answer. " .
+            "You MUST NOT rephrase them, recalculate any figure, look up GRN records, measurement books, PO tables, or any other data source to verify or replace the numbers in these sentences. " .
+            "The numbers in the sentences ARE the answer. Treat them as final facts. " .
+            "If the briefing sentences fully answer the question, stop there — do not call any other tool.\n\n" .
 
-            "HOW TO USE THE BRIEFING:\n" .
-            "- briefing.alerts → read these first. They are PHP-computed red flags. Always mention the most critical ones.\n" .
-            "- briefing.time_position.schedule_status → 'ahead', 'on_track', or 'delayed'.\n" .
-            "- briefing.physical_progress.schedule_variance_pct → positive = ahead, negative = behind.\n" .
-            "- briefing.cost_position.cpi → >1 under budget, <1 over budget, null means no actuals yet.\n" .
-            "- briefing.cost_position.ecwd → estimated cost of work done (earned value).\n" .
-            "- briefing.cost_position.acwd → actual cost of work done (what was spent).\n" .
-            "- briefing.time_position.forecast_end → projected completion date accounting for current delay.\n\n" .
+            "WHEN TO CALL ADDITIONAL TOOLS:\n" .
+            "Only call a second tool if the user asks for specific detail the briefing sentences do not cover:\n" .
+            "- get_activity_kpi → specific activity production rate, cycle time, task breakdown, cause of delay.\n" .
+            "- get_schedule_activities → list of activities filtered by status (delayed, critical, ongoing, completed).\n" .
+            "- get_activity_costs → estimated cost of a specific activity.\n" .
+            "- get_activity_actual_cost → actual spend on a specific activity.\n" .
+            "- get_stock → materials at site, inventory levels.\n" .
+            "- get_activity_resources → planned resource breakdown for an activity.\n" .
+            "- get_project_estimate → total BOQ budget and profitability margin.\n" .
+            "- query_database → ONLY when no other tool covers the question.\n\n" .
 
             "AMBIGUITY HANDLING:\n" .
             "If get_activity_kpi returns status=ambiguous, present the matched_activities list to the user and ask them to specify which activity they mean. Do not pick one yourself.\n\n" .
@@ -1782,23 +1808,22 @@ class ChatbotController extends Controller
             "Never report unit_cost_per_est_unit. When units_same=false, explain the conversion.\n\n" .
 
             "CRITICAL TERMINOLOGY:\n" .
-            "- 'estimated cost of the project' → get_project_estimate → total_estimate_cost\n" .
-            "- 'ECWD' / 'earned cost' / 'cost of work done (estimated)' → briefing.cost_position.ecwd\n" .
-            "- 'ACWD' / 'actual spend' / 'cost of work done (actual)' → briefing.cost_position.acwd\n" .
-            "- 'CPI' → briefing.cost_position.cpi\n" .
-            "- 'contract value' → briefing.project.contract_value\n" .
-            "- 'schedule variance' → briefing.physical_progress.schedule_variance_pct\n" .
-            "- 'unit cost of activity' → get_activity_costs → unit_cost_per_sched_unit\n" .
-            "- 'actual cost of activity' → get_activity_actual_cost → actual_cost\n" .
-            "- 'target production' → get_activity_kpi → target_production_per_day\n" .
-            "- 'actual production' → get_activity_kpi → actual_production_per_day\n" .
-            "- 'stock / inventory' → get_stock → total_received\n\n" .
+            "- 'ECWD' / 'estimated cost of work done' → in the briefing cost_sentence, already written out.\n" .
+            "- 'ACWD' / 'actual cost' / 'actual spend' → in the briefing cost_sentence, already written out.\n" .
+            "- 'CPI' → in the briefing cost_sentence, already written out.\n" .
+            "- 'contract value' → in the briefing project_sentence, already written out.\n" .
+            "- 'schedule variance' → in the briefing progress_sentence, already written out.\n" .
+            "- 'unit cost of activity' → call get_activity_costs → use unit_cost_per_sched_unit.\n" .
+            "- 'actual cost of activity' → call get_activity_actual_cost → use actual_cost field.\n" .
+            "- 'target production' → call get_activity_kpi → use target_production_per_day.\n" .
+            "- 'actual production' → call get_activity_kpi → use actual_production_per_day.\n" .
+            "- 'stock / inventory' → call get_stock → use total_received.\n\n" .
 
             "ANSWER FORMAT:\n" .
-            "1. Pass project/activity names from context to tools — never ask the user to repeat them.\n" .
-            "2. Answer in clear sentences. Lead with the most important finding from the alerts.\n" .
-            "3. Show quantities with units. Show money as ₹ with 2 decimal places.\n" .
-            "4. Never mention internal field names or JSON keys — use plain English.\n" .
+            "1. Start with the most important alert from the briefing alerts list — use the exact wording.\n" .
+            "2. Follow with the relevant briefing sentences copied exactly.\n" .
+            "3. Only add detail from a second tool if the user asked for it specifically.\n" .
+            "4. Never mention internal field names, JSON keys, or tool names in your answer.\n" .
             "5. Do not add commentary, suggestions, or emojis.\n\n" .
             "TODAY'S DATE: " . date('d F Y') . ".";
 
