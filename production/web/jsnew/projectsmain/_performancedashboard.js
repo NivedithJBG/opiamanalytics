@@ -601,7 +601,7 @@ function renderCdUnitCostOfActivity(items, actName, actUnit, schedQty){
     if (el5) el5.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sh(actName||'',40)+'</div>';
     gauge('cd-g5', actUCA, maxVal, 'cost', 0.5,
         'Est', fmtCost(estUCA)+unitLbl,
-        hasActual ? 'Act' : '', hasActual ? fmtCost(actUCA)+unitLbl : '',
+        'Act', fmtCost(actUCA)+unitLbl,
         '');
 }
 function renderCdCostOfActivity(d){
