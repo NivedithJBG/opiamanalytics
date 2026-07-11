@@ -1648,7 +1648,8 @@ function doActivityDuration(k) {
             if (k.act_start_date && k.act_start_date !== '0000-00-00') {
                 var today = new Date(); today.setHours(0,0,0,0);
                 var startD = new Date(k.act_start_date); startD.setHours(0,0,0,0);
-                elapsedDays = Math.max(0, Math.round((today - startD) / 86400000));
+                // Start date counts as day 1, so elapsed = difference (not difference + 1)
+                elapsedDays = Math.max(0, Math.round((today - startD) / 86400000) - 1);
             }
 
             // 2. Time required to complete = (schedule_qty - work_done_qty) / actual_productivity
