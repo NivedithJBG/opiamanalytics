@@ -1785,9 +1785,14 @@ class ChatbotController extends Controller
             "- get_project_estimate → total BOQ budget and profit margin\n" .
             "- query_database → raw SELECT only when no other tool covers the question\n\n" .
 
-            "## NO-ARITHMETIC RULE (ABSOLUTE)\n" .
-            "Never compute, derive, or combine numbers yourself. Every figure in your answer must come directly from a tool result field. " .
-            "If a value is not in the tool result, say it is not available.\n\n" .
+            "## ARITHMETIC RULE\n" .
+            "By default, never compute or derive numbers yourself — every figure must come directly from a tool result field. " .
+            "If a value is not in the tool result, say it is not available.\n" .
+            "EXCEPTION: if the user explicitly asks you to compute an average (e.g. 'what is the average cost per activity', " .
+            "'average unit cost across these activities', 'compute the average for me'), you may calculate a simple average " .
+            "from values already returned by tools in the same conversation. State clearly that you computed this average " .
+            "from the tool data and show the inputs used (e.g. 'average of X, Y, Z = ...'). " .
+            "Do NOT perform any other arithmetic (totals, differences, percentages, ratios) — those must still come from tool results.\n\n" .
 
             "## ACTUALS AVAILABILITY\n" .
             "Tool results include a has_actual flag. When has_actual is false, actual cost is not yet recorded — " .
