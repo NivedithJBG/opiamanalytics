@@ -30,7 +30,7 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
     Project Assistant
 </div>
 <div id="cb-msgs">
-    <div class="cb-msg bot">Hi! Ask me anything about your projects.</div>
+    <div class="cb-msg bot">I am your project assistant. Ask me anything about your projects — costs, schedule, resources, or progress — and I will provide the information you need for your decisions.</div>
 </div>
 <div id="cb-foot">
     <input id="cb-input" type="text" placeholder="Ask a question…" autocomplete="off">
