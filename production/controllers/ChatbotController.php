@@ -1267,32 +1267,70 @@ class ChatbotController extends Controller
 
         $pid    = (int)$project['Project_Id'];
         $filter = $input['filter'] ?? 'all';
-        $having = '';
+        $extra  = '';
         switch ($filter) {
-            case 'critical':  $having = "AND sa.critical_status='Yes'"; break;
-            case 'delayed':   $having = "AND sa.completed_status=0 AND sa.end_date < CURDATE()"; break;
-            case 'completed': $having = "AND sa.completed_status=1"; break;
-            case 'ongoing':   $having = "AND sa.completed_status=0"; break;
+            case 'critical':  $extra = "AND sa.critical_status='Yes'"; break;
+            case 'completed': $extra = "AND sa.completed_status=1"; break;
+            case 'ongoing':   $extra = "AND sa.completed_status=0 AND pr.report_count>0"; break;
         }
 
+        // Mirror actionPerformancedashboard(): compute projected_duration the same way the dashboard does.
+        // Delayed = not completed AND:
+        //   - ongoing (has progress): projected_duration > old_duration
+        //   - upcoming (no progress): start_date < today
         $rows = $db->createCommand("
             SELECT sa.name, sa.start_date, sa.end_date,
                    sa.old_duration AS planned_duration, sa.quantity, sa.unit,
                    sa.completed_status, sa.critical_status,
-                   COALESCE(rpt.cumulated_qty,0) AS qty_done,
-                   CASE WHEN sa.quantity>0 AND COALESCE(rpt.cumulated_qty,0)>0
-                        THEN ROUND(COALESCE(rpt.cumulated_qty,0)/sa.quantity*100,1)
+                   COALESCE(pr.report_count, 0) AS report_count,
+                   COALESCE(pr.cumulated_qty, 0) AS qty_done,
+                   pr.spr_start_date,
+                   CASE WHEN sa.quantity>0 AND COALESCE(pr.cumulated_qty,0)>0
+                        THEN ROUND(COALESCE(pr.cumulated_qty,0)/sa.quantity*100,1)
                         WHEN sa.completed_status=1 THEN 100 ELSE 0 END AS progress_pct,
-                   CASE WHEN sa.completed_status=0 AND sa.end_date<CURDATE()
-                        THEN DATEDIFF(CURDATE(),sa.end_date) ELSE 0 END AS days_overdue
+                   CASE
+                       WHEN pr.cumulated_qty>0 AND sa.quantity>0
+                            AND pr.spr_start_date IS NOT NULL AND pr.spr_start_date!='0000-00-00'
+                       THEN ROUND(
+                              (DATEDIFF(pr.last_report_date, pr.spr_start_date) + 1)
+                              / pr.cumulated_qty * sa.quantity
+                            )
+                       ELSE NULL
+                   END AS projected_duration
             FROM scheduleactivities sa
             LEFT JOIN (
-                SELECT activity_id, MAX(cumulated_qty) AS cumulated_qty
-                FROM schedule_progress_report GROUP BY activity_id
-            ) rpt ON rpt.activity_id=sa.id
-            WHERE sa.projectId=:pid AND sa.status=0 {$having}
+                SELECT spr.activity_id,
+                       COUNT(*) AS report_count,
+                       MAX(spr.cumulated_qty) AS cumulated_qty,
+                       MIN(spr.start_date) AS spr_start_date,
+                       COALESCE(MAX(sprl.report_date), MAX(spr.updated_at)) AS last_report_date
+                FROM schedule_progress_report spr
+                LEFT JOIN schedule_progress_report_log sprl
+                       ON sprl.activity_id=spr.activity_id AND sprl.currentqty>0
+                GROUP BY spr.activity_id
+            ) pr ON pr.activity_id=sa.id
+            WHERE sa.projectId=:pid AND sa.status=0 {$extra}
             ORDER BY sa.start_date ASC LIMIT 200
         ", [':pid' => $pid])->queryAll();
+
+        $today = date('Y-m-d');
+
+        // Apply delayed filter in PHP (same logic as dashboard JS toBarItems())
+        if ($filter === 'delayed') {
+            $rows = array_values(array_filter($rows, function($a) use ($today) {
+                if ((int)$a['completed_status'] === 1) return false;
+                $hasProgress = (int)$a['report_count'] > 0;
+                if ($hasProgress) {
+                    // Ongoing: delayed if projected_duration > planned_duration
+                    $proj = $a['projected_duration'];
+                    return $proj !== null && (float)$proj > (float)$a['planned_duration'];
+                } else {
+                    // Upcoming: delayed if planned start has already passed
+                    return !empty($a['start_date']) && $a['start_date'] !== '0000-00-00'
+                        && $a['start_date'] < $today;
+                }
+            }));
+        }
 
         if (empty($rows)) return ['status' => 'no_data', 'reason' => "No {$filter} activities found for \"{$project['Name']}\"."];
 
@@ -1301,19 +1339,34 @@ class ChatbotController extends Controller
             'project'    => $project['Name'],
             'filter'     => $filter,
             'count'      => count($rows),
-            'activities' => array_map(fn($a) => [
-                'name'             => $a['name'],
-                'start_date'       => $a['start_date'],
-                'end_date'         => $a['end_date'],
-                'planned_duration' => (int)$a['planned_duration'],
-                'planned_qty'      => (float)$a['quantity'],
-                'qty_done'         => (float)$a['qty_done'],
-                'unit'             => $a['unit'],
-                'progress_percent' => (float)$a['progress_pct'],
-                'is_completed'     => (int)$a['completed_status'] === 1,
-                'is_critical'      => $a['critical_status'] === 'Yes',
-                'days_overdue'     => (int)$a['days_overdue'],
-            ], $rows),
+            'activities' => array_map(function($a) use ($today) {
+                $hasProgress = (int)$a['report_count'] > 0;
+                $proj        = $a['projected_duration'] !== null ? (int)$a['projected_duration'] : null;
+                $planned     = (int)$a['planned_duration'];
+                // Days overdue: ongoing → proj - planned; upcoming → today - start_date
+                if ($hasProgress) {
+                    $days_overdue = ($proj !== null && $proj > $planned) ? $proj - $planned : 0;
+                } else {
+                    $days_overdue = (!empty($a['start_date']) && $a['start_date'] < $today)
+                        ? (int)floor((strtotime($today) - strtotime($a['start_date'])) / 86400)
+                        : 0;
+                }
+                return [
+                    'name'                => $a['name'],
+                    'start_date'          => $a['start_date'],
+                    'end_date'            => $a['end_date'],
+                    'planned_duration'    => $planned,
+                    'projected_duration'  => $proj,
+                    'planned_qty'         => (float)$a['quantity'],
+                    'qty_done'            => (float)$a['qty_done'],
+                    'unit'                => $a['unit'],
+                    'progress_percent'    => (float)$a['progress_pct'],
+                    'is_completed'        => (int)$a['completed_status'] === 1,
+                    'is_critical'         => $a['critical_status'] === 'Yes',
+                    'has_progress'        => $hasProgress,
+                    'days_overdue'        => $days_overdue,
+                ];
+            }, $rows),
         ];
     }
 
