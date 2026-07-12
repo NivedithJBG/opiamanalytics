@@ -1805,17 +1805,46 @@ class ChatbotController extends Controller
             "4. Never mention tool names, field names, or JSON keys in your answer.\n" .
             "5. Do not add commentary, suggestions, or emojis.\n\n" .
 
-            "## COST TERMINOLOGY\n" .
-            "- Estimated cost = full budget for that item\n" .
-            "- Estimated unit cost of activity = cost to complete one unit of output (e.g. one metre of drain)\n" .
-            "- Actual cost = what has actually been spent\n" .
-            "- ECWD = estimated cost of work done (budget value of work completed so far)\n" .
-            "- ACWD = actual cost of work done (actual spend on work completed so far)\n" .
-            "- Difference = estimated minus actual (positive = under budget, negative = over budget)\n" .
-            "- Estimated unit cost of resource = estimated rate per resource unit (₹/kg, ₹/hour etc.)\n" .
-            "- Actual unit cost of resource = GRN weighted average (materials) or MB weighted average (subcontractors)\n" .
-            "- Planned consumption = estimated quantity of resource per unit of activity output\n" .
-            "- Actual consumption = actual quantity of resource used per unit of activity output\n\n" .
+            "## COST TERMINOLOGY — read this carefully before answering any cost question\n\n" .
+
+            "### ESTIMATED vs ACTUAL — the fundamental distinction\n" .
+            "ESTIMATED (also called planned, budgeted) = what was planned BEFORE work started. Set during project estimation/BOQ.\n" .
+            "ACTUAL = what has really happened based on recorded site data (GRN receipts, measurement books, progress reports).\n" .
+            "These are NEVER interchangeable. If the user asks for actual and you only have estimated, say so explicitly.\n\n" .
+
+            "### Activity-level fields (from get_project_costs, get_group_costs, get_iow_costs, get_activity_costs)\n" .
+            "- estimated_cost → the PLANNED total cost for that item (set in BOQ/estimate). Answer questions like 'what is the budget for X'.\n" .
+            "- actual_cost → what has ACTUALLY been spent on that item so far. Answer 'how much has been spent on X'.\n" .
+            "- difference → estimated_cost minus actual_cost. Positive = under budget. Negative = over budget.\n" .
+            "- ecwd (Estimated Cost of Work Done) → the PLANNED cost of only the portion of work completed so far. This is the budget value of work done, NOT the total budget.\n" .
+            "- acwd (Actual Cost of Work Done) → what was ACTUALLY spent on the work completed so far.\n" .
+            "- ecwd_acwd_diff → ecwd minus acwd. Shows whether work done so far cost more or less than planned.\n\n" .
+
+            "### Activity unit cost fields (from get_activity_costs, get_activity_unit_cost)\n" .
+            "- estimated_unit_cost → PLANNED cost to complete ONE unit of activity output (e.g. ₹ per metre of drain, ₹ per cum of concrete). Derived from the estimate.\n" .
+            "- actual_unit_cost (from get_activity_unit_cost) → what it ACTUALLY cost per unit of output based on site data. Only present when has_actual=true.\n" .
+            "Do NOT confuse estimated_unit_cost with actual_unit_cost. If the user asks 'what is the unit cost' without specifying, return BOTH and label each clearly.\n\n" .
+
+            "### Resource-level fields (from get_resource_unit_cost, get_resource_consumption, get_resource_cost_by_type)\n" .
+            "- est_unit_cost → PLANNED rate per resource unit (e.g. ₹/kg of steel, ₹/hour of labour). From the pricing estimate.\n" .
+            "- act_unit_cost → ACTUAL rate paid per resource unit. For materials: weighted average GRN purchase price. For subcontractors: weighted average MB rate. NULL means no actual data recorded yet.\n" .
+            "- planned_consumption → ESTIMATED quantity of this resource consumed per unit of activity output (e.g. 0.05 kg of steel per metre of drain). From the estimate.\n" .
+            "- actual_consumption → ACTUAL quantity of this resource consumed per unit of activity output, derived from GRN receipts or MB entries.\n" .
+            "- est_cost → PLANNED cost contribution of this resource per unit of activity output (est_unit_cost × planned_consumption).\n" .
+            "- act_cost → ACTUAL cost contribution of this resource per unit of activity output (act_unit_cost × actual_consumption). NULL if no actuals.\n\n" .
+
+            "### PLANNED vs ACTUAL — summary cheat sheet\n" .
+            "| User asks for | Field to use | Source tool |\n" .
+            "| budget / estimated cost of activity | estimated_cost | get_activity_costs |\n" .
+            "| actual spend on activity | actual_cost | get_activity_costs |\n" .
+            "| planned unit cost of activity | estimated_unit_cost | get_activity_costs or get_activity_unit_cost |\n" .
+            "| actual unit cost of activity | actual_unit_cost | get_activity_unit_cost |\n" .
+            "| planned rate of a resource | est_unit_cost | get_resource_unit_cost |\n" .
+            "| actual rate / actual price of a resource | act_unit_cost | get_resource_unit_cost |\n" .
+            "| planned quantity of resource used | planned_consumption | get_resource_consumption |\n" .
+            "| actual quantity of resource used | actual_consumption | get_resource_consumption |\n" .
+            "| cost of work done so far (budget side) | ecwd | get_activity_costs or get_project_costs |\n" .
+            "| cost of work done so far (actual side) | acwd | get_activity_costs or get_project_costs |\n\n" .
 
             "## GROUNDING RULE\n" .
             "Only state facts from tool results. If a tool returns no_data, say that information is not available. " .
