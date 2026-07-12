@@ -272,6 +272,7 @@ class ChatbotController extends Controller
                 'name'      => $sa['name'],
                 'schedQty'  => $schedQty,
                 'lastQty'   => $lastQty,
+                'unitCost'  => round($unitCost, 4),
                 'est'       => round($unitCost * $estQty, 2),
                 'acoa'      => round($actualTotal * $schedQty, 2),
                 'estwd'     => round($estUCTotal * $lastQty, 2),
@@ -763,6 +764,7 @@ class ChatbotController extends Controller
                 'activity_qty'        => $wan ? (float)$wan['activity_qty'] : 0,
                 'qty_done'            => $c['lastQty'],
                 'est_cost_activity'   => $c['est'],
+                'unit_cost'           => $c['unitCost'],
                 'actual_cost_activity'=> $c['acoa'],
                 'difference'          => round($c['est'] - $c['acoa'], 2),
                 'ecwd'                => $c['estwd'],
@@ -1031,6 +1033,7 @@ class ChatbotController extends Controller
             'qty_done'             => (float)$r['qty_done'],
             'unit'                 => $r['unit'],
             'est_cost_activity'    => (float)$r['est_cost_activity'],
+            'unit_cost'            => (float)$r['unit_cost'],
             'actual_cost_activity' => (float)$r['actual_cost_activity'],
             'difference'           => (float)$r['difference'],
             'ecwd'                 => (float)$r['ecwd'],
@@ -1077,6 +1080,7 @@ class ChatbotController extends Controller
             'activity_qty'         => (float)$r['activity_qty'],
             'qty_done'             => (float)$r['qty_done'],
             'est_cost_activity'    => (float)$r['est_cost_activity'],
+            'unit_cost'            => (float)$r['unit_cost'],
             'actual_cost_activity' => (float)$r['actual_cost_activity'],
             'difference'           => (float)$r['difference'],
             'ecwd'                 => (float)$r['ecwd'],
@@ -1941,6 +1945,7 @@ class ChatbotController extends Controller
 
             "## COST TERMINOLOGY\n" .
             "- 'Estimated cost' = estimated_cost (full budget for that item)\n" .
+            "- 'Unit cost' / 'estimated unit cost' / 'cost per unit' = unit_cost (cost per one unit of the activity, available at activity level)\n" .
             "- 'Actual cost' = actual_cost (what has actually been spent)\n" .
             "- 'ECWD' / 'estimated cost of work done' = ecwd (budget value of work completed so far)\n" .
             "- 'ACWD' / 'actual cost of work done' = acwd (actual spend on work completed so far)\n" .
