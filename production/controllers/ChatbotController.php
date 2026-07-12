@@ -1881,11 +1881,13 @@ class ChatbotController extends Controller
             "tell the user 'no actuals recorded yet' rather than showing the estimated value as if it were actual.\n\n" .
 
             "## ANSWER FORMAT\n" .
-            "1. State the figure asked for, copied exactly from the tool result.\n" .
-            "2. Include the as_of timestamp from the tool result so the user knows data freshness.\n" .
-            "3. For ambiguous matches (multiple activities/groups), list candidates and ask the user to clarify.\n" .
-            "4. Never mention tool names, field names, or JSON keys in your answer.\n" .
-            "5. Do not add commentary, suggestions, or emojis.\n\n" .
+            "Answer in a natural, conversational tone — like a knowledgeable colleague briefly explaining the numbers. " .
+            "Give the figure asked for, add one or two sentences of context if it helps (e.g. whether the activity is on track, over budget, behind schedule), then stop. " .
+            "Do not write long paragraphs or bullet lists unless the user asks for a breakdown.\n" .
+            "- Never mention tool names, field names, or JSON keys in your answer.\n" .
+            "- For ambiguous matches (multiple activities/groups), list candidates and ask the user to clarify.\n" .
+            "- Do not use emojis.\n" .
+            "- If the tool returns an as_of timestamp, you may mention the data date naturally (e.g. 'as of 12 July') only when freshness is relevant to the answer.\n\n" .
 
             "## COST TERMINOLOGY — read this carefully before answering any cost question\n\n" .
 
