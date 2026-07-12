@@ -105,7 +105,7 @@ class ChatbotController extends Controller
     // -----------------------------------------------------------------------
     // Core computation — mirrors actionCostdashboardbatch() exactly
     // Returns array keyed by scheduleactivities.id:
-    //   est, acoa, estwd, actwd
+    //   est, acoa, estwd, actwd, resources (array of per-resource rows)
     // -----------------------------------------------------------------------
     private function computeActivityCosts($db, $pid)
     {
@@ -144,12 +144,16 @@ class ChatbotController extends Controller
         $estQtyMap = [];
         foreach ($penRows as $r) { $estQtyMap[(int)$r['activity_Id']] = (float)$r['activity_qty']; }
 
-        // Resources per WBS id — same JOIN as actionCostdashboardbatch
+        // Resources per WBS id — same JOIN as actionCostdashboardbatch, plus names for cache
         $resRows = $db->createCommand(
             "SELECT pern.activity_id, pern.pricing_resourceid, pern.resourcetype_Id AS type_id,
                     pern.rate, pern.quantity AS res_qty, pern.task_ids, pern.resource_Id,
+                    COALESCE(pern.display_name, r.Name, rt.Name) AS resource_name,
+                    COALESCE(r.Unit, '') AS resource_unit,
                     grn.actual_unit_cost, grn.grn_qty, si.stock_at_site
              FROM pricing_estimate_resources_new pern
+             LEFT JOIN resources r ON r.Resource_Id = pern.resource_Id
+             LEFT JOIN resourcetype rt ON rt.ResourceType_Id = pern.resourcetype_Id
              LEFT JOIN (
                  SELECT por.allocation_id,
                         SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))*por.rate)
@@ -250,15 +254,29 @@ class ChatbotController extends Controller
             }
 
             $estUCTotal = $unitCost * $ratio;
+
+            // Collect per-resource rows for cb_cache_resources
+            $resCache = [];
+            foreach ($resources as $r) {
+                $resCache[] = [
+                    'resource_name' => $r['resource_name'] ?? '',
+                    'resource_unit' => $r['resource_unit'] ?? '',
+                    'qty_per_unit'  => (float)$r['res_qty'],
+                    'unit_rate'     => (float)$r['rate'],
+                    'amount_per_unit' => round((float)$r['res_qty'] * (float)$r['rate'], 2),
+                ];
+            }
+
             $data[$schedId] = [
-                'wbId'     => $wbId,
-                'name'     => $sa['name'],
-                'schedQty' => $schedQty,
-                'lastQty'  => $lastQty,
-                'est'      => round($unitCost * $estQty, 2),
-                'acoa'     => round($actualTotal * $schedQty, 2),
-                'estwd'    => round($estUCTotal * $lastQty, 2),
-                'actwd'    => $actualTotal > 0 ? round($actualTotal * $lastQty, 2) : round($estUCTotal * $lastQty, 2),
+                'wbId'      => $wbId,
+                'name'      => $sa['name'],
+                'schedQty'  => $schedQty,
+                'lastQty'   => $lastQty,
+                'est'       => round($unitCost * $estQty, 2),
+                'acoa'      => round($actualTotal * $schedQty, 2),
+                'estwd'     => round($estUCTotal * $lastQty, 2),
+                'actwd'     => $actualTotal > 0 ? round($actualTotal * $lastQty, 2) : round($estUCTotal * $lastQty, 2),
+                'resources' => $resCache,
             ];
         }
         return $data;
@@ -386,11 +404,34 @@ class ChatbotController extends Controller
                 ],
             ],
             [
+                'name'        => 'get_resource_metric',
+                'description' =>
+                    'Reads resource unit rates and quantities from the session cache (cb_cache_resources). ' .
+                    'Use this when the user asks about the unit cost/rate of a resource (e.g. "unit cost of reinforcement", ' .
+                    '"rate of steel", "cost of cement per bag") OR asks for the full resource breakdown of an activity. ' .
+                    'Requires the project to already be loaded via load_project_dashboard. ' .
+                    'Returns unit_rate (₹ per resource unit), qty_per_unit, amount_per_unit for each matching resource row. ' .
+                    'If it returns reason="project_not_loaded", call load_project_dashboard first then retry.',
+                'input_schema' => [
+                    'type'       => 'object',
+                    'properties' => [
+                        'project_name'  => ['type' => 'string'],
+                        'resource_name' => [
+                            'type'        => 'string',
+                            'description' => 'Full or partial resource name (e.g. "reinforcement", "cement", "clearing drain"). Omit to get all resources for the activity.',
+                        ],
+                        'activity_name' => [
+                            'type'        => 'string',
+                            'description' => 'Optional: filter by activity name. If omitted, searches across all activities.',
+                        ],
+                    ],
+                    'required' => ['project_name', 'resource_name'],
+                ],
+            ],
+            [
                 'name'        => 'get_activity_resources',
-                'description' => 'Returns the planned resource allocation for a specific activity: each resource with ' .
-                    'unit_rate (estimated unit cost of that resource, e.g. ₹/MT for steel, ₹/bag for cement), ' .
-                    'qty_per_unit (planned consumption per one activity unit), and amount_per_unit. ' .
-                    'Use this when the user asks about the unit cost/rate of a resource, OR the full resource breakdown of an activity.',
+                'description' => 'LEGACY: Use get_resource_metric instead (reads from cache). ' .
+                    'This tool does a live query. Only use if get_resource_metric is unavailable or project is not loaded.',
                 'input_schema' => [
                     'type'       => 'object',
                     'properties' => [
@@ -461,6 +502,8 @@ class ChatbotController extends Controller
                 return $this->toolGetStock($db, $input);
             case 'get_project_estimate':
                 return $this->toolGetProjectEstimate($db, $input);
+            case 'get_resource_metric':
+                return $this->toolGetResourceMetric($db, $input);
             case 'get_activity_resources':
                 return $this->toolGetActivityResources($db, $input);
             case 'get_work_orders_and_mb':
@@ -727,6 +770,27 @@ class ChatbotController extends Controller
                 'ecwd_acwd_diff'      => round($c['estwd'] - $c['actwd'], 2),
                 'computed_at'         => $now,
             ])->execute();
+        }
+
+        // 5. Resources (per-resource per activity)
+        $db->createCommand()->delete('cb_cache_resources', ['project_id' => $pid])->execute();
+        foreach ($actCosts as $schedId => $c) {
+            $wanId = $schedToWan[$schedId] ?? null;
+            foreach ($c['resources'] as $res) {
+                if (($res['resource_name'] ?? '') === '') continue;
+                $db->createCommand()->insert('cb_cache_resources', [
+                    'project_id'       => $pid,
+                    'sched_activity_id'=> $schedId,
+                    'wan_id'           => $wanId ?? 0,
+                    'activity_name'    => $c['name'],
+                    'resource_name'    => $res['resource_name'],
+                    'resource_unit'    => $res['resource_unit'],
+                    'qty_per_unit'     => $res['qty_per_unit'],
+                    'unit_rate'        => $res['unit_rate'],
+                    'amount_per_unit'  => $res['amount_per_unit'],
+                    'computed_at'      => $now,
+                ])->execute();
+            }
         }
 
         // Mark loaded in this request's memory
@@ -1473,6 +1537,98 @@ class ChatbotController extends Controller
         ];
     }
 
+    // =======================================================================
+    // TOOL: get_resource_metric
+    // Pure read from cb_cache_resources — returns per-resource unit rates.
+    // =======================================================================
+    private function toolGetResourceMetric($db, $input)
+    {
+        $projectName  = trim($input['project_name']  ?? '');
+        $resourceName = trim($input['resource_name'] ?? '');
+        $activityName = trim($input['activity_name'] ?? '');
+
+        if ($projectName === '') return ['matched' => false, 'reason' => 'project_name is required.'];
+        if ($resourceName === '') return ['matched' => false, 'reason' => 'resource_name is required.'];
+
+        $project = $this->resolveProject($db, $projectName);
+        if (isset($project['status'])) return ['matched' => false, 'reason' => $project['reason']];
+        $pid = (int)$project['Project_Id'];
+
+        // Check project is loaded
+        $cacheCheck = $db->createCommand(
+            "SELECT computed_at FROM cb_cache_project WHERE project_id=:pid LIMIT 1",
+            [':pid' => $pid]
+        )->queryScalar();
+        if (!$cacheCheck) {
+            return [
+                'matched' => false,
+                'reason'  => 'project_not_loaded',
+                'message' => "Dashboard for \"{$project['Name']}\" has not been loaded this session. Call load_project_dashboard first.",
+            ];
+        }
+
+        // Build fuzzy match on resource_name
+        $raw   = preg_replace('/[^a-z0-9 ]/i', ' ', $resourceName);
+        $words = array_values(array_filter(explode(' ', strtolower($raw)), fn($w) => strlen($w) >= 3));
+        $where = 'project_id = :pid';
+        $params = [':pid' => $pid];
+        foreach ($words as $i => $w) {
+            $key = ':rw' . $i;
+            $where .= " AND LOWER(resource_name) LIKE {$key}";
+            $params[$key] = '%' . rtrim($w, 's') . '%';
+        }
+        if (empty($words)) {
+            $where .= ' AND LOWER(resource_name) LIKE :rfull';
+            $params[':rfull'] = '%' . strtolower($resourceName) . '%';
+        }
+
+        // Optional activity filter
+        if ($activityName !== '') {
+            $actRaw   = preg_replace('/[^a-z0-9 ]/i', ' ', $activityName);
+            $actWords = array_values(array_filter(explode(' ', strtolower($actRaw)), fn($w) => strlen($w) >= 3));
+            foreach ($actWords as $i => $w) {
+                $key = ':aw' . $i;
+                $where .= " AND LOWER(activity_name) LIKE {$key}";
+                $params[$key] = '%' . rtrim($w, 's') . '%';
+            }
+        }
+
+        $rows = $db->createCommand(
+            "SELECT resource_name, resource_unit, activity_name,
+                    qty_per_unit, unit_rate, amount_per_unit, computed_at
+             FROM cb_cache_resources
+             WHERE {$where}
+             ORDER BY resource_name, activity_name LIMIT 50",
+            $params
+        )->queryAll();
+
+        if (empty($rows)) {
+            return [
+                'matched' => false,
+                'reason'  => "No resource matching \"{$resourceName}\" found in \"{$project['Name']}\"" .
+                    ($activityName ? " for activity \"{$activityName}\"" : '') . '.',
+            ];
+        }
+
+        $computedAt = $rows[0]['computed_at'];
+        return [
+            'matched'      => true,
+            'project'      => $project['Name'],
+            'resource_filter' => $resourceName,
+            'activity_filter' => $activityName ?: null,
+            'computed_at'  => $computedAt,
+            'count'        => count($rows),
+            'resources'    => array_map(fn($r) => [
+                'resource_name'   => $r['resource_name'],
+                'unit'            => $r['resource_unit'],
+                'activity_name'   => $r['activity_name'],
+                'qty_per_unit'    => (float)$r['qty_per_unit'],
+                'unit_rate'       => (float)$r['unit_rate'],
+                'amount_per_unit' => (float)$r['amount_per_unit'],
+            ], $rows),
+        ];
+    }
+
     private function toolGetActivityResources($db, $input)
     {
         $project = $this->resolveProject($db, $input['project_name'] ?? '');
@@ -1793,12 +1949,12 @@ class ChatbotController extends Controller
             "## WHEN TO USE OTHER TOOLS\n" .
             "- get_schedule_activities → list of activities with dates, progress, delay status\n" .
             "- get_activity_kpi → production rates, cycle times, tasks, cause-of-delay for one specific activity\n" .
-            "- get_activity_resources → use this when the user asks about the UNIT COST or RATE of a specific resource " .
-            "(e.g. 'unit cost of reinforcement', 'rate of steel', 'cost of cement per bag') OR when they ask for the " .
-            "full resource breakdown of a specific activity. The tool returns each resource with: " .
-            "unit_rate (₹ per resource unit — this IS the estimated unit cost of that resource), " .
-            "qty_per_unit (consumption per one activity unit), amount_per_unit (contribution per activity unit). " .
-            "Always call with both project_name and the activity name the resource belongs to.\n" .
+            "- get_resource_metric → use this when the user asks about the UNIT COST or RATE of a resource " .
+            "(e.g. 'unit cost of reinforcement', 'rate of steel', 'cost of cement per bag', 'resources of clearing drain'). " .
+            "This reads from the session cache — no live query needed. Pass project_name + resource_name (partial ok). " .
+            "Optionally pass activity_name to narrow results. Returns unit_rate (₹ per resource unit), qty_per_unit, amount_per_unit. " .
+            "Requires the project to be loaded first (call load_project_dashboard if not). " .
+            "If it returns reason='project_not_loaded', load first then retry.\n" .
             "- get_materials / get_stock → materials received, GRN, stock position\n" .
             "- get_work_orders_and_mb → subcontractor work orders and measurement books\n" .
             "- get_project_estimate → total BOQ budget and profit margin\n" .
