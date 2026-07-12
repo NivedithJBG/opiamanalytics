@@ -387,7 +387,10 @@ class ChatbotController extends Controller
             ],
             [
                 'name'        => 'get_activity_resources',
-                'description' => 'Returns the planned resource allocation for a specific activity: each resource with planned quantity per unit, unit rate, and amount per unit.',
+                'description' => 'Returns the planned resource allocation for a specific activity: each resource with ' .
+                    'unit_rate (estimated unit cost of that resource, e.g. ₹/MT for steel, ₹/bag for cement), ' .
+                    'qty_per_unit (planned consumption per one activity unit), and amount_per_unit. ' .
+                    'Use this when the user asks about the unit cost/rate of a resource, OR the full resource breakdown of an activity.',
                 'input_schema' => [
                     'type'       => 'object',
                     'properties' => [
@@ -1790,7 +1793,12 @@ class ChatbotController extends Controller
             "## WHEN TO USE OTHER TOOLS\n" .
             "- get_schedule_activities → list of activities with dates, progress, delay status\n" .
             "- get_activity_kpi → production rates, cycle times, tasks, cause-of-delay for one specific activity\n" .
-            "- get_activity_resources → planned resource breakdown for one activity\n" .
+            "- get_activity_resources → use this when the user asks about the UNIT COST or RATE of a specific resource " .
+            "(e.g. 'unit cost of reinforcement', 'rate of steel', 'cost of cement per bag') OR when they ask for the " .
+            "full resource breakdown of a specific activity. The tool returns each resource with: " .
+            "unit_rate (₹ per resource unit — this IS the estimated unit cost of that resource), " .
+            "qty_per_unit (consumption per one activity unit), amount_per_unit (contribution per activity unit). " .
+            "Always call with both project_name and the activity name the resource belongs to.\n" .
             "- get_materials / get_stock → materials received, GRN, stock position\n" .
             "- get_work_orders_and_mb → subcontractor work orders and measurement books\n" .
             "- get_project_estimate → total BOQ budget and profit margin\n" .
@@ -1803,12 +1811,17 @@ class ChatbotController extends Controller
 
             "TODAY'S DATE: " . date('d F Y') . ".";
 
+        // Only pass plain user/assistant text turns as history.
+        // Never pass tool_use or tool_result blocks — those are internal API rounds
+        // that the browser should not hold, and re-sending them causes
+        // "Input should be an object" from the Anthropic API.
         $messages = [];
         foreach ((array)$history as $h) {
             if (empty($h['role']) || !isset($h['content'])) continue;
             $content = $h['content'];
-            if (!is_string($content)) $content = is_array($content) ? json_encode($content) : (string)$content;
-            if ($content === '') continue;
+            // Skip any entry whose content is not a plain string (e.g. serialised tool blocks)
+            if (!is_string($content)) continue;
+            if (trim($content) === '') continue;
             $messages[] = ['role' => $h['role'], 'content' => $content];
         }
         $messages[] = ['role' => 'user', 'content' => $message];
