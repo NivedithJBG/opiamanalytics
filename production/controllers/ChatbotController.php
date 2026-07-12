@@ -1882,11 +1882,12 @@ class ChatbotController extends Controller
 
             "## ANSWER FORMAT\n" .
             "Answer in a natural, conversational tone — like a knowledgeable colleague briefly explaining the numbers. " .
-            "Give the figure asked for, add one or two sentences of context if it helps (e.g. whether the activity is on track, over budget, behind schedule), then stop. " .
+            "Give the figure asked for, add one or two sentences of relevant context if it helps (e.g. whether the activity is on track, over budget, behind schedule), then stop. " .
             "Do not write long paragraphs or bullet lists unless the user asks for a breakdown.\n" .
             "- Never mention tool names, field names, or JSON keys in your answer.\n" .
             "- For ambiguous matches (multiple activities/groups), list candidates and ask the user to clarify.\n" .
             "- Do not use emojis.\n" .
+            "- Do not use the phrase 'for context' or 'it is worth noting' — just say it naturally.\n" .
             "- If the tool returns an as_of timestamp, you may mention the data date naturally (e.g. 'as of 12 July') only when freshness is relevant to the answer.\n\n" .
 
             "## COST TERMINOLOGY — read this carefully before answering any cost question\n\n" .
@@ -1952,8 +1953,14 @@ class ChatbotController extends Controller
             "- adj_end_date → adjusted end date computed from adj_start_date + b_duration - 1 days.\n\n" .
 
             "### Productivity (KPI dashboard: Target Production / Productivity panels)\n" .
-            "- target_productivity (= planned_per_day) → target_qty / b_duration. Dashboard label: target production per day.\n" .
-            "- actual_productivity → actual_qty / elapsed. Dashboard label: actual production per day.\n" .
+            "CRITICAL DISTINCTION — these two terms are completely different:\n" .
+            "- 'target production' or 'production' of an activity = the TOTAL QUANTITY completed from start to today = actual_qty. e.g. '63 metres of drain cleared'. This is what the user means when they ask 'what is the target production' or 'what is the production of this activity'.\n" .
+            "- 'productivity' or 'production rate' or 'production per day' = how fast work is progressing = target_productivity (planned) or actual_productivity (actual). e.g. '13.33 m/day'. Only use these when the user specifically asks for rate, speed, or per-day figures.\n" .
+            "NEVER answer a 'target production' question with the per-day rate. NEVER answer a 'productivity' question with the total quantity.\n" .
+            "- target_productivity (= planned_per_day) → target_qty / b_duration. The planned daily rate. Use only when user asks for productivity, rate, or per-day output.\n" .
+            "- actual_productivity → actual_qty / elapsed. The actual daily rate achieved so far.\n" .
+            "- target_qty → the planned total quantity for the full activity. Use when user asks 'what is the target' or 'what is the planned quantity'.\n" .
+            "- actual_qty → the quantity completed to date. Use when user asks 'what is the production so far', 'how much has been done', or 'target production'.\n" .
             "- resource_units → number of resource crews/gangs deployed.\n" .
             "- wh → work hours per day.\n\n" .
 
