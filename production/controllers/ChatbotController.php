@@ -715,7 +715,7 @@ class ChatbotController extends Controller
             if ($filter !== '' && strpos(strtolower($c['name']), $filter) === false) continue;
             $rows[] = [
                 'activity_name'          => $c['name'],
-                'estimated_unit_cost'    => $c['unitCost'],
+                'estimated_unit_cost'    => $c['estUCTotal'],
                 'quantity_of_work_done'  => $c['lastQty'],
                 'estimated_cost'         => $c['est'],
                 'actual_cost'            => $c['has_actual'] ? $c['acoa'] : null,
@@ -774,10 +774,11 @@ class ChatbotController extends Controller
             return ['status' => 'no_data', 'reason' => "No resource data found for \"{$act['name']}\"."];
         }
 
-        // Unit cost of activity = sum of (est_unit_cost × qty_per_unit) across all resources
+        // Unit cost of activity = sum of (rate × planned_consumption) across all resources
+        // mirrors renderCdUnitCostOfActivity() in _performancedashboard.js: estUC * estCons
         $estUCA = 0.0; $actUCA = 0.0; $hasActual = false;
         foreach ($res['items'] as $r) {
-            $estUCA += $r['est_unit_cost'] * $r['qty_per_unit'];
+            $estUCA += $r['est_unit_cost'] * $r['planned_consumption'];
             if ($r['act_unit_cost'] !== null) {
                 $actUCA   += $r['act_unit_cost'] * $r['actual_consumption'];
                 $hasActual = true;
