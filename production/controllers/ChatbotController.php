@@ -150,6 +150,7 @@ class ChatbotController extends Controller
                     pern.rate, pern.quantity AS res_qty, pern.task_ids, pern.resource_Id,
                     COALESCE(pern.display_name, r.Name, rt.Name) AS resource_name,
                     COALESCE(r.Unit, '') AS resource_unit,
+                    rt.Name AS type_name,
                     grn.actual_unit_cost, grn.grn_qty, si.stock_at_site
              FROM pricing_estimate_resources_new pern
              LEFT JOIN resources r ON r.Resource_Id = pern.resource_Id
@@ -202,7 +203,9 @@ class ChatbotController extends Controller
             }
         }
 
-        // Compute per activity — mirrors actionCostdashboardbatch exactly
+        // Compute per activity — mirrors actionCostdashboardbatch exactly.
+        // Single pass per resource: accumulates activity-level totals AND captures
+        // per-resource detail (actUnit, actualConsumption, typeName) for cache tables.
         $data = [];
         foreach ($schedActs as $sa) {
             $schedId   = (int)$sa['id'];
@@ -215,12 +218,15 @@ class ChatbotController extends Controller
 
             $unitCost    = 0.0;
             $actualTotal = 0.0;
+            $resCache    = [];
 
             foreach ($resources as $r) {
-                $typeId  = (int)$r['type_id'];
-                $resQty  = (float)$r['res_qty'];
-                $unitCost += $resQty * (float)$r['rate'];
+                $typeId             = (int)$r['type_id'];
+                $resQty             = (float)$r['res_qty'];
+                $estRate            = (float)$r['rate'];
                 $plannedConsumption = $resQty * $ratio;
+
+                $unitCost += $resQty * $estRate;
 
                 if ($typeId === 4) {
                     $taskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
@@ -229,14 +235,12 @@ class ChatbotController extends Controller
                         $wdVal += $taskAmountById[$tid]   ?? 0.0;
                         $wdQty += $taskWorkDoneById[$tid] ?? 0.0;
                     }
-                    $actUnit = $wdQty > 0 ? $wdVal / $wdQty : null;
-                    $taskIds2 = $taskIds;
-                    $scWd = 0.0;
-                    foreach ($taskIds2 as $tid) { $scWd += $taskWorkDoneById[$tid] ?? 0.0; }
+                    $actUnit  = $wdQty > 0 ? $wdVal / $wdQty : null;
+                    $scWd     = $wdQty; // same variable, already summed above
                     $actualConsumption = ($lastQty > 0 && $scWd > 0)
                         ? $scWd / $lastQty : $plannedConsumption;
                 } elseif (in_array($typeId, [2, 6, 7, 8])) {
-                    $actUnit = ($r['actual_unit_cost'] !== null) ? (float)$r['actual_unit_cost'] : null;
+                    $actUnit      = ($r['actual_unit_cost'] !== null) ? (float)$r['actual_unit_cost'] : null;
                     $indentRaised = ($r['stock_at_site'] !== null);
                     if ($indentRaised && $lastQty > 0) {
                         $actualConsumption = max(0, (float)($r['grn_qty'] ?? 0) - (float)($r['stock_at_site'] ?? 0)) / $lastQty;
@@ -251,21 +255,25 @@ class ChatbotController extends Controller
                 if ($actUnit !== null) {
                     $actualTotal += $actUnit * $actualConsumption;
                 }
+
+                $resName = $r['resource_name'] ?? '';
+                if ($resName === '') continue;
+
+                $resCache[] = [
+                    'resource_name'      => $resName,
+                    'resource_unit'      => $r['resource_unit'] ?? '',
+                    'resource_type_name' => $r['type_name'] ?? '',
+                    'qty_per_unit'       => $resQty,
+                    'est_unit_cost'      => $estRate,
+                    'act_unit_cost'      => $actUnit,
+                    'planned_consumption'=> $plannedConsumption,
+                    'actual_consumption' => $actualConsumption,
+                    'est_cost'           => round($estRate * $plannedConsumption, 4),
+                    'act_cost'           => $actUnit !== null ? round($actUnit * $actualConsumption, 4) : null,
+                ];
             }
 
             $estUCTotal = $unitCost * $ratio;
-
-            // Collect per-resource rows for cb_cache_resources
-            $resCache = [];
-            foreach ($resources as $r) {
-                $resCache[] = [
-                    'resource_name' => $r['resource_name'] ?? '',
-                    'resource_unit' => $r['resource_unit'] ?? '',
-                    'qty_per_unit'  => (float)$r['res_qty'],
-                    'unit_rate'     => (float)$r['rate'],
-                    'amount_per_unit' => round((float)$r['res_qty'] * (float)$r['rate'], 2),
-                ];
-            }
 
             $data[$schedId] = [
                 'wbId'      => $wbId,
@@ -407,11 +415,12 @@ class ChatbotController extends Controller
             [
                 'name'        => 'get_resource_metric',
                 'description' =>
-                    'Reads resource unit rates and quantities from the session cache (cb_cache_resources). ' .
-                    'Use this when the user asks about the unit cost/rate of a resource (e.g. "unit cost of reinforcement", ' .
-                    '"rate of steel", "cost of cement per bag") OR asks for the full resource breakdown of an activity. ' .
-                    'Requires the project to already be loaded via load_project_dashboard. ' .
-                    'Returns unit_rate (₹ per resource unit), qty_per_unit, amount_per_unit for each matching resource row. ' .
+                    'Reads per-resource detail from the session cache (cb_cache_resources). ' .
+                    'Use when the user asks about: resource unit costs/rates ("unit cost of reinforcement", "rate of steel"), ' .
+                    'actual vs estimated unit cost of a resource, resource consumption (planned vs actual), ' .
+                    'resource cost by type (Material/Labour/Plant/Subcontractor), or the full resource breakdown of an activity. ' .
+                    'Returns: est_unit_cost, act_unit_cost, planned_consumption, actual_consumption, est_cost, act_cost, resource_type_name per resource row. ' .
+                    'Requires the project to be loaded via load_project_dashboard first. ' .
                     'If it returns reason="project_not_loaded", call load_project_dashboard first then retry.',
                 'input_schema' => [
                     'type'       => 'object',
@@ -774,23 +783,27 @@ class ChatbotController extends Controller
             ])->execute();
         }
 
-        // 5. Resources (per-resource per activity)
+        // 5. cb_cache_resources — per-resource per activity (estimated + actual unit cost + consumption)
         $db->createCommand()->delete('cb_cache_resources', ['project_id' => $pid])->execute();
         foreach ($actCosts as $schedId => $c) {
             $wanId = $schedToWan[$schedId] ?? null;
             foreach ($c['resources'] as $res) {
-                if (($res['resource_name'] ?? '') === '') continue;
                 $db->createCommand()->insert('cb_cache_resources', [
-                    'project_id'       => $pid,
-                    'sched_activity_id'=> $schedId,
-                    'wan_id'           => $wanId ?? 0,
-                    'activity_name'    => $c['name'],
-                    'resource_name'    => $res['resource_name'],
-                    'resource_unit'    => $res['resource_unit'],
-                    'qty_per_unit'     => $res['qty_per_unit'],
-                    'unit_rate'        => $res['unit_rate'],
-                    'amount_per_unit'  => $res['amount_per_unit'],
-                    'computed_at'      => $now,
+                    'project_id'         => $pid,
+                    'sched_activity_id'  => $schedId,
+                    'wan_id'             => $wanId ?? 0,
+                    'activity_name'      => $c['name'],
+                    'resource_name'      => $res['resource_name'],
+                    'resource_unit'      => $res['resource_unit'],
+                    'resource_type_name' => $res['resource_type_name'],
+                    'qty_per_unit'       => $res['qty_per_unit'],
+                    'est_unit_cost'      => $res['est_unit_cost'],
+                    'act_unit_cost'      => $res['act_unit_cost'],
+                    'planned_consumption'=> $res['planned_consumption'],
+                    'actual_consumption' => $res['actual_consumption'],
+                    'est_cost'           => $res['est_cost'],
+                    'act_cost'           => $res['act_cost'],
+                    'computed_at'        => $now,
                 ])->execute();
             }
         }
@@ -1598,8 +1611,10 @@ class ChatbotController extends Controller
         }
 
         $rows = $db->createCommand(
-            "SELECT resource_name, resource_unit, activity_name,
-                    qty_per_unit, unit_rate, amount_per_unit, computed_at
+            "SELECT resource_name, resource_unit, resource_type_name, activity_name,
+                    qty_per_unit, est_unit_cost, act_unit_cost,
+                    planned_consumption, actual_consumption,
+                    est_cost, act_cost, computed_at
              FROM cb_cache_resources
              WHERE {$where}
              ORDER BY resource_name, activity_name LIMIT 50",
@@ -1614,22 +1629,49 @@ class ChatbotController extends Controller
             ];
         }
 
+        // Build resource-type cost grouping (Table 4 equivalent — for type-level questions)
+        $byType = [];
+        foreach ($rows as $r) {
+            $tn = $r['resource_type_name'] ?: 'Other';
+            if (!isset($byType[$tn])) {
+                $byType[$tn] = ['est_cost' => 0.0, 'act_cost' => 0.0];
+            }
+            $byType[$tn]['est_cost'] += (float)($r['est_cost'] ?? 0);
+            if ($r['act_cost'] !== null) {
+                $byType[$tn]['act_cost'] += (float)$r['act_cost'];
+            }
+        }
+        $byTypeOut = [];
+        foreach ($byType as $tn => $vals) {
+            $byTypeOut[] = [
+                'resource_type'  => $tn,
+                'est_cost'       => round($vals['est_cost'], 2),
+                'act_cost'       => round($vals['act_cost'], 2),
+            ];
+        }
+
         $computedAt = $rows[0]['computed_at'];
         return [
-            'matched'      => true,
-            'project'      => $project['Name'],
+            'matched'         => true,
+            'project'         => $project['Name'],
             'resource_filter' => $resourceName,
             'activity_filter' => $activityName ?: null,
-            'computed_at'  => $computedAt,
-            'count'        => count($rows),
-            'resources'    => array_map(fn($r) => [
-                'resource_name'   => $r['resource_name'],
-                'unit'            => $r['resource_unit'],
-                'activity_name'   => $r['activity_name'],
-                'qty_per_unit'    => (float)$r['qty_per_unit'],
-                'unit_rate'       => (float)$r['unit_rate'],
-                'amount_per_unit' => (float)$r['amount_per_unit'],
+            'computed_at'     => $computedAt,
+            'count'           => count($rows),
+            'resources'       => array_map(fn($r) => [
+                'resource_name'       => $r['resource_name'],
+                'resource_type'       => $r['resource_type_name'],
+                'unit'                => $r['resource_unit'],
+                'activity_name'       => $r['activity_name'],
+                'qty_per_unit'        => (float)$r['qty_per_unit'],
+                'est_unit_cost'       => (float)$r['est_unit_cost'],
+                'act_unit_cost'       => $r['act_unit_cost'] !== null ? (float)$r['act_unit_cost'] : null,
+                'planned_consumption' => round((float)$r['planned_consumption'], 4),
+                'actual_consumption'  => round((float)$r['actual_consumption'], 4),
+                'est_cost'            => (float)$r['est_cost'],
+                'act_cost'            => $r['act_cost'] !== null ? (float)$r['act_cost'] : null,
             ], $rows),
+            'by_resource_type' => $byTypeOut,
         ];
     }
 
@@ -1944,22 +1986,33 @@ class ChatbotController extends Controller
             "5. Do not add commentary, suggestions, or emojis.\n\n" .
 
             "## COST TERMINOLOGY\n" .
-            "- 'Estimated cost' = estimated_cost (full budget for that item)\n" .
-            "- 'Unit cost' / 'estimated unit cost' / 'cost per unit' = unit_cost (cost per one unit of the activity, available at activity level)\n" .
-            "- 'Actual cost' = actual_cost (what has actually been spent)\n" .
+            "Activity-level (from get_dashboard_metric):\n" .
+            "- 'Estimated cost' = estimated_cost / est_cost_activity (full budget for that item)\n" .
+            "- 'Unit cost' / 'estimated unit cost of activity' = unit_cost (estimated cost per one unit of activity output)\n" .
+            "- 'Actual cost' = actual_cost / actual_cost_activity (actual spend on that activity)\n" .
             "- 'ECWD' / 'estimated cost of work done' = ecwd (budget value of work completed so far)\n" .
             "- 'ACWD' / 'actual cost of work done' = acwd (actual spend on work completed so far)\n" .
             "- 'Difference' = difference (estimated minus actual; positive = under budget, negative = over budget)\n\n" .
+            "Resource-level (from get_resource_metric — per resource row):\n" .
+            "- 'Estimated unit cost of resource' = est_unit_cost (estimated rate per resource unit, e.g. ₹/kg, ₹/hour)\n" .
+            "- 'Actual unit cost of resource' = act_unit_cost (GRN weighted avg for materials, MB weighted avg for subcontractors; null if no actuals)\n" .
+            "- 'Planned consumption' = planned_consumption (estimated quantity of this resource used per unit of activity output)\n" .
+            "- 'Actual consumption' = actual_consumption (actual quantity used per unit of activity output, derived from GRN/MB)\n" .
+            "- 'Est cost' (resource level) = est_cost (est_unit_cost × planned_consumption)\n" .
+            "- 'Act cost' (resource level) = act_cost (act_unit_cost × actual_consumption; null if no actuals)\n" .
+            "- 'By resource type' = by_resource_type (aggregated est/act cost grouped by Material, Labour, Plant, Subcontractor etc.)\n\n" .
 
             "## WHEN TO USE OTHER TOOLS\n" .
             "- get_schedule_activities → list of activities with dates, progress, delay status\n" .
             "- get_activity_kpi → production rates, cycle times, tasks, cause-of-delay for one specific activity\n" .
-            "- get_resource_metric → use this when the user asks about the UNIT COST or RATE of a resource " .
-            "(e.g. 'unit cost of reinforcement', 'rate of steel', 'cost of cement per bag', 'resources of clearing drain'). " .
-            "This reads from the session cache — no live query needed. Pass project_name + resource_name (partial ok). " .
-            "Optionally pass activity_name to narrow results. Returns unit_rate (₹ per resource unit), qty_per_unit, amount_per_unit. " .
-            "Requires the project to be loaded first (call load_project_dashboard if not). " .
-            "If it returns reason='project_not_loaded', load first then retry.\n" .
+            "- get_resource_metric → use for any question about individual resources: estimated or actual unit cost of a resource, " .
+            "planned vs actual consumption, cost by resource type (Material/Labour/Plant/Subcontractor). " .
+            "Examples: 'unit cost of reinforcement', 'actual rate of steel', 'cement consumption', 'resource breakdown of clearing drain', " .
+            "'how much did we spend on materials vs labour'. " .
+            "Pass project_name + resource_name (partial ok). Optionally pass activity_name to narrow scope. " .
+            "Returns per-resource: est_unit_cost, act_unit_cost (null if no actuals), planned_consumption, actual_consumption, est_cost, act_cost. " .
+            "Also returns by_resource_type array with aggregated est_cost/act_cost per type. " .
+            "Requires project to be loaded. If reason='project_not_loaded', call load_project_dashboard first.\n" .
             "- get_materials / get_stock → materials received, GRN, stock position\n" .
             "- get_work_orders_and_mb → subcontractor work orders and measurement books\n" .
             "- get_project_estimate → total BOQ budget and profit margin\n" .
