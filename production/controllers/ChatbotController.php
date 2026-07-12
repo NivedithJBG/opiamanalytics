@@ -250,9 +250,12 @@ class ChatbotController extends Controller
                 $typeId             = (int)$r['type_id'];
                 $resQty             = (float)$r['res_qty'];
                 $estRate            = (float)$r['rate'];
-                $plannedConsumption = $resQty * $ratio;
+                $plannedConsumption = round($resQty * $ratio, 3);
 
                 $unitCost += $resQty * $estRate;
+
+                $indentRaised = false;
+                $hasMb        = false;
 
                 if ($typeId === 4) {
                     $taskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
@@ -262,13 +265,17 @@ class ChatbotController extends Controller
                         $wdQty += $taskWorkDoneById[$tid] ?? 0.0;
                     }
                     $actUnit           = $wdQty > 0 ? $wdVal / $wdQty : null;
+                    $hasMb             = $wdQty > 0;
                     $actualConsumption = ($lastQty > 0 && $wdQty > 0)
-                        ? $wdQty / $lastQty : $plannedConsumption;
+                        ? round($wdQty / $lastQty, 3) : $plannedConsumption;
                 } elseif (in_array($typeId, [2, 6, 7, 8])) {
                     $actUnit      = ($r['actual_unit_cost'] !== null) ? (float)$r['actual_unit_cost'] : null;
                     $indentRaised = ($r['stock_at_site'] !== null);
                     if ($indentRaised && $lastQty > 0) {
-                        $actualConsumption = max(0, (float)($r['grn_qty'] ?? 0) - (float)($r['stock_at_site'] ?? 0)) / $lastQty;
+                        $actualConsumption = round(
+                            max(0, (float)($r['grn_qty'] ?? 0) - (float)($r['stock_at_site'] ?? 0)) / $lastQty,
+                            3
+                        );
                     } else {
                         $actualConsumption = $plannedConsumption;
                     }
@@ -277,8 +284,14 @@ class ChatbotController extends Controller
                     $actualConsumption = $plannedConsumption;
                 }
 
-                if ($actUnit !== null) {
-                    $actualTotal += $actUnit * $actualConsumption;
+                // Dashboard uses est as fallback when no actual
+                $effectiveActUnit = $actUnit !== null ? $actUnit : $estRate;
+                $hasActual = ($indentRaised && in_array($typeId, [2, 6, 7, 8])) || ($hasMb && $typeId === 4);
+
+                if ($hasActual) {
+                    $actualTotal += $effectiveActUnit * $actualConsumption;
+                } else {
+                    $actualTotal += $estRate * $plannedConsumption;
                 }
 
                 $resName = $r['resource_name'] ?? '';
@@ -291,15 +304,31 @@ class ChatbotController extends Controller
                     'qty_per_unit'        => $resQty,
                     'est_unit_cost'       => $estRate,
                     'act_unit_cost'       => $actUnit,
-                    'planned_consumption' => round($plannedConsumption, 6),
-                    'actual_consumption'  => round($actualConsumption,  6),
+                    'effective_act_unit'  => $effectiveActUnit,
+                    'planned_consumption' => $plannedConsumption,
+                    'actual_consumption'  => $actualConsumption,
+                    'indent_raised'       => $indentRaised,
+                    'has_mb'              => $hasMb,
+                    'has_actual'          => $hasActual,
                     'est_cost'            => round($estRate * $plannedConsumption, 4),
-                    'act_cost'            => $actUnit !== null ? round($actUnit * $actualConsumption, 4) : null,
+                    'act_cost'            => round($effectiveActUnit * $actualConsumption, 4),
                 ];
             }
 
             $estUCTotal = $unitCost * $ratio;
-            $hasActual  = $actualTotal > 0;
+            // has_actual = true if ANY resource has real site data (indent_raised or has_mb)
+            // mirrors JS: if (acoa > 0) hasReal = true
+            $hasActual = false;
+            foreach ($resDetail as $rd) {
+                if ($rd['has_actual']) { $hasActual = true; break; }
+            }
+
+            // acoa = actualTotal × schedQty (actualTotal always uses est fallback, matches dashboard)
+            // actwd: dashboard passes actwd from PHP; PHP: actualTotal > 0 ? actualTotal×lastQty : estwd
+            // Since we always compute actualTotal (with fallback), check hasActual for the same gate
+            $acoa  = round($actualTotal * $schedQty, 2);
+            $estwd = round($estUCTotal * $lastQty, 2);
+            $actwd = $hasActual ? round($actualTotal * $lastQty, 2) : $estwd;
 
             $data[$schedId] = [
                 'wbId'       => $wbId,
@@ -307,14 +336,12 @@ class ChatbotController extends Controller
                 'schedQty'   => $schedQty,
                 'estQty'     => $estQty,
                 'lastQty'    => $lastQty,
-                'unitCost'   => round($unitCost,    4),  // estimated unit cost of activity
-                'estUCTotal' => round($estUCTotal,  4),  // unit cost × ratio (est unit cost of work done per unit)
+                'unitCost'   => round($unitCost,    4),
+                'estUCTotal' => round($estUCTotal,  4),
                 'est'        => round($unitCost * $estQty, 2),
-                'acoa'       => round($actualTotal * $schedQty, 2),
-                'estwd'      => round($estUCTotal * $lastQty, 2),
-                'actwd'      => $hasActual
-                    ? round($actualTotal * $lastQty, 2)
-                    : round($estUCTotal  * $lastQty, 2),
+                'acoa'       => $acoa,
+                'estwd'      => $estwd,
+                'actwd'      => $actwd,
                 'has_actual' => $hasActual,
                 'resources'  => $resDetail,
             ];
@@ -336,10 +363,10 @@ class ChatbotController extends Controller
             [':wid' => $wbId, ':pid' => $pid]
         )->queryScalar() ?: 0);
 
-        // Last reported qty
+        // Last reported qty — matches actionCostdashboardactivity: ORDER BY updated_at DESC LIMIT 1
         $lastQty = (float)($db->createCommand(
-            "SELECT COALESCE(MAX(cumulated_qty),0) FROM schedule_progress_report
-             WHERE activity_id=:sid",
+            "SELECT COALESCE(cumulated_qty,0) FROM schedule_progress_report
+             WHERE activity_id=:sid ORDER BY updated_at DESC LIMIT 1",
             [':sid' => $schedId]
         )->queryScalar() ?: 0);
 
@@ -413,7 +440,11 @@ class ChatbotController extends Controller
             $resQty             = (float)$r['res_qty'];
             $typeId             = (int)$r['type_id'];
             $estRate            = (float)$r['rate'];
-            $plannedConsumption = round($resQty * $ratio, 6);
+            // Round to 3 — matches actionCostdashboardactivity
+            $plannedConsumption = round($resQty * $ratio, 3);
+
+            $indentRaised = false;
+            $hasMb        = false;
 
             if ($typeId === 4) {
                 $taskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
@@ -423,15 +454,16 @@ class ChatbotController extends Controller
                     $wdQty += $taskWorkDoneById[$tid] ?? 0.0;
                 }
                 $actUnit           = $wdQty > 0 ? $wdVal / $wdQty : null;
+                $hasMb             = $wdQty > 0;
                 $actualConsumption = ($lastQty > 0 && $wdQty > 0)
-                    ? round($wdQty / $lastQty, 6) : $plannedConsumption;
+                    ? round($wdQty / $lastQty, 3) : $plannedConsumption;
             } elseif (in_array($typeId, [2, 6, 7, 8])) {
                 $actUnit      = ($r['actual_unit_cost'] !== null) ? (float)$r['actual_unit_cost'] : null;
                 $indentRaised = ($r['stock_at_site'] !== null);
                 if ($indentRaised && $lastQty > 0) {
                     $actualConsumption = round(
                         max(0, (float)($r['grn_qty'] ?? 0) - (float)($r['stock_at_site'] ?? 0)) / $lastQty,
-                        6
+                        3
                     );
                 } else {
                     $actualConsumption = $plannedConsumption;
@@ -441,6 +473,12 @@ class ChatbotController extends Controller
                 $actualConsumption = $plannedConsumption;
             }
 
+            // has_actual mirrors JS: (isMaterial && indent_raised) || (isSC && has_mb)
+            $hasActual = ($indentRaised && in_array($typeId, [2, 6, 7, 8])) || ($hasMb && $typeId === 4);
+
+            // For cost totals, dashboard falls back to estimated when no actual (actUC = hasAct ? actual : est)
+            $effectiveActUnit = $actUnit !== null ? $actUnit : $estRate;
+
             $items[] = [
                 'resource_name'       => $r['resource_name'],
                 'resource_type'       => $r['type_name'],
@@ -448,10 +486,15 @@ class ChatbotController extends Controller
                 'qty_per_unit'        => $resQty,
                 'est_unit_cost'       => $estRate,
                 'act_unit_cost'       => $actUnit,
+                'effective_act_unit'  => $effectiveActUnit,
                 'planned_consumption' => $plannedConsumption,
                 'actual_consumption'  => $actualConsumption,
+                'indent_raised'       => $indentRaised,
+                'has_mb'              => $hasMb,
+                'has_actual'          => $hasActual,
                 'est_cost'            => round($estRate * $plannedConsumption, 4),
-                'act_cost'            => $actUnit !== null ? round($actUnit * $actualConsumption, 4) : null,
+                // act_cost uses dashboard fallback: effectiveActUnit × actualConsumption
+                'act_cost'            => round($effectiveActUnit * $actualConsumption, 4),
             ];
         }
 
@@ -479,17 +522,17 @@ class ChatbotController extends Controller
             return ['status' => 'no_data', 'reason' => "No cost data found for \"{$project['Name']}\"."];
         }
 
-        $totEst = 0.0; $totAcoa = 0.0; $totEstWD = 0.0; $totActWD = 0.0;
+        // Dashboard JS: totAcoa += acoa > 0 ? acoa : est
+        // Since acoa now uses est fallback, acoa always >= est when no actuals (= est)
+        // Use has_actual flag to decide which to show, matching JS hasReal logic
+        $totEst = 0.0; $totAcoa = 0.0; $totEstWD = 0.0; $totActWD = 0.0; $hasAnyActual = false;
         foreach ($actData as $c) {
             $totEst   += $c['est'];
             $totEstWD += $c['estwd'];
-            if ($c['has_actual']) {
-                $totAcoa  += $c['acoa'];
-                $totActWD += $c['actwd'];
-            } else {
-                $totAcoa  += $c['est'];
-                $totActWD += $c['estwd'];
-            }
+            // acoa already = est when no actuals (fallback in computeActivityCosts)
+            $totAcoa  += $c['acoa'];
+            $totActWD += $c['actwd'];
+            if ($c['has_actual']) $hasAnyActual = true;
         }
 
         return [
@@ -499,8 +542,9 @@ class ChatbotController extends Controller
             'location'        => $project['location'],
             'contract_value'  => (float)$project['project_value'],
             'estimated_cost'  => round($totEst,   2),
-            'actual_cost'     => round($totAcoa,  2),
-            'difference'      => round($totEst - $totAcoa, 2),
+            'actual_cost'     => $hasAnyActual ? round($totAcoa, 2) : null,
+            'has_actual'      => $hasAnyActual,
+            'difference'      => $hasAnyActual ? round($totEst - $totAcoa, 2) : null,
             'ecwd'            => round($totEstWD, 2),
             'acwd'            => round($totActWD, 2),
             'ecwd_acwd_diff'  => round($totEstWD - $totActWD, 2),
@@ -564,17 +608,14 @@ class ChatbotController extends Controller
             $gid = $iowToGroup[$iowId] ?? null;
             if (!$gid) continue;
             if (!isset($grpAgg[$gid])) {
-                $grpAgg[$gid] = ['est' => 0.0, 'acoa' => 0.0, 'estwd' => 0.0, 'actwd' => 0.0];
+                $grpAgg[$gid] = ['est' => 0.0, 'acoa' => 0.0, 'estwd' => 0.0, 'actwd' => 0.0, 'has_actual' => false];
             }
             $grpAgg[$gid]['est']   += $c['est'];
             $grpAgg[$gid]['estwd'] += $c['estwd'];
-            if ($c['has_actual']) {
-                $grpAgg[$gid]['acoa']  += $c['acoa'];
-                $grpAgg[$gid]['actwd'] += $c['actwd'];
-            } else {
-                $grpAgg[$gid]['acoa']  += $c['est'];
-                $grpAgg[$gid]['actwd'] += $c['estwd'];
-            }
+            // acoa already uses est fallback when no actuals
+            $grpAgg[$gid]['acoa']  += $c['acoa'];
+            $grpAgg[$gid]['actwd'] += $c['actwd'];
+            if ($c['has_actual']) $grpAgg[$gid]['has_actual'] = true;
         }
 
         $filter = strtolower(trim($input['group_name'] ?? ''));
@@ -583,12 +624,13 @@ class ChatbotController extends Controller
             $gid  = (int)$g['group_id'];
             $name = $g['group_name'];
             if ($filter !== '' && strpos(strtolower($name), $filter) === false) continue;
-            $agg  = $grpAgg[$gid] ?? ['est' => 0, 'acoa' => 0, 'estwd' => 0, 'actwd' => 0];
+            $agg  = $grpAgg[$gid] ?? ['est' => 0, 'acoa' => 0, 'estwd' => 0, 'actwd' => 0, 'has_actual' => false];
             $result[] = [
                 'group_name'     => $name,
+                'has_actual'     => $agg['has_actual'],
                 'estimated_cost' => round($agg['est'],  2),
-                'actual_cost'    => round($agg['acoa'], 2),
-                'difference'     => round($agg['est'] - $agg['acoa'], 2),
+                'actual_cost'    => $agg['has_actual'] ? round($agg['acoa'], 2) : null,
+                'difference'     => $agg['has_actual'] ? round($agg['est'] - $agg['acoa'], 2) : null,
                 'ecwd'           => round($agg['estwd'], 2),
                 'acwd'           => round($agg['actwd'], 2),
                 'ecwd_acwd_diff' => round($agg['estwd'] - $agg['actwd'], 2),
@@ -651,17 +693,13 @@ class ChatbotController extends Controller
             $iowId = $wanIowMap[$wanId] ?? null;
             if (!$iowId) continue;
             if (!isset($iowAgg[$iowId])) {
-                $iowAgg[$iowId] = ['est' => 0.0, 'acoa' => 0.0, 'estwd' => 0.0, 'actwd' => 0.0];
+                $iowAgg[$iowId] = ['est' => 0.0, 'acoa' => 0.0, 'estwd' => 0.0, 'actwd' => 0.0, 'has_actual' => false];
             }
             $iowAgg[$iowId]['est']   += $c['est'];
             $iowAgg[$iowId]['estwd'] += $c['estwd'];
-            if ($c['has_actual']) {
-                $iowAgg[$iowId]['acoa']  += $c['acoa'];
-                $iowAgg[$iowId]['actwd'] += $c['actwd'];
-            } else {
-                $iowAgg[$iowId]['acoa']  += $c['est'];
-                $iowAgg[$iowId]['actwd'] += $c['estwd'];
-            }
+            $iowAgg[$iowId]['acoa']  += $c['acoa'];
+            $iowAgg[$iowId]['actwd'] += $c['actwd'];
+            if ($c['has_actual']) $iowAgg[$iowId]['has_actual'] = true;
         }
 
         $filter = strtolower(trim($input['iow_name'] ?? ''));
@@ -670,13 +708,14 @@ class ChatbotController extends Controller
             $iid  = (int)$iow['iow_id'];
             $name = $iow['iow_name'];
             if ($filter !== '' && strpos(strtolower($name), $filter) === false) continue;
-            $agg  = $iowAgg[$iid] ?? ['est' => 0, 'acoa' => 0, 'estwd' => 0, 'actwd' => 0];
+            $agg  = $iowAgg[$iid] ?? ['est' => 0, 'acoa' => 0, 'estwd' => 0, 'actwd' => 0, 'has_actual' => false];
             $result[] = [
                 'iow_name'       => $name,
                 'group_name'     => $iow['group_name'],
+                'has_actual'     => $agg['has_actual'],
                 'estimated_cost' => round($agg['est'],  2),
-                'actual_cost'    => round($agg['acoa'], 2),
-                'difference'     => round($agg['est'] - $agg['acoa'], 2),
+                'actual_cost'    => $agg['has_actual'] ? round($agg['acoa'], 2) : null,
+                'difference'     => $agg['has_actual'] ? round($agg['est'] - $agg['acoa'], 2) : null,
                 'ecwd'           => round($agg['estwd'], 2),
                 'acwd'           => round($agg['actwd'], 2),
                 'ecwd_acwd_diff' => round($agg['estwd'] - $agg['actwd'], 2),
@@ -775,14 +814,15 @@ class ChatbotController extends Controller
         }
 
         // Unit cost of activity = sum of (rate × planned_consumption) across all resources
-        // mirrors renderCdUnitCostOfActivity() in _performancedashboard.js: estUC * estCons
+        // mirrors renderCdUnitCostOfActivity() in _performancedashboard.js:
+        //   estUC * estCons for estimated
+        //   actUC = hasAct ? actual_unit_cost : estUC (fallback) for actual
         $estUCA = 0.0; $actUCA = 0.0; $hasActual = false;
         foreach ($res['items'] as $r) {
             $estUCA += $r['est_unit_cost'] * $r['planned_consumption'];
-            if ($r['act_unit_cost'] !== null) {
-                $actUCA   += $r['act_unit_cost'] * $r['actual_consumption'];
-                $hasActual = true;
-            }
+            // effective_act_unit already applies dashboard fallback (est when no actual)
+            $actUCA += $r['effective_act_unit'] * $r['actual_consumption'];
+            if ($r['has_actual']) $hasActual = true;
         }
 
         return [
@@ -847,7 +887,8 @@ class ChatbotController extends Controller
                 'unit'            => $r['unit'],
                 'est_unit_cost'   => $r['est_unit_cost'],
                 'act_unit_cost'   => $r['act_unit_cost'],
-                'has_actual'      => $r['act_unit_cost'] !== null,
+                // has_actual: material needs indent raised, SC needs MB entry (mirrors JS dashboard)
+                'has_actual'      => $r['has_actual'],
             ], $items),
         ];
     }
@@ -900,8 +941,9 @@ class ChatbotController extends Controller
                 'resource_type'       => $r['resource_type'],
                 'unit'                => $r['unit'],
                 'planned_consumption' => $r['planned_consumption'],
-                'actual_consumption'  => $r['actual_consumption'],
-                'has_actual'          => $r['act_unit_cost'] !== null,
+                // Dashboard shows actual_consumption only when indent_raised (material) or has_mb (SC)
+                'actual_consumption'  => $r['has_actual'] ? $r['actual_consumption'] : $r['planned_consumption'],
+                'has_actual'          => $r['has_actual'],
             ], $items),
         ];
     }
@@ -933,7 +975,9 @@ class ChatbotController extends Controller
             return ['status' => 'no_data', 'reason' => "No resource data found for \"{$act['name']}\"."];
         }
 
-        // Group by resource_type — mirrors renderCdResourceCost() in JS dashboard
+        // Group by resource_type — mirrors renderCdResourceCost() in JS dashboard:
+        //   actUC = hasActual ? actual_unit_cost : estUC  (fallback to est when no actual)
+        //   groups[key].act += actUC * actCons  (always, for ALL rows)
         $byType = [];
         foreach ($res['items'] as $r) {
             $tn = $r['resource_type'] ?: 'Other';
@@ -941,10 +985,9 @@ class ChatbotController extends Controller
                 $byType[$tn] = ['est_cost' => 0.0, 'act_cost' => 0.0, 'has_actual' => false];
             }
             $byType[$tn]['est_cost'] += $r['est_cost'];
-            if ($r['act_cost'] !== null) {
-                $byType[$tn]['act_cost']  += $r['act_cost'];
-                $byType[$tn]['has_actual'] = true;
-            }
+            // act_cost already uses effectiveActUnit (dashboard fallback), always add it
+            $byType[$tn]['act_cost'] += $r['act_cost'];
+            if ($r['has_actual']) $byType[$tn]['has_actual'] = true;
         }
 
         $result = [];
@@ -1039,29 +1082,65 @@ class ChatbotController extends Controller
         $actid = (int)$act['id'];
         $pid   = (int)$act['pid'];
 
+        // Exact port of _buildKpi() from ProjectsmainController.php
         $san = $db->createCommand(
-            "SELECT progress, Workhours, Cycles, Resourceunits FROM schedule_activity_new WHERE actvity_id=$actid"
+            "SELECT progress, cycle_qty, Workhours, Cycles, Resourceunits, cycle_unit_type
+             FROM schedule_activity_new WHERE actvity_id=$actid"
         )->queryOne();
 
-        $target_qty  = (float)($act['quantity'] ?? 0);
-        $unit        = $act['unit'] ?? '';
-        $wh          = $san ? (int)$san['Workhours'] : 8;
-        $progress    = $san ? (float)$san['progress'] : 0;
+        $target_qty     = (float)($act['quantity'] ?? 0);
+        $unit           = $act['unit'] ?? '';
+        $wh             = $san ? (int)$san['Workhours']  : 8;
+        $progress       = $san ? (float)$san['progress'] : 0;
+        $resource_units = max(1, (float)($act['resource_units'] ?? 1));
 
         $pr = $db->createCommand(
-            "SELECT cumulated_qty FROM schedule_progress_report WHERE activity_id=$actid ORDER BY updated_at DESC LIMIT 1"
+            "SELECT cumulated_qty FROM schedule_progress_report
+             WHERE activity_id=$actid ORDER BY updated_at DESC LIMIT 1"
         )->queryOne();
         $actual_qty    = $pr ? (float)$pr['cumulated_qty'] : 0;
         $work_done_pct = ($target_qty > 0) ? round($actual_qty / $target_qty * 100, 1) : $progress;
-        $b_duration    = (float)($act['old_duration'] ?? 0);
+
+        $duration   = (float)($act['duration']     ?? 0);
+        $b_duration = (float)($act['old_duration'] ?? 0);
+
+        $target_cycle = ($target_qty > 0)
+            ? round(($b_duration / $target_qty) * $wh, 3) : 0;
+        $actual_cycle = 0;
+        $actual_prod  = 0;
 
         $brk = $db->createCommand(
-            "SELECT SUM(break_hour) AS total_break FROM schedule_progress_report_log WHERE activity_id=$actid"
+            "SELECT SUM(break_hour) AS total_break FROM schedule_progress_report_log
+             WHERE activity_id=$actid"
         )->queryOne();
         $cum_break = $brk ? (float)$brk['total_break'] : 0;
+        $cap_max   = 0;
+        $cap_used  = 0;
+
+        $cod_rows = $db->createCommand(
+            "SELECT cd.title, COUNT(strc.id) AS cnt
+             FROM schedule_task_report_cause_of_delays strc
+             JOIN cause_of_delays cd ON cd.id=strc.cause_of_delay_id
+             WHERE strc.activity_id=$actid GROUP BY cd.id, cd.title"
+        )->queryAll();
+        $total_cod      = array_sum(array_column($cod_rows, 'cnt'));
+        $cause_of_delay = array_map(fn($r) => [
+            'name'  => $r['title'],
+            'count' => (int)$r['cnt'],
+            'pct'   => $total_cod > 0 ? round($r['cnt'] / $total_cod * 100) : 0,
+        ], $cod_rows);
+
+        $res_rows = $db->createCommand(
+            "SELECT r.Name AS name, strr.count AS cnt
+             FROM schedule_task_report_resources strr
+             JOIN resources r ON r.Resource_Id=strr.res_id
+             WHERE strr.activity_id=$actid
+             ORDER BY strr.count DESC LIMIT 8"
+        )->queryAll();
 
         $lrd = $db->createCommand(
-            "SELECT MAX(report_date) AS last_date FROM schedule_progress_report_log WHERE activity_id=$actid AND currentqty>0"
+            "SELECT MAX(report_date) AS last_date FROM schedule_progress_report_log
+             WHERE activity_id=$actid AND currentqty>0"
         )->queryOne();
         $last_reported_date = ($lrd && !empty($lrd['last_date'])) ? $lrd['last_date'] : '';
 
@@ -1074,7 +1153,11 @@ class ChatbotController extends Controller
             ? min($planned_start, $reported_start)
             : ($reported_start ?: $planned_start);
 
-        $actual_prod = 0; $elapsed = 0; $start_delay = 0; $cap_max = 0; $cap_used = 0; $actual_cycle = 0;
+        $planned_per_day = ($b_duration > 0 && $target_qty > 0) ? round($target_qty / $b_duration, 3) : 0;
+        $target_prod     = $planned_per_day;
+        $elapsed         = 0;
+        $start_delay     = 0;
+
         if ($act_start_date && $last_reported_date && $actual_qty > 0) {
             $elapsed      = max(1, (strtotime($last_reported_date) - strtotime($act_start_date)) / 86400 + 1);
             $actual_prod  = round($actual_qty / $elapsed, 3);
@@ -1086,28 +1169,13 @@ class ChatbotController extends Controller
             $elapsed     = $start_delay;
         }
 
-        $planned_per_day    = ($b_duration > 0 && $target_qty > 0) ? round($target_qty / $b_duration, 3) : 0;
         $projected_duration = ($actual_qty > 0 && $elapsed > 0)
             ? (int)round($elapsed / $actual_qty * $target_qty)
             : ($start_delay > 0 ? $b_duration + $start_delay : 0);
-        $target_cycle = ($target_qty > 0 && $b_duration > 0) ? round(($b_duration / $target_qty) * $wh, 3) : 0;
 
-        $cod_rows = $db->createCommand(
-            "SELECT cd.title, COUNT(strc.id) AS cnt
-             FROM schedule_task_report_cause_of_delays strc
-             JOIN cause_of_delays cd ON cd.id=strc.cause_of_delay_id
-             WHERE strc.activity_id=$actid GROUP BY cd.id, cd.title"
-        )->queryAll();
-        $total_cod      = array_sum(array_column($cod_rows, 'cnt'));
-        $cause_of_delay = array_map(fn($r) => [
-            'reason'  => $r['title'],
-            'count'   => (int)$r['cnt'],
-            'percent' => $total_cod > 0 ? round($r['cnt'] / $total_cod * 100) : 0,
-        ], $cod_rows);
-
-        $sa_act    = $db->createCommand("SELECT activity_id FROM scheduleactivities WHERE id=$actid")->queryOne();
-        $wbn_id    = $sa_act ? (int)$sa_act['activity_id'] : 0;
-        $wbn_row   = $wbn_id ? $db->createCommand("SELECT activity_Id FROM workgroup_activities_new WHERE id=$wbn_id")->queryOne() : null;
+        $sa_act      = $db->createCommand("SELECT activity_id FROM scheduleactivities WHERE id=$actid")->queryOne();
+        $wbn_id      = $sa_act ? (int)$sa_act['activity_id'] : 0;
+        $wbn_row     = $wbn_id ? $db->createCommand("SELECT activity_Id FROM workgroup_activities_new WHERE id=$wbn_id")->queryOne() : null;
         $masterActId = ($wbn_row && $wbn_row['activity_Id']) ? (int)$wbn_row['activity_Id'] : $wbn_id;
 
         $task_rows = $masterActId ? $db->createCommand(
@@ -1136,50 +1204,59 @@ class ChatbotController extends Controller
             }
         }
 
+        // Task map: exact copy of _buildKpi() task closure
         $tasks = array_map(function($t) use ($target_qty, $actual_qty, $elapsed, $taskMbQty) {
-            $tqu   = (float)$t['task_qty'];
-            $mbQty = $taskMbQty[(int)$t['task_id']] ?? 0;
+            $tqu    = (float)$t['task_qty'];
+            $actual = ($elapsed > 0 && $actual_qty > 0 && $tqu > 0)
+                ? round($actual_qty * $tqu / $elapsed, 3) : 0;
+            $mbQty  = $taskMbQty[(int)$t['task_id']] ?? 0;
             return [
-                'task_name'             => $t['task_name'],
-                'unit'                  => $t['task_unit'],
-                'target_production_per_day' => round((float)$t['productivity'] * max(1, (float)$t['resource_units']), 3),
-                'task_planned_qty'      => round($tqu * $target_qty, 3),
-                'planned_duration_days' => (float)$t['planned_duration'],
-                'actual_duration_days'  => ($elapsed > 0 && $mbQty > 0) ? round($elapsed / $mbQty, 3) : 0,
+                'name'             => $t['task_name'],
+                'unit'             => $t['task_unit'],
+                'val'              => round((float)$t['productivity'] * max(1, (float)$t['resource_units']), 3),
+                'actual'           => $actual,
+                'qty'              => round($tqu * $target_qty, 3),
+                'planned_duration' => (float)$t['planned_duration'],
+                'actual_duration'  => ($elapsed > 0 && $mbQty > 0) ? round($elapsed / $mbQty, 3) : 0,
             ];
         }, $task_rows);
 
+        // Return: exact field names and values from _buildKpi() + status wrapper
         return [
-            'status'                    => 'ok',
-            'project'                   => $act['project_name'],
-            'activity'                  => $act['name'],
-            'unit'                      => $unit,
-            'target_qty'                => $target_qty,
-            'actual_qty_done'           => $actual_qty,
-            'progress_percent'          => $work_done_pct,
-            'planned_duration_days'     => $b_duration,
-            'elapsed_days'              => (int)round($elapsed),
-            'start_delay_days'          => $start_delay,
-            'projected_total_duration'  => $projected_duration,
-            'planned_start_date'        => $planned_start,
-            'planned_end_date'          => $act['end_date'] ?? '',
-            'reported_start_date'       => $reported_start ?: null,
-            'last_reported_date'        => $last_reported_date ?: null,
-            'target_production_per_day' => $planned_per_day,
-            'actual_production_per_day' => $actual_prod,
-            'work_hours_per_day'        => $wh,
-            'target_cycle_time_hrs'     => $target_cycle,
-            'actual_cycle_time_hrs'     => $actual_cycle,
-            'capacity_max_hrs'          => $cap_max,
-            'capacity_used_hrs'         => $cap_used,
-            'is_critical'               => ($act['critical_status'] === 'Yes'),
-            'is_completed'              => ((int)$act['completed_status'] === 1),
-            'cause_of_delay'            => empty($cause_of_delay)
-                ? ['status' => 'no_data', 'reason' => 'No cause-of-delay entries recorded.']
-                : $cause_of_delay,
-            'tasks'                     => empty($tasks)
-                ? ['status' => 'no_data', 'reason' => 'No tasks defined for this activity.']
-                : $tasks,
+            'status'              => 'ok',
+            'activity_id'         => $actid,
+            'activity_name'       => $act['name'],
+            'work_done_pct'       => $work_done_pct,
+            'target_qty'          => $target_qty,
+            'actual_qty'          => $actual_qty,
+            'unit'                => $unit,
+            'duration'            => $duration,
+            'b_duration'          => $b_duration,
+            'act_start_date'      => $act_start_date,
+            'last_reported_date'  => $last_reported_date ?: null,
+            'planned_per_day'     => $planned_per_day,
+            'resource_units'      => $resource_units,
+            'target_productivity' => $target_prod,
+            'actual_productivity' => $actual_prod,
+            'wh'                  => $wh,
+            'target_cycle_time'   => $target_cycle,
+            'actual_cycle_time'   => $actual_cycle,
+            'cap_max'             => $cap_max,
+            'cap_used'            => $cap_used,
+            'cause_of_delay'      => $cause_of_delay,
+            'resources'           => $res_rows,
+            'tasks'               => $tasks,
+            'elapsed'             => (int)round($elapsed),
+            'start_delay'         => $start_delay,
+            'projected_duration'  => $projected_duration,
+            'planned_end_date'    => $act['end_date'] ?? '',
+            'reported_start_date' => $reported_start ?: '',
+            'adj_start_date'      => $planned_start ?: $act_start_date,
+            'adj_end_date'        => $planned_start
+                ? date('Y-m-d', strtotime($planned_start . ' +' . (max(1, $b_duration) - 1) . ' days'))
+                : ($act['end_date'] ?? ''),
+            'critical'            => (($act['critical_status'] ?? '') === 'Yes'),
+            'project_name'        => $act['project_name'],
         ];
     }
 
@@ -1778,9 +1855,11 @@ class ChatbotController extends Controller
             "- get_resource_consumption → planned vs actual consumption per resource within an activity\n" .
             "- get_resource_cost_by_type → cost grouped by resource type (Material, Labour, Plant, Subcontractor)\n\n" .
 
+            "KPI panel tools (use these for all schedule/performance questions):\n" .
+            "- get_activity_kpi → all production KPIs for one activity: work done %, productivity, cycle times, capacity, elapsed, projected duration, tasks, cause-of-delay\n\n" .
+
             "Other tools:\n" .
             "- get_projects → list of active projects\n" .
-            "- get_activity_kpi → production rates, cycle times, tasks, cause-of-delay for one activity\n" .
             "- get_schedule_activities → activity list with dates, progress, delay status\n" .
             "- get_project_schedule_summary → schedule health, overall progress %, forecast completion\n" .
             "- get_materials / get_stock → GRN receipts, purchase orders, site stock\n" .
@@ -1849,6 +1928,76 @@ class ChatbotController extends Controller
             "| cost of work done so far (budget side) | ecwd | get_activity_costs or get_project_costs |\n" .
             "| cost of work done so far (actual side) | acwd | get_activity_costs or get_project_costs |\n\n" .
 
+            "## KPI TERMINOLOGY — read this carefully before answering any schedule/performance question\n\n" .
+
+            "All KPI values come from get_activity_kpi. Field names match the live KPI dashboard exactly.\n\n" .
+
+            "### Progress & Quantity (KPI dashboard: Work Done panel)\n" .
+            "- work_done_pct → % of scheduled quantity completed. Dashboard label: work done %.\n" .
+            "- target_qty → total scheduled quantity for the activity (e.g. 500 cum, 1200 m).\n" .
+            "- actual_qty → cumulative quantity completed to date (latest progress report).\n" .
+            "- unit → unit of measurement (cum, m, nos, etc.).\n\n" .
+
+            "### Duration & Schedule (KPI dashboard: Activity Duration panel)\n" .
+            "- b_duration → planned/budgeted duration in days (from schedule). Dashboard label: planned duration.\n" .
+            "- duration → current schedule duration in days (may differ from b_duration if revised).\n" .
+            "- elapsed → days elapsed from act_start_date to last_reported_date + 1. This is what PHP uses for all KPI computations. NOT the same as today minus start date.\n" .
+            "- start_delay → days overdue before any progress was recorded (only set when actual_qty = 0 but start date has passed).\n" .
+            "- projected_duration → forecast total duration = round(elapsed / actual_qty × target_qty). Dashboard label: projected duration.\n" .
+            "- act_start_date → earlier of planned_start and reported_start. The activity's effective start anchor.\n" .
+            "- planned_end_date → originally scheduled completion date.\n" .
+            "- adj_start_date → adjusted start date (= planned_start if available).\n" .
+            "- adj_end_date → adjusted end date computed from adj_start_date + b_duration - 1 days.\n\n" .
+
+            "### Productivity (KPI dashboard: Target Production / Productivity panels)\n" .
+            "- target_productivity (= planned_per_day) → target_qty / b_duration. Dashboard label: target production per day.\n" .
+            "- actual_productivity → actual_qty / elapsed. Dashboard label: actual production per day.\n" .
+            "- resource_units → number of resource crews/gangs deployed.\n" .
+            "- wh → work hours per day.\n\n" .
+
+            "### Cycle Time (KPI dashboard: Cycle Time panel)\n" .
+            "- target_cycle_time → (b_duration / target_qty) × wh. Time in hours to produce one unit at planned rate.\n" .
+            "- actual_cycle_time → (elapsed / actual_qty) × wh. Actual hours per unit based on progress to date.\n" .
+            "  IMPORTANT: When actual_cycle_time = 0 (no progress yet), the dashboard shows target_cycle_time as the current cycle time. Follow this same fallback: if actual_cycle_time is 0, report target_cycle_time as the current cycle time.\n\n" .
+
+            "### Capacity Utilisation (KPI dashboard: Capacity panel)\n" .
+            "- cap_max → elapsed × wh. Total available work-hours over elapsed period.\n" .
+            "- cap_used → max(0, cap_max − cumulative_break_hours). Productive hours used.\n" .
+            "- capacity % = cap_used / cap_max × 100. Only meaningful when progress has been reported.\n\n" .
+
+            "### Tasks (KPI dashboard: Resource Productivity panel)\n" .
+            "Each task in the 'tasks' array has:\n" .
+            "- name → task name.\n" .
+            "- unit → task unit.\n" .
+            "- val → target production rate = productivity × max(1, resource_units). Dashboard label: target.\n" .
+            "- actual → actual task production rate = actual_qty × task_qty / elapsed. Dashboard label: actual.\n" .
+            "- qty → total planned task quantity = task_qty × target_qty.\n" .
+            "- planned_duration → budgeted duration for this task in days.\n" .
+            "- actual_duration → elapsed / mb_work_done (from measurement book). 0 if no MB entries.\n\n" .
+
+            "### Cause of Delay (KPI dashboard: Cause of Delay panel)\n" .
+            "Each entry in 'cause_of_delay' has: name (reason), count (number of occurrences), pct (% of total delay reports).\n\n" .
+
+            "### KPI CHEAT SHEET\n" .
+            "| User asks for | Field | Notes |\n" .
+            "| work done / progress % | work_done_pct | |\n" .
+            "| quantity completed | actual_qty + unit | |\n" .
+            "| planned quantity / target | target_qty + unit | |\n" .
+            "| planned duration | b_duration | in days |\n" .
+            "| projected / forecast duration | projected_duration | in days |\n" .
+            "| days elapsed | elapsed | last_reported_date − act_start_date + 1 |\n" .
+            "| start delay | start_delay | days overdue before first progress |\n" .
+            "| planned start | adj_start_date | |\n" .
+            "| planned end / scheduled completion | adj_end_date | |\n" .
+            "| target production per day | target_productivity | |\n" .
+            "| actual production per day | actual_productivity | |\n" .
+            "| target cycle time | target_cycle_time | hours per unit |\n" .
+            "| actual cycle time | actual_cycle_time (fallback: target_cycle_time when 0) | hours per unit |\n" .
+            "| capacity available | cap_max | hours |\n" .
+            "| capacity used / productive hours | cap_used | hours |\n" .
+            "| task target production rate | tasks[].val | |\n" .
+            "| task actual production rate | tasks[].actual | |\n\n" .
+
             "## GROUNDING RULE\n" .
             "Only state facts from tool results. If a tool returns no_data, say that information is not available. " .
             "Never guess or fill gaps from general knowledge.\n\n" .
@@ -1915,7 +2064,14 @@ class ChatbotController extends Controller
             }
 
             if ($stopReason === 'tool_use') {
-                $messages[] = ['role' => 'assistant', 'content' => $content];
+                // Re-encode: empty tool inputs must be {} (object) not [] (array) for the API
+                $contentForHistory = array_map(function($block) {
+                    if (($block['type'] ?? '') === 'tool_use' && isset($block['input']) && $block['input'] === []) {
+                        $block['input'] = (object)[];
+                    }
+                    return $block;
+                }, $content);
+                $messages[] = ['role' => 'assistant', 'content' => $contentForHistory];
 
                 $toolResults = [];
                 foreach ($content as $block) {
