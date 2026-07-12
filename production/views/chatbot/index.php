@@ -42,6 +42,13 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
     var history = [];
     var msgs = document.getElementById('cb-msgs');
     var inp  = document.getElementById('cb-input');
+    // Session id: one per browser tab open, persists for this conversation window
+    var sessionId = (function(){
+        var k = 'cb_session_id';
+        var s = sessionStorage.getItem(k);
+        if (!s) { s = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem(k, s); }
+        return s;
+    })();
 
     /* Voice input */
     var micBtn = document.getElementById('cb-mic');
@@ -118,7 +125,7 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
         };
         xhr.onerror = function(){ msgs.removeChild(typing); addMsg('Network error.', 'bot'); };
         var priorHistory = history.slice(0, -1);
-        xhr.send('message=' + encodeURIComponent(text) + '&history=' + encodeURIComponent(JSON.stringify(priorHistory)));
+        xhr.send('message=' + encodeURIComponent(text) + '&history=' + encodeURIComponent(JSON.stringify(priorHistory)) + '&session_id=' + encodeURIComponent(sessionId));
     }
 
     function addMsg(text, cls){
