@@ -1726,11 +1726,12 @@ class ChatbotController extends Controller
 
                 $totalVar = $priceVar + $usageVar;
 
-                $key = $r['resource_name'] . '||' . $r['resource_type'];
+                $resTypeName = $r['resource_type_name'] ?? $r['resource_type'] ?? '';
+                $key = $r['resource_name'] . '||' . $resTypeName;
                 if (!isset($byResource[$key])) {
                     $byResource[$key] = [
                         'resource_name'    => $r['resource_name'],
-                        'resource_type'    => $r['resource_type'],
+                        'resource_type'    => $resTypeName,
                         'price_variance'   => 0.0,
                         'usage_variance'   => 0.0,
                         'total_variance'   => 0.0,
