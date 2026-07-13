@@ -283,7 +283,7 @@ class ProjectsmainController extends Controller
                 && (float)($a['cumulated_qty'] ?? 0) > 0
                 && (float)($a['quantity']      ?? 0) > 0)
             {
-                $elapsed = max(1, (strtotime($a['last_report_date']) - strtotime($anchorStart)) / 86400);
+                $elapsed = max(1, (strtotime($a['last_report_date']) - strtotime($anchorStart)) / 86400 + 1);
                 $a['projected_duration'] = ($elapsed / (float)$a['cumulated_qty']) * (float)$a['quantity'];
                 $a['delay'] = max(0, $a['projected_duration'] - (float)$a['duration']);
             }
@@ -616,7 +616,7 @@ class ProjectsmainController extends Controller
             $anchorStart = $r['spr_start_date'] ?: $r['start_date'];
             if ((int)$r['report_count'] > 0 && $anchorStart && !empty($r['last_report_date'])
                 && (float)$r['cumulated_qty'] > 0 && (float)$r['quantity'] > 0) {
-                $elapsed = max(1, (strtotime($r['last_report_date']) - strtotime($anchorStart)) / 86400);
+                $elapsed = max(1, (strtotime($r['last_report_date']) - strtotime($anchorStart)) / 86400 + 1);
                 $r['computed_elapsed']            = $elapsed;
                 $r['computed_projected_duration'] = $elapsed / (float)$r['cumulated_qty'] * (float)$r['quantity'];
                 $r['computed_delay']              = max(0, $r['computed_projected_duration'] - (float)$r['duration']);
