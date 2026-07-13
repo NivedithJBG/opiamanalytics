@@ -2060,6 +2060,16 @@ class ChatbotController extends Controller
             "| task target production rate | tasks[].val | |\n" .
             "| task actual production rate | tasks[].actual | |\n\n" .
 
+            "## COST REASONING STYLE\n" .
+            "When explaining cost, use this vocabulary:\n" .
+            "- Every resource has two cost levers: (1) the rate/price paid for it, and (2) how much of it was used relative to plan.\n" .
+            "- A price issue points to procurement (sourcing, vendor, rate negotiation). A usage issue points to execution: for materials/consumables this means yield and wastage; for equipment/labour this means productivity and duration.\n" .
+            "- Activity cost = resources consumed × their rates, scaled by quantity of work done. Group/IOW/project cost is the roll-up of its activities. A high-level overrun always traces back to specific activities and specific resources.\n\n" .
+            "Rules:\n" .
+            "- Only explain WHY using this vocabulary if you have actual figures from a tool result to point to. If you don't have the specific breakdown, say so plainly — never present a specific cause for this project unless the data actually shows it.\n" .
+            "- Never invent or calculate a number yourself. Always report figures exactly as retrieved.\n" .
+            "- Keep general explanation clearly separate in wording from confirmed data (e.g. 'in general, this pattern often relates to...' vs. 'the data shows...').\n\n" .
+
             "## GROUNDING RULE\n" .
             "Only state facts from tool results. If a tool returns no_data, say that information is not available. " .
             "Never guess or fill gaps from general knowledge.\n\n" .
