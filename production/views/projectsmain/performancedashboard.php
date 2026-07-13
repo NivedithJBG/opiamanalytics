@@ -301,7 +301,7 @@ function hbar(id, ds, clickable){
             } : null,
             plugins:{
                 legend:{display:false},
-                tooltip:{callbacks:{label:function(c){return ' '+c.dataset.label+': '+c.parsed.x.toFixed(1)+' d';}}}
+                tooltip:{callbacks:{label:function(c){return ' '+c.dataset.label+': '+c.parsed.x+' d';}}}
             },
             scales:{
                 x:{stacked:true,ticks:{font:{size:8},color:'#778'},grid:{color:'rgba(0,0,0,.06)'},border:{display:false}},

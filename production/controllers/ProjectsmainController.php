@@ -284,7 +284,7 @@ class ProjectsmainController extends Controller
                 && (float)($a['quantity']      ?? 0) > 0)
             {
                 $elapsed = max(1, (strtotime($a['last_report_date']) - strtotime($anchorStart)) / 86400);
-                $a['projected_duration'] = round(($elapsed / (float)$a['cumulated_qty']) * (float)$a['quantity'], 1);
+                $a['projected_duration'] = ($elapsed / (float)$a['cumulated_qty']) * (float)$a['quantity'];
             }
         }
         unset($a);
