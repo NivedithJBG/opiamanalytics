@@ -1710,30 +1710,40 @@ class ChatbotController extends Controller
             if ($filterIds !== null && !in_array($schedId, $filterIds)) continue;
             if (!$actInfo['has_actual']) continue; // skip activities with no site data
 
-            $lastQty = (float)$actInfo['lastQty']; // actual quantity done — scales per-unit figures to totals
+            $lastQty  = (float)$actInfo['lastQty'];  // qty done — same basis as ECWD/ACWD
+            $schedQty = (float)$actInfo['schedQty']; // full scheduled qty
 
+            // Recompute ACWD using live-dashboard logic: actUnit !== null (not indent-gated)
+            $liveActualTotal = 0.0;
+            foreach ($actInfo['resources'] as $r) {
+                if ($r['act_unit_cost'] !== null) {
+                    $liveActualTotal += (float)$r['effective_act_unit'] * (float)$r['actual_consumption'];
+                }
+            }
+            $liveActwd = $liveActualTotal > 0 ? round($liveActualTotal * $lastQty, 2) : $actInfo['estwd'];
             $actSummary[] = [
-                'activity'  => $actInfo['name'],
-                'qty_done'  => $lastQty,
-                'unit'      => $actInfo['schedQty'] > 0 ? 'sched units' : '',
-                'ecwd'      => $actInfo['estwd'],
-                'acwd'      => $actInfo['actwd'],
-                'ecwd_minus_acwd' => round($actInfo['estwd'] - $actInfo['actwd'], 2),
+                'activity' => $actInfo['name'],
+                'ecwd'     => $actInfo['estwd'],
+                'acwd'     => $liveActwd,
+                'saving'   => round($actInfo['estwd'] - $liveActwd, 2),
             ];
 
             foreach ($actInfo['resources'] as $r) {
-                if (!$r['has_actual']) continue;
+                // Mirror live dashboard: include resource when act_unit_cost !== null (GRN or MB exists),
+                // regardless of store indent. has_actual in computeActivityCosts is stricter (indent-based).
+                $hasData = ($r['act_unit_cost'] !== null);
+                if (!$hasData) continue;
 
                 $estUnit  = (float)$r['est_unit_cost'];
-                $effUnit  = (float)$r['effective_act_unit'];
-                $planned  = (float)$r['planned_consumption']; // per unit of activity output
-                $actual   = (float)$r['actual_consumption'];  // per unit of activity output
+                $effUnit  = (float)$r['effective_act_unit']; // = act_unit_cost when not null
+                $planned  = (float)$r['planned_consumption']; // per schedule unit
+                $actual   = (float)$r['actual_consumption'];  // per schedule unit
 
-                // Scale per-unit consumptions to totals over work done
-                // Price variance = (actual_rate - est_rate) × total_actual_consumption
+                // Variance on work-done basis (ECWD − ACWD), scaled by lastQty
+                // Price variance = (actual_rate − est_rate) × actual_consumption × lastQty
                 $priceVar = ($effUnit - $estUnit) * $actual * $lastQty;
 
-                // Usage variance = (actual_consumption - planned_consumption) × est_rate × qty_done
+                // Usage variance = (actual_consumption − planned_consumption) × est_rate × lastQty
                 $usageVar = ($actual - $planned) * $estUnit * $lastQty;
 
                 $totalVar = $priceVar + $usageVar;
@@ -1821,8 +1831,8 @@ class ChatbotController extends Controller
             'total_usage_variance' => $sumUsage,
             'total_variance'       => $sumTotal,
             'drivers'         => $rows,
-            'activity_ecwd_acwd'   => $actSummary,
-            'note'            => 'Positive variance = cost overrun vs plan. Negative = saving vs plan. Only activities with recorded site data are included. total_variance should equal sum of (ecwd - acwd) across activity_ecwd_acwd.',
+            'activity_est_acoa'    => $actSummary,
+            'note'            => 'Positive variance = cost overrun vs plan. Negative = saving vs plan. Only resources with recorded site data are included. total_variance should equal sum of (est - acoa) across activity_est_acoa.',
         ];
     }
 
