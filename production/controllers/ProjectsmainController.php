@@ -589,43 +589,6 @@ class ProjectsmainController extends Controller
         ]);
     }
 
-    public function actionPerformancedashboarddebug()
-    {
-        $uid  = Yii::$app->user->Id;
-        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
-        if (!$projuser) { return json_encode(['error' => 'No project']); }
-        $pid = (int)$projuser->projectid;
-        $connection = \Yii::$app->db;
-        $name = $_GET['name'] ?? '';
-        $rows = $connection->createCommand(
-            "SELECT sa.id, sa.name, sa.duration, sa.delay, sa.quantity, sa.start_date,
-                    pr.report_count, pr.cumulated_qty, pr.spr_start_date, pr.last_report_date
-             FROM scheduleactivities sa
-             LEFT JOIN (
-                 SELECT spr.activity_id, COUNT(*) AS report_count, MAX(spr.cumulated_qty) AS cumulated_qty,
-                        MIN(spr.start_date) AS spr_start_date,
-                        COALESCE(MAX(sprl.report_date), MAX(spr.updated_at)) AS last_report_date
-                 FROM schedule_progress_report spr
-                 LEFT JOIN schedule_progress_report_log sprl ON sprl.activity_id = spr.activity_id AND sprl.currentqty > 0
-                 GROUP BY spr.activity_id
-             ) pr ON pr.activity_id = sa.id
-             WHERE sa.projectId=$pid AND sa.status=0 AND sa.name LIKE :name",
-            [':name' => '%'.$name.'%']
-        )->queryAll();
-        foreach ($rows as &$r) {
-            $anchorStart = $r['spr_start_date'] ?: $r['start_date'];
-            if ((int)$r['report_count'] > 0 && $anchorStart && !empty($r['last_report_date'])
-                && (float)$r['cumulated_qty'] > 0 && (float)$r['quantity'] > 0) {
-                $elapsed = max(1, (strtotime($r['last_report_date']) - strtotime($anchorStart)) / 86400 + 1);
-                $r['computed_elapsed']            = $elapsed;
-                $r['computed_projected_duration'] = $elapsed / (float)$r['cumulated_qty'] * (float)$r['quantity'];
-                $r['computed_delay']              = max(0, $r['computed_projected_duration'] - (float)$r['duration']);
-            } else {
-                $r['computed_delay'] = 'condition_failed';
-            }
-        }
-        return json_encode($rows);
-    }
 
     public function actionPerformancedashboardkpi()
     {
