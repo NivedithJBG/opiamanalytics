@@ -1643,6 +1643,195 @@ class ChatbotController extends Controller
         return ['status' => 'ok', 'row_count' => count($rows), 'rows' => $rows, 'query_used' => $sql, 'query_reason' => $reason];
     }
 
+    // ── Tool: Cost Variance Drivers ─────────────────────────────────────────
+    // Per-resource price variance + usage variance for every activity in scope.
+    // Scope: project | group (group_name) | iow (iow_name) | activity (activity_name)
+    // top_n: optional, limits output to N resources by |total_variance| descending.
+    private function toolGetCostVarianceDrivers($db, $input)
+    {
+        $project = $this->resolveProject($db, $input['project_name'] ?? '');
+        if (isset($project['status'])) return $project;
+
+        $pid     = (int)$project['Project_Id'];
+        $topN    = isset($input['top_n']) ? max(1, (int)$input['top_n']) : null;
+        $scope   = strtolower(trim($input['scope'] ?? 'project'));
+
+        // Load full activity cost data (already computes per-resource fields)
+        $actData = $this->computeActivityCosts($db, $pid);
+        if (empty($actData)) {
+            return ['status' => 'no_data', 'reason' => "No cost data found for \"{$project['Name']}\"."];
+        }
+
+        // Optionally resolve hierarchy maps for group/iow filtering
+        $filterIds = null; // null = all activities
+
+        if ($scope === 'activity') {
+            $actName = trim($input['activity_name'] ?? '');
+            if ($actName === '') return ['status' => 'no_data', 'reason' => 'activity_name is required when scope=activity.'];
+            $matches = $this->resolveActivity($db, $pid, $actName);
+            if (empty($matches)) return ['status' => 'no_data', 'reason' => "No activity found matching \"{$actName}\"."];
+            $filterIds = array_column($matches, 'id');
+
+        } elseif ($scope === 'iow') {
+            $iowFilter = strtolower(trim($input['iow_name'] ?? ''));
+            $iowRows = $db->createCommand(
+                "SELECT wg.id AS iow_id FROM workgroups_new wg WHERE wg.project_Id=:pid AND wg.pricing_status=0
+                 AND LOWER(COALESCE(wg.name,'')) LIKE :n",
+                [':pid' => $pid, ':n' => '%' . $iowFilter . '%']
+            )->queryAll();
+            if (empty($iowRows)) return ['status' => 'no_data', 'reason' => "No IOW found matching \"{$input['iow_name']}\"."];
+            $iowIds = array_column($iowRows, 'iow_id');
+            $filterIds = $this->_schedIdsForIows($db, $pid, $iowIds);
+
+        } elseif ($scope === 'group') {
+            $grpFilter = strtolower(trim($input['group_name'] ?? ''));
+            $grpRows = $db->createCommand(
+                "SELECT ig.id FROM iow_groups ig
+                 JOIN workgroups_new wg ON wg.iowGroupid=ig.id AND wg.project_Id=:pid AND wg.pricing_status=0
+                 WHERE LOWER(ig.name) LIKE :n GROUP BY ig.id",
+                [':pid' => $pid, ':n' => '%' . $grpFilter . '%']
+            )->queryAll();
+            if (empty($grpRows)) return ['status' => 'no_data', 'reason' => "No group found matching \"{$input['group_name']}\"."];
+            $grpIds = array_column($grpRows, 'id');
+            $iowRows = $db->createCommand(
+                "SELECT id AS iow_id FROM workgroups_new WHERE project_Id=:pid AND pricing_status=0
+                 AND iowGroupid IN (" . implode(',', array_map('intval', $grpIds)) . ")",
+                [':pid' => $pid]
+            )->queryAll();
+            $iowIds = array_column($iowRows, 'iow_id');
+            $filterIds = $this->_schedIdsForIows($db, $pid, $iowIds);
+        }
+
+        // Aggregate variance per resource across all in-scope activities
+        $byResource = [];
+        foreach ($actData as $schedId => $actInfo) {
+            if ($filterIds !== null && !in_array($schedId, $filterIds)) continue;
+            if (!$actInfo['has_actual']) continue; // skip activities with no site data
+
+            foreach ($actInfo['resources'] as $r) {
+                if (!$r['has_actual']) continue;
+
+                $estUnit  = (float)$r['est_unit_cost'];
+                $effUnit  = (float)$r['effective_act_unit'];
+                $planned  = (float)$r['planned_consumption'];
+                $actual   = (float)$r['actual_consumption'];
+
+                // Price variance = (actual_rate - est_rate) × actual_consumption
+                // Positive = overspend due to higher rate; negative = saving
+                $priceVar = ($effUnit - $estUnit) * $actual;
+
+                // Usage variance = (actual_consumption - planned_consumption) × est_rate
+                // Positive = overspend due to more usage; negative = saving
+                $usageVar = ($actual - $planned) * $estUnit;
+
+                $totalVar = $priceVar + $usageVar;
+
+                $key = $r['resource_name'] . '||' . $r['resource_type'];
+                if (!isset($byResource[$key])) {
+                    $byResource[$key] = [
+                        'resource_name'    => $r['resource_name'],
+                        'resource_type'    => $r['resource_type'],
+                        'price_variance'   => 0.0,
+                        'usage_variance'   => 0.0,
+                        'total_variance'   => 0.0,
+                        'activity_count'   => 0,
+                    ];
+                }
+                $byResource[$key]['price_variance'] += $priceVar;
+                $byResource[$key]['usage_variance'] += $usageVar;
+                $byResource[$key]['total_variance'] += $totalVar;
+                $byResource[$key]['activity_count'] += 1;
+            }
+        }
+
+        if (empty($byResource)) {
+            return ['status' => 'no_data', 'reason' => 'No activities with recorded site data found in this scope.'];
+        }
+
+        // Build result rows with driver labels
+        $rows = [];
+        foreach ($byResource as $item) {
+            $priceVar = round($item['price_variance'], 2);
+            $usageVar = round($item['usage_variance'], 2);
+            $totalVar = round($item['total_variance'], 2);
+
+            $absPriceVar = abs($priceVar);
+            $absUsageVar = abs($usageVar);
+
+            if ($absPriceVar >= $absUsageVar) {
+                $primaryDriver = 'price';
+                if ($priceVar > 0)      $likelyCause = 'rate_increase';
+                elseif ($priceVar < 0)  $likelyCause = 'rate_saving';
+                else                    $likelyCause = 'on_plan';
+            } else {
+                $primaryDriver = 'usage';
+                $resType = strtolower($item['resource_type']);
+                if ($usageVar > 0) {
+                    if (in_array($resType, ['material', 'materials'])) $likelyCause = 'wastage_or_yield';
+                    else                                                $likelyCause = 'productivity_shortfall';
+                } else {
+                    if (in_array($resType, ['material', 'materials'])) $likelyCause = 'better_yield';
+                    else                                                $likelyCause = 'productivity_gain';
+                }
+            }
+
+            $rows[] = [
+                'resource_name'  => $item['resource_name'],
+                'resource_type'  => $item['resource_type'],
+                'price_variance' => $priceVar,
+                'usage_variance' => $usageVar,
+                'total_variance' => $totalVar,
+                'primary_driver' => $primaryDriver,
+                'likely_cause'   => $likelyCause,
+                'activity_count' => $item['activity_count'],
+            ];
+        }
+
+        // Sort by |total_variance| descending
+        usort($rows, fn($a, $b) => abs($b['total_variance']) <=> abs($a['total_variance']));
+
+        if ($topN !== null) {
+            $rows = array_slice($rows, 0, $topN);
+        }
+
+        // Summary totals
+        $sumPrice = round(array_sum(array_column($rows, 'price_variance')), 2);
+        $sumUsage = round(array_sum(array_column($rows, 'usage_variance')), 2);
+        $sumTotal = round(array_sum(array_column($rows, 'total_variance')), 2);
+
+        return [
+            'status'          => 'ok',
+            'project'         => $project['Name'],
+            'scope'           => $scope,
+            'scope_label'     => $input['group_name'] ?? $input['iow_name'] ?? $input['activity_name'] ?? 'all',
+            'total_price_variance' => $sumPrice,
+            'total_usage_variance' => $sumUsage,
+            'total_variance'       => $sumTotal,
+            'drivers'         => $rows,
+            'note'            => 'Positive variance = cost overrun vs plan. Negative = saving vs plan. Only activities with recorded site data are included.',
+        ];
+    }
+
+    // Helper: resolve schedule activity IDs for a set of IOW IDs
+    private function _schedIdsForIows($db, $pid, array $iowIds)
+    {
+        if (empty($iowIds)) return [];
+        $wanRows = $db->createCommand(
+            "SELECT wan.id AS wan_id FROM workgroup_activities_new wan
+             WHERE wan.WorkGroup_Id IN (" . implode(',', array_map('intval', $iowIds)) . ")
+             AND wan.project_Id=:pid AND wan.pricing_status=0",
+            [':pid' => $pid]
+        )->queryAll();
+        $wanIds = array_column($wanRows, 'wan_id');
+        if (empty($wanIds)) return [];
+        $schedRows = $db->createCommand(
+            "SELECT id FROM scheduleactivities WHERE activity_id IN (" . implode(',', array_map('intval', $wanIds)) . ")
+             AND projectId=:pid AND status=0",
+            [':pid' => $pid]
+        )->queryAll();
+        return array_column($schedRows, 'id');
+    }
+
     // =======================================================================
     // Tool definitions
     // =======================================================================
@@ -1839,6 +2028,22 @@ class ChatbotController extends Controller
                     'required' => ['sql', 'reason'],
                 ],
             ],
+            [
+                'name'        => 'get_cost_variance_drivers',
+                'description' => 'Breaks down cost variance into price variance (rate/procurement issue) and usage variance (quantity/execution issue) per resource. Use when the user asks why cost is over/under budget, what is driving the overrun, which resources are most expensive, or wants a variance breakdown. scope can be "project", "group", "iow", or "activity". top_n limits to the N biggest drivers.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'project_name'  => ['type' => 'string'],
+                        'scope'         => ['type' => 'string', 'enum' => ['project', 'group', 'iow', 'activity'], 'description' => 'Level to analyse: project=all activities, group=one group, iow=one IOW, activity=one activity.'],
+                        'group_name'    => ['type' => 'string', 'description' => 'Required when scope=group.'],
+                        'iow_name'      => ['type' => 'string', 'description' => 'Required when scope=iow.'],
+                        'activity_name' => ['type' => 'string', 'description' => 'Required when scope=activity.'],
+                        'top_n'         => ['type' => 'integer', 'description' => 'Optional: return only the top N resources by absolute variance.'],
+                    ],
+                    'required' => ['project_name'],
+                ],
+            ],
         ];
     }
 
@@ -1865,7 +2070,8 @@ class ChatbotController extends Controller
             case 'get_project_estimate':      return $this->toolGetProjectEstimate($db, $input);
             case 'get_work_orders_and_mb':    return $this->toolGetWorkOrdersAndMb($db, $input);
             case 'get_project_schedule_summary': return $this->toolGetProjectScheduleSummary($db, $input);
-            case 'query_database':            return $this->toolQueryDatabase($db, $input);
+            case 'query_database':               return $this->toolQueryDatabase($db, $input);
+            case 'get_cost_variance_drivers':    return $this->toolGetCostVarianceDrivers($db, $input);
             default:
                 return ['status' => 'no_data', 'reason' => "Unknown tool: {$name}"];
         }
@@ -1906,7 +2112,8 @@ class ChatbotController extends Controller
             "- get_activity_unit_cost → estimated and actual unit cost of one activity (cost per metre / cum / nos etc.)\n" .
             "- get_resource_unit_cost → estimated vs actual unit cost per resource within an activity\n" .
             "- get_resource_consumption → planned vs actual consumption per resource within an activity\n" .
-            "- get_resource_cost_by_type → cost grouped by resource type (Material, Labour, Plant, Subcontractor)\n\n" .
+            "- get_resource_cost_by_type → cost grouped by resource type (Material, Labour, Plant, Subcontractor)\n" .
+            "- get_cost_variance_drivers → breaks total cost variance into price variance (rate issue → procurement) and usage variance (quantity issue → execution) per resource; scope = project / group / iow / activity; top_n to limit results\n\n" .
 
             "KPI panel tools (use these for all schedule/performance questions):\n" .
             "- get_activity_kpi → all production KPIs for one activity: work done %, productivity, cycle times, capacity, elapsed, projected duration, tasks, cause-of-delay\n\n" .
