@@ -284,14 +284,13 @@ class ChatbotController extends Controller
                     $actualConsumption = $plannedConsumption;
                 }
 
-                // Dashboard uses est as fallback when no actual
+                // Mirrors live dashboard: only include resource in actualTotal when actUnit !== null
+                // (GRN price exists for materials, MB entry exists for SC). No est-fallback.
                 $effectiveActUnit = $actUnit !== null ? $actUnit : $estRate;
-                $hasActual = ($indentRaised && in_array($typeId, [2, 6, 7, 8])) || ($hasMb && $typeId === 4);
+                $hasActual = ($actUnit !== null);
 
                 if ($hasActual) {
-                    $actualTotal += $effectiveActUnit * $actualConsumption;
-                } else {
-                    $actualTotal += $estRate * $plannedConsumption;
+                    $actualTotal += $actUnit * $actualConsumption;
                 }
 
                 $resName = $r['resource_name'] ?? '';
@@ -311,24 +310,17 @@ class ChatbotController extends Controller
                     'has_mb'              => $hasMb,
                     'has_actual'          => $hasActual,
                     'est_cost'            => round($estRate * $plannedConsumption, 4),
-                    'act_cost'            => round($effectiveActUnit * $actualConsumption, 4),
+                    'act_cost'            => round($actUnit !== null ? $actUnit * $actualConsumption : 0, 4),
                 ];
             }
 
-            $estUCTotal = $unitCost * $ratio;
-            // has_actual = true if ANY resource has real site data (indent_raised or has_mb)
-            // mirrors JS: if (acoa > 0) hasReal = true
-            $hasActual = false;
-            foreach ($resDetail as $rd) {
-                if ($rd['has_actual']) { $hasActual = true; break; }
-            }
+            $estUCTotal  = $unitCost * $ratio;
+            $hasAnyActual = $actualTotal > 0;
 
-            // acoa = actualTotal × schedQty (actualTotal always uses est fallback, matches dashboard)
-            // actwd: dashboard passes actwd from PHP; PHP: actualTotal > 0 ? actualTotal×lastQty : estwd
-            // Since we always compute actualTotal (with fallback), check hasActual for the same gate
+            // Mirrors live dashboard: acoa = actualTotal × schedQty; actwd gated on actualTotal > 0
             $acoa  = round($actualTotal * $schedQty, 2);
             $estwd = round($estUCTotal * $lastQty, 2);
-            $actwd = $hasActual ? round($actualTotal * $lastQty, 2) : $estwd;
+            $actwd = $hasAnyActual ? round($actualTotal * $lastQty, 2) : $estwd;
 
             $data[$schedId] = [
                 'wbId'       => $wbId,
@@ -342,7 +334,7 @@ class ChatbotController extends Controller
                 'acoa'       => $acoa,
                 'estwd'      => $estwd,
                 'actwd'      => $actwd,
-                'has_actual' => $hasActual,
+                'has_actual' => $hasAnyActual,
                 'resources'  => $resDetail,
             ];
         }
@@ -1710,29 +1702,18 @@ class ChatbotController extends Controller
             if ($filterIds !== null && !in_array($schedId, $filterIds)) continue;
             if (!$actInfo['has_actual']) continue; // skip activities with no site data
 
-            $lastQty  = (float)$actInfo['lastQty'];  // qty done — same basis as ECWD/ACWD
-            $schedQty = (float)$actInfo['schedQty']; // full scheduled qty
+            $lastQty  = (float)$actInfo['lastQty'];
+            $schedQty = (float)$actInfo['schedQty'];
 
-            // Recompute ACWD using live-dashboard logic: actUnit !== null (not indent-gated)
-            $liveActualTotal = 0.0;
-            foreach ($actInfo['resources'] as $r) {
-                if ($r['act_unit_cost'] !== null) {
-                    $liveActualTotal += (float)$r['effective_act_unit'] * (float)$r['actual_consumption'];
-                }
-            }
-            $liveActwd = $liveActualTotal > 0 ? round($liveActualTotal * $lastQty, 2) : $actInfo['estwd'];
             $actSummary[] = [
                 'activity' => $actInfo['name'],
                 'ecwd'     => $actInfo['estwd'],
-                'acwd'     => $liveActwd,
-                'saving'   => round($actInfo['estwd'] - $liveActwd, 2),
+                'acwd'     => $actInfo['actwd'],
+                'saving'   => round($actInfo['estwd'] - $actInfo['actwd'], 2),
             ];
 
             foreach ($actInfo['resources'] as $r) {
-                // Mirror live dashboard: include resource when act_unit_cost !== null (GRN or MB exists),
-                // regardless of store indent. has_actual in computeActivityCosts is stricter (indent-based).
-                $hasData = ($r['act_unit_cost'] !== null);
-                if (!$hasData) continue;
+                if (!$r['has_actual']) continue;
 
                 $estUnit  = (float)$r['est_unit_cost'];
                 $effUnit  = (float)$r['effective_act_unit']; // = act_unit_cost when not null
