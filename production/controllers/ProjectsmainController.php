@@ -589,6 +589,32 @@ class ProjectsmainController extends Controller
         ]);
     }
 
+    public function actionPerformancedashboarddebug()
+    {
+        $uid  = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project']); }
+        $pid = (int)$projuser->projectid;
+        $connection = \Yii::$app->db;
+        $name = $_GET['name'] ?? '';
+        $rows = $connection->createCommand(
+            "SELECT sa.id, sa.name, sa.duration, sa.delay, sa.quantity, sa.start_date,
+                    pr.report_count, pr.cumulated_qty, pr.spr_start_date, pr.last_report_date
+             FROM scheduleactivities sa
+             LEFT JOIN (
+                 SELECT spr.activity_id, COUNT(*) AS report_count, MAX(spr.cumulated_qty) AS cumulated_qty,
+                        MIN(spr.start_date) AS spr_start_date,
+                        COALESCE(MAX(sprl.report_date), MAX(spr.updated_at)) AS last_report_date
+                 FROM schedule_progress_report spr
+                 LEFT JOIN schedule_progress_report_log sprl ON sprl.activity_id = spr.activity_id AND sprl.currentqty > 0
+                 GROUP BY spr.activity_id
+             ) pr ON pr.activity_id = sa.id
+             WHERE sa.projectId=$pid AND sa.status=0 AND sa.name LIKE :name",
+            [':name' => '%'.$name.'%']
+        )->queryAll();
+        return json_encode($rows);
+    }
+
     public function actionPerformancedashboardkpi()
     {
         $actid = (int)$_POST['actid'];
