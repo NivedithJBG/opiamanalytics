@@ -1708,21 +1708,22 @@ class ChatbotController extends Controller
             if ($filterIds !== null && !in_array($schedId, $filterIds)) continue;
             if (!$actInfo['has_actual']) continue; // skip activities with no site data
 
+            $lastQty = (float)$actInfo['lastQty']; // actual quantity done — scales per-unit figures to totals
+
             foreach ($actInfo['resources'] as $r) {
                 if (!$r['has_actual']) continue;
 
                 $estUnit  = (float)$r['est_unit_cost'];
                 $effUnit  = (float)$r['effective_act_unit'];
-                $planned  = (float)$r['planned_consumption'];
-                $actual   = (float)$r['actual_consumption'];
+                $planned  = (float)$r['planned_consumption']; // per unit of activity output
+                $actual   = (float)$r['actual_consumption'];  // per unit of activity output
 
-                // Price variance = (actual_rate - est_rate) × actual_consumption
-                // Positive = overspend due to higher rate; negative = saving
-                $priceVar = ($effUnit - $estUnit) * $actual;
+                // Scale per-unit consumptions to totals over work done
+                // Price variance = (actual_rate - est_rate) × total_actual_consumption
+                $priceVar = ($effUnit - $estUnit) * $actual * $lastQty;
 
-                // Usage variance = (actual_consumption - planned_consumption) × est_rate
-                // Positive = overspend due to more usage; negative = saving
-                $usageVar = ($actual - $planned) * $estUnit;
+                // Usage variance = (actual_consumption - planned_consumption) × est_rate × qty_done
+                $usageVar = ($actual - $planned) * $estUnit * $lastQty;
 
                 $totalVar = $priceVar + $usageVar;
 
