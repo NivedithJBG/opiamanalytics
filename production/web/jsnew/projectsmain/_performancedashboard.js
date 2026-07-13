@@ -1084,13 +1084,13 @@ function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, 
     html += '<div style="display:flex;align-items:stretch;height:14px;border-radius:3px;overflow:hidden;">';
     if (actual > 0 && actual > budgeted){
         html += '<div style="width:'+(budgeted/effMax*100).toFixed(1)+'%;background:#00838f;min-width:3px;"></div>';
-        html += '<div style="width:'+((actual-budgeted)/effMax*100).toFixed(1)+'%;background:#e53935;min-width:3px;"></div>';
+        html += '<div style="width:'+((actual-budgeted)/effMax*100).toFixed(1)+'%;background:#f4a94e;min-width:3px;"></div>';
     } else if (actual > 0 && actual < budgeted){
         html += '<div style="width:'+(actual/effMax*100).toFixed(1)+'%;background:#00838f;min-width:3px;"></div>';
         html += '<div style="width:'+((budgeted-actual)/effMax*100).toFixed(1)+'%;background:#f0c419;min-width:3px;"></div>';
     } else if (startDelay > 0){
         html += '<div style="width:'+(budgeted/effMax*100).toFixed(1)+'%;background:#00838f;min-width:3px;"></div>';
-        html += '<div style="width:'+(startDelay/effMax*100).toFixed(1)+'%;background:#e53935;min-width:3px;"></div>';
+        html += '<div style="width:'+(startDelay/effMax*100).toFixed(1)+'%;background:#f4a94e;min-width:3px;"></div>';
     } else {
         html += '<div style="width:100%;background:#00838f;min-width:3px;"></div>';
     }
@@ -1176,7 +1176,7 @@ function renderBars(containerId, items, onRowClick){
     var html = '<div class="leg">'
         +'<span><span class="ld" style="background:#37474F"></span>Normal</span>'
         +'<span><span class="ld" style="background:#00838f"></span>Critical</span>'
-        +'<span><span class="ld" style="background:#FF0000"></span>Delay</span>'
+        +'<span><span class="ld" style="background:#f4a94e"></span>Delay</span>'
         +'<span><span class="ld" style="background:#f0c419"></span>Saving</span>'
         +'</div>';
 
@@ -1592,7 +1592,7 @@ function doActivityDuration(k) {
         + '<span style="color:#1a2540;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;padding-right:6px;">' + (actName||'') + '</span>'
         + '<span style="white-space:nowrap;color:#1a2540;">' + bDur + ' d'
         + (isOver ? ' &nbsp;<span style="color:#e53935;">+' + (aDur-bDur) + ' d</span>' : isUnder ? ' &nbsp;<span style="color:#27ae60;">-' + (bDur-aDur) + ' d</span>' : '')
-        + (startDelay > 0 && !isOver && !isUnder ? ' &nbsp;<span style="color:#e53935;">+' + startDelay + ' d</span>' : '')
+        + (startDelay > 0 && !isOver && !isUnder ? ' &nbsp;<span style="color:#f4a94e;">+' + startDelay + ' d</span>' : '')
         + '</span>'
         + '</div>'
         + bar
