@@ -2178,9 +2178,8 @@ class ChatbotController extends Controller
             "Walk through it like this: state the planned quantity, state the actual quantity (mentioning the source document — measurement book, GRN, or estimate as appropriate), " .
             "state the rate used, and explain what the difference means in cost terms. " .
             "Do not say 'from the data' or 'the data shows' — the user knows where the numbers come from. Just state the numbers directly.\n" .
-            "Do not show bullet points with labels like 'Planned quantity:' — weave the numbers into sentences.\n" .
-            "Example style: 'The estimate allowed for 27 tons of reinforcement for the 9 piles completed. The measurement book shows only 3 tons were actually certified. " .
-            "At the estimated rate of ₹8,000 per ton, that difference of 24 tons works out to a saving of ₹1,92,000.'\n\n" .
+            "Where it helps clarity, you may list the key figures as short labelled lines (e.g. 'Planned: 27 tons', 'Actual: 3 tons', 'Rate: ₹8,000/ton') " .
+            "then explain what the difference means in one or two sentences.\n\n" .
 
             "## COST TERMINOLOGY — read this carefully before answering any cost question\n\n" .
 
