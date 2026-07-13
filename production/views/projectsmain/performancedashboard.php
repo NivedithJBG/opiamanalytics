@@ -117,7 +117,7 @@ body{
     <div class="dcard-body">
       <div class="leg">
         <span><i style="background:#2878c0"></i>Scheduled</span>
-        <span><i style="background:#e55353"></i>Delay</span>
+        <span><i style="background:#f4a94e"></i>Delay</span>
       </div>
       <div class="cv-area"><canvas id="ch-iow-grp"></canvas></div>
     </div>
@@ -129,7 +129,7 @@ body{
     <div class="dcard-body">
       <div class="leg" style="flex-wrap:wrap;gap:6px 12px;">
         <span><i style="background:#2878c0"></i>Planned Duration: <b id="leg-planned-dur" style="font-size:13px;font-weight:700;color:#1a2540;">—</b></span>
-        <span><i style="background:#e55353"></i>Actual Duration: <b id="leg-actual-dur" style="font-size:13px;font-weight:700;color:#1a2540;">—</b></span>
+        <span><i style="background:#f4a94e"></i>Actual Duration: <b id="leg-actual-dur" style="font-size:13px;font-weight:700;color:#1a2540;">—</b></span>
         <span><i style="background:#f0c419"></i>Difference: <b id="leg-diff-dur" style="font-size:13px;font-weight:700;color:#1a2540;">—</b></span>
       </div>
       <div class="cv-area"><canvas id="ch-project"></canvas></div>
@@ -247,7 +247,7 @@ post('/projectsmain/performancedashboard', null, function(d){
         document.getElementById('leg-planned-dur').textContent = planned > 0 ? planned + ' days' : '—';
         document.getElementById('leg-actual-dur').textContent  = actual  > 0 ? actual  + ' days' : '—';
         document.getElementById('leg-diff-dur').textContent    = planned > 0 ? (diff > 0 ? '+' : '') + diff + ' days' : '—';
-        document.getElementById('leg-diff-dur').style.color    = diff > 0 ? '#e55353' : diff < 0 ? '#27ae60' : '#1a2540';
+        document.getElementById('leg-diff-dur').style.color    = diff > 0 ? '#f4a94e' : diff < 0 ? '#27ae60' : '#1a2540';
     }
     hbar('ch-iow',      actDs(d.iow_items),           true);
     hbar('ch-ongoing',  actDs(d.ongoing),             true);
@@ -264,7 +264,7 @@ function grpDs(g){
     (g||[]).forEach(function(r){lb.push(s(r.name,20));sc.push(+r.scheduled||0);dl.push(+r.delay||0);});
     return {labels:lb,_ids:null,datasets:[
         {label:'Scheduled',data:sc,backgroundColor:'#2878c0',borderWidth:0,barThickness:12},
-        {label:'Delay',    data:dl,backgroundColor:'#e55353',borderWidth:0,barThickness:12}
+        {label:'Delay',    data:dl,backgroundColor:'#f4a94e',borderWidth:0,barThickness:12}
     ]};
 }
 function projDs(name,bar){
@@ -273,7 +273,7 @@ function projDs(name,bar){
     var delay   = Math.max(0, actual - planned);
     return {labels:[s(name||'Project',26)],_ids:null,datasets:[
         {label:'Planned Duration', data:[planned], backgroundColor:'#2878c0', borderWidth:0, barThickness:18},
-        {label:'Actual Duration',  data:[delay],   backgroundColor:'#e55353', borderWidth:0, barThickness:18}
+        {label:'Actual Duration',  data:[delay],   backgroundColor:'#f4a94e', borderWidth:0, barThickness:18}
     ]};
 }
 function actDs(items){
@@ -283,7 +283,7 @@ function actDs(items){
     });
     return {labels:lb,_ids:ids,datasets:[
         {label:'Scheduled',data:sc,backgroundColor:'#2878c0',borderWidth:0,barThickness:13},
-        {label:'Delay',    data:dl,backgroundColor:'#e55353',borderWidth:0,barThickness:13}
+        {label:'Delay',    data:dl,backgroundColor:'#f4a94e',borderWidth:0,barThickness:13}
     ]};
 }
 
