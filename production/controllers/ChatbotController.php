@@ -1703,12 +1703,23 @@ class ChatbotController extends Controller
         }
 
         // Aggregate variance per resource across all in-scope activities
-        $byResource = [];
+        $byResource  = [];
+        $actSummary  = []; // per-activity ECWD/ACWD for verification
+
         foreach ($actData as $schedId => $actInfo) {
             if ($filterIds !== null && !in_array($schedId, $filterIds)) continue;
             if (!$actInfo['has_actual']) continue; // skip activities with no site data
 
             $lastQty = (float)$actInfo['lastQty']; // actual quantity done — scales per-unit figures to totals
+
+            $actSummary[] = [
+                'activity'  => $actInfo['name'],
+                'qty_done'  => $lastQty,
+                'unit'      => $actInfo['schedQty'] > 0 ? 'sched units' : '',
+                'ecwd'      => $actInfo['estwd'],
+                'acwd'      => $actInfo['actwd'],
+                'ecwd_minus_acwd' => round($actInfo['estwd'] - $actInfo['actwd'], 2),
+            ];
 
             foreach ($actInfo['resources'] as $r) {
                 if (!$r['has_actual']) continue;
@@ -1810,7 +1821,8 @@ class ChatbotController extends Controller
             'total_usage_variance' => $sumUsage,
             'total_variance'       => $sumTotal,
             'drivers'         => $rows,
-            'note'            => 'Positive variance = cost overrun vs plan. Negative = saving vs plan. Only activities with recorded site data are included.',
+            'activity_ecwd_acwd'   => $actSummary,
+            'note'            => 'Positive variance = cost overrun vs plan. Negative = saving vs plan. Only activities with recorded site data are included. total_variance should equal sum of (ecwd - acwd) across activity_ecwd_acwd.',
         ];
     }
 
