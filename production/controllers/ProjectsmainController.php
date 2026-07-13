@@ -612,6 +612,18 @@ class ProjectsmainController extends Controller
              WHERE sa.projectId=$pid AND sa.status=0 AND sa.name LIKE :name",
             [':name' => '%'.$name.'%']
         )->queryAll();
+        foreach ($rows as &$r) {
+            $anchorStart = $r['spr_start_date'] ?: $r['start_date'];
+            if ((int)$r['report_count'] > 0 && $anchorStart && !empty($r['last_report_date'])
+                && (float)$r['cumulated_qty'] > 0 && (float)$r['quantity'] > 0) {
+                $elapsed = max(1, (strtotime($r['last_report_date']) - strtotime($anchorStart)) / 86400);
+                $r['computed_elapsed']            = $elapsed;
+                $r['computed_projected_duration'] = $elapsed / (float)$r['cumulated_qty'] * (float)$r['quantity'];
+                $r['computed_delay']              = max(0, $r['computed_projected_duration'] - (float)$r['duration']);
+            } else {
+                $r['computed_delay'] = 'condition_failed';
+            }
+        }
         return json_encode($rows);
     }
 
