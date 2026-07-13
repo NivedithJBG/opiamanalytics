@@ -287,21 +287,47 @@ function actDs(items){
     ]};
 }
 
+// ── End-of-bar label plugin ──────────────────────────────────────────────────
+var endLabelPlugin = {
+    id:'endLabel',
+    afterDatasetsDraw:function(chart){
+        var ctx=chart.ctx, meta0=chart.getDatasetMeta(0), meta1=chart.getDatasetMeta(1);
+        if(!meta0||!meta1) return;
+        meta0.data.forEach(function(bar0, i){
+            var bar1=meta1.data[i];
+            var v0=chart.data.datasets[0].data[i]||0;
+            var v1=chart.data.datasets[1].data[i]||0;
+            if(v1===0) return;
+            var total=(+v0+(+v1)).toFixed(1);
+            var x=bar1.x+3, y=bar1.y;
+            ctx.save();
+            ctx.font='bold 8px Arial';
+            ctx.fillStyle='#c05000';
+            ctx.textBaseline='middle';
+            ctx.fillText(total+'d',x,y);
+            ctx.restore();
+        });
+    }
+};
+
 // ── Horizontal bar ───────────────────────────────────────────────────────────
 function hbar(id, ds, clickable){
     var cv=document.getElementById(id); if(!cv) return;
     if(_ch[id]){_ch[id].destroy();delete _ch[id];}
+    var hasDelay=ds.datasets[1]&&ds.datasets[1].data.some(function(v){return v>0;});
     _ch[id]=new Chart(cv,{
         type:'bar', data:ds,
+        plugins: hasDelay ? [endLabelPlugin] : [],
         options:{
             indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:{duration:300},
+            layout:{padding:{right:36}},
             onClick: clickable ? function(e,items){
                 if(!items.length) return;
                 var aid=ds._ids&&ds._ids[items[0].index]; if(aid) loadKpi(aid);
             } : null,
             plugins:{
                 legend:{display:false},
-                tooltip:{callbacks:{label:function(c){return ' '+c.dataset.label+': '+c.parsed.x+' d';}}}
+                tooltip:{callbacks:{label:function(c){return ' '+c.dataset.label+': '+c.parsed.x.toFixed(2)+' d';}}}
             },
             scales:{
                 x:{stacked:true,ticks:{font:{size:8},color:'#778'},grid:{color:'rgba(0,0,0,.06)'},border:{display:false}},
