@@ -250,6 +250,7 @@ post('/projectsmain/performancedashboard', null, function(d){
         document.getElementById('leg-diff-dur').style.color    = diff > 0 ? '#f4a94e' : diff < 0 ? '#27ae60' : '#1a2540';
     }
     hbar('ch-iow',      actDs(d.iow_items),           true);
+    console.log('ONGOING', JSON.stringify((d.ongoing||[]).map(function(a){return {name:a.name,duration:a.duration,delay:a.delay};})));
     hbar('ch-ongoing',  actDs(d.ongoing),             true);
     hbar('ch-upcoming', actDs(d.upcoming),            true);
     if (d.kpi) doKpi(d.kpi);
