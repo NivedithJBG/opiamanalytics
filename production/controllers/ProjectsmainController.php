@@ -285,6 +285,7 @@ class ProjectsmainController extends Controller
             {
                 $elapsed = max(1, (strtotime($a['last_report_date']) - strtotime($anchorStart)) / 86400);
                 $a['projected_duration'] = ($elapsed / (float)$a['cumulated_qty']) * (float)$a['quantity'];
+                $a['delay'] = max(0, $a['projected_duration'] - (float)$a['duration']);
             }
         }
         unset($a);
