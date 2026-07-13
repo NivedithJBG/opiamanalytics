@@ -1733,14 +1733,24 @@ class ChatbotController extends Controller
                 $key = $r['resource_name'] . '||' . $resTypeName;
                 if (!isset($byResource[$key])) {
                     $byResource[$key] = [
-                        'resource_name'    => $r['resource_name'],
-                        'resource_type'    => $resTypeName,
-                        'price_variance'   => 0.0,
-                        'usage_variance'   => 0.0,
-                        'total_variance'   => 0.0,
-                        'activity_count'   => 0,
+                        'resource_name'      => $r['resource_name'],
+                        'resource_type'      => $resTypeName,
+                        'est_rate'           => $estUnit,
+                        'act_rate'           => $effUnit,
+                        'planned_per_unit'   => $planned,
+                        'actual_per_unit'    => $actual,
+                        'qty_done'           => 0.0,
+                        'planned_total'      => 0.0,
+                        'actual_total'       => 0.0,
+                        'price_variance'     => 0.0,
+                        'usage_variance'     => 0.0,
+                        'total_variance'     => 0.0,
+                        'activity_count'     => 0,
                     ];
                 }
+                $byResource[$key]['qty_done']      += $lastQty;
+                $byResource[$key]['planned_total']  += round($planned * $lastQty, 3);
+                $byResource[$key]['actual_total']   += round($actual  * $lastQty, 3);
                 $byResource[$key]['price_variance'] += $priceVar;
                 $byResource[$key]['usage_variance'] += $usageVar;
                 $byResource[$key]['total_variance'] += $totalVar;
@@ -1780,14 +1790,19 @@ class ChatbotController extends Controller
             }
 
             $rows[] = [
-                'resource_name'  => $item['resource_name'],
-                'resource_type'  => $item['resource_type'],
-                'price_variance' => $priceVar,
-                'usage_variance' => $usageVar,
-                'total_variance' => $totalVar,
-                'primary_driver' => $primaryDriver,
-                'likely_cause'   => $likelyCause,
-                'activity_count' => $item['activity_count'],
+                'resource_name'    => $item['resource_name'],
+                'resource_type'    => $item['resource_type'],
+                'est_rate'         => round($item['est_rate'], 2),
+                'act_rate'         => round($item['act_rate'], 2),
+                'planned_total'    => round($item['planned_total'], 3),
+                'actual_total'     => round($item['actual_total'], 3),
+                'qty_done'         => round($item['qty_done'], 3),
+                'price_variance'   => $priceVar,
+                'usage_variance'   => $usageVar,
+                'total_variance'   => $totalVar,
+                'primary_driver'   => $primaryDriver,
+                'likely_cause'     => $likelyCause,
+                'activity_count'   => $item['activity_count'],
             ];
         }
 
@@ -2146,14 +2161,25 @@ class ChatbotController extends Controller
             "tell the user 'no actuals recorded yet' rather than showing the estimated value as if it were actual.\n\n" .
 
             "## ANSWER FORMAT\n" .
-            "Answer in a natural, conversational tone — like a knowledgeable colleague briefly explaining the numbers. " .
-            "Give the figure asked for, add one or two sentences of relevant context if it helps (e.g. whether the activity is on track, over budget, behind schedule), then stop. " .
+            "Answer in a natural, conversational tone — like a knowledgeable colleague who knows the project well. " .
+            "Give the figure asked for, add one or two sentences of relevant context if it helps, then stop. " .
             "Do not write long paragraphs or bullet lists unless the user asks for a breakdown.\n" .
-            "- Never mention tool names, field names, or JSON keys in your answer.\n" .
+            "- Never mention tool names, field names, JSON keys, or the word 'variance tool' — refer instead to project documents: measurement book, GRN, store indent, progress report.\n" .
+            "- Once you have named a resource or activity in the conversation, use a short form in follow-up answers. Do not repeat the full name every time.\n" .
+            "- Do not repeat information already given earlier in the conversation unless the user asks for a recap.\n" .
             "- For ambiguous matches (multiple activities/groups), list candidates and ask the user to clarify.\n" .
             "- Do not use emojis.\n" .
-            "- Do not use the phrase 'for context' or 'it is worth noting' — just say it naturally.\n" .
+            "- Do not use the phrases 'for context', 'it is worth noting', 'based on the data', or 'the tool returns' — just state the fact naturally.\n" .
             "- If the tool returns an as_of timestamp, you may mention the data date naturally (e.g. 'as of 12 July') only when freshness is relevant to the answer.\n\n" .
+
+            "## SHOWING CALCULATION WORKINGS\n" .
+            "When the user asks HOW a figure was arrived at (e.g. 'how did you get that number', 'show me the calculation', 'where does that come from'), " .
+            "show the step-by-step working using the figures from the data — rates, quantities, planned vs actual — in plain language. " .
+            "For variance figures specifically, the working is:\n" .
+            "  Usage variance = (actual quantity used − planned quantity) × estimated rate\n" .
+            "  Price variance = (actual rate − estimated rate) × actual quantity used\n" .
+            "State the actual numbers from the data at each step. Use project document names (measurement book, GRN, estimate) to explain where each figure comes from. " .
+            "Do not say 'the variance tool computed this' — say 'based on the measurement book' or 'per the estimate' as appropriate.\n\n" .
 
             "## COST TERMINOLOGY — read this carefully before answering any cost question\n\n" .
 
