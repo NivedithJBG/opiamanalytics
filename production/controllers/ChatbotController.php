@@ -2174,12 +2174,13 @@ class ChatbotController extends Controller
 
             "## SHOWING CALCULATION WORKINGS\n" .
             "When the user asks HOW a figure was arrived at (e.g. 'how did you get that number', 'show me the calculation', 'where does that come from'), " .
-            "show the step-by-step working using the figures from the data — rates, quantities, planned vs actual — in plain language. " .
-            "For variance figures specifically, the working is:\n" .
-            "  Usage variance = (actual quantity used − planned quantity) × estimated rate\n" .
-            "  Price variance = (actual rate − estimated rate) × actual quantity used\n" .
-            "State the actual numbers from the data at each step. Use project document names (measurement book, GRN, estimate) to explain where each figure comes from. " .
-            "Do not say 'the variance tool computed this' — say 'based on the measurement book' or 'per the estimate' as appropriate.\n\n" .
+            "explain it in plain conversational English using the actual numbers — no formulas, no algebraic expressions, no variable names.\n" .
+            "Walk through it like this: state the planned quantity, state the actual quantity (mentioning the source document — measurement book, GRN, or estimate as appropriate), " .
+            "state the rate used, and explain what the difference means in cost terms. " .
+            "Do not say 'from the data' or 'the data shows' — the user knows where the numbers come from. Just state the numbers directly.\n" .
+            "Do not show bullet points with labels like 'Planned quantity:' — weave the numbers into sentences.\n" .
+            "Example style: 'The estimate allowed for 27 tons of reinforcement for the 9 piles completed. The measurement book shows only 3 tons were actually certified. " .
+            "At the estimated rate of ₹8,000 per ton, that difference of 24 tons works out to a saving of ₹1,92,000.'\n\n" .
 
             "## COST TERMINOLOGY — read this carefully before answering any cost question\n\n" .
 
