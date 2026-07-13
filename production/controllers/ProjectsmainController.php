@@ -271,6 +271,8 @@ class ProjectsmainController extends Controller
         )->queryAll();
 
         foreach ($activities as &$a) {
+            // Use old_duration as the current planned duration for the bar
+            $a['duration'] = (float)($a['old_duration'] ?? $a['duration']);
             $a['projected_duration'] = $a['duration'];
             // Anchor = earlier of planned start (sa.start_date) and reported start (spr.start_date)
             $plannedStart = (!empty($a['start_date']) && $a['start_date'] !== '0000-00-00') ? $a['start_date'] : '';
@@ -285,7 +287,7 @@ class ProjectsmainController extends Controller
             {
                 $elapsed = max(1, (strtotime($a['last_report_date']) - strtotime($anchorStart)) / 86400 + 1);
                 $a['projected_duration'] = ($elapsed / (float)$a['cumulated_qty']) * (float)$a['quantity'];
-                $a['delay'] = max(0, $a['projected_duration'] - (float)$a['duration']);
+                $a['delay'] = max(0, $a['projected_duration'] - $a['duration']);
             }
         }
         unset($a);
