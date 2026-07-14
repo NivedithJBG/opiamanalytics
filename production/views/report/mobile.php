@@ -76,6 +76,7 @@ body{background:var(--bg)}
 }
 .mob-form-field input:focus,.mob-form-field select:focus{border-color:var(--accent)}
 .mob-form-field input[readonly]{background:var(--bg);color:var(--muted)}
+.mob-form-field input.sd-locked{background:var(--bg);color:var(--muted);pointer-events:none;border-color:var(--border)}
 .mob-cum-info{font-size:11px;color:var(--muted);margin-top:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid var(--border)}
 .mob-cum-info strong{color:var(--text)}
 
@@ -284,8 +285,9 @@ function escHtml(s){
 function checkExistingReport(id, reportDate) {
   var $qty  = $('#fqty-'+id);
   var $upd  = $('#fupd-'+id);
+  var $fsd  = $('#fsd-'+id);
   var unit  = $upd.data('unit') || '';
-  var cum   = parseFloat($qty.data('cum')) || 0; // current total cumulated qty
+  var cum   = parseFloat($qty.data('cum')) || 0;
 
   // reset to new-report state
   $('#fedit-'+id).removeClass('show');
@@ -299,19 +301,26 @@ function checkExistingReport(id, reportDate) {
     dataType:'json',
     data:{ actid: id, report_date: reportDate },
     success: function(r){
+      // Lock/unlock start date based on whether report date is after the current start date
+      var currentStartDate = $fsd.val();
+      if(currentStartDate && reportDate > currentStartDate){
+        // report date is after start date — start date is correct, lock it
+        $fsd.addClass('sd-locked').removeAttr('type').attr('type','text');
+      } else {
+        // report date is on or before start date — allow correction
+        $fsd.removeClass('sd-locked').removeAttr('type').attr('type','date');
+      }
+
       if(r.found){
-        // edit base = total cumulated minus what was reported on this date
-        // so Up-to-date = editBase + newQty correctly shows the revised total
         var editBase = Math.max(0, cum - r.currentqty);
         $qty.data('cum', editBase);
         $qty.val(r.currentqty);
-        $qty.trigger('input'); // update Up-to-date display
+        $qty.trigger('input');
         $('#fbd-'+id).val(r.break_hour > 0 ? r.break_hour : '');
-        if(r.start_date) $('#fsd-'+id).val(r.start_date);
+        if(r.start_date) $fsd.val(r.start_date);
         $('#fedit-'+id).addClass('show');
         $('.mob-btn-report[data-id="'+id+'"]').text('Update Report');
       } else {
-        // reset data-cum back to full cumulated for new entry
         $qty.data('cum', cum);
       }
     }
