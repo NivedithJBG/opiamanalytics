@@ -254,7 +254,7 @@ function buildCards(activities){
     // ── Entry fields ──
     html += '<div class="mob-form-row mob-form-row-date">';
     html += '<div class="mob-form-field"><label>Activity Start Date</label><input type="date" id="fsd-'+act.id+'" value="'+escHtml(startVal)+'"></div>';
-    html += '<div class="mob-form-field"><label>Report Date</label><input type="date" id="frd-'+act.id+'" value="'+document.getElementById('mob-report-date').value+'" readonly></div>';
+    html += '<div class="mob-form-field"><label>Report Date</label><input type="date" id="frd-'+act.id+'" class="frd-input" value="'+document.getElementById('mob-report-date').value+'"></div>';
     html += '</div>';
     html += '<div class="mob-form-row">';
     html += '<div class="mob-form-field"><label>Break Hours</label><input type="number" id="fbd-'+act.id+'" placeholder="0" step="0.5" min="0" inputmode="decimal"></div>';
@@ -281,6 +281,31 @@ function escHtml(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function checkExistingReport(id, reportDate) {
+  // reset state before lookup
+  $('#flogid-'+id).val('');
+  $('#fedit-'+id).removeClass('show');
+  $('#fqty-'+id).val('');
+  $('#fbd-'+id).val('');
+  $('.mob-btn-report[data-id="'+id+'"]').text('Submit Report');
+
+  $.ajax({
+    type:'POST', url:'../report/getreportbydate',
+    dataType:'json',
+    data:{ actid: id, report_date: reportDate },
+    success: function(r){
+      if(r.found){
+        $('#flogid-'+id).val(r.log_id);
+        $('#fqty-'+id).val(r.currentqty);
+        $('#fbd-'+id).val(r.break_hour > 0 ? r.break_hour : '');
+        if(r.start_date) $('#fsd-'+id).val(r.start_date);
+        $('#fedit-'+id).addClass('show');
+        $('.mob-btn-report[data-id="'+id+'"]').text('Update Report');
+      }
+    }
+  });
+}
+
 // Toggle form open/close on card tap
 $(document).on('click','.mob-act-top', function(){
   var id = $(this).data('id');
@@ -292,42 +317,21 @@ $(document).on('click','.mob-act-top', function(){
     $('.mob-act-form.open').removeClass('open');
     $form.addClass('open');
     _openActId = id;
-    // sync report date
     var reportDate = document.getElementById('mob-report-date').value;
     $('#frd-'+id).val(reportDate);
-    // reset edit state
-    $('#flogid-'+id).val('');
-    $('#fedit-'+id).removeClass('show');
-    $('#fqty-'+id).val('');
-    $('#fbd-'+id).val('');
-    $('.mob-btn-report[data-id="'+id+'"]').text('Submit Report');
-
-    // check if a report already exists for this date
-    $.ajax({
-      type:'POST', url:'../report/getreportbydate',
-      dataType:'json',
-      data:{ actid: id, report_date: reportDate },
-      success: function(r){
-        if(r.found){
-          $('#flogid-'+id).val(r.log_id);
-          $('#fqty-'+id).val(r.currentqty);
-          $('#fbd-'+id).val(r.break_hour > 0 ? r.break_hour : '');
-          if(r.start_date) $('#fsd-'+id).val(r.start_date);
-          $('#fedit-'+id).addClass('show');
-          $('.mob-btn-report[data-id="'+id+'"]').text('Update Report');
-        } else {
-          toast('No report found for ' + reportDate + ' (act:' + id + ' found:' + (r.found||'no') + ')');
-        }
-      },
-      error: function(xhr){ toast('Lookup error: ' + xhr.status + ' ' + xhr.responseText.substring(0,80)); }
-    });
-
+    checkExistingReport(id, reportDate);
     // scroll card into view
     setTimeout(function(){
       var card = document.querySelector('.mob-act-card[data-id="'+id+'"]');
       if(card) card.scrollIntoView({behavior:'smooth', block:'nearest'});
     },200);
   }
+});
+
+// When user changes the date inside an open form, re-check for existing report
+$(document).on('change','.frd-input', function(){
+  var id = this.id.replace('frd-','');
+  checkExistingReport(id, this.value);
 });
 
 // Cancel
