@@ -101,6 +101,14 @@ body{background:var(--bg)}
 }
 #mob-toast.show{opacity:1}
 
+/* ── Edit mode banner ── */
+.mob-edit-banner{
+  background:rgba(217,119,6,.12);border:1px solid var(--amber);
+  border-radius:8px;padding:7px 12px;margin-top:10px;
+  font-size:11px;font-weight:600;color:var(--amber);display:none;
+}
+.mob-edit-banner.show{display:block}
+
 /* ── Bottom nav ── */
 #mob-bottom-nav{
   position:fixed;bottom:0;left:0;right:0;
@@ -240,6 +248,8 @@ function buildCards(activities){
     html += '</div>'; // mob-act-top
 
     html += '<div class="mob-act-form" id="form-'+act.id+'">';
+    html += '<input type="hidden" id="flogid-'+act.id+'" value="">';
+    html += '<div class="mob-edit-banner" id="fedit-'+act.id+'">✏️ Editing previously submitted report — changes will recalculate all totals.</div>';
 
     // ── Entry fields ──
     html += '<div class="mob-form-row mob-form-row-date">';
@@ -283,7 +293,34 @@ $(document).on('click','.mob-act-top', function(){
     $form.addClass('open');
     _openActId = id;
     // sync report date
-    $('#frd-'+id).val(document.getElementById('mob-report-date').value);
+    var reportDate = document.getElementById('mob-report-date').value;
+    $('#frd-'+id).val(reportDate);
+    // reset edit state
+    $('#flogid-'+id).val('');
+    $('#fedit-'+id).removeClass('show');
+    $('#fqty-'+id).val('');
+    $('#fbd-'+id).val('');
+    $('.mob-btn-report[data-id="'+id+'"]').text('Submit Report');
+
+    // check if a report already exists for this date
+    $.ajax({
+      type:'POST', url:'../report/getreportbydate',
+      dataType:'json',
+      data:{ actid: id, report_date: reportDate },
+      success: function(r){
+        if(r.found){
+          $('#flogid-'+id).val(r.log_id);
+          $('#fqty-'+id).val(r.currentqty);
+          // break_hour is stored in hours; convert back to days using workhours=8 default
+          var breakDays = r.break_hour > 0 ? (r.break_hour / 8).toFixed(2) : '';
+          $('#fbd-'+id).val(breakDays);
+          if(r.start_date) $('#fsd-'+id).val(r.start_date);
+          $('#fedit-'+id).addClass('show');
+          $('.mob-btn-report[data-id="'+id+'"]').text('Update Report');
+        }
+      }
+    });
+
     // scroll card into view
     setTimeout(function(){
       var card = document.querySelector('.mob-act-card[data-id="'+id+'"]');
@@ -299,34 +336,41 @@ $(document).on('click','.mob-btn-cancel',function(){
   _openActId = null;
 });
 
-// Submit report
+// Submit / Update report
 $(document).on('click','.mob-btn-report',function(){
   var id = $(this).data('id');
   var qty = parseFloat($('#fqty-'+id).val());
   var reportDate = $('#frd-'+id).val();
-  var breakDays = $('#fbd-'+id).val() || 0;
+  var breakDays = parseFloat($('#fbd-'+id).val()) || 0;
   var startDate = $('#fsd-'+id).val();
+  var logId = $('#flogid-'+id).val();
+  var isEdit = logId !== '';
 
   if(isNaN(qty) || qty <= 0){ toast('Please enter a valid quantity'); return; }
   if(!startDate){ toast('Please enter Activity Start Date'); return; }
 
   var $btn = $(this);
+  var origText = $btn.text();
   $btn.text('Saving…').attr('disabled',true);
 
+  var url  = isEdit ? '../report/progressreportedit' : '../report/simplereportprogress';
+  var data = {
+    actid:      id,
+    currentqnty: qty,
+    reportdate: fmtDate(reportDate),
+    break_days: breakDays,
+    workhours:  8,
+    start_date: fmtDate(startDate)
+  };
+  if(isEdit) data.log_id = logId;
+
   $.ajax({
-    type:'POST', url:'../report/simplereportprogress',
-    dataType:'json',
-    data:{
-      actid: id,
-      currentqnty: qty,
-      reportdate: fmtDate(reportDate),
-      workhours: breakDays,
-      start_date: fmtDate(startDate)
-    },
+    type:'POST', url: url,
+    dataType:'json', data: data,
     success: function(r){
-      $btn.text('Submit Report').removeAttr('disabled');
+      $btn.text(origText).removeAttr('disabled');
       if(r.error === 'No'){
-        toast('Reported successfully!');
+        toast(isEdit ? 'Report updated successfully!' : 'Reported successfully!');
         $('#form-'+id).removeClass('open');
         setTimeout(loadActivities, 800);
       } else {
@@ -334,7 +378,7 @@ $(document).on('click','.mob-btn-report',function(){
       }
     },
     error: function(){
-      $btn.text('Submit Report').removeAttr('disabled');
+      $btn.text(origText).removeAttr('disabled');
       toast('Network error. Please try again.');
     }
   });

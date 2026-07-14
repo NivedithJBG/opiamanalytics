@@ -749,10 +749,100 @@ class ReportController extends Controller
         return ['error' => 'Yes'];
     }
 
+    // Return existing log entry for a specific activity + date (for pre-filling edit form)
+    public function actionGetreportbydate()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $projectid = $this->getCurrentProjectId();
+        if (!$projectid) return ['found' => false];
+
+        $actid      = (int)Yii::$app->request->post('actid');
+        $reportDate = Yii::$app->request->post('report_date', '');
+        if (!$actid || !$reportDate) return ['found' => false];
+
+        $db  = Yii::$app->db;
+        $row = $db->createCommand(
+            "SELECT id, currentqty, break_hour, report_date
+             FROM schedule_progress_report_log
+             WHERE activity_id = :aid AND report_date = :rd
+             ORDER BY id DESC LIMIT 1",
+            [':aid' => $actid, ':rd' => $reportDate]
+        )->queryOne();
+
+        if (!$row) return ['found' => false];
+
+        $spr = $db->createCommand(
+            "SELECT start_date FROM schedule_progress_report WHERE activity_id = :aid LIMIT 1",
+            [':aid' => $actid]
+        )->queryOne();
+
+        return [
+            'found'      => true,
+            'log_id'     => (int)$row['id'],
+            'currentqty' => (float)$row['currentqty'],
+            'break_hour' => (float)$row['break_hour'],
+            'start_date' => ($spr && $spr['start_date'] && $spr['start_date'] !== '0000-00-00')
+                            ? date('Y-m-d', strtotime($spr['start_date'])) : '',
+        ];
+    }
+
+    // Update an existing log entry by date and recalculate cumulated totals
     public function actionProgressreportedit()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-        return ['error' => 'Yes'];
+        $projectid = $this->getCurrentProjectId();
+        if (!$projectid) return ['error' => 'Yes'];
+
+        $actid      = (int)Yii::$app->request->post('actid');
+        $logId      = (int)Yii::$app->request->post('log_id');
+        $currentQty = (float)Yii::$app->request->post('currentqnty', 0);
+        $breakDays  = (float)Yii::$app->request->post('break_days', 0);
+        $workhours  = (float)Yii::$app->request->post('workhours', 8);
+        $startDate  = Yii::$app->request->post('start_date', '');
+        $reportDate = Yii::$app->request->post('reportdate', '');
+        $uid        = Yii::$app->user->id;
+        $db         = Yii::$app->db;
+
+        if (!$actid || !$logId) return ['error' => 'Yes'];
+
+        $breakHours  = $breakDays * ($workhours > 0 ? $workhours : 8);
+        $reportDateDb = $this->parseDate($reportDate) ?: date('Y-m-d');
+
+        // Update the specific log row
+        $db->createCommand(
+            "UPDATE schedule_progress_report_log
+             SET currentqty = :qty, break_hour = :bh, reported_by = :uid
+             WHERE id = :lid AND activity_id = :aid",
+            [':qty' => $currentQty, ':bh' => $breakHours, ':uid' => $uid, ':lid' => $logId, ':aid' => $actid]
+        )->execute();
+
+        // Recalculate cumulated_qty from all log entries for this activity
+        $totals = $db->createCommand(
+            "SELECT SUM(currentqty) AS totalqty, MIN(report_date) AS first_date
+             FROM schedule_progress_report_log WHERE activity_id = :aid",
+            [':aid' => $actid]
+        )->queryOne();
+
+        $newCumQty  = (float)($totals['totalqty'] ?? 0);
+        $startDateDb = $this->parseDate($startDate);
+
+        $existing = $db->createCommand(
+            "SELECT id FROM schedule_progress_report WHERE activity_id = :aid LIMIT 1",
+            [':aid' => $actid]
+        )->queryOne();
+
+        if ($existing) {
+            $updateSql = "UPDATE schedule_progress_report SET cumulated_qty = :cq, updated_at = :ud";
+            $params    = [':cq' => $newCumQty, ':ud' => $reportDateDb, ':aid' => $actid];
+            if (!empty($startDateDb)) {
+                $updateSql .= ", start_date = :sd";
+                $params[':sd'] = $startDateDb;
+            }
+            $updateSql .= " WHERE activity_id = :aid";
+            $db->createCommand($updateSql, $params)->execute();
+        }
+
+        return ['error' => 'No', 'new_cumqty' => round($newCumQty, 3)];
     }
 
     public function actionReporttasknewlog()
