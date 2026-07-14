@@ -1201,13 +1201,13 @@ function renderBars(containerId, items, onRowClick){
         var dlAbsPct = (dlAbs/maxVal*100).toFixed(1);
         var fmt2 = function(v){ return Number.isInteger(v) ? v : parseFloat(v).toFixed(2); };
         var dispVal = sc > 0 ? (fmt2(sc)
-            + (dl > 0  ? '<span style="color:#FF0000;margin-left:3px;">+' + fmt2(dl) + '</span>' : '')
+            + (dl > 0  ? '<span style="color:#f4a94e;margin-left:3px;">+' + fmt2(dl) + '</span>' : '')
             + (isSlack ? '<span style="color:#27ae60;margin-left:3px;">-' + fmt2(dlAbs) + '</span>' : '')) : '';
         html += '<div class="'+rowCls+'" '+(r.id?'data-aid="'+r.id+'" style="cursor:pointer;display:flex;align-items:center;"':'style="display:flex;align-items:center;"')+'>'
             +'<div class="blbl"'+tipAttr+' style="color:#000;" title="'+r.name+'">'+sh(r.name,30)+'</div>'
             +'<div class="btrk" style="flex:1;">'
             +(sc>0?'<div class="bs" style="width:'+scPct+'%;background:'+barCol+'"></div>':'')
-            +(dl>0?'<div class="bs" style="width:'+dlPct+'%;background:#FF0000"></div>':'')
+            +(dl>0?'<div class="bs" style="width:'+dlPct+'%;background:#f4a94e"></div>':'')
             +(isSlack?'<div class="bs" style="width:'+dlAbsPct+'%;background:#f0c419"></div>':'')
             +'</div>'
             +'<div style="font-size:11px;color:#000;font-weight:700;min-width:38px;text-align:right;padding-left:5px;white-space:nowrap;">'+dispVal+'</div>'
