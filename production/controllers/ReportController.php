@@ -747,7 +747,7 @@ class ReportController extends Controller
         return ['error' => 'Yes'];
     }
 
-    // Return existing log entry for a specific activity + date (for pre-filling edit form)
+    // Return sum of all log entries for a specific activity + date (for pre-filling edit form)
     public function actionGetreportbydate()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
@@ -757,15 +757,16 @@ class ReportController extends Controller
         if (!$actid || !$reportDate) return ['found' => false];
 
         $db  = Yii::$app->db;
+
+        // Sum all entries for this date — multiple submissions on same day treated as one
         $row = $db->createCommand(
-            "SELECT id, currentqty, break_hour, report_date
+            "SELECT SUM(currentqty) AS totalqty, SUM(break_hour) AS total_break, COUNT(*) AS cnt
              FROM schedule_progress_report_log
-             WHERE activity_id = :aid AND report_date = :rd
-             ORDER BY id DESC LIMIT 1",
+             WHERE activity_id = :aid AND report_date = :rd",
             [':aid' => $actid, ':rd' => $reportDate]
         )->queryOne();
 
-        if (!$row) return ['found' => false];
+        if (!$row || (int)$row['cnt'] === 0) return ['found' => false];
 
         $spr = $db->createCommand(
             "SELECT start_date FROM schedule_progress_report WHERE activity_id = :aid LIMIT 1",
@@ -774,15 +775,14 @@ class ReportController extends Controller
 
         return [
             'found'      => true,
-            'log_id'     => (int)$row['id'],
-            'currentqty' => (float)$row['currentqty'],
-            'break_hour' => (float)$row['break_hour'],
+            'currentqty' => round((float)$row['totalqty'], 3),
+            'break_hour' => round((float)$row['total_break'], 4),
             'start_date' => ($spr && $spr['start_date'] && $spr['start_date'] !== '0000-00-00')
                             ? date('Y-m-d', strtotime($spr['start_date'])) : '',
         ];
     }
 
-    // Update an existing log entry by date and recalculate cumulated totals
+    // Replace all log entries for a date with one consolidated row, recalculate totals
     public function actionProgressreportedit()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
@@ -790,7 +790,6 @@ class ReportController extends Controller
         if (!$projectid) return ['error' => 'Yes'];
 
         $actid      = (int)Yii::$app->request->post('actid');
-        $logId      = (int)Yii::$app->request->post('log_id');
         $currentQty = (float)Yii::$app->request->post('currentqnty', 0);
         $breakHours = (float)Yii::$app->request->post('break_hours', 0);
         $startDate  = Yii::$app->request->post('start_date', '');
@@ -798,26 +797,30 @@ class ReportController extends Controller
         $uid        = Yii::$app->user->id;
         $db         = Yii::$app->db;
 
-        if (!$actid || !$logId) return ['error' => 'Yes'];
+        if (!$actid || !$reportDate) return ['error' => 'Yes'];
 
         $reportDateDb = $this->parseDate($reportDate) ?: date('Y-m-d');
 
-        // Update the specific log row
+        // Delete all existing entries for this activity + date, then insert one clean row
         $db->createCommand(
-            "UPDATE schedule_progress_report_log
-             SET currentqty = :qty, break_hour = :bh, reported_by = :uid
-             WHERE id = :lid AND activity_id = :aid",
-            [':qty' => $currentQty, ':bh' => $breakHours, ':uid' => $uid, ':lid' => $logId, ':aid' => $actid]
+            "DELETE FROM schedule_progress_report_log WHERE activity_id = :aid AND report_date = :rd",
+            [':aid' => $actid, ':rd' => $reportDateDb]
+        )->execute();
+
+        $db->createCommand(
+            "INSERT INTO schedule_progress_report_log
+             (activity_id, wrk_grp_act_id, current_cycle, report_date, reported_by, currentqty, activity_duration, last_activity, holiday_cnt, break_hour, updated_at)
+             VALUES (:aid, 0, 1, :rd, :uid, :qty, 0, 0, 0, :bh, NOW())",
+            [':aid' => $actid, ':rd' => $reportDateDb, ':uid' => $uid, ':qty' => $currentQty, ':bh' => $breakHours]
         )->execute();
 
         // Recalculate cumulated_qty from all log entries for this activity
         $totals = $db->createCommand(
-            "SELECT SUM(currentqty) AS totalqty, MIN(report_date) AS first_date
-             FROM schedule_progress_report_log WHERE activity_id = :aid",
+            "SELECT SUM(currentqty) AS totalqty FROM schedule_progress_report_log WHERE activity_id = :aid",
             [':aid' => $actid]
         )->queryOne();
 
-        $newCumQty  = (float)($totals['totalqty'] ?? 0);
+        $newCumQty   = (float)($totals['totalqty'] ?? 0);
         $startDateDb = $this->parseDate($startDate);
 
         $existing = $db->createCommand(

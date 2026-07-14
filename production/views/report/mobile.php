@@ -261,7 +261,7 @@ function buildCards(activities){
     html += '<div class="mob-form-field"><label>Unit</label><input type="text" value="'+escHtml(act.unit||'—')+'" readonly></div>';
     html += '</div>';
     html += '<div class="mob-form-row">';
-    html += '<div class="mob-form-field"><label>Current Qty</label><input type="number" id="fqty-'+act.id+'" data-cum="'+escHtml(String(cumQty||0))+'" placeholder="0.00" step="0.001" inputmode="decimal" class="fqty-input"></div>';
+    html += '<div class="mob-form-field"><label>Current Qty</label><input type="number" id="fqty-'+act.id+'" data-cum="'+escHtml(String(cumQty||0))+'" data-orig-cum="'+escHtml(String(cumQty||0))+'" placeholder="0.00" step="0.001" inputmode="decimal" class="fqty-input"></div>';
     html += '<div class="mob-form-field"><label>Up-to-date Qty</label><input type="text" id="fupd-'+act.id+'" data-unit="'+escHtml(act.unit||'')+'" value="'+escHtml(String(cumQty||0))+' '+escHtml(act.unit||'')+'" readonly></div>';
     html += '</div>';
 
@@ -282,12 +282,17 @@ function escHtml(s){
 }
 
 function checkExistingReport(id, reportDate) {
-  // reset state before lookup
-  $('#flogid-'+id).val('');
+  var $qty  = $('#fqty-'+id);
+  var $upd  = $('#fupd-'+id);
+  var unit  = $upd.data('unit') || '';
+  var cum   = parseFloat($qty.data('cum')) || 0; // current total cumulated qty
+
+  // reset to new-report state
   $('#fedit-'+id).removeClass('show');
-  $('#fqty-'+id).val('');
+  $qty.val('');
   $('#fbd-'+id).val('');
   $('.mob-btn-report[data-id="'+id+'"]').text('Submit Report');
+  $upd.val(cum.toFixed(3) + (unit ? ' '+unit : ''));
 
   $.ajax({
     type:'POST', url:'../report/getreportbydate',
@@ -295,12 +300,19 @@ function checkExistingReport(id, reportDate) {
     data:{ actid: id, report_date: reportDate },
     success: function(r){
       if(r.found){
-        $('#flogid-'+id).val(r.log_id);
-        $('#fqty-'+id).val(r.currentqty);
+        // edit base = total cumulated minus what was reported on this date
+        // so Up-to-date = editBase + newQty correctly shows the revised total
+        var editBase = Math.max(0, cum - r.currentqty);
+        $qty.data('cum', editBase);
+        $qty.val(r.currentqty);
+        $qty.trigger('input'); // update Up-to-date display
         $('#fbd-'+id).val(r.break_hour > 0 ? r.break_hour : '');
         if(r.start_date) $('#fsd-'+id).val(r.start_date);
         $('#fedit-'+id).addClass('show');
         $('.mob-btn-report[data-id="'+id+'"]').text('Update Report');
+      } else {
+        // reset data-cum back to full cumulated for new entry
+        $qty.data('cum', cum);
       }
     }
   });
@@ -346,10 +358,9 @@ $(document).on('click','.mob-btn-report',function(){
   var id = $(this).data('id');
   var qty = parseFloat($('#fqty-'+id).val());
   var reportDate = $('#frd-'+id).val();
-  var breakDays = parseFloat($('#fbd-'+id).val()) || 0;
+  var breakHours = parseFloat($('#fbd-'+id).val()) || 0;
   var startDate = $('#fsd-'+id).val();
-  var logId = $('#flogid-'+id).val();
-  var isEdit = logId !== '';
+  var isEdit = $('#fedit-'+id).hasClass('show');
 
   if(isNaN(qty) || qty <= 0){ toast('Please enter a valid quantity'); return; }
   if(!startDate){ toast('Please enter Activity Start Date'); return; }
@@ -363,10 +374,9 @@ $(document).on('click','.mob-btn-report',function(){
     actid:       id,
     currentqnty: qty,
     reportdate:  fmtDate(reportDate),
-    break_hours: breakDays,
+    break_hours: breakHours,
     start_date:  fmtDate(startDate)
   };
-  if(isEdit) data.log_id = logId;
 
   $.ajax({
     type:'POST', url: url,
