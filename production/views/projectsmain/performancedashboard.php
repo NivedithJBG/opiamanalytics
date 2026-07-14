@@ -113,7 +113,7 @@ body{
 
   <!-- R1C1 IOW Group -->
   <div class="dcard">
-    <div class="dcard-hdr">IOW Group</div>
+    <div class="dcard-hdr">Major</div>
     <div class="dcard-body">
       <div class="leg">
         <span><i style="background:#2878c0"></i>Scheduled</span>
