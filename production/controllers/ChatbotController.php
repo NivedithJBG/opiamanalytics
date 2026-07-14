@@ -2413,4 +2413,52 @@ class ChatbotController extends Controller
 
         return ['reply' => 'Could not complete request after multiple attempts.'];
     }
+
+    // -----------------------------------------------------------------------
+    // Whisper transcription endpoint
+    // -----------------------------------------------------------------------
+    public function actionTranscribe()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $secrets = @include(Yii::getAlias('@app') . '/config/secrets.php');
+        $apiKey  = is_array($secrets) ? ($secrets['openaiApiKey'] ?? '') : '';
+        if (!$apiKey) {
+            return ['error' => 'OpenAI API key not configured'];
+        }
+
+        $audio = \yii\web\UploadedFile::getInstanceByName('audio');
+        if (!$audio) {
+            return ['error' => 'No audio received'];
+        }
+
+        $tmpPath = sys_get_temp_dir() . '/whisper_' . uniqid() . '.webm';
+        $audio->saveAs($tmpPath);
+
+        // Use PHP's curl to call Whisper API
+        $ch = curl_init('https://api.openai.com/v1/audio/transcriptions');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
+            CURLOPT_POSTFIELDS     => [
+                'file'            => new \CURLFile($tmpPath, 'audio/webm', 'audio.webm'),
+                'model'           => 'whisper-1',
+                'language'        => 'en',
+            ],
+            CURLOPT_TIMEOUT        => 30,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        @unlink($tmpPath);
+
+        if ($httpCode !== 200) {
+            return ['error' => 'Whisper API error ' . $httpCode];
+        }
+
+        $data = json_decode($response, true);
+        return ['text' => $data['text'] ?? ''];
+    }
 }

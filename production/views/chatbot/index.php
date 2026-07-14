@@ -50,43 +50,66 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
         return s;
     })();
 
-    /* Voice input */
+    /* Voice input — Whisper API via MediaRecorder */
     var micBtn = document.getElementById('cb-mic');
-    var listening = false;
-    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if(SpeechRecognition){
-        var recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = 'en-IN';
-        recognition.onstart = function(){ listening = true; micBtn.classList.add('listening'); micBtn.title = 'Tap to stop'; };
-        recognition.onend   = function(){
-            listening = false;
-            micBtn.classList.remove('listening');
-            micBtn.title = 'Speak';
-        };
-        recognition.onerror = function(e){
-            listening = false;
-            micBtn.classList.remove('listening');
-            micBtn.title = 'Speak';
-            if(e.error === 'not-allowed'){
-                addMsg('Microphone access denied. Please allow mic permission in your browser settings.', 'bot');
-            } else if(e.error === 'no-speech'){
-                /* silent */
-            } else {
-                addMsg('Mic error: ' + e.error, 'bot');
-            }
-        };
-        recognition.onresult = function(e){
-            var final = '';
-            for(var i = e.resultIndex; i < e.results.length; i++){
-                if(e.results[i].isFinal) final += e.results[i][0].transcript;
-            }
-            if(final){ inp.value = final.trim(); }
-        };
+    var mediaRecorder = null;
+    var audioChunks = [];
+    var recording = false;
+    var transcribeUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/chatbot/transcribe"]); ?>';
+
+    if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
         micBtn.addEventListener('click', function(){
-            if(listening){ recognition.stop(); }
-            else { try{ recognition.start(); } catch(ex){} }
+            if(recording){
+                mediaRecorder.stop();
+            } else {
+                navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+                    audioChunks = [];
+                    var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                        ? 'audio/webm;codecs=opus'
+                        : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4');
+                    mediaRecorder = new MediaRecorder(stream, {mimeType: mimeType});
+                    mediaRecorder.ondataavailable = function(e){
+                        if(e.data && e.data.size > 0) audioChunks.push(e.data);
+                    };
+                    mediaRecorder.onstop = function(){
+                        recording = false;
+                        micBtn.classList.remove('listening');
+                        micBtn.title = 'Speak';
+                        stream.getTracks().forEach(function(t){ t.stop(); });
+
+                        var blob = new Blob(audioChunks, {type: mimeType});
+                        var ext  = mimeType.indexOf('mp4') > -1 ? 'mp4' : 'webm';
+                        var fd   = new FormData();
+                        fd.append('audio', blob, 'audio.' + ext);
+
+                        micBtn.style.opacity = '0.5';
+                        micBtn.title = 'Transcribing…';
+                        var xhr = new XMLHttpRequest();
+                        xhr.open('POST', transcribeUrl, true);
+                        xhr.onload = function(){
+                            micBtn.style.opacity = '1';
+                            micBtn.title = 'Speak';
+                            try {
+                                var d = JSON.parse(xhr.responseText);
+                                if(d.text && d.text.trim()){
+                                    inp.value = d.text.trim();
+                                    inp.focus();
+                                } else if(d.error){
+                                    addMsg('Transcription error: ' + d.error, 'bot');
+                                }
+                            } catch(e){ addMsg('Transcription failed.', 'bot'); }
+                        };
+                        xhr.onerror = function(){ micBtn.style.opacity='1'; micBtn.title='Speak'; addMsg('Network error during transcription.','bot'); };
+                        xhr.send(fd);
+                    };
+                    mediaRecorder.start();
+                    recording = true;
+                    micBtn.classList.add('listening');
+                    micBtn.title = 'Tap to stop';
+                }).catch(function(err){
+                    addMsg('Microphone access denied. Please allow mic permission in your browser settings.', 'bot');
+                });
+            }
         });
     } else {
         micBtn.title = 'Voice not supported in this browser';
