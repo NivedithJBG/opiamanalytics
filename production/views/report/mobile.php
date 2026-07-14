@@ -296,7 +296,7 @@ function buildCards(activities){
     html += '</div></div>';
     html += '</div>';
     html += '<div class="mob-form-row">';
-    html += '<div class="mob-form-field"><label>Break Hours</label><input type="number" id="fbd-'+act.id+'" placeholder="0" step="0.5" min="0" inputmode="decimal"></div>';
+    html += '<div class="mob-form-field"><label>Break Days</label><input type="number" id="fbd-'+act.id+'" placeholder="0" step="0.5" min="0" inputmode="decimal"></div>';
     html += '<div class="mob-form-field"><label>Unit</label><input type="text" value="'+escHtml(act.unit||'—')+'" readonly></div>';
     html += '</div>';
     html += '<div class="mob-form-row">';

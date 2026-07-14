@@ -719,15 +719,15 @@ class ProjectsmainController extends Controller
         $start_delay = 0;
         $today_ts = strtotime(date('Y-m-d'));
         if ($act_start_date && $last_reported_date && $actual_qty > 0) {
-            // break_hour column currently stores hours; break_days = hours / wh
-            $break_days       = ($wh > 0) ? $cum_break / $wh : 0;
+            // break_hour column stores days (user enters days directly)
+            $break_days       = $cum_break;
             $elapsed_work     = max(1, (strtotime($last_reported_date) - strtotime($act_start_date)) / 86400 + 1 - $break_days);
             $elapsed_calendar = max(1, ($today_ts - strtotime($act_start_date)) / 86400 + 1);
             $elapsed          = $elapsed_calendar;
             $actual_prod  = round($actual_qty / $elapsed_work, 3);
             $actual_cycle = round(($elapsed_work / $actual_qty) * $wh, 3);
             $cap_max  = round($elapsed_calendar * $wh, 2);
-            $cap_used = round(max(0, $cap_max - $cum_break), 2); // cum_break still in hours, cap_max in hours
+            $cap_used = round(max(0, $cap_max - ($cum_break * $wh)), 2); // break_days × wh = break_hours deducted from cap_max (hours)
         } elseif ($planned_start && $actual_qty == 0 && strtotime($planned_start) < $today_ts) {
             // No progress yet but start date has passed — count start delay as elapsed
             $start_delay      = (int)floor(($today_ts - strtotime($planned_start)) / 86400);
