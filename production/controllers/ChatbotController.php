@@ -2427,35 +2427,50 @@ class ChatbotController extends Controller
             return ['error' => 'OpenAI API key not configured'];
         }
 
-        $audio = \yii\web\UploadedFile::getInstanceByName('audio');
-        if (!$audio) {
-            return ['error' => 'No audio received'];
+        // Accept file via $_FILES directly (more reliable than Yii UploadedFile for blobs)
+        if (empty($_FILES['audio']) || $_FILES['audio']['error'] !== UPLOAD_ERR_OK) {
+            $errCode = $_FILES['audio']['error'] ?? 'missing';
+            return ['error' => 'No audio received (code: ' . $errCode . ')'];
         }
 
-        $tmpPath = sys_get_temp_dir() . '/whisper_' . uniqid() . '.webm';
-        $audio->saveAs($tmpPath);
+        $uploadedTmp  = $_FILES['audio']['tmp_name'];
+        $originalName = $_FILES['audio']['name'] ?? 'audio.webm';
+        $ext          = strtolower(pathinfo($originalName, PATHINFO_EXTENSION)) ?: 'webm';
+        $mimeMap      = ['webm' => 'audio/webm', 'mp4' => 'audio/mp4', 'mp3' => 'audio/mpeg', 'm4a' => 'audio/mp4'];
+        $mime         = $mimeMap[$ext] ?? 'audio/webm';
 
-        // Use PHP's curl to call Whisper API
+        // Copy to a tmp file with correct extension (Whisper uses extension to detect format)
+        $tmpPath = sys_get_temp_dir() . '/whisper_' . uniqid() . '.' . $ext;
+        if (!copy($uploadedTmp, $tmpPath)) {
+            return ['error' => 'Failed to process audio file'];
+        }
+
         $ch = curl_init('https://api.openai.com/v1/audio/transcriptions');
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST           => true,
             CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
             CURLOPT_POSTFIELDS     => [
-                'file'            => new \CURLFile($tmpPath, 'audio/webm', 'audio.webm'),
-                'model'           => 'whisper-1',
-                'language'        => 'en',
+                'file'     => new \CURLFile($tmpPath, $mime, 'audio.' . $ext),
+                'model'    => 'whisper-1',
+                'language' => 'en',
             ],
             CURLOPT_TIMEOUT        => 30,
         ]);
 
         $response = curl_exec($ch);
+        $curlErr  = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
         @unlink($tmpPath);
 
+        if ($curlErr) {
+            return ['error' => 'cURL error: ' . $curlErr];
+        }
         if ($httpCode !== 200) {
-            return ['error' => 'Whisper API error ' . $httpCode];
+            $detail = json_decode($response, true);
+            $msg    = $detail['error']['message'] ?? $response;
+            return ['error' => 'Whisper API error ' . $httpCode . ': ' . substr($msg, 0, 200)];
         }
 
         $data = json_decode($response, true);

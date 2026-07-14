@@ -96,8 +96,12 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
                                     inp.focus();
                                 } else if(d.error){
                                     addMsg('Transcription error: ' + d.error, 'bot');
+                                } else {
+                                    addMsg('No speech detected. Please try again.', 'bot');
                                 }
-                            } catch(e){ addMsg('Transcription failed.', 'bot'); }
+                            } catch(e){
+                                addMsg('Transcription failed (HTTP ' + xhr.status + '): ' + xhr.responseText.substring(0,200), 'bot');
+                            }
                         };
                         xhr.onerror = function(){ micBtn.style.opacity='1'; micBtn.title='Speak'; addMsg('Network error during transcription.','bot'); };
                         xhr.send(fd);
