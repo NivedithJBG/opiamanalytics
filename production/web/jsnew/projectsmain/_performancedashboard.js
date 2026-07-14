@@ -1128,7 +1128,7 @@ function renderProjectBar(el, budgeted, actual, serverDelay, label, bStartDate, 
     if (bStartDate) {
         var today3 = new Date(); today3.setHours(0,0,0,0);
         var ps = new Date(bStartDate); ps.setHours(0,0,0,0);
-        elapsedProj = Math.max(0, Math.round((today3 - ps) / 86400000));
+        elapsedProj = Math.max(0, Math.round((today3 - ps) / 86400000) + 1);
         elapsedStr = elapsedProj + ' d';
     }
 
@@ -1277,7 +1277,7 @@ function doTargetProduction(k){
     // Target to date = Elapsed days ÃƒÆ’Ã¢â‚¬â€ (Schedule Qty / B. Duration)
     var asd = k.act_start_date     || '';
     var lrd = k.last_reported_date || '';
-    var elapsedDays  = (asd && lrd) ? Math.max(0, (new Date(lrd) - new Date(asd)) / 86400000) : 0;
+    var elapsedDays  = (asd && lrd) ? Math.max(0, Math.round((new Date(lrd) - new Date(asd)) / 86400000) + 1) : 0;
     var compTarget   = (dur > 0 && tq > 0) ? Math.min(tq, elapsedDays * (tq / dur)) : 0;
     var fActual = tq > 0 ? Math.max(0, Math.min(1, aq / tq)) : 0;
     var fTarget = tq > 0 ? Math.max(0, Math.min(1, compTarget / tq)) : 0;
@@ -1644,7 +1644,7 @@ function doActivityDuration(k) {
             if (k.act_start_date && k.act_start_date !== '0000-00-00') {
                 var today = new Date(); today.setHours(0,0,0,0);
                 var startD = new Date(k.act_start_date); startD.setHours(0,0,0,0);
-                elapsedDays = Math.max(0, Math.round((today - startD) / 86400000));
+                elapsedDays = Math.max(0, Math.round((today - startD) / 86400000) + 1);
             }
 
             // 2. Time required to complete = (schedule_qty - work_done_qty) / actual_productivity
