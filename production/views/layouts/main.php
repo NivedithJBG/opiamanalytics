@@ -2027,7 +2027,7 @@ if($action=='login')
   <div id="pd-body">
     <div id="pd-grid">
       <div id="pd-left">
-        <div class="panel"><div class="ph">MAJOR GROUPS</div><div class="pb" id="pd-c1"></div></div>
+        <div class="panel"><div class="ph">MAJOR</div><div class="pb" id="pd-c1"></div></div>
         <div class="panel"><div class="ph">IOW</div><div class="pb" id="pd-c3"></div></div>
         <div class="panel"><div class="ph">ONGOING ACTIVITIES</div><div class="pb" id="pd-c4"></div></div>
         <div class="panel"><div class="ph">UPCOMING ACTIVITIES</div><div class="pb" id="pd-c5"></div></div>
