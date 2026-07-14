@@ -45,7 +45,7 @@ body{background:var(--bg)}
 .mob-act-card{
   background:var(--card);border-radius:12px;
   border:1px solid var(--border);
-  margin-bottom:8px;overflow:hidden;
+  margin-bottom:8px;
   box-shadow:0 1px 3px rgba(0,0,0,.06);
 }
 .mob-act-card.completed{border-left:4px solid var(--green)}
@@ -113,7 +113,7 @@ body{background:var(--bg)}
 }
 .cdp-display span{pointer-events:none}
 .cdp-panel{
-  position:absolute;top:calc(100% + 4px);left:0;z-index:500;
+  position:fixed;z-index:9999;
   background:#fff;border:1.5px solid var(--border);border-radius:10px;
   box-shadow:0 6px 20px rgba(0,0,0,.14);padding:10px;width:250px;display:none;
 }
@@ -181,6 +181,9 @@ body{background:var(--bg)}
 
 <!-- Toast -->
 <div id="mob-toast"></div>
+
+<!-- Calendar portal (fixed, outside all scroll/overflow containers) -->
+<div class="cdp-panel" id="cdp-portal"></div>
 
 <!-- Bottom nav -->
 <div id="mob-bottom-nav">
@@ -290,7 +293,6 @@ function buildCards(activities){
     html += '<div class="cdp-wrap" id="cdpwrap-'+act.id+'">';
     html += '<div class="cdp-display" id="cdpdisp-'+act.id+'">'+fmtDisplayDate(topDate)+'<span style="font-size:12px;color:var(--muted)">▾</span></div>';
     html += '<input type="hidden" id="frd-'+act.id+'" class="frd-input" value="'+topDate+'">';
-    html += '<div class="cdp-panel" id="cdppanel-'+act.id+'"></div>';
     html += '</div></div>';
     html += '</div>';
     html += '<div class="mob-form-row">';
@@ -326,12 +328,12 @@ function fmtDisplayDate(ymd){
   return p[2]+' '+MONTHS[parseInt(p[1],10)-1].slice(0,3)+' '+p[0];
 }
 
-// cdpState[actId] = {year, month}
+var _cdpActiveId = null;
 var cdpState = {};
 
 function renderCdp(id){
   var hidden = document.getElementById('frd-'+id);
-  var selected = hidden ? hidden.value : ''; // yyyy-mm-dd
+  var selected = hidden ? hidden.value : '';
   var state = cdpState[id] || (function(){
     var d = selected ? new Date(selected) : new Date();
     cdpState[id] = {year: d.getFullYear(), month: d.getMonth()};
@@ -339,7 +341,7 @@ function renderCdp(id){
   })();
 
   var y = state.year, m = state.month;
-  var first = new Date(y, m, 1).getDay(); // 0=Sun
+  var first = new Date(y, m, 1).getDay();
   var daysInMonth = new Date(y, m+1, 0).getDate();
 
   var h = '<div class="cdp-head">';
@@ -356,18 +358,32 @@ function renderCdp(id){
     h += '<div class="cdp-day'+sel+'" data-cdp-date="'+ymd+'" data-cdp-id="'+id+'">'+d+'</div>';
   }
   h += '</div>';
-  document.getElementById('cdppanel-'+id).innerHTML = h;
+  var portal = document.getElementById('cdp-portal');
+  portal.innerHTML = h;
+  portal.dataset.cdpId = id;
 }
 
 function cdpOpen(id){
-  // close any other open panels
-  document.querySelectorAll('.cdp-panel.open').forEach(function(el){
-    if(el.id !== 'cdppanel-'+id) el.classList.remove('open');
-  });
-  var panel = document.getElementById('cdppanel-'+id);
-  if(!panel) return;
+  var portal = document.getElementById('cdp-portal');
+  var disp   = document.getElementById('cdpdisp-'+id);
+  if(!disp) return;
+
+  var isOpen = portal.classList.contains('open') && portal.dataset.cdpId == id;
+  portal.classList.remove('open');
+  if(isOpen){ _cdpActiveId = null; return; }
+
+  _cdpActiveId = id;
   renderCdp(id);
-  panel.classList.toggle('open');
+
+  // Position below the display button; flip upward if not enough space below
+  var rect     = disp.getBoundingClientRect();
+  var panelH   = 270;
+  var spaceBelow = window.innerHeight - rect.bottom;
+  var top = spaceBelow >= panelH ? rect.bottom + 4 : rect.top - panelH - 4;
+  var left = Math.min(rect.left, window.innerWidth - 260);
+  portal.style.top  = top + 'px';
+  portal.style.left = left + 'px';
+  portal.classList.add('open');
 }
 
 $(document).on('click','.cdp-display',function(){
@@ -400,15 +416,16 @@ $(document).on('click','[data-cdp-date]',function(e){
   document.getElementById('frd-'+id).value = ymd;
   var disp = document.getElementById('cdpdisp-'+id);
   disp.innerHTML = fmtDisplayDate(ymd) + '<span style="font-size:12px;color:var(--muted)">▾</span>';
-  document.getElementById('cdppanel-'+id).classList.remove('open');
-  // trigger change so checkExistingReport fires
+  document.getElementById('cdp-portal').classList.remove('open');
+  _cdpActiveId = null;
   $('#frd-'+id).trigger('change');
 });
 
-// close picker when tapping outside
+// close portal when tapping outside
 $(document).on('click',function(e){
-  if(!$(e.target).closest('.cdp-wrap').length){
-    document.querySelectorAll('.cdp-panel.open').forEach(function(el){ el.classList.remove('open'); });
+  if(!$(e.target).closest('.cdp-wrap, #cdp-portal').length){
+    document.getElementById('cdp-portal').classList.remove('open');
+    _cdpActiveId = null;
   }
 });
 
