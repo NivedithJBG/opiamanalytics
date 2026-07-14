@@ -257,7 +257,7 @@ function buildCards(activities){
     html += '<div class="mob-form-field"><label>Report Date</label><input type="date" id="frd-'+act.id+'" value="'+document.getElementById('mob-report-date').value+'" readonly></div>';
     html += '</div>';
     html += '<div class="mob-form-row">';
-    html += '<div class="mob-form-field"><label>Break Days</label><input type="number" id="fbd-'+act.id+'" placeholder="0" step="0.5" min="0" inputmode="decimal"></div>';
+    html += '<div class="mob-form-field"><label>Break Hours</label><input type="number" id="fbd-'+act.id+'" placeholder="0" step="0.5" min="0" inputmode="decimal"></div>';
     html += '<div class="mob-form-field"><label>Unit</label><input type="text" value="'+escHtml(act.unit||'—')+'" readonly></div>';
     html += '</div>';
     html += '<div class="mob-form-row">';
@@ -311,9 +311,8 @@ $(document).on('click','.mob-act-top', function(){
         if(r.found){
           $('#flogid-'+id).val(r.log_id);
           $('#fqty-'+id).val(r.currentqty);
-          // break_hour is stored in hours; convert back to days using workhours=8 default
-          var breakDays = r.break_hour > 0 ? (r.break_hour / 8).toFixed(2) : '';
-          $('#fbd-'+id).val(breakDays);
+          // break_hour stored in hours — show directly
+          $('#fbd-'+id).val(r.break_hour > 0 ? r.break_hour : '');
           if(r.start_date) $('#fsd-'+id).val(r.start_date);
           $('#fedit-'+id).addClass('show');
           $('.mob-btn-report[data-id="'+id+'"]').text('Update Report');
@@ -355,12 +354,11 @@ $(document).on('click','.mob-btn-report',function(){
 
   var url  = isEdit ? '../report/progressreportedit' : '../report/simplereportprogress';
   var data = {
-    actid:      id,
+    actid:       id,
     currentqnty: qty,
-    reportdate: fmtDate(reportDate),
-    break_days: breakDays,
-    workhours:  8,
-    start_date: fmtDate(startDate)
+    reportdate:  fmtDate(reportDate),
+    break_hours: breakDays,
+    start_date:  fmtDate(startDate)
   };
   if(isEdit) data.log_id = logId;
 

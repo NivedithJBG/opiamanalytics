@@ -527,9 +527,7 @@ class ReportController extends Controller
         $currentQty = (float)Yii::$app->request->post('currentqnty', 0);
         $startDate  = Yii::$app->request->post('start_date', '');
         $reportDate = Yii::$app->request->post('reportdate', date('d-m-Y'));
-        $breakDays  = (float)Yii::$app->request->post('break_days', 0);
-        $workhours  = (float)Yii::$app->request->post('workhours', 8);
-        $breakHours = $breakDays * ($workhours > 0 ? $workhours : 8);
+        $breakHours = (float)Yii::$app->request->post('break_hours', 0);
         $uid        = Yii::$app->user->id;
         $db         = Yii::$app->db;
 
@@ -796,8 +794,7 @@ class ReportController extends Controller
         $actid      = (int)Yii::$app->request->post('actid');
         $logId      = (int)Yii::$app->request->post('log_id');
         $currentQty = (float)Yii::$app->request->post('currentqnty', 0);
-        $breakDays  = (float)Yii::$app->request->post('break_days', 0);
-        $workhours  = (float)Yii::$app->request->post('workhours', 8);
+        $breakHours = (float)Yii::$app->request->post('break_hours', 0);
         $startDate  = Yii::$app->request->post('start_date', '');
         $reportDate = Yii::$app->request->post('reportdate', '');
         $uid        = Yii::$app->user->id;
@@ -805,7 +802,6 @@ class ReportController extends Controller
 
         if (!$actid || !$logId) return ['error' => 'Yes'];
 
-        $breakHours  = $breakDays * ($workhours > 0 ? $workhours : 8);
         $reportDateDb = $this->parseDate($reportDate) ?: date('Y-m-d');
 
         // Update the specific log row
