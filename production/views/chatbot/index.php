@@ -57,6 +57,9 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
     var recording = false;
     var transcribeUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/chatbot/transcribe"]); ?>';
 
+    /* iOS Safari diagnostic */
+    addMsg('[DEBUG] MediaRecorder=' + (typeof MediaRecorder) + ' getUserMedia=' + !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) + ' UA=' + navigator.userAgent.substring(0,80), 'bot');
+
     function stopAndTranscribe(stream, mimeType) {
         recording = false;
         micBtn.classList.remove('listening');
