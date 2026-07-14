@@ -57,65 +57,89 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
     var recording = false;
     var transcribeUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/chatbot/transcribe"]); ?>';
 
+    function stopAndTranscribe(stream, mimeType) {
+        recording = false;
+        micBtn.classList.remove('listening');
+        micBtn.title = 'Speak';
+        stream.getTracks().forEach(function(t){ t.stop(); });
+
+        var blob = new Blob(audioChunks, {type: mimeType});
+        addMsg('[DEBUG] chunks=' + audioChunks.length + ' blobSize=' + blob.size + ' mime=' + mimeType, 'bot');
+
+        if(blob.size < 100){
+            addMsg('Audio too short — please speak and try again.', 'bot');
+            return;
+        }
+
+        var ext = (mimeType.indexOf('mp4') > -1 || mimeType.indexOf('m4a') > -1) ? 'mp4' : 'webm';
+        var fd  = new FormData();
+        fd.append('audio', blob, 'audio.' + ext);
+
+        addMsg('[DEBUG] Sending to: ' + transcribeUrl, 'bot');
+        micBtn.style.opacity = '0.5';
+        micBtn.title = 'Transcribing…';
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', transcribeUrl, true);
+        xhr.onload = function(){
+            micBtn.style.opacity = '1';
+            micBtn.title = 'Speak';
+            addMsg('[DEBUG] HTTP=' + xhr.status + ' resp=' + xhr.responseText.substring(0,300), 'bot');
+            try {
+                var d = JSON.parse(xhr.responseText);
+                if(d.text && d.text.trim()){
+                    inp.value = d.text.trim();
+                    inp.focus();
+                } else if(d.error){
+                    addMsg('Transcription error: ' + d.error, 'bot');
+                } else {
+                    addMsg('No speech detected. Please try again.', 'bot');
+                }
+            } catch(e){
+                addMsg('Transcription failed (HTTP ' + xhr.status + '): ' + xhr.responseText.substring(0,200), 'bot');
+            }
+        };
+        xhr.onerror = function(){ micBtn.style.opacity='1'; micBtn.title='Speak'; addMsg('Network error during transcription.','bot'); };
+        xhr.send(fd);
+    }
+
     if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
         micBtn.addEventListener('click', function(){
-            if(recording){
+            if(recording && mediaRecorder){
+                /* Request final chunk then stop — critical for Safari/iOS */
+                try { mediaRecorder.requestData(); } catch(ex){}
                 mediaRecorder.stop();
             } else {
                 navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
                     audioChunks = [];
-                    var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-                        ? 'audio/webm;codecs=opus'
-                        : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4');
-                    mediaRecorder = new MediaRecorder(stream, {mimeType: mimeType});
+
+                    /* Pick a mime type Safari actually supports */
+                    var mimeType = '';
+                    var candidates = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', ''];
+                    for(var i = 0; i < candidates.length; i++){
+                        if(candidates[i] === '' || MediaRecorder.isTypeSupported(candidates[i])){
+                            mimeType = candidates[i];
+                            break;
+                        }
+                    }
+
+                    try {
+                        mediaRecorder = mimeType
+                            ? new MediaRecorder(stream, {mimeType: mimeType})
+                            : new MediaRecorder(stream);
+                    } catch(ex) {
+                        mediaRecorder = new MediaRecorder(stream);
+                    }
+                    mimeType = mediaRecorder.mimeType || 'audio/webm';
+
                     mediaRecorder.ondataavailable = function(e){
                         if(e.data && e.data.size > 0) audioChunks.push(e.data);
                     };
                     mediaRecorder.onstop = function(){
-                        recording = false;
-                        micBtn.classList.remove('listening');
-                        micBtn.title = 'Speak';
-                        stream.getTracks().forEach(function(t){ t.stop(); });
-
-                        var blob = new Blob(audioChunks, {type: mimeType});
-                        addMsg('[DEBUG] chunks=' + audioChunks.length + ' blobSize=' + blob.size + ' mime=' + mimeType, 'bot');
-
-                        if(blob.size < 100){
-                            addMsg('Audio too short or empty — please speak longer and try again.', 'bot');
-                            return;
-                        }
-
-                        var ext  = mimeType.indexOf('mp4') > -1 ? 'mp4' : 'webm';
-                        var fd   = new FormData();
-                        fd.append('audio', blob, 'audio.' + ext);
-
-                        addMsg('[DEBUG] Sending to: ' + transcribeUrl, 'bot');
-                        micBtn.style.opacity = '0.5';
-                        micBtn.title = 'Transcribing…';
-                        var xhr = new XMLHttpRequest();
-                        xhr.open('POST', transcribeUrl, true);
-                        xhr.onload = function(){
-                            micBtn.style.opacity = '1';
-                            micBtn.title = 'Speak';
-                            addMsg('[DEBUG] HTTP=' + xhr.status + ' resp=' + xhr.responseText.substring(0,300), 'bot');
-                            try {
-                                var d = JSON.parse(xhr.responseText);
-                                if(d.text && d.text.trim()){
-                                    inp.value = d.text.trim();
-                                    inp.focus();
-                                } else if(d.error){
-                                    addMsg('Transcription error: ' + d.error, 'bot');
-                                } else {
-                                    addMsg('No speech detected. Please try again.', 'bot');
-                                }
-                            } catch(e){
-                                addMsg('Transcription failed (HTTP ' + xhr.status + '): ' + xhr.responseText.substring(0,200), 'bot');
-                            }
-                        };
-                        xhr.onerror = function(){ micBtn.style.opacity='1'; micBtn.title='Speak'; addMsg('Network error during transcription.','bot'); };
-                        xhr.send(fd);
+                        stopAndTranscribe(stream, mimeType);
                     };
-                    mediaRecorder.start();
+
+                    /* timeslice=1000: collect a chunk every second — ensures data on iOS */
+                    mediaRecorder.start(1000);
                     recording = true;
                     micBtn.classList.add('listening');
                     micBtn.title = 'Tap to stop';
