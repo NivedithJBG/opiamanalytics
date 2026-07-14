@@ -285,7 +285,7 @@ class ProjectsmainController extends Controller
                 && (float)($a['cumulated_qty'] ?? 0) > 0
                 && (float)($a['quantity']      ?? 0) > 0)
             {
-                $elapsed = max(1, (strtotime($a['last_report_date']) - strtotime($anchorStart)) / 86400 + 1);
+                $elapsed = max(1, (strtotime(date('Y-m-d')) - strtotime($anchorStart)) / 86400 + 1);
                 $a['projected_duration'] = ($elapsed / (float)$a['cumulated_qty']) * (float)$a['quantity'];
                 $a['delay'] = max(0, $a['projected_duration'] - $a['duration']);
             }
@@ -713,21 +713,29 @@ class ProjectsmainController extends Controller
             ? round($target_qty / $b_duration, 3) : 0;
 
         $target_prod = $planned_per_day;
-        $elapsed = 0;
+        $elapsed_work     = 0; // for Productivity & Cycle Time: (last_reported - start + 1) - break_days
+        $elapsed_calendar = 0; // for Capacity, Projected Duration, Activity bars: today - start + 1
+        $elapsed          = 0; // sent to JS as k.elapsed (calendar-based)
         $start_delay = 0;
+        $today_ts = strtotime(date('Y-m-d'));
         if ($act_start_date && $last_reported_date && $actual_qty > 0) {
-            $elapsed = max(1, (strtotime($last_reported_date) - strtotime($act_start_date)) / 86400 + 1);
-            $actual_prod  = round($actual_qty / $elapsed, 3);
-            $actual_cycle = round(($elapsed / $actual_qty) * $wh, 3);
-            $cap_max  = round($elapsed * $wh, 2);
-            $cap_used = round(max(0, $cap_max - $cum_break), 2);
-        } elseif ($planned_start && $actual_qty == 0 && strtotime($planned_start) < strtotime(date('Y-m-d'))) {
+            // break_hour column currently stores hours; break_days = hours / wh
+            $break_days       = ($wh > 0) ? $cum_break / $wh : 0;
+            $elapsed_work     = max(1, (strtotime($last_reported_date) - strtotime($act_start_date)) / 86400 + 1 - $break_days);
+            $elapsed_calendar = max(1, ($today_ts - strtotime($act_start_date)) / 86400 + 1);
+            $elapsed          = $elapsed_calendar;
+            $actual_prod  = round($actual_qty / $elapsed_work, 3);
+            $actual_cycle = round(($elapsed_work / $actual_qty) * $wh, 3);
+            $cap_max  = round($elapsed_calendar * $wh, 2);
+            $cap_used = round(max(0, $cap_max - $cum_break), 2); // cum_break still in hours, cap_max in hours
+        } elseif ($planned_start && $actual_qty == 0 && strtotime($planned_start) < $today_ts) {
             // No progress yet but start date has passed — count start delay as elapsed
-            $start_delay = (int)floor((strtotime(date('Y-m-d')) - strtotime($planned_start)) / 86400);
-            $elapsed     = $start_delay;
+            $start_delay      = (int)floor(($today_ts - strtotime($planned_start)) / 86400);
+            $elapsed_calendar = $start_delay;
+            $elapsed          = $start_delay;
         }
-        $projected_duration = ($actual_qty > 0 && $elapsed > 0)
-            ? (int)round($elapsed / $actual_qty * $target_qty)
+        $projected_duration = ($actual_qty > 0 && $elapsed_calendar > 0)
+            ? (int)round($elapsed_calendar / $actual_qty * $target_qty)
             : ($start_delay > 0 ? $b_duration + $start_delay : 0);
 
         // Tasks for Resource Productivity panel
@@ -769,8 +777,8 @@ class ProjectsmainController extends Controller
 
         $tasks = array_map(function($t) use ($target_qty, $actual_qty, $elapsed, $taskMbQty) {
             $tqu = (float)$t['task_qty'];
-            $actual = ($elapsed > 0 && $actual_qty > 0 && $tqu > 0)
-                ? round($actual_qty * $tqu / $elapsed, 3) : 0;
+            $actual = ($elapsed_work > 0 && $actual_qty > 0 && $tqu > 0)
+                ? round($actual_qty * $tqu / $elapsed_work, 3) : 0;
             $mbQty = $taskMbQty[(int)$t['task_id']] ?? 0;
             return [
                 'name'             => $t['task_name'],
@@ -779,7 +787,7 @@ class ProjectsmainController extends Controller
                 'actual'           => $actual,
                 'qty'              => round($tqu * $target_qty, 3),
                 'planned_duration' => (float)$t['planned_duration'],
-                'actual_duration'  => ($elapsed > 0 && $mbQty > 0) ? round($elapsed / $mbQty, 3) : 0,
+                'actual_duration'  => ($elapsed_work > 0 && $mbQty > 0) ? round($elapsed_work / $mbQty, 3) : 0,
             ];
         }, $task_rows);
 
