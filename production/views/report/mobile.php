@@ -303,23 +303,23 @@ $(document).on('click','.mob-act-top', function(){
     $('.mob-btn-report[data-id="'+id+'"]').text('Submit Report');
 
     // check if a report already exists for this date
-    console.log('getreportbydate check:', {actid: id, report_date: reportDate});
     $.ajax({
       type:'POST', url:'../report/getreportbydate',
       dataType:'json',
       data:{ actid: id, report_date: reportDate },
       success: function(r){
-        console.log('getreportbydate response:', r);
         if(r.found){
           $('#flogid-'+id).val(r.log_id);
           $('#fqty-'+id).val(r.currentqty);
-          // break_hour stored in hours — show directly
           $('#fbd-'+id).val(r.break_hour > 0 ? r.break_hour : '');
           if(r.start_date) $('#fsd-'+id).val(r.start_date);
           $('#fedit-'+id).addClass('show');
           $('.mob-btn-report[data-id="'+id+'"]').text('Update Report');
+        } else {
+          toast('No report found for ' + reportDate + ' (act:' + id + ' found:' + (r.found||'no') + ')');
         }
-      }
+      },
+      error: function(xhr){ toast('Lookup error: ' + xhr.status + ' ' + xhr.responseText.substring(0,80)); }
     });
 
     // scroll card into view
