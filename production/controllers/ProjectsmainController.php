@@ -775,7 +775,7 @@ class ProjectsmainController extends Controller
             }
         }
 
-        $tasks = array_map(function($t) use ($target_qty, $actual_qty, $elapsed, $taskMbQty) {
+        $tasks = array_map(function($t) use ($target_qty, $actual_qty, $elapsed, $elapsed_work, $taskMbQty) {
             $tqu = (float)$t['task_qty'];
             $actual = ($elapsed_work > 0 && $actual_qty > 0 && $tqu > 0)
                 ? round($actual_qty * $tqu / $elapsed_work, 3) : 0;
