@@ -191,6 +191,7 @@ class ApiController extends Controller
                     $actreportlog->current_cycle    = $curr_cycle;
                     $actreportlog->currentqty       = $currentqnty;
                     $actreportlog->reported_by      = 0;
+                    $actreportlog->break_hour       = round($break_hour / 3600, 4);
                     $actreportlog->save(false);
                 endif;
             }
@@ -203,6 +204,7 @@ class ApiController extends Controller
                     $logexist->currentqty       = $currentqnty;
                     $logexist->reported_by      = $uid;
                     $logexist->report_date      = $curEndDateQry->task_enddate;
+                    $logexist->break_hour       = round($break_hour / 3600, 4);
                     $logexist->save(false);
                 }
                 else{
@@ -214,6 +216,7 @@ class ApiController extends Controller
                         $actreportlog->current_cycle    = $curr_cycle;
                         $actreportlog->currentqty       = $currentqnty;
                         $actreportlog->reported_by      = $uid;
+                        $actreportlog->break_hour       = round($break_hour / 3600, 4);
                         $actreportlog->save(false);
                     endif;
                 }
