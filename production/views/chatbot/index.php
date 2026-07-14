@@ -64,7 +64,6 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
             listening = false;
             micBtn.classList.remove('listening');
             micBtn.title = 'Speak';
-            if(inp.value.trim()) sendMsg();
         };
         recognition.onerror = function(e){
             listening = false;
