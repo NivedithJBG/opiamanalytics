@@ -303,11 +303,13 @@ $(document).on('click','.mob-act-top', function(){
     $('.mob-btn-report[data-id="'+id+'"]').text('Submit Report');
 
     // check if a report already exists for this date
+    console.log('getreportbydate check:', {actid: id, report_date: reportDate});
     $.ajax({
       type:'POST', url:'../report/getreportbydate',
       dataType:'json',
       data:{ actid: id, report_date: reportDate },
       success: function(r){
+        console.log('getreportbydate response:', r);
         if(r.found){
           $('#flogid-'+id).val(r.log_id);
           $('#fqty-'+id).val(r.currentqty);

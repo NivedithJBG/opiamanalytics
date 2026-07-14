@@ -751,8 +751,6 @@ class ReportController extends Controller
     public function actionGetreportbydate()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-        $projectid = $this->getCurrentProjectId();
-        if (!$projectid) return ['found' => false];
 
         $actid      = (int)Yii::$app->request->post('actid');
         $reportDate = Yii::$app->request->post('report_date', '');
