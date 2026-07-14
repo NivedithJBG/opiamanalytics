@@ -102,6 +102,36 @@ body{background:var(--bg)}
 }
 #mob-toast.show{opacity:1}
 
+/* ── Custom date picker ── */
+.cdp-wrap{position:relative}
+.cdp-display{
+  padding:10px 12px;font-size:14px;color:var(--text);
+  border:1.5px solid var(--border);border-radius:8px;
+  background:#fff;font-family:'Inter',sans-serif;
+  width:100%;box-sizing:border-box;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.cdp-display span{pointer-events:none}
+.cdp-panel{
+  position:absolute;top:calc(100% + 4px);left:0;z-index:500;
+  background:#fff;border:1.5px solid var(--border);border-radius:10px;
+  box-shadow:0 6px 20px rgba(0,0,0,.14);padding:10px;width:250px;display:none;
+}
+.cdp-panel.open{display:block}
+.cdp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.cdp-head button{background:none;border:none;font-size:17px;cursor:pointer;color:var(--accent);padding:2px 6px;line-height:1}
+.cdp-head span{font-size:13px;font-weight:700;color:var(--text)}
+.cdp-days-hdr{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
+.cdp-days-hdr span{font-size:9px;font-weight:700;color:var(--muted);text-align:center;text-transform:uppercase}
+.cdp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cdp-day{
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  font-size:12px;border-radius:6px;cursor:pointer;color:var(--text);
+}
+.cdp-day:hover{background:var(--bg)}
+.cdp-day.selected{background:var(--accent);color:#fff;font-weight:700}
+.cdp-day.empty{cursor:default}
+
 /* ── Edit mode banner ── */
 .mob-edit-banner{
   background:rgba(217,119,6,.12);border:1px solid var(--amber);
@@ -253,9 +283,15 @@ function buildCards(activities){
     html += '<div class="mob-edit-banner" id="fedit-'+act.id+'">✏️ Editing previously submitted report — changes will recalculate all totals.</div>';
 
     // ── Entry fields ──
+    var topDate = document.getElementById('mob-report-date').value;
     html += '<div class="mob-form-row mob-form-row-date">';
     html += '<div class="mob-form-field"><label>Activity Start Date</label><input type="date" id="fsd-'+act.id+'" value="'+escHtml(startVal)+'"></div>';
-    html += '<div class="mob-form-field"><label>Report Date</label><input type="date" id="frd-'+act.id+'" class="frd-input" value="'+document.getElementById('mob-report-date').value+'"></div>';
+    html += '<div class="mob-form-field"><label>Report Date</label>';
+    html += '<div class="cdp-wrap" id="cdpwrap-'+act.id+'">';
+    html += '<div class="cdp-display" id="cdpdisp-'+act.id+'">'+fmtDisplayDate(topDate)+'<span style="font-size:12px;color:var(--muted)">▾</span></div>';
+    html += '<input type="hidden" id="frd-'+act.id+'" class="frd-input" value="'+topDate+'">';
+    html += '<div class="cdp-panel" id="cdppanel-'+act.id+'"></div>';
+    html += '</div></div>';
     html += '</div>';
     html += '<div class="mob-form-row">';
     html += '<div class="mob-form-field"><label>Break Hours</label><input type="number" id="fbd-'+act.id+'" placeholder="0" step="0.5" min="0" inputmode="decimal"></div>';
@@ -281,6 +317,100 @@ function buildCards(activities){
 function escHtml(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function fmtDisplayDate(ymd){
+  if(!ymd) return '—';
+  var p = ymd.split('-');
+  return p[2]+' '+MONTHS[parseInt(p[1],10)-1].slice(0,3)+' '+p[0];
+}
+
+// cdpState[actId] = {year, month}
+var cdpState = {};
+
+function renderCdp(id){
+  var hidden = document.getElementById('frd-'+id);
+  var selected = hidden ? hidden.value : ''; // yyyy-mm-dd
+  var state = cdpState[id] || (function(){
+    var d = selected ? new Date(selected) : new Date();
+    cdpState[id] = {year: d.getFullYear(), month: d.getMonth()};
+    return cdpState[id];
+  })();
+
+  var y = state.year, m = state.month;
+  var first = new Date(y, m, 1).getDay(); // 0=Sun
+  var daysInMonth = new Date(y, m+1, 0).getDate();
+
+  var h = '<div class="cdp-head">';
+  h += '<button type="button" data-cdp-prev="'+id+'">&#8249;</button>';
+  h += '<span>'+MONTHS[m]+' '+y+'</span>';
+  h += '<button type="button" data-cdp-next="'+id+'">&#8250;</button>';
+  h += '</div>';
+  h += '<div class="cdp-days-hdr"><span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span></div>';
+  h += '<div class="cdp-days">';
+  for(var i=0;i<first;i++) h += '<div class="cdp-day empty"></div>';
+  for(var d=1;d<=daysInMonth;d++){
+    var ymd = y+'-'+(m+1<10?'0':'')+(m+1)+'-'+(d<10?'0':'')+d;
+    var sel = (ymd === selected) ? ' selected' : '';
+    h += '<div class="cdp-day'+sel+'" data-cdp-date="'+ymd+'" data-cdp-id="'+id+'">'+d+'</div>';
+  }
+  h += '</div>';
+  document.getElementById('cdppanel-'+id).innerHTML = h;
+}
+
+function cdpOpen(id){
+  // close any other open panels
+  document.querySelectorAll('.cdp-panel.open').forEach(function(el){
+    if(el.id !== 'cdppanel-'+id) el.classList.remove('open');
+  });
+  var panel = document.getElementById('cdppanel-'+id);
+  if(!panel) return;
+  renderCdp(id);
+  panel.classList.toggle('open');
+}
+
+$(document).on('click','.cdp-display',function(){
+  var id = this.id.replace('cdpdisp-','');
+  cdpOpen(id);
+});
+
+$(document).on('click','[data-cdp-prev]',function(e){
+  e.stopPropagation();
+  var id = $(this).data('cdp-prev');
+  if(!cdpState[id]) cdpState[id] = {year:new Date().getFullYear(), month:new Date().getMonth()};
+  cdpState[id].month--;
+  if(cdpState[id].month < 0){ cdpState[id].month=11; cdpState[id].year--; }
+  renderCdp(id);
+});
+
+$(document).on('click','[data-cdp-next]',function(e){
+  e.stopPropagation();
+  var id = $(this).data('cdp-next');
+  if(!cdpState[id]) cdpState[id] = {year:new Date().getFullYear(), month:new Date().getMonth()};
+  cdpState[id].month++;
+  if(cdpState[id].month > 11){ cdpState[id].month=0; cdpState[id].year++; }
+  renderCdp(id);
+});
+
+$(document).on('click','[data-cdp-date]',function(e){
+  e.stopPropagation();
+  var ymd = $(this).data('cdp-date');
+  var id  = $(this).data('cdp-id');
+  document.getElementById('frd-'+id).value = ymd;
+  var disp = document.getElementById('cdpdisp-'+id);
+  disp.innerHTML = fmtDisplayDate(ymd) + '<span style="font-size:12px;color:var(--muted)">▾</span>';
+  document.getElementById('cdppanel-'+id).classList.remove('open');
+  // trigger change so checkExistingReport fires
+  $('#frd-'+id).trigger('change');
+});
+
+// close picker when tapping outside
+$(document).on('click',function(e){
+  if(!$(e.target).closest('.cdp-wrap').length){
+    document.querySelectorAll('.cdp-panel.open').forEach(function(el){ el.classList.remove('open'); });
+  }
+});
 
 function checkExistingReport(id, reportDate) {
   var $qty  = $('#fqty-'+id);
