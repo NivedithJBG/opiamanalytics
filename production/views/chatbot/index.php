@@ -78,10 +78,18 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
                         stream.getTracks().forEach(function(t){ t.stop(); });
 
                         var blob = new Blob(audioChunks, {type: mimeType});
+                        addMsg('[DEBUG] chunks=' + audioChunks.length + ' blobSize=' + blob.size + ' mime=' + mimeType, 'bot');
+
+                        if(blob.size < 100){
+                            addMsg('Audio too short or empty — please speak longer and try again.', 'bot');
+                            return;
+                        }
+
                         var ext  = mimeType.indexOf('mp4') > -1 ? 'mp4' : 'webm';
                         var fd   = new FormData();
                         fd.append('audio', blob, 'audio.' + ext);
 
+                        addMsg('[DEBUG] Sending to: ' + transcribeUrl, 'bot');
                         micBtn.style.opacity = '0.5';
                         micBtn.title = 'Transcribing…';
                         var xhr = new XMLHttpRequest();
@@ -89,6 +97,7 @@ body{background:#f0f3fa;font-family:'Times New Roman',Times,serif;height:100vh;d
                         xhr.onload = function(){
                             micBtn.style.opacity = '1';
                             micBtn.title = 'Speak';
+                            addMsg('[DEBUG] HTTP=' + xhr.status + ' resp=' + xhr.responseText.substring(0,300), 'bot');
                             try {
                                 var d = JSON.parse(xhr.responseText);
                                 if(d.text && d.text.trim()){
