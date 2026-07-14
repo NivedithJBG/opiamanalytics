@@ -274,10 +274,11 @@ class ProjectsmainController extends Controller
             // Use old_duration as the current planned duration for the bar
             $a['duration'] = (float)($a['old_duration'] ?? $a['duration']);
             $a['projected_duration'] = $a['duration'];
-            // Anchor = earlier of planned start (sa.start_date) and reported start (spr.start_date)
-            $plannedStart = (!empty($a['start_date']) && $a['start_date'] !== '0000-00-00') ? $a['start_date'] : '';
+            // Anchor: if activity has started use reported start, otherwise use planned start
+            $plannedStart  = (!empty($a['start_date'])     && $a['start_date']     !== '0000-00-00') ? $a['start_date']     : '';
             $reportedStart = (!empty($a['spr_start_date']) && $a['spr_start_date'] !== '0000-00-00') ? $a['spr_start_date'] : '';
-            $anchorStart = ($plannedStart && $reportedStart) ? min($plannedStart, $reportedStart) : ($reportedStart ?: $plannedStart);
+            $hasStarted    = (int)($a['pr_report_count'] ?? 0) > 0 && (float)($a['cumulated_qty'] ?? 0) > 0;
+            $anchorStart   = ($hasStarted && $reportedStart) ? $reportedStart : $plannedStart;
             $a['spr_start_date'] = $anchorStart;
             if ((int)($a['pr_report_count'] ?? 0) > 0
                 && $anchorStart
@@ -693,8 +694,9 @@ class ProjectsmainController extends Controller
         )->queryOne();
         $last_reported_date = ($lrd && !empty($lrd['last_date'])) ? $lrd['last_date'] : '';
 
-        // Activity start anchor = earlier of planned schedule start and the date progress reporting began
-        // (covers an initial start delay either way: a late actual start, or a schedule entered after work began)
+        // Activity start anchor:
+        // - Started (has progress): use the reported start date from schedule_progress_report
+        // - Not started: use the budgeted start date from scheduleactivities
         $spr = $connection->createCommand(
             "SELECT start_date FROM schedule_progress_report
              WHERE activity_id=$actid LIMIT 1"
@@ -703,9 +705,10 @@ class ProjectsmainController extends Controller
             ? $spr['start_date'] : '';
         $planned_start = (!empty($act['start_date']) && $act['start_date'] != '0000-00-00')
             ? $act['start_date'] : '';
-        $act_start_date = ($planned_start && $reported_start)
-            ? min($planned_start, $reported_start)
-            : ($reported_start ?: $planned_start);
+        // Use reported start if activity has started, otherwise planned start
+        $act_start_date = ($actual_qty > 0 && $reported_start)
+            ? $reported_start
+            : $planned_start;
 
         $duration   = (float)($act['duration']     ?? 0);
         $b_duration = (float)($act['old_duration'] ?? 0);
