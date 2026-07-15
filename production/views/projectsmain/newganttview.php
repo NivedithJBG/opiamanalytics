@@ -502,10 +502,6 @@ td.gcol-status { width: 64px; min-width: 64px; text-align: center; padding: 0; v
     if (_durHdr && !document.getElementById('gcol-status-hdr')) {
       _durHdr.parentNode.insertBefore(_makeHdr('gcol-status-hdr', 'Status', 64), _durHdr);
     }
-    if (_resHdr && !document.getElementById('gkpi-hdr-cell')) {
-      _resHdr.parentNode.insertBefore(_makeHdr('gkpi-hdr-cell',  'KPI',  70),  _resHdr.nextSibling);
-      _resHdr.parentNode.insertBefore(_makeHdr('gcost-hdr-cell', 'Cost', 70),  _resHdr.nextSibling);
-    }
 
     // Apply progressive indentation + patch B. columns and A. columns with formatted values
     var _tasks = g.getList ? g.getList() : [];
@@ -575,19 +571,6 @@ td.gcol-status { width: 64px; min-width: 64px; text-align: center; padding: 0; v
         if (_gbdEl) _gbdEl.textContent = formatGanttDur(_groupBDur[_tid]);
       }
 
-      // Inject KPI and Cost placeholder cells after A.Duration (gres)
-      var _resTd = _row.querySelector('td.gres');
-      if (_resTd && !_row.querySelector('td.gcol-kpi')) {
-        var _kpiTd = document.createElement('td');
-        _kpiTd.className = 'gcol-kpi';
-        _kpiTd.style.cssText = 'width:70px;min-width:70px;text-align:center;padding:2px 4px;';
-        var _costTd = document.createElement('td');
-        _costTd.className = 'gcol-cost';
-        _costTd.style.cssText = 'width:70px;min-width:70px;text-align:center;padding:2px 4px;';
-        var _after = _resTd.nextSibling;
-        _resTd.parentNode.insertBefore(_kpiTd,  _after);
-        _resTd.parentNode.insertBefore(_costTd, _kpiTd.nextSibling);
-      }
     }
 
     // Performance delay overlay — red overlay where actual duration exceeds budgeted
