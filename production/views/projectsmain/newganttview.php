@@ -786,7 +786,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         _kpiTd.style.cssText = 'width:50px;min-width:50px;text-align:center;padding:0;vertical-align:middle;';
         if (_db) {
           var _kpiIcon = document.createElement('span');
-          _kpiIcon.style.cssText = 'display:inline-block;width:8px;height:8px;background:#1a7fc1;border-radius:50%;cursor:pointer;';
+          _kpiIcon.style.cssText = 'display:inline-block;font-size:11px;line-height:1;color:#1a7fc1;cursor:pointer;user-select:none;';
+          _kpiIcon.textContent = '◎';
           _kpiIcon.setAttribute('data-kpiactid', _db.rawId);
           _kpiTd.appendChild(_kpiIcon);
         }
