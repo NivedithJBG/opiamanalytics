@@ -1016,12 +1016,19 @@
       var maxVal = 0;
       items.forEach(function(r) {
         var est = +r.planned_consumption || 0;
-        var act = +r.actual_consumption  || 0;
+        var typeId = +r.type_id;
+        var isMaterial = [2, 6, 7, 8].indexOf(typeId) >= 0;
+        var isSC = typeId === 4;
+        var hasActual = (isMaterial && r.indent_raised) || (isSC && r.has_mb);
+        var act = hasActual ? (+r.actual_consumption || 0) : est;
         if (Math.max(est, act) > maxVal) maxVal = Math.max(est, act);
       });
       if (maxVal === 0) maxVal = 1;
-      var rows = '';
-      items.forEach(function(r) {
+
+      var palette = ['#3461b8','#00838f','#e8820c','#8e44ad','#27ae60','#c0392b','#2980b9','#d4845a'];
+      var barCols = '', valRow = '', lblRow = '', legendRows = '';
+
+      items.forEach(function(r, idx) {
         var est = +r.planned_consumption || 0;
         var typeId = +r.type_id;
         var isMaterial = [2, 6, 7, 8].indexOf(typeId) >= 0;
@@ -1029,31 +1036,65 @@
         var hasActual = (isMaterial && r.indent_raised) || (isSC && r.has_mb);
         var act = hasActual ? (+r.actual_consumption || 0) : est;
         var unit = r.unit ? _shu(r.unit) : (r.task_unit ? _shu(r.task_unit) : '');
+        var col = palette[idx % palette.length];
         var diff = act - est;
-        var actCol = diff > 0 ? '#e8820c' : (diff < 0 ? '#1b9e8e' : '#4a5568');
-        var estPct = (est / maxVal * 100).toFixed(1);
-        var barHtml;
+        var valCol = diff > 0 ? '#e8820c' : (diff < 0 ? '#1b9e8e' : col);
+
+        var estH  = (est / maxVal * 100).toFixed(1);
+        var actH  = (act / maxVal * 100).toFixed(1);
+        var barInner;
         if (diff > 0) {
-          var diffPct = (diff / maxVal * 100).toFixed(1);
-          barHtml = '<div style="display:flex;height:10px;border-radius:3px;overflow:hidden;width:100%"><div style="width:' + estPct + '%;background:#4a5568;flex-shrink:0"></div><div style="width:' + diffPct + '%;background:#e8820c;flex-shrink:0"></div></div>';
+          var diffH = (diff / maxVal * 100).toFixed(1);
+          barInner =
+            '<div style="width:100%;height:' + diffH + '%;background:#e8820c;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
+            + '<div style="width:100%;height:' + estH + '%;background:' + col + ';flex-shrink:0"></div>';
         } else if (diff < 0) {
-          var actPct2 = (act / maxVal * 100).toFixed(1);
-          var gapPct2 = (Math.abs(diff) / maxVal * 100).toFixed(1);
-          barHtml = '<div style="display:flex;height:10px;border-radius:3px;overflow:hidden;width:100%"><div style="width:' + actPct2 + '%;background:#4a5568;flex-shrink:0"></div><div style="width:' + gapPct2 + '%;background:#1b9e8e;flex-shrink:0"></div></div>';
+          var saveH = (Math.abs(diff) / maxVal * 100).toFixed(1);
+          barInner =
+            '<div style="width:100%;height:' + saveH + '%;background:#1b9e8e;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
+            + '<div style="width:100%;height:' + actH + '%;background:' + col + ';flex-shrink:0"></div>';
         } else {
-          barHtml = '<div style="display:flex;height:10px;border-radius:3px;overflow:hidden;width:100%"><div style="width:' + estPct + '%;background:#4a5568;flex-shrink:0"></div></div>';
+          barInner = '<div style="width:100%;height:' + estH + '%;background:' + col + ';border-radius:2px 2px 0 0;flex-shrink:0"></div>';
         }
-        rows += '<div style="padding:3px 6px;border-bottom:1px solid #f0f3fa">'
-          + '<div style="display:grid;grid-template-columns:1fr 20px 56px 20px 56px;align-items:baseline;margin-bottom:2px">'
-          +   '<div style="font-size:11px;font-weight:600;color:#1a2540;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0" title="' + (r.name||'') + '">' + (r.name||'') + '</div>'
-          +   '<span style="font-size:9px;color:#888;text-align:right;padding-right:2px">Est</span>'
-          +   '<span style="font-size:11px;color:#000;font-weight:700;text-align:right">' + _fm(est) + '<span style="font-size:9px;color:#888;font-weight:400"> ' + unit + '</span></span>'
-          +   '<span style="font-size:9px;color:#888;text-align:right;padding-right:2px">Act</span>'
-          +   '<span style="font-size:11px;color:' + actCol + ';font-weight:700;text-align:right">' + _fm(act) + '<span style="font-size:9px;color:#888;font-weight:400"> ' + unit + '</span></span>'
-          + '</div>' + barHtml + '</div>';
+
+        barCols +=
+          '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;padding:0 3px">'
+          + barInner
+          + '</div>';
+
+        valRow +=
+          '<div style="flex:1;text-align:center;padding-bottom:1px">'
+          + '<div style="font-size:8px;font-weight:700;color:' + valCol + '">' + _fm(act) + (unit ? ' '+unit : '') + '</div>'
+          + '<div style="font-size:7px;color:#888">' + _fm(est) + (unit ? ' '+unit : '') + '</div>'
+          + '</div>';
+
+        lblRow += '<div style="flex:1;text-align:center;font-size:9px;color:#1a2540;font-weight:700;padding-top:2px">' + (idx + 1) + '</div>';
+
+        legendRows +=
+          '<div style="display:flex;align-items:baseline;gap:5px;padding:2px 6px;border-bottom:1px solid #f0f3fa;font-size:10px">'
+          + '<span style="font-weight:700;color:#1a2540;flex-shrink:0;min-width:12px">' + (idx + 1) + '.</span>'
+          + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + col + ';flex-shrink:0;margin-bottom:1px"></span>'
+          + '<span style="flex:1;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (r.name||'') + '">' + (r.name||'') + '</span>'
+          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fm(est) + (unit ? ' '+unit : '') + '</b></span>'
+          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + valCol + '">' + _fm(act) + (unit ? ' '+unit : '') + '</b></span>'
+          + '</div>';
       });
-      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0">' + _sh(actName||'', 40) + '</div>'
-        + '<div style="overflow-y:auto;flex:1;min-height:0">' + rows + '</div>';
+
+      var key = '<div style="display:flex;gap:12px;padding:3px 6px;flex-shrink:0">'
+        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#4a5568;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Estimated</span>'
+        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#e8820c;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Over</span>'
+        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#1b9e8e;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Under</span>'
+        + '</div>';
+
+      el.innerHTML =
+        '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0">' + _sh(actName||'', 40) + '</div>'
+        + '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">'
+        +   '<div style="display:flex;gap:2px;padding:2px 6px 0;flex-shrink:0">' + valRow + '</div>'
+        +   '<div style="display:flex;gap:2px;flex:1;min-height:0;padding:0 6px;align-items:flex-end;border-bottom:1px solid #c8d0e0">' + barCols + '</div>'
+        +   '<div style="display:flex;gap:2px;padding:2px 6px;flex-shrink:0">' + lblRow + '</div>'
+        +   key
+        +   '<div style="overflow-y:auto;flex-shrink:0;max-height:90px;border-top:1px solid #e8efff;margin-top:2px">' + legendRows + '</div>'
+        + '</div>';
     }
 
     // 3. Cost of Resources → gm-cd-rcost
