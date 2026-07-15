@@ -1981,7 +1981,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var left = mouseX + 18;
       if (left + pw > vw - 8) left = vw - pw - 8;
       if (left < 4) left = 4;
-      var top = mouseY - 20;
+      var top = mouseY - 120;
       if (top + ph > vh - 8) top = vh - ph - 8;
       if (top < 4) top = 4;
       pop.style.left = left + 'px';
