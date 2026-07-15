@@ -565,9 +565,9 @@
         }
       }
 
-      // Inject Cost cell after A.Duration (gres) — leaf activities only
+      // Inject Cost cell after A.Duration (gres) — all rows
       var _resTd = _row.querySelector('td.gres');
-      if (_resTd && !_row.querySelector('td.gcol-cost') && _actCells[_tid]) {
+      if (_resTd && !_row.querySelector('td.gcol-cost')) {
         var _costTd = document.createElement('td');
         _costTd.className = 'gcol-cost';
         _costTd.style.cssText = 'width:50px;min-width:50px;text-align:center;padding:0;vertical-align:middle;';
