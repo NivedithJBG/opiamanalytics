@@ -64,7 +64,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 /* ── KPI Hover Popup ─────────────────────────────────────────────────────── */
 #gkp-popup {
   display: none; position: fixed; z-index: 9998;
-  width: 560px; background: #f0f3fa;
+  width: 680px; background: #f0f3fa;
   border-radius: 10px; box-shadow: 0 8px 36px rgba(0,0,0,0.32);
   overflow: hidden; pointer-events: none;
 }
@@ -77,7 +77,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 #gkp-body {
   display: flex; flex-direction: column; gap: 5px; padding: 6px;
 }
-#gkp-row1, #gkp-row2 { display: flex; gap: 5px; }
+#gkp-row1, #gkp-row2 { display: flex; gap: 5px; height: 175px; }
 .gkp-panel {
   flex: 1; background: #fff; border-radius: 5px; border: 1px solid #dde3ef;
   display: flex; flex-direction: column; overflow: hidden; min-width: 0;
@@ -92,7 +92,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 /* ── Gantt Cost Hover Popup ─────────────────────────────────────────────────── */
 #gcm-popup {
   display: none; position: fixed; z-index: 9998;
-  width: 620px; background: #f0f3fa;
+  width: 760px; background: #f0f3fa;
   border-radius: 10px; box-shadow: 0 8px 36px rgba(0,0,0,0.32);
   overflow: hidden; pointer-events: none;
 }
@@ -105,7 +105,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 #gcm-pop-body {
   display: flex; flex-direction: column; gap: 5px; padding: 6px;
 }
-#gcm-pop-row1, #gcm-pop-row2 { display: flex; gap: 5px; height: 170px; }
+#gcm-pop-row1, #gcm-pop-row2 { display: flex; gap: 5px; height: 205px; }
 .gcm-pop-panel {
   flex: 1; background: #fff; border-radius: 5px; border: 1px solid #dde3ef;
   display: flex; flex-direction: column; overflow: hidden; min-width: 0;
