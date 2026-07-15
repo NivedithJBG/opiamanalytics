@@ -74,7 +74,7 @@
 }
 .act-dot.ongoing   { background: #66bb6a; }
 .act-dot.upcoming  { background: #87ceeb; }
-.act-dot.overdue   { background: #ff4b00; }
+.act-dot.overdue   { background: #ff2800; }
 .act-dot-check {
   display: inline-block; width: 12px; height: 12px;
   border-radius: 50%; background: #bdbdbd;
@@ -529,7 +529,7 @@
             _dot.style.background = '#66bb6a';
             _dot.title = 'Ongoing';
           } else if (_st.planStart && _st.planStart < todayStr) {
-            _dot.style.background = '#ff4b00';
+            _dot.style.background = '#ff2800';
             _dot.title = 'Overdue';
           } else {
             _dot.style.background = '#87ceeb';
@@ -579,7 +579,7 @@
       if (_delayPx <= 0) continue;
 
       var _overlay = document.createElement('div');
-      _overlay.style.cssText = 'position:absolute;left:' + _budgetedPx + 'px;width:' + _delayPx + 'px;top:1px;height:13px;background:rgba(255,75,0,0.9);pointer-events:none;z-index:2;border-radius:0 3px 3px 0;';
+      _overlay.style.cssText = 'position:absolute;left:' + _budgetedPx + 'px;width:' + _delayPx + 'px;top:1px;height:13px;background:rgba(255,40,0,0.9);pointer-events:none;z-index:2;border-radius:0 3px 3px 0;';
       _barDiv.appendChild(_overlay);
     }
 
