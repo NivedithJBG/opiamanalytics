@@ -471,28 +471,35 @@ td.gstatus {
     var _c = document.getElementById('gantt-container');
     function _hdr(cls, txt) {
       var el = _c ? _c.querySelector('.gtaskheading.' + cls) : null;
-      if (el) el.textContent = txt;
+      if (!el) return;
+      var div = el.querySelector('div');
+      if (div) div.textContent = txt; else el.textContent = txt;
     }
     _hdr('gdur', 'B. Duration');
     _hdr('gres', 'A. Duration');
 
+    // Inject Status before B.Duration; KPI and Cost after A.Duration
+    // JSGantt header cells contain a <div> inside — mirror that structure exactly
     function _makeHdr(id, txt, width) {
       var td = document.createElement('td');
       td.id = id;
-      td.style.cssText = 'width:' + width + 'px;min-width:' + width + 'px;text-align:center;padding:0;vertical-align:middle;font-weight:600;font-size:11px;';
-      td.textContent = txt;
+      td.className = 'gtaskheading';
+      td.style.cssText = 'width:' + width + 'px;min-width:' + width + 'px;';
+      var div = document.createElement('div');
+      div.style.cssText = 'width:' + width + 'px;text-align:center;font-weight:600;font-size:11px;overflow:hidden;white-space:nowrap;';
+      div.textContent = txt;
+      td.appendChild(div);
       return td;
     }
 
-    // Inject Status before B.Duration; KPI and Cost after A.Duration
     var _durHdr = _c ? _c.querySelector('.gtaskheading.gdur') : null;
     var _resHdr = _c ? _c.querySelector('.gtaskheading.gres')  : null;
     if (_durHdr && !document.getElementById('gstatus-hdr-cell')) {
       _durHdr.parentNode.insertBefore(_makeHdr('gstatus-hdr-cell', 'Status', 30), _durHdr);
     }
     if (_resHdr && !document.getElementById('gkpi-hdr-cell')) {
-      _resHdr.parentNode.insertBefore(_makeHdr('gcost-hdr-cell', 'Cost', 70),  _resHdr.nextSibling);
       _resHdr.parentNode.insertBefore(_makeHdr('gkpi-hdr-cell',  'KPI',  70),  _resHdr.nextSibling);
+      _resHdr.parentNode.insertBefore(_makeHdr('gcost-hdr-cell', 'Cost', 70),  _resHdr.nextSibling);
     }
 
     // Apply progressive indentation + patch B. columns and A. columns with formatted values
