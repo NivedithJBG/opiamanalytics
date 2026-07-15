@@ -24,6 +24,9 @@
 }
 #gantt-act-tooltip b { color: #1a2540; }
 
+/* ── Gantt row highlight when cost modal is open ──────────────────────────── */
+tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8820c; outline-offset: -1px; }
+
 /* ── Gantt Cost Modal ──────────────────────────────────────────────────────── */
 #gcm-bk {
   display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 10000;
@@ -1277,9 +1280,14 @@
     }
 
     // ── Open modal on Cost icon click ─────────────────────────────────────────
+    var _gcmHighlightedRow = null;
     $(document).on('click', '#gantt-container .gcol-cost span[data-actid]', function() {
       var actId = $(this).data('actid');
       if (!actId) return;
+      // Highlight the clicked row
+      if (_gcmHighlightedRow) $(_gcmHighlightedRow).removeClass('gcm-row-highlight');
+      _gcmHighlightedRow = $(this).closest('tr')[0];
+      if (_gcmHighlightedRow) $(_gcmHighlightedRow).addClass('gcm-row-highlight');
       $('#gcm-loading').show();
       $('#gcm-row1, #gcm-row2').hide();
       $('#gcm-title').text('Cost Dashboard — Loading…');
@@ -1320,6 +1328,7 @@
     $('#gcm-close, #gcm-bk').on('click', function(e) {
       if (e.target !== this) return;
       $('#gcm-bk, #gcm-modal').removeClass('gcm-open');
+      if (_gcmHighlightedRow) { $(_gcmHighlightedRow).removeClass('gcm-row-highlight'); _gcmHighlightedRow = null; }
     });
   })();
 
