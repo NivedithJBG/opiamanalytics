@@ -89,42 +89,38 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 .gkp-panel-body { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 
-/* ── Gantt Cost Modal ──────────────────────────────────────────────────────── */
-#gcm-bk {
-  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 10000;
+/* ── Gantt Cost Hover Popup ─────────────────────────────────────────────────── */
+#gcm-popup {
+  display: none; position: fixed; z-index: 9998;
+  width: 620px; background: #f0f3fa;
+  border-radius: 10px; box-shadow: 0 8px 36px rgba(0,0,0,0.32);
+  overflow: hidden; pointer-events: none;
 }
-#gcm-bk.gcm-open { display: block; }
-#gcm-modal {
-  display: none; position: fixed; z-index: 10001;
-  top: 50%; left: 50%; transform: translate(-50%,-50%);
-  width: 69vw; max-width: 825px; height: 65vh;
-  background: #f0f3fa; border-radius: 10px;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.28);
-  flex-direction: column; overflow: hidden;
+#gcm-popup.gcm-visible { display: block; }
+#gcm-pop-hdr {
+  background: #1a2540; color: #fff; padding: 7px 12px;
+  font-size: 12px; font-weight: 600; font-family: 'Barlow Condensed', sans-serif;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-#gcm-modal.gcm-open { display: flex; }
-#gcm-header {
-  background: #1a2540; color: #fff; padding: 10px 16px;
-  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+#gcm-pop-body {
+  display: flex; flex-direction: column; gap: 5px; padding: 6px;
 }
-#gcm-title { font-size: 13px; font-weight: 600; font-family: 'Barlow Condensed', sans-serif; }
-#gcm-close {
-  background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;
+#gcm-pop-row1, #gcm-pop-row2 { display: flex; gap: 5px; height: 170px; }
+.gcm-pop-panel {
+  flex: 1; background: #fff; border-radius: 5px; border: 1px solid #dde3ef;
+  display: flex; flex-direction: column; overflow: hidden; min-width: 0;
 }
-#gcm-loading {
-  text-align: center; padding: 40px; font-size: 13px; color: #5a6e8c;
+.gcm-pop-panel-title {
+  font-size: 9px; font-weight: 700; color: #e8efff; text-transform: uppercase;
+  letter-spacing: 0.04em; padding: 4px 7px; flex-shrink: 0;
+  background: #1a2540; border-bottom: 1px solid #0d1f3c;
 }
-#gcm-body {
-  flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px; gap: 8px; overflow: hidden;
-}
-/* Top row: 3 panels side by side */
-#gcm-row1 {
-  display: flex; gap: 8px; flex: 1; min-height: 0;
-}
-/* Bottom row: 3 panels side by side */
-#gcm-row2 {
-  display: flex; gap: 8px; flex: 1; min-height: 0;
-}
+.gcm-pop-panel-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+#gcm-pop-loading { text-align: center; padding: 18px; font-size: 11px; color: #5a6e8c; }
+
+/* ── Gantt Cost Modal (kept for backwards compat, hidden by default) ─────── */
+#gcm-bk { display: none; }
+#gcm-modal { display: none; }
 .gcm-panel {
   flex: 1; background: #fff; border-radius: 6px; border: 1px solid #dde3ef;
   display: flex; flex-direction: column; overflow: hidden; min-width: 0;
@@ -247,42 +243,20 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 </div>
 </div>
 
-<!-- Gantt Cost Modal -->
-<div id="gcm-bk"></div>
-<div id="gcm-modal">
-  <div id="gcm-header">
-    <span id="gcm-title">Cost Dashboard</span>
-    <button id="gcm-close" title="Close">&times;</button>
-  </div>
-  <div id="gcm-body">
-    <div id="gcm-loading">Loading&hellip;</div>
-    <div id="gcm-row1" style="display:none">
-      <div class="gcm-panel">
-        <div class="gcm-panel-title">Unit Cost of Activity</div>
-        <div class="gcm-panel-body" id="gm-cd-g5" style="align-items:center;justify-content:center"></div>
-      </div>
-      <div class="gcm-panel">
-        <div class="gcm-panel-title">Work Done</div>
-        <div class="gcm-panel-body" id="gm-cd-g4" style="align-items:center;justify-content:center"></div>
-      </div>
-      <div class="gcm-panel">
-        <div class="gcm-panel-title">Cost of Activity</div>
-        <div class="gcm-panel-body" id="gm-cd-g2"></div>
-      </div>
+<!-- Gantt Cost Hover Popup -->
+<div id="gcm-popup">
+  <div id="gcm-pop-hdr">Cost Dashboard</div>
+  <div id="gcm-pop-body">
+    <div id="gcm-pop-loading">Loading&hellip;</div>
+    <div id="gcm-pop-row1" style="display:none">
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Unit Cost of Activity</div><div class="gcm-pop-panel-body" id="gm-cd-g5" style="align-items:center;justify-content:center"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Work Done</div><div class="gcm-pop-panel-body" id="gm-cd-g4" style="align-items:center;justify-content:center"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Cost of Activity</div><div class="gcm-pop-panel-body" id="gm-cd-g2"></div></div>
     </div>
-    <div id="gcm-row2" style="display:none">
-      <div class="gcm-panel">
-        <div class="gcm-panel-title">Unit Cost of Resources</div>
-        <div class="gcm-panel-body" id="gm-cd-c6"></div>
-      </div>
-      <div class="gcm-panel">
-        <div class="gcm-panel-title">Consumption of Resources</div>
-        <div class="gcm-panel-body" id="gm-cd-c7"></div>
-      </div>
-      <div class="gcm-panel">
-        <div class="gcm-panel-title">Cost of Resources</div>
-        <div class="gcm-panel-body" id="gm-cd-rcost"></div>
-      </div>
+    <div id="gcm-pop-row2" style="display:none">
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Unit Cost of Resources</div><div class="gcm-pop-panel-body" id="gm-cd-c6"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Consumption of Resources</div><div class="gcm-pop-panel-body" id="gm-cd-c7"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Cost of Resources</div><div class="gcm-pop-panel-body" id="gm-cd-rcost"></div></div>
     </div>
   </div>
 </div>
@@ -1399,63 +1373,106 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         +'</div>';
     }
 
-    // ── Open modal on Cost icon click ─────────────────────────────────────────
-    var _gcmHighlightedRow = null;
-    $(document).on('click', '#gantt-container .gcol-cost span[data-actid]', function() {
-      var actId = $(this).data('actid');
-      if (!actId) return;
-      // Highlight the clicked row
-      if (_gcmHighlightedRow) $(_gcmHighlightedRow).removeClass('gcm-row-highlight');
-      _gcmHighlightedRow = $(this).closest('tr')[0];
-      if (_gcmHighlightedRow) $(_gcmHighlightedRow).addClass('gcm-row-highlight');
-      $('#gcm-loading').show();
-      $('#gcm-row1, #gcm-row2').hide();
-      $('#gcm-title').text('Cost Dashboard — Loading…');
-      $('#gcm-bk, #gcm-modal').addClass('gcm-open');
+    // ── Cost icon hover → floating popup ─────────────────────────────────────
+    var _gcpTimer  = null;
+    var _gcpXhr    = null;
+    var _gcpCache  = {};
 
-      $.ajax({
-        type: 'POST',
-        url: '../projectsmain/costdashboardactivity',
-        data: { actid: actId },
-        dataType: 'json',
+    function _positionCostPopup(anchorEl) {
+      var pop = document.getElementById('gcm-popup');
+      var pw = pop.offsetWidth || 620, ph = pop.offsetHeight || 280;
+      var vw = window.innerWidth, vh = window.innerHeight;
+      var rect = anchorEl ? anchorEl.getBoundingClientRect() : null;
+      var left = rect ? Math.min(rect.right + 10, vw - pw - 8) : vw - pw - 8;
+      if (left < 4) left = 4;
+      var top = rect ? rect.top - 20 : vh / 2 - ph / 2;
+      if (top + ph > vh - 8) top = vh - ph - 8;
+      if (top < 4) top = 4;
+      pop.style.left = left + 'px';
+      pop.style.top  = top  + 'px';
+    }
+
+    function _hideCostPopup() {
+      clearTimeout(_gcpTimer);
+      if (_gcpXhr) { _gcpXhr.abort(); _gcpXhr = null; }
+      var pop = document.getElementById('gcm-popup');
+      if (pop) pop.classList.remove('gcm-visible');
+    }
+
+    function _showCostPopup(actId, anchorEl) {
+      var pop = document.getElementById('gcm-popup');
+      if (!pop) return;
+
+      function _doRender(d) {
+        document.getElementById('gcm-pop-hdr').textContent = 'Cost Dashboard — ' + (d.activity_name || '');
+        ['gm-cd-c6','gm-cd-c7','gm-cd-rcost','gm-cd-g5','gm-cd-g4','gm-cd-g2'].forEach(function(id) {
+          var el = document.getElementById(id); if (el) el.innerHTML = '';
+        });
+        document.getElementById('gcm-pop-loading').style.display = 'none';
+        document.getElementById('gcm-pop-row1').style.display = 'flex';
+        document.getElementById('gcm-pop-row2').style.display = 'flex';
+        _renderUnitCostOfResource(d.items, d.activity_name);
+        _renderResourceConsumption(d.items, d.activity_name, d.last_report_qty, d.unit);
+        _renderResourceCost(d.items, d.activity_name, d.unit);
+        _renderUnitCostOfActivity(d.items, d.activity_name, d.unit, d.schedule_qty);
+        _renderValueOfWorkDone(d);
+        _renderCostOfActivity(d);
+        _positionCostPopup(anchorEl);
+      }
+
+      if (_gcpCache[actId]) {
+        document.getElementById('gcm-pop-loading').style.display = 'none';
+        pop.classList.add('gcm-visible');
+        _positionCostPopup(anchorEl);
+        _doRender(_gcpCache[actId]);
+        return;
+      }
+
+      // Show loading state
+      document.getElementById('gcm-pop-hdr').textContent = 'Cost Dashboard — Loading…';
+      document.getElementById('gcm-pop-loading').style.display = 'block';
+      document.getElementById('gcm-pop-row1').style.display = 'none';
+      document.getElementById('gcm-pop-row2').style.display = 'none';
+      pop.classList.add('gcm-visible');
+      _positionCostPopup(anchorEl);
+
+      if (_gcpXhr) _gcpXhr.abort();
+      _gcpXhr = $.ajax({
+        type: 'POST', url: '../projectsmain/costdashboardactivity',
+        data: { actid: actId }, dataType: 'json',
         success: function(d) {
-          $('#gcm-loading').hide();
+          _gcpXhr = null;
           if (!d || d.error) {
-            $('#gcm-loading').text(d && d.error ? d.error : 'Error loading data').show();
+            document.getElementById('gcm-pop-loading').textContent = d && d.error ? d.error : 'Error loading data';
             return;
           }
-          $('#gcm-title').text('Cost Dashboard — ' + (d.activity_name || ''));
-          // Clear previous content
-          ['gm-cd-c6','gm-cd-c7','gm-cd-rcost','gm-cd-g5','gm-cd-g4','gm-cd-g2'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.innerHTML = '';
-          });
-          _renderUnitCostOfResource(d.items, d.activity_name);
-          _renderResourceConsumption(d.items, d.activity_name, d.last_report_qty, d.unit);
-          _renderResourceCost(d.items, d.activity_name, d.unit);
-          _renderUnitCostOfActivity(d.items, d.activity_name, d.unit, d.schedule_qty);
-          _renderValueOfWorkDone(d);
-          _renderCostOfActivity(d);
-          $('#gcm-row1, #gcm-row2').show();
+          _gcpCache[actId] = d;
+          _doRender(d);
         },
-        error: function() {
-          $('#gcm-loading').text('Failed to load cost data.').show();
-        }
+        error: function(x, s) { _gcpXhr = null; if (s !== 'abort') _hideCostPopup(); }
       });
+    }
+
+    $(document).on('mouseenter', '#gantt-container .gcol-cost span[data-actid]', function() {
+      var actId = $(this).data('actid');
+      if (!actId) return;
+      clearTimeout(_gcpTimer);
+      var self = this;
+      _gcpTimer = setTimeout(function() {
+        _showCostPopup(actId, self);
+      }, 200);
     });
 
-    // ── Close cost modal ───────────────────────────────────────────────────────
-    $('#gcm-close, #gcm-bk').on('click', function(e) {
-      if (e.target !== this) return;
-      $('#gcm-bk, #gcm-modal').removeClass('gcm-open');
-      if (_gcmHighlightedRow) { $(_gcmHighlightedRow).removeClass('gcm-row-highlight'); _gcmHighlightedRow = null; }
+    $(document).on('mouseleave', '#gantt-container .gcol-cost span[data-actid]', function() {
+      _hideCostPopup();
     });
 
-    // ── KPI icon click → open KPI modal ───────────────────────────────────────
+    // ── KPI icon click → open KPI modal (full detail view) ───────────────────
     var _gkmCache = {};
     $(document).on('click', '#gantt-container .gcol-kpi span[data-kpiactid]', function() {
       var actId = $(this).data('kpiactid');
       if (!actId) return;
+      _hidePopup(); // close hover popup first
       $('#gkm-loading').show();
       $('#gkm-content').hide();
       $('#gkm-title').text('KPI Dashboard — Loading…');
@@ -1959,10 +1976,27 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var pop = document.getElementById('gkp-popup');
       var pw = pop.offsetWidth || 560, ph = pop.offsetHeight || 300;
       var vw = window.innerWidth, vh = window.innerHeight;
+      // Always anchor to the Gantt (right) side — prefer right of cursor
       var left = mouseX + 18;
-      if (left + pw > vw - 8) left = mouseX - pw - 10;
+      if (left + pw > vw - 8) left = vw - pw - 8;
       if (left < 4) left = 4;
       var top = mouseY - 20;
+      if (top + ph > vh - 8) top = vh - ph - 8;
+      if (top < 4) top = 4;
+      pop.style.left = left + 'px';
+      pop.style.top  = top  + 'px';
+    }
+
+    function _positionPopupRight(anchorEl) {
+      // Position popup to the right of the viewport (Gantt chart side),
+      // vertically aligned near the anchor element
+      var pop = document.getElementById('gkp-popup');
+      var pw = pop.offsetWidth || 560, ph = pop.offsetHeight || 300;
+      var vw = window.innerWidth, vh = window.innerHeight;
+      var rect = anchorEl ? anchorEl.getBoundingClientRect() : null;
+      var left = rect ? Math.min(rect.right + 10, vw - pw - 8) : vw - pw - 8;
+      if (left < 4) left = 4;
+      var top = rect ? rect.top - 20 : vh / 2 - ph / 2;
       if (top + ph > vh - 8) top = vh - ph - 8;
       if (top < 4) top = 4;
       pop.style.left = left + 'px';
@@ -1986,44 +2020,64 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       return (db && db.rawId) ? db.rawId : null;
     }
 
+    // Generic KPI fetch + show function (used by bar hover and KPI icon hover)
+    function _showKpiForAct(actId, positionFn) {
+      if (_kpCache[actId]) {
+        _renderKpi(_kpCache[actId]);
+        var pop = document.getElementById('gkp-popup');
+        pop.classList.add('gkp-visible');
+        positionFn();
+        return;
+      }
+      if (_kpXhr) _kpXhr.abort();
+      document.getElementById('gkp-hdr').textContent = 'Loading KPI…';
+      ['gkp-g5','gkp-g4','gkp-g3','gkp-tp','gkp-dur'].forEach(function(id){
+        var el=document.getElementById(id); if(el) el.innerHTML='';
+      });
+      var pop = document.getElementById('gkp-popup');
+      pop.classList.add('gkp-visible');
+      positionFn();
+      _kpXhr = $.ajax({
+        type: 'POST', url: '../projectsmain/performancedashboardkpi',
+        data: { actid: actId }, dataType: 'json',
+        success: function(d) {
+          _kpXhr = null;
+          if (!d || !d.kpi) return;
+          _kpCache[actId] = d.kpi;
+          _renderKpi(d.kpi);
+          positionFn();
+        },
+        error: function(x, s) { _kpXhr = null; if(s!=='abort') _hidePopup(); }
+      });
+    }
+
+    // Bar hover — KPI popup
     $(document).on('mouseover', '#gantt-container .gtaskbarcontainer:not(.gplan)', function(e) {
       var actId = _getActIdFromBarDiv(this);
       if (!actId) return;
       clearTimeout(_kpTimer);
       var mx = e.clientX, my = e.clientY;
       _kpTimer = setTimeout(function() {
-        if (_kpCache[actId]) {
-          _renderKpi(_kpCache[actId]);
-          var pop = document.getElementById('gkp-popup');
-          pop.classList.add('gkp-visible');
-          _positionPopup(mx, my);
-          return;
-        }
-        if (_kpXhr) _kpXhr.abort();
-        // Show loading state
-        document.getElementById('gkp-hdr').textContent = 'Loading KPI…';
-        ['gkp-g5','gkp-g4','gkp-g3','gkp-tp','gkp-dur'].forEach(function(id){
-          var el=document.getElementById(id); if(el) el.innerHTML='';
-        });
-        var pop = document.getElementById('gkp-popup');
-        pop.classList.add('gkp-visible');
-        _positionPopup(mx, my);
-        _kpXhr = $.ajax({
-          type: 'POST', url: '../projectsmain/performancedashboardkpi',
-          data: { actid: actId }, dataType: 'json',
-          success: function(d) {
-            _kpXhr = null;
-            if (!d || !d.kpi) return;
-            _kpCache[actId] = d.kpi;
-            _renderKpi(d.kpi);
-            _positionPopup(mx, my);
-          },
-          error: function(x, s) { _kpXhr = null; if(s!=='abort') _hidePopup(); }
-        });
+        _showKpiForAct(actId, function(){ _positionPopup(mx, my); });
       }, 300);
     });
 
     $(document).on('mouseleave', '#gantt-container .gtaskbarcontainer:not(.gplan)', function() {
+      _hidePopup();
+    });
+
+    // KPI column icon hover — same popup
+    $(document).on('mouseenter', '#gantt-container .gcol-kpi span[data-kpiactid]', function() {
+      var actId = $(this).data('kpiactid');
+      if (!actId) return;
+      clearTimeout(_kpTimer);
+      var self = this;
+      _kpTimer = setTimeout(function() {
+        _showKpiForAct(actId, function(){ _positionPopupRight(self); });
+      }, 200);
+    });
+
+    $(document).on('mouseleave', '#gantt-container .gcol-kpi span[data-kpiactid]', function() {
       _hidePopup();
     });
 
