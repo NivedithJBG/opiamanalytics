@@ -51,20 +51,29 @@
 .dot-normal    { background: #337ab7; }
 /* Critical path bar colour — overrides external CSS (needed when view loads without full layout) */
 .gtaskpink, div.gtaskpink.gplan { background: #00ACC1 !important; border-color: #0097A7 !important; }
-/* Activity status badges */
-.act-badge {
+/* Activity status dots */
+.act-dot {
   display: inline-block;
-  padding: 2px 7px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-  color: #fff;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  vertical-align: middle;
 }
-.act-badge.ongoing   { background: #43a047; }
-.act-badge.upcoming  { background: #1e88e5; }
-.act-badge.overdue   { background: #e53935; }
-.act-badge.completed { background: #757575; }
+.act-dot.ongoing   { background: #43a047; }
+.act-dot.upcoming  { background: #1e88e5; }
+.act-dot.overdue   { background: #e53935; }
+.act-dot.completed { background: #43a047; } /* green circle with tick overlay handled via content */
+/* Completed: use a checkmark character instead of plain dot */
+.act-dot-check {
+  display: inline-block;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: #757575;
+  color: #fff;
+  font-size: 9px;
+  line-height: 13px;
+  text-align: center;
+  vertical-align: middle;
+}
 td.gstatus { text-align: center; padding: 2px 4px; vertical-align: middle; }
 th.gstatus-hdr, .gtaskheading.gstatus-hdr {
   text-align: center;
@@ -94,10 +103,10 @@ th.gstatus-hdr, .gtaskheading.gstatus-hdr {
   <div class="gantt-legend-row" style="margin-top:10px;">
     <div class="gantt-legend-item"><span class="gantt-legend-dot dot-critical"></span> Critical Path</div>
     <div class="gantt-legend-item"><span class="gantt-legend-dot dot-normal"></span> Normal Activity</div>
-    <div class="gantt-legend-item"><span class="act-badge ongoing">● Ongoing</span></div>
-    <div class="gantt-legend-item"><span class="act-badge upcoming">● Upcoming</span></div>
-    <div class="gantt-legend-item"><span class="act-badge overdue">● Overdue</span></div>
-    <div class="gantt-legend-item"><span class="act-badge completed">✓ Completed</span></div>
+    <div class="gantt-legend-item"><span class="act-dot ongoing" style="display:inline-block;"></span> Ongoing</div>
+    <div class="gantt-legend-item"><span class="act-dot upcoming" style="display:inline-block;"></span> Upcoming</div>
+    <div class="gantt-legend-item"><span class="act-dot overdue" style="display:inline-block;"></span> Overdue</div>
+    <div class="gantt-legend-item"><span class="act-dot-check" style="display:inline-block;">✓</span> Completed</div>
   </div>
 
   <div id="relations-panel">
@@ -469,7 +478,7 @@ th.gstatus-hdr, .gtaskheading.gstatus-hdr {
     if (_durHdr) {
       var _statusHdr = document.createElement('td');
       _statusHdr.className = 'gtaskheading gstatus-hdr';
-      _statusHdr.style.cssText = 'width:72px;min-width:72px;';
+      _statusHdr.style.cssText = 'width:30px;min-width:30px;';
       _statusHdr.textContent = 'Status';
       _durHdr.parentNode.insertBefore(_statusHdr, _durHdr);
     }
@@ -494,23 +503,29 @@ th.gstatus-hdr, .gtaskheading.gstatus-hdr {
       if (_durTd) {
         var _statusTd = document.createElement('td');
         _statusTd.className = 'gstatus';
-        _statusTd.style.cssText = 'width:72px;min-width:72px;';
+        _statusTd.style.cssText = 'width:30px;min-width:30px;';
         var _st = _actStatus[_tid];
         if (_st) {
-          var _badgeCls, _badgeTxt;
+          var _dot;
           if (_st.completed) {
-            _badgeCls = 'completed'; _badgeTxt = '✓ Completed';
+            _dot = document.createElement('span');
+            _dot.className = 'act-dot-check';
+            _dot.title = 'Completed';
+            _dot.textContent = '✓';
           } else if (_st.hasProgress) {
-            _badgeCls = 'ongoing';  _badgeTxt = '● Ongoing';
+            _dot = document.createElement('span');
+            _dot.className = 'act-dot ongoing';
+            _dot.title = 'Ongoing';
           } else if (_st.plannedStart && _st.plannedStart < todayStr) {
-            _badgeCls = 'overdue';  _badgeTxt = '● Overdue';
+            _dot = document.createElement('span');
+            _dot.className = 'act-dot overdue';
+            _dot.title = 'Overdue';
           } else {
-            _badgeCls = 'upcoming'; _badgeTxt = '● Upcoming';
+            _dot = document.createElement('span');
+            _dot.className = 'act-dot upcoming';
+            _dot.title = 'Upcoming';
           }
-          var _badge = document.createElement('span');
-          _badge.className = 'act-badge ' + _badgeCls;
-          _badge.textContent = _badgeTxt;
-          _statusTd.appendChild(_badge);
+          _statusTd.appendChild(_dot);
         }
         _durTd.parentNode.insertBefore(_statusTd, _durTd);
       }
