@@ -927,39 +927,67 @@
         if (Math.max(est, act) > maxVal) maxVal = Math.max(est, act);
       });
       if (maxVal === 0) maxVal = 1;
-      var rows = '';
-      items.forEach(function(r) {
+
+      // Colour palette for resources (cycles if more than palette length)
+      var palette = ['#3461b8','#00838f','#e8820c','#8e44ad','#27ae60','#c0392b','#2980b9','#d4845a'];
+
+      var barCols = '', estValRow = '', actValRow = '', lblRow = '', legendRows = '';
+      items.forEach(function(r, idx) {
         var est = +r.rate || 0;
         var hasActual = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
         var act = hasActual ? +r.actual_unit_cost : est;
         var unit = r.unit ? ' /' + _shu(r.unit) : '';
-        var src = hasActual ? '<span style="font-size:9px;background:#e8f0fe;color:#3461b8;border-radius:3px;padding:1px 4px;margin-left:4px">' + (+r.type_id === 4 ? 'MB' : 'GRN') + '</span>' : '';
-        var estPct = (est / maxVal * 100).toFixed(1);
+        var col = palette[idx % palette.length];
         var diff = act - est;
-        var diffPct = (Math.abs(diff) / maxVal * 100).toFixed(1);
-        var diffCol = diff > 0 ? '#e8820c' : '#1b9e8e';
-        var barHtml;
-        if (diff > 0) {
-          barHtml = '<div style="display:flex;height:10px;border-radius:3px;overflow:hidden;width:100%"><div style="width:' + estPct + '%;background:#4a5568;flex-shrink:0"></div><div style="width:' + diffPct + '%;background:' + diffCol + ';flex-shrink:0"></div></div>';
-        } else if (diff < 0) {
-          var actPct = (act / maxVal * 100).toFixed(1);
-          var gapPct = (Math.abs(diff) / maxVal * 100).toFixed(1);
-          barHtml = '<div style="display:flex;height:10px;border-radius:3px;overflow:hidden;width:100%"><div style="width:' + actPct + '%;background:#4a5568;flex-shrink:0"></div><div style="width:' + gapPct + '%;background:' + diffCol + ';flex-shrink:0"></div></div>';
-        } else {
-          barHtml = '<div style="display:flex;height:10px;border-radius:3px;overflow:hidden;width:100%"><div style="width:' + estPct + '%;background:#4a5568;flex-shrink:0"></div></div>';
-        }
-        var actCol = diff > 0 ? '#e8820c' : (diff < 0 ? '#1b9e8e' : '#4a5568');
-        rows += '<div style="padding:3px 6px;border-bottom:1px solid #f0f3fa">'
-          + '<div style="display:grid;grid-template-columns:1fr 20px 56px 20px 56px;align-items:baseline;margin-bottom:2px">'
-          +   '<div style="font-size:11px;font-weight:600;color:#1a2540;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0" title="' + (r.name||'') + '">' + (r.name||'') + '</div>'
-          +   '<span style="font-size:9px;color:#888;text-align:right;padding-right:2px">Est</span>'
-          +   '<span style="font-size:11px;color:#000;font-weight:700;text-align:right">' + _fmtCost(est) + '<span style="font-size:9px;color:#888;font-weight:400">' + unit + '</span></span>'
-          +   '<span style="font-size:9px;color:#888;text-align:right;padding-right:2px">Act</span>'
-          +   '<span style="font-size:11px;color:' + actCol + ';font-weight:700;text-align:right">' + _fmtCost(act) + '<span style="font-size:9px;color:#888;font-weight:400">' + unit + '</span></span>'
-          + '</div>' + barHtml + '</div>';
+        var actCol = diff > 0 ? '#e8820c' : (diff < 0 ? '#1b9e8e' : col);
+        var estH = (est / maxVal * 100).toFixed(1);
+        var actH = (act / maxVal * 100).toFixed(1);
+
+        // Two vertical bars side by side per resource (Est + Act)
+        barCols +=
+          '<div style="flex:1;display:flex;gap:2px;justify-content:center;align-items:flex-end;height:100%;padding:0 4px">'
+          + '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%">'
+          +   '<div style="width:100%;height:' + estH + '%;background:' + col + ';border-radius:2px 2px 0 0;opacity:0.55"></div>'
+          + '</div>'
+          + '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%">'
+          +   '<div style="width:100%;height:' + actH + '%;background:' + actCol + ';border-radius:2px 2px 0 0"></div>'
+          + '</div>'
+          + '</div>';
+
+        // Values above bars
+        estValRow += '<div style="flex:1;text-align:center;font-size:8px;color:#4a5568;font-weight:700;padding-bottom:1px">' + _fmtCost(est) + '</div>';
+        actValRow += '<div style="flex:1;text-align:center;font-size:8px;color:' + actCol + ';font-weight:700;padding-bottom:1px">' + _fmtCost(act) + '</div>';
+
+        // Index number below bars
+        lblRow += '<div style="flex:1;text-align:center;font-size:9px;color:#1a2540;font-weight:700;padding-top:2px">' + (idx + 1) + '</div>';
+
+        // Legend row: number + colour swatch + name + Est/Act values
+        legendRows +=
+          '<div style="display:flex;align-items:baseline;gap:5px;padding:2px 6px;border-bottom:1px solid #f0f3fa;font-size:10px">'
+          + '<span style="font-weight:700;color:#1a2540;flex-shrink:0;min-width:12px">' + (idx + 1) + '.</span>'
+          + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + col + ';flex-shrink:0;margin-bottom:1px"></span>'
+          + '<span style="flex:1;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (r.name||'') + '">' + (r.name||'') + '</span>'
+          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fmtCost(est) + unit + '</b></span>'
+          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + actCol + '">' + _fmtCost(act) + unit + '</b></span>'
+          + '</div>';
       });
-      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0">' + _sh(actName||'', 40) + '</div>'
-        + '<div style="overflow-y:auto;flex:1;min-height:0">' + rows + '</div>';
+
+      // Chart key
+      var key = '<div style="display:flex;gap:12px;padding:3px 6px;flex-shrink:0">'
+        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#4a5568;border-radius:1px;margin-right:3px;vertical-align:middle;opacity:0.55"></span>Estimated</span>'
+        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#4a5568;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Actual</span>'
+        + '</div>';
+
+      el.innerHTML =
+        '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0">' + _sh(actName||'', 40) + '</div>'
+        + '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">'
+        +   '<div style="display:flex;gap:2px;padding:2px 6px 0;flex-shrink:0">' + estValRow + '</div>'
+        +   '<div style="display:flex;gap:2px;padding:0 6px;flex-shrink:0">' + actValRow + '</div>'
+        +   '<div style="display:flex;gap:2px;flex:1;min-height:0;padding:0 6px;align-items:flex-end;border-bottom:1px solid #c8d0e0">' + barCols + '</div>'
+        +   '<div style="display:flex;gap:2px;padding:2px 6px;flex-shrink:0">' + lblRow + '</div>'
+        +   key
+        +   '<div style="overflow-y:auto;flex-shrink:0;max-height:90px;border-top:1px solid #e8efff;margin-top:2px">' + legendRows + '</div>'
+        + '</div>';
     }
 
     // 2. Consumption of Resources → gm-cd-c7
