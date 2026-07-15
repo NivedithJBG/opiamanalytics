@@ -8031,6 +8031,7 @@ class ProjectsmainController extends Controller
                    sa.start_date, sa.actual_start_date, sa.actual_end_date,
                    sa.old_duration, sa.quantity,
                    sa.scheduleitem_id, sa.critical_status,
+                   sa.completed_status,
                    CASE
                      WHEN rpt.cumulated_qty > 0
                           AND sa.quantity > 0
@@ -8058,6 +8059,7 @@ class ProjectsmainController extends Controller
                         THEN spr.start_date
                         ELSE sa.start_date END AS spr_start_date,
                    rpt.last_report_date  AS spr_end_date,
+                   COALESCE(rpt.cumulated_qty, 0) AS cumulated_qty,
                    GROUP_CONCAT(
                        CONCAT(ar.precedent_activity,'ABC',ar.precedent_activity,
                            CASE ar.relation_type WHEN 1 THEN 'SS' WHEN 2 THEN 'FS' WHEN 3 THEN 'FF' ELSE 'FS' END)

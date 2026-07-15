@@ -51,6 +51,29 @@
 .dot-normal    { background: #337ab7; }
 /* Critical path bar colour — overrides external CSS (needed when view loads without full layout) */
 .gtaskpink, div.gtaskpink.gplan { background: #00ACC1 !important; border-color: #0097A7 !important; }
+/* Activity status badges */
+.act-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #fff;
+}
+.act-badge.ongoing   { background: #43a047; }
+.act-badge.upcoming  { background: #1e88e5; }
+.act-badge.overdue   { background: #e53935; }
+.act-badge.completed { background: #757575; }
+td.gstatus { text-align: center; padding: 2px 4px; vertical-align: middle; }
+th.gstatus-hdr, .gtaskheading.gstatus-hdr {
+  text-align: center;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 2px 4px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
 </style>
 
 <div class="container-fluid">
@@ -71,6 +94,10 @@
   <div class="gantt-legend-row" style="margin-top:10px;">
     <div class="gantt-legend-item"><span class="gantt-legend-dot dot-critical"></span> Critical Path</div>
     <div class="gantt-legend-item"><span class="gantt-legend-dot dot-normal"></span> Normal Activity</div>
+    <div class="gantt-legend-item"><span class="act-badge ongoing">● Ongoing</span></div>
+    <div class="gantt-legend-item"><span class="act-badge upcoming">● Upcoming</span></div>
+    <div class="gantt-legend-item"><span class="act-badge overdue">● Overdue</span></div>
+    <div class="gantt-legend-item"><span class="act-badge completed">✓ Completed</span></div>
   </div>
 
   <div id="relations-panel">
@@ -210,6 +237,8 @@
 
     // Map from hashed task ID → raw DB values, used after Draw() to patch B. columns
     var _actCells = {};
+    // Map from hashed task ID → activity status for badge column
+    var _actStatus = {};
     // A. Duration/Start/End for group rows (WBS items and IOW groups) — separate to avoid clearing B. columns
     var _groupActDur   = {};
     var _groupActStart = {};
@@ -360,6 +389,14 @@
                     '', '', g, null,
                     null, null
                   );
+                  // Status badge
+                  var _bStart = safeDate(act.actual_start_date);
+                  _actStatus[_ti.getID()] = {
+                    completed:    (parseInt(act.completed_status) === 1),
+                    hasProgress:  (parseFloat(act.cumulated_qty) > 0),
+                    plannedStart: _bStart
+                  };
+
                   // B. columns show schedule values; A. columns fall back to B. when no progress
                   _actCells[_ti.getID()] = {
                     dur:    act.old_duration,
@@ -427,6 +464,16 @@
     _hdr('gplanstartdate','A. Start Date');
     _hdr('gplanenddate',  'A. End Date');
 
+    // Inject Status column header before B. Duration (gdur)
+    var _durHdr = _c ? _c.querySelector('.gtaskheading.gdur') : null;
+    if (_durHdr) {
+      var _statusHdr = document.createElement('td');
+      _statusHdr.className = 'gtaskheading gstatus-hdr';
+      _statusHdr.style.cssText = 'width:72px;min-width:72px;';
+      _statusHdr.textContent = 'Status';
+      _durHdr.parentNode.insertBefore(_statusHdr, _durHdr);
+    }
+
     // Apply progressive indentation + patch B. columns and A. columns with formatted values
     var _tasks = g.getList ? g.getList() : [];
     for (var _i = 0; _i < _tasks.length; _i++) {
@@ -440,6 +487,32 @@
       if (_cell) {
         var _indent = [0, 4, 18, 32, 46][_t.getLevel()] || 4;
         _cell.style.paddingLeft = _indent + 'px';
+      }
+
+      // Inject status badge cell before B. Duration (gdur) for every row
+      var _durTd = _row.querySelector('td.gdur');
+      if (_durTd) {
+        var _statusTd = document.createElement('td');
+        _statusTd.className = 'gstatus';
+        _statusTd.style.cssText = 'width:72px;min-width:72px;';
+        var _st = _actStatus[_tid];
+        if (_st) {
+          var _badgeCls, _badgeTxt;
+          if (_st.completed) {
+            _badgeCls = 'completed'; _badgeTxt = '✓ Completed';
+          } else if (_st.hasProgress) {
+            _badgeCls = 'ongoing';  _badgeTxt = '● Ongoing';
+          } else if (_st.plannedStart && _st.plannedStart < todayStr) {
+            _badgeCls = 'overdue';  _badgeTxt = '● Overdue';
+          } else {
+            _badgeCls = 'upcoming'; _badgeTxt = '● Upcoming';
+          }
+          var _badge = document.createElement('span');
+          _badge.className = 'act-badge ' + _badgeCls;
+          _badge.textContent = _badgeTxt;
+          _statusTd.appendChild(_badge);
+        }
+        _durTd.parentNode.insertBefore(_statusTd, _durTd);
       }
 
       // Leaf activity: patch B. and A. columns
