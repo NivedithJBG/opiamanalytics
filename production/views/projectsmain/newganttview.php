@@ -467,37 +467,36 @@ td.gstatus {
 
     g.Draw();
 
-    // Relabel native column headers
+    // Relabel native column headers and inject custom columns
     var _c = document.getElementById('gantt-container');
-    // DEBUG — remove after fix
-    var _dbgRows = _c ? _c.querySelectorAll('tr') : [];
-    var _dbgHdr = _dbgRows[1] || _dbgRows[0];
-    if (_dbgHdr) { var _dbgDiv = document.createElement('pre'); _dbgDiv.style.cssText='font-size:9px;background:#ffe;padding:4px;overflow:auto;max-height:150px;'; _dbgDiv.textContent = _dbgHdr.innerHTML.substring(0,3000); document.getElementById('relations-panel').parentNode.insertBefore(_dbgDiv, document.getElementById('relations-panel')); _dbgDiv.id='gantt-debug-hdr'; }
-    function _hdr(cls, txt) {
-      var el = _c ? _c.querySelector('.gtaskheading.' + cls) : null;
-      if (!el) return;
-      var div = el.querySelector('div');
-      if (div) div.textContent = txt; else el.textContent = txt;
-    }
-    _hdr('gdur', 'B. Duration');
-    _hdr('gres', 'A. Duration');
 
-    // Inject Status before B.Duration; KPI and Cost after A.Duration
-    // JSGantt header cells contain a <div> inside — mirror that structure exactly
+    // JSGantt puts text directly in <td class="gtaskheading gdur"> — no inner div
+    // querySelectorAll gets ALL matches across nested tables; we want the one whose
+    // parent row also contains a gtaskname cell (the real header row)
+    function _findHdrCell(cls) {
+      if (!_c) return null;
+      var els = _c.querySelectorAll('.gtaskheading.' + cls);
+      for (var i = 0; i < els.length; i++) {
+        if (els[i].closest('tr') && els[i].closest('tr').querySelector('.gtaskname')) return els[i];
+      }
+      return els[0] || null;
+    }
+
+    var _durHdr = _findHdrCell('gdur');
+    var _resHdr = _findHdrCell('gres');
+
+    if (_durHdr) _durHdr.textContent = 'B. Duration';
+    if (_resHdr) _resHdr.textContent = 'A. Duration';
+
     function _makeHdr(id, txt, width) {
       var td = document.createElement('td');
       td.id = id;
       td.className = 'gtaskheading';
-      td.style.cssText = 'width:' + width + 'px;min-width:' + width + 'px;';
-      var div = document.createElement('div');
-      div.style.cssText = 'width:' + width + 'px;text-align:center;font-weight:600;font-size:11px;overflow:hidden;white-space:nowrap;';
-      div.textContent = txt;
-      td.appendChild(div);
+      td.style.cssText = 'text-align:center;font-weight:600;font-size:11px;width:' + width + 'px;min-width:' + width + 'px;';
+      td.textContent = txt;
       return td;
     }
 
-    var _durHdr = _c ? _c.querySelector('.gtaskheading.gdur') : null;
-    var _resHdr = _c ? _c.querySelector('.gtaskheading.gres')  : null;
     if (_durHdr && !document.getElementById('gstatus-hdr-cell')) {
       _durHdr.parentNode.insertBefore(_makeHdr('gstatus-hdr-cell', 'Status', 30), _durHdr);
     }
