@@ -1103,7 +1103,7 @@
     }
 
     // 3. Cost of Resources → gm-cd-rcost
-    function _renderResourceCost(items, actName) {
+    function _renderResourceCost(items, actName, actUnit) {
       var el = document.getElementById('gm-cd-rcost');
       if (!el) return;
       items = items || [];
@@ -1150,8 +1150,8 @@
           + '<span style="font-weight:700;color:#1a2540;flex-shrink:0;min-width:12px">' + (idx3 + 1) + '.</span>'
           + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#4a5568;flex-shrink:0;margin-bottom:1px"></span>'
           + '<span style="flex:1;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + k + '">' + k + '</span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fmtFull(est) + '</b></span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + actCol + '">' + _fmtFull(act) + '</b></span>'
+          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fmtFull(est) + (actUnit ? ' ' + actUnit : '') + '</b></span>'
+          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + actCol + '">' + _fmtFull(act) + (actUnit ? ' ' + actUnit : '') + '</b></span>'
           + '</div>';
       });
       el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0">' + _sh(actName||'', 40) + '</div>'
@@ -1304,7 +1304,7 @@
           });
           _renderUnitCostOfResource(d.items, d.activity_name);
           _renderResourceConsumption(d.items, d.activity_name, d.last_report_qty, d.unit);
-          _renderResourceCost(d.items, d.activity_name);
+          _renderResourceCost(d.items, d.activity_name, d.unit);
           _renderUnitCostOfActivity(d.items, d.activity_name, d.unit, d.schedule_qty);
           _renderValueOfWorkDone(d);
           _renderCostOfActivity(d);
