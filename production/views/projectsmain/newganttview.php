@@ -23,6 +23,55 @@
   white-space: nowrap;
 }
 #gantt-act-tooltip b { color: #1a2540; }
+
+/* ── Gantt Cost Modal ──────────────────────────────────────────────────────── */
+#gcm-bk {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 10000;
+}
+#gcm-bk.gcm-open { display: block; }
+#gcm-modal {
+  display: none; position: fixed; z-index: 10001;
+  top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 92vw; max-width: 1100px; height: 86vh;
+  background: #f0f3fa; border-radius: 10px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.28);
+  flex-direction: column; overflow: hidden;
+}
+#gcm-modal.gcm-open { display: flex; }
+#gcm-header {
+  background: #1a2540; color: #fff; padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+#gcm-title { font-size: 13px; font-weight: 600; font-family: 'Barlow Condensed', sans-serif; }
+#gcm-close {
+  background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;
+}
+#gcm-loading {
+  text-align: center; padding: 40px; font-size: 13px; color: #5a6e8c;
+}
+#gcm-body {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px; gap: 8px; overflow: hidden;
+}
+/* Top row: 3 panels side by side */
+#gcm-row1 {
+  display: flex; gap: 8px; flex: 1; min-height: 0;
+}
+/* Bottom row: 3 panels side by side */
+#gcm-row2 {
+  display: flex; gap: 8px; flex: 1; min-height: 0;
+}
+.gcm-panel {
+  flex: 1; background: #fff; border-radius: 6px; border: 1px solid #dde3ef;
+  display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+}
+.gcm-panel-title {
+  font-size: 10px; font-weight: 700; color: #1a2540; text-transform: uppercase;
+  letter-spacing: 0.04em; padding: 5px 8px; border-bottom: 1px solid #e8efff; flex-shrink: 0;
+}
+.gcm-panel-body {
+  flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column;
+}
+
 #gantt-toolbar {
   padding: 8px 0;
   margin-bottom: 6px;
@@ -130,6 +179,46 @@
 
 </div>
 </div>
+</div>
+
+<!-- Gantt Cost Modal -->
+<div id="gcm-bk"></div>
+<div id="gcm-modal">
+  <div id="gcm-header">
+    <span id="gcm-title">Cost Dashboard</span>
+    <button id="gcm-close" title="Close">&times;</button>
+  </div>
+  <div id="gcm-body">
+    <div id="gcm-loading">Loading&hellip;</div>
+    <div id="gcm-row1" style="display:none">
+      <div class="gcm-panel">
+        <div class="gcm-panel-title">Unit Cost of Resources</div>
+        <div class="gcm-panel-body" id="gm-cd-c6"></div>
+      </div>
+      <div class="gcm-panel">
+        <div class="gcm-panel-title">Consumption of Resources</div>
+        <div class="gcm-panel-body" id="gm-cd-c7"></div>
+      </div>
+      <div class="gcm-panel">
+        <div class="gcm-panel-title">Cost of Resources</div>
+        <div class="gcm-panel-body" id="gm-cd-rcost"></div>
+      </div>
+    </div>
+    <div id="gcm-row2" style="display:none">
+      <div class="gcm-panel">
+        <div class="gcm-panel-title">Unit Cost of Activity</div>
+        <div class="gcm-panel-body" id="gm-cd-g5" style="align-items:center;justify-content:center"></div>
+      </div>
+      <div class="gcm-panel">
+        <div class="gcm-panel-title">Work Done</div>
+        <div class="gcm-panel-body" id="gm-cd-g4" style="align-items:center;justify-content:center"></div>
+      </div>
+      <div class="gcm-panel">
+        <div class="gcm-panel-title">Cost of Activity</div>
+        <div class="gcm-panel-body" id="gm-cd-g2"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script language="javascript" src="<?= Yii::$app->request->baseUrl ?>/jsnew/projectsmain/jsgantt.js"></script>
@@ -427,7 +516,8 @@
                     end:    act.actual_end_date,
                     actdur: actDur !== '' ? actDur : act.old_duration,
                     astart: aStart || act.actual_start_date,
-                    aend:   aEndComputed || act.actual_end_date
+                    aend:   aEndComputed || act.actual_end_date,
+                    rawId:  act.id
                   };
                   g.AddTaskItem(_ti);
                 }
@@ -591,6 +681,8 @@
         var _costIcon = document.createElement('span');
         _costIcon.style.cssText = 'display:inline-block;width:8px;height:8px;background:#546e7a;border-radius:2px;cursor:pointer;';
         _costIcon.title = 'Cost';
+        // Store raw activity DB id so click handler can POST it
+        if (_db) _costIcon.setAttribute('data-actid', _db.rawId);
         _costTd.appendChild(_costIcon);
         _resTd.parentNode.insertBefore(_costTd, _resTd.nextSibling);
       }
@@ -737,6 +829,397 @@
       }
     })();
   }
+
+  // ── Gantt Cost Modal — wired once at page level (not per-draw) ─────────────
+  (function() {
+    if (document.getElementById('gcm-modal').__gcmWired) return;
+    document.getElementById('gcm-modal').__gcmWired = true;
+
+    // ── Helper functions (mirrors of _performancedashboard.js, scoped here) ──
+    function _fmtCost(v) {
+      if (!v) return '0.00';
+      if (v >= 1e7) return (v / 1e7).toFixed(2) + 'Cr';
+      if (v >= 1e5) return (v / 1e5).toFixed(2) + 'L';
+      if (v >= 1e3) return (v / 1e3).toFixed(2) + 'K';
+      return (+v).toFixed(2);
+    }
+    function _sh(str, n) { str = str || ''; return str.length > n ? str.substring(0, n - 1) + '…' : str; }
+    function _fm(v) { v = +v || 0; return Number.isInteger(v) ? v : v.toFixed(1); }
+    var _UNIT_ABBR = {
+      'numbers':'Nos','number':'Nos','nos':'Nos','each':'Ea',
+      'cubic meter':'Cum','cubic meters':'Cum','cubic metre':'Cum','cubic metres':'Cum',
+      'square meter':'Sqm','square meters':'Sqm','square metre':'Sqm','square metres':'Sqm',
+      'square feet':'Sft','square foot':'Sft',
+      'running meter':'Rmt','running metre':'Rmt','running meters':'Rmt','running metres':'Rmt',
+      'meter':'m','meters':'m','metre':'m','metres':'m',
+      'kilogram':'kg','kilograms':'kg','kgs':'kg',
+      'metric ton':'MT','metric tons':'MT','metric tonne':'MT','metric tonnes':'MT',
+      'tonne':'MT','tonnes':'MT','ton':'MT','tons':'MT',
+      'litre':'L','litres':'L','liter':'L','liters':'L',
+      'hours':'hrs','hour':'hr','days':'d','day':'d',
+      'man days':'MD','man-days':'MD','mandays':'MD',
+      'lump sum':'LS','lumpsum':'LS','percentage':'%','percent':'%'
+    };
+    function _shu(u) {
+      u = (u || '').trim();
+      if (!u) return '';
+      var key = u.toLowerCase();
+      if (_UNIT_ABBR[key]) return _UNIT_ABBR[key];
+      var stripped = u.replace(/^(?:no\.?s?|number)\s+of\s+/i, '');
+      if (stripped !== u) return _shu(stripped);
+      return u.length > 8 ? _sh(u, 8) : u;
+    }
+
+    function _gauge(elId, val, maxVal, trackStyle, targetFrac, lbl1, v1, lbl2, v2) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      val = +val || 0; maxVal = +maxVal || 1;
+      var f = Math.max(0, Math.min(1, val / maxVal));
+      var cx = 105, cy = 92, r = 76, sw = 14;
+      function ptF(frac) {
+        var a = Math.PI * (1 - frac);
+        return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)];
+      }
+      function arc(f1, f2, col, cap) {
+        if (f2 <= f1) return '';
+        cap = cap || 'butt';
+        var p1 = ptF(f1), p2 = ptF(f2);
+        if ((f2 - f1) >= 1) {
+          var pm = ptF(0.5);
+          return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + pm[0] + ',' + pm[1] +
+                 ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="' + cap + '"/>';
+        }
+        return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="' + cap + '"/>';
+      }
+      var trackSvg = (trackStyle === 'flat') ? arc(0, 1, '#a8d4f5')
+        : (trackStyle === 'cost') ? arc(0, 0.5, '#00838f') + arc(0.5, 1, '#FF6D00')
+        : arc(0, 0.5, '#8B0000') + arc(0.5, 1, '#81C784');
+      var nr = r - 15, na = Math.PI * (1 - f);
+      var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
+      var fillCol = (trackStyle === 'flat') ? '#0d1f6e' : (trackStyle === 'cost') ? '#1b9e8e' : '#1a3a6b';
+      var dotCol  = (trackStyle === 'flat') ? '#a8d4f5' : '#dce3ef';
+      var centreVal = (trackStyle === 'cost') ? _fmtCost(val) : _fm(val);
+      var lblSvg = '';
+      if (lbl1) lblSvg += '<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">' + lbl1 + ' <tspan font-weight="700">' + v1 + '</tspan></text>';
+      if (lbl2) lblSvg += '<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">' + lbl2 + ' <tspan font-weight="700">' + v2 + '</tspan></text>';
+      var svg = '<svg width="210" height="138" viewBox="0 0 210 138" xmlns="http://www.w3.org/2000/svg">'
+        + trackSvg
+        + (f > 0 ? arc(0, f, fillCol, (trackStyle === 'cost' ? 'butt' : 'round')) : '')
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="' + dotCol + '"/>'
+        + '<text x="' + cx + '" y="' + (cy - 18) + '" text-anchor="middle" font-size="22" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">' + centreVal + '</text>'
+        + lblSvg
+        + '</svg>';
+      el.innerHTML += svg;
+    }
+
+    // 1. Unit Cost of Resources → gm-cd-c6
+    function _renderUnitCostOfResource(items, actName) {
+      var el = document.getElementById('gm-cd-c6');
+      if (!el) return;
+      items = items || [];
+      if (!items.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No resources allocated</div>'; return; }
+      var maxVal = 0;
+      items.forEach(function(r) {
+        var est = +r.rate || 0;
+        var act = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined) ? +r.actual_unit_cost : est;
+        if (Math.max(est, act) > maxVal) maxVal = Math.max(est, act);
+      });
+      if (maxVal === 0) maxVal = 1;
+      var rows = '';
+      items.forEach(function(r) {
+        var est = +r.rate || 0;
+        var hasActual = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+        var act = hasActual ? +r.actual_unit_cost : est;
+        var unit = r.unit ? ' /' + _shu(r.unit) : '';
+        var src = hasActual ? '<span style="font-size:9px;background:#e8f0fe;color:#3461b8;border-radius:3px;padding:1px 4px;margin-left:4px">' + (+r.type_id === 4 ? 'MB' : 'GRN') + '</span>' : '';
+        var estPct = (est / maxVal * 100).toFixed(1);
+        var diff = act - est;
+        var diffPct = (Math.abs(diff) / maxVal * 100).toFixed(1);
+        var diffCol = diff > 0 ? '#e8820c' : '#1b9e8e';
+        var barHtml;
+        if (diff > 0) {
+          barHtml = '<div style="display:flex;height:10px;border-radius:3px;overflow:hidden;width:100%"><div style="width:' + estPct + '%;background:#4a5568;flex-shrink:0"></div><div style="width:' + diffPct + '%;background:' + diffCol + ';flex-shrink:0"></div></div>';
+        } else if (diff < 0) {
+          var actPct = (act / maxVal * 100).toFixed(1);
+          var gapPct = (Math.abs(diff) / maxVal * 100).toFixed(1);
+          barHtml = '<div style="display:flex;height:10px;border-radius:3px;overflow:hidden;width:100%"><div style="width:' + actPct + '%;background:#4a5568;flex-shrink:0"></div><div style="width:' + gapPct + '%;background:' + diffCol + ';flex-shrink:0"></div></div>';
+        } else {
+          barHtml = '<div style="display:flex;height:10px;border-radius:3px;overflow:hidden;width:100%"><div style="width:' + estPct + '%;background:#4a5568;flex-shrink:0"></div></div>';
+        }
+        var actCol = diff > 0 ? '#e8820c' : (diff < 0 ? '#1b9e8e' : '#4a5568');
+        rows += '<div style="padding:3px 6px;border-bottom:1px solid #f0f3fa">'
+          + '<div style="display:grid;grid-template-columns:1fr 20px 56px 20px 56px;align-items:baseline;margin-bottom:2px">'
+          +   '<div style="font-size:11px;font-weight:600;color:#1a2540;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0" title="' + (r.name||'') + '">' + (r.name||'') + '</div>'
+          +   '<span style="font-size:9px;color:#888;text-align:right;padding-right:2px">Est</span>'
+          +   '<span style="font-size:11px;color:#000;font-weight:700;text-align:right">' + _fmtCost(est) + '<span style="font-size:9px;color:#888;font-weight:400">' + unit + '</span></span>'
+          +   '<span style="font-size:9px;color:#888;text-align:right;padding-right:2px">Act</span>'
+          +   '<span style="font-size:11px;color:' + actCol + ';font-weight:700;text-align:right">' + _fmtCost(act) + '<span style="font-size:9px;color:#888;font-weight:400">' + unit + '</span></span>'
+          + '</div>' + barHtml + '</div>';
+      });
+      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0">' + _sh(actName||'', 40) + '</div>'
+        + '<div style="overflow-y:auto;flex:1;min-height:0">' + rows + '</div>';
+    }
+
+    // 2. Consumption of Resources → gm-cd-c7
+    function _renderResourceConsumption(items, actName, lastQty, actUnit) {
+      var el = document.getElementById('gm-cd-c7');
+      if (!el) return;
+      items = items || [];
+      if (!items.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No resources allocated</div>'; return; }
+      var maxVal = 0;
+      items.forEach(function(r) {
+        var est = +r.planned_consumption || 0;
+        var act = +r.actual_consumption  || 0;
+        if (Math.max(est, act) > maxVal) maxVal = Math.max(est, act);
+      });
+      if (maxVal === 0) maxVal = 1;
+      var rows = '';
+      items.forEach(function(r) {
+        var est = +r.planned_consumption || 0;
+        var typeId = +r.type_id;
+        var isMaterial = [2, 6, 7, 8].indexOf(typeId) >= 0;
+        var isSC = typeId === 4;
+        var hasActual = (isMaterial && r.indent_raised) || (isSC && r.has_mb);
+        var act = hasActual ? (+r.actual_consumption || 0) : est;
+        var unit = r.unit ? _shu(r.unit) : (r.task_unit ? _shu(r.task_unit) : '');
+        var diff = act - est;
+        var actCol = diff > 0 ? '#e8820c' : (diff < 0 ? '#1b9e8e' : '#4a5568');
+        var estPct = (est / maxVal * 100).toFixed(1);
+        var barHtml;
+        if (diff > 0) {
+          var diffPct = (diff / maxVal * 100).toFixed(1);
+          barHtml = '<div style="display:flex;height:10px;border-radius:3px;overflow:hidden;width:100%"><div style="width:' + estPct + '%;background:#4a5568;flex-shrink:0"></div><div style="width:' + diffPct + '%;background:#e8820c;flex-shrink:0"></div></div>';
+        } else if (diff < 0) {
+          var actPct2 = (act / maxVal * 100).toFixed(1);
+          var gapPct2 = (Math.abs(diff) / maxVal * 100).toFixed(1);
+          barHtml = '<div style="display:flex;height:10px;border-radius:3px;overflow:hidden;width:100%"><div style="width:' + actPct2 + '%;background:#4a5568;flex-shrink:0"></div><div style="width:' + gapPct2 + '%;background:#1b9e8e;flex-shrink:0"></div></div>';
+        } else {
+          barHtml = '<div style="display:flex;height:10px;border-radius:3px;overflow:hidden;width:100%"><div style="width:' + estPct + '%;background:#4a5568;flex-shrink:0"></div></div>';
+        }
+        rows += '<div style="padding:3px 6px;border-bottom:1px solid #f0f3fa">'
+          + '<div style="display:grid;grid-template-columns:1fr 20px 56px 20px 56px;align-items:baseline;margin-bottom:2px">'
+          +   '<div style="font-size:11px;font-weight:600;color:#1a2540;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0" title="' + (r.name||'') + '">' + (r.name||'') + '</div>'
+          +   '<span style="font-size:9px;color:#888;text-align:right;padding-right:2px">Est</span>'
+          +   '<span style="font-size:11px;color:#000;font-weight:700;text-align:right">' + _fm(est) + '<span style="font-size:9px;color:#888;font-weight:400"> ' + unit + '</span></span>'
+          +   '<span style="font-size:9px;color:#888;text-align:right;padding-right:2px">Act</span>'
+          +   '<span style="font-size:11px;color:' + actCol + ';font-weight:700;text-align:right">' + _fm(act) + '<span style="font-size:9px;color:#888;font-weight:400"> ' + unit + '</span></span>'
+          + '</div>' + barHtml + '</div>';
+      });
+      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0">' + _sh(actName||'', 40) + '</div>'
+        + '<div style="overflow-y:auto;flex:1;min-height:0">' + rows + '</div>';
+    }
+
+    // 3. Cost of Resources → gm-cd-rcost
+    function _renderResourceCost(items, actName) {
+      var el = document.getElementById('gm-cd-rcost');
+      if (!el) return;
+      items = items || [];
+      if (!items.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No resources</div>'; return; }
+      var groups = {};
+      items.forEach(function(r) {
+        var key = r.type_name || 'Other';
+        if (!groups[key]) groups[key] = { est: 0, act: 0 };
+        var estUC = +r.rate || 0;
+        var actUC = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined) ? +r.actual_unit_cost : estUC;
+        groups[key].est += estUC * (+r.planned_consumption || 0);
+        groups[key].act += actUC * (+r.actual_consumption  || 0);
+      });
+      var labels = Object.keys(groups);
+      if (!labels.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No data</div>'; return; }
+      var maxVal = 0;
+      labels.forEach(function(k) { maxVal = Math.max(maxVal, groups[k].est, groups[k].act); });
+      if (maxVal === 0) maxVal = 1;
+      var estRow = '', actRow = '', bars = '', lblRow = '';
+      labels.forEach(function(k) {
+        var est = groups[k].est, act = groups[k].act;
+        var diff = act - est;
+        var actCol = diff > 0 ? '#e8820c' : (diff < 0 ? '#1b9e8e' : '#4a5568');
+        var estPct = (est / maxVal * 100).toFixed(1);
+        var actPct = (act / maxVal * 100).toFixed(1);
+        estRow += '<div style="flex:1;text-align:center;font-size:9px;font-weight:700;color:#4a5568">' + _fmtCost(est) + '</div>';
+        actRow += '<div style="flex:1;text-align:center;font-size:9px;font-weight:700;color:' + actCol + '">' + _fmtCost(act) + '</div>';
+        var barInner;
+        if (diff > 0) {
+          var diffPct = (diff / maxVal * 100).toFixed(1);
+          barInner = '<div style="width:100%;height:' + diffPct + '%;background:#e8820c;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
+                   + '<div style="width:100%;height:' + estPct + '%;background:#4a5568;flex-shrink:0"></div>';
+        } else if (diff < 0) {
+          var savePct = (Math.abs(diff) / maxVal * 100).toFixed(1);
+          barInner = '<div style="width:100%;height:' + savePct + '%;background:#1b9e8e;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
+                   + '<div style="width:100%;height:' + actPct + '%;background:#4a5568;flex-shrink:0"></div>';
+        } else {
+          barInner = '<div style="width:100%;height:' + estPct + '%;background:#4a5568;border-radius:2px 2px 0 0;flex-shrink:0"></div>';
+        }
+        bars += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;padding:0 3px">' + barInner + '</div>';
+        lblRow += '<div style="flex:1;text-align:center;font-size:9px;color:#1a2540;font-weight:600;padding-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + k + '">' + _sh(k, 10) + '</div>';
+      });
+      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0">' + _sh(actName||'', 40) + '</div>'
+        + '<div style="display:flex;gap:2px;padding:2px 6px 0;flex-shrink:0">' + estRow + '</div>'
+        + '<div style="display:flex;gap:2px;padding:0 6px;flex-shrink:0">' + actRow + '</div>'
+        + '<div style="display:flex;gap:2px;flex:1;min-height:0;padding:0 6px;align-items:flex-end;border-bottom:1px solid #c8d0e0">' + bars + '</div>'
+        + '<div style="display:flex;gap:2px;padding:2px 6px;flex-shrink:0">' + lblRow + '</div>'
+        + '<div style="display:flex;gap:12px;padding:4px 6px;flex-shrink:0;flex-wrap:wrap">'
+        +   '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#4a5568;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Estimated</span>'
+        +   '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#e8820c;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Actual (over)</span>'
+        +   '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#1b9e8e;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Actual (under)</span>'
+        + '</div>';
+    }
+
+    // 4. Unit Cost of Activity → gm-cd-g5
+    function _renderUnitCostOfActivity(items, actName, actUnit, schedQty) {
+      items = items || []; schedQty = +schedQty || 0;
+      var estTotal = 0, actTotal = 0;
+      items.forEach(function(r) {
+        var estUC = +r.rate || 0;
+        var hasAct = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+        var actUC = hasAct ? +r.actual_unit_cost : estUC;
+        estTotal += estUC * (+r.planned_consumption || 0);
+        actTotal += actUC * (+r.actual_consumption  || 0);
+      });
+      var maxVal = estTotal > 0 ? estTotal * 2 : 1;
+      var unitLbl = actUnit ? ' /' + actUnit : '';
+      var el5 = document.getElementById('gm-cd-g5');
+      if (el5) el5.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _sh(actName||'', 40) + '</div>';
+      _gauge('gm-cd-g5', actTotal, maxVal, 'cost', 0.5, 'Est', _fmtCost(estTotal) + unitLbl, 'Act', _fmtCost(actTotal) + unitLbl);
+    }
+
+    // 5. Work Done → gm-cd-g4
+    function _renderValueOfWorkDone(d) {
+      var el = document.getElementById('gm-cd-g4');
+      if (!el) return;
+      var schedQty = +d.schedule_qty || 0;
+      var lastQty  = +d.last_report_qty || 0;
+      var unit     = d.unit || '';
+      var actName  = d.activity_name || '';
+      var maxVal   = schedQty > 0 ? schedQty : 1;
+      var cx=105, cy=92, r=76, sw=14;
+      function ptF(frac){ var a=Math.PI*(1-frac); return [(cx+r*Math.cos(a)).toFixed(1),(cy-r*Math.sin(a)).toFixed(1)]; }
+      function arc(f1,f2,col,cap){
+        if(f2<=f1) return ''; cap=cap||'butt';
+        var p1=ptF(f1),p2=ptF(f2);
+        if((f2-f1)>=1){ var pm=ptF(0.5); return '<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+pm[0]+','+pm[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>'; }
+        return '<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>';
+      }
+      var f=Math.max(0,Math.min(1,lastQty/maxVal));
+      var nr=r-15,na=Math.PI*(1-f);
+      var nx=(cx+nr*Math.cos(na)).toFixed(1),ny=(cy-nr*Math.sin(na)).toFixed(1);
+      var pct=schedQty>0?(lastQty/schedQty*100).toFixed(1):'0.0';
+      var svg='<svg width="210" height="138" viewBox="0 0 210 138" xmlns="http://www.w3.org/2000/svg">'
+        +arc(0,1,'#64748b')+(f>0?arc(0,f,'#94a3b8','butt'):'')
+        +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
+        +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
+        +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
+        +'<text x="'+cx+'" y="'+(cy-22)+'" text-anchor="middle" font-size="22" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+pct+'%</text>'
+        +'<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Done <tspan font-weight="700">'+_fm(lastQty)+(unit?' '+unit:'')+'</tspan></text>'
+        +'<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Sched <tspan font-weight="700">'+_fm(schedQty)+(unit?' '+unit:'')+'</tspan></text>'
+        +'</svg>';
+      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_sh(actName,40)+'</div>' + svg;
+    }
+
+    // 6. Cost of Activity → gm-cd-g2
+    function _renderCostOfActivity(d) {
+      var el = document.getElementById('gm-cd-g2');
+      if (!el) return;
+      var items = d.items || [], schedQty = +d.schedule_qty || 0, actName = d.activity_name || '';
+      var estUCTotal = 0, actUCTotal = 0, hasActual = false;
+      items.forEach(function(r) {
+        var estUC  = +r.rate || 0;
+        var estCons = +r.planned_consumption || 0;
+        estUCTotal += estUC * estCons;
+        var hasAct = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+        var actUC  = hasAct ? +r.actual_unit_cost : estUC;
+        var actCons = +r.actual_consumption || 0;
+        actUCTotal += actUC * actCons;
+        if (hasAct) hasActual = true;
+      });
+      var estCost = estUCTotal * schedQty;
+      var actCost = hasActual ? actUCTotal * schedQty : estCost;
+      var diff = actCost - estCost;
+      var over = diff > 0;
+      var barHtml;
+      if (!hasActual || diff === 0) {
+        barHtml = '<div style="width:100%;height:14px;background:#64748b;border-radius:3px"></div>';
+      } else if (over) {
+        var estPct = (estCost / actCost * 100).toFixed(1);
+        var diffPct = (diff / actCost * 100).toFixed(1);
+        barHtml = '<div style="display:flex;height:14px;border-radius:3px;overflow:hidden;width:100%"><div style="width:'+estPct+'%;background:#64748b;flex-shrink:0"></div><div style="width:'+diffPct+'%;background:#e8820c;flex-shrink:0"></div></div>';
+      } else {
+        var actPct3 = (actCost / estCost * 100).toFixed(1);
+        var savePct3 = (Math.abs(diff) / estCost * 100).toFixed(1);
+        barHtml = '<div style="display:flex;height:14px;border-radius:3px;overflow:hidden;width:100%"><div style="width:'+actPct3+'%;background:#64748b;flex-shrink:0"></div><div style="width:'+savePct3+'%;background:#1b9e8e;flex-shrink:0"></div></div>';
+      }
+      var diffLabel = hasActual && diff !== 0 ? (over?'+':'-') + _fmtCost(Math.abs(diff)) + ' ' + (over?'over':'saving') : '';
+      var diffCol = over ? '#e8820c' : '#1b9e8e';
+      var workDone = +d.last_report_qty || 0;
+      var estCostWD = estUCTotal * workDone;
+      var actCostWD = actUCTotal * workDone;
+      var diffWD = actCostWD - estCostWD;
+      var overWD = diffWD > 0;
+      var diffWDLabel = diffWD !== 0 ? (overWD?'+':'-') + _fmtCost(Math.abs(diffWD)) + ' ' + (overWD?'over':'saving') : '';
+      var valRow = '<div style="display:flex;justify-content:space-between;align-items:baseline;font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:700;color:#111;margin-bottom:6px">'
+        +'<span>Est: ' + _fmtCost(estCost) + (hasActual ? '&nbsp;&nbsp;&nbsp;Act: <span style="color:'+(over?'#e8820c':'#1b9e8e')+'">' + _fmtCost(actCost) + '</span>' : '') + '</span>'
+        +(diffLabel ? '<span style="color:'+diffCol+'">'+diffLabel+'</span>' : '')
+        +'</div>';
+      var wdRow = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;margin-top:8px;line-height:1.7">'
+        +'<div>Estimated Cost of Work Done &nbsp;<span style="color:#111">' + _fmtCost(estCostWD) + '</span></div>'
+        +'<div>Actual Cost of Work Done &nbsp;<span style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">' + _fmtCost(actCostWD) + '</span></div>'
+        +'<div style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">Difference &nbsp;'+(diffWDLabel||_fmtCost(0))+'</div>'
+        +'</div>';
+      el.style.overflow = 'auto';
+      el.innerHTML = '<div style="padding:4px 6px 8px;width:100%;box-sizing:border-box">'
+        +'<div style="font-size:10px;color:#3461b8;font-weight:600;padding-bottom:4px;border-bottom:1px solid #e8efff;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_sh(actName,40)+'</div>'
+        + valRow + barHtml + wdRow
+        +'</div>';
+    }
+
+    // ── Open modal on Cost icon click ─────────────────────────────────────────
+    $(document).on('click', '#gantt-container .gcol-cost span[data-actid]', function() {
+      var actId = $(this).data('actid');
+      if (!actId) return;
+      $('#gcm-loading').show();
+      $('#gcm-row1, #gcm-row2').hide();
+      $('#gcm-title').text('Cost Dashboard — Loading…');
+      $('#gcm-bk, #gcm-modal').addClass('gcm-open');
+
+      $.ajax({
+        type: 'POST',
+        url: '../projectsmain/costdashboardactivity',
+        data: { actid: actId },
+        dataType: 'json',
+        success: function(d) {
+          $('#gcm-loading').hide();
+          if (!d || d.error) {
+            $('#gcm-loading').text(d && d.error ? d.error : 'Error loading data').show();
+            return;
+          }
+          $('#gcm-title').text('Cost Dashboard — ' + (d.activity_name || ''));
+          // Clear previous content
+          ['gm-cd-c6','gm-cd-c7','gm-cd-rcost','gm-cd-g5','gm-cd-g4','gm-cd-g2'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.innerHTML = '';
+          });
+          _renderUnitCostOfResource(d.items, d.activity_name);
+          _renderResourceConsumption(d.items, d.activity_name, d.last_report_qty, d.unit);
+          _renderResourceCost(d.items, d.activity_name);
+          _renderUnitCostOfActivity(d.items, d.activity_name, d.unit, d.schedule_qty);
+          _renderValueOfWorkDone(d);
+          _renderCostOfActivity(d);
+          $('#gcm-row1, #gcm-row2').show();
+        },
+        error: function() {
+          $('#gcm-loading').text('Failed to load cost data.').show();
+        }
+      });
+    });
+
+    // ── Close modal ────────────────────────────────────────────────────────────
+    $('#gcm-close, #gcm-bk').on('click', function(e) {
+      if (e.target !== this) return;
+      $('#gcm-bk, #gcm-modal').removeClass('gcm-open');
+    });
+  })();
 
   // ---- Manage Relations panel -----------------------------------------------
 
