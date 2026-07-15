@@ -72,12 +72,12 @@
   display: inline-block; width: 12px; height: 12px;
   border-radius: 50%; vertical-align: middle;
 }
-.act-dot.ongoing   { background: #66bb6a; }
-.act-dot.upcoming  { background: #87ceeb; }
+.act-dot.ongoing   { background: #546e7a; }
+.act-dot.upcoming  { background: #0d2b6e; }
 .act-dot.overdue   { background: #ff2800; }
 .act-dot-check {
   display: inline-block; width: 12px; height: 12px;
-  border-radius: 50%; background: #bdbdbd;
+  border-radius: 50%; background: #43a047;
   color: #fff; font-size: 9px; line-height: 12px;
   text-align: center; vertical-align: middle;
 }
@@ -101,8 +101,8 @@
   <div class="gantt-legend-row" style="margin-top:10px;">
     <div class="gantt-legend-item"><span class="gantt-legend-dot dot-critical"></span> Critical Path</div>
     <div class="gantt-legend-item"><span class="gantt-legend-dot dot-normal"></span> Normal Activity</div>
+    <div class="gantt-legend-item"><span class="act-dot" style="background:#0d2b6e;display:inline-block;width:12px;height:12px;border-radius:50%;"></span> Upcoming</div>
     <div class="gantt-legend-item"><span class="act-dot ongoing"></span> Ongoing</div>
-    <div class="gantt-legend-item"><span class="act-dot upcoming"></span> Upcoming</div>
     <div class="gantt-legend-item"><span class="act-dot overdue"></span> Overdue</div>
     <div class="gantt-legend-item"><span class="act-dot-check">✓</span> Completed</div>
   </div>
@@ -400,7 +400,8 @@
                   _actStatus[_ti.getID()] = {
                     completed:   (parseInt(act.completed_status) === 1),
                     hasProgress: (parseFloat(act.cumulated_qty) > 0),
-                    planStart:   safeDate(act.actual_start_date)
+                    planStart:   safeDate(act.actual_start_date),
+                    critical:    (pClass === 'gtaskpink')
                   };
                   // B. columns show schedule values; A. columns fall back to B. when no progress
                   _actCells[_ti.getID()] = {
@@ -517,8 +518,12 @@
           var _dot = document.createElement('span');
           _dot.className = 'act-dot-inline';
           _dot.style.cssText = 'display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle;flex-shrink:0;';
-          if (_st.completed) {
-            _dot.style.background = '#bdbdbd';
+          if (_st.critical) {
+            // Critical path activities: always show critical bar colour (#00ACC1) regardless of status
+            _dot.style.background = '#00ACC1';
+            _dot.title = 'Critical';
+          } else if (_st.completed) {
+            _dot.style.background = '#43a047';
             _dot.style.color = '#fff';
             _dot.style.fontSize = '7px';
             _dot.style.lineHeight = '9px';
@@ -526,13 +531,13 @@
             _dot.title = 'Completed';
             _dot.textContent = '✓';
           } else if (_st.hasProgress) {
-            _dot.style.background = '#66bb6a';
+            _dot.style.background = '#546e7a';
             _dot.title = 'Ongoing';
           } else if (_st.planStart && _st.planStart < todayStr) {
             _dot.style.background = '#ff2800';
             _dot.title = 'Overdue';
           } else {
-            _dot.style.background = '#87ceeb';
+            _dot.style.background = '#0d2b6e';
             _dot.title = 'Upcoming';
           }
           _cell.insertBefore(_dot, _cell.firstChild);
