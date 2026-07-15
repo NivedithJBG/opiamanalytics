@@ -551,7 +551,13 @@
         if (_durEl) _durEl.textContent = formatGanttDur(_db.dur);
 
         var _adEl = _row.querySelector('td.gres div');
-        if (_adEl) _adEl.textContent = formatGanttDur(_db.actdur);
+        if (_adEl) {
+          _adEl.textContent = formatGanttDur(_db.actdur);
+          if (_db.actdur && _db.dur && Number(_db.actdur) > Number(_db.dur)) {
+            _adEl.style.color = '#ff2800';
+            _adEl.style.fontWeight = '600';
+          }
+        }
       }
 
       // Group row A. Duration
