@@ -27,6 +27,40 @@
 /* ── Gantt row highlight when cost modal is open ──────────────────────────── */
 tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8820c; outline-offset: -1px; }
 
+/* ── KPI Click Modal ─────────────────────────────────────────────────────── */
+#gkm-bk { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:10000; }
+#gkm-bk.gkm-open { display:block; }
+#gkm-modal {
+  display:none; position:fixed; z-index:10001;
+  top:50%; left:50%; transform:translate(-50%,-50%);
+  width:69vw; max-width:825px; height:65vh;
+  background:#f0f3fa; border-radius:10px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.28);
+  flex-direction:column; overflow:hidden;
+}
+#gkm-modal.gkm-open { display:flex; }
+#gkm-header {
+  background:#1a2540; color:#fff; padding:10px 16px;
+  display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+}
+#gkm-title { font-size:13px; font-weight:600; font-family:'Barlow Condensed',sans-serif; }
+#gkm-close { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:0 4px; line-height:1; }
+#gkm-loading { text-align:center; padding:40px; font-size:13px; color:#5a6e8c; }
+#gkm-body { flex:1; min-height:0; display:flex; flex-direction:column; padding:10px; gap:8px; overflow:hidden; }
+#gkm-content { display:flex; flex-direction:column; gap:8px; flex:1; min-height:0; }
+#gkm-row1 { display:flex; gap:8px; flex:1; min-height:0; }
+#gkm-row2 { display:flex; gap:8px; flex:1; min-height:0; }
+.gkm-panel {
+  flex:1; background:#fff; border-radius:6px; border:1px solid #dde3ef;
+  display:flex; flex-direction:column; overflow:hidden; min-width:0;
+}
+.gkm-panel-title {
+  font-size:10px; font-weight:700; color:#e8efff; text-transform:uppercase;
+  letter-spacing:0.04em; padding:5px 8px; border-bottom:1px solid #0d1f3c; flex-shrink:0;
+  background:#1a2540;
+}
+.gkm-panel-body { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; }
+
 /* ── KPI Hover Popup ─────────────────────────────────────────────────────── */
 #gkp-popup {
   display: none; position: fixed; z-index: 9998;
@@ -248,6 +282,29 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       <div class="gcm-panel">
         <div class="gcm-panel-title">Cost of Resources</div>
         <div class="gcm-panel-body" id="gm-cd-rcost"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- KPI Click Modal -->
+<div id="gkm-bk"></div>
+<div id="gkm-modal">
+  <div id="gkm-header">
+    <span id="gkm-title">KPI Dashboard</span>
+    <button id="gkm-close" title="Close">&times;</button>
+  </div>
+  <div id="gkm-body">
+    <div id="gkm-loading">Loading&hellip;</div>
+    <div id="gkm-content" style="display:none">
+      <div id="gkm-row1">
+        <div class="gkm-panel"><div class="gkm-panel-title">Capacity Utilisation</div><div class="gkm-panel-body" id="gkm-g5"></div></div>
+        <div class="gkm-panel"><div class="gkm-panel-title">Cycle Time</div><div class="gkm-panel-body" id="gkm-g4"></div></div>
+        <div class="gkm-panel"><div class="gkm-panel-title">Productivity</div><div class="gkm-panel-body" id="gkm-g3"></div></div>
+      </div>
+      <div id="gkm-row2">
+        <div class="gkm-panel" style="flex:1"><div class="gkm-panel-title">Target Production</div><div class="gkm-panel-body" id="gkm-tp"></div></div>
+        <div class="gkm-panel" style="flex:1.4"><div class="gkm-panel-title">Activity Duration</div><div class="gkm-panel-body" id="gkm-dur"></div></div>
       </div>
     </div>
   </div>
@@ -652,9 +709,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       return td;
     }
 
-    // Inject Cost header after A.Duration (gres)
+    // Inject KPI header then Cost header after A.Duration (gres)
     if (_resHdr && !document.getElementById('gcost-hdr-cell')) {
-      _resHdr.parentNode.insertBefore(_makeHdr('gcost-hdr-cell', 'Cost', 50), _resHdr.nextSibling);
+      var _kpiHdrInserted = _resHdr.parentNode.insertBefore(_makeHdr('gkpi-hdr-cell', 'KPI', 50), _resHdr.nextSibling);
+      _resHdr.parentNode.insertBefore(_makeHdr('gcost-hdr-cell', 'Cost', 50), _kpiHdrInserted.nextSibling);
     }
 
     // Apply progressive indentation + patch B. columns and A. columns with formatted values
@@ -719,9 +777,21 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         }
       }
 
-      // Inject Cost cell after A.Duration (gres) — all rows
+      // Inject KPI cell then Cost cell after A.Duration (gres) — all rows
       var _resTd = _row.querySelector('td.gres');
-      if (_resTd && !_row.querySelector('td.gcol-cost')) {
+      if (_resTd && !_row.querySelector('td.gcol-kpi')) {
+        // KPI cell
+        var _kpiTd = document.createElement('td');
+        _kpiTd.className = 'gcol-kpi';
+        _kpiTd.style.cssText = 'width:50px;min-width:50px;text-align:center;padding:0;vertical-align:middle;';
+        if (_db) {
+          var _kpiIcon = document.createElement('span');
+          _kpiIcon.style.cssText = 'display:inline-block;width:8px;height:8px;background:#1a7fc1;border-radius:50%;cursor:pointer;';
+          _kpiIcon.setAttribute('data-kpiactid', _db.rawId);
+          _kpiTd.appendChild(_kpiIcon);
+        }
+        _resTd.parentNode.insertBefore(_kpiTd, _resTd.nextSibling);
+        // Cost cell (after KPI)
         var _costTd = document.createElement('td');
         _costTd.className = 'gcol-cost';
         _costTd.style.cssText = 'width:50px;min-width:50px;text-align:center;padding:0;vertical-align:middle;';
@@ -730,7 +800,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         // Store raw activity DB id so click handler can POST it
         if (_db) _costIcon.setAttribute('data-actid', _db.rawId);
         _costTd.appendChild(_costIcon);
-        _resTd.parentNode.insertBefore(_costTd, _resTd.nextSibling);
+        _kpiTd.parentNode.insertBefore(_costTd, _kpiTd.nextSibling);
       }
 
       // Group row A. Duration
@@ -1368,11 +1438,154 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       });
     });
 
-    // ── Close modal ────────────────────────────────────────────────────────────
+    // ── Close cost modal ───────────────────────────────────────────────────────
     $('#gcm-close, #gcm-bk').on('click', function(e) {
       if (e.target !== this) return;
       $('#gcm-bk, #gcm-modal').removeClass('gcm-open');
       if (_gcmHighlightedRow) { $(_gcmHighlightedRow).removeClass('gcm-row-highlight'); _gcmHighlightedRow = null; }
+    });
+
+    // ── KPI icon click → open KPI modal ───────────────────────────────────────
+    var _gkmCache = {};
+    $(document).on('click', '#gantt-container .gcol-kpi span[data-kpiactid]', function() {
+      var actId = $(this).data('kpiactid');
+      if (!actId) return;
+      $('#gkm-loading').show();
+      $('#gkm-content').hide();
+      $('#gkm-title').text('KPI Dashboard — Loading…');
+      $('#gkm-bk, #gkm-modal').addClass('gkm-open');
+
+      function _renderIntoModal(k) {
+        $('#gkm-title').text('KPI Dashboard — ' + (k.activity_name || ''));
+        // Capacity
+        (function(){
+          var el=document.getElementById('gkm-g5'); if(!el)return;
+          var maxV=+k.cap_max||0,used=+k.cap_used||0,f=maxV>0?used/maxV:0,pct=maxV>0?((used/maxV)*100).toFixed(1):'0';
+          var cx=105,cy=92,r=76,sw=14;
+          function ptF(fr){var a=Math.PI*(1-fr);return [(cx+r*Math.cos(a)).toFixed(1),(cy-r*Math.sin(a)).toFixed(1)];}
+          function arc(f1,f2,col){if(f2<=f1)return'';var p1=ptF(f1),p2=ptF(f2);if((f2-f1)>=1){var pm=ptF(0.5);return'<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+pm[0]+','+pm[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="butt"/>';}return'<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="butt"/>';}
+          var nr=r-15,na=Math.PI*(1-f),nx=(cx+nr*Math.cos(na)).toFixed(1),ny=(cy-nr*Math.sin(na)).toFixed(1);
+          el.innerHTML='<svg width="100%" viewBox="0 -12 210 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
+            +arc(0,1,'#FFD700')+(f>0?arc(0,f,'#90EE90','butt'):'')
+            +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
+            +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/><circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#FFD700"/>'
+            +'<text x="105" y="62" text-anchor="middle" font-size="22" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+pct+'%</text>'
+            +'<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Used <tspan font-weight="700">'+_fmtFull(used)+' h</tspan></text>'
+            +'<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Max <tspan font-weight="700">'+_fmtFull(maxV)+' h</tspan></text>'
+            +'</svg>';
+        })();
+        // Cycle Time
+        (function(){
+          var el=document.getElementById('gkm-g4'); if(!el)return;
+          var tc=+k.target_cycle_time||0,ac=+k.actual_cycle_time>0?+k.actual_cycle_time:tc;
+          var maxV=tc>0?tc*2:1,f=ac/maxV,acCol=ac>tc?'#e53935':ac<tc?'#27ae60':'#1a2540';
+          var cx=105,cy=92,r=76,sw=14;
+          function ptF(fr){var a=Math.PI*(1-fr);return [(cx+r*Math.cos(a)).toFixed(1),(cy-r*Math.sin(a)).toFixed(1)];}
+          function arc(f1,f2,col){if(f2<=f1)return'';var p1=ptF(f1),p2=ptF(f2);return'<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="butt"/>';}
+          var nr=r-15,na=Math.PI*(1-f),nx=(cx+nr*Math.cos(na)).toFixed(1),ny=(cy-nr*Math.sin(na)).toFixed(1);
+          el.innerHTML='<svg width="100%" viewBox="0 -12 210 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
+            +arc(0,0.5,'#00838f')+arc(0.5,1,'#FF6D00')
+            +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
+            +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/><circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
+            +'<text x="105" y="40" text-anchor="middle" font-size="10" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Target</text>'
+            +'<text x="105" y="53" text-anchor="middle" font-size="15" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+_fmtFull(tc)+' Hrs</text>'
+            +'<text x="105" y="66" text-anchor="middle" font-size="10" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual</text>'
+            +'<text x="105" y="79" text-anchor="middle" font-size="15" font-weight="700" fill="'+acCol+'" font-family="Barlow Condensed,Arial">'+_fmtFull(ac)+' Hrs</text>'
+            +'<text x="8" y="112" text-anchor="start" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">Fast</text>'
+            +'<text x="202" y="112" text-anchor="end" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">Slow</text>'
+            +'</svg>';
+        })();
+        // Productivity
+        (function(){
+          var el=document.getElementById('gkm-g3'); if(!el)return;
+          var tp=+k.target_productivity||0,ap=+k.actual_productivity>0?+k.actual_productivity:tp;
+          var u=k.unit?' '+k.unit:'',maxV=tp>0?tp*2:1,f=ap/maxV,apCol=ap<tp?'#e53935':ap>tp?'#27ae60':'#1a2540';
+          var cx=105,cy=92,r=76,sw=14;
+          function ptF(fr){var a=Math.PI*(1-fr);return [(cx+r*Math.cos(a)).toFixed(1),(cy-r*Math.sin(a)).toFixed(1)];}
+          function arc(f1,f2,col){if(f2<=f1)return'';var p1=ptF(f1),p2=ptF(f2);return'<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="butt"/>';}
+          var nr=r-15,na=Math.PI*(1-f),nx=(cx+nr*Math.cos(na)).toFixed(1),ny=(cy-nr*Math.sin(na)).toFixed(1);
+          el.innerHTML='<svg width="100%" viewBox="0 -12 210 150" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
+            +arc(0,0.5,'#E65100')+arc(0.5,1,'#00695C')
+            +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
+            +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/><circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
+            +'<text x="105" y="40" text-anchor="middle" font-size="10" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Target</text>'
+            +'<text x="105" y="53" text-anchor="middle" font-size="15" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+_fmtFull(tp)+u+'/d</text>'
+            +'<text x="105" y="66" text-anchor="middle" font-size="10" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual</text>'
+            +'<text x="105" y="79" text-anchor="middle" font-size="15" font-weight="700" fill="'+apCol+'" font-family="Barlow Condensed,Arial">'+_fmtFull(ap)+u+'/d</text>'
+            +'<text x="8" y="112" text-anchor="start" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">Low</text>'
+            +'<text x="202" y="112" text-anchor="end" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">High</text>'
+            +'</svg>';
+        })();
+        // Target Production
+        (function(){
+          var el=document.getElementById('gkm-tp'); if(!el)return;
+          var tq=+k.target_qty||0,aq=+k.actual_qty||0,ppd=+k.planned_per_day||0,u=k.unit?' '+k.unit:'';
+          var f=tq>0?Math.min(1,aq/tq):0,barW=(f*100).toFixed(1);
+          var actCol=aq<tq?'#e8820c':aq>tq?'#27ae60':'#3461b8';
+          el.innerHTML='<div style="padding:12px 14px;font-family:\'Barlow Condensed\',sans-serif;font-size:13px;display:flex;flex-direction:column;gap:8px;height:100%;box-sizing:border-box;">'
+            +'<div style="display:flex;justify-content:space-between;">'
+            +'<span style="color:#5a6e8c;">Planned/day&nbsp;<b style="color:#1a2540;">'+_fmtFull(ppd)+u+'</b></span>'
+            +'<span style="color:#5a6e8c;">Done&nbsp;<b style="color:'+actCol+';">'+_fmtFull(aq)+u+'</b></span>'
+            +'</div>'
+            +'<div style="height:14px;background:#dde3ef;border-radius:5px;overflow:hidden;">'
+            +'<div style="height:100%;width:'+barW+'%;background:'+actCol+';border-radius:5px;"></div></div>'
+            +'<div style="display:flex;justify-content:space-between;font-size:11px;color:#5a6e8c;">'
+            +'<span>0</span><span>Target&nbsp;<b style="color:#1a2540;">'+_fmtFull(tq)+u+'</b></span></div>'
+            +'</div>';
+        })();
+        // Activity Duration
+        (function(){
+          var el=document.getElementById('gkm-dur'); if(!el)return;
+          var bDur=+k.b_duration||+k.duration||0,aDur=+k.projected_duration||0;
+          var elapsed=+k.elapsed||0,startDelay=+k.start_delay||0;
+          if(!aDur)aDur=bDur; if(!bDur){el.innerHTML='<div style="text-align:center;padding:20px;color:#aaa;font-size:12px;">No duration data</div>';return;}
+          var maxDur=Math.max(bDur,aDur,1),isOver=aDur>bDur,isUnder=bDur>aDur;
+          var baseCol=k.critical?'#00838f':'#37474F';
+          var fam="font-family:'Barlow Condensed',sans-serif;";
+          var bar='<div style="position:relative;display:flex;align-items:stretch;height:14px;border-radius:3px;overflow:hidden;margin:8px 0;">';
+          if(isOver){bar+='<div style="width:'+(bDur/maxDur*100).toFixed(1)+'%;background:'+baseCol+';min-width:3px;"></div><div style="width:'+((aDur-bDur)/maxDur*100).toFixed(1)+'%;background:#e53935;min-width:3px;"></div>';}
+          else if(isUnder){bar+='<div style="width:'+(aDur/maxDur*100).toFixed(1)+'%;background:'+baseCol+';min-width:3px;"></div><div style="width:'+((bDur-aDur)/maxDur*100).toFixed(1)+'%;background:#f0c419;min-width:3px;"></div>';}
+          else{bar+='<div style="width:100%;background:'+baseCol+';"></div>';}
+          bar+='</div>';
+          var elapsedDays=elapsed;
+          if(k.act_start_date&&k.act_start_date!=='0000-00-00'){var td2=new Date();td2.setHours(0,0,0,0);var sd2=new Date(k.act_start_date);sd2.setHours(0,0,0,0);elapsedDays=Math.max(0,Math.round((td2-sd2)/86400000)+1);}
+          function fmD(s){if(!s||s==='0000-00-00')return'—';var p=s.split('-');return p[2]+'-'+p[1]+'-'+p[0];}
+          el.innerHTML='<div style="padding:10px 14px;'+fam+'font-size:12px;box-sizing:border-box;">'
+            +'<div style="display:flex;justify-content:space-between;align-items:baseline;font-weight:700;color:#1a2540;">'
+            +'<span>'+bDur+'d Planned'+(isOver?' <span style="color:#e53935;">+' +(aDur-bDur)+'d</span>':isUnder?' <span style="color:#27ae60;">−'+(bDur-aDur)+'d</span>':'')+' </span>'
+            +(startDelay>0&&!isOver?'<span style="color:#E65100;">Start +'+startDelay+'d</span>':'')+'</div>'
+            +bar
+            +'<div style="display:flex;justify-content:space-between;color:#5a6e8c;font-size:11px;">'
+            +'<span>Act. Start: <b style="color:#1a2540;">'+fmD(k.act_start_date)+'</b></span>'
+            +'<span>Elapsed: <b style="color:#1a2540;">'+elapsedDays+'d</b></span>'
+            +'<span>Plan End: <b style="color:#1a2540;">'+fmD(k.adj_end_date)+'</b></span>'
+            +'</div>'
+            +'</div>';
+        })();
+        $('#gkm-loading').hide();
+        $('#gkm-content').show();
+      }
+
+      if (_gkmCache[actId]) {
+        _renderIntoModal(_gkmCache[actId]);
+        return;
+      }
+      $.ajax({
+        type: 'POST', url: '../projectsmain/performancedashboardkpi',
+        data: { actid: actId }, dataType: 'json',
+        success: function(d) {
+          if (!d || !d.kpi) { $('#gkm-loading').text('No KPI data.'); return; }
+          _gkmCache[actId] = d.kpi;
+          _renderIntoModal(d.kpi);
+        },
+        error: function() { $('#gkm-loading').text('Failed to load KPI data.'); }
+      });
+    });
+
+    // ── Close KPI modal ────────────────────────────────────────────────────────
+    $('#gkm-close, #gkm-bk').on('click', function(e) {
+      if (e.target !== this) return;
+      $('#gkm-bk, #gkm-modal').removeClass('gkm-open');
     });
   })();
 
