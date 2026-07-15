@@ -1389,7 +1389,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var rect = anchorEl ? anchorEl.getBoundingClientRect() : null;
       var left = rect ? Math.min(rect.right - 70, vw - pw - 8) : vw - pw - 8;
       if (left < 4) left = 4;
-      var top = rect ? rect.top - 20 : vh / 2 - ph / 2;
+      var top = rect ? rect.top - ph + 20 : vh / 2 - ph / 2;
       if (top + ph > vh - 8) top = vh - ph - 8;
       if (top < 4) top = 4;
       pop.style.left = left + 'px';
@@ -1984,7 +1984,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var left = mouseX + 18;
       if (left + pw > vw - 8) left = vw - pw - 8;
       if (left < 4) left = 4;
-      var top = mouseY - 120;
+      var top = mouseY - (ph * 0.75);
       if (top + ph > vh - 8) top = vh - ph - 8;
       if (top < 4) top = 4;
       pop.style.left = left + 'px';
@@ -2000,7 +2000,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var rect = anchorEl ? anchorEl.getBoundingClientRect() : null;
       var left = rect ? Math.min(rect.right + 10, vw - pw - 8) : vw - pw - 8;
       if (left < 4) left = 4;
-      var top = rect ? rect.top - 20 : vh / 2 - ph / 2;
+      var top = rect ? rect.top - ph + 20 : vh / 2 - ph / 2;
       if (top + ph > vh - 8) top = vh - ph - 8;
       if (top < 4) top = 4;
       pop.style.left = left + 'px';
