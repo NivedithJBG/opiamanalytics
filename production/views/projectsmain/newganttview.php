@@ -498,6 +498,11 @@
       return td;
     }
 
+    // Inject Cost header after A.Duration (gres)
+    if (_resHdr && !document.getElementById('gcost-hdr-cell')) {
+      _resHdr.parentNode.insertBefore(_makeHdr('gcost-hdr-cell', 'Cost', 50), _resHdr.nextSibling);
+    }
+
     // Apply progressive indentation + patch B. columns and A. columns with formatted values
     var _tasks = g.getList ? g.getList() : [];
     for (var _i = 0; _i < _tasks.length; _i++) {
@@ -558,6 +563,19 @@
             _adEl.style.fontWeight = '600';
           }
         }
+      }
+
+      // Inject Cost cell after A.Duration (gres) — leaf activities only
+      var _resTd = _row.querySelector('td.gres');
+      if (_resTd && !_row.querySelector('td.gcol-cost') && _actCells[_tid]) {
+        var _costTd = document.createElement('td');
+        _costTd.className = 'gcol-cost';
+        _costTd.style.cssText = 'width:50px;min-width:50px;text-align:center;padding:0;vertical-align:middle;';
+        var _costIcon = document.createElement('span');
+        _costIcon.style.cssText = 'display:inline-block;width:12px;height:12px;background:#546e7a;border-radius:2px;cursor:pointer;';
+        _costIcon.title = 'Cost';
+        _costTd.appendChild(_costIcon);
+        _resTd.parentNode.insertBefore(_costTd, _resTd.nextSibling);
       }
 
       // Group row A. Duration
