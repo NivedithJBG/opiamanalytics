@@ -579,7 +579,7 @@
       if (_delayPx <= 0) continue;
 
       var _overlay = document.createElement('div');
-      _overlay.style.cssText = 'position:absolute;left:' + _budgetedPx + 'px;width:' + _delayPx + 'px;top:1px;height:13px;background:rgba(230,81,0,0.9);pointer-events:none;z-index:2;border-radius:0 3px 3px 0;';
+      _overlay.style.cssText = 'position:absolute;left:' + _budgetedPx + 'px;width:' + _delayPx + 'px;top:1px;height:13px;background:rgba(255,109,0,0.9);pointer-events:none;z-index:2;border-radius:0 3px 3px 0;';
       _barDiv.appendChild(_overlay);
     }
 
