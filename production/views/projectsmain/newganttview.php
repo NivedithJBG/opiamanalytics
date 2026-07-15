@@ -27,6 +27,34 @@
 /* ── Gantt row highlight when cost modal is open ──────────────────────────── */
 tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8820c; outline-offset: -1px; }
 
+/* ── KPI Hover Popup ─────────────────────────────────────────────────────── */
+#gkp-popup {
+  display: none; position: fixed; z-index: 9998;
+  width: 560px; background: #f0f3fa;
+  border-radius: 10px; box-shadow: 0 8px 36px rgba(0,0,0,0.32);
+  overflow: hidden; pointer-events: none;
+}
+#gkp-popup.gkp-visible { display: block; }
+#gkp-hdr {
+  background: #1a2540; color: #fff; padding: 7px 12px;
+  font-size: 12px; font-weight: 600; font-family: 'Barlow Condensed', sans-serif;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#gkp-body {
+  display: flex; flex-direction: column; gap: 5px; padding: 6px;
+}
+#gkp-row1, #gkp-row2 { display: flex; gap: 5px; }
+.gkp-panel {
+  flex: 1; background: #fff; border-radius: 5px; border: 1px solid #dde3ef;
+  display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+}
+.gkp-panel-title {
+  font-size: 9px; font-weight: 700; color: #e8efff; text-transform: uppercase;
+  letter-spacing: 0.04em; padding: 4px 7px; flex-shrink: 0;
+  background: #1a2540; border-bottom: 1px solid #0d1f3c;
+}
+.gkp-panel-body { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+
 /* ── Gantt Cost Modal ──────────────────────────────────────────────────────── */
 #gcm-bk {
   display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 10000;
@@ -221,6 +249,22 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         <div class="gcm-panel-title">Cost of Resources</div>
         <div class="gcm-panel-body" id="gm-cd-rcost"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- KPI Hover Popup -->
+<div id="gkp-popup">
+  <div id="gkp-hdr">KPI</div>
+  <div id="gkp-body">
+    <div id="gkp-row1">
+      <div class="gkp-panel"><div class="gkp-panel-title">Capacity Utilisation</div><div class="gkp-panel-body" id="gkp-g5"></div></div>
+      <div class="gkp-panel"><div class="gkp-panel-title">Cycle Time</div><div class="gkp-panel-body" id="gkp-g4"></div></div>
+      <div class="gkp-panel"><div class="gkp-panel-title">Productivity</div><div class="gkp-panel-body" id="gkp-g3"></div></div>
+    </div>
+    <div id="gkp-row2">
+      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Target Production</div><div class="gkp-panel-body" id="gkp-tp"></div></div>
+      <div class="gkp-panel" style="flex:1.4"><div class="gkp-panel-title">Activity Duration</div><div class="gkp-panel-body" id="gkp-dur"></div></div>
     </div>
   </div>
 </div>
@@ -1534,6 +1578,221 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       }
     });
   });
+
+  // ── KPI hover popup on Gantt bars ─────────────────────────────────────────
+  (function(){
+    var _kpTimer   = null;   // debounce timer
+    var _kpXhr     = null;   // in-flight request
+    var _kpCache   = {};     // actid → kpi data cache
+
+    var _fmK = function(v){ v=+v||0; if(!v)return'0'; return(+v.toFixed(2)).toLocaleString('en-IN'); };
+    var _shK = function(s,n){ s=String(s||''); return s.length>n?s.slice(0,n-1)+'…':s; };
+    var _fmDateK = function(s){ if(!s||s==='0000-00-00')return'-'; var p=s.split('-'); return p[2]+'-'+p[1]+'-'+p[0]; };
+
+    function _gauge(elId, frac, leftCol, rightCol, centerHtml, lblL, lblR) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      var cx=90, cy=80, r=66, sw=12;
+      var f = Math.max(0, Math.min(1, frac||0));
+      function ptF(fr){ var a=Math.PI*(1-fr); return [(cx+r*Math.cos(a)).toFixed(1),(cy-r*Math.sin(a)).toFixed(1)]; }
+      function arc(f1,f2,col){
+        if(f2<=f1) return '';
+        var p1=ptF(f1),p2=ptF(f2);
+        if((f2-f1)>=1){ var pm=ptF(0.5); return '<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+pm[0]+','+pm[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="butt"/>'; }
+        return '<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="butt"/>';
+      }
+      var nr=r-12, na=Math.PI*(1-f);
+      var nx=(cx+nr*Math.cos(na)).toFixed(1), ny=(cy-nr*Math.sin(na)).toFixed(1);
+      var svg='<svg width="100%" viewBox="0 -8 180 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
+        +arc(0,0.5,leftCol)+arc(0.5,1,rightCol)
+        +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="2.5" stroke-linecap="round"/>'
+        +'<circle cx="'+cx+'" cy="'+cy+'" r="5" fill="#555"/>'
+        +'<circle cx="'+cx+'" cy="'+cy+'" r="2" fill="#dce3ef"/>'
+        + centerHtml
+        +'<text x="6" y="100" text-anchor="start" font-size="9" fill="#555" font-family="Barlow Condensed,Arial">'+lblL+'</text>'
+        +'<text x="174" y="100" text-anchor="end" font-size="9" fill="#555" font-family="Barlow Condensed,Arial">'+lblR+'</text>'
+        +'</svg>';
+      el.innerHTML = svg;
+    }
+
+    function _renderKpuCapacity(k) {
+      var maxV=+k.cap_max||0, used=+k.cap_used||0;
+      var f = maxV>0 ? used/maxV : 0;
+      var pct = maxV>0 ? ((used/maxV)*100).toFixed(1) : '0';
+      _gauge('gkp-g5', f, '#FFD700', '#FFD700',
+        '<text x="90" y="60" text-anchor="middle" font-size="19" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+pct+'%</text>'
+        +'<text x="90" y="72" text-anchor="middle" font-size="8" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Used '+_fmK(used)+'h / Max '+_fmK(maxV)+'h</text>',
+        'Low','High');
+    }
+
+    function _renderKpuCycleTime(k) {
+      var tc=+k.target_cycle_time||0, ac=+k.actual_cycle_time>0?+k.actual_cycle_time:tc;
+      var maxV=tc>0?tc*2:1, f=ac/maxV;
+      var acCol=ac>tc?'#e53935':ac<tc?'#27ae60':'#1a2540';
+      _gauge('gkp-g4', f, '#00838f', '#FF6D00',
+        '<text x="90" y="54" text-anchor="middle" font-size="8" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Target</text>'
+        +'<text x="90" y="65" text-anchor="middle" font-size="14" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+_fmK(tc)+' Hrs</text>'
+        +'<text x="90" y="74" text-anchor="middle" font-size="8" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual</text>'
+        +'<text x="90" y="85" text-anchor="middle" font-size="13" font-weight="700" fill="'+acCol+'" font-family="Barlow Condensed,Arial">'+_fmK(ac)+' Hrs</text>',
+        'Fast','Slow');
+    }
+
+    function _renderKpuProductivity(k) {
+      var tp=+k.target_productivity||0, ap=+k.actual_productivity>0?+k.actual_productivity:tp;
+      var u=k.unit?' '+k.unit:''; var maxV=tp>0?tp*2:1, f=ap/maxV;
+      var apCol=ap<tp?'#e53935':ap>tp?'#27ae60':'#1a2540';
+      _gauge('gkp-g3', f, '#E65100', '#00695C',
+        '<text x="90" y="54" text-anchor="middle" font-size="8" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Target</text>'
+        +'<text x="90" y="65" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+_fmK(tp)+u+'/d</text>'
+        +'<text x="90" y="74" text-anchor="middle" font-size="8" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual</text>'
+        +'<text x="90" y="85" text-anchor="middle" font-size="13" font-weight="700" fill="'+apCol+'" font-family="Barlow Condensed,Arial">'+_fmK(ap)+u+'/d</text>',
+        'Low','High');
+    }
+
+    function _renderKpuTargetProd(k) {
+      var el=document.getElementById('gkp-tp'); if(!el)return;
+      var tq=+k.target_qty||0, aq=+k.actual_qty||0, ppd=+k.planned_per_day||0, u=k.unit?'  '+k.unit:'';
+      var f=tq>0?Math.min(1,aq/tq):0;
+      var barW=(f*100).toFixed(1), actCol=aq<tq?'#e8820c':aq>tq?'#27ae60':'#3461b8';
+      el.innerHTML='<div style="padding:5px 7px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;">'
+        +'<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+        +'<span style="color:#5a6e8c;">Planned/day <b style="color:#1a2540;">'+_fmK(ppd)+u+'</b></span>'
+        +'<span style="color:#5a6e8c;">Done <b style="color:'+actCol+';">'+_fmK(aq)+u+'</b></span>'
+        +'</div>'
+        +'<div style="height:10px;background:#dde3ef;border-radius:4px;overflow:hidden;">'
+        +'<div style="height:100%;width:'+barW+'%;background:'+actCol+';border-radius:4px;"></div></div>'
+        +'<div style="display:flex;justify-content:space-between;margin-top:3px;font-size:10px;color:#5a6e8c;">'
+        +'<span>0</span><span>Target <b style="color:#1a2540;">'+_fmK(tq)+u+'</b></span></div>'
+        +'</div>';
+    }
+
+    function _renderKpuDuration(k) {
+      var el=document.getElementById('gkp-dur'); if(!el)return;
+      var bDur=+k.b_duration||+k.duration||0, aDur=+k.projected_duration||0;
+      var elapsed=+k.elapsed||0, startDelay=+k.start_delay||0;
+      if(!aDur) aDur=bDur;
+      var maxDur=Math.max(bDur,aDur,1);
+      var isOver=aDur>bDur, isUnder=bDur>aDur;
+      var baseCol=k.critical?'#00838f':'#37474F';
+      var fam="font-family:'Barlow Condensed',sans-serif;";
+      var bar='<div style="position:relative;display:flex;align-items:stretch;height:11px;border-radius:3px;overflow:hidden;margin:4px 0;">';
+      if(isOver){
+        bar+='<div style="width:'+(bDur/maxDur*100).toFixed(1)+'%;background:'+baseCol+';min-width:3px;"></div>';
+        bar+='<div style="width:'+((aDur-bDur)/maxDur*100).toFixed(1)+'%;background:#e53935;min-width:3px;"></div>';
+      } else if(isUnder){
+        bar+='<div style="width:'+(aDur/maxDur*100).toFixed(1)+'%;background:'+baseCol+';min-width:3px;"></div>';
+        bar+='<div style="width:'+((bDur-aDur)/maxDur*100).toFixed(1)+'%;background:#f0c419;min-width:3px;"></div>';
+      } else {
+        bar+='<div style="width:100%;background:'+baseCol+';"></div>';
+      }
+      bar+='</div>';
+      // Elapsed days from act_start_date to today
+      var elapsedDays=elapsed;
+      if(k.act_start_date&&k.act_start_date!=='0000-00-00'){
+        var td=new Date();td.setHours(0,0,0,0);
+        var sd=new Date(k.act_start_date);sd.setHours(0,0,0,0);
+        elapsedDays=Math.max(0,Math.round((td-sd)/86400000)+1);
+      }
+      el.innerHTML='<div style="padding:5px 7px;'+fam+'font-size:10px;box-sizing:border-box;">'
+        +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px;">'
+        +'<span style="color:#1a2540;font-weight:700;">'+bDur+'d Planned'+(isOver?' <span style="color:#e53935;">+' +(aDur-bDur)+'d</span>':isUnder?' <span style="color:#27ae60;">−'+(bDur-aDur)+'d</span>':'')+' </span>'
+        +(startDelay>0&&!isOver?'<span style="color:#E65100;">Start +'+startDelay+'d</span>':'')
+        +'</div>'
+        +bar
+        +'<div style="display:flex;justify-content:space-between;color:#5a6e8c;font-size:9px;">'
+        +'<span>Start: <b style="color:#1a2540;">'+(_fmDateK(k.act_start_date)||'—')+'</b></span>'
+        +'<span>Elapsed: <b style="color:#1a2540;">'+elapsedDays+'d</b></span>'
+        +'<span>Plan End: <b style="color:#1a2540;">'+(_fmDateK(k.adj_end_date)||'—')+'</b></span>'
+        +'</div>'
+        +'</div>';
+    }
+
+    function _renderKpi(k) {
+      document.getElementById('gkp-hdr').textContent = k.activity_name || 'KPI';
+      _renderKpuCapacity(k);
+      _renderKpuCycleTime(k);
+      _renderKpuProductivity(k);
+      _renderKpuTargetProd(k);
+      _renderKpuDuration(k);
+    }
+
+    function _positionPopup(mouseX, mouseY) {
+      var pop = document.getElementById('gkp-popup');
+      var pw = pop.offsetWidth || 560, ph = pop.offsetHeight || 300;
+      var vw = window.innerWidth, vh = window.innerHeight;
+      var left = mouseX + 18;
+      if (left + pw > vw - 8) left = mouseX - pw - 10;
+      if (left < 4) left = 4;
+      var top = mouseY - 20;
+      if (top + ph > vh - 8) top = vh - ph - 8;
+      if (top < 4) top = 4;
+      pop.style.left = left + 'px';
+      pop.style.top  = top  + 'px';
+    }
+
+    function _hidePopup() {
+      clearTimeout(_kpTimer);
+      if (_kpXhr) { _kpXhr.abort(); _kpXhr = null; }
+      var pop = document.getElementById('gkp-popup');
+      pop.classList.remove('gkp-visible');
+    }
+
+    // Extract raw actid from the bar's hashed task ID via _actCells lookup
+    function _getActIdFromBarDiv(barDiv) {
+      var idAttr = barDiv.id || '';   // e.g. "gantt-containerbardiv_<hashed_tid>"
+      var pfx = 'gantt-containerbardiv_';
+      if (idAttr.indexOf(pfx) !== 0) return null;
+      var tid = idAttr.slice(pfx.length);
+      var db  = _actCells[tid];
+      return (db && db.rawId) ? db.rawId : null;
+    }
+
+    $(document).on('mouseover', '#gantt-container .gtaskbarcontainer:not(.gplan)', function(e) {
+      var actId = _getActIdFromBarDiv(this);
+      if (!actId) return;
+      clearTimeout(_kpTimer);
+      var mx = e.clientX, my = e.clientY;
+      _kpTimer = setTimeout(function() {
+        if (_kpCache[actId]) {
+          _renderKpi(_kpCache[actId]);
+          var pop = document.getElementById('gkp-popup');
+          pop.classList.add('gkp-visible');
+          _positionPopup(mx, my);
+          return;
+        }
+        if (_kpXhr) _kpXhr.abort();
+        // Show loading state
+        document.getElementById('gkp-hdr').textContent = 'Loading KPI…';
+        ['gkp-g5','gkp-g4','gkp-g3','gkp-tp','gkp-dur'].forEach(function(id){
+          var el=document.getElementById(id); if(el) el.innerHTML='';
+        });
+        var pop = document.getElementById('gkp-popup');
+        pop.classList.add('gkp-visible');
+        _positionPopup(mx, my);
+        _kpXhr = $.ajax({
+          type: 'POST', url: '../projectsmain/performancedashboardkpi',
+          data: { actid: actId }, dataType: 'json',
+          success: function(d) {
+            _kpXhr = null;
+            if (!d || !d.kpi) return;
+            _kpCache[actId] = d.kpi;
+            _renderKpi(d.kpi);
+            _positionPopup(mx, my);
+          },
+          error: function(x, s) { _kpXhr = null; if(s!=='abort') _hidePopup(); }
+        });
+      }, 300);
+    });
+
+    $(document).on('mouseleave', '#gantt-container .gtaskbarcontainer:not(.gplan)', function() {
+      _hidePopup();
+    });
+
+    // Also hide if mouse leaves the whole gantt container
+    $(document).on('mouseleave', '#gantt-container', function() {
+      _hidePopup();
+    });
+  })();
 
   function reloadRelationsPanel(notice, warningText) {
     $.ajax({
