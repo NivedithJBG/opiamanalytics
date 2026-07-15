@@ -192,20 +192,6 @@
     <div id="gcm-loading">Loading&hellip;</div>
     <div id="gcm-row1" style="display:none">
       <div class="gcm-panel">
-        <div class="gcm-panel-title">Unit Cost of Resources</div>
-        <div class="gcm-panel-body" id="gm-cd-c6"></div>
-      </div>
-      <div class="gcm-panel">
-        <div class="gcm-panel-title">Consumption of Resources</div>
-        <div class="gcm-panel-body" id="gm-cd-c7"></div>
-      </div>
-      <div class="gcm-panel">
-        <div class="gcm-panel-title">Cost of Resources</div>
-        <div class="gcm-panel-body" id="gm-cd-rcost"></div>
-      </div>
-    </div>
-    <div id="gcm-row2" style="display:none">
-      <div class="gcm-panel">
         <div class="gcm-panel-title">Unit Cost of Activity</div>
         <div class="gcm-panel-body" id="gm-cd-g5" style="align-items:center;justify-content:center"></div>
       </div>
@@ -216,6 +202,20 @@
       <div class="gcm-panel">
         <div class="gcm-panel-title">Cost of Activity</div>
         <div class="gcm-panel-body" id="gm-cd-g2"></div>
+      </div>
+    </div>
+    <div id="gcm-row2" style="display:none">
+      <div class="gcm-panel">
+        <div class="gcm-panel-title">Unit Cost of Resources</div>
+        <div class="gcm-panel-body" id="gm-cd-c6"></div>
+      </div>
+      <div class="gcm-panel">
+        <div class="gcm-panel-title">Consumption of Resources</div>
+        <div class="gcm-panel-body" id="gm-cd-c7"></div>
+      </div>
+      <div class="gcm-panel">
+        <div class="gcm-panel-title">Cost of Resources</div>
+        <div class="gcm-panel-body" id="gm-cd-rcost"></div>
       </div>
     </div>
   </div>
