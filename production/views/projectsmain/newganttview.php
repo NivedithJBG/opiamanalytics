@@ -32,7 +32,7 @@
 #gcm-modal {
   display: none; position: fixed; z-index: 10001;
   top: 50%; left: 50%; transform: translate(-50%,-50%);
-  width: 92vw; max-width: 1100px; height: 86vh;
+  width: 69vw; max-width: 825px; height: 65vh;
   background: #f0f3fa; border-radius: 10px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.28);
   flex-direction: column; overflow: hidden;
