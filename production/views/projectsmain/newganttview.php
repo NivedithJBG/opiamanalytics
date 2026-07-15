@@ -926,10 +926,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     })();
   }
 
-  // ── Gantt Cost Modal — wired once at page level (not per-draw) ─────────────
+  // ── Gantt Cost Popup — wired once at page level (not per-draw) ──────────────
   (function() {
-    if (document.getElementById('gcm-modal').__gcmWired) return;
-    document.getElementById('gcm-modal').__gcmWired = true;
+    var _gcmSentinel = document.getElementById('gcm-popup');
+    if (!_gcmSentinel || _gcmSentinel.__gcmWired) return;
+    _gcmSentinel.__gcmWired = true;
 
     // ── Helper functions (mirrors of _performancedashboard.js, scoped here) ──
     function _fmtCost(v) {
