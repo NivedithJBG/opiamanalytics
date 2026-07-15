@@ -481,16 +481,16 @@ td.gstatus {
     _hdr('gplanenddate',  'A. End Date');
 
     // Inject Status column header before B. Duration (gdur)
-    var _durHdr = _c ? _c.querySelector('.gtaskheading.gdur') : null;
-    if (_durHdr) {
-      var _statusHdr = document.createElement('td');
-      _statusHdr.className = 'gtaskheading gstatus-hdr';
-      _statusHdr.style.cssText = 'width:30px;min-width:30px;text-align:center;padding:0;';
-      var _statusHdrDiv = document.createElement('div');
-      _statusHdrDiv.style.cssText = 'width:30px;text-align:center;overflow:hidden;font-size:11px;font-weight:600;';
-      _statusHdrDiv.textContent = 'Status';
-      _statusHdr.appendChild(_statusHdrDiv);
-      _durHdr.parentNode.insertBefore(_statusHdr, _durHdr);
+    // Do this AFTER _hdr() calls so 'B. Duration' label is already set on gdur before we insert
+    if (!document.getElementById('gstatus-hdr-cell')) {
+      var _durHdr = _c ? _c.querySelector('.gtaskheading.gdur') : null;
+      if (_durHdr) {
+        var _statusHdr = document.createElement('td');
+        _statusHdr.id = 'gstatus-hdr-cell';
+        _statusHdr.style.cssText = 'width:30px;min-width:30px;text-align:center;padding:0;vertical-align:middle;font-weight:600;font-size:11px;';
+        _statusHdr.textContent = 'Status';
+        _durHdr.parentNode.insertBefore(_statusHdr, _durHdr);
+      }
     }
 
     // Apply progressive indentation + patch B. columns and A. columns with formatted values
