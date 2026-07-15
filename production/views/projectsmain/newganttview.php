@@ -58,30 +58,37 @@
   border-radius: 50%;
   vertical-align: middle;
 }
-.act-dot.ongoing   { background: #43a047; }
-.act-dot.upcoming  { background: #1e88e5; }
-.act-dot.overdue   { background: #e53935; }
-.act-dot.completed { background: #43a047; } /* green circle with tick overlay handled via content */
-/* Completed: use a checkmark character instead of plain dot */
+.act-dot.ongoing   { background: #66bb6a; }  /* light green */
+.act-dot.upcoming  { background: #87ceeb; }  /* sky blue */
+.act-dot.overdue   { background: #ffa726; }  /* orange */
+/* Completed: grey circle with tick */
 .act-dot-check {
   display: inline-block;
   width: 13px; height: 13px;
   border-radius: 50%;
-  background: #757575;
+  background: #bdbdbd;
   color: #fff;
   font-size: 9px;
   line-height: 13px;
   text-align: center;
   vertical-align: middle;
 }
-td.gstatus { text-align: center; padding: 2px 4px; vertical-align: middle; }
-th.gstatus-hdr, .gtaskheading.gstatus-hdr {
+td.gstatus {
   text-align: center;
+  padding: 0;
+  vertical-align: middle;
+  width: 30px;
+  min-width: 30px;
+}
+.gtaskheading.gstatus-hdr {
+  text-align: center !important;
   font-weight: 600;
-  font-size: 12px;
-  padding: 2px 4px;
-  background: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
+  font-size: 11px;
+  padding: 0 !important;
+  width: 30px !important;
+  min-width: 30px !important;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 </style>
 
@@ -103,10 +110,10 @@ th.gstatus-hdr, .gtaskheading.gstatus-hdr {
   <div class="gantt-legend-row" style="margin-top:10px;">
     <div class="gantt-legend-item"><span class="gantt-legend-dot dot-critical"></span> Critical Path</div>
     <div class="gantt-legend-item"><span class="gantt-legend-dot dot-normal"></span> Normal Activity</div>
-    <div class="gantt-legend-item"><span class="act-dot ongoing" style="display:inline-block;"></span> Ongoing</div>
-    <div class="gantt-legend-item"><span class="act-dot upcoming" style="display:inline-block;"></span> Upcoming</div>
-    <div class="gantt-legend-item"><span class="act-dot overdue" style="display:inline-block;"></span> Overdue</div>
-    <div class="gantt-legend-item"><span class="act-dot-check" style="display:inline-block;">✓</span> Completed</div>
+    <div class="gantt-legend-item"><span class="act-dot ongoing"></span> Ongoing</div>
+    <div class="gantt-legend-item"><span class="act-dot upcoming"></span> Upcoming</div>
+    <div class="gantt-legend-item"><span class="act-dot overdue"></span> Overdue</div>
+    <div class="gantt-legend-item"><span class="act-dot-check">✓</span> Completed</div>
   </div>
 
   <div id="relations-panel">
@@ -478,8 +485,11 @@ th.gstatus-hdr, .gtaskheading.gstatus-hdr {
     if (_durHdr) {
       var _statusHdr = document.createElement('td');
       _statusHdr.className = 'gtaskheading gstatus-hdr';
-      _statusHdr.style.cssText = 'width:30px;min-width:30px;';
-      _statusHdr.textContent = 'Status';
+      _statusHdr.style.cssText = 'width:30px;min-width:30px;text-align:center;padding:0;';
+      var _statusHdrDiv = document.createElement('div');
+      _statusHdrDiv.style.cssText = 'width:30px;text-align:center;overflow:hidden;font-size:11px;font-weight:600;';
+      _statusHdrDiv.textContent = 'Status';
+      _statusHdr.appendChild(_statusHdrDiv);
       _durHdr.parentNode.insertBefore(_statusHdr, _durHdr);
     }
 
