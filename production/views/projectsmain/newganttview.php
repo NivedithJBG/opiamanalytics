@@ -640,50 +640,6 @@
       }
     }
 
-    // ── Activity name tooltip ─────────────────────────────────────────────────
-    (function() {
-      var _tip = document.getElementById('gantt-act-tooltip');
-      if (!_tip) return;
-
-      function _fmt(d) {
-        if (!d || d === '0000-00-00') return '—';
-        var p = d.split('-');
-        return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d;
-      }
-
-      var _tasks2 = g.getList ? g.getList() : [];
-      for (var _ti2 = 0; _ti2 < _tasks2.length; _ti2++) {
-        var _tid2 = _tasks2[_ti2].getID();
-        var _db2  = _actCells[_tid2];
-        if (!_db2) continue;
-        var _row2 = document.getElementById('gantt-container' + 'child_' + _tid2);
-        if (!_row2) continue;
-        var _nameCell = _row2.querySelector('td.gtaskname');
-        if (!_nameCell) continue;
-
-        (function(db) {
-          _nameCell.style.cursor = 'default';
-          _nameCell.addEventListener('mouseenter', function(e) {
-            _tip.innerHTML =
-              '<b>Planned Start:</b> '  + _fmt(db.start)  + '<br>' +
-              '<b>Actual Start:</b> '   + _fmt(db.astart) + '<br>' +
-              '<b>Planned End:</b> '    + _fmt(db.end)    + '<br>' +
-              '<b>Actual End:</b> '     + _fmt(db.aend);
-            _tip.style.display = 'block';
-            _tip.style.left = (e.clientX + 14) + 'px';
-            _tip.style.top  = (e.clientY + 14) + 'px';
-          });
-          _nameCell.addEventListener('mousemove', function(e) {
-            _tip.style.left = (e.clientX + 14) + 'px';
-            _tip.style.top  = (e.clientY + 14) + 'px';
-          });
-          _nameCell.addEventListener('mouseleave', function() {
-            _tip.style.display = 'none';
-          });
-        })(_db2);
-      }
-    })();
-
     // ── Kill left-panel horizontal scroll ────────────────────────────────────
     // JSGantt's syncScroll wired: chartBody.scrollLeft → gListLbl.scrollLeft
     //                         and: gtasktablewrapper.scrollLeft → gListLbl.scrollLeft
@@ -736,6 +692,50 @@
     })();
 
     $('#gantt-status').text('');
+
+    // ── Activity name tooltip — must run AFTER cloneNode so listeners survive ──
+    (function() {
+      var _tip = document.getElementById('gantt-act-tooltip');
+      if (!_tip) return;
+
+      function _fmt(d) {
+        if (!d || d === '0000-00-00') return '—';
+        var p = d.split('-');
+        return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d;
+      }
+
+      var _tasks2 = g.getList ? g.getList() : [];
+      for (var _ti2 = 0; _ti2 < _tasks2.length; _ti2++) {
+        var _tid2 = _tasks2[_ti2].getID();
+        var _db2  = _actCells[_tid2];
+        if (!_db2) continue;
+        // getElementById finds the cloned row (same ID, now in DOM)
+        var _row2 = document.getElementById('gantt-container' + 'child_' + _tid2);
+        if (!_row2) continue;
+        var _nameCell = _row2.querySelector('td.gtaskname');
+        if (!_nameCell) continue;
+
+        (function(db, cell) {
+          cell.addEventListener('mouseenter', function(e) {
+            _tip.innerHTML =
+              '<b>Planned Start:</b> ' + _fmt(db.start)  + '<br>' +
+              '<b>Actual Start:</b> '  + _fmt(db.astart) + '<br>' +
+              '<b>Planned End:</b> '   + _fmt(db.end)    + '<br>' +
+              '<b>Actual End:</b> '    + _fmt(db.aend);
+            _tip.style.display = 'block';
+            _tip.style.left = (e.clientX + 14) + 'px';
+            _tip.style.top  = (e.clientY + 14) + 'px';
+          });
+          cell.addEventListener('mousemove', function(e) {
+            _tip.style.left = (e.clientX + 14) + 'px';
+            _tip.style.top  = (e.clientY + 14) + 'px';
+          });
+          cell.addEventListener('mouseleave', function() {
+            _tip.style.display = 'none';
+          });
+        })(_db2, _nameCell);
+      }
+    })();
   }
 
   // ---- Manage Relations panel -----------------------------------------------
