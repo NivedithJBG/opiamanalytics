@@ -592,25 +592,6 @@
 
     }
 
-    // Performance delay overlay — red overlay where actual duration exceeds budgeted
-    for (var _tid in _actCells) {
-      var _db = _actCells[_tid];
-      if (!_db.dur || !_db.actdur || Number(_db.actdur) <= Number(_db.dur)) continue;
-
-      var _barDiv = document.getElementById('gantt-container' + 'bardiv_' + _tid);
-      if (!_barDiv) continue;
-
-      var _barW = parseInt(_barDiv.style.width) || 0;
-      if (!_barW) continue;
-
-      var _budgetedPx = Math.round((Number(_db.dur) / Number(_db.actdur)) * _barW);
-      var _delayPx    = _barW - _budgetedPx;
-      if (_delayPx <= 0) continue;
-
-      var _overlay = document.createElement('div');
-      _overlay.style.cssText = 'position:absolute;left:' + _budgetedPx + 'px;width:' + _delayPx + 'px;top:1px;height:13px;background:rgba(255,40,0,0.9);pointer-events:none;z-index:2;border-radius:0 3px 3px 0;';
-      _barDiv.appendChild(_overlay);
-    }
 
     // ── Kill left-panel horizontal scroll ────────────────────────────────────
     // JSGantt's syncScroll wired: chartBody.scrollLeft → gListLbl.scrollLeft
