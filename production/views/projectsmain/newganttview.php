@@ -572,7 +572,7 @@
         _costTd.className = 'gcol-cost';
         _costTd.style.cssText = 'width:50px;min-width:50px;text-align:center;padding:0;vertical-align:middle;';
         var _costIcon = document.createElement('span');
-        _costIcon.style.cssText = 'display:inline-block;width:12px;height:12px;background:#546e7a;border-radius:2px;cursor:pointer;';
+        _costIcon.style.cssText = 'display:inline-block;width:8px;height:8px;background:#546e7a;border-radius:2px;cursor:pointer;';
         _costIcon.title = 'Cost';
         _costTd.appendChild(_costIcon);
         _resTd.parentNode.insertBefore(_costTd, _resTd.nextSibling);
