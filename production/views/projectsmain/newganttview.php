@@ -298,13 +298,13 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     <div id="gkm-loading">Loading&hellip;</div>
     <div id="gkm-content" style="display:none">
       <div id="gkm-row1">
+        <div class="gkm-panel" style="flex:1"><div class="gkm-panel-title">Target Production</div><div class="gkm-panel-body" id="gkm-tp"></div></div>
+        <div class="gkm-panel" style="flex:1.4"><div class="gkm-panel-title">Activity Duration</div><div class="gkm-panel-body" id="gkm-dur"></div></div>
+      </div>
+      <div id="gkm-row2">
         <div class="gkm-panel"><div class="gkm-panel-title">Capacity Utilisation</div><div class="gkm-panel-body" id="gkm-g5"></div></div>
         <div class="gkm-panel"><div class="gkm-panel-title">Cycle Time</div><div class="gkm-panel-body" id="gkm-g4"></div></div>
         <div class="gkm-panel"><div class="gkm-panel-title">Productivity</div><div class="gkm-panel-body" id="gkm-g3"></div></div>
-      </div>
-      <div id="gkm-row2">
-        <div class="gkm-panel" style="flex:1"><div class="gkm-panel-title">Target Production</div><div class="gkm-panel-body" id="gkm-tp"></div></div>
-        <div class="gkm-panel" style="flex:1.4"><div class="gkm-panel-title">Activity Duration</div><div class="gkm-panel-body" id="gkm-dur"></div></div>
       </div>
     </div>
   </div>
@@ -315,13 +315,13 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   <div id="gkp-hdr">KPI</div>
   <div id="gkp-body">
     <div id="gkp-row1">
+      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Target Production</div><div class="gkp-panel-body" id="gkp-tp"></div></div>
+      <div class="gkp-panel" style="flex:1.4"><div class="gkp-panel-title">Activity Duration</div><div class="gkp-panel-body" id="gkp-dur"></div></div>
+    </div>
+    <div id="gkp-row2">
       <div class="gkp-panel"><div class="gkp-panel-title">Capacity Utilisation</div><div class="gkp-panel-body" id="gkp-g5"></div></div>
       <div class="gkp-panel"><div class="gkp-panel-title">Cycle Time</div><div class="gkp-panel-body" id="gkp-g4"></div></div>
       <div class="gkp-panel"><div class="gkp-panel-title">Productivity</div><div class="gkp-panel-body" id="gkp-g3"></div></div>
-    </div>
-    <div id="gkp-row2">
-      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Target Production</div><div class="gkp-panel-body" id="gkp-tp"></div></div>
-      <div class="gkp-panel" style="flex:1.4"><div class="gkp-panel-title">Activity Duration</div><div class="gkp-panel-body" id="gkp-dur"></div></div>
     </div>
   </div>
 </div>
