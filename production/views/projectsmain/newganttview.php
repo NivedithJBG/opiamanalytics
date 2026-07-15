@@ -859,6 +859,12 @@
       'man days':'MD','man-days':'MD','mandays':'MD',
       'lump sum':'LS','lumpsum':'LS','percentage':'%','percent':'%'
     };
+    function _fmtFull(v) {
+      v = +v || 0;
+      if (v === 0) return '0';
+      if (Number.isInteger(v)) return v.toLocaleString('en-IN');
+      return (+v.toFixed(2)).toLocaleString('en-IN');
+    }
     function _shu(u) {
       u = (u || '').trim();
       if (!u) return '';
@@ -983,8 +989,8 @@
           + '<span style="font-weight:700;color:#1a2540;flex-shrink:0;min-width:12px">' + (idx + 1) + '.</span>'
           + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + col + ';flex-shrink:0;margin-bottom:1px"></span>'
           + '<span style="flex:1;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (r.name||'') + '">' + (r.name||'') + '</span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fmtCost(est) + unit + '</b></span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + valCol + '">' + _fmtCost(act) + unit + '</b></span>'
+          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fmtFull(est) + unit + '</b></span>'
+          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + valCol + '">' + _fmtFull(act) + unit + '</b></span>'
           + '</div>';
       });
 
@@ -1074,8 +1080,8 @@
           + '<span style="font-weight:700;color:#1a2540;flex-shrink:0;min-width:12px">' + (idx + 1) + '.</span>'
           + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + col + ';flex-shrink:0;margin-bottom:1px"></span>'
           + '<span style="flex:1;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (r.name||'') + '">' + (r.name||'') + '</span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fm(est) + (unit ? ' '+unit : '') + '</b></span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + valCol + '">' + _fm(act) + (unit ? ' '+unit : '') + '</b></span>'
+          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fmtFull(est) + (unit ? ' '+unit : '') + '</b></span>'
+          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + valCol + '">' + _fmtFull(act) + (unit ? ' '+unit : '') + '</b></span>'
           + '</div>';
       });
 
@@ -1116,8 +1122,8 @@
       var maxVal = 0;
       labels.forEach(function(k) { maxVal = Math.max(maxVal, groups[k].est, groups[k].act); });
       if (maxVal === 0) maxVal = 1;
-      var estRow = '', actRow = '', bars = '', lblRow = '';
-      labels.forEach(function(k) {
+      var estRow = '', actRow = '', bars = '', lblRow = '', legendRows3 = '';
+      labels.forEach(function(k, idx3) {
         var est = groups[k].est, act = groups[k].act;
         var diff = act - est;
         var actCol = diff > 0 ? '#e8820c' : (diff < 0 ? '#1b9e8e' : '#4a5568');
@@ -1138,17 +1144,28 @@
           barInner = '<div style="width:100%;height:' + estPct + '%;background:#4a5568;border-radius:2px 2px 0 0;flex-shrink:0"></div>';
         }
         bars += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;padding:0 3px">' + barInner + '</div>';
-        lblRow += '<div style="flex:1;text-align:center;font-size:9px;color:#1a2540;font-weight:600;padding-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + k + '">' + _sh(k, 10) + '</div>';
+        lblRow += '<div style="flex:1;text-align:center;font-size:9px;color:#1a2540;font-weight:600;padding-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + k + '">' + (idx3 + 1) + '</div>';
+        legendRows3 +=
+          '<div style="display:flex;align-items:baseline;gap:5px;padding:2px 6px;border-bottom:1px solid #f0f3fa;font-size:10px">'
+          + '<span style="font-weight:700;color:#1a2540;flex-shrink:0;min-width:12px">' + (idx3 + 1) + '.</span>'
+          + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#4a5568;flex-shrink:0;margin-bottom:1px"></span>'
+          + '<span style="flex:1;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + k + '">' + k + '</span>'
+          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fmtFull(est) + '</b></span>'
+          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + actCol + '">' + _fmtFull(act) + '</b></span>'
+          + '</div>';
       });
       el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0">' + _sh(actName||'', 40) + '</div>'
-        + '<div style="display:flex;gap:2px;padding:2px 6px 0;flex-shrink:0">' + estRow + '</div>'
-        + '<div style="display:flex;gap:2px;padding:0 6px;flex-shrink:0">' + actRow + '</div>'
-        + '<div style="display:flex;gap:2px;flex:1;min-height:0;padding:0 6px;align-items:flex-end;border-bottom:1px solid #c8d0e0">' + bars + '</div>'
-        + '<div style="display:flex;gap:2px;padding:2px 6px;flex-shrink:0">' + lblRow + '</div>'
-        + '<div style="display:flex;gap:12px;padding:4px 6px;flex-shrink:0;flex-wrap:wrap">'
-        +   '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#4a5568;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Estimated</span>'
-        +   '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#e8820c;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Actual (over)</span>'
-        +   '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#1b9e8e;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Actual (under)</span>'
+        + '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">'
+        +   '<div style="display:flex;gap:2px;padding:2px 6px 0;flex-shrink:0">' + estRow + '</div>'
+        +   '<div style="display:flex;gap:2px;padding:0 6px;flex-shrink:0">' + actRow + '</div>'
+        +   '<div style="display:flex;gap:2px;flex:1;min-height:0;padding:0 6px;align-items:flex-end;border-bottom:1px solid #c8d0e0">' + bars + '</div>'
+        +   '<div style="display:flex;gap:2px;padding:2px 6px;flex-shrink:0">' + lblRow + '</div>'
+        +   '<div style="display:flex;gap:12px;padding:3px 6px;flex-shrink:0;flex-wrap:wrap">'
+        +     '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#4a5568;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Estimated</span>'
+        +     '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#e8820c;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Over</span>'
+        +     '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#1b9e8e;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Under</span>'
+        +   '</div>'
+        +   '<div style="overflow-y:auto;flex-shrink:0;max-height:80px;border-top:1px solid #e8efff;margin-top:2px">' + legendRows3 + '</div>'
         + '</div>';
     }
 
@@ -1167,7 +1184,7 @@
       var unitLbl = actUnit ? ' /' + actUnit : '';
       var el5 = document.getElementById('gm-cd-g5');
       if (el5) el5.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _sh(actName||'', 40) + '</div>';
-      _gauge('gm-cd-g5', actTotal, maxVal, 'cost', 0.5, 'Est', _fmtCost(estTotal) + unitLbl, 'Act', _fmtCost(actTotal) + unitLbl);
+      _gauge('gm-cd-g5', actTotal, maxVal, 'cost', 0.5, 'Est', _fmtFull(estTotal) + unitLbl, 'Act', _fmtFull(actTotal) + unitLbl);
     }
 
     // 5. Work Done → gm-cd-g4
@@ -1197,8 +1214,8 @@
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
         +'<text x="'+cx+'" y="'+(cy-22)+'" text-anchor="middle" font-size="22" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+pct+'%</text>'
-        +'<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Done <tspan font-weight="700">'+_fm(lastQty)+(unit?' '+unit:'')+'</tspan></text>'
-        +'<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Sched <tspan font-weight="700">'+_fm(schedQty)+(unit?' '+unit:'')+'</tspan></text>'
+        +'<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Done <tspan font-weight="700">'+_fmtFull(lastQty)+(unit?' '+unit:'')+'</tspan></text>'
+        +'<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Sched <tspan font-weight="700">'+_fmtFull(schedQty)+(unit?' '+unit:'')+'</tspan></text>'
         +'</svg>';
       el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_sh(actName,40)+'</div>' + svg;
     }
@@ -1235,22 +1252,22 @@
         var savePct3 = (Math.abs(diff) / estCost * 100).toFixed(1);
         barHtml = '<div style="display:flex;height:14px;border-radius:3px;overflow:hidden;width:100%"><div style="width:'+actPct3+'%;background:#64748b;flex-shrink:0"></div><div style="width:'+savePct3+'%;background:#1b9e8e;flex-shrink:0"></div></div>';
       }
-      var diffLabel = hasActual && diff !== 0 ? (over?'+':'-') + _fmtCost(Math.abs(diff)) + ' ' + (over?'over':'saving') : '';
+      var diffLabel = hasActual && diff !== 0 ? (over?'+':'-') + _fmtFull(Math.abs(diff)) + ' ' + (over?'over':'saving') : '';
       var diffCol = over ? '#e8820c' : '#1b9e8e';
       var workDone = +d.last_report_qty || 0;
       var estCostWD = estUCTotal * workDone;
       var actCostWD = actUCTotal * workDone;
       var diffWD = actCostWD - estCostWD;
       var overWD = diffWD > 0;
-      var diffWDLabel = diffWD !== 0 ? (overWD?'+':'-') + _fmtCost(Math.abs(diffWD)) + ' ' + (overWD?'over':'saving') : '';
+      var diffWDLabel = diffWD !== 0 ? (overWD?'+':'-') + _fmtFull(Math.abs(diffWD)) + ' ' + (overWD?'over':'saving') : '';
       var valRow = '<div style="display:flex;justify-content:space-between;align-items:baseline;font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:700;color:#111;margin-bottom:6px">'
-        +'<span>Est: ' + _fmtCost(estCost) + (hasActual ? '&nbsp;&nbsp;&nbsp;Act: <span style="color:'+(over?'#e8820c':'#1b9e8e')+'">' + _fmtCost(actCost) + '</span>' : '') + '</span>'
+        +'<span>Est: ' + _fmtFull(estCost) + (hasActual ? '&nbsp;&nbsp;&nbsp;Act: <span style="color:'+(over?'#e8820c':'#1b9e8e')+'">' + _fmtFull(actCost) + '</span>' : '') + '</span>'
         +(diffLabel ? '<span style="color:'+diffCol+'">'+diffLabel+'</span>' : '')
         +'</div>';
       var wdRow = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;margin-top:8px;line-height:1.7">'
-        +'<div>Estimated Cost of Work Done &nbsp;<span style="color:#111">' + _fmtCost(estCostWD) + '</span></div>'
-        +'<div>Actual Cost of Work Done &nbsp;<span style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">' + _fmtCost(actCostWD) + '</span></div>'
-        +'<div style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">Difference &nbsp;'+(diffWDLabel||_fmtCost(0))+'</div>'
+        +'<div>Estimated Cost of Work Done &nbsp;<span style="color:#111">' + _fmtFull(estCostWD) + '</span></div>'
+        +'<div>Actual Cost of Work Done &nbsp;<span style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">' + _fmtFull(actCostWD) + '</span></div>'
+        +'<div style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">Difference &nbsp;'+(diffWDLabel||_fmtFull(0))+'</div>'
         +'</div>';
       el.style.overflow = 'auto';
       el.innerHTML = '<div style="padding:4px 6px 8px;width:100%;box-sizing:border-box">'
