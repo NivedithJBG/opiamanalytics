@@ -97,7 +97,7 @@ class ReportController extends Controller
             JOIN workgroups_new wn ON wn.Workgroup_Id = wa.wbs_id AND wn.Project_Id = :pid2
             LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
             LEFT JOIN schedule_progress_report_log sprl ON sprl.activity_id = sa.id
-            WHERE wa.project_Id = :pid3 AND wn.Status = 0
+            WHERE wa.project_Id = :pid3 AND wn.Status = 0 AND sa.completed_status = 0
             GROUP BY sa.id, wa.activity_Name, sa.unit, wa.activity_Unit, sa.quantity, sa.completed_status, spr.start_date, spr.cumulated_qty, spr.updated_at, wn.Name
             ORDER BY wn.sortorder ASC, wa.sortorder ASC
         ", [':pid' => $projectid, ':pid2' => $projectid, ':pid3' => $projectid])->queryAll();
@@ -215,7 +215,7 @@ class ReportController extends Controller
                            . 'data-id="' . $schedId . '" title="Clear">&#10005;</button>';
                 } else {
                     $html .= '<button type="button" class="btn btn-xs btn-info activityreportreactivate" '
-                           . 'data-v="' . $schedId . '" title="Reactivate">&#8635; Reactivate</button>';
+                           . 'data-v="' . $schedId . '" title="Activate">&#8635; Activate</button>';
                 }
 
                 $html .= '</td></tr>';
