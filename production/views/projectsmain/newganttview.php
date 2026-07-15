@@ -74,7 +74,7 @@
 }
 .act-dot.ongoing   { background: #66bb6a; }
 .act-dot.upcoming  { background: #87ceeb; }
-.act-dot.overdue   { background: #ffa726; }
+.act-dot.overdue   { background: #ff4b00; }
 .act-dot-check {
   display: inline-block; width: 12px; height: 12px;
   border-radius: 50%; background: #bdbdbd;
@@ -529,7 +529,7 @@
             _dot.style.background = '#66bb6a';
             _dot.title = 'Ongoing';
           } else if (_st.planStart && _st.planStart < todayStr) {
-            _dot.style.background = '#ffa726';
+            _dot.style.background = '#ff4b00';
             _dot.title = 'Overdue';
           } else {
             _dot.style.background = '#87ceeb';
