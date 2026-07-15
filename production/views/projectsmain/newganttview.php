@@ -470,8 +470,9 @@ td.gstatus {
     // Relabel native column headers
     var _c = document.getElementById('gantt-container');
     // DEBUG — remove after fix
-    var _dbgHdr = _c ? _c.querySelector('tr') : null;
-    if (_dbgHdr) { var _dbgDiv = document.createElement('pre'); _dbgDiv.style.cssText='font-size:9px;background:#ffe;padding:4px;overflow:auto;max-height:120px;'; _dbgDiv.textContent = _dbgHdr.innerHTML.substring(0,2000); document.getElementById('relations-panel').parentNode.insertBefore(_dbgDiv, document.getElementById('relations-panel')); _dbgDiv.id='gantt-debug-hdr'; }
+    var _dbgRows = _c ? _c.querySelectorAll('tr') : [];
+    var _dbgHdr = _dbgRows[1] || _dbgRows[0];
+    if (_dbgHdr) { var _dbgDiv = document.createElement('pre'); _dbgDiv.style.cssText='font-size:9px;background:#ffe;padding:4px;overflow:auto;max-height:150px;'; _dbgDiv.textContent = _dbgHdr.innerHTML.substring(0,3000); document.getElementById('relations-panel').parentNode.insertBefore(_dbgDiv, document.getElementById('relations-panel')); _dbgDiv.id='gantt-debug-hdr'; }
     function _hdr(cls, txt) {
       var el = _c ? _c.querySelector('.gtaskheading.' + cls) : null;
       if (!el) return;
