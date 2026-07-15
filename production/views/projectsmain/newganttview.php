@@ -787,7 +787,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         if (_db) {
           var _kpiIcon = document.createElement('span');
           _kpiIcon.style.cssText = 'display:inline-block;font-size:11px;line-height:1;color:#1a7fc1;cursor:pointer;user-select:none;';
-          _kpiIcon.textContent = '⬡';
+          _kpiIcon.textContent = '📈';
           _kpiIcon.setAttribute('data-kpiactid', _db.rawId);
           _kpiTd.appendChild(_kpiIcon);
         }
