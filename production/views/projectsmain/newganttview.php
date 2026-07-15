@@ -230,10 +230,10 @@ td.gstatus {
     g.setUseToolTip(1);
     g.setCaptionType('None');
     g.setShowDur(1);
-    g.setShowStartDate(1);
-    g.setShowEndDate(1);
-    g.setShowPlanStartDate(1);
-    g.setShowPlanEndDate(1);
+    g.setShowStartDate(0);
+    g.setShowEndDate(0);
+    g.setShowPlanStartDate(0);
+    g.setShowPlanEndDate(0);
     g.setShowComp(0);
     g.setShowRes(1);
     g.setShowDeps(1);
@@ -241,8 +241,8 @@ td.gstatus {
     g.setDayMajorDateDisplayFormat('mon yyyy - Week ww');
     g.setWeekMinorDateDisplayFormat('dd mon');
     g.setUseSingleCell(10000);
-    // Custom column order: B.Duration, B.Start, B.End, A.Duration, A.Start, A.End
-    g.vColumnOrder = ['vShowDur', 'vShowStartDate', 'vShowEndDate', 'vShowRes', 'vShowPlanStartDate', 'vShowPlanEndDate'];
+    // Columns: B.Duration, A.Duration — Status/KPI/Cost injected via DOM after Draw()
+    g.vColumnOrder = ['vShowDur', 'vShowRes'];
 
     // Root project row — pID = projectId (never 0; JSGantt reserves 0 as virtual root)
     var _projTi = new JSGantt.TaskItem(
@@ -467,30 +467,32 @@ td.gstatus {
 
     g.Draw();
 
-    // Relabel column headers (cells use class "gtaskheading g{type}" in the header row)
+    // Relabel native column headers
     var _c = document.getElementById('gantt-container');
     function _hdr(cls, txt) {
       var el = _c ? _c.querySelector('.gtaskheading.' + cls) : null;
       if (el) el.textContent = txt;
     }
-    _hdr('gdur',          'B. Duration');
-    _hdr('gstartdate',    'B. Start Date');
-    _hdr('genddate',      'B. End Date');
-    _hdr('gres',          'A. Duration');
-    _hdr('gplanstartdate','A. Start Date');
-    _hdr('gplanenddate',  'A. End Date');
+    _hdr('gdur', 'B. Duration');
+    _hdr('gres', 'A. Duration');
 
-    // Inject Status column header before B. Duration (gdur)
-    // Do this AFTER _hdr() calls so 'B. Duration' label is already set on gdur before we insert
-    if (!document.getElementById('gstatus-hdr-cell')) {
-      var _durHdr = _c ? _c.querySelector('.gtaskheading.gdur') : null;
-      if (_durHdr) {
-        var _statusHdr = document.createElement('td');
-        _statusHdr.id = 'gstatus-hdr-cell';
-        _statusHdr.style.cssText = 'width:30px;min-width:30px;text-align:center;padding:0;vertical-align:middle;font-weight:600;font-size:11px;';
-        _statusHdr.textContent = 'Status';
-        _durHdr.parentNode.insertBefore(_statusHdr, _durHdr);
-      }
+    function _makeHdr(id, txt, width) {
+      var td = document.createElement('td');
+      td.id = id;
+      td.style.cssText = 'width:' + width + 'px;min-width:' + width + 'px;text-align:center;padding:0;vertical-align:middle;font-weight:600;font-size:11px;';
+      td.textContent = txt;
+      return td;
+    }
+
+    // Inject Status before B.Duration; KPI and Cost after A.Duration
+    var _durHdr = _c ? _c.querySelector('.gtaskheading.gdur') : null;
+    var _resHdr = _c ? _c.querySelector('.gtaskheading.gres')  : null;
+    if (_durHdr && !document.getElementById('gstatus-hdr-cell')) {
+      _durHdr.parentNode.insertBefore(_makeHdr('gstatus-hdr-cell', 'Status', 30), _durHdr);
+    }
+    if (_resHdr && !document.getElementById('gkpi-hdr-cell')) {
+      _resHdr.parentNode.insertBefore(_makeHdr('gcost-hdr-cell', 'Cost', 70),  _resHdr.nextSibling);
+      _resHdr.parentNode.insertBefore(_makeHdr('gkpi-hdr-cell',  'KPI',  70),  _resHdr.nextSibling);
     }
 
     // Apply progressive indentation + patch B. columns and A. columns with formatted values
@@ -540,50 +542,40 @@ td.gstatus {
         _durTd.parentNode.insertBefore(_statusTd, _durTd);
       }
 
-      // Leaf activity: patch B. and A. columns
+      // Leaf activity: patch B. Duration and A. Duration
       var _db = _actCells[_tid];
       if (_db) {
         var _durEl = _row.querySelector('td.gdur div');
         if (_durEl) _durEl.textContent = formatGanttDur(_db.dur);
 
-        var _sEl = _row.querySelector('td.gstartdate div');
-        if (_sEl) _sEl.textContent = formatGanttDate(_db.start);
-
-        var _eEl = _row.querySelector('td.genddate div');
-        if (_eEl) _eEl.textContent = formatGanttDate(_db.end);
-
         var _adEl = _row.querySelector('td.gres div');
         if (_adEl) _adEl.textContent = formatGanttDur(_db.actdur);
-
-        var _asEl = _row.querySelector('td.gplanstartdate div');
-        if (_asEl) _asEl.textContent = formatGanttDate(_db.astart);
-
-        var _aeEl = _row.querySelector('td.gplanenddate div');
-        if (_aeEl) _aeEl.textContent = formatGanttDate(_db.aend);
       }
 
-      // Group row A. columns (WBS items and IOW groups)
+      // Group row A. Duration
       if (_groupActDur.hasOwnProperty(_tid)) {
         var _gadEl = _row.querySelector('td.gres div');
         if (_gadEl) _gadEl.textContent = formatGanttDur(_groupActDur[_tid]);
-
-        var _gasEl = _row.querySelector('td.gplanstartdate div');
-        if (_gasEl) _gasEl.textContent = formatGanttDate(_groupActStart[_tid]);
-
-        var _gaeEl = _row.querySelector('td.gplanenddate div');
-        if (_gaeEl) _gaeEl.textContent = formatGanttDate(_groupActEnd[_tid]);
       }
 
-      // Group row B. columns (always schedule values)
+      // Group row B. Duration
       if (_groupBDur.hasOwnProperty(_tid)) {
         var _gbdEl = _row.querySelector('td.gdur div');
         if (_gbdEl) _gbdEl.textContent = formatGanttDur(_groupBDur[_tid]);
+      }
 
-        var _gbsEl = _row.querySelector('td.gstartdate div');
-        if (_gbsEl) _gbsEl.textContent = formatGanttDate(_groupBStart[_tid]);
-
-        var _gbeEl = _row.querySelector('td.genddate div');
-        if (_gbeEl) _gbeEl.textContent = formatGanttDate(_groupBEnd[_tid]);
+      // Inject KPI and Cost placeholder cells after A.Duration (gres)
+      var _resTd = _row.querySelector('td.gres');
+      if (_resTd && !_row.querySelector('td.gcol-kpi')) {
+        var _kpiTd = document.createElement('td');
+        _kpiTd.className = 'gcol-kpi';
+        _kpiTd.style.cssText = 'width:70px;min-width:70px;text-align:center;padding:2px 4px;';
+        var _costTd = document.createElement('td');
+        _costTd.className = 'gcol-cost';
+        _costTd.style.cssText = 'width:70px;min-width:70px;text-align:center;padding:2px 4px;';
+        var _after = _resTd.nextSibling;
+        _resTd.parentNode.insertBefore(_kpiTd,  _after);
+        _resTd.parentNode.insertBefore(_costTd, _kpiTd.nextSibling);
       }
     }
 
