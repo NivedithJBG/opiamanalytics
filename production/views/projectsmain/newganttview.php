@@ -1381,10 +1381,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
     function _positionCostPopup(anchorEl) {
       var pop = document.getElementById('gcm-popup');
-      var pw = pop.offsetWidth || 620, ph = pop.offsetHeight || 280;
+      var pw = pop.offsetWidth || 760, ph = pop.offsetHeight || 280;
       var vw = window.innerWidth, vh = window.innerHeight;
       var rect = anchorEl ? anchorEl.getBoundingClientRect() : null;
-      var left = rect ? Math.min(rect.right + 10, vw - pw - 8) : vw - pw - 8;
+      var left = rect ? Math.min(rect.right - 70, vw - pw - 8) : vw - pw - 8;
       if (left < 4) left = 4;
       var top = rect ? rect.top - 20 : vh / 2 - ph / 2;
       if (top + ph > vh - 8) top = vh - ph - 8;
