@@ -22,6 +22,17 @@
   width: 100%;
   height: calc(100vh - 220px);
 }
+/* Left panel: wider, never scrolls horizontally */
+#gantt-container .gmainleft {
+  flex: 0 0 80% !important;
+  width: 80% !important;
+  overflow-x: hidden !important;
+}
+#gantt-container .glistlbl,
+#gantt-container .gtasktablewrapper,
+#gantt-container .gtasktableouterwrapper {
+  overflow-x: hidden !important;
+}
 /* Widen the activity name column */
 #gantt-container .gtaskname,
 #gantt-container .gspanning.gtaskname {
@@ -72,7 +83,7 @@
   color: #fff; font-size: 9px; line-height: 12px;
   text-align: center; vertical-align: middle;
 }
-td.gcol-status { width: 28px; min-width: 28px; text-align: center; padding: 0; vertical-align: middle; }
+td.gcol-status { width: 64px; min-width: 64px; text-align: center; padding: 0; vertical-align: middle; }
 </style>
 
 <div class="container-fluid">
@@ -491,7 +502,7 @@ td.gcol-status { width: 28px; min-width: 28px; text-align: center; padding: 0; v
 
     // Inject Status header after gtaskname, before gdur
     if (_durHdr && !document.getElementById('gcol-status-hdr')) {
-      _durHdr.parentNode.insertBefore(_makeHdr('gcol-status-hdr', 'Status', 28), _durHdr);
+      _durHdr.parentNode.insertBefore(_makeHdr('gcol-status-hdr', 'Status', 64), _durHdr);
     }
     if (_resHdr && !document.getElementById('gkpi-hdr-cell')) {
       _resHdr.parentNode.insertBefore(_makeHdr('gkpi-hdr-cell',  'KPI',  70),  _resHdr.nextSibling);
@@ -600,6 +611,47 @@ td.gcol-status { width: 28px; min-width: 28px; text-align: center; padding: 0; v
       _overlay.style.cssText = 'position:absolute;left:' + _budgetedPx + 'px;width:' + _delayPx + 'px;top:1px;height:13px;background:rgba(255,0,0,0.9);pointer-events:none;z-index:2;border-radius:0 3px 3px 0;';
       _barDiv.appendChild(_overlay);
     }
+
+    // ── Kill left-panel horizontal scroll ────────────────────────────────────
+    // JSGantt's syncScroll wired: chartBody.scrollLeft → gListLbl.scrollLeft
+    //                         and: gtasktablewrapper.scrollLeft → gListLbl.scrollLeft
+    // Both make left columns slide out of view when user scrolls the chart or left body.
+    // Fix: clone those two elements (strips all JS event listeners), put clones back in DOM,
+    // then rewire ONLY vertical scrollTop sync between left body and chart body.
+    // Must run AFTER all DOM injection above so clones capture the injected cells.
+    (function() {
+      var _gc = document.getElementById('gantt-container');
+      if (!_gc) return;
+
+      var _listHead  = _gc.querySelector('.glistlbl');           // left header div
+      var _listBody  = _gc.querySelector('.gtasktablewrapper');  // left body div
+      var _chartBody = _gc.querySelector('.gchartgrid');         // right chart body
+
+      if (!_listHead || !_listBody || !_chartBody) return;
+
+      // cloneNode(true) copies DOM but NOT addEventListener listeners → JSGantt scroll sync gone
+      var _lhClone = _listHead.cloneNode(true);
+      var _lbClone = _listBody.cloneNode(true);
+      _listHead.parentNode.replaceChild(_lhClone, _listHead);
+      _listBody.parentNode.replaceChild(_lbClone, _listBody);
+
+      // Force both to position 0 and keep there
+      _lhClone.scrollLeft = 0;
+      _lbClone.scrollLeft = 0;
+
+      // Rewire vertical scroll only (scrollTop) between left body ↔ chart body
+      var _lock = false;
+      _chartBody.addEventListener('scroll', function() {
+        if (_lock) return; _lock = true;
+        _lbClone.scrollTop = _chartBody.scrollTop;
+        _lock = false;
+      });
+      _lbClone.addEventListener('scroll', function() {
+        if (_lock) return; _lock = true;
+        _chartBody.scrollTop = _lbClone.scrollTop;
+        _lock = false;
+      });
+    })();
 
     $('#gantt-status').text('');
   }
