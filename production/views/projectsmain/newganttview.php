@@ -24,8 +24,6 @@
 }
 /* Left panel: wider, never scrolls horizontally */
 #gantt-container .gmainleft {
-  flex: 0 0 33% !important;
-  width: 33% !important;
   overflow-x: hidden !important;
 }
 #gantt-container .glistlbl,
@@ -628,6 +626,16 @@ td.gcol-status { width: 64px; min-width: 64px; text-align: center; padding: 0; v
       var _chartBody = _gc.querySelector('.gchartgrid');         // right chart body
 
       if (!_listHead || !_listBody || !_chartBody) return;
+
+      // Measure the actual content width of the left panel header table before cloning
+      var _headerTable = _listHead.querySelector('table');
+      var _contentWidth = _headerTable ? _headerTable.scrollWidth : _listHead.scrollWidth;
+      // Set .gmainleft to exactly the pixel width needed to show all columns
+      var _mainLeft = _gc.querySelector('.gmainleft');
+      if (_mainLeft && _contentWidth > 0) {
+        _mainLeft.style.flex = '0 0 ' + _contentWidth + 'px';
+        _mainLeft.style.width = _contentWidth + 'px';
+      }
 
       // cloneNode(true) copies DOM but NOT addEventListener listeners → JSGantt scroll sync gone
       var _lhClone = _listHead.cloneNode(true);
