@@ -65,8 +65,9 @@
   display: flex; flex-direction: column; overflow: hidden; min-width: 0;
 }
 .gcm-panel-title {
-  font-size: 10px; font-weight: 700; color: #1a2540; text-transform: uppercase;
-  letter-spacing: 0.04em; padding: 5px 8px; border-bottom: 1px solid #e8efff; flex-shrink: 0;
+  font-size: 10px; font-weight: 700; color: #e8efff; text-transform: uppercase;
+  letter-spacing: 0.04em; padding: 5px 8px; border-bottom: 1px solid #0d1f3c; flex-shrink: 0;
+  background: #1a2540;
 }
 .gcm-panel-body {
   flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column;
