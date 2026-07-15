@@ -22,6 +22,13 @@
   width: 100%;
   height: calc(100vh - 220px);
 }
+/* Widen the activity name column */
+#gantt-container .gtaskname,
+#gantt-container .gspanning.gtaskname {
+  min-width: 220px !important;
+  width: 220px !important;
+  max-width: 220px !important;
+}
 .btn-opiam {
   position: relative;
   padding: 4px 14px;
