@@ -593,6 +593,16 @@
     }
 
 
+    // Colour completed activity bars green
+    for (var _tid in _actStatus) {
+      if (!_actStatus[_tid].completed) continue;
+      var _barDiv = document.getElementById('gantt-container' + 'taskbar_' + _tid);
+      if (_barDiv) {
+        _barDiv.style.background = '#43a047';
+        _barDiv.style.borderColor = '#388e3c';
+      }
+    }
+
     // ── Kill left-panel horizontal scroll ────────────────────────────────────
     // JSGantt's syncScroll wired: chartBody.scrollLeft → gListLbl.scrollLeft
     //                         and: gtasktablewrapper.scrollLeft → gListLbl.scrollLeft
