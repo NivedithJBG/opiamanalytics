@@ -788,10 +788,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           var _kpiIcon = document.createElement('span');
           _kpiIcon.style.cssText = 'display:inline-block;cursor:pointer;vertical-align:middle;';
           _kpiIcon.innerHTML = '<svg width="14" height="12" viewBox="0 0 14 12" xmlns="http://www.w3.org/2000/svg">'
-            + '<rect x="0" y="7" width="3" height="5" rx="0.5" fill="#607d8b"/>'
-            + '<rect x="4" y="4" width="3" height="8" rx="0.5" fill="#607d8b"/>'
-            + '<rect x="8" y="1" width="3" height="11" rx="0.5" fill="#607d8b"/>'
-            + '<polyline points="1.5,6 5.5,3 9.5,0.5 13,0" fill="none" stroke="#90a4ae" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>'
+            + '<rect x="0" y="7" width="3" height="5" rx="0.5" fill="#00838f"/>'
+            + '<rect x="4" y="4" width="3" height="8" rx="0.5" fill="#00838f"/>'
+            + '<rect x="8" y="1" width="3" height="11" rx="0.5" fill="#00838f"/>'
+            + '<polyline points="1.5,6 5.5,3 9.5,0.5 13,0" fill="none" stroke="#004d55" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>'
             + '</svg>';
           _kpiIcon.setAttribute('data-kpiactid', _db.rawId);
           _kpiTd.appendChild(_kpiIcon);
