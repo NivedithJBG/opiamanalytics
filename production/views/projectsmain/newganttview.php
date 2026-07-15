@@ -81,7 +81,6 @@
   color: #fff; font-size: 9px; line-height: 12px;
   text-align: center; vertical-align: middle;
 }
-td.gcol-status { width: 64px; min-width: 64px; text-align: center; padding: 0; vertical-align: middle; }
 </style>
 
 <div class="container-fluid">
@@ -498,11 +497,6 @@ td.gcol-status { width: 64px; min-width: 64px; text-align: center; padding: 0; v
       return td;
     }
 
-    // Inject Status header after gtaskname, before gdur
-    if (_durHdr && !document.getElementById('gcol-status-hdr')) {
-      _durHdr.parentNode.insertBefore(_makeHdr('gcol-status-hdr', 'Status', 64), _durHdr);
-    }
-
     // Apply progressive indentation + patch B. columns and A. columns with formatted values
     var _tasks = g.getList ? g.getList() : [];
     for (var _i = 0; _i < _tasks.length; _i++) {
@@ -511,42 +505,38 @@ td.gcol-status { width: 64px; min-width: 64px; text-align: center; padding: 0; v
       var _row = document.getElementById('gantt-container' + 'child_' + _tid);
       if (!_row) continue;
 
-      // Indentation
+      // Indentation + prepend status dot inside the activity name cell
       var _cell = _row.querySelector('td.gtaskname');
       if (_cell) {
         var _indent = [0, 4, 18, 32, 46][_t.getLevel()] || 4;
         _cell.style.paddingLeft = _indent + 'px';
-      }
 
-      // Inject status dot before gdur
-      var _durTd = _row.querySelector('td.gdur');
-      if (_durTd && !_row.querySelector('td.gcol-status')) {
-        var _stTd = document.createElement('td');
-        _stTd.className = 'gcol-status';
+        // Prepend dot for leaf activities only (not group rows)
         var _st = _actStatus[_tid];
-        if (_st) {
-          var _dot;
+        if (_st && !_row.querySelector('.act-dot-inline')) {
+          var _dot = document.createElement('span');
+          _dot.className = 'act-dot-inline';
+          _dot.style.cssText = 'display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle;flex-shrink:0;';
           if (_st.completed) {
-            _dot = document.createElement('span');
-            _dot.className = 'act-dot-check';
+            _dot.style.background = '#bdbdbd';
+            _dot.style.color = '#fff';
+            _dot.style.fontSize = '7px';
+            _dot.style.lineHeight = '9px';
+            _dot.style.textAlign = 'center';
             _dot.title = 'Completed';
             _dot.textContent = '✓';
           } else if (_st.hasProgress) {
-            _dot = document.createElement('span');
-            _dot.className = 'act-dot ongoing';
+            _dot.style.background = '#66bb6a';
             _dot.title = 'Ongoing';
           } else if (_st.planStart && _st.planStart < todayStr) {
-            _dot = document.createElement('span');
-            _dot.className = 'act-dot overdue';
+            _dot.style.background = '#ffa726';
             _dot.title = 'Overdue';
           } else {
-            _dot = document.createElement('span');
-            _dot.className = 'act-dot upcoming';
+            _dot.style.background = '#87ceeb';
             _dot.title = 'Upcoming';
           }
-          _stTd.appendChild(_dot);
+          _cell.insertBefore(_dot, _cell.firstChild);
         }
-        _durTd.parentNode.insertBefore(_stTd, _durTd);
       }
 
       // Leaf activity: patch B. Duration and A. Duration
