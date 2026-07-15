@@ -192,7 +192,7 @@ class ReportController extends Controller
                 $lastUpdated = $this->formatDateDisplay($act['last_updated']);
                 $completed   = (int)($act['completed_status'] ?? 0);
                 $rowClass    = $completed ? 'completed-row' : '';
-                $status      = $completed ? '<span style="color:green;font-weight:600;">Complete</span>' : '<span style="color:#888;">Active</span>';
+                $status      = $completed ? '<span style="color:green;font-weight:600;">Completed</span>' : '<span style="color:#888;">Active</span>';
 
                 $html .= '<tr class="' . $rowClass . '">';
                 $html .= '<td>' . ($k + 1) . '</td>';
