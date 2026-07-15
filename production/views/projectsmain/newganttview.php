@@ -25,9 +25,9 @@
 /* Widen the activity name column */
 #gantt-container .gtaskname,
 #gantt-container .gspanning.gtaskname {
-  min-width: 220px !important;
-  width: 220px !important;
-  max-width: 220px !important;
+  min-width: 320px !important;
+  width: 320px !important;
+  max-width: 320px !important;
 }
 .btn-opiam {
   position: relative;
