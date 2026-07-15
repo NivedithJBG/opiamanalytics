@@ -34,9 +34,9 @@
 /* Widen the activity name column */
 #gantt-container .gtaskname,
 #gantt-container .gspanning.gtaskname {
-  min-width: 320px !important;
-  width: 320px !important;
-  max-width: 320px !important;
+  min-width: 260px !important;
+  width: 260px !important;
+  max-width: 260px !important;
 }
 .btn-opiam {
   position: relative;
