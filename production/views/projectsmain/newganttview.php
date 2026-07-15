@@ -24,8 +24,8 @@
 }
 /* Left panel: wider, never scrolls horizontally */
 #gantt-container .gmainleft {
-  flex: 0 0 80% !important;
-  width: 80% !important;
+  flex: 0 0 33% !important;
+  width: 33% !important;
   overflow-x: hidden !important;
 }
 #gantt-container .glistlbl,
