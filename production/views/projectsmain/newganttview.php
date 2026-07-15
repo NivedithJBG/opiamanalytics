@@ -58,6 +58,21 @@
 .dot-normal    { background: #337ab7; }
 /* Critical path bar colour — overrides external CSS (needed when view loads without full layout) */
 .gtaskpink, div.gtaskpink.gplan { background: #00ACC1 !important; border-color: #0097A7 !important; }
+/* Status dots */
+.act-dot {
+  display: inline-block; width: 12px; height: 12px;
+  border-radius: 50%; vertical-align: middle;
+}
+.act-dot.ongoing   { background: #66bb6a; }
+.act-dot.upcoming  { background: #87ceeb; }
+.act-dot.overdue   { background: #ffa726; }
+.act-dot-check {
+  display: inline-block; width: 12px; height: 12px;
+  border-radius: 50%; background: #bdbdbd;
+  color: #fff; font-size: 9px; line-height: 12px;
+  text-align: center; vertical-align: middle;
+}
+td.gcol-status { width: 28px; min-width: 28px; text-align: center; padding: 0; vertical-align: middle; }
 </style>
 
 <div class="container-fluid">
@@ -78,6 +93,10 @@
   <div class="gantt-legend-row" style="margin-top:10px;">
     <div class="gantt-legend-item"><span class="gantt-legend-dot dot-critical"></span> Critical Path</div>
     <div class="gantt-legend-item"><span class="gantt-legend-dot dot-normal"></span> Normal Activity</div>
+    <div class="gantt-legend-item"><span class="act-dot ongoing"></span> Ongoing</div>
+    <div class="gantt-legend-item"><span class="act-dot upcoming"></span> Upcoming</div>
+    <div class="gantt-legend-item"><span class="act-dot overdue"></span> Overdue</div>
+    <div class="gantt-legend-item"><span class="act-dot-check">✓</span> Completed</div>
   </div>
 
   <div id="relations-panel">
@@ -215,6 +234,8 @@
     var _projHid = _projTi.getID();
     g.AddTaskItem(_projTi);
 
+    // Map from hashed task ID → status for dot column
+    var _actStatus = {};
     // Map from hashed task ID → raw DB values, used after Draw() to patch B. columns
     var _actCells = {};
     // A. Duration/Start/End for group rows (WBS items and IOW groups) — separate to avoid clearing B. columns
@@ -367,6 +388,12 @@
                     '', '', g, null,
                     null, null
                   );
+                  // Status dot data
+                  _actStatus[_ti.getID()] = {
+                    completed:   (parseInt(act.completed_status) === 1),
+                    hasProgress: (parseFloat(act.cumulated_qty) > 0),
+                    planStart:   safeDate(act.actual_start_date)
+                  };
                   // B. columns show schedule values; A. columns fall back to B. when no progress
                   _actCells[_ti.getID()] = {
                     dur:    act.old_duration,
@@ -462,6 +489,10 @@
       return td;
     }
 
+    // Inject Status header after gtaskname, before gdur
+    if (_durHdr && !document.getElementById('gcol-status-hdr')) {
+      _durHdr.parentNode.insertBefore(_makeHdr('gcol-status-hdr', 'Status', 28), _durHdr);
+    }
     if (_resHdr && !document.getElementById('gkpi-hdr-cell')) {
       _resHdr.parentNode.insertBefore(_makeHdr('gkpi-hdr-cell',  'KPI',  70),  _resHdr.nextSibling);
       _resHdr.parentNode.insertBefore(_makeHdr('gcost-hdr-cell', 'Cost', 70),  _resHdr.nextSibling);
@@ -480,6 +511,37 @@
       if (_cell) {
         var _indent = [0, 4, 18, 32, 46][_t.getLevel()] || 4;
         _cell.style.paddingLeft = _indent + 'px';
+      }
+
+      // Inject status dot before gdur
+      var _durTd = _row.querySelector('td.gdur');
+      if (_durTd && !_row.querySelector('td.gcol-status')) {
+        var _stTd = document.createElement('td');
+        _stTd.className = 'gcol-status';
+        var _st = _actStatus[_tid];
+        if (_st) {
+          var _dot;
+          if (_st.completed) {
+            _dot = document.createElement('span');
+            _dot.className = 'act-dot-check';
+            _dot.title = 'Completed';
+            _dot.textContent = '✓';
+          } else if (_st.hasProgress) {
+            _dot = document.createElement('span');
+            _dot.className = 'act-dot ongoing';
+            _dot.title = 'Ongoing';
+          } else if (_st.planStart && _st.planStart < todayStr) {
+            _dot = document.createElement('span');
+            _dot.className = 'act-dot overdue';
+            _dot.title = 'Overdue';
+          } else {
+            _dot = document.createElement('span');
+            _dot.className = 'act-dot upcoming';
+            _dot.title = 'Upcoming';
+          }
+          _stTd.appendChild(_dot);
+        }
+        _durTd.parentNode.insertBefore(_stTd, _durTd);
       }
 
       // Leaf activity: patch B. Duration and A. Duration
