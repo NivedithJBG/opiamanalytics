@@ -1516,22 +1516,33 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
             +'<text x="202" y="112" text-anchor="end" font-size="11" fill="#111" font-family="Barlow Condensed,Arial">High</text>'
             +'</svg>';
         })();
-        // Target Production
+        // Target Production — dial (same as KPI Dashboard)
         (function(){
           var el=document.getElementById('gkm-tp'); if(!el)return;
-          var tq=+k.target_qty||0,aq=+k.actual_qty||0,ppd=+k.planned_per_day||0,u=k.unit?' '+k.unit:'';
-          var f=tq>0?Math.min(1,aq/tq):0,barW=(f*100).toFixed(1);
-          var actCol=aq<tq?'#e8820c':aq>tq?'#27ae60':'#3461b8';
-          el.innerHTML='<div style="padding:12px 14px;font-family:\'Barlow Condensed\',sans-serif;font-size:13px;display:flex;flex-direction:column;gap:8px;height:100%;box-sizing:border-box;">'
-            +'<div style="display:flex;justify-content:space-between;">'
-            +'<span style="color:#5a6e8c;">Planned/day&nbsp;<b style="color:#1a2540;">'+_fmtFull(ppd)+u+'</b></span>'
-            +'<span style="color:#5a6e8c;">Done&nbsp;<b style="color:'+actCol+';">'+_fmtFull(aq)+u+'</b></span>'
-            +'</div>'
-            +'<div style="height:14px;background:#dde3ef;border-radius:5px;overflow:hidden;">'
-            +'<div style="height:100%;width:'+barW+'%;background:'+actCol+';border-radius:5px;"></div></div>'
-            +'<div style="display:flex;justify-content:space-between;font-size:11px;color:#5a6e8c;">'
-            +'<span>0</span><span>Target&nbsp;<b style="color:#1a2540;">'+_fmtFull(tq)+u+'</b></span></div>'
-            +'</div>';
+          var tq=+k.target_qty||0,aq=+k.actual_qty||0,dur=+k.b_duration||0,u=k.unit?' '+k.unit:'';
+          var asd=k.act_start_date||'',lrd=k.last_reported_date||'';
+          var elDays=(asd&&lrd)?Math.max(0,Math.round((new Date(lrd)-new Date(asd))/86400000)+1):0;
+          var compTarget=(dur>0&&tq>0)?Math.min(tq,elDays*(tq/dur)):0;
+          var fAct=tq>0?Math.max(0,Math.min(1,aq/tq)):0;
+          var fTgt=tq>0?Math.max(0,Math.min(1,compTarget/tq)):0;
+          var actCol=aq<compTarget?'#e53935':aq>compTarget?'#27ae60':'#1a2540';
+          var cx=105,cy=92,r=76,sw=14;
+          function ptF(fr){var a=Math.PI*(1-fr);return [(cx+r*Math.cos(a)).toFixed(1),(cy-r*Math.sin(a)).toFixed(1)];}
+          function arcD(f1,f2,col,cap){if(f2<=f1)return'';cap=cap||'butt';var p1=ptF(f1),p2=ptF(f2);if((f2-f1)>=1){var pm=ptF(0.5);return'<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+pm[0]+','+pm[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>';}return'<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>';}
+          var nr=r-15,na=Math.PI*(1-fTgt),nx=(cx+nr*Math.cos(na)).toFixed(1),ny=(cy-nr*Math.sin(na)).toFixed(1);
+          el.innerHTML='<svg width="100%" viewBox="0 -12 210 146" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
+            +arcD(0,1,'#a8aeb8')+(fAct>0?arcD(0,fAct,'#0d1f6e','butt'):'')
+            +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
+            +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/><circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#a8aeb8"/>'
+            +(tq>0?'<text x="105" y="40" text-anchor="middle" font-size="10" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Target to Date</text>':'')
+            +(tq>0?'<text x="105" y="53" text-anchor="middle" font-size="15" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+_fmtFull(compTarget)+u+'</text>':'')
+            +'<text x="105" y="66" text-anchor="middle" font-size="10" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual</text>'
+            +'<text x="105" y="79" text-anchor="middle" font-size="15" font-weight="700" fill="'+actCol+'" font-family="Barlow Condensed,Arial">'+_fmtFull(aq)+u+'</text>'
+            +'<text x="8" y="112" text-anchor="start" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual</text>'
+            +'<text x="8" y="123" text-anchor="start" font-size="12" font-weight="700" fill="'+actCol+'" font-family="Barlow Condensed,Arial">'+_fmtFull(aq)+u+'</text>'
+            +'<text x="202" y="112" text-anchor="end" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Schedule Qty</text>'
+            +'<text x="202" y="123" text-anchor="end" font-size="12" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+_fmtFull(tq)+u+'</text>'
+            +'</svg>';
         })();
         // Activity Duration
         (function(){
@@ -1864,19 +1875,28 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
     function _renderKpuTargetProd(k) {
       var el=document.getElementById('gkp-tp'); if(!el)return;
-      var tq=+k.target_qty||0, aq=+k.actual_qty||0, ppd=+k.planned_per_day||0, u=k.unit?'  '+k.unit:'';
-      var f=tq>0?Math.min(1,aq/tq):0;
-      var barW=(f*100).toFixed(1), actCol=aq<tq?'#e8820c':aq>tq?'#27ae60':'#3461b8';
-      el.innerHTML='<div style="padding:5px 7px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;">'
-        +'<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
-        +'<span style="color:#5a6e8c;">Planned/day <b style="color:#1a2540;">'+_fmK(ppd)+u+'</b></span>'
-        +'<span style="color:#5a6e8c;">Done <b style="color:'+actCol+';">'+_fmK(aq)+u+'</b></span>'
-        +'</div>'
-        +'<div style="height:10px;background:#dde3ef;border-radius:4px;overflow:hidden;">'
-        +'<div style="height:100%;width:'+barW+'%;background:'+actCol+';border-radius:4px;"></div></div>'
-        +'<div style="display:flex;justify-content:space-between;margin-top:3px;font-size:10px;color:#5a6e8c;">'
-        +'<span>0</span><span>Target <b style="color:#1a2540;">'+_fmK(tq)+u+'</b></span></div>'
-        +'</div>';
+      var tq=+k.target_qty||0, aq=+k.actual_qty||0, dur=+k.b_duration||0, u=k.unit?' '+k.unit:'';
+      var asd=k.act_start_date||'', lrd=k.last_reported_date||'';
+      var elDays=(asd&&lrd)?Math.max(0,Math.round((new Date(lrd)-new Date(asd))/86400000)+1):0;
+      var compTarget=(dur>0&&tq>0)?Math.min(tq,elDays*(tq/dur)):0;
+      var fAct=tq>0?Math.max(0,Math.min(1,aq/tq)):0;
+      var fTgt=tq>0?Math.max(0,Math.min(1,compTarget/tq)):0;
+      var actCol=aq<compTarget?'#e53935':aq>compTarget?'#27ae60':'#1a2540';
+      var cx=90,cy=80,r=66,sw=12;
+      function ptF(fr){var a=Math.PI*(1-fr);return [(cx+r*Math.cos(a)).toFixed(1),(cy-r*Math.sin(a)).toFixed(1)];}
+      function arcP(f1,f2,col,cap){if(f2<=f1)return'';cap=cap||'butt';var p1=ptF(f1),p2=ptF(f2);if((f2-f1)>=1){var pm=ptF(0.5);return'<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+pm[0]+','+pm[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>';}return'<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>';}
+      var nr=r-12,na=Math.PI*(1-fTgt),nx=(cx+nr*Math.cos(na)).toFixed(1),ny=(cy-nr*Math.sin(na)).toFixed(1);
+      el.innerHTML='<svg width="100%" viewBox="0 -8 180 130" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
+        +arcP(0,1,'#a8aeb8')+(fAct>0?arcP(0,fAct,'#0d1f6e','butt'):'')
+        +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="2.5" stroke-linecap="round"/>'
+        +'<circle cx="'+cx+'" cy="'+cy+'" r="5" fill="#555"/><circle cx="'+cx+'" cy="'+cy+'" r="2" fill="#a8aeb8"/>'
+        +(tq>0?'<text x="90" y="44" text-anchor="middle" font-size="8" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Target to Date</text>':'')
+        +(tq>0?'<text x="90" y="55" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+_fmK(compTarget)+u+'</text>':'')
+        +'<text x="90" y="65" text-anchor="middle" font-size="8" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual</text>'
+        +'<text x="90" y="76" text-anchor="middle" font-size="12" font-weight="700" fill="'+actCol+'" font-family="Barlow Condensed,Arial">'+_fmK(aq)+u+'</text>'
+        +'<text x="4" y="100" text-anchor="start" font-size="9" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700" fill="'+actCol+'">'+_fmK(aq)+u+'</tspan></text>'
+        +'<text x="176" y="100" text-anchor="end" font-size="9" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Schedule <tspan font-weight="700" fill="#1a2540">'+_fmK(tq)+u+'</tspan></text>'
+        +'</svg>';
     }
 
     function _renderKpuDuration(k) {
