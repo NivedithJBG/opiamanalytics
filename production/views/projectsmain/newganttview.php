@@ -7,6 +7,22 @@
  */
 ?>
 <style>
+#gantt-act-tooltip {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #222;
+  line-height: 1.8;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+  pointer-events: none;
+  white-space: nowrap;
+}
+#gantt-act-tooltip b { color: #1a2540; }
 #gantt-toolbar {
   padding: 8px 0;
   margin-bottom: 6px;
@@ -87,7 +103,8 @@
 <div class="row">
 <div class="col-md-12">
 
-  <div id="gantt-toolbar">
+  <div id="gantt-act-tooltip"></div>
+<div id="gantt-toolbar">
     <button class="btn-opiam" id="btn-manage-relations">Manage Relations</button>
     <button class="btn-opiam" id="btn-refresh-cpm">Refresh Critical Path</button>
     <button class="btn-opiam" id="btn-quick-entry" style="background:#00838f;" title="Quick Entry">&#9998; Quick Entry</button>
@@ -622,6 +639,50 @@
         _barDiv.style.borderColor = '#388e3c';
       }
     }
+
+    // ── Activity name tooltip ─────────────────────────────────────────────────
+    (function() {
+      var _tip = document.getElementById('gantt-act-tooltip');
+      if (!_tip) return;
+
+      function _fmt(d) {
+        if (!d || d === '0000-00-00') return '—';
+        var p = d.split('-');
+        return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d;
+      }
+
+      var _tasks2 = g.getList ? g.getList() : [];
+      for (var _ti2 = 0; _ti2 < _tasks2.length; _ti2++) {
+        var _tid2 = _tasks2[_ti2].getID();
+        var _db2  = _actCells[_tid2];
+        if (!_db2) continue;
+        var _row2 = document.getElementById('gantt-container' + 'child_' + _tid2);
+        if (!_row2) continue;
+        var _nameCell = _row2.querySelector('td.gtaskname');
+        if (!_nameCell) continue;
+
+        (function(db) {
+          _nameCell.style.cursor = 'default';
+          _nameCell.addEventListener('mouseenter', function(e) {
+            _tip.innerHTML =
+              '<b>Planned Start:</b> '  + _fmt(db.start)  + '<br>' +
+              '<b>Actual Start:</b> '   + _fmt(db.astart) + '<br>' +
+              '<b>Planned End:</b> '    + _fmt(db.end)    + '<br>' +
+              '<b>Actual End:</b> '     + _fmt(db.aend);
+            _tip.style.display = 'block';
+            _tip.style.left = (e.clientX + 14) + 'px';
+            _tip.style.top  = (e.clientY + 14) + 'px';
+          });
+          _nameCell.addEventListener('mousemove', function(e) {
+            _tip.style.left = (e.clientX + 14) + 'px';
+            _tip.style.top  = (e.clientY + 14) + 'px';
+          });
+          _nameCell.addEventListener('mouseleave', function() {
+            _tip.style.display = 'none';
+          });
+        })(_db2);
+      }
+    })();
 
     // ── Kill left-panel horizontal scroll ────────────────────────────────────
     // JSGantt's syncScroll wired: chartBody.scrollLeft → gListLbl.scrollLeft
