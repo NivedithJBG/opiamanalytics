@@ -324,7 +324,6 @@
 
     g.setUseToolTip(0);
     g.setUseSort(0);
-    g.setUseToolTip(1);
     g.setCaptionType('None');
     g.setShowDur(1);
     g.setShowStartDate(0);
@@ -680,7 +679,6 @@
         _costTd.style.cssText = 'width:50px;min-width:50px;text-align:center;padding:0;vertical-align:middle;';
         var _costIcon = document.createElement('span');
         _costIcon.style.cssText = 'display:inline-block;width:8px;height:8px;background:#546e7a;border-radius:2px;cursor:pointer;';
-        _costIcon.title = 'Cost';
         // Store raw activity DB id so click handler can POST it
         if (_db) _costIcon.setAttribute('data-actid', _db.rawId);
         _costTd.appendChild(_costIcon);
