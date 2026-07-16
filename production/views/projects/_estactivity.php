@@ -539,7 +539,14 @@ function alLoadProjTypeList(){
         dataType: 'json',
         data: { worktypename: '' },
         success: function(data){
-            $('#alProjTypeListContainer').html(data.result || '<div class="col-md-12" style="padding:8px 15px;color:#999;">No project types yet.</div>');
+            if(data && data.result){
+                $('#alProjTypeListContainer').html(data.result);
+            } else {
+                $('#alProjTypeListContainer').html('<div class="col-md-12" style="padding:8px 15px;color:#999;">No project types yet.</div>');
+            }
+        },
+        error: function(xhr, status, err){
+            $('#alProjTypeListContainer').html('<div class="col-md-12" style="padding:8px 15px;color:red;">Error: ' + xhr.status + ' ' + err + ' — ' + xhr.responseText.substring(0,200) + '</div>');
         }
     });
 }
