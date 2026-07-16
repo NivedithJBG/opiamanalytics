@@ -408,7 +408,7 @@ use app\models\Resources;
                 <div id="alIowGroupListContainer" class="row"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal"><span class="icon-close"></span> Close</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal" style="background:#e67e22;color:#fff;border-color:#d35400;"><span class="icon-close"></span> Close</button>
             </div>
         </div>
     </div>
@@ -446,7 +446,7 @@ use app\models\Resources;
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal"><span class="icon-close"></span> Close</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal" style="background:#e67e22;color:#fff;border-color:#d35400;"><span class="icon-close"></span> Close</button>
             </div>
         </div>
     </div>
@@ -479,7 +479,7 @@ use app\models\Resources;
                 <div id="alActTypeListContainer" class="row"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal"><span class="icon-close"></span> Close</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal" style="background:#e67e22;color:#fff;border-color:#d35400;"><span class="icon-close"></span> Close</button>
             </div>
         </div>
     </div>
@@ -492,12 +492,13 @@ use app\models\Resources;
 $('#alIowGroupPopup, #alIowPopup, #alActTypePopup').appendTo('body');
 
 /* ── IOW Group modal ── */
-$('#alIowGroupPopup').on('show.bs.modal', function(){
+$('#alIowGroupPopup').on('shown.bs.modal', function(){
     $('#alIowGroupName').val('');
     alLoadIowGroupList();
 });
 
 function alLoadIowGroupList(){
+    $('#alIowGroupListContainer').html('<div class="col-md-12" style="padding:8px 15px;color:#999;">Loading…</div>');
     $.ajax({
         url: '<?php echo \yii\helpers\Url::to(["/projects/getiowgrouplist"]); ?>',
         dataType: 'json',
@@ -508,18 +509,64 @@ function alLoadIowGroupList(){
                 return;
             }
             var html = '<div class="col-md-12 scheduleitemheader schdhead" style="padding:6px 15px;font-size:13px;margin-top:0;">'
-                     + '<div class="row"><div class="col-md-1"><label>#</label></div>'
-                     + '<div class="col-md-9" style="padding-left:5px;"><label>Group Name</label></div></div></div>';
+                     + '<div class="row">'
+                     + '<div class="col-md-1"><label>#</label></div>'
+                     + '<div class="col-md-7" style="padding-left:5px;"><label>Group Name</label></div>'
+                     + '<div class="col-md-4"><label>&nbsp;</label></div>'
+                     + '</div></div>';
             items.forEach(function(g, i){
-                html += '<div class="col-md-12 datalists scheduleitemcontent"><div class="row datslis" style="cursor:pointer;">'
+                html += '<div class="col-md-12 datalists scheduleitemcontent" id="alGrpRow'+g.id+'">'
+                      + '<div class="row datslis">'
                       + '<div class="col-md-1"><span class="number">'+(i+1)+'</span></div>'
-                      + '<div class="col-md-9 type">'+g.name+'</div>'
+                      + '<div class="col-md-7 type">'
+                      +   '<span id="alGrpName'+g.id+'">'+g.name+'</span>'
+                      +   '<input type="text" class="form-control" id="alGrpEdit'+g.id+'" value="'+g.name+'" style="display:none;">'
+                      + '</div>'
+                      + '<div class="col-md-4 icon-groups">'
+                      +   '<a class="btn btn-primary icon-pencil al-edit-iowgroup" data-id="'+g.id+'" href="#" title="Rename"></a>'
+                      +   '<a class="btn btn-primary icon-save al-save-iowgroup" data-id="'+g.id+'" href="#" style="display:none;" title="Save"></a>'
+                      + '</div>'
                       + '</div></div>';
             });
             $('#alIowGroupListContainer').html(html);
         }
     });
 }
+
+/* inline edit handlers */
+$(document).on('click', '.al-edit-iowgroup', function(e){
+    e.preventDefault();
+    var id = $(this).data('id');
+    $('#alGrpName'+id).hide();
+    $('#alGrpEdit'+id).show().focus();
+    $(this).hide();
+    $('#alGrpRow'+id+' .al-save-iowgroup').show();
+});
+
+$(document).on('click', '.al-save-iowgroup', function(e){
+    e.preventDefault();
+    var id  = $(this).data('id');
+    var val = $('#alGrpEdit'+id).val().trim();
+    if(!val) return;
+    var btn = $(this);
+    $.ajax({
+        type: 'POST',
+        url: '<?php echo \yii\helpers\Url::to(["/workgroups1/iowgroupupdate"]); ?>',
+        dataType: 'json',
+        data: { groupid: id, groupname: val },
+        success: function(data){
+            if(data.error === 'No'){
+                $('#alGrpName'+id).text(val).show();
+                $('#alGrpEdit'+id).hide();
+                btn.hide();
+                $('#alGrpRow'+id+' .al-edit-iowgroup').show();
+                alRefreshIowGroupDropdown();
+            } else {
+                alert(data.errortext || 'Could not save.');
+            }
+        }
+    });
+});
 
 $(document).on('click', '#alSaveIowGroup', function(){
     var name = $('#alIowGroupName').val().trim();
@@ -590,7 +637,7 @@ $(document).on('click', '#alSaveIow', function(){
 });
 
 /* ── Activity Type modal ── */
-$('#alActTypePopup').on('show.bs.modal', function(){
+$('#alActTypePopup').on('shown.bs.modal', function(){
     $('#alActTypeName').val('');
     alLoadActTypeList();
 });
