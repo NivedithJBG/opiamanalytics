@@ -68,8 +68,6 @@ use app\models\Resources;
     <div id="collapsemasteract" class="tab-content cOrder-body panel-collapse collapse">
         <div class="panel-body ">
 
-                    <form id="estactivityform">
-                    <input type="hidden" id="editingActivityId" name="activity_id" value="">
                     <div class="search-and-content-wrpr">
                         <div class="search-and-actions-wrpr row" id="AR-allocate-body-one-head">
 
@@ -97,119 +95,14 @@ use app\models\Resources;
                                 <a href="#alIowGroupPopup" class="btn btn-default" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW Group</a>
                                 <a href="#alIowPopup" class="btn btn-default" data-toggle="modal" data-target="#alIowPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW</a>
                                 <a href="#alActTypePopup" class="btn btn-default" data-toggle="modal" data-target="#alActTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Activity Type</a>
-                                <a href="#" class="btn btn-primary addForm" id="addestactivity" title="Add Activities"><span class="icon-add"></span> Activity</a>
+                                <a href="#alAddActivityPopup" class="btn btn-primary" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities"><span class="icon-add"></span> Activity</a>
                                 <a href="#" class="btn btn-primary list-accountType" id="listestactivity"><span class="icon-th-list"></span> List</a>
                             </div>
                         </div>
                         <div class="content-wrpr">
-                            
-                            <!-- form starts here -->
 
-                            <div class="add-form add-activity-form">
-
-                                <div class="row" id="estactivityaddrow">
-
-                                    <!-- Project Type + Activity Type + Name + Unit + Working Hours -->
-                                    <div class="row" style="margin-top:10px;">
-                                        <div class="col-md-1"></div>
-                                        <div class="col-md-2">
-                                            <div class="form-group">
-                                                <label>Project Type</label>
-                                                <select id="estworktypelistss1" data-id="1" class="form-control estworktypelistses" name="worktypeid">
-                                                    <option value="0">Select Project Type</option>
-                                                    <?php
-                                                    $typelist=EstimateWorkType::find()->orderBy(['estworktype_name'=>SORT_ASC])->all();
-                                                    foreach($typelist AS $list):
-                                                        echo "<option value='".$list->estworktype_id."'>".$list->estworktype_name."</option>";
-                                                    endforeach;
-                                                    ?>
-                                                </select>
-                                                <span style="color:red;"></span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-group">
-                                                <label>Activity Type</label>
-                                                <select class="form-control" id="estactivitytypeid" name="activitytypeid">
-                                                    <option value="0">Select Type</option>
-                                                    <?php
-                                                    $activityTypes = EstimateActivityType::find()->orderBy(['activitytype_name' => SORT_ASC])->all();
-                                                    foreach ($activityTypes as $at):
-                                                        echo "<option value='" . $at->activitytype_id . "'>" . htmlspecialchars($at->activitytype_name) . "</option>";
-                                                    endforeach;
-                                                    ?>
-                                                </select>
-                                                <span style="color:red;"></span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="form-group">
-                                                <label>Activity Name</label>
-                                                <input class="form-control estactivityname" type="text" id="estactivityname1" data-id="1" name="estactivityname[]" placeholder="Activity Name">
-                                                <span style="color:red;"></span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-group">
-                                                <label>Activity Unit</label>
-                                                <input class="form-control estactivityunit" type="text" id="estactivityunit1" data-id="1" name="estactivityunit[]" placeholder="Activity Unit">
-                                                <span style="color:red;"></span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-1">
-                                            <div class="form-group">
-                                                <label>Wk.Hrs</label>
-                                                <select class="form-control" id="est_working_hours" name="working_hours">
-                                                    <option value="8">8</option>
-                                                    <option value="10">10</option>
-                                                    <option value="12">12</option>
-                                                    <option value="24">24</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-1"></div>
-                                    </div>
-
-                                    <!-- Tasks header -->
-                                    <div class="row" style="margin-top:6px;">
-                                        <div class="col-md-1"></div>
-                                        <div class="col-md-4"><label style="font-weight:600;">Tasks</label></div>
-                                        <div class="col-md-2"><label style="font-weight:600;">Unit</label></div>
-                                        <div class="col-md-3"><label style="font-weight:600;">Productivity</label></div>
-                                        <div class="col-md-1"></div>
-                                    </div>
-
-                                    <!-- Task rows container -->
-                                    <div id="task-rows-container">
-                                        <div class="row task-row" id="task-row-1" style="margin-top:4px;">
-                                            <div class="col-md-1"></div>
-                                            <div class="col-md-4">
-                                                <input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name">
-                                            </div>
-                                            <div class="col-md-2">
-                                                <input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit">
-                                            </div>
-                                            <div class="col-md-3">
-                                                <input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/Wh">
-                                            </div>
-                                            <div class="col-md-1">
-                                                <button type="button" class="add-task-row" style="background:none;border:none;padding:6px 4px;"><span class="icon-add" style="color:#337ab7;font-size:18px;"></span></button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                </div>
-
-                                <div style="height:60px;"></div>
-                                <div class="row">
-                                    <div class="col-md-12 text-center">
-                                        <button type="button" class="btn btn-danger cancel cancelactivity"><span class="icon-close"></span> Cancel</button>
-                                        &nbsp;&nbsp;
-                                        <button type="button" class="btn btn-primary save-btn" id="saveestactivity"><span class="icon-check"></span> Add Activity</button>
-                                    </div>
-                                </div>
-                                <div style="height:40px;"></div>
-                            </div>
+                            <!-- add-activity-form kept as hidden placeholder so existing JS hide/show calls don't error -->
+                            <div class="add-form add-activity-form" style="display:none;"></div>
 <!--                         <div class="add-form add-activity-form">
                             <div class="row" id="estactivityaddrow">
                                 <div class="col-md-1"></div>
@@ -264,8 +157,8 @@ use app\models\Resources;
                                         <button type="button" class="btn btn-primary text-button" id="saveactivitybutton"><span class="icon-check"></span> Edit Activity</button>
                                     </div>
                                 </div>
-                            </div></form>
-                            
+                            </div>
+
                             <!-- edit form ends here -->
                             
                             
@@ -381,6 +274,115 @@ use app\models\Resources;
     </div>
 </div>
 
+<!-- ── ADD ACTIVITY MODAL ───────────────────────────────────────────── -->
+<div class="modal fade" id="alAddActivityPopup">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="alAddActivityTitle" style="float:left;">Add Activity</h4>
+                <button type="button" class="close cancelactivity" data-dismiss="modal" style="float:right;font-size:30px;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="estactivityform">
+                    <input type="hidden" id="editingActivityId" name="activity_id" value="">
+                    <div class="row" id="estactivityaddrow">
+                        <!-- Project Type + Activity Type + Name + Unit + Working Hours -->
+                        <div class="row" style="margin-top:6px;">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Project Type</label>
+                                    <select id="estworktypelistss1" data-id="1" class="form-control estworktypelistses" name="worktypeid">
+                                        <option value="0">Select Project Type</option>
+                                        <?php
+                                        $typelist=EstimateWorkType::find()->orderBy(['estworktype_name'=>SORT_ASC])->all();
+                                        foreach($typelist AS $list):
+                                            echo "<option value='".$list->estworktype_id."'>".$list->estworktype_name."</option>";
+                                        endforeach;
+                                        ?>
+                                    </select>
+                                    <span style="color:red;"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Activity Type</label>
+                                    <select class="form-control" id="estactivitytypeid" name="activitytypeid">
+                                        <option value="0">Select Type</option>
+                                        <?php
+                                        $activityTypes = EstimateActivityType::find()->orderBy(['activitytype_name' => SORT_ASC])->all();
+                                        foreach ($activityTypes as $at):
+                                            echo "<option value='" . $at->activitytype_id . "'>" . htmlspecialchars($at->activitytype_name) . "</option>";
+                                        endforeach;
+                                        ?>
+                                    </select>
+                                    <span style="color:red;"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Activity Name</label>
+                                    <input class="form-control estactivityname" type="text" id="estactivityname1" data-id="1" name="estactivityname[]" placeholder="Activity Name">
+                                    <span style="color:red;"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>Activity Unit</label>
+                                    <input class="form-control estactivityunit" type="text" id="estactivityunit1" data-id="1" name="estactivityunit[]" placeholder="Activity Unit">
+                                    <span style="color:red;"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-top:4px;">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Working Hours</label>
+                                    <select class="form-control" id="est_working_hours" name="working_hours">
+                                        <option value="8">8</option>
+                                        <option value="10">10</option>
+                                        <option value="12">12</option>
+                                        <option value="24">24</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tasks -->
+                        <div class="row" style="margin-top:10px;">
+                            <div class="col-md-12"><label style="font-weight:600;border-bottom:1px solid #eee;width:100%;padding-bottom:4px;">Tasks</label></div>
+                        </div>
+                        <div class="row" style="margin-bottom:4px;">
+                            <div class="col-md-5"><label style="color:#777;font-size:12px;">Task Name</label></div>
+                            <div class="col-md-2"><label style="color:#777;font-size:12px;">Unit</label></div>
+                            <div class="col-md-4"><label style="color:#777;font-size:12px;">Productivity/Wh</label></div>
+                        </div>
+                        <div id="task-rows-container">
+                            <div class="row task-row" id="task-row-1" style="margin-bottom:6px;">
+                                <div class="col-md-5">
+                                    <input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name">
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity">
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="button" class="add-task-row" style="background:none;border:none;padding:6px 4px;"><span class="icon-add" style="color:#337ab7;font-size:18px;"></span></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger cancelactivity" data-dismiss="modal"><span class="icon-close"></span> Cancel</button>
+                <button type="button" class="btn btn-primary save-btn" id="saveestactivity"><span class="icon-check"></span> Add Activity</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ── IOW GROUP MODAL ──────────────────────────────────────────────── -->
 <div class="modal fade" id="alIowGroupPopup">
     <div class="modal-dialog modal-lg">
@@ -489,7 +491,39 @@ use app\models\Resources;
 (function(){
 
 /* Move modals to <body> so accordion overflow/z-index doesn't trap them */
-$('#alIowGroupPopup, #alIowPopup, #alActTypePopup').appendTo('body');
+$('#alAddActivityPopup, #alIowGroupPopup, #alIowPopup, #alActTypePopup').appendTo('body');
+
+/* ── Add Activity modal ── */
+$('#alAddActivityPopup').on('shown.bs.modal', function(){
+    /* reset form and title */
+    $('#editingActivityId').val('');
+    $('#estactivityform')[0].reset();
+    $('#task-rows-container .task-row:not(#task-row-1)').remove();
+    $('#task-row-1 .task-name, #task-row-1 .task-unit, #task-row-1 .task-productivity').val('');
+    $('#alAddActivityTitle').text('Add Activity');
+    $('#saveestactivity').html('<span class="icon-check"></span> Add Activity');
+});
+
+/* Intercept estactivity.js showing .add-activity-form (edit flow) → open modal instead */
+var alActObserver = new MutationObserver(function(mutations){
+    mutations.forEach(function(m){
+        if(m.target.style.display !== 'none' && $(m.target).hasClass('add-activity-form')){
+            m.target.style.display = 'none'; /* keep placeholder hidden */
+            $('#alAddActivityPopup').modal('show');
+        }
+    });
+});
+var alActTarget = document.querySelector('.add-activity-form');
+if(alActTarget) alActObserver.observe(alActTarget, { attributes: true, attributeFilter: ['style'] });
+
+/* close modal after successful save (estactivity.js hides .add-activity-form on success) */
+$(document).on('click', '#saveestactivity', function(){
+    setTimeout(function(){
+        if($('.add-activity-form').is(':hidden')){
+            $('#alAddActivityPopup').modal('hide');
+        }
+    }, 600);
+});
 
 /* ── IOW Group modal ── */
 $('#alIowGroupPopup').on('shown.bs.modal', function(){
