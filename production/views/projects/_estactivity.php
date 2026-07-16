@@ -362,7 +362,7 @@ use app\models\Resources;
                             <div class="col-md-1"></div>
                             <div class="col-md-4"><label style="color:#777;font-size:12px;">Task Name</label></div>
                             <div class="col-md-2"><label style="color:#777;font-size:12px;">Unit</label></div>
-                            <div class="col-md-3"><label style="color:#777;font-size:12px;">Productivity/Wh</label></div>
+                            <div class="col-md-3"><label style="color:#777;font-size:12px;">Productivity/day</label></div>
                         </div>
                         <div id="task-rows-container">
                             <div class="row task-row" id="task-row-1" style="margin-top:4px;">
@@ -374,7 +374,7 @@ use app\models\Resources;
                                     <input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit">
                                 </div>
                                 <div class="col-md-3">
-                                    <input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/Wh">
+                                    <input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day">
                                 </div>
                                 <div class="col-md-1">
                                     <button type="button" class="add-task-row" style="background:none;border:none;padding:6px 4px;"><span class="icon-add" style="color:#337ab7;font-size:18px;"></span></button>

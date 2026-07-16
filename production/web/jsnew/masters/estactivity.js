@@ -73,7 +73,7 @@ $(function() {
             '<div class="col-md-1"></div>' +
             '<div class="col-md-4"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name"></div>' +
             '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit"></div>' +
-            '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/Wh"></div>' +
+            '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day"></div>' +
             '<div class="col-md-1"><button type="button" class="remove-task-row" style="background:none;border:none;padding:6px 4px;"><span class="icon-minus" style="color:#d9534f;font-size:18px;"></span></button></div>' +
             '</div>';
         $('#task-rows-container').append(row);
@@ -317,7 +317,7 @@ $(document).on('click', '.editactivitybutton', function(){
                             '<div class="col-md-1"></div>' +
                             '<div class="col-md-4"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name" value="' + $('<div/>').text(task.task_name).html() + '"></div>' +
                             '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit" value="' + $('<div/>').text(task.task_unit).html() + '"></div>' +
-                            '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/Wh" value="' + parseFloat(task.productivity).toFixed(3) + '"></div>' +
+                            '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day" value="' + parseFloat(task.productivity).toFixed(3) + '"></div>' +
                             '<div class="col-md-1">' + btnHtml + '</div>' +
                             '</div>';
                         $('#task-rows-container').append(row);
@@ -329,7 +329,7 @@ $(document).on('click', '.editactivitybutton', function(){
                         '<div class="col-md-1"></div>' +
                         '<div class="col-md-4"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name"></div>' +
                         '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit"></div>' +
-                        '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/Wh"></div>' +
+                        '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day"></div>' +
                         '<div class="col-md-1"><button type="button" class="add-task-row" style="background:none;border:none;padding:6px 4px;"><span class="icon-add" style="color:#337ab7;font-size:18px;"></span></button></div>' +
                         '</div>'
                     );
