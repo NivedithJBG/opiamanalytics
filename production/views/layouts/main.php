@@ -2282,7 +2282,7 @@ if($action=='login')
   <div id="qe-footer">
     <div id="qe-save-msg">&#10003; Activity added to Gantt!</div>
     <button id="qe-btn-add">&#43; Add to Gantt</button>
-    <button id="qe-close" style="background:#e67e22;color:#fff;border:none;padding:6px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;border-radius:0;">&#10005; Close</button>
+    <button id="qe-close-btn" style="background:#e67e22;color:#fff;border:none;padding:6px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;border-radius:0;">&#10005; Close</button>
   </div>
 </div><!-- /qe-modal -->
 
@@ -2530,6 +2530,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   /* close */
   document.getElementById('qe-close').addEventListener('click', closeModal);
+  document.getElementById('qe-close-btn').addEventListener('click', closeModal);
   document.getElementById('qe-bk').addEventListener('click', closeModal);
 
   /* cascade: Project Type → Groups + reload Activities */
