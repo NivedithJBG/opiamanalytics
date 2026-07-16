@@ -2056,7 +2056,7 @@ if($action=='login')
   display:none;position:fixed;top:50%;left:50%;
   transform:translate(-50%,-50%);
   width:860px;max-width:95vw;max-height:88vh;
-  z-index:10001;border-radius:10px;overflow:hidden;
+  z-index:10001;border-radius:0;overflow:hidden;
   background:#edf0f4;box-shadow:0 12px 40px rgba(0,0,0,.75);
   flex-direction:column;
   font-family:'Barlow',sans-serif;
@@ -2067,7 +2067,7 @@ if($action=='login')
 #qe-body{flex:1;overflow-y:auto;padding:16px 20px 20px;display:flex;flex-direction:column;gap:0}
 
 /* Section wrapper */
-.qe-section{background:#fff;border-radius:4px;border:1px solid #a0aab8;margin-bottom:0;overflow:hidden}
+.qe-section{background:#fff;border-radius:0;border:none;margin-bottom:0;overflow:hidden}
 .qe-section+.qe-section{margin-top:14px}
 .qe-sec-hdr{display:none}
 .qe-sec-body{padding:14px 16px}
@@ -2082,7 +2082,7 @@ if($action=='login')
 .qe-label{font-size:11px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
 .qe-input,.qe-select{
   width:100%;padding:8px 10px;font-size:13px;color:#2d3748;
-  border:1px solid #a0aab8;border-radius:3px;background:#fff;
+  border:1px solid #a0aab8;border-radius:0;background:#fff;
   outline:none;box-sizing:border-box;font-family:'Barlow',sans-serif;
   transition:border-color .15s;height:38px;
 }
@@ -2091,20 +2091,20 @@ if($action=='login')
 .qe-persist-note{font-size:9px;color:#888;font-style:italic;margin-top:2px}
 
 /* Divider */
-.qe-divider{border:none;border-top:1px solid #a0aab8;margin:12px 0}
+.qe-divider{display:none}
 
 /* Repeating rows (tasks / resources) */
 .qe-repeat-tbl{width:100%;border-collapse:collapse}
 .qe-repeat-tbl th{
   font-size:11px;font-weight:900;color:#000;text-transform:uppercase;
-  letter-spacing:.4px;padding:0 6px 8px 0;border-bottom:1px solid #a0aab8;
+  letter-spacing:.4px;padding:0 6px 8px 0;border-bottom:2px solid #2d3748;
   white-space:nowrap;
 }
 .qe-repeat-tbl td{padding:6px 6px 6px 0;vertical-align:middle}
 .qe-repeat-tbl td:last-child{padding-right:0}
 .qe-repeat-tbl input,.qe-repeat-tbl select{
   width:100%;padding:7px 9px;font-size:13px;color:#2d3748;
-  border:1px solid #a0aab8;border-radius:3px;background:#fff;
+  border:1px solid #a0aab8;border-radius:0;background:#fff;
   outline:none;font-family:'Barlow',sans-serif;transition:border-color .15s;
   box-sizing:border-box;height:36px;
 }
