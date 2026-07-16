@@ -153,6 +153,8 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .perf-dashboard-btn     { background-color: #2e7d32 !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
         .round-icons .cost-dashboard-btn     { background-color: #7b1fa2 !important; height: 26px !important; width: 26px !important; font-size: 9px !important; padding: 0 !important; box-sizing: content-box !important; }
         .round-icons .qe-btn                 { background-color: #00838f !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
+        .round-icons .lib-mini-btn           { background-color: #6b7a93 !important; height: 26px !important; width: 26px !important; font-size: 10px !important; font-weight:700 !important; color:#fff !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; border-radius:50% !important; text-decoration:none !important; }
+        .round-icons .lib-mini-btn:hover,.round-icons .lib-mini-btn:focus { background-color: #4a5568 !important; }
         /* Keep coloured backgrounds on hover/focus */
         .round-icons .icon-chart3:hover,            .round-icons .icon-chart3:focus            { background: #002060 !important; }
         .round-icons .icon-calendar:hover,          .round-icons .icon-calendar:focus          { background: #8a6200 !important; }
@@ -409,7 +411,10 @@ if($action=='login')
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="lib-mini-btn" data-lib="iow-group" title="+ IOW Group" href="#" style="cursor:pointer;">G</a></li>
+                    <li><a class="lib-mini-btn" data-lib="iow" title="+ IOW" href="#" style="cursor:pointer;">I</a></li>
+                    <li><a class="lib-mini-btn" data-lib="act-type" title="+ Activity Type" href="#" style="cursor:pointer;">A</a></li>
+                    <li><a class="icon-pencil qe-btn" title="Add Activity to Gantt" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -425,7 +430,10 @@ if($action=='login')
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="lib-mini-btn" data-lib="iow-group" title="+ IOW Group" href="#" style="cursor:pointer;">G</a></li>
+                    <li><a class="lib-mini-btn" data-lib="iow" title="+ IOW" href="#" style="cursor:pointer;">I</a></li>
+                    <li><a class="lib-mini-btn" data-lib="act-type" title="+ Activity Type" href="#" style="cursor:pointer;">A</a></li>
+                    <li><a class="icon-pencil qe-btn" title="Add Activity to Gantt" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1555" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -498,7 +506,10 @@ if($action=='login')
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="lib-mini-btn" data-lib="iow-group" title="+ IOW Group" href="#" style="cursor:pointer;">G</a></li>
+                    <li><a class="lib-mini-btn" data-lib="iow" title="+ IOW" href="#" style="cursor:pointer;">I</a></li>
+                    <li><a class="lib-mini-btn" data-lib="act-type" title="+ Activity Type" href="#" style="cursor:pointer;">A</a></li>
+                    <li><a class="icon-pencil qe-btn" title="Add Activity to Gantt" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -552,7 +563,10 @@ if($action=='login')
                     </li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="lib-mini-btn" data-lib="iow-group" title="+ IOW Group" href="#" style="cursor:pointer;">G</a></li>
+                    <li><a class="lib-mini-btn" data-lib="iow" title="+ IOW" href="#" style="cursor:pointer;">I</a></li>
+                    <li><a class="lib-mini-btn" data-lib="act-type" title="+ Activity Type" href="#" style="cursor:pointer;">A</a></li>
+                    <li><a class="icon-pencil qe-btn" title="Add Activity to Gantt" href="#" style="cursor:pointer;"> </a></li>
                 <?php  } } } ?>
 
 
@@ -2155,6 +2169,281 @@ if($action=='login')
 #qe-btn-add:disabled{background:#aaa;cursor:default}
 </style>
 
+<!-- ══════════════════════════════════════════════════════════════════════
+     LIBRARY MINI POPUPS  (IOW Group / IOW / Activity Type)
+════════════════════════════════════════════════════════════════════════ -->
+<style>
+.lib-popup{
+  display:none;position:fixed;z-index:20000;
+  background:#fff;border-radius:8px;
+  box-shadow:0 8px 32px rgba(0,0,0,.55);
+  width:320px;overflow:hidden;
+  font-family:'Barlow',sans-serif;
+}
+.lib-popup.lib-open{display:block}
+.lib-popup-hdr{
+  background:#4a5568;padding:8px 14px;
+  display:flex;align-items:center;
+}
+.lib-popup-hdr span{flex:1;color:#fff;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.lib-popup-close{background:none;border:none;color:#fff;font-size:16px;cursor:pointer;padding:0 2px;opacity:.85}
+.lib-popup-close:hover{opacity:1}
+.lib-popup-body{padding:14px}
+.lib-popup-body label{display:block;font-size:9px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.lib-popup-body input,.lib-popup-body select{
+  width:100%;padding:5px 9px;font-size:12px;color:#2d3748;
+  border:1px solid #a0aab8;border-radius:3px;background:#fff;
+  outline:none;box-sizing:border-box;font-family:'Barlow',sans-serif;
+  margin-bottom:10px;
+}
+.lib-popup-body input:focus,.lib-popup-body select:focus{border-color:#4a5568}
+.lib-popup-footer{
+  background:#dce1ea;border-top:1px solid #a0aab8;
+  padding:8px 14px;display:flex;align-items:center;gap:10px;justify-content:flex-end;
+}
+.lib-popup-save{
+  background:#00838f;color:#fff;border:none;border-radius:4px;
+  padding:5px 18px;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;
+  cursor:pointer;text-transform:uppercase;letter-spacing:.3px;
+}
+.lib-popup-save:hover{background:#006b75}
+.lib-popup-save:disabled{background:#aaa;cursor:default}
+.lib-popup-msg{font-size:11px;color:#27ae60;flex:1;display:none}
+</style>
+
+<!-- IOW Group popup -->
+<div class="lib-popup" id="lib-pop-iow-group">
+  <div class="lib-popup-hdr"><span>New IOW Group</span><button class="lib-popup-close">&times;</button></div>
+  <div class="lib-popup-body">
+    <label>IOW Group Name</label>
+    <input type="text" id="lib-ig-name" placeholder="Enter group name…">
+  </div>
+  <div class="lib-popup-footer">
+    <span class="lib-popup-msg" id="lib-ig-msg">&#10003; Saved!</span>
+    <button class="lib-popup-save" id="lib-ig-save">Save</button>
+  </div>
+</div>
+
+<!-- IOW popup -->
+<div class="lib-popup" id="lib-pop-iow">
+  <div class="lib-popup-hdr"><span>New IOW</span><button class="lib-popup-close">&times;</button></div>
+  <div class="lib-popup-body">
+    <label>IOW Group</label>
+    <select id="lib-iow-group-sel"><option value="">— Select Group —</option></select>
+    <label>IOW Name</label>
+    <input type="text" id="lib-iow-name" placeholder="Enter IOW name…">
+  </div>
+  <div class="lib-popup-footer">
+    <span class="lib-popup-msg" id="lib-iow-msg">&#10003; Saved!</span>
+    <button class="lib-popup-save" id="lib-iow-save">Save</button>
+  </div>
+</div>
+
+<!-- Activity Type popup -->
+<div class="lib-popup" id="lib-pop-act-type">
+  <div class="lib-popup-hdr"><span>New Activity Type</span><button class="lib-popup-close">&times;</button></div>
+  <div class="lib-popup-body">
+    <label>IOW</label>
+    <select id="lib-at-iow-sel"><option value="">— Select IOW —</option></select>
+    <label>Activity Name</label>
+    <input type="text" id="lib-at-name" placeholder="Enter activity name…">
+    <label>Unit</label>
+    <input type="text" id="lib-at-unit" placeholder="e.g. m³">
+  </div>
+  <div class="lib-popup-footer">
+    <span class="lib-popup-msg" id="lib-at-msg">&#10003; Saved!</span>
+    <button class="lib-popup-save" id="lib-at-save">Save</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ── position popup near clicked button ── */
+function positionPopup(popup, trigger){
+  var rect = trigger.getBoundingClientRect();
+  var pw = popup.offsetWidth || 320;
+  var left = rect.right - pw;
+  if(left < 8) left = 8;
+  var top  = rect.bottom + 6;
+  if(top + 280 > window.innerHeight) top = rect.top - 280 - 6;
+  popup.style.left = left + 'px';
+  popup.style.top  = top  + 'px';
+}
+
+/* ── close all popups ── */
+function closeAllLibPopups(){
+  document.querySelectorAll('.lib-popup').forEach(function(p){ p.classList.remove('lib-open'); });
+}
+
+/* ── open a specific popup ── */
+function openLibPopup(type, trigger){
+  closeAllLibPopups();
+  var popup = document.getElementById('lib-pop-' + type);
+  if(!popup) return;
+  popup.classList.add('lib-open');
+  positionPopup(popup, trigger);
+
+  /* pre-populate dropdowns when needed */
+  if(type === 'iow'){
+    var sel = document.getElementById('lib-iow-group-sel');
+    if(sel.options.length <= 1) refreshIowGroupDropdowns();
+  }
+  if(type === 'act-type'){
+    var sel2 = document.getElementById('lib-at-iow-sel');
+    if(sel2.options.length <= 1) refreshIowDropdowns();
+  }
+}
+
+/* ── click outside closes ── */
+document.addEventListener('click', function(e){
+  if(!e.target.closest('.lib-popup') && !e.target.closest('.lib-mini-btn')){
+    closeAllLibPopups();
+  }
+});
+
+/* ── close buttons inside popups ── */
+document.querySelectorAll('.lib-popup-close').forEach(function(btn){
+  btn.addEventListener('click', closeAllLibPopups);
+});
+
+/* ── nav button clicks ── */
+document.addEventListener('click', function(e){
+  var btn = e.target.closest('.lib-mini-btn');
+  if(!btn) return;
+  e.preventDefault();
+  var type = btn.getAttribute('data-lib');
+  openLibPopup(type, btn);
+});
+
+/* ── refresh helpers: repopulate selects after saves ── */
+function refreshIowGroupDropdowns(){
+  $.ajax({
+    type:'POST', url:'../projectsmain/getiowgrouplist', dataType:'json',
+    success: function(d){
+      var items = d.items || [];
+      ['lib-iow-group-sel'].forEach(function(id){
+        var sel = document.getElementById(id);
+        if(!sel) return;
+        var cur = sel.value;
+        sel.innerHTML = '<option value="">— Select Group —</option>';
+        items.forEach(function(g){
+          var o = document.createElement('option');
+          o.value = g.id; o.textContent = g.name;
+          sel.appendChild(o);
+        });
+        if(cur) sel.value = cur;
+      });
+    }
+  });
+}
+
+function refreshIowDropdowns(){
+  $.ajax({
+    type:'POST', url:'../projectsmain/getiowlist', dataType:'json',
+    success: function(d){
+      var items = d.items || [];
+      ['lib-at-iow-sel'].forEach(function(id){
+        var sel = document.getElementById(id);
+        if(!sel) return;
+        var cur = sel.value;
+        sel.innerHTML = '<option value="">— Select IOW —</option>';
+        items.forEach(function(g){
+          var o = document.createElement('option');
+          o.value = g.id; o.textContent = g.name;
+          sel.appendChild(o);
+        });
+        if(cur) sel.value = cur;
+      });
+    }
+  });
+}
+
+/* also refresh the main modal IOW dropdown after saves */
+function refreshMainModalIows(){
+  var groupId = document.getElementById('qe-group') ? document.getElementById('qe-group').value : '';
+  if(groupId && typeof loadIows === 'function') loadIows(groupId);
+}
+function refreshMainModalActivities(){
+  var iowId = document.getElementById('qe-iow') ? document.getElementById('qe-iow').value : '';
+  if(iowId && typeof loadActivities === 'function') loadActivities(iowId);
+}
+
+/* ── IOW GROUP save ── */
+document.getElementById('lib-ig-save').addEventListener('click', function(){
+  var name = document.getElementById('lib-ig-name').value.trim();
+  if(!name){ alert('Please enter a group name.'); return; }
+  var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+  $.ajax({
+    type:'POST', url:'../projectsmain/addiowgroup',
+    data:{ name: name }, dataType:'json',
+    success: function(d){
+      btn.disabled = false; btn.textContent = 'Save';
+      if(d.error){ alert('Error: '+d.error); return; }
+      document.getElementById('lib-ig-name').value = '';
+      var msg = document.getElementById('lib-ig-msg');
+      msg.style.display = 'block';
+      setTimeout(function(){ msg.style.display = 'none'; }, 2500);
+      /* refresh group dropdowns everywhere */
+      refreshIowGroupDropdowns();
+    },
+    error: function(){ btn.disabled=false; btn.textContent='Save'; alert('Server error.'); }
+  });
+});
+
+/* ── IOW save ── */
+document.getElementById('lib-iow-save').addEventListener('click', function(){
+  var groupId = document.getElementById('lib-iow-group-sel').value;
+  var name    = document.getElementById('lib-iow-name').value.trim();
+  if(!groupId){ alert('Please select a group.'); return; }
+  if(!name)   { alert('Please enter an IOW name.'); return; }
+  var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+  $.ajax({
+    type:'POST', url:'../projectsmain/addiow',
+    data:{ group_id: groupId, name: name }, dataType:'json',
+    success: function(d){
+      btn.disabled = false; btn.textContent = 'Save';
+      if(d.error){ alert('Error: '+d.error); return; }
+      document.getElementById('lib-iow-name').value = '';
+      var msg = document.getElementById('lib-iow-msg');
+      msg.style.display = 'block';
+      setTimeout(function(){ msg.style.display = 'none'; }, 2500);
+      refreshIowDropdowns();
+      refreshMainModalIows();
+    },
+    error: function(){ btn.disabled=false; btn.textContent='Save'; alert('Server error.'); }
+  });
+});
+
+/* ── Activity Type save ── */
+document.getElementById('lib-at-save').addEventListener('click', function(){
+  var iowId = document.getElementById('lib-at-iow-sel').value;
+  var name  = document.getElementById('lib-at-name').value.trim();
+  var unit  = document.getElementById('lib-at-unit').value.trim();
+  if(!iowId){ alert('Please select an IOW.'); return; }
+  if(!name) { alert('Please enter an activity name.'); return; }
+  var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+  $.ajax({
+    type:'POST', url:'../projectsmain/addactivitytype',
+    data:{ iow_id: iowId, name: name, unit: unit }, dataType:'json',
+    success: function(d){
+      btn.disabled = false; btn.textContent = 'Save';
+      if(d.error){ alert('Error: '+d.error); return; }
+      document.getElementById('lib-at-name').value = '';
+      document.getElementById('lib-at-unit').value = '';
+      var msg = document.getElementById('lib-at-msg');
+      msg.style.display = 'block';
+      setTimeout(function(){ msg.style.display = 'none'; }, 2500);
+      refreshMainModalActivities();
+    },
+    error: function(){ btn.disabled=false; btn.textContent='Save'; alert('Server error.'); }
+  });
+});
+
+})();
+</script>
+
 <div id="qe-bk"></div>
 <div id="qe-modal">
   <div id="qe-hdr">
@@ -2317,7 +2606,9 @@ function openModal(){
   if(!document.querySelector('#qe-res-body tr'))  { loadResTypes(function(){ addResRow(); }); }
   recalcDuration();
 }
-window.openQeModal = openModal;
+window.openQeModal  = openModal;
+window.loadIows     = loadIows;
+window.loadActivities = loadActivities;
 function closeModal(){
   document.getElementById('qe-bk').classList.remove('qe-open');
   document.getElementById('qe-modal').classList.remove('qe-open');
