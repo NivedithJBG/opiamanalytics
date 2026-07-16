@@ -499,7 +499,7 @@ $('#alIowGroupPopup').on('show.bs.modal', function(){
 
 function alLoadIowGroupList(){
     $.ajax({
-        url: '../projects/getiowgrouplist',
+        url: '<?php echo \yii\helpers\Url::to(["/projects/getiowgrouplist"]); ?>',
         dataType: 'json',
         success: function(data){
             var items = data.items || [];
@@ -528,7 +528,7 @@ $(document).on('click', '#alSaveIowGroup', function(){
     var btn = $(this).attr('disabled', true);
     $.ajax({
         type: 'POST',
-        url: '../workgroups1/iowgroupcreate',
+        url: '<?php echo \yii\helpers\Url::to(["/workgroups1/iowgroupcreate"]); ?>',
         dataType: 'json',
         data: { iowgroupname: name },
         success: function(data){
@@ -552,7 +552,7 @@ $('#alIowPopup').on('show.bs.modal', function(){
 
 function alRefreshIowGroupDropdown(){
     $.ajax({
-        url: '../projects/getiowgrouplist',
+        url: '<?php echo \yii\helpers\Url::to(["/projects/getiowgrouplist"]); ?>',
         dataType: 'json',
         success: function(data){
             var sel = $('#alIowGroupSel');
@@ -576,7 +576,7 @@ $(document).on('click', '#alSaveIow', function(){
     var btn = $(this).attr('disabled', true);
     $.ajax({
         type: 'POST',
-        url: '../projects/addiow',
+        url: '<?php echo \yii\helpers\Url::to(["/projects/addiow"]); ?>',
         dataType: 'json',
         data: { name: name, group_id: groupId, project_id: pid },
         success: function(data){
@@ -597,7 +597,7 @@ $('#alActTypePopup').on('show.bs.modal', function(){
 
 function alLoadActTypeList(){
     $.ajax({
-        url: '../projects/getactivitytypelist',
+        url: '<?php echo \yii\helpers\Url::to(["/projects/getactivitytypelist"]); ?>',
         dataType: 'json',
         success: function(data){
             if(!data.items || !data.items.length){
@@ -623,7 +623,7 @@ $(document).on('click', '#alSaveActType', function(){
     var btn = $(this).attr('disabled', true);
     $.ajax({
         type: 'POST',
-        url: '../projects/addactivitytype',
+        url: '<?php echo \yii\helpers\Url::to(["/projects/addactivitytype"]); ?>',
         dataType: 'json',
         data: { name: name, schedule: 0 },
         success: function(data){
