@@ -382,7 +382,7 @@ use app\models\Resources;
 </div>
 
 <!-- ── IOW GROUP MODAL ──────────────────────────────────────────────── -->
-<div class="modal fade iowGroupPopup" id="alIowGroupPopup">
+<div class="modal fade" id="alIowGroupPopup">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -415,7 +415,7 @@ use app\models\Resources;
 </div>
 
 <!-- ── IOW MODAL ────────────────────────────────────────────────────── -->
-<div class="modal fade iowFormPopup" id="alIowPopup">
+<div class="modal fade" id="alIowPopup">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -499,10 +499,24 @@ $('#alIowGroupPopup').on('show.bs.modal', function(){
 
 function alLoadIowGroupList(){
     $.ajax({
-        url: '../workgroups1/iowgrouplist',
+        url: '../projects/getiowgrouplist',
         dataType: 'json',
         success: function(data){
-            $('#alIowGroupListContainer').html(data.result);
+            var items = data.items || [];
+            if(!items.length){
+                $('#alIowGroupListContainer').html('<div class="col-md-12" style="padding:8px 15px;color:#999;">No groups yet.</div>');
+                return;
+            }
+            var html = '<div class="col-md-12 scheduleitemheader schdhead" style="padding:6px 15px;font-size:13px;margin-top:0;">'
+                     + '<div class="row"><div class="col-md-1"><label>#</label></div>'
+                     + '<div class="col-md-9" style="padding-left:5px;"><label>Group Name</label></div></div></div>';
+            items.forEach(function(g, i){
+                html += '<div class="col-md-12 datalists scheduleitemcontent"><div class="row datslis" style="cursor:pointer;">'
+                      + '<div class="col-md-1"><span class="number">'+(i+1)+'</span></div>'
+                      + '<div class="col-md-9 type">'+g.name+'</div>'
+                      + '</div></div>';
+            });
+            $('#alIowGroupListContainer').html(html);
         }
     });
 }
@@ -538,18 +552,16 @@ $('#alIowPopup').on('show.bs.modal', function(){
 
 function alRefreshIowGroupDropdown(){
     $.ajax({
-        url: '../workgroups1/iowgrouplist',
+        url: '../projects/getiowgrouplist',
         dataType: 'json',
         success: function(data){
-            /* parse names from the returned HTML */
-            var tmp = $('<div>').html(data.result);
             var sel = $('#alIowGroupSel');
+            var cur = sel.val();
             sel.html('<option value="">Select IOW Group</option>');
-            tmp.find('[id^="iowgroupname"]').each(function(){
-                var id  = $(this).attr('id').replace('iowgroupname','');
-                var txt = $(this).text().trim();
-                sel.append('<option value="'+id+'">'+txt+'</option>');
+            (data.items||[]).forEach(function(g){
+                sel.append('<option value="'+g.id+'">'+g.name+'</option>');
             });
+            if(cur) sel.val(cur);
         }
     });
 }
