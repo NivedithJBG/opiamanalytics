@@ -21270,6 +21270,7 @@ public function actionActivitymusterprocess()
 //status active
     public function actionListworktype()
     {
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $connection = \Yii::$app->db;
         $search = isset($_POST['worktypename']) ? trim($_POST['worktypename']) : '';
         $sql = "SELECT estworktype_id, estworktype_name FROM estimateworktypes WHERE estworktype_status = 0";
@@ -21279,7 +21280,7 @@ public function actionActivitymusterprocess()
         $sql .= " ORDER BY sortorder ASC";
         $rows = $connection->createCommand($sql)->queryAll();
         if (empty($rows)) {
-            return json_encode(['error' => 'No', 'result' => '<p style="color:#aaa;font-size:13px;text-align:center;padding:30px 0;">No project types found.</p>']);
+            return ['error' => 'No', 'result' => '<p style="color:#aaa;font-size:13px;text-align:center;padding:30px 0;">No project types found.</p>'];
         }
         $html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
               . '<thead><tr>'
@@ -21299,7 +21300,7 @@ public function actionActivitymusterprocess()
                    . '</td></tr>';
         }
         $html .= '</tbody></table>';
-        return json_encode(['error' => 'No', 'result' => $html]);
+        return ['error' => 'No', 'result' => $html];
     }
 
     public function actionUpdateprojecttypesort()
