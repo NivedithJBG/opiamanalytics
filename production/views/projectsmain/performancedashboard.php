@@ -12,10 +12,9 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-/* position:fixed + inset:0 is the bulletproof no-scroll approach */
 html{height:100%}
 body{
-    position:fixed;inset:0;overflow:hidden;
+    min-height:100%;
     font-family:'Segoe UI',Arial,sans-serif;
     background:#0d1b2e;
     display:flex;flex-direction:column
@@ -23,8 +22,10 @@ body{
 
 /* ── Header ── */
 #dash-header{
-    height:48px;background:#0d1b2e;display:flex;align-items:center;
-    padding:0 10px;gap:8px;border-bottom:2px solid #1e3554;flex-shrink:0
+    position:sticky;top:0;z-index:10;
+    background:#0d1b2e;display:flex;align-items:center;
+    padding:0 10px;gap:8px;border-bottom:2px solid #1e3554;flex-shrink:0;
+    min-height:48px;
 }
 #dash-header h1{
     flex:1;color:#e8f0fb;font-size:13px;font-weight:700;
@@ -32,41 +33,51 @@ body{
 }
 #dash-back{
     background:none;border:1px solid #3a5a80;color:#8ab4d8;
-    font-size:10px;padding:2px 8px;border-radius:3px;cursor:pointer;flex-shrink:0
+    font-size:10px;padding:4px 10px;border-radius:3px;cursor:pointer;flex-shrink:0
 }
 #dash-back:hover{background:#1e3554;color:#fff}
 #dash-hint{font-size:9px;color:#4a6a90;font-style:italic;flex-shrink:0}
 
-/* ── Grid ── */
+/* ── Grid — desktop: 3 col, tablet: 2 col, phone: 1 col ── */
 #dash-grid{
-    flex:1;min-height:0;
+    flex:1;
     display:grid;
     grid-template-columns:repeat(3,1fr);
-    grid-template-rows:repeat(4,1fr);
-    gap:4px;padding:4px;
-    overflow:hidden
+    gap:6px;padding:6px;
+}
+@media(max-width:900px){
+    #dash-grid{ grid-template-columns:repeat(2,1fr); }
+    #dash-hint{ display:none; }
+}
+@media(max-width:540px){
+    #dash-grid{ grid-template-columns:1fr; gap:8px; padding:8px; }
+    #dash-header h1{ font-size:12px; }
 }
 
 /* ── Cards ── */
 .dcard{
-    background:#fff;border-radius:4px;
+    background:#fff;border-radius:6px;
     display:flex;flex-direction:column;
-    overflow:hidden;min-height:0;
+    overflow:hidden;
+    min-height:200px;
     box-shadow:0 1px 4px rgba(0,0,0,.3)
+}
+@media(max-width:540px){
+    .dcard{ min-height:240px; }
 }
 .dcard-hdr{
     background:#1a3052;color:#e8f0fb;
-    font-size:10.5px;font-weight:700;
-    padding:3px 8px;flex-shrink:0;
+    font-size:11px;font-weight:700;
+    padding:5px 10px;flex-shrink:0;
     display:flex;align-items:center;justify-content:space-between;
     line-height:1.3
 }
 .dcard-hdr .hist{font-size:9px;font-weight:400;color:#7aacda;cursor:pointer}
 
-/* card body — flex column, must not grow past its cell */
+/* card body */
 .dcard-body{
     flex:1;min-height:0;overflow:hidden;
-    padding:4px 6px;
+    padding:6px 8px;
     display:flex;flex-direction:column
 }
 #ch-project-card .dcard-body{overflow:visible;}
@@ -77,22 +88,25 @@ body{
     flex-shrink:0;margin-bottom:3px;flex-wrap:wrap;
 }
 .leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px;vertical-align:middle}
-.cv-area{flex:1;min-height:0;position:relative}
+.cv-area{flex:1;min-height:120px;position:relative}
 .cv-area canvas{position:absolute;inset:0;width:100%!important;height:100%!important}
 
 /* ── Gauge cards ── */
 .gauge-wrap{
     flex:1;min-height:0;overflow:hidden;
     display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:1px
+    align-items:center;justify-content:center;gap:2px
 }
-.gauge-wrap svg{display:block;width:100%;height:auto;flex-shrink:1;max-height:76px}
+.gauge-wrap svg{display:block;width:100%;height:auto;flex-shrink:1;max-height:130px}
+@media(max-width:540px){
+    .gauge-wrap svg{ max-height:160px; }
+}
 .g-vals{display:flex;gap:12px;justify-content:center;flex-shrink:0}
 .g-val{text-align:center;line-height:1.2}
-.g-val-lbl{font-size:8px;font-weight:700;display:block}
-.g-val-num{font-size:11px;font-weight:700;color:#1a2a4a}
+.g-val-lbl{font-size:9px;font-weight:700;display:block}
+.g-val-num{font-size:12px;font-weight:700;color:#1a2a4a}
 .g-act{
-    font-size:8.5px;color:#8892a4;text-align:center;
+    font-size:9px;color:#8892a4;text-align:center;
     overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
     width:100%;padding:0 3px;flex-shrink:0
 }
