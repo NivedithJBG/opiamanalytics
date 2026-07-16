@@ -2263,15 +2263,16 @@ if($action=='login')
               <th style="width:12%">Quantity</th>
               <th style="width:14%">Rate</th>
               <th style="width:14%">Amount</th>
-              <th style="width:12%;text-align:right">
-                <button class="qe-add-btn" id="qe-res-add" title="Add resource row" onclick="if(window._resTypesLoaded){addResRow();}else{loadResTypes(function(){addResRow();});}">+</button>
-              </th>
+              <th style="width:12%"></th>
             </tr>
           </thead>
           <tbody id="qe-res-body">
             <!-- rows injected by JS -->
           </tbody>
         </table>
+        <div style="margin-top:6px">
+          <button id="qe-res-add" onclick="if(window._resTypesLoaded){addResRow();}else{loadResTypes(function(){addResRow();});}" style="background:#4a5568;color:#fff;border:none;padding:4px 14px;font-size:12px;font-weight:700;cursor:pointer;border-radius:3px;">+ Add Resource</button>
+        </div>
       </div>
     </div>
 
