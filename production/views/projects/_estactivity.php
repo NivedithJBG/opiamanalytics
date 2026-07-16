@@ -94,9 +94,9 @@ use app\models\Resources;
                                 <button id="estactivitysearch" class="btn btn-primary" type="button"><span class="icon-search5"></span></button>
                             </div>
                             <div class="content-action-wrpr col-md-6 col-sm-6" style="white-space:nowrap;">
-                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="iow-group" title="New IOW Group" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW Group</a>
-                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="iow" title="New IOW" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW</a>
-                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="act-type" title="New Activity Type" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Activity Type</a>
+                                <a href="#iowGroupPopup" class="btn btn-default" data-toggle="modal" data-target="#iowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW Group</a>
+                                <a href="#iowFormPopup" class="btn btn-default" data-toggle="modal" data-target="#iowFormPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW</a>
+                                <a href="#collapseacttype" class="btn btn-default" data-toggle="collapse" data-parent="#accordionpromasterind" onclick="setTimeout(function(){$('#addactivitytype').trigger('click');},350);" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Activity Type</a>
                                 <a href="#" class="btn btn-primary addForm" id="addestactivity" title="Add Activities"><span class="icon-add"></span> Activity</a>
                                 <a href="#" class="btn btn-primary list-accountType" id="listestactivity"><span class="icon-th-list"></span> List</a>
                             </div>
