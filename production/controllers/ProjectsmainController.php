@@ -250,17 +250,25 @@ class ProjectsmainController extends Controller
     public function actionGetiowgrouplist()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid      = Yii::$app->user->Id;
+        $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
+        $pid      = $projuser ? (int)$projuser->projectid : 0;
         $rows = \Yii::$app->db->createCommand(
-            "SELECT id, name FROM iow_groups ORDER BY name ASC"
+            "SELECT id, name FROM iow_groups WHERE project_id = :p AND status = 0 ORDER BY name ASC",
+            [':p' => $pid]
         )->queryAll();
         return ['items' => $rows];
     }
 
-    public function actionGetiowlist()
+    public function actionGetalliows()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid      = Yii::$app->user->Id;
+        $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
+        $pid      = $projuser ? (int)$projuser->projectid : 0;
         $rows = \Yii::$app->db->createCommand(
-            "SELECT id, name FROM iow_groups ORDER BY name ASC"
+            "SELECT id, name FROM iow_groups WHERE project_id = :p AND status = 0 ORDER BY name ASC",
+            [':p' => $pid]
         )->queryAll();
         return ['items' => $rows];
     }
@@ -271,10 +279,19 @@ class ProjectsmainController extends Controller
         try {
             $name = trim(\Yii::$app->request->post('name', ''));
             if (!$name) return ['error' => 'Name required'];
+            $uid      = Yii::$app->user->Id;
+            $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
+            $pid      = $projuser ? (int)$projuser->projectid : 0;
             $db = \Yii::$app->db;
-            $exists = $db->createCommand("SELECT id FROM iow_groups WHERE name = :n", [':n' => $name])->queryScalar();
+            $exists = $db->createCommand(
+                "SELECT id FROM iow_groups WHERE name = :n AND project_id = :p",
+                [':n' => $name, ':p' => $pid]
+            )->queryScalar();
             if ($exists) return ['error' => 'Group already exists', 'id' => (int)$exists];
-            $db->createCommand("INSERT INTO iow_groups (name) VALUES (:n)", [':n' => $name])->execute();
+            $db->createCommand(
+                "INSERT INTO iow_groups (name, project_id, status, primavera_id) VALUES (:n, :p, 0, 0)",
+                [':n' => $name, ':p' => $pid]
+            )->execute();
             $id = (int)$db->lastInsertID;
             return ['ok' => true, 'id' => $id];
         } catch (\Exception $e) {
@@ -290,24 +307,32 @@ class ProjectsmainController extends Controller
             $name    = trim(\Yii::$app->request->post('name', ''));
             if (!$groupId) return ['error' => 'Group required'];
             if (!$name)    return ['error' => 'Name required'];
-            $db = \Yii::$app->db;
-            $exists = $db->createCommand(
-                "SELECT id FROM iow_groups WHERE name = :n", [':n' => $name]
-            )->queryScalar();
-            if ($exists) return ['error' => 'IOW already exists', 'id' => (int)$exists];
-            $db->createCommand("INSERT INTO iow_groups (name) VALUES (:n)", [':n' => $name])->execute();
-            $iowId = (int)$db->lastInsertID;
             $uid      = Yii::$app->user->Id;
             $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
-            if ($projuser) {
-                $pid = (int)$projuser->projectid;
+            $pid      = $projuser ? (int)$projuser->projectid : 0;
+            $db = \Yii::$app->db;
+            $exists = $db->createCommand(
+                "SELECT id FROM iow_groups WHERE name = :n AND project_id = :p",
+                [':n' => $name, ':p' => $pid]
+            )->queryScalar();
+            if ($exists) return ['error' => 'IOW already exists', 'id' => (int)$exists];
+            $db->createCommand(
+                "INSERT INTO iow_groups (name, project_id, status, primavera_id) VALUES (:n, :p, 0, 0)",
+                [':n' => $name, ':p' => $pid]
+            )->execute();
+            $iowId = (int)$db->lastInsertID;
+            if ($pid) {
                 $now = date('Y-m-d H:i:s');
                 $db->createCommand(
                     "INSERT INTO workgroups_new
-                     (iowGroupid, worktypegroup, Project_Id, Added_On, Updated_On, Added_By,
-                      start_date, end_date, duration, progress, open, parent, itemtype, worktype, wbs_estimate_id)
-                     VALUES (:ig, :wg, :pid, :now, :now, :uid, :now, :now, 0, 0, 1, 0, 0, 0, 0)",
-                    [':ig' => $iowId, ':wg' => $groupId, ':pid' => $pid, ':now' => $now, ':uid' => $uid]
+                     (iowGroupid, worktypegroup, Project_Id, Name, Added_On, Added_By,
+                      start_date, end_date, duration, progress, open, sortorder,
+                      parent, itemtype, worktype, wbs_estimate_id, pricing_status, notes, primavera_id)
+                     VALUES (:ig, :wg, :pid, :nm, :now, :uid,
+                             :now, :now, 0, 0, 1, 0,
+                             0, '', 0, 0, 0, '', 0)",
+                    [':ig' => $iowId, ':wg' => $groupId, ':pid' => $pid,
+                     ':nm' => $name, ':now' => $now, ':uid' => $uid]
                 )->execute();
             }
             return ['ok' => true, 'id' => $iowId];
@@ -383,9 +408,10 @@ class ProjectsmainController extends Controller
             $db->createCommand(
                 "INSERT INTO workgroups_new
                  (Project_Id, Name, iowGroupid, Status, sortorder, Added_On, Updated_On, Added_By,
-                  start_date, end_date, duration, progress, open, parent, itemtype, worktype, worktypegroup, wbs_estimate_id)
+                  start_date, end_date, duration, progress, open, parent, itemtype, worktype, worktypegroup,
+                  wbs_estimate_id, pricing_status, notes, primavera_id)
                  VALUES (:p, :n, :g, 0, :s, :t, :t, :uid,
-                  '0000-00-00', '0000-00-00', 0, 0, 0, 0, '', 0, 0, 0)",
+                  :t, :t, 0, 0, 0, 0, '', 0, 0, 0, 0, '', 0)",
                 [':p'=>$pid, ':n'=>$iowGroupName, ':g'=>$iowGroupId, ':s'=>$nextSort, ':t'=>$now, ':uid'=>$uid]
             )->execute();
             $wgId = (int)$db->lastInsertID;

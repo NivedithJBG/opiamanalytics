@@ -2341,7 +2341,7 @@ function refreshIowGroupDropdowns(){
 
 function refreshIowDropdowns(){
   $.ajax({
-    type:'POST', url:'../projectsmain/getiowlist', dataType:'json',
+    type:'POST', url:'../projectsmain/getalliows', dataType:'json',
     success: function(d){
       var items = d.items || [];
       ['lib-at-iow-sel'].forEach(function(id){
