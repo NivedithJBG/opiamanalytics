@@ -2055,69 +2055,58 @@ if($action=='login')
 #qe-modal{
   display:none;position:fixed;top:50%;left:50%;
   transform:translate(-50%,-50%);
-  width:900px;max-width:96vw;max-height:92vh;
+  width:1100px;max-width:98vw;max-height:92vh;
   z-index:10001;border-radius:10px;overflow:hidden;
   background:#edf0f4;box-shadow:0 12px 40px rgba(0,0,0,.75);
   flex-direction:column;
   font-family:'Barlow',sans-serif;
 }
 #qe-modal.qe-open{display:flex}
-#qe-hdr{
-  background:#4a5568;
-  padding:7px 16px;display:flex;align-items:center;
-  border-bottom:1px solid #3a4357;flex-shrink:0;
-}
-#qe-hdr span{flex:1;color:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;letter-spacing:.4px;text-align:center;text-transform:uppercase}
-#qe-close{background:none;border:none;color:#fff;font-size:18px;line-height:1;cursor:pointer;padding:0 4px;opacity:.85}
-#qe-close:hover{opacity:1}
-#qe-body{flex:1;overflow-y:auto;padding:12px 16px 16px;display:flex;flex-direction:column;gap:0}
+#qe-hdr{display:none}
+#qe-close{display:none}
+#qe-body{flex:1;overflow-y:auto;padding:16px 20px 20px;display:flex;flex-direction:column;gap:0}
 
 /* Section wrapper */
 .qe-section{background:#fff;border-radius:4px;border:1px solid #a0aab8;margin-bottom:0;overflow:hidden}
-.qe-section+.qe-section{margin-top:10px}
-.qe-sec-hdr{
-  background:#6b7a93;border-bottom:1px solid #56657a;
-  padding:5px 12px;
-  font-family:'Nunito',sans-serif;font-size:10px;font-weight:700;
-  color:#fff;letter-spacing:.6px;text-transform:uppercase;
-}
-.qe-sec-body{padding:10px 12px}
+.qe-section+.qe-section{margin-top:14px}
+.qe-sec-hdr{display:none}
+.qe-sec-body{padding:14px 16px}
 
 /* Label + field */
-.qe-row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end}
+.qe-row{display:flex;flex-wrap:wrap;gap:14px 16px;align-items:flex-end}
 .qe-field{display:flex;flex-direction:column;min-width:80px}
 .qe-field.wide{flex:1 1 180px}
 .qe-field.med{flex:1 1 120px}
-.qe-field.sm{flex:0 0 90px}
-.qe-field.xs{flex:0 0 70px}
-.qe-label{font-size:9px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.qe-field.sm{flex:0 0 100px}
+.qe-field.xs{flex:0 0 80px}
+.qe-label{font-size:10px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
 .qe-input,.qe-select{
-  width:100%;padding:4px 8px;font-size:12px;color:#2d3748;
+  width:100%;padding:8px 10px;font-size:13px;color:#2d3748;
   border:1px solid #a0aab8;border-radius:3px;background:#fff;
   outline:none;box-sizing:border-box;font-family:'Barlow',sans-serif;
-  transition:border-color .15s;
+  transition:border-color .15s;height:38px;
 }
 .qe-input:focus,.qe-select:focus{border-color:#4a5568;background:#fff}
 .qe-input[readonly]{background:#edf0f4;color:#666;cursor:default}
 .qe-persist-note{font-size:9px;color:#888;font-style:italic;margin-top:2px}
 
 /* Divider */
-.qe-divider{border:none;border-top:1px solid #a0aab8;margin:8px 0}
+.qe-divider{border:none;border-top:1px solid #a0aab8;margin:12px 0}
 
 /* Repeating rows (tasks / resources) */
 .qe-repeat-tbl{width:100%;border-collapse:collapse}
 .qe-repeat-tbl th{
-  font-size:9px;font-weight:700;color:#4a5568;text-transform:uppercase;
-  letter-spacing:.4px;padding:0 6px 5px 0;border-bottom:1px solid #a0aab8;
+  font-size:10px;font-weight:700;color:#4a5568;text-transform:uppercase;
+  letter-spacing:.4px;padding:0 6px 8px 0;border-bottom:1px solid #a0aab8;
   white-space:nowrap;
 }
-.qe-repeat-tbl td{padding:4px 6px 4px 0;vertical-align:middle}
+.qe-repeat-tbl td{padding:6px 6px 6px 0;vertical-align:middle}
 .qe-repeat-tbl td:last-child{padding-right:0}
 .qe-repeat-tbl input,.qe-repeat-tbl select{
-  width:100%;padding:4px 7px;font-size:12px;color:#2d3748;
+  width:100%;padding:7px 9px;font-size:13px;color:#2d3748;
   border:1px solid #a0aab8;border-radius:3px;background:#fff;
   outline:none;font-family:'Barlow',sans-serif;transition:border-color .15s;
-  box-sizing:border-box;
+  box-sizing:border-box;height:36px;
 }
 .qe-repeat-tbl input:focus,.qe-repeat-tbl select:focus{border-color:#4a5568}
 .qe-repeat-tbl input[readonly]{background:#edf0f4;color:#666;cursor:default}
@@ -2301,6 +2290,7 @@ if($action=='login')
     <div id="qe-duration-display">Computed Duration: <span id="qe-dur-val">&mdash;</span> days</div>
     <div id="qe-save-msg">&#10003; Activity added to Gantt!</div>
     <button id="qe-btn-add">&#43; Add to Gantt</button>
+    <button id="qe-close" style="background:#e67e22;color:#fff;border:none;border-radius:20px;padding:6px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">&#10005; Close</button>
   </div>
 </div><!-- /qe-modal -->
 
