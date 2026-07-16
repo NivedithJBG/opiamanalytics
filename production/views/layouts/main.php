@@ -2381,12 +2381,18 @@ function recalcDuration(){
 
 /* ── Resource Types ── */
 var _resTypes = [];
+var _resTypesLoaded = false;
 function loadResTypes(cb){
-  if(_resTypes.length){ if(cb) cb(); return; }
+  if(_resTypesLoaded){ if(cb) cb(); return; }
   $.ajax({
     type:'POST', url:'../projectsmain/getrestypelist', dataType:'json',
     success: function(d){
       _resTypes = d.items || [];
+      _resTypesLoaded = true;
+      if(cb) cb();
+    },
+    error: function(){
+      _resTypesLoaded = true;
       if(cb) cb();
     }
   });
@@ -2557,7 +2563,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   /* add resource row */
   document.getElementById('qe-res-add').addEventListener('click', function(){
-    loadResTypes(function(){ addResRow(); });
+    if(_resTypesLoaded){ addResRow(); } else { loadResTypes(function(){ addResRow(); }); }
   });
 
   /* ── Add to Gantt ── */
