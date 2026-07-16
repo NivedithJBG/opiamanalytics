@@ -89,6 +89,7 @@ use app\models\Resources;
                                 </div>
                             </div>
                         </div>
+                        <div style="height:40px;"></div>
                         <div class="content-wrpr">
 
                             <!-- add-activity-form kept as hidden placeholder so existing JS hide/show calls don't error -->
@@ -258,6 +259,10 @@ use app\models\Resources;
 
                             <!-- list end here -->
                         </div>
+                    </div>
+
+                    <div style="padding:16px 0 8px 0;text-align:left;">
+                        <button type="button" class="btn menu4-win-close" style="position:static;font-size:14px;background:#e67e22;color:#fff;border-color:#d35400;border-radius:20px;padding:6px 20px;"><span class="icon-close"></span> Close</button>
                     </div>
 
         </div>
