@@ -2182,14 +2182,12 @@ if($action=='login')
         <div class="qe-row">
           <div class="qe-field wide">
             <span class="qe-label">IOW</span>
-            <select id="qe-iow" class="qe-select">
-              <option value="">— Select IOW —</option>
-            </select>
+            <input type="text" id="qe-iow" class="qe-input" placeholder="Enter IOW name">
           </div>
           <div class="qe-field wide">
             <span class="qe-label">Activity</span>
             <select id="qe-activity" class="qe-select">
-              <option value="">— Select Activity —</option>
+              <option value="">— Select Project Type &amp; Group first —</option>
             </select>
           </div>
         </div>
@@ -2304,7 +2302,7 @@ function openModal(){
 }
 window.openQeModal  = openModal;
 window.loadIows     = loadIows;
-window.loadActivities = loadActivities;
+window.loadActivities = function(typeId, groupId){ loadActivities(typeId, groupId); };
 function closeModal(){
   document.getElementById('qe-bk').classList.remove('qe-open');
   document.getElementById('qe-modal').classList.remove('qe-open');
@@ -2330,8 +2328,7 @@ function loadProjTypes(){
 function loadGroups(typeId){
   var sel = document.getElementById('qe-group');
   sel.innerHTML = '<option value="">— Select Group —</option>';
-  document.getElementById('qe-iow').innerHTML = '<option value="">— Select IOW —</option>';
-  document.getElementById('qe-activity').innerHTML = '<option value="">— Select Activity —</option>';
+  document.getElementById('qe-activity').innerHTML = '<option value="">— Select Project Type &amp; Group first —</option>';
   if(!typeId) return;
   $.ajax({
     type:'POST', url:'../projectsmain/getwbgrouplist', dataType:'json',
@@ -2346,37 +2343,21 @@ function loadGroups(typeId){
   });
 }
 
-function loadIows(groupId){
-  var sel = document.getElementById('qe-iow');
-  sel.innerHTML = '<option value="">— Select IOW —</option>';
-  document.getElementById('qe-activity').innerHTML = '<option value="">— Select Activity —</option>';
-  if(!groupId) return;
-  $.ajax({
-    type:'POST', url:'../projectsmain/getiowbygroup', dataType:'json',
-    data:{groupId: groupId},
-    success: function(d){
-      (d.items||[]).forEach(function(item){
-        var o = document.createElement('option');
-        o.value = item.id; o.textContent = item.name;
-        sel.appendChild(o);
-      });
-    }
-  });
-}
-
-function loadActivities(iowId){
+function loadActivities(typeId, groupId){
   var sel = document.getElementById('qe-activity');
-  sel.innerHTML = '<option value="">— Select Activity —</option>';
-  if(!iowId) return;
+  sel.innerHTML = '<option value="">— Loading… —</option>';
+  if(!typeId && !groupId){ sel.innerHTML = '<option value="">— Select Project Type &amp; Group first —</option>'; return; }
   $.ajax({
-    type:'POST', url:'../projectsmain/getiowactivities', dataType:'json',
-    data:{iowId: iowId},
+    type:'POST', url:'../projectsmain/getactivitiesbytypeandgroup', dataType:'json',
+    data:{typeId: typeId, groupId: groupId},
     success: function(d){
+      sel.innerHTML = '<option value="">— Select Activity —</option>';
       (d.items||[]).forEach(function(item){
         var o = document.createElement('option');
         o.value = item.id; o.textContent = item.name;
         sel.appendChild(o);
       });
+      if(!d.items || !d.items.length) sel.innerHTML = '<option value="">— No activities found —</option>';
     }
   });
 }
@@ -2467,7 +2448,7 @@ function addResRow(){
 
 /* ── clear activity fields (keeps Project Type, Group, IOW, Activity selections) ── */
 function clearActivityFields(){
-  document.getElementById('qe-actname').value  = '';
+  document.getElementById('qe-iow').value      = '';
   document.getElementById('qe-unit').value     = '';
   document.getElementById('qe-qty').value      = '';
   document.getElementById('qe-rate').value     = '';
@@ -2506,7 +2487,7 @@ function collectPayload(){
     });
   });
 
-  var iowSel      = document.getElementById('qe-iow');
+  var iowEl       = document.getElementById('qe-iow');
   var actSel      = document.getElementById('qe-activity');
   var projTypeSel = document.getElementById('qe-proj-type');
   var groupSel    = document.getElementById('qe-group');
@@ -2514,11 +2495,11 @@ function collectPayload(){
   return {
     proj_type_id: projTypeSel.value,
     group_id:     groupSel.value,
-    iow_group_id: iowSel.value,
-    iow_group:    iowSel.options[iowSel.selectedIndex] ? iowSel.options[iowSel.selectedIndex].text : '',
+    iow_group_id: '',
+    iow_group:    iowEl.value.trim(),
     iow_act_id:   actSel.value,
     iow_name:     actSel.options[actSel.selectedIndex] ? actSel.options[actSel.selectedIndex].text : '',
-    act_name:     document.getElementById('qe-actname').value.trim(),
+    act_name:     actSel.options[actSel.selectedIndex] ? actSel.options[actSel.selectedIndex].text : '',
     unit:         document.getElementById('qe-unit').value.trim(),
     qty:          parseFloat(document.getElementById('qe-qty').value)     || 0,
     rate:         parseFloat(document.getElementById('qe-rate').value)    || 0,
@@ -2552,19 +2533,15 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('qe-close').addEventListener('click', closeModal);
   document.getElementById('qe-bk').addEventListener('click', closeModal);
 
-  /* cascade: Project Type → Groups */
+  /* cascade: Project Type → Groups + reload Activities */
   document.getElementById('qe-proj-type').addEventListener('change', function(){
     loadGroups(this.value);
+    loadActivities(this.value, document.getElementById('qe-group').value);
   });
 
-  /* cascade: Group → IOWs */
+  /* cascade: Group → Activities */
   document.getElementById('qe-group').addEventListener('change', function(){
-    loadIows(this.value);
-  });
-
-  /* cascade: IOW → Activities */
-  document.getElementById('qe-iow').addEventListener('change', function(){
-    loadActivities(this.value);
+    loadActivities(document.getElementById('qe-proj-type').value, this.value);
   });
 
   /* estimate amount = qty × rate */
@@ -2589,8 +2566,7 @@ document.addEventListener('DOMContentLoaded', function(){
   /* ── Add to Gantt ── */
   document.getElementById('qe-btn-add').addEventListener('click', function(){
     var payload = collectPayload();
-    if(!payload.iow_group_id){ alert('Please select an IOW.'); return; }
-    if(!payload.act_name)    { alert('Please enter an Activity name.'); return; }
+    if(!payload.iow_act_id)  { alert('Please select an Activity.'); return; }
     if(payload.duration < 1) { alert('Duration is 0. Please fill in task productivity and resource units.'); return; }
 
     var btn = document.getElementById('qe-btn-add');

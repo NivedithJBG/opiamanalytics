@@ -273,6 +273,22 @@ class ProjectsmainController extends Controller
         return ['items' => $rows];
     }
 
+    public function actionGetactivitiesbytypeandgroup()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $typeId  = (int)\Yii::$app->request->post('typeId');
+        $groupId = (int)\Yii::$app->request->post('groupId');
+        if (!$typeId && !$groupId) return ['items' => []];
+        $sql  = "SELECT ea.activity_id AS id, ea.activity_name AS name
+                 FROM estimateactivities ea
+                 WHERE ea.activity_status = 0";
+        if ($typeId)  $sql .= " AND ea.work_type = " . $typeId;
+        if ($groupId) $sql .= " AND ea.activity_type = " . $groupId;
+        $sql .= " ORDER BY ea.activity_name ASC";
+        $rows = \Yii::$app->db->createCommand($sql)->queryAll();
+        return ['items' => $rows];
+    }
+
     public function actionAddiowgroup()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
