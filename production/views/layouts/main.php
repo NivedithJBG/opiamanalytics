@@ -2558,7 +2558,6 @@ document.addEventListener('DOMContentLoaded', function(){
   /* add resource row */
   document.getElementById('qe-res-add').addEventListener('click', function(){
     loadResTypes(function(){ addResRow(); });
-    if(_resTypes.length) addResRow();
   });
 
   /* ── Add to Gantt ── */
