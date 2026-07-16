@@ -2081,10 +2081,10 @@ if($action=='login')
 .qe-field.xs{flex:0 0 80px}
 .qe-label{font-size:11px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
 .qe-input,.qe-select{
-  width:100%;padding:8px 10px;font-size:13px;color:#2d3748;
+  width:100%;padding:5px 10px;font-size:13px;color:#2d3748;
   border:1px solid #a0aab8;border-radius:0;background:#fff;
   outline:none;box-sizing:border-box;font-family:'Barlow',sans-serif;
-  transition:border-color .15s;height:38px;
+  transition:border-color .15s;height:32px;
 }
 .qe-input:focus,.qe-select:focus{border-color:#4a5568;background:#fff}
 .qe-input[readonly]{background:#f5f5f5;color:#666;cursor:default}
@@ -2106,7 +2106,7 @@ if($action=='login')
   width:100%;padding:7px 9px;font-size:13px;color:#2d3748;
   border:1px solid #a0aab8;border-radius:0;background:#fff;
   outline:none;font-family:'Barlow',sans-serif;transition:border-color .15s;
-  box-sizing:border-box;height:36px;
+  box-sizing:border-box;height:32px;
 }
 .qe-repeat-tbl input:focus,.qe-repeat-tbl select:focus{border-color:#4a5568}
 .qe-repeat-tbl input[readonly]{background:#edf0f4;color:#666;cursor:default}
@@ -2151,6 +2151,8 @@ if($action=='login')
     <button id="qe-close">&times;</button>
   </div>
   <div id="qe-body">
+
+    <div style="padding:14px 4px 10px;font-family:'Nunito',sans-serif;font-size:18px;font-weight:900;color:#1a202c;letter-spacing:.5px;text-transform:uppercase;border-bottom:3px solid #1a202c;margin-bottom:14px;">WBS</div>
 
     <!-- ── SECTION 1 : Project Type + Group (persists) ─────────────── -->
     <div class="qe-section">
