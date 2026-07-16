@@ -2055,7 +2055,7 @@ if($action=='login')
 #qe-modal{
   display:none;position:fixed;top:50%;left:50%;
   transform:translate(-50%,-50%);
-  width:860px;max-width:95vw;max-height:88vh;
+  width:740px;max-width:94vw;max-height:88vh;
   z-index:10001;border-radius:0;overflow:hidden;
   background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.75);
   flex-direction:column;
@@ -2084,7 +2084,7 @@ if($action=='login')
   width:100%;padding:5px 10px;font-size:13px;color:#2d3748;
   border:1px solid #a0aab8;border-radius:0;background:#fff;
   outline:none;box-sizing:border-box;font-family:'Barlow',sans-serif;
-  transition:border-color .15s;height:32px;
+  transition:border-color .15s;height:28px;
 }
 .qe-input:focus,.qe-select:focus{border-color:#4a5568;background:#fff}
 .qe-input[readonly]{background:#f5f5f5;color:#666;cursor:default}
@@ -2106,7 +2106,7 @@ if($action=='login')
   width:100%;padding:7px 9px;font-size:13px;color:#2d3748;
   border:1px solid #a0aab8;border-radius:0;background:#fff;
   outline:none;font-family:'Barlow',sans-serif;transition:border-color .15s;
-  box-sizing:border-box;height:32px;
+  box-sizing:border-box;height:28px;
 }
 .qe-repeat-tbl input:focus,.qe-repeat-tbl select:focus{border-color:#4a5568}
 .qe-repeat-tbl input[readonly]{background:#edf0f4;color:#666;cursor:default}
