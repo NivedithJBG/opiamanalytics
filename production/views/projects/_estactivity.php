@@ -489,6 +489,9 @@ use app\models\Resources;
 <script>
 (function(){
 
+/* Move modals to <body> so accordion overflow/z-index doesn't trap them */
+$('#alIowGroupPopup, #alIowPopup, #alActTypePopup').appendTo('body');
+
 /* ── IOW Group modal ── */
 $('#alIowGroupPopup').on('show.bs.modal', function(){
     $('#alIowGroupName').val('');
