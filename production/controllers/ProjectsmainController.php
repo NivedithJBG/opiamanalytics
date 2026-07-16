@@ -194,7 +194,7 @@ class ProjectsmainController extends Controller
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $rows = \Yii::$app->db->createCommand(
-            "SELECT worktype_id AS id, name FROM worktype ORDER BY sortorder ASC, name ASC"
+            "SELECT estworktype_id AS id, estworktype_name AS name FROM estimateworktypes WHERE estworktype_status = 0 ORDER BY sortorder ASC, estworktype_name ASC"
         )->queryAll();
         return ['items' => $rows];
     }
@@ -202,9 +202,8 @@ class ProjectsmainController extends Controller
     public function actionGetwbgrouplist()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $typeId = (int)\Yii::$app->request->post('typeId');
         $rows = \Yii::$app->db->createCommand(
-            "SELECT worktypegroup_id AS id, name FROM worktypegroups ORDER BY sortorder ASC, name ASC"
+            "SELECT activitytype_id AS id, activitytype_name AS name FROM estimateactivitytypes WHERE activitytype_status = 0 ORDER BY sortorder ASC, activitytype_name ASC"
         )->queryAll();
         return ['items' => $rows];
     }

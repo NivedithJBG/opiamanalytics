@@ -2166,7 +2166,7 @@ if($action=='login')
             </select>
           </div>
           <div class="qe-field wide">
-            <span class="qe-label">Group</span>
+            <span class="qe-label">Activity Type</span>
             <select id="qe-group" class="qe-select">
               <option value="">— Select Group —</option>
             </select>
