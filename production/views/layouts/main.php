@@ -2264,7 +2264,7 @@ if($action=='login')
               <th style="width:14%">Rate</th>
               <th style="width:14%">Amount</th>
               <th style="width:12%;text-align:right">
-                <button class="qe-add-btn" id="qe-res-add" title="Add resource row">+</button>
+                <button class="qe-add-btn" id="qe-res-add" title="Add resource row" onclick="if(window._resTypesLoaded){addResRow();}else{loadResTypes(function(){addResRow();});}">+</button>
               </th>
             </tr>
           </thead>
