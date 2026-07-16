@@ -94,9 +94,9 @@ use app\models\Resources;
                                 <button id="estactivitysearch" class="btn btn-primary" type="button"><span class="icon-search5"></span></button>
                             </div>
                             <div class="content-action-wrpr col-md-6 col-sm-6" style="white-space:nowrap;">
-                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="iow-group" title="New IOW Group">+ IOW Group</a>
-                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="iow" title="New IOW">+ IOW</a>
-                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="act-type" title="New Activity Type">+ Activity Type</a>
+                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="iow-group" title="New IOW Group" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW Group</a>
+                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="iow" title="New IOW" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW</a>
+                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="act-type" title="New Activity Type" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Activity Type</a>
                                 <a href="#" class="btn btn-primary addForm" id="addestactivity" title="Add Activities"><span class="icon-add"></span> Activity</a>
                                 <a href="#" class="btn btn-primary list-accountType" id="listestactivity"><span class="icon-th-list"></span> List</a>
                             </div>
