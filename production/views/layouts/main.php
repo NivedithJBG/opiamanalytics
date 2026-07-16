@@ -2199,13 +2199,6 @@ if($action=='login')
       <div class="qe-sec-hdr">Activity Details</div>
       <div class="qe-sec-body">
         <div class="qe-row">
-          <div class="qe-field wide">
-            <span class="qe-label">Activity Name</span>
-            <input id="qe-actname" type="text" class="qe-input" placeholder="Enter activity name">
-          </div>
-        </div>
-        <div class="qe-divider"></div>
-        <div class="qe-row">
           <div style="font-size:9px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;width:100%;margin-bottom:2px">Estimate</div>
           <div class="qe-field sm">
             <span class="qe-label">Unit</span>
