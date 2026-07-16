@@ -24971,12 +24971,8 @@ public function actionActivitymusterprocess()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         try {
-            $uid      = Yii::$app->user->Id;
-            $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
-            $pid      = $projuser ? (int)$projuser->projectid : 0;
             $rows = \Yii::$app->db->createCommand(
-                "SELECT id, name FROM iow_groups WHERE project_id = :p AND status = 0 ORDER BY name ASC",
-                [':p' => $pid]
+                "SELECT id, name FROM iow_groups WHERE status = 0 ORDER BY name ASC"
             )->queryAll();
             return ['items' => $rows];
         } catch (\Exception $e) { return ['items' => [], 'error' => $e->getMessage()]; }
