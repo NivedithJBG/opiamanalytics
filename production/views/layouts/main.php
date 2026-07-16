@@ -95,7 +95,7 @@ $subDomain = array_shift(($HTTP_HOST));
     <link rel="stylesheet" type="text/css" href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/jsgantt.css" />
     <link rel="stylesheet" type="text/css" href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/jsgantt-extra.css" />
 
-    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/custom.css" rel="stylesheet">
+    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/custom.css?v=20260716d" rel="stylesheet">
 
      
     <!--<script type="text/javascript" src="<?php //echo Yii::$app->request->baseUrl; ?>/jsnew/jquery-1.9.1.min.js"></script>-->
