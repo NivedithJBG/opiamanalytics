@@ -64,7 +64,7 @@ use app\models\Resources;
                         <div class="search-and-actions-wrpr row" id="AR-allocate-body-one-head" style="display:flex !important;align-items:center;margin:0;padding:4px 0;">
 
                             <div class="content-action-wrpr col-md-8 col-sm-8" style="display:flex !important;white-space:nowrap;text-align:left;padding:0;margin:0;justify-content:flex-start !important;">
-                                <a href="#alProjTypePopup" class="btn btn-default" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Project Type</a>
+                                <a href="#alProjTypePopup" class="btn btn-default" id="alOpenProjTypePopup" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Project Type</a>
                                 <a href="#alIowGroupPopup" class="btn btn-default" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW Group</a>
                                 <a href="#alActTypePopup" class="btn btn-default" data-toggle="modal" data-target="#alActTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Activity Type</a>
                                 <a href="#alAddActivityPopup" class="btn btn-primary" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities"><span class="icon-add"></span> Activity</a>
@@ -525,6 +525,10 @@ $('#alAddActivityPopup').on('hidden.bs.modal', function(){
 });
 
 /* ── Project Type modal ── */
+$(document).on('click', '#alOpenProjTypePopup', function(){
+    $('#alProjTypeListContainer').html('<div class="col-md-12" style="padding:8px 15px;color:#999;">Loading…</div>');
+    setTimeout(function(){ alLoadProjTypeList(); }, 300);
+});
 $('#alProjTypePopup').on('shown.bs.modal', function(){
     $('#alProjTypeName').val('').focus();
     $('#alProjTypeErr').hide();
