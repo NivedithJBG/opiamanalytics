@@ -2199,7 +2199,7 @@ if($action=='login')
       <div class="qe-sec-hdr">Activity Details</div>
       <div class="qe-sec-body">
         <div class="qe-row">
-          <div style="font-size:9px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;width:100%;margin-bottom:2px">Estimate</div>
+          <div style="font-size:9px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;width:100%;margin-bottom:2px;border-top:2px solid #2d3748;padding-top:10px;">Estimate</div>
           <div class="qe-field sm">
             <span class="qe-label">Unit</span>
             <input id="qe-unit" type="text" class="qe-input" placeholder="e.g. m³">
