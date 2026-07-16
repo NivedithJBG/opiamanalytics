@@ -24965,6 +24965,108 @@ public function actionActivitymusterprocess()
 
         }
     }
+    /* ── Activity Library popup endpoints ───────────────────────────── */
+
+    public function actionGetiowgrouplist()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        try {
+            $uid      = Yii::$app->user->Id;
+            $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
+            $pid      = $projuser ? (int)$projuser->projectid : 0;
+            $rows = \Yii::$app->db->createCommand(
+                "SELECT id, name FROM iow_groups WHERE project_id = :p AND status = 0 ORDER BY name ASC",
+                [':p' => $pid]
+            )->queryAll();
+            return ['items' => $rows];
+        } catch (\Exception $e) { return ['items' => [], 'error' => $e->getMessage()]; }
+    }
+
+    public function actionAddiowgroup()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        try {
+            $name = trim(\Yii::$app->request->post('name', ''));
+            if (!$name) return ['error' => 'Name required'];
+            $uid      = Yii::$app->user->Id;
+            $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
+            $pid      = $projuser ? (int)$projuser->projectid : 0;
+            $db = \Yii::$app->db;
+            $exists = $db->createCommand(
+                "SELECT id FROM iow_groups WHERE name = :n AND project_id = :p",
+                [':n' => $name, ':p' => $pid]
+            )->queryScalar();
+            if ($exists) return ['error' => 'Group already exists', 'id' => (int)$exists];
+            $db->createCommand(
+                "INSERT INTO iow_groups (name, project_id, status, primavera_id) VALUES (:n, :p, 0, 0)",
+                [':n' => $name, ':p' => $pid]
+            )->execute();
+            return ['ok' => true, 'id' => (int)$db->lastInsertID];
+        } catch (\Exception $e) { return ['error' => $e->getMessage()]; }
+    }
+
+    public function actionAddiow()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        try {
+            $name    = trim(\Yii::$app->request->post('name', ''));
+            $groupId = (int)\Yii::$app->request->post('group_id');
+            if (!$name)    return ['error' => 'Name required'];
+            if (!$groupId) return ['error' => 'Group required'];
+            $uid      = Yii::$app->user->Id;
+            $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
+            $pid      = $projuser ? (int)$projuser->projectid : 0;
+            $db  = \Yii::$app->db;
+            $now = date('Y-m-d H:i:s');
+            $exists = $db->createCommand(
+                "SELECT id FROM iow_groups WHERE name = :n AND project_id = :p",
+                [':n' => $name, ':p' => $pid]
+            )->queryScalar();
+            if ($exists) return ['error' => 'IOW already exists', 'id' => (int)$exists];
+            $db->createCommand(
+                "INSERT INTO iow_groups (name, project_id, status, primavera_id) VALUES (:n, :p, 0, 0)",
+                [':n' => $name, ':p' => $pid]
+            )->execute();
+            $iowId = (int)$db->lastInsertID;
+            if ($pid) {
+                $nextSort = (int)($db->createCommand(
+                    "SELECT COALESCE(MAX(sortorder),0)+1 FROM workgroups_new WHERE Project_Id=:p", [':p' => $pid]
+                )->queryScalar() ?? 1);
+                $db->createCommand(
+                    "INSERT INTO workgroups_new
+                     (iowGroupid, worktypegroup, Project_Id, Name, Added_On, Updated_On, Added_By,
+                      start_date, end_date, duration, progress, open, sortorder,
+                      parent, itemtype, worktype, wbs_estimate_id, pricing_status, notes, primavera_id, Status)
+                     VALUES (:ig, :wg, :pid, :nm, :now, :now, :uid,
+                             :now, :now, 0, 0, 1, :so,
+                             0, '', 0, 0, 0, '', 0, 0)",
+                    [':ig' => $iowId, ':wg' => $groupId, ':pid' => $pid,
+                     ':nm' => $name, ':now' => $now, ':uid' => $uid, ':so' => $nextSort]
+                )->execute();
+            }
+            return ['ok' => true, 'id' => $iowId];
+        } catch (\Exception $e) { return ['error' => $e->getMessage()]; }
+    }
+
+    public function actionAddactivitytype()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        try {
+            $name     = trim(\Yii::$app->request->post('name', ''));
+            $schedule = (int)\Yii::$app->request->post('schedule', 0);
+            if (!$name) return ['error' => 'Name required'];
+            $db = \Yii::$app->db;
+            $nextSort = (int)($db->createCommand(
+                "SELECT COALESCE(MAX(sortorder),0)+1 FROM estimateworktypes"
+            )->queryScalar() ?? 1);
+            $db->createCommand(
+                "INSERT INTO estimateworktypes (estworktype_name, estworktype_status, sortorder) VALUES (:n, 0, :s)",
+                [':n' => $name, ':s' => $nextSort]
+            )->execute();
+            return ['ok' => true, 'id' => (int)$db->lastInsertID];
+        } catch (\Exception $e) { return ['error' => $e->getMessage()]; }
+    }
+
     /*public function actionProjectsrole()
     {
         $proj='';
