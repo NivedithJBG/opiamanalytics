@@ -2057,15 +2057,15 @@ if($action=='login')
   transform:translate(-50%,-50%);
   width:900px;max-width:96vw;max-height:92vh;
   z-index:10001;border-radius:10px;overflow:hidden;
-  background:#f5f5f5;box-shadow:0 12px 40px rgba(0,0,0,.75);
+  background:#edf0f4;box-shadow:0 12px 40px rgba(0,0,0,.75);
   flex-direction:column;
   font-family:'Barlow',sans-serif;
 }
 #qe-modal.qe-open{display:flex}
 #qe-hdr{
-  background:#666;
+  background:#4a5568;
   padding:7px 16px;display:flex;align-items:center;
-  border-bottom:1px solid #555;flex-shrink:0;
+  border-bottom:1px solid #3a4357;flex-shrink:0;
 }
 #qe-hdr span{flex:1;color:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;letter-spacing:.4px;text-align:center;text-transform:uppercase}
 #qe-close{background:none;border:none;color:#fff;font-size:18px;line-height:1;cursor:pointer;padding:0 4px;opacity:.85}
@@ -2073,10 +2073,10 @@ if($action=='login')
 #qe-body{flex:1;overflow-y:auto;padding:12px 16px 16px;display:flex;flex-direction:column;gap:0}
 
 /* Section wrapper */
-.qe-section{background:#fff;border-radius:4px;border:1px solid #ccc;margin-bottom:0;overflow:hidden}
+.qe-section{background:#fff;border-radius:4px;border:1px solid #a0aab8;margin-bottom:0;overflow:hidden}
 .qe-section+.qe-section{margin-top:10px}
 .qe-sec-hdr{
-  background:#999;border-bottom:1px solid #888;
+  background:#6b7a93;border-bottom:1px solid #56657a;
   padding:5px 12px;
   font-family:'Nunito',sans-serif;font-size:10px;font-weight:700;
   color:#fff;letter-spacing:.6px;text-transform:uppercase;
@@ -2090,44 +2090,44 @@ if($action=='login')
 .qe-field.med{flex:1 1 120px}
 .qe-field.sm{flex:0 0 90px}
 .qe-field.xs{flex:0 0 70px}
-.qe-label{font-size:9px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.qe-label{font-size:9px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
 .qe-input,.qe-select{
-  width:100%;padding:4px 8px;font-size:12px;color:#333;
-  border:1px solid #bbb;border-radius:3px;background:#fff;
+  width:100%;padding:4px 8px;font-size:12px;color:#2d3748;
+  border:1px solid #a0aab8;border-radius:3px;background:#fff;
   outline:none;box-sizing:border-box;font-family:'Barlow',sans-serif;
   transition:border-color .15s;
 }
-.qe-input:focus,.qe-select:focus{border-color:#888;background:#fff}
-.qe-input[readonly]{background:#f0f0f0;color:#666;cursor:default}
+.qe-input:focus,.qe-select:focus{border-color:#4a5568;background:#fff}
+.qe-input[readonly]{background:#edf0f4;color:#666;cursor:default}
 .qe-persist-note{font-size:9px;color:#888;font-style:italic;margin-top:2px}
 
 /* Divider */
-.qe-divider{border:none;border-top:1px solid #dde3ef;margin:8px 0}
+.qe-divider{border:none;border-top:1px solid #a0aab8;margin:8px 0}
 
 /* Repeating rows (tasks / resources) */
 .qe-repeat-tbl{width:100%;border-collapse:collapse}
 .qe-repeat-tbl th{
-  font-size:9px;font-weight:700;color:#555;text-transform:uppercase;
-  letter-spacing:.4px;padding:0 6px 5px 0;border-bottom:1px solid #bbb;
+  font-size:9px;font-weight:700;color:#4a5568;text-transform:uppercase;
+  letter-spacing:.4px;padding:0 6px 5px 0;border-bottom:1px solid #a0aab8;
   white-space:nowrap;
 }
 .qe-repeat-tbl td{padding:4px 6px 4px 0;vertical-align:middle}
 .qe-repeat-tbl td:last-child{padding-right:0}
 .qe-repeat-tbl input,.qe-repeat-tbl select{
-  width:100%;padding:4px 7px;font-size:12px;color:#333;
-  border:1px solid #bbb;border-radius:3px;background:#fff;
+  width:100%;padding:4px 7px;font-size:12px;color:#2d3748;
+  border:1px solid #a0aab8;border-radius:3px;background:#fff;
   outline:none;font-family:'Barlow',sans-serif;transition:border-color .15s;
   box-sizing:border-box;
 }
-.qe-repeat-tbl input:focus,.qe-repeat-tbl select:focus{border-color:#888}
-.qe-repeat-tbl input[readonly]{background:#f0f0f0;color:#666;cursor:default}
+.qe-repeat-tbl input:focus,.qe-repeat-tbl select:focus{border-color:#4a5568}
+.qe-repeat-tbl input[readonly]{background:#edf0f4;color:#666;cursor:default}
 .qe-add-btn{
   display:inline-flex;align-items:center;justify-content:center;
   width:22px;height:22px;border-radius:50%;border:none;cursor:pointer;
-  background:#777;color:#fff;font-size:16px;line-height:1;
+  background:#6b7a93;color:#fff;font-size:16px;line-height:1;
   transition:background .15s;flex-shrink:0;
 }
-.qe-add-btn:hover{background:#555}
+.qe-add-btn:hover{background:#4a5568}
 .qe-del-btn{
   display:inline-flex;align-items:center;justify-content:center;
   width:18px;height:18px;border-radius:50%;border:none;cursor:pointer;
@@ -2138,13 +2138,13 @@ if($action=='login')
 
 /* Footer bar */
 #qe-footer{
-  background:#f2f2f2;border-top:1px solid #ccc;
+  background:#dce1ea;border-top:1px solid #a0aab8;
   padding:8px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;
 }
 #qe-duration-display{
-  flex:1;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;color:#444;
+  flex:1;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;color:#2d3748;
 }
-#qe-duration-display span{color:#555;margin-left:4px}
+#qe-duration-display span{color:#4a5568;margin-left:4px}
 #qe-save-msg{font-size:11px;color:#27ae60;display:none}
 #qe-btn-add{
   background:#00838f;color:#fff;border:none;border-radius:4px;
@@ -2192,7 +2192,7 @@ if($action=='login')
         </div>
         <div class="qe-divider"></div>
         <div class="qe-row">
-          <div style="font-size:9px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;width:100%;margin-bottom:2px">Estimate</div>
+          <div style="font-size:9px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;width:100%;margin-bottom:2px">Estimate</div>
           <div class="qe-field sm">
             <span class="qe-label">Unit</span>
             <input id="qe-unit" type="text" class="qe-input" placeholder="e.g. m³">
@@ -2210,7 +2210,7 @@ if($action=='login')
             <input id="qe-amount" type="number" class="qe-input" placeholder="0.00" readonly>
           </div>
           <div style="width:30px"></div>
-          <div style="font-size:9px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;align-self:flex-end;padding-bottom:5px">Schedule</div>
+          <div style="font-size:9px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;align-self:flex-end;padding-bottom:5px">Schedule</div>
           <div class="qe-field sm">
             <span class="qe-label">Schedule Unit</span>
             <input id="qe-sch-unit" type="text" class="qe-input" placeholder="e.g. Nos">
