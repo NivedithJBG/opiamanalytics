@@ -2055,7 +2055,7 @@ if($action=='login')
 #qe-modal{
   display:none;position:fixed;top:50%;left:50%;
   transform:translate(-50%,-50%);
-  width:740px;max-width:94vw;max-height:88vh;
+  width:740px;max-width:94vw;height:94vh;max-height:94vh;
   z-index:10001;border-radius:0;overflow:hidden;
   background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.75);
   flex-direction:column;
@@ -2064,7 +2064,7 @@ if($action=='login')
 #qe-modal.qe-open{display:flex}
 #qe-hdr{display:none}
 #qe-close{display:none}
-#qe-body{flex:1;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:0}
+#qe-body{flex:1;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:0}
 
 /* Section wrapper */
 .qe-section{background:#fff;border-radius:0;border:none;margin-bottom:0;overflow:hidden}
