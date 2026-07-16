@@ -391,25 +391,25 @@ use app\models\Resources;
             </div>
             <div class="modal-body">
                 <div class="row">
-                    <form id="alIowGroupForm">
-                        <div class="col-md-3"></div>
-                        <div class="col-md-5">
-                            <div class="form-group">
-                                <label>IOW Group</label>
-                                <input type="text" class="form-control" id="alIowGroupName" placeholder="IOW Group">
-                                <span class="error" style="display:none;"></span>
-                            </div>
+                    <div class="col-md-2"></div>
+                    <div class="col-md-8">
+                        <label>IOW Group</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="alIowGroupName" placeholder="IOW Group">
+                            <span class="input-group-btn">
+                                <button type="button" class="btn btn-primary" id="alSaveIowGroup"><span class="icon-check"></span> Add</button>
+                            </span>
                         </div>
-                        <div class="col-md-4 text-left" style="padding-top:5px;">
-                            <label></label>
-                            <button type="button" class="btn btn-primary save-btn" id="alSaveIowGroup"><span class="icon-check"></span> Add</button>
-                        </div>
-                    </form>
+                        <span class="error" id="alIowGroupErr" style="color:red;display:none;"></span>
+                    </div>
+                    <div class="col-md-2"></div>
                 </div>
                 <hr>
                 <div id="alIowGroupListContainer" class="row"></div>
             </div>
-            <div class="modal-footer"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal"><span class="icon-close"></span> Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -423,36 +423,31 @@ use app\models\Resources;
                 <button type="button" class="close" data-dismiss="modal" style="float:right;font-size:30px;">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="add-project-master-form row">
-                    <form id="alIowForm">
-                        <div class="row">
-                            <div class="col-md-7">
-                                <div class="form-group">
-                                    <label>Item of Work Name</label>
-                                    <input type="text" class="form-control" id="alIowName" placeholder="IOW Name">
-                                    <span class="error" style="display:none;"></span>
-                                </div>
-                            </div>
-                            <div class="col-md-5">
-                                <div class="form-group">
-                                    <label>Group Name</label>
-                                    <select class="form-control" id="alIowGroupSel">
-                                        <option value="">Select IOW Group</option>
-                                    </select>
-                                    <span class="error" style="display:none;"></span>
-                                </div>
-                            </div>
+                <div class="row">
+                    <div class="col-md-5">
+                        <div class="form-group">
+                            <label>Item of Work Name</label>
+                            <input type="text" class="form-control" id="alIowName" placeholder="IOW Name">
+                            <span class="error" id="alIowNameErr" style="color:red;display:none;"></span>
                         </div>
-                        <div class="row">
-                            <div class="col-md-12 text-center">
-                                <button type="button" class="btn btn-primary" id="alSaveIow"><span class="icon-check"></span> Add WBS</button>
-                                <button type="button" class="btn btn-danger" data-dismiss="modal"><span class="icon-close"></span> Cancel</button>
-                            </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Group Name</label>
+                            <select class="form-control" id="alIowGroupSel">
+                                <option value="">Select IOW Group</option>
+                            </select>
+                            <span class="error" id="alIowGroupSelErr" style="color:red;display:none;"></span>
                         </div>
-                    </form>
+                    </div>
+                    <div class="col-md-3" style="padding-top:25px;">
+                        <button type="button" class="btn btn-primary" id="alSaveIow"><span class="icon-check"></span> Add WBS</button>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal"><span class="icon-close"></span> Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -467,25 +462,25 @@ use app\models\Resources;
             </div>
             <div class="modal-body">
                 <div class="row">
-                    <form id="alActTypeForm">
-                        <div class="col-md-3"></div>
-                        <div class="col-md-5">
-                            <div class="form-group">
-                                <label>Activity Type</label>
-                                <input type="text" class="form-control" id="alActTypeName" placeholder="Activity Type">
-                                <span class="error" style="display:none;"></span>
-                            </div>
+                    <div class="col-md-2"></div>
+                    <div class="col-md-8">
+                        <label>Activity Type</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="alActTypeName" placeholder="Activity Type">
+                            <span class="input-group-btn">
+                                <button type="button" class="btn btn-primary" id="alSaveActType"><span class="icon-check"></span> Add</button>
+                            </span>
                         </div>
-                        <div class="col-md-4 text-left" style="padding-top:5px;">
-                            <label></label>
-                            <button type="button" class="btn btn-primary save-btn" id="alSaveActType"><span class="icon-check"></span> Add</button>
-                        </div>
-                    </form>
+                        <span class="error" id="alActTypeErr" style="color:red;display:none;"></span>
+                    </div>
+                    <div class="col-md-2"></div>
                 </div>
                 <hr>
                 <div id="alActTypeListContainer" class="row"></div>
             </div>
-            <div class="modal-footer"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal"><span class="icon-close"></span> Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -514,8 +509,8 @@ function alLoadIowGroupList(){
 
 $(document).on('click', '#alSaveIowGroup', function(){
     var name = $('#alIowGroupName').val().trim();
-    if(!name){ $('#alIowGroupName').next('.error').html('Enter IOW group name').show(); return; }
-    $('#alIowGroupName').next('.error').hide();
+    if(!name){ $('#alIowGroupErr').html('Enter IOW group name').show(); return; }
+    $('#alIowGroupErr').hide();
     var btn = $(this).attr('disabled', true);
     $.ajax({
         type: 'POST',
@@ -529,7 +524,7 @@ $(document).on('click', '#alSaveIowGroup', function(){
                 alLoadIowGroupList();
                 alRefreshIowGroupDropdown();
             } else {
-                $('#alIowGroupName').next('.error').html(data.errortext).show();
+                $('#alIowGroupErr').html(data.errortext).show();
             }
         }
     });
@@ -563,9 +558,9 @@ $(document).on('click', '#alSaveIow', function(){
     var name    = $('#alIowName').val().trim();
     var groupId = $('#alIowGroupSel').val();
     var pid     = $('#selectedProjectId').val() || $('input[name="project_id"]').first().val() || '';
-    if(!name)   { $('#alIowName').next('.error').html('Enter IOW Name').show(); return; }
-    if(!groupId){ $('#alIowGroupSel').next('.error').html('Select IOW Group').show(); return; }
-    $('#alIowName, #alIowGroupSel').next('.error').hide();
+    if(!name)   { $('#alIowNameErr').html('Enter IOW Name').show(); return; }
+    if(!groupId){ $('#alIowGroupSelErr').html('Select IOW Group').show(); return; }
+    $('#alIowNameErr, #alIowGroupSelErr').hide();
     var btn = $(this).attr('disabled', true);
     $.ajax({
         type: 'POST',
@@ -611,8 +606,8 @@ function alLoadActTypeList(){
 
 $(document).on('click', '#alSaveActType', function(){
     var name = $('#alActTypeName').val().trim();
-    if(!name){ $('#alActTypeName').next('.error').html('Enter activity type name').show(); return; }
-    $('#alActTypeName').next('.error').hide();
+    if(!name){ $('#alActTypeErr').html('Enter activity type name').show(); return; }
+    $('#alActTypeErr').hide();
     var btn = $(this).attr('disabled', true);
     $.ajax({
         type: 'POST',
