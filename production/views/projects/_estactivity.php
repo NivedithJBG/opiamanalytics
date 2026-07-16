@@ -57,7 +57,7 @@ use app\models\Resources;
 
        
     </script>
-    <div id="collapsemasteract">
+    <div id="collapsemasteract" style="display:block;">
         <div class="panel-body">
 
                     <div class="search-and-content-wrpr">
