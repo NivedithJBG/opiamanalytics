@@ -2263,16 +2263,15 @@ if($action=='login')
               <th style="width:12%">Quantity</th>
               <th style="width:14%">Rate</th>
               <th style="width:14%">Amount</th>
-              <th style="width:12%"></th>
+              <th style="width:12%;text-align:right">
+                <button class="qe-add-btn" id="qe-res-add" title="Add resource row">+</button>
+              </th>
             </tr>
           </thead>
           <tbody id="qe-res-body">
             <!-- rows injected by JS -->
           </tbody>
         </table>
-        <div style="margin-top:6px">
-          <button id="qe-res-add" onclick="if(window._resTypesLoaded){addResRow();}else{loadResTypes(function(){addResRow();});}" style="background:#4a5568;color:#fff;border:none;padding:4px 14px;font-size:12px;font-weight:700;cursor:pointer;border-radius:3px;">+ Add Resource</button>
-        </div>
       </div>
     </div>
 
@@ -2298,8 +2297,7 @@ function openModal(){
   if(!document.querySelector('#qe-res-body tr'))  { loadResTypes(function(){ addResRow(); }); }
   recalcDuration();
 }
-window.openQeModal  = openModal;
-window.loadIows     = loadIows;
+window.openQeModal    = openModal;
 window.loadActivities = function(typeId, groupId){ loadActivities(typeId, groupId); };
 function closeModal(){
   document.getElementById('qe-bk').classList.remove('qe-open');
@@ -2376,7 +2374,7 @@ function recalcDuration(){
   });
 
   var duration = (schQty > 0 && cycleDays > 0) ? Math.ceil(cycleDays * schQty) : 0;
-  document.getElementById('qe-dur-val').textContent = duration > 0 ? duration : '—';
+  var durEl = document.getElementById('qe-dur-val'); if(durEl) durEl.textContent = duration > 0 ? duration : '—';
   return duration;
 }
 
