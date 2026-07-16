@@ -2280,10 +2280,9 @@ if($action=='login')
   </div><!-- /qe-body -->
 
   <div id="qe-footer">
-    <div id="qe-duration-display">Computed Duration: <span id="qe-dur-val">&mdash;</span> days</div>
     <div id="qe-save-msg">&#10003; Activity added to Gantt!</div>
     <button id="qe-btn-add">&#43; Add to Gantt</button>
-    <button id="qe-close" style="background:#e67e22;color:#fff;border:none;border-radius:20px;padding:6px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">&#10005; Close</button>
+    <button id="qe-close" style="background:#e67e22;color:#fff;border:none;padding:6px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;border-radius:0;">&#10005; Close</button>
   </div>
 </div><!-- /qe-modal -->
 
