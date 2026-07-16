@@ -27,8 +27,6 @@ $(function(){
 					<div class="panel-group acco-one-active" id="accordionpromasterind">
 
 					<?php //echo $this->render('_projects'); ?>
-					<?php echo $this->render('_worktypes'); ?>
-					<?php echo $this->render('_activitytypes'); ?>
 					<?php echo $this->render('_estactivity'); ?>
 					<?php //echo $this->render('_resourceallocation'); ?><!-- tab copy inside _estactivity -->
 					</div>

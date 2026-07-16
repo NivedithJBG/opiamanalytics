@@ -5,7 +5,7 @@ use app\models\EstimateActivityType;
 use app\models\Resources;
 ?>
 
-<div class="panel panel-default activities-masters-tab tab-wrapper tab acco-three allocate-resource-tabss" id="estactivity">
+<div class="activities-masters-tab allocate-resource-tabss" id="estactivity">
     <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/masters/estactivity.js?v=<?php echo time(); ?>" type="text/javascript"></script>
     <script type="text/javascript">
         $(document).ready(function() {
@@ -57,16 +57,8 @@ use app\models\Resources;
 
        
     </script>
-    <!--<input type="radio" id="rd5" class="prjct-estactvts" name="rd">-->
-    <div class="panel-heading">
-      <h4 class="panel-title prjct-estactvts" id="act-lib-actvty">
-        <a data-toggle="collapse" data-parent="#accordionpromasterind" href="#collapsemasteract">
-        <span class="icon-directions_run"></span>Activities</a>
-      </h4>
-   </div>
-
-    <div id="collapsemasteract" class="tab-content cOrder-body panel-collapse collapse">
-        <div class="panel-body ">
+    <div id="collapsemasteract" class="tab-content cOrder-body">
+        <div class="panel-body">
 
                     <div class="search-and-content-wrpr">
                         <div class="search-and-actions-wrpr row" id="AR-allocate-body-one-head" style="display:flex;align-items:center;margin:0;padding:4px 0;">
