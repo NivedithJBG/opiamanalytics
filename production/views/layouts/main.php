@@ -2216,14 +2216,12 @@ if($action=='login')
             <span class="qe-label">Amount</span>
             <input id="qe-amount" type="number" class="qe-input" placeholder="0.00" readonly>
           </div>
-          <div style="width:30px"></div>
-          <div style="font-size:9px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;align-self:flex-end;padding-bottom:5px">Schedule</div>
           <div class="qe-field sm">
-            <span class="qe-label">Schedule Unit</span>
+            <span class="qe-label">Sch. Unit</span>
             <input id="qe-sch-unit" type="text" class="qe-input" placeholder="e.g. Nos">
           </div>
           <div class="qe-field xs">
-            <span class="qe-label">Schedule Qty</span>
+            <span class="qe-label">Sch. Qty</span>
             <input id="qe-sch-qty" type="number" class="qe-input" placeholder="0" step="0.001">
           </div>
         </div>
