@@ -65,8 +65,8 @@ use app\models\Resources;
 
                             <div class="content-action-wrpr col-md-8 col-sm-8" style="display:flex !important;white-space:nowrap;text-align:left;padding:0;margin:0;justify-content:flex-start !important;">
                                 <a href="#alProjTypePopup" class="btn btn-default" id="alOpenProjTypePopup" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Project Type</a>
-                                <a href="#alIowGroupPopup" class="btn btn-default" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW Group</a>
-                                <a href="#alActTypePopup" class="btn btn-default" data-toggle="modal" data-target="#alActTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Activity Type</a>
+                                <a href="#alIowGroupPopup" class="btn btn-default" id="alOpenIowGroupPopup" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW Group</a>
+                                <a href="#alActTypePopup" class="btn btn-default" id="alOpenActTypePopup" data-toggle="modal" data-target="#alActTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Activity Type</a>
                                 <a href="#alAddActivityPopup" class="btn btn-primary" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities"><span class="icon-add"></span> Activity</a>
                                 <a href="#" class="btn btn-primary list-accountType" id="listestactivity"><span class="icon-th-list"></span> List</a>
                             </div>
@@ -611,6 +611,10 @@ $(document).on('click', '#saveestactivity', function(){
 });
 
 /* ── IOW Group modal ── */
+$(document).on('click', '#alOpenIowGroupPopup', function(){
+    $('#alIowGroupListContainer').html('<div class="col-md-12" style="padding:8px 15px;color:#999;">Loading…</div>');
+    setTimeout(function(){ alLoadIowGroupList(); }, 300);
+});
 $('#alIowGroupPopup').on('shown.bs.modal', function(){
     $('#alIowGroupName').val('');
     alLoadIowGroupList();
@@ -756,6 +760,10 @@ $(document).on('click', '#alSaveIow', function(){
 });
 
 /* ── Activity Type modal ── */
+$(document).on('click', '#alOpenActTypePopup', function(){
+    $('#alActTypeListContainer').html('<div class="col-md-12" style="padding:8px 15px;color:#999;">Loading…</div>');
+    setTimeout(function(){ alLoadActTypeList(); }, 300);
+});
 $('#alActTypePopup').on('shown.bs.modal', function(){
     $('#alActTypeName').val('');
     alLoadActTypeList();
