@@ -190,6 +190,61 @@ class ProjectsmainController extends Controller
         return ['items' => $rows];
     }
 
+    public function actionGetwbtypelist()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $rows = \Yii::$app->db->createCommand(
+            "SELECT worktype_id AS id, name FROM worktype ORDER BY sortorder ASC, name ASC"
+        )->queryAll();
+        return ['items' => $rows];
+    }
+
+    public function actionGetwbgrouplist()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $typeId = (int)\Yii::$app->request->post('typeId');
+        $rows = \Yii::$app->db->createCommand(
+            "SELECT worktypegroup_id AS id, name FROM worktypegroups ORDER BY sortorder ASC, name ASC"
+        )->queryAll();
+        return ['items' => $rows];
+    }
+
+    public function actionGetiowbygroup()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $groupId = (int)\Yii::$app->request->post('groupId');
+        if (!$groupId) return ['items' => []];
+        $uid = Yii::$app->user->Id;
+        $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
+        $pid = $projuser ? (int)$projuser->projectid : 0;
+        $rows = \Yii::$app->db->createCommand(
+            "SELECT g.id, g.name
+             FROM iow_groups g
+             JOIN workgroups_new wn ON wn.iowGroupid = g.id AND wn.Project_Id = :p AND wn.Status = 0
+             WHERE wn.worktypegroup = :gid
+             ORDER BY g.name ASC",
+            [':p' => $pid, ':gid' => $groupId]
+        )->queryAll();
+        if (empty($rows)) {
+            $rows = \Yii::$app->db->createCommand(
+                "SELECT id, name FROM iow_groups ORDER BY name ASC"
+            )->queryAll();
+        }
+        return ['items' => $rows];
+    }
+
+    public function actionGetiowactivities()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $iowId = (int)\Yii::$app->request->post('iowId');
+        if (!$iowId) return ['items' => []];
+        $rows = \Yii::$app->db->createCommand(
+            "SELECT Activity_Id AS id, Name AS name FROM iowactivities WHERE IOW_Id = :iow ORDER BY Name ASC",
+            [':iow' => $iowId]
+        )->queryAll();
+        return ['items' => $rows];
+    }
+
     public function actionWbsadd()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -204,34 +259,24 @@ class ProjectsmainController extends Controller
         $p = json_decode($raw, true);
         if (!$p) return ['error' => 'Bad payload'];
 
-        $iowGroupName = trim($p['iow_group'] ?? '');
-        $iowName      = trim($p['iow_name']  ?? '');
-        $actName      = trim($p['act_name']  ?? '');
-        $unit         = trim($p['unit']      ?? '');
-        $schUnit      = trim($p['sch_unit']  ?? '');
-        $qty          = (float)($p['qty']     ?? 0);
-        $schQty       = (float)($p['sch_qty'] ?? 0);
-        $rate         = (float)($p['rate']    ?? 0);
+        $iowGroupId   = (int)($p['iow_group_id'] ?? 0);
+        $iowGroupName = trim($p['iow_group']    ?? '');
+        $iowActId     = (int)($p['iow_act_id']  ?? 0);
+        $iowName      = trim($p['iow_name']     ?? '');
+        $actName      = trim($p['act_name']     ?? '');
+        $unit         = trim($p['unit']         ?? '');
+        $schUnit      = trim($p['sch_unit']     ?? '');
+        $qty          = (float)($p['qty']        ?? 0);
+        $schQty       = (float)($p['sch_qty']    ?? 0);
+        $rate         = (float)($p['rate']       ?? 0);
         $duration     = max(1, (int)($p['duration'] ?? 1));
         $tasks        = $p['tasks']     ?? [];
         $resources    = $p['resources'] ?? [];
 
-        if (!$iowGroupName || !$iowName || !$actName) return ['error' => 'Missing required fields'];
+        if (!$iowGroupId || !$actName) return ['error' => 'Missing required fields'];
 
-        $now  = date('Y-m-d H:i:s');
+        $now   = date('Y-m-d H:i:s');
         $today = date('Y-m-d');
-
-        // 1. Find or create iow_groups row
-        $iowGroup = $db->createCommand(
-            "SELECT id FROM iow_groups WHERE name = :n LIMIT 1", [':n' => $iowGroupName]
-        )->queryOne();
-        if (!$iowGroup) {
-            $db->createCommand("INSERT INTO iow_groups (name) VALUES (:n)",
-                [':n' => $iowGroupName])->execute();
-            $iowGroupId = (int)$db->lastInsertID;
-        } else {
-            $iowGroupId = (int)$iowGroup['id'];
-        }
 
         // 2. Find or create workgroups_new row for this IOW group in this project
         $wgRow = $db->createCommand(
@@ -271,13 +316,15 @@ class ProjectsmainController extends Controller
             $scheduleItemId = (int)$wbsItem['scheduleitem_id'];
         }
 
-        // 4. Create iowactivities row (IOW_Id links to iow_groups.id)
-        $db->createCommand(
-            "INSERT INTO iowactivities (IOW_Id, Name, Budgeted_Duration, End_Duration)
-             VALUES (:iow, :n, :d, :d)",
-            [':iow' => $iowGroupId, ':n' => $iowName, ':d' => (string)$duration]
-        )->execute();
-        $iowActId = (int)$db->lastInsertID;
+        // 4. Use selected iowactivities row, or create a new one if none selected
+        if (!$iowActId) {
+            $db->createCommand(
+                "INSERT INTO iowactivities (IOW_Id, Name, Budgeted_Duration, End_Duration)
+                 VALUES (:iow, :n, :d, :d)",
+                [':iow' => $iowGroupId, ':n' => $iowName ?: $actName, ':d' => (string)$duration]
+            )->execute();
+            $iowActId = (int)$db->lastInsertID;
+        }
 
         // 5. Save task rows to iowschmethedology (stored as JSON in methedologies field)
         if (!empty($tasks)) {

@@ -2163,26 +2163,51 @@ if($action=='login')
   </div>
   <div id="qe-body">
 
-    <!-- ── SECTION 1 : IOW Identity (persists across adds) ───────────── -->
+    <!-- ── SECTION 1 : Project Type + Group (persists) ─────────────── -->
     <div class="qe-section">
-      <div class="qe-sec-hdr">IOW Group &amp; Activity Group <span style="font-weight:400;opacity:.7">&mdash; stays selected until you change it</span></div>
+      <div class="qe-sec-hdr">Project Type &amp; Group <span style="font-weight:400;opacity:.7">&mdash; stays selected until you change it</span></div>
       <div class="qe-sec-body">
         <div class="qe-row">
           <div class="qe-field wide">
-            <span class="qe-label">IOW Group Name</span>
-            <input id="qe-iow-group" type="text" class="qe-input" placeholder="e.g. Earthwork">
+            <span class="qe-label">Project Type</span>
+            <select id="qe-proj-type" class="qe-select">
+              <option value="">— Select Project Type —</option>
+            </select>
           </div>
           <div class="qe-field wide">
-            <span class="qe-label">IOW / Activity Group</span>
-            <input id="qe-iow-name" type="text" class="qe-input" placeholder="e.g. Excavation in Hard Rock">
+            <span class="qe-label">Group</span>
+            <select id="qe-group" class="qe-select">
+              <option value="">— Select Group —</option>
+            </select>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ── SECTION 2 : Activity Details ──────────────────────────────── -->
+    <!-- ── SECTION 2 : IOW + Activity (cascading) ────────────────────── -->
     <div class="qe-section">
-      <div class="qe-sec-hdr">Activity</div>
+      <div class="qe-sec-hdr">IOW &amp; Activity</div>
+      <div class="qe-sec-body">
+        <div class="qe-row">
+          <div class="qe-field wide">
+            <span class="qe-label">IOW</span>
+            <select id="qe-iow" class="qe-select">
+              <option value="">— Select IOW —</option>
+            </select>
+          </div>
+          <div class="qe-field wide">
+            <span class="qe-label">Activity</span>
+            <select id="qe-activity" class="qe-select">
+              <option value="">— Select Activity —</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECTION 3 : Activity Details ──────────────────────────────── -->
+    <div class="qe-section">
+      <div class="qe-sec-hdr">Activity Details</div>
       <div class="qe-sec-body">
         <div class="qe-row">
           <div class="qe-field wide">
@@ -2223,7 +2248,7 @@ if($action=='login')
       </div>
     </div>
 
-    <!-- ── SECTION 3 : Tasks ─────────────────────────────────────────── -->
+    <!-- ── SECTION 4 : Tasks ─────────────────────────────────────────── -->
     <div class="qe-section">
       <div class="qe-sec-hdr">Tasks <span style="font-weight:400;opacity:.7">&mdash; duration is computed from these</span></div>
       <div class="qe-sec-body">
@@ -2246,7 +2271,7 @@ if($action=='login')
       </div>
     </div>
 
-    <!-- ── SECTION 4 : Resources ──────────────────────────────────────── -->
+    <!-- ── SECTION 5 : Resources ──────────────────────────────────────── -->
     <div class="qe-section">
       <div class="qe-sec-hdr">Resources</div>
       <div class="qe-sec-body">
@@ -2287,6 +2312,7 @@ if($action=='login')
 function openModal(){
   document.getElementById('qe-bk').classList.add('qe-open');
   document.getElementById('qe-modal').classList.add('qe-open');
+  loadProjTypes();
   if(!document.querySelector('#qe-task-body tr')) addTaskRow();
   if(!document.querySelector('#qe-res-body tr'))  { loadResTypes(function(){ addResRow(); }); }
   recalcDuration();
@@ -2297,6 +2323,77 @@ function closeModal(){
   document.getElementById('qe-modal').classList.remove('qe-open');
 }
 
+/* ── cascading dropdowns ── */
+
+function loadProjTypes(){
+  var sel = document.getElementById('qe-proj-type');
+  if(sel.options.length > 1) return;
+  $.ajax({
+    type:'POST', url:'../projectsmain/getwbtypelist', dataType:'json',
+    success: function(d){
+      (d.items||[]).forEach(function(item){
+        var o = document.createElement('option');
+        o.value = item.id; o.textContent = item.name;
+        sel.appendChild(o);
+      });
+    }
+  });
+}
+
+function loadGroups(typeId){
+  var sel = document.getElementById('qe-group');
+  sel.innerHTML = '<option value="">— Select Group —</option>';
+  document.getElementById('qe-iow').innerHTML = '<option value="">— Select IOW —</option>';
+  document.getElementById('qe-activity').innerHTML = '<option value="">— Select Activity —</option>';
+  if(!typeId) return;
+  $.ajax({
+    type:'POST', url:'../projectsmain/getwbgrouplist', dataType:'json',
+    data:{typeId: typeId},
+    success: function(d){
+      (d.items||[]).forEach(function(item){
+        var o = document.createElement('option');
+        o.value = item.id; o.textContent = item.name;
+        sel.appendChild(o);
+      });
+    }
+  });
+}
+
+function loadIows(groupId){
+  var sel = document.getElementById('qe-iow');
+  sel.innerHTML = '<option value="">— Select IOW —</option>';
+  document.getElementById('qe-activity').innerHTML = '<option value="">— Select Activity —</option>';
+  if(!groupId) return;
+  $.ajax({
+    type:'POST', url:'../projectsmain/getiowbygroup', dataType:'json',
+    data:{groupId: groupId},
+    success: function(d){
+      (d.items||[]).forEach(function(item){
+        var o = document.createElement('option');
+        o.value = item.id; o.textContent = item.name;
+        sel.appendChild(o);
+      });
+    }
+  });
+}
+
+function loadActivities(iowId){
+  var sel = document.getElementById('qe-activity');
+  sel.innerHTML = '<option value="">— Select Activity —</option>';
+  if(!iowId) return;
+  $.ajax({
+    type:'POST', url:'../projectsmain/getiowactivities', dataType:'json',
+    data:{iowId: iowId},
+    success: function(d){
+      (d.items||[]).forEach(function(item){
+        var o = document.createElement('option');
+        o.value = item.id; o.textContent = item.name;
+        sel.appendChild(o);
+      });
+    }
+  });
+}
+
 /* ── duration calculation ── */
 function recalcDuration(){
   var estQty = parseFloat(document.getElementById('qe-qty').value) || 0;
@@ -2305,7 +2402,7 @@ function recalcDuration(){
 
   var cycleDays = 0;
   document.querySelectorAll('#qe-task-body tr').forEach(function(tr){
-    var prod   = parseFloat(tr.querySelector('.qe-task-prod') ? tr.querySelector('.qe-task-prod').value : 0) || 0;
+    var prod     = parseFloat(tr.querySelector('.qe-task-prod')     ? tr.querySelector('.qe-task-prod').value     : 0) || 0;
     var resUnits = parseFloat(tr.querySelector('.qe-task-resunits') ? tr.querySelector('.qe-task-resunits').value : 0) || 0;
     if(prod > 0 && resUnits > 0 && qtyPerUnit > 0){
       cycleDays += (qtyPerUnit / prod) / resUnits;
@@ -2313,8 +2410,7 @@ function recalcDuration(){
   });
 
   var duration = (schQty > 0 && cycleDays > 0) ? Math.ceil(cycleDays * schQty) : 0;
-  var el = document.getElementById('qe-dur-val');
-  el.textContent = duration > 0 ? duration : '—';
+  document.getElementById('qe-dur-val').textContent = duration > 0 ? duration : '—';
   return duration;
 }
 
@@ -2372,29 +2468,27 @@ function addResRow(){
   var rateEl = tr.querySelector('.qe-res-rate');
   var amtEl  = tr.querySelector('.qe-res-amt');
   function calcAmt(){
-    var q = parseFloat(qtyEl.value)||0;
-    var r = parseFloat(rateEl.value)||0;
+    var q = parseFloat(qtyEl.value)||0, r = parseFloat(rateEl.value)||0;
     amtEl.value = (q*r).toFixed(2);
   }
   qtyEl.addEventListener('input', calcAmt);
   rateEl.addEventListener('input', calcAmt);
-
   tr.querySelector('.qe-res-del').addEventListener('click', function(){
     if(document.querySelectorAll('#qe-res-body tr').length > 1) tr.remove();
   });
 }
 
-/* ── clear activity fields (keeps IOW group + IOW name) ── */
+/* ── clear activity fields (keeps Project Type, Group, IOW, Activity selections) ── */
 function clearActivityFields(){
-  document.getElementById('qe-actname').value = '';
-  document.getElementById('qe-unit').value    = '';
-  document.getElementById('qe-qty').value     = '';
-  document.getElementById('qe-rate').value    = '';
-  document.getElementById('qe-amount').value  = '';
+  document.getElementById('qe-actname').value  = '';
+  document.getElementById('qe-unit').value     = '';
+  document.getElementById('qe-qty').value      = '';
+  document.getElementById('qe-rate').value     = '';
+  document.getElementById('qe-amount').value   = '';
   document.getElementById('qe-sch-unit').value = '';
   document.getElementById('qe-sch-qty').value  = '';
-  document.getElementById('qe-task-body').innerHTML  = '';
-  document.getElementById('qe-res-body').innerHTML   = '';
+  document.getElementById('qe-task-body').innerHTML = '';
+  document.getElementById('qe-res-body').innerHTML  = '';
   addTaskRow();
   loadResTypes(function(){ addResRow(); });
   recalcDuration();
@@ -2418,24 +2512,34 @@ function collectPayload(){
     var name = tr.querySelector('.qe-res-name') ? tr.querySelector('.qe-res-name').value.trim() : '';
     if(!name) return;
     resources.push({
-      type_id:  tr.querySelector('.qe-res-type').value,
-      name:     name,
-      qty:      parseFloat(tr.querySelector('.qe-res-qty').value)  || 0,
-      rate:     parseFloat(tr.querySelector('.qe-res-rate').value) || 0
+      type_id: tr.querySelector('.qe-res-type').value,
+      name:    name,
+      qty:     parseFloat(tr.querySelector('.qe-res-qty').value)  || 0,
+      rate:    parseFloat(tr.querySelector('.qe-res-rate').value) || 0
     });
   });
+
+  var iowSel      = document.getElementById('qe-iow');
+  var actSel      = document.getElementById('qe-activity');
+  var projTypeSel = document.getElementById('qe-proj-type');
+  var groupSel    = document.getElementById('qe-group');
+
   return {
-    iow_group:  document.getElementById('qe-iow-group').value.trim(),
-    iow_name:   document.getElementById('qe-iow-name').value.trim(),
-    act_name:   document.getElementById('qe-actname').value.trim(),
-    unit:       document.getElementById('qe-unit').value.trim(),
-    qty:        parseFloat(document.getElementById('qe-qty').value)     || 0,
-    rate:       parseFloat(document.getElementById('qe-rate').value)    || 0,
-    sch_unit:   document.getElementById('qe-sch-unit').value.trim(),
-    sch_qty:    parseFloat(document.getElementById('qe-sch-qty').value) || 0,
-    duration:   recalcDuration(),
-    tasks:      tasks,
-    resources:  resources
+    proj_type_id: projTypeSel.value,
+    group_id:     groupSel.value,
+    iow_group_id: iowSel.value,
+    iow_group:    iowSel.options[iowSel.selectedIndex] ? iowSel.options[iowSel.selectedIndex].text : '',
+    iow_act_id:   actSel.value,
+    iow_name:     actSel.options[actSel.selectedIndex] ? actSel.options[actSel.selectedIndex].text : '',
+    act_name:     document.getElementById('qe-actname').value.trim(),
+    unit:         document.getElementById('qe-unit').value.trim(),
+    qty:          parseFloat(document.getElementById('qe-qty').value)     || 0,
+    rate:         parseFloat(document.getElementById('qe-rate').value)    || 0,
+    sch_unit:     document.getElementById('qe-sch-unit').value.trim(),
+    sch_qty:      parseFloat(document.getElementById('qe-sch-qty').value) || 0,
+    duration:     recalcDuration(),
+    tasks:        tasks,
+    resources:    resources
   };
 }
 
@@ -2461,6 +2565,21 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('qe-close').addEventListener('click', closeModal);
   document.getElementById('qe-bk').addEventListener('click', closeModal);
 
+  /* cascade: Project Type → Groups */
+  document.getElementById('qe-proj-type').addEventListener('change', function(){
+    loadGroups(this.value);
+  });
+
+  /* cascade: Group → IOWs */
+  document.getElementById('qe-group').addEventListener('change', function(){
+    loadIows(this.value);
+  });
+
+  /* cascade: IOW → Activities */
+  document.getElementById('qe-iow').addEventListener('change', function(){
+    loadActivities(this.value);
+  });
+
   /* estimate amount = qty × rate */
   function calcActivityAmount(){
     var q = parseFloat(document.getElementById('qe-qty').value)  || 0;
@@ -2483,37 +2602,27 @@ document.addEventListener('DOMContentLoaded', function(){
   /* ── Add to Gantt ── */
   document.getElementById('qe-btn-add').addEventListener('click', function(){
     var payload = collectPayload();
-    if(!payload.iow_group){ alert('Please enter an IOW Group name.'); return; }
-    if(!payload.iow_name) { alert('Please enter an IOW / Activity Group name.'); return; }
-    if(!payload.act_name) { alert('Please enter an Activity name.'); return; }
-    if(payload.duration < 1){ alert('Duration is 0. Please fill in task productivity and resource units.'); return; }
+    if(!payload.iow_group_id){ alert('Please select an IOW.'); return; }
+    if(!payload.act_name)    { alert('Please enter an Activity name.'); return; }
+    if(payload.duration < 1) { alert('Duration is 0. Please fill in task productivity and resource units.'); return; }
 
     var btn = document.getElementById('qe-btn-add');
-    btn.disabled = true;
-    btn.textContent = 'Saving…';
+    btn.disabled = true; btn.textContent = 'Saving…';
 
     $.ajax({
-      type: 'POST',
-      url:  '../projectsmain/wbsadd',
-      data: { payload: JSON.stringify(payload) },
-      dataType: 'json',
+      type:'POST', url:'../projectsmain/wbsadd',
+      data:{ payload: JSON.stringify(payload) }, dataType:'json',
       success: function(d){
-        btn.disabled = false;
-        btn.textContent = '+ Add to Gantt';
-        if(d.error && d.error !== 'No'){
-          alert('Error: ' + d.error);
-          return;
-        }
+        btn.disabled = false; btn.textContent = '+ Add to Gantt';
+        if(d.error && d.error !== 'No'){ alert('Error: ' + d.error); return; }
         var msg = document.getElementById('qe-save-msg');
         msg.style.display = 'block';
         setTimeout(function(){ msg.style.display = 'none'; }, 3000);
         clearActivityFields();
-        /* ask Gantt to reload if it is on screen */
         if(typeof window.loadGantt === 'function') window.loadGantt();
       },
       error: function(){
-        btn.disabled = false;
-        btn.textContent = '+ Add to Gantt';
+        btn.disabled = false; btn.textContent = '+ Add to Gantt';
         alert('Server error — please try again.');
       }
     });
