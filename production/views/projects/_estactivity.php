@@ -281,9 +281,9 @@ use app\models\Resources;
                 <form id="estactivityform">
                     <input type="hidden" id="editingActivityId" name="activity_id" value="">
                     <div class="row" id="estactivityaddrow">
-                        <!-- Project Type + Activity Type + Name + Unit + Working Hours -->
+                        <!-- Project Type + IOW Group + Activity Type -->
                         <div class="row" style="margin-top:6px;">
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label>Project Type</label>
                                     <select id="estworktypelistss1" data-id="1" class="form-control estworktypelistses" name="worktypeid">
@@ -298,7 +298,16 @@ use app\models\Resources;
                                     <span style="color:red;"></span>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>IOW Group</label>
+                                    <select class="form-control" id="actIowGroupId" name="iow_group_id">
+                                        <option value="">Select IOW Group</option>
+                                    </select>
+                                    <span style="color:red;"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label>Activity Type</label>
                                     <select class="form-control" id="estactivitytypeid" name="activitytypeid">
@@ -313,14 +322,17 @@ use app\models\Resources;
                                     <span style="color:red;"></span>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                        </div>
+                        <!-- Activity Name + Unit -->
+                        <div class="row" style="margin-top:2px;">
+                            <div class="col-md-8">
                                 <div class="form-group">
                                     <label>Activity Name</label>
                                     <input class="form-control estactivityname" type="text" id="estactivityname1" data-id="1" name="estactivityname[]" placeholder="Activity Name">
                                     <span style="color:red;"></span>
                                 </div>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label>Activity Unit</label>
                                     <input class="form-control estactivityunit" type="text" id="estactivityunit1" data-id="1" name="estactivityunit[]" placeholder="Activity Unit">
@@ -371,7 +383,7 @@ use app\models\Resources;
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-danger cancelactivity" data-dismiss="modal"><span class="icon-close"></span> Cancel</button>
+                <button type="button" class="btn cancelactivity" data-dismiss="modal" style="background:#e67e22;color:#fff;border-color:#d35400;border-radius:20px;"><span class="icon-close"></span> Close</button>
                 <button type="button" class="btn btn-primary save-btn" id="saveestactivity"><span class="icon-check"></span> Add Activity</button>
             </div>
         </div>
@@ -587,7 +599,24 @@ $('#alAddActivityPopup').on('shown.bs.modal', function(){
     $('#task-row-1 .task-name, #task-row-1 .task-unit, #task-row-1 .task-productivity').val('');
     $('#alAddActivityTitle').text('Add Activity');
     $('#saveestactivity').html('<span class="icon-check"></span> Add Activity');
+    alRefreshActIowGroupDropdown();
 });
+
+function alRefreshActIowGroupDropdown(){
+    $.ajax({
+        url: '<?php echo \yii\helpers\Url::to(["/projects/getiowgrouplist"]); ?>',
+        dataType: 'json',
+        success: function(data){
+            var sel = $('#actIowGroupId');
+            var cur = sel.val();
+            sel.html('<option value="">Select IOW Group</option>');
+            (data.items||[]).forEach(function(g){
+                sel.append('<option value="'+g.id+'">'+g.name+'</option>');
+            });
+            if(cur) sel.val(cur);
+        }
+    });
+}
 
 /* Intercept estactivity.js showing .add-activity-form (edit flow) → open modal instead */
 var alActObserver = new MutationObserver(function(mutations){
