@@ -1,4 +1,4 @@
-<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projects/over_menu_projectmaster.js" type="text/javascript"></script>
+<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projects/over_menu_projectmaster.js?v=<?php echo time(); ?>" type="text/javascript"></script>
 <?php if(Yii::$app->controller->id == 'projects' && Yii::$app->controller->action->id == 'projectmasters'): ?>
 <script>
 $(function(){
