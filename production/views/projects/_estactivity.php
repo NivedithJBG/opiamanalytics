@@ -71,32 +71,30 @@ use app\models\Resources;
                     <div class="search-and-content-wrpr">
                         <div class="search-and-actions-wrpr row" id="AR-allocate-body-one-head">
 
-                    <div class="col-md-3" id="searchestworktypediv">
-                        <select id="searchestworktypelist" class="form-control" >
-                            <option value="0">All Project Types</option>
-                            <?php
-                                $typelist=EstimateWorkType::find()->orderBy(['estworktype_name'=>SORT_ASC])->all();
-                           // $tabs = UserTabs::find()->where(['user_id' => $userid])->andWhere('function_id =11')->all();
-                            foreach($typelist AS $list):
-                                echo "<option value='".$list->estworktype_id."'>".$list->estworktype_name."</option>";
-                            endforeach;
-                            ?>
-                        </select>
-                        <span class="error" style="display: none;"></span>
-                            <input type="hidden" name="estworktypedisplay" id="estworktypedisplay">
-                    </div>
-
-                    
-                            <div class="content-search-wrpr col-md-3 col-sm-3" >
-                                <input type="text" placeholder="Search" id="searchestactivityname" class="form-control" >
-                                <button id="estactivitysearch" class="btn btn-primary" type="button"><span class="icon-search5"></span></button>
-                            </div>
-                            <div class="content-action-wrpr col-md-6 col-sm-6" style="white-space:nowrap;">
-                                <a href="#alIowGroupPopup" class="btn btn-default" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW Group</a>
+                            <div class="content-action-wrpr col-md-8 col-sm-8" style="white-space:nowrap;">
                                 <a href="#alProjTypePopup" class="btn btn-default" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Project Type</a>
+                                <a href="#alIowGroupPopup" class="btn btn-default" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW Group</a>
                                 <a href="#alActTypePopup" class="btn btn-default" data-toggle="modal" data-target="#alActTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Activity Type</a>
                                 <a href="#alAddActivityPopup" class="btn btn-primary" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities"><span class="icon-add"></span> Activity</a>
                                 <a href="#" class="btn btn-primary list-accountType" id="listestactivity"><span class="icon-th-list"></span> List</a>
+                            </div>
+                            <div class="col-md-4 col-sm-4" style="display:flex;justify-content:flex-end;align-items:center;gap:4px;">
+                                <div id="searchestworktypediv" style="min-width:130px;">
+                                    <select id="searchestworktypelist" class="form-control">
+                                        <option value="0">All Project Types</option>
+                                        <?php
+                                        $typelist=EstimateWorkType::find()->orderBy(['estworktype_name'=>SORT_ASC])->all();
+                                        foreach($typelist AS $list):
+                                            echo "<option value='".$list->estworktype_id."'>".$list->estworktype_name."</option>";
+                                        endforeach;
+                                        ?>
+                                    </select>
+                                    <input type="hidden" name="estworktypedisplay" id="estworktypedisplay">
+                                </div>
+                                <div class="content-search-wrpr" style="display:flex;align-items:center;">
+                                    <input type="text" placeholder="Search" id="searchestactivityname" class="form-control" style="width:130px;">
+                                    <button id="estactivitysearch" class="btn btn-primary" type="button" style="margin-left:4px;"><span class="icon-search5"></span></button>
+                                </div>
                             </div>
                         </div>
                         <div class="content-wrpr">
@@ -400,7 +398,6 @@ use app\models\Resources;
                         <span class="error" id="alProjTypeErr" style="color:red;display:none;"></span>
                     </div>
                     <div class="col-md-4" style="padding-top:25px;">
-                        <button type="button" class="btn btn-danger" id="alCancelProjType"><span class="icon-close"></span> Cancel</button>
                         <button type="button" class="btn btn-primary" id="alSaveProjType"><span class="icon-check"></span> Add Project Type</button>
                     </div>
                 </div>
@@ -529,11 +526,6 @@ $('#alProjTypePopup').on('shown.bs.modal', function(){
     $('#alProjTypeName').val('').focus();
     $('#alProjTypeErr').hide();
     alLoadProjTypeList();
-});
-
-$('#alCancelProjType').on('click', function(){
-    $('#alProjTypeName').val('');
-    $('#alProjTypeErr').hide();
 });
 
 function alLoadProjTypeList(){
