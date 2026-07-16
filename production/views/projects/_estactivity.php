@@ -382,30 +382,32 @@ use app\models\Resources;
 </div>
 
 <!-- ── IOW GROUP MODAL ──────────────────────────────────────────────── -->
-<div class="modal fade" id="alIowGroupPopup">
+<div class="modal fade iowGroupPopup" id="alIowGroupPopup">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title" style="float:left;">Add IOW Group</h4>
+                <h4 class="modal-title" style="float:left;">Manage IOW Groups</h4>
                 <button type="button" class="close" data-dismiss="modal" style="float:right;font-size:30px;">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="row">
-                    <div class="col-md-3"></div>
-                    <div class="col-md-5">
-                        <div class="form-group">
-                            <label>IOW Group Name</label>
-                            <input type="text" class="form-control" id="alIowGroupName" placeholder="IOW Group Name">
-                            <span class="al-error" style="color:red;display:none;"></span>
+                    <form id="alIowGroupForm">
+                        <div class="col-md-3"></div>
+                        <div class="col-md-5">
+                            <div class="form-group">
+                                <label>IOW Group</label>
+                                <input type="text" class="form-control" id="alIowGroupName" placeholder="IOW Group">
+                                <span class="error" style="display:none;"></span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-4 text-left" style="padding-top:25px;">
-                        <button type="button" class="btn btn-primary" id="alSaveIowGroup"><span class="icon-check"></span> Add</button>
-                        <button type="button" class="btn btn-danger" data-dismiss="modal"><span class="icon-close"></span> Cancel</button>
-                    </div>
+                        <div class="col-md-4 text-left" style="padding-top:5px;">
+                            <label></label>
+                            <button type="button" class="btn btn-primary save-btn" id="alSaveIowGroup"><span class="icon-check"></span> Add</button>
+                        </div>
+                    </form>
                 </div>
                 <hr>
-                <div id="alIowGroupList" class="row"></div>
+                <div id="alIowGroupListContainer" class="row"></div>
             </div>
             <div class="modal-footer"></div>
         </div>
@@ -413,37 +415,41 @@ use app\models\Resources;
 </div>
 
 <!-- ── IOW MODAL ────────────────────────────────────────────────────── -->
-<div class="modal fade" id="alIowPopup">
+<div class="modal fade iowFormPopup" id="alIowPopup">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title" style="float:left;">Add IOW</h4>
+                <h4 class="modal-title" style="float:left;">Add Work Breakdown Structure</h4>
                 <button type="button" class="close" data-dismiss="modal" style="float:right;font-size:30px;">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>IOW Name</label>
-                            <input type="text" class="form-control" id="alIowName" placeholder="IOW Name">
-                            <span class="al-error" style="color:red;display:none;"></span>
+                <div class="add-project-master-form row">
+                    <form id="alIowForm">
+                        <div class="row">
+                            <div class="col-md-7">
+                                <div class="form-group">
+                                    <label>Item of Work Name</label>
+                                    <input type="text" class="form-control" id="alIowName" placeholder="IOW Name">
+                                    <span class="error" style="display:none;"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="form-group">
+                                    <label>Group Name</label>
+                                    <select class="form-control" id="alIowGroupSel">
+                                        <option value="">Select IOW Group</option>
+                                    </select>
+                                    <span class="error" style="display:none;"></span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>IOW Group</label>
-                            <select class="form-control" id="alIowGroupSel">
-                                <option value="">— Select IOW Group —</option>
-                            </select>
-                            <span class="al-error" style="color:red;display:none;"></span>
+                        <div class="row">
+                            <div class="col-md-12 text-center">
+                                <button type="button" class="btn btn-primary" id="alSaveIow"><span class="icon-check"></span> Add WBS</button>
+                                <button type="button" class="btn btn-danger" data-dismiss="modal"><span class="icon-close"></span> Cancel</button>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-12 text-center">
-                        <button type="button" class="btn btn-primary" id="alSaveIow"><span class="icon-check"></span> Add IOW</button>
-                        <button type="button" class="btn btn-danger" data-dismiss="modal"><span class="icon-close"></span> Cancel</button>
-                    </div>
+                    </form>
                 </div>
             </div>
             <div class="modal-footer"></div>
@@ -461,25 +467,23 @@ use app\models\Resources;
             </div>
             <div class="modal-body">
                 <div class="row">
-                    <div class="col-md-1"></div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Activity Type</label>
-                            <input type="text" class="form-control" id="alActTypeName" placeholder="Activity Type">
-                            <span class="al-error" style="color:red;display:none;"></span>
+                    <form id="alActTypeForm">
+                        <div class="col-md-3"></div>
+                        <div class="col-md-5">
+                            <div class="form-group">
+                                <label>Activity Type</label>
+                                <input type="text" class="form-control" id="alActTypeName" placeholder="Activity Type">
+                                <span class="error" style="display:none;"></span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-1">
-                        <div class="form-group">
-                            <label>Schedule</label>
-                            <input type="checkbox" id="alActTypeSchedule" value="1" style="margin-top:10px;">
+                        <div class="col-md-4 text-left" style="padding-top:5px;">
+                            <label></label>
+                            <button type="button" class="btn btn-primary save-btn" id="alSaveActType"><span class="icon-check"></span> Add</button>
                         </div>
-                    </div>
-                    <div class="col-md-4 text-left" style="padding-top:25px;">
-                        <button type="button" class="btn btn-primary" id="alSaveActType"><span class="icon-check"></span> Add Activity Type</button>
-                        <button type="button" class="btn btn-danger" data-dismiss="modal"><span class="icon-close"></span> Cancel</button>
-                    </div>
+                    </form>
                 </div>
+                <hr>
+                <div id="alActTypeListContainer" class="row"></div>
             </div>
             <div class="modal-footer"></div>
         </div>
@@ -495,84 +499,133 @@ $('#alIowGroupPopup, #alIowPopup, #alActTypePopup').appendTo('body');
 /* ── IOW Group modal ── */
 $('#alIowGroupPopup').on('show.bs.modal', function(){
     $('#alIowGroupName').val('');
-    loadAlIowGroupList();
+    alLoadIowGroupList();
 });
 
-function loadAlIowGroupList(){
-    $.post('../projects/getiowgrouplist', {}, function(d){
-        var html = '';
-        (d.items||[]).forEach(function(g){
-            html += '<div class="col-md-12" style="padding:4px 15px;border-bottom:1px solid #eee;">'+g.name+'</div>';
-        });
-        $('#alIowGroupList').html(html || '<div class="col-md-12" style="padding:8px 15px;color:#999;">No groups yet.</div>');
-    }, 'json');
+function alLoadIowGroupList(){
+    $.ajax({
+        url: '../workgroups1/iowgrouplist',
+        dataType: 'json',
+        success: function(data){
+            $('#alIowGroupListContainer').html(data.result);
+        }
+    });
 }
 
-$('#alSaveIowGroup').on('click', function(){
+$(document).on('click', '#alSaveIowGroup', function(){
     var name = $('#alIowGroupName').val().trim();
-    if(!name){ alert('Please enter a group name.'); return; }
-    var btn = $(this).prop('disabled', true).text('Saving…');
-    $.post('../projects/addiowgroup', {name: name}, function(d){
-        btn.prop('disabled', false).html('<span class="icon-check"></span> Add');
-        if(d.error){ alert('Error: '+d.error); return; }
-        $('#alIowGroupName').val('');
-        loadAlIowGroupList();
-        refreshAlIowGroupDropdown();
-    }, 'json').fail(function(){ btn.prop('disabled', false).html('<span class="icon-check"></span> Add'); alert('Server error.'); });
+    if(!name){ $('#alIowGroupName').next('.error').html('Enter IOW group name').show(); return; }
+    $('#alIowGroupName').next('.error').hide();
+    var btn = $(this).attr('disabled', true);
+    $.ajax({
+        type: 'POST',
+        url: '../workgroups1/iowgroupcreate',
+        dataType: 'json',
+        data: { iowgroupname: name },
+        success: function(data){
+            btn.attr('disabled', false);
+            if(data.error === 'No'){
+                $('#alIowGroupName').val('');
+                alLoadIowGroupList();
+                alRefreshIowGroupDropdown();
+            } else {
+                $('#alIowGroupName').next('.error').html(data.errortext).show();
+            }
+        }
+    });
 });
 
 /* ── IOW modal ── */
 $('#alIowPopup').on('show.bs.modal', function(){
     $('#alIowName').val('');
-    refreshAlIowGroupDropdown();
+    alRefreshIowGroupDropdown();
 });
 
-function refreshAlIowGroupDropdown(){
-    $.post('../projects/getiowgrouplist', {}, function(d){
-        var sel = $('#alIowGroupSel');
-        var cur = sel.val();
-        sel.html('<option value="">— Select IOW Group —</option>');
-        (d.items||[]).forEach(function(g){
-            sel.append('<option value="'+g.id+'">'+g.name+'</option>');
-        });
-        if(cur) sel.val(cur);
-    }, 'json');
+function alRefreshIowGroupDropdown(){
+    $.ajax({
+        url: '../workgroups1/iowgrouplist',
+        dataType: 'json',
+        success: function(data){
+            /* parse names from the returned HTML */
+            var tmp = $('<div>').html(data.result);
+            var sel = $('#alIowGroupSel');
+            sel.html('<option value="">Select IOW Group</option>');
+            tmp.find('[id^="iowgroupname"]').each(function(){
+                var id  = $(this).attr('id').replace('iowgroupname','');
+                var txt = $(this).text().trim();
+                sel.append('<option value="'+id+'">'+txt+'</option>');
+            });
+        }
+    });
 }
 
-$('#alSaveIow').on('click', function(){
+$(document).on('click', '#alSaveIow', function(){
     var name    = $('#alIowName').val().trim();
     var groupId = $('#alIowGroupSel').val();
-    if(!name)   { alert('Please enter an IOW name.'); return; }
-    if(!groupId){ alert('Please select an IOW Group.'); return; }
-    var btn = $(this).prop('disabled', true).text('Saving…');
-    $.post('../projects/addiow', {name: name, group_id: groupId}, function(d){
-        btn.prop('disabled', false).html('<span class="icon-check"></span> Add IOW');
-        if(d.error){ alert('Error: '+d.error); return; }
-        $('#alIowName').val('');
-        $('#alIowGroupSel').val('');
-    }, 'json').fail(function(){ btn.prop('disabled', false).html('<span class="icon-check"></span> Add IOW'); alert('Server error.'); });
+    var pid     = $('#selectedProjectId').val() || $('input[name="project_id"]').first().val() || '';
+    if(!name)   { $('#alIowName').next('.error').html('Enter IOW Name').show(); return; }
+    if(!groupId){ $('#alIowGroupSel').next('.error').html('Select IOW Group').show(); return; }
+    $('#alIowName, #alIowGroupSel').next('.error').hide();
+    var btn = $(this).attr('disabled', true);
+    $.ajax({
+        type: 'POST',
+        url: '../projects/addiow',
+        dataType: 'json',
+        data: { name: name, group_id: groupId, project_id: pid },
+        success: function(data){
+            btn.attr('disabled', false);
+            if(data.error){ alert('Error: '+data.error); return; }
+            $('#alIowName').val('');
+            $('#alIowGroupSel').val('');
+            $('#alIowPopup').modal('hide');
+        }
+    });
 });
 
 /* ── Activity Type modal ── */
 $('#alActTypePopup').on('show.bs.modal', function(){
     $('#alActTypeName').val('');
-    $('#alActTypeSchedule').prop('checked', false);
+    alLoadActTypeList();
 });
 
-$('#alSaveActType').on('click', function(){
-    var name     = $('#alActTypeName').val().trim();
-    var schedule = $('#alActTypeSchedule').is(':checked') ? 1 : 0;
-    if(!name){ alert('Please enter an activity type name.'); return; }
-    var btn = $(this).prop('disabled', true).text('Saving…');
-    $.post('../projects/addactivitytype', {name: name, schedule: schedule}, function(d){
-        btn.prop('disabled', false).html('<span class="icon-check"></span> Add Activity Type');
-        if(d.error){ alert('Error: '+d.error); return; }
-        $('#alActTypeName').val('');
-        $('#alActTypeSchedule').prop('checked', false);
-        $('#alActTypePopup').modal('hide');
-        /* refresh the activity type list if visible */
-        if(typeof window.loadActivityTypeList === 'function') window.loadActivityTypeList();
-    }, 'json').fail(function(){ btn.prop('disabled', false).html('<span class="icon-check"></span> Add Activity Type'); alert('Server error.'); });
+function alLoadActTypeList(){
+    $.ajax({
+        url: '../projects/getactivitytypelist',
+        dataType: 'json',
+        success: function(data){
+            if(!data.items || !data.items.length){
+                $('#alActTypeListContainer').html('<div class="col-md-12" style="padding:8px 15px;color:#999;">No activity types yet.</div>');
+                return;
+            }
+            var html = '<div class="col-md-12 scheduleitemheader schdhead" style="padding:6px 15px;font-size:13px;margin-top:0;"><div class="row"><div class="col-md-1"><label>#</label></div><div class="col-md-7" style="padding-left:5px;"><label>Activity Type</label></div></div></div>';
+            data.items.forEach(function(at, i){
+                html += '<div class="col-md-12 datalists scheduleitemcontent"><div class="row datslis" style="cursor:pointer;">'
+                      + '<div class="col-md-1"><span class="number">'+(i+1)+'</span></div>'
+                      + '<div class="col-md-7 type">'+at.name+'</div>'
+                      + '</div></div>';
+            });
+            $('#alActTypeListContainer').html(html);
+        }
+    });
+}
+
+$(document).on('click', '#alSaveActType', function(){
+    var name = $('#alActTypeName').val().trim();
+    if(!name){ $('#alActTypeName').next('.error').html('Enter activity type name').show(); return; }
+    $('#alActTypeName').next('.error').hide();
+    var btn = $(this).attr('disabled', true);
+    $.ajax({
+        type: 'POST',
+        url: '../projects/addactivitytype',
+        dataType: 'json',
+        data: { name: name, schedule: 0 },
+        success: function(data){
+            btn.attr('disabled', false);
+            if(data.error){ alert('Error: '+data.error); return; }
+            $('#alActTypeName').val('');
+            alLoadActTypeList();
+        }
+    });
 });
 
 })();
