@@ -2055,7 +2055,7 @@ if($action=='login')
 #qe-modal{
   display:none;position:fixed;top:50%;left:50%;
   transform:translate(-50%,-50%);
-  width:1100px;max-width:98vw;max-height:92vh;
+  width:960px;max-width:96vw;max-height:88vh;
   z-index:10001;border-radius:10px;overflow:hidden;
   background:#edf0f4;box-shadow:0 12px 40px rgba(0,0,0,.75);
   flex-direction:column;
@@ -2079,7 +2079,7 @@ if($action=='login')
 .qe-field.med{flex:1 1 120px}
 .qe-field.sm{flex:0 0 100px}
 .qe-field.xs{flex:0 0 80px}
-.qe-label{font-size:10px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.qe-label{font-size:11px;font-weight:800;color:#2d3748;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
 .qe-input,.qe-select{
   width:100%;padding:8px 10px;font-size:13px;color:#2d3748;
   border:1px solid #a0aab8;border-radius:3px;background:#fff;
@@ -2096,7 +2096,7 @@ if($action=='login')
 /* Repeating rows (tasks / resources) */
 .qe-repeat-tbl{width:100%;border-collapse:collapse}
 .qe-repeat-tbl th{
-  font-size:10px;font-weight:700;color:#4a5568;text-transform:uppercase;
+  font-size:11px;font-weight:800;color:#2d3748;text-transform:uppercase;
   letter-spacing:.4px;padding:0 6px 8px 0;border-bottom:1px solid #a0aab8;
   white-space:nowrap;
 }
