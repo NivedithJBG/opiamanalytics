@@ -89,17 +89,16 @@ use app\models\Resources;
                     </div>
 
                     
-                            <div class="content-search-wrpr col-md-5 col-sm-5" >
+                            <div class="content-search-wrpr col-md-3 col-sm-3" >
                                 <input type="text" placeholder="Search" id="searchestactivityname" class="form-control" >
                                 <button id="estactivitysearch" class="btn btn-primary" type="button"><span class="icon-search5"></span></button>
                             </div>
-                            <div class="col-md-2 col-sm-2" id="space"></div>
-                            <div class="content-action-wrpr col-md-2 col-sm-2" >
-                                <a href="#" class="btn btn-primary addForm" id="addestactivity" title="Add Activities"><span class="icon-add"></span> Add</a>
+                            <div class="content-action-wrpr col-md-6 col-sm-6" style="white-space:nowrap;">
+                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="iow-group" title="New IOW Group">+ IOW Group</a>
+                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="iow" title="New IOW">+ IOW</a>
+                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="act-type" title="New Activity Type">+ Activity Type</a>
+                                <a href="#" class="btn btn-primary addForm" id="addestactivity" title="Add Activities"><span class="icon-add"></span> Activity</a>
                                 <a href="#" class="btn btn-primary list-accountType" id="listestactivity"><span class="icon-th-list"></span> List</a>
-                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="iow-group" title="New IOW Group" style="margin-top:4px;">+ IOW Group</a>
-                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="iow" title="New IOW" style="margin-top:4px;">+ IOW</a>
-                                <a href="#" class="btn btn-default lib-mini-btn" data-lib="act-type" title="New Activity Type" style="margin-top:4px;">+ Activity Type</a>
                             </div>
                         </div>
                         <div class="content-wrpr">
