@@ -153,8 +153,6 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .perf-dashboard-btn     { background-color: #2e7d32 !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
         .round-icons .cost-dashboard-btn     { background-color: #7b1fa2 !important; height: 26px !important; width: 26px !important; font-size: 9px !important; padding: 0 !important; box-sizing: content-box !important; }
         .round-icons .qe-btn                 { background-color: #00838f !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
-        .round-icons .lib-mini-btn           { background-color: #6b7a93 !important; height: 26px !important; width: 26px !important; font-size: 10px !important; font-weight:700 !important; color:#fff !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; border-radius:50% !important; text-decoration:none !important; }
-        .round-icons .lib-mini-btn:hover,.round-icons .lib-mini-btn:focus { background-color: #4a5568 !important; }
         /* Keep coloured backgrounds on hover/focus */
         .round-icons .icon-chart3:hover,            .round-icons .icon-chart3:focus            { background: #002060 !important; }
         .round-icons .icon-calendar:hover,          .round-icons .icon-calendar:focus          { background: #8a6200 !important; }
@@ -411,10 +409,7 @@ if($action=='login')
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="lib-mini-btn" data-lib="iow-group" title="+ IOW Group" href="#" style="cursor:pointer;">G</a></li>
-                    <li><a class="lib-mini-btn" data-lib="iow" title="+ IOW" href="#" style="cursor:pointer;">I</a></li>
-                    <li><a class="lib-mini-btn" data-lib="act-type" title="+ Activity Type" href="#" style="cursor:pointer;">A</a></li>
-                    <li><a class="icon-pencil qe-btn" title="Add Activity to Gantt" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -430,10 +425,7 @@ if($action=='login')
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="lib-mini-btn" data-lib="iow-group" title="+ IOW Group" href="#" style="cursor:pointer;">G</a></li>
-                    <li><a class="lib-mini-btn" data-lib="iow" title="+ IOW" href="#" style="cursor:pointer;">I</a></li>
-                    <li><a class="lib-mini-btn" data-lib="act-type" title="+ Activity Type" href="#" style="cursor:pointer;">A</a></li>
-                    <li><a class="icon-pencil qe-btn" title="Add Activity to Gantt" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1555" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -506,10 +498,7 @@ if($action=='login')
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="lib-mini-btn" data-lib="iow-group" title="+ IOW Group" href="#" style="cursor:pointer;">G</a></li>
-                    <li><a class="lib-mini-btn" data-lib="iow" title="+ IOW" href="#" style="cursor:pointer;">I</a></li>
-                    <li><a class="lib-mini-btn" data-lib="act-type" title="+ Activity Type" href="#" style="cursor:pointer;">A</a></li>
-                    <li><a class="icon-pencil qe-btn" title="Add Activity to Gantt" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -563,10 +552,7 @@ if($action=='login')
                     </li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="lib-mini-btn" data-lib="iow-group" title="+ IOW Group" href="#" style="cursor:pointer;">G</a></li>
-                    <li><a class="lib-mini-btn" data-lib="iow" title="+ IOW" href="#" style="cursor:pointer;">I</a></li>
-                    <li><a class="lib-mini-btn" data-lib="act-type" title="+ Activity Type" href="#" style="cursor:pointer;">A</a></li>
-                    <li><a class="icon-pencil qe-btn" title="Add Activity to Gantt" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
                 <?php  } } } ?>
 
 
