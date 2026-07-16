@@ -2047,7 +2047,7 @@ if($action=='login')
 <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/_performancedashboard.js?v=<?php echo time();?>"></script>
 
 <!-- ══════════════════════════════════════════════════════════════════════
-     QUICK ENTRY MODAL
+     WBS / IOW ENTRY MODAL
 ════════════════════════════════════════════════════════════════════════ -->
 <style>
 #qe-bk{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000}
@@ -2055,7 +2055,7 @@ if($action=='login')
 #qe-modal{
   display:none;position:fixed;top:50%;left:50%;
   transform:translate(-50%,-50%);
-  width:860px;max-width:96vw;max-height:90vh;
+  width:900px;max-width:96vw;max-height:92vh;
   z-index:10001;border-radius:10px;overflow:hidden;
   background:#f4f6fb;box-shadow:0 12px 40px rgba(0,0,0,.75);
   flex-direction:column;
@@ -2063,9 +2063,9 @@ if($action=='login')
 }
 #qe-modal.qe-open{display:flex}
 #qe-hdr{
-  background:#555;
+  background:#1a2540;
   padding:7px 16px;display:flex;align-items:center;
-  border-bottom:1px solid #999;flex-shrink:0;
+  border-bottom:1px solid #0d1a30;flex-shrink:0;
 }
 #qe-hdr span{flex:1;color:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;letter-spacing:.4px;text-align:center;text-transform:uppercase}
 #qe-close{background:none;border:none;color:#fff;font-size:18px;line-height:1;cursor:pointer;padding:0 4px;opacity:.85}
@@ -2073,60 +2073,61 @@ if($action=='login')
 #qe-body{flex:1;overflow-y:auto;padding:12px 16px 16px;display:flex;flex-direction:column;gap:0}
 
 /* Section wrapper */
-.qe-section{background:#fff;border-radius:4px;border:1px solid #888;margin-bottom:0;overflow:hidden}
+.qe-section{background:#fff;border-radius:4px;border:1px solid #c8cfe0;margin-bottom:0;overflow:hidden}
 .qe-section+.qe-section{margin-top:10px}
 .qe-sec-hdr{
-  background:#b8b8b8;border-bottom:1px solid #888;
+  background:#2c3e6b;border-bottom:1px solid #1a2540;
   padding:5px 12px;
-  font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;
-  color:#222;letter-spacing:.6px;text-transform:uppercase;
+  font-family:'Nunito',sans-serif;font-size:10px;font-weight:700;
+  color:#e8efff;letter-spacing:.6px;text-transform:uppercase;
 }
 .qe-sec-body{padding:10px 12px}
 
 /* Label + field */
 .qe-row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end}
-.qe-field{display:flex;flex-direction:column;min-width:100px}
-.qe-field.wide{flex:1 1 200px}
-.qe-field.med{flex:1 1 130px}
-.qe-field.sm{flex:0 0 100px}
-.qe-field.xs{flex:0 0 75px}
-.qe-label{font-size:9px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.qe-field{display:flex;flex-direction:column;min-width:80px}
+.qe-field.wide{flex:1 1 180px}
+.qe-field.med{flex:1 1 120px}
+.qe-field.sm{flex:0 0 90px}
+.qe-field.xs{flex:0 0 70px}
+.qe-label{font-size:9px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
 .qe-input,.qe-select{
   width:100%;padding:4px 8px;font-size:12px;color:#1a2540;
-  border:1px solid #888;border-radius:3px;background:#fff;
+  border:1px solid #9aa5c0;border-radius:3px;background:#fff;
   outline:none;box-sizing:border-box;font-family:'Barlow',sans-serif;
   transition:border-color .15s;
 }
-.qe-input:focus,.qe-select:focus{border-color:#888;background:#fff}
-.qe-input[readonly]{background:#f3f3f3;color:#666;cursor:default}
+.qe-input:focus,.qe-select:focus{border-color:#2c3e6b;background:#fff}
+.qe-input[readonly]{background:#f0f2f8;color:#666;cursor:default}
+.qe-persist-note{font-size:9px;color:#888;font-style:italic;margin-top:2px}
 
-/* Divider between sections */
-.qe-divider{border:none;border-top:1px solid #ccc;margin:0}
+/* Divider */
+.qe-divider{border:none;border-top:1px solid #dde3ef;margin:8px 0}
 
 /* Repeating rows (tasks / resources) */
 .qe-repeat-tbl{width:100%;border-collapse:collapse}
 .qe-repeat-tbl th{
   font-size:9px;font-weight:700;color:#444;text-transform:uppercase;
-  letter-spacing:.4px;padding:0 6px 5px 0;border-bottom:1px solid #888;
+  letter-spacing:.4px;padding:0 6px 5px 0;border-bottom:1px solid #c8cfe0;
   white-space:nowrap;
 }
 .qe-repeat-tbl td{padding:4px 6px 4px 0;vertical-align:middle}
 .qe-repeat-tbl td:last-child{padding-right:0}
 .qe-repeat-tbl input,.qe-repeat-tbl select{
   width:100%;padding:4px 7px;font-size:12px;color:#1a2540;
-  border:1px solid #888;border-radius:3px;background:#fff;
+  border:1px solid #9aa5c0;border-radius:3px;background:#fff;
   outline:none;font-family:'Barlow',sans-serif;transition:border-color .15s;
   box-sizing:border-box;
 }
-.qe-repeat-tbl input:focus,.qe-repeat-tbl select:focus{border-color:#888;background:#fff}
-.qe-repeat-tbl input[readonly]{background:#f3f3f3;color:#666;cursor:default}
+.qe-repeat-tbl input:focus,.qe-repeat-tbl select:focus{border-color:#2c3e6b}
+.qe-repeat-tbl input[readonly]{background:#f0f2f8;color:#666;cursor:default}
 .qe-add-btn{
   display:inline-flex;align-items:center;justify-content:center;
   width:22px;height:22px;border-radius:50%;border:none;cursor:pointer;
-  background:#0c2461;color:#fff;font-size:16px;line-height:1;
+  background:#2c3e6b;color:#fff;font-size:16px;line-height:1;
   transition:background .15s;flex-shrink:0;
 }
-.qe-add-btn:hover{background:#091a45}
+.qe-add-btn:hover{background:#1a2540}
 .qe-del-btn{
   display:inline-flex;align-items:center;justify-content:center;
   width:18px;height:18px;border-radius:50%;border:none;cursor:pointer;
@@ -2134,40 +2135,71 @@ if($action=='login')
   flex-shrink:0;opacity:.9;
 }
 .qe-del-btn:hover{opacity:1;background:#ca6f1e}
+
+/* Footer bar */
+#qe-footer{
+  background:#f4f6fb;border-top:1px solid #c8cfe0;
+  padding:8px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;
+}
+#qe-duration-display{
+  flex:1;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;color:#1a2540;
+}
+#qe-duration-display span{color:#00838f;margin-left:4px}
+#qe-save-msg{font-size:11px;color:#27ae60;display:none}
+#qe-btn-add{
+  background:#00838f;color:#fff;border:none;border-radius:4px;
+  padding:6px 22px;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;
+  cursor:pointer;letter-spacing:.3px;text-transform:uppercase;
+}
+#qe-btn-add:hover{background:#006b75}
+#qe-btn-add:disabled{background:#aaa;cursor:default}
 </style>
 
 <div id="qe-bk"></div>
 <div id="qe-modal">
   <div id="qe-hdr">
-    <span>Quick Entry</span>
+    <span>Add Activity to Schedule</span>
     <button id="qe-close">&times;</button>
   </div>
   <div id="qe-body">
 
-    <!-- ── SECTION 1 : Activity + Tasks ─────────────────────────────── -->
+    <!-- ── SECTION 1 : IOW Identity (persists across adds) ───────────── -->
     <div class="qe-section">
-      <div class="qe-sec-hdr">Section 1 &mdash; Activity</div>
+      <div class="qe-sec-hdr">IOW Group &amp; Activity Group <span style="font-weight:400;opacity:.7">&mdash; stays selected until you change it</span></div>
       <div class="qe-sec-body">
         <div class="qe-row">
           <div class="qe-field wide">
-            <span class="qe-label">IOW Name</span>
-            <select id="qe-iow" class="qe-select">
-              <option value="">— Select IOW —</option>
-            </select>
+            <span class="qe-label">IOW Group Name</span>
+            <input id="qe-iow-group" type="text" class="qe-input" placeholder="e.g. Earthwork">
           </div>
+          <div class="qe-field wide">
+            <span class="qe-label">IOW / Activity Group</span>
+            <input id="qe-iow-name" type="text" class="qe-input" placeholder="e.g. Excavation in Hard Rock">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECTION 2 : Activity Details ──────────────────────────────── -->
+    <div class="qe-section">
+      <div class="qe-sec-hdr">Activity</div>
+      <div class="qe-sec-body">
+        <div class="qe-row">
           <div class="qe-field wide">
             <span class="qe-label">Activity Name</span>
             <input id="qe-actname" type="text" class="qe-input" placeholder="Enter activity name">
           </div>
         </div>
-        <div class="qe-row" style="margin-top:8px">
+        <div class="qe-divider"></div>
+        <div class="qe-row">
+          <div style="font-size:9px;font-weight:700;color:#2c3e6b;text-transform:uppercase;letter-spacing:.5px;width:100%;margin-bottom:2px">Estimate</div>
           <div class="qe-field sm">
             <span class="qe-label">Unit</span>
             <input id="qe-unit" type="text" class="qe-input" placeholder="e.g. m³">
           </div>
           <div class="qe-field xs">
             <span class="qe-label">Quantity</span>
-            <input id="qe-qty" type="number" class="qe-input" placeholder="0">
+            <input id="qe-qty" type="number" class="qe-input" placeholder="0" step="0.001">
           </div>
           <div class="qe-field xs">
             <span class="qe-label">Rate</span>
@@ -2177,24 +2209,33 @@ if($action=='login')
             <span class="qe-label">Amount</span>
             <input id="qe-amount" type="number" class="qe-input" placeholder="0.00" readonly>
           </div>
+          <div style="width:30px"></div>
+          <div style="font-size:9px;font-weight:700;color:#2c3e6b;text-transform:uppercase;letter-spacing:.5px;align-self:flex-end;padding-bottom:5px">Schedule</div>
           <div class="qe-field sm">
-            <span class="qe-label">Alternate Unit / Nos</span>
-            <input id="qe-altunit" type="text" class="qe-input" placeholder="e.g. Nos">
+            <span class="qe-label">Schedule Unit</span>
+            <input id="qe-sch-unit" type="text" class="qe-input" placeholder="e.g. Nos">
           </div>
           <div class="qe-field xs">
-            <span class="qe-label">Quantity</span>
-            <input id="qe-altqty" type="number" class="qe-input" placeholder="0">
+            <span class="qe-label">Schedule Qty</span>
+            <input id="qe-sch-qty" type="number" class="qe-input" placeholder="0" step="0.001">
           </div>
         </div>
-        <div style="border-top:1px solid #ccc;margin:10px 0 8px"></div>
+      </div>
+    </div>
+
+    <!-- ── SECTION 3 : Tasks ─────────────────────────────────────────── -->
+    <div class="qe-section">
+      <div class="qe-sec-hdr">Tasks <span style="font-weight:400;opacity:.7">&mdash; duration is computed from these</span></div>
+      <div class="qe-sec-body">
         <table class="qe-repeat-tbl" id="qe-task-tbl">
           <thead>
             <tr>
-              <th style="width:40%">Task Name</th>
-              <th style="width:20%">Unit</th>
-              <th style="width:25%">Productivity / Day</th>
-              <th style="width:15%;text-align:right">
-                <button class="qe-add-btn" id="qe-task-add" title="Add row">+</button>
+              <th style="width:36%">Task Name</th>
+              <th style="width:14%">Unit</th>
+              <th style="width:18%">Productivity / Day</th>
+              <th style="width:16%">Resource Units</th>
+              <th style="width:16%;text-align:right">
+                <button class="qe-add-btn" id="qe-task-add" title="Add task row">+</button>
               </th>
             </tr>
           </thead>
@@ -2205,20 +2246,20 @@ if($action=='login')
       </div>
     </div>
 
-    <!-- ── SECTION 2 : Resources ─────────────────────────────────────── -->
+    <!-- ── SECTION 4 : Resources ──────────────────────────────────────── -->
     <div class="qe-section">
-      <div class="qe-sec-hdr">Section 2 &mdash; Resources</div>
+      <div class="qe-sec-hdr">Resources</div>
       <div class="qe-sec-body">
         <table class="qe-repeat-tbl" id="qe-res-tbl">
           <thead>
             <tr>
-              <th style="width:22%">Resource Type</th>
+              <th style="width:20%">Resource Type</th>
               <th style="width:28%">Resource Name</th>
               <th style="width:12%">Quantity</th>
               <th style="width:14%">Rate</th>
               <th style="width:14%">Amount</th>
-              <th style="width:10%;text-align:right">
-                <button class="qe-add-btn" id="qe-res-add" title="Add row">+</button>
+              <th style="width:12%;text-align:right">
+                <button class="qe-add-btn" id="qe-res-add" title="Add resource row">+</button>
               </th>
             </tr>
           </thead>
@@ -2230,19 +2271,25 @@ if($action=='login')
     </div>
 
   </div><!-- /qe-body -->
+
+  <div id="qe-footer">
+    <div id="qe-duration-display">Computed Duration: <span id="qe-dur-val">&mdash;</span> days</div>
+    <div id="qe-save-msg">&#10003; Activity added to Gantt!</div>
+    <button id="qe-btn-add">&#43; Add to Gantt</button>
+  </div>
 </div><!-- /qe-modal -->
 
 <script>
 (function(){
 'use strict';
 
-/* ── helpers ── */
+/* ── open / close ── */
 function openModal(){
   document.getElementById('qe-bk').classList.add('qe-open');
   document.getElementById('qe-modal').classList.add('qe-open');
-  loadIowOptions();
   if(!document.querySelector('#qe-task-body tr')) addTaskRow();
-  if(!document.querySelector('#qe-res-body tr'))  addResRow();
+  if(!document.querySelector('#qe-res-body tr'))  { loadResTypes(function(){ addResRow(); }); }
+  recalcDuration();
 }
 window.openQeModal = openModal;
 function closeModal(){
@@ -2250,21 +2297,25 @@ function closeModal(){
   document.getElementById('qe-modal').classList.remove('qe-open');
 }
 
-/* ── IOW dropdown ── */
-function loadIowOptions(){
-  var sel = document.getElementById('qe-iow');
-  if(sel.options.length > 1) return; // already loaded
-  $.ajax({
-    type:'POST', url:'../projectsmain/getiowlist', dataType:'json',
-    success: function(d){
-      (d.items||[]).forEach(function(item){
-        var o = document.createElement('option');
-        o.value = item.id;
-        o.textContent = item.name;
-        sel.appendChild(o);
-      });
+/* ── duration calculation ── */
+function recalcDuration(){
+  var estQty = parseFloat(document.getElementById('qe-qty').value) || 0;
+  var schQty = parseFloat(document.getElementById('qe-sch-qty').value) || 0;
+  var qtyPerUnit = (schQty > 0) ? estQty / schQty : 0;
+
+  var cycleDays = 0;
+  document.querySelectorAll('#qe-task-body tr').forEach(function(tr){
+    var prod   = parseFloat(tr.querySelector('.qe-task-prod') ? tr.querySelector('.qe-task-prod').value : 0) || 0;
+    var resUnits = parseFloat(tr.querySelector('.qe-task-resunits') ? tr.querySelector('.qe-task-resunits').value : 0) || 0;
+    if(prod > 0 && resUnits > 0 && qtyPerUnit > 0){
+      cycleDays += (qtyPerUnit / prod) / resUnits;
     }
   });
+
+  var duration = (schQty > 0 && cycleDays > 0) ? Math.ceil(cycleDays * schQty) : 0;
+  var el = document.getElementById('qe-dur-val');
+  el.textContent = duration > 0 ? duration : '—';
+  return duration;
 }
 
 /* ── Resource Types ── */
@@ -2287,11 +2338,14 @@ function addTaskRow(){
   tr.innerHTML =
     '<td><input type="text" class="qe-task-name" placeholder="Task name"></td>'+
     '<td><input type="text" class="qe-task-unit" placeholder="Unit"></td>'+
-    '<td><input type="number" class="qe-task-prod" placeholder="0.00" step="0.01"></td>'+
+    '<td><input type="number" class="qe-task-prod" placeholder="0.00" step="0.001" min="0"></td>'+
+    '<td><input type="number" class="qe-task-resunits" placeholder="1" step="1" min="1"></td>'+
     '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
   tbody.appendChild(tr);
+  tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
+  tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
   tr.querySelector('.qe-task-del').addEventListener('click', function(){
-    if(document.querySelectorAll('#qe-task-body tr').length > 1) tr.remove();
+    if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
   });
 }
 
@@ -2330,15 +2384,69 @@ function addResRow(){
   });
 }
 
+/* ── clear activity fields (keeps IOW group + IOW name) ── */
+function clearActivityFields(){
+  document.getElementById('qe-actname').value = '';
+  document.getElementById('qe-unit').value    = '';
+  document.getElementById('qe-qty').value     = '';
+  document.getElementById('qe-rate').value    = '';
+  document.getElementById('qe-amount').value  = '';
+  document.getElementById('qe-sch-unit').value = '';
+  document.getElementById('qe-sch-qty').value  = '';
+  document.getElementById('qe-task-body').innerHTML  = '';
+  document.getElementById('qe-res-body').innerHTML   = '';
+  addTaskRow();
+  loadResTypes(function(){ addResRow(); });
+  recalcDuration();
+}
+
+/* ── collect form payload ── */
+function collectPayload(){
+  var tasks = [];
+  document.querySelectorAll('#qe-task-body tr').forEach(function(tr){
+    var name = tr.querySelector('.qe-task-name') ? tr.querySelector('.qe-task-name').value.trim() : '';
+    if(!name) return;
+    tasks.push({
+      name:     name,
+      unit:     tr.querySelector('.qe-task-unit').value.trim(),
+      prod:     parseFloat(tr.querySelector('.qe-task-prod').value)     || 0,
+      resunits: parseFloat(tr.querySelector('.qe-task-resunits').value) || 1
+    });
+  });
+  var resources = [];
+  document.querySelectorAll('#qe-res-body tr').forEach(function(tr){
+    var name = tr.querySelector('.qe-res-name') ? tr.querySelector('.qe-res-name').value.trim() : '';
+    if(!name) return;
+    resources.push({
+      type_id:  tr.querySelector('.qe-res-type').value,
+      name:     name,
+      qty:      parseFloat(tr.querySelector('.qe-res-qty').value)  || 0,
+      rate:     parseFloat(tr.querySelector('.qe-res-rate').value) || 0
+    });
+  });
+  return {
+    iow_group:  document.getElementById('qe-iow-group').value.trim(),
+    iow_name:   document.getElementById('qe-iow-name').value.trim(),
+    act_name:   document.getElementById('qe-actname').value.trim(),
+    unit:       document.getElementById('qe-unit').value.trim(),
+    qty:        parseFloat(document.getElementById('qe-qty').value)     || 0,
+    rate:       parseFloat(document.getElementById('qe-rate').value)    || 0,
+    sch_unit:   document.getElementById('qe-sch-unit').value.trim(),
+    sch_qty:    parseFloat(document.getElementById('qe-sch-qty').value) || 0,
+    duration:   recalcDuration(),
+    tasks:      tasks,
+    resources:  resources
+  };
+}
+
 /* ── Bind ── */
 document.addEventListener('DOMContentLoaded', function(){
 
-  /* open */
+  /* open via .qe-btn class anywhere on page */
   document.addEventListener('click', function(e){
     if(e.target.closest('.qe-btn')){
       e.preventDefault();
       loadResTypes(function(){
-        // rebuild existing res rows' selects after types loaded
         document.querySelectorAll('#qe-res-body .qe-res-type').forEach(function(sel){
           var cur = sel.value;
           sel.innerHTML = makeResTypeOptions();
@@ -2353,14 +2461,15 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('qe-close').addEventListener('click', closeModal);
   document.getElementById('qe-bk').addEventListener('click', closeModal);
 
-  /* activity amount = qty × rate */
+  /* estimate amount = qty × rate */
   function calcActivityAmount(){
     var q = parseFloat(document.getElementById('qe-qty').value)  || 0;
     var r = parseFloat(document.getElementById('qe-rate').value) || 0;
     document.getElementById('qe-amount').value = (q * r).toFixed(2);
   }
-  document.getElementById('qe-qty').addEventListener('input', calcActivityAmount);
+  document.getElementById('qe-qty').addEventListener('input', function(){ calcActivityAmount(); recalcDuration(); });
   document.getElementById('qe-rate').addEventListener('input', calcActivityAmount);
+  document.getElementById('qe-sch-qty').addEventListener('input', recalcDuration);
 
   /* add task row */
   document.getElementById('qe-task-add').addEventListener('click', addTaskRow);
@@ -2370,6 +2479,46 @@ document.addEventListener('DOMContentLoaded', function(){
     loadResTypes(function(){ addResRow(); });
     if(_resTypes.length) addResRow();
   });
+
+  /* ── Add to Gantt ── */
+  document.getElementById('qe-btn-add').addEventListener('click', function(){
+    var payload = collectPayload();
+    if(!payload.iow_group){ alert('Please enter an IOW Group name.'); return; }
+    if(!payload.iow_name) { alert('Please enter an IOW / Activity Group name.'); return; }
+    if(!payload.act_name) { alert('Please enter an Activity name.'); return; }
+    if(payload.duration < 1){ alert('Duration is 0. Please fill in task productivity and resource units.'); return; }
+
+    var btn = document.getElementById('qe-btn-add');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    $.ajax({
+      type: 'POST',
+      url:  '../projectsmain/wbsadd',
+      data: { payload: JSON.stringify(payload) },
+      dataType: 'json',
+      success: function(d){
+        btn.disabled = false;
+        btn.textContent = '+ Add to Gantt';
+        if(d.error && d.error !== 'No'){
+          alert('Error: ' + d.error);
+          return;
+        }
+        var msg = document.getElementById('qe-save-msg');
+        msg.style.display = 'block';
+        setTimeout(function(){ msg.style.display = 'none'; }, 3000);
+        clearActivityFields();
+        /* ask Gantt to reload if it is on screen */
+        if(typeof window.loadGantt === 'function') window.loadGantt();
+      },
+      error: function(){
+        btn.disabled = false;
+        btn.textContent = '+ Add to Gantt';
+        alert('Server error — please try again.');
+      }
+    });
+  });
+
 });
 
 })();

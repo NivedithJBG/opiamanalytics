@@ -190,6 +190,189 @@ class ProjectsmainController extends Controller
         return ['items' => $rows];
     }
 
+    public function actionWbsadd()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid      = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return ['error' => 'No project selected'];
+        $pid = (int)$projuser->projectid;
+        $db  = \Yii::$app->db;
+
+        $raw = \Yii::$app->request->post('payload');
+        if (!$raw) return ['error' => 'No payload'];
+        $p = json_decode($raw, true);
+        if (!$p) return ['error' => 'Bad payload'];
+
+        $iowGroupName = trim($p['iow_group'] ?? '');
+        $iowName      = trim($p['iow_name']  ?? '');
+        $actName      = trim($p['act_name']  ?? '');
+        $unit         = trim($p['unit']      ?? '');
+        $schUnit      = trim($p['sch_unit']  ?? '');
+        $qty          = (float)($p['qty']     ?? 0);
+        $schQty       = (float)($p['sch_qty'] ?? 0);
+        $rate         = (float)($p['rate']    ?? 0);
+        $duration     = max(1, (int)($p['duration'] ?? 1));
+        $tasks        = $p['tasks']     ?? [];
+        $resources    = $p['resources'] ?? [];
+
+        if (!$iowGroupName || !$iowName || !$actName) return ['error' => 'Missing required fields'];
+
+        $now  = date('Y-m-d H:i:s');
+        $today = date('Y-m-d');
+
+        // 1. Find or create iow_groups row
+        $iowGroup = $db->createCommand(
+            "SELECT id FROM iow_groups WHERE name = :n LIMIT 1", [':n' => $iowGroupName]
+        )->queryOne();
+        if (!$iowGroup) {
+            $db->createCommand("INSERT INTO iow_groups (name) VALUES (:n)",
+                [':n' => $iowGroupName])->execute();
+            $iowGroupId = (int)$db->lastInsertID;
+        } else {
+            $iowGroupId = (int)$iowGroup['id'];
+        }
+
+        // 2. Find or create workgroups_new row for this IOW group in this project
+        $wgRow = $db->createCommand(
+            "SELECT Workgroup_Id FROM workgroups_new WHERE Project_Id=:p AND iowGroupid=:g AND Status=0 LIMIT 1",
+            [':p' => $pid, ':g' => $iowGroupId]
+        )->queryOne();
+        if (!$wgRow) {
+            $nextSort = (int)($db->createCommand(
+                "SELECT COALESCE(MAX(sortorder),0)+1 AS s FROM workgroups_new WHERE Project_Id=:p", [':p'=>$pid]
+            )->queryOne()['s'] ?? 0);
+            $db->createCommand(
+                "INSERT INTO workgroups_new
+                 (Project_Id, Name, iowGroupid, Status, sortorder, Added_On, Updated_On, Added_By,
+                  start_date, end_date, duration, progress, open, parent, itemtype, worktype, worktypegroup, wbs_estimate_id)
+                 VALUES (:p, :n, :g, 0, :s, :t, :t, :uid,
+                  '0000-00-00', '0000-00-00', 0, 0, 0, 0, '', 0, 0, 0)",
+                [':p'=>$pid, ':n'=>$iowGroupName, ':g'=>$iowGroupId, ':s'=>$nextSort, ':t'=>$now, ':uid'=>$uid]
+            )->execute();
+            $wgId = (int)$db->lastInsertID;
+        } else {
+            $wgId = (int)$wgRow['Workgroup_Id'];
+        }
+
+        // 3. Find or create wbsscheduleitems row for this workgroup
+        $wbsItem = $db->createCommand(
+            "SELECT scheduleitem_id FROM wbsscheduleitems WHERE wbsid=:w AND projectId=:p AND status=0 LIMIT 1",
+            [':w' => $wgId, ':p' => $pid]
+        )->queryOne();
+        if (!$wbsItem) {
+            $db->createCommand(
+                "INSERT INTO wbsscheduleitems (name, projectId, wbsid, schedulegrp_id, status)
+                 VALUES (:n, :p, :w, 0, 0)",
+                [':n' => $iowGroupName, ':p' => $pid, ':w' => $wgId]
+            )->execute();
+            $scheduleItemId = (int)$db->lastInsertID;
+        } else {
+            $scheduleItemId = (int)$wbsItem['scheduleitem_id'];
+        }
+
+        // 4. Create iowactivities row (IOW_Id links to iow_groups.id)
+        $db->createCommand(
+            "INSERT INTO iowactivities (IOW_Id, Name, Budgeted_Duration, End_Duration)
+             VALUES (:iow, :n, :d, :d)",
+            [':iow' => $iowGroupId, ':n' => $iowName, ':d' => (string)$duration]
+        )->execute();
+        $iowActId = (int)$db->lastInsertID;
+
+        // 5. Save task rows to iowschmethedology (stored as JSON in methedologies field)
+        if (!empty($tasks)) {
+            $db->createCommand(
+                "INSERT INTO iowschmethedology (IOW_Id, methedologies, pro_estimate_id)
+                 VALUES (:iow, :data, 0)",
+                [':iow' => $iowActId, ':data' => json_encode($tasks)]
+            )->execute();
+        }
+
+        // 6. Create workgroup_activities_new row
+        $lastSort = $db->createCommand(
+            "SELECT COALESCE(MAX(sortorder),0) AS s FROM workgroup_activities_new WHERE wbs_id=:w",
+            [':w' => $wgId]
+        )->queryOne();
+        $sortorder = ((int)($lastSort['s'] ?? 0)) + 1;
+
+        $db->createCommand(
+            "INSERT INTO workgroup_activities_new
+             (project_Id, wbs_id, worktype_Id, activitytype_id, activity_Id, activity_Unit,
+              estimate, amount, sortorder, type, activity_Name, process_Id, schedule, duration,
+              cycle_Unit, cycle_Quantity, pr_status, pricing_status, operations_status, wbs_estimate_id)
+             VALUES (:p, :w, 0, 0, :ia, :u, 1, :amt, :s, 0, :n, 0, 1, :d, :cu, :cq, 0, 0, 0, 0)",
+            [
+                ':p'   => $pid,
+                ':w'   => $wgId,
+                ':ia'  => $iowActId,
+                ':u'   => $unit ?: $schUnit,
+                ':amt' => round($qty * $rate, 2),
+                ':s'   => $sortorder,
+                ':n'   => $actName,
+                ':d'   => $duration,
+                ':cu'  => $schUnit,
+                ':cq'  => $schQty,
+            ]
+        )->execute();
+        $wanId = (int)$db->lastInsertID;
+
+        // 7. Save resources — stored alongside tasks in iowschmethedology as a second JSON row
+        if (!empty($resources)) {
+            $db->createCommand(
+                "INSERT INTO iowschmethedology (IOW_Id, methedologies, pro_estimate_id)
+                 VALUES (:iow, :data, 1)",
+                [':iow' => $iowActId, ':data' => json_encode($resources)]
+            )->execute();
+        }
+
+        // 8. Create scheduleactivities row
+        $lastSchSort = $db->createCommand(
+            "SELECT COALESCE(MAX(sortorder),0) AS s FROM scheduleactivities WHERE projectId=:p",
+            [':p' => $pid]
+        )->queryOne();
+        $schSort = ((int)($lastSchSort['s'] ?? 0)) + 1;
+
+        $endDate = date('Y-m-d', strtotime($today . ' + ' . ($duration - 1) . ' days'));
+
+        $db->createCommand(
+            "INSERT INTO scheduleactivities
+             (name, activity_id, unit, quantity, start_date, end_date, duration, old_duration,
+              scheduleitem_id, projectId, status, sortorder, resource_units)
+             VALUES (:n, :aid, :u, :q, :sd, :ed, :dur, :dur, :si, :p, 0, :so, 1)",
+            [
+                ':n'   => $actName,
+                ':aid' => $wanId,
+                ':u'   => $schUnit ?: $unit,
+                ':q'   => $schQty ?: $qty,
+                ':sd'  => $today,
+                ':ed'  => $endDate,
+                ':dur' => $duration,
+                ':si'  => $scheduleItemId,
+                ':p'   => $pid,
+                ':so'  => $schSort,
+            ]
+        )->execute();
+        $saId = (int)$db->lastInsertID;
+
+        // 9. Auto-wire existing activity_relations where both ends now exist in this project
+        $db->createCommand(
+            "UPDATE activity_relations ar
+             JOIN scheduleactivities sa_pre ON sa_pre.id = ar.precedent_activity AND sa_pre.projectId = :p AND sa_pre.status = 0
+             JOIN scheduleactivities sa_dep ON sa_dep.id = ar.dependent_activity AND sa_dep.projectId = :p AND sa_dep.status = 0
+             SET ar.status = 0
+             WHERE ar.projectId = :p AND ar.status = 1",
+            [':p' => $pid]
+        )->execute();
+
+        return [
+            'error'          => 'No',
+            'sa_id'          => $saId,
+            'scheduleitem_id'=> $scheduleItemId,
+            'duration'       => $duration,
+            'act_name'       => $actName,
+        ];
+    }
+
     public function actionPerformancedashboard()
     {
         $uid  = Yii::$app->user->Id;
