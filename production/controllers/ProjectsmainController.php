@@ -268,63 +268,74 @@ class ProjectsmainController extends Controller
     public function actionAddiowgroup()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $name = trim(\Yii::$app->request->post('name', ''));
-        if (!$name) return ['error' => 'Name required'];
-        $db = \Yii::$app->db;
-        $exists = $db->createCommand("SELECT id FROM iow_groups WHERE name = :n", [':n' => $name])->queryScalar();
-        if ($exists) return ['error' => 'Group already exists', 'id' => (int)$exists];
-        $db->createCommand("INSERT INTO iow_groups (name) VALUES (:n)", [':n' => $name])->execute();
-        $id = (int)$db->lastInsertID;
-        return ['ok' => true, 'id' => $id];
+        try {
+            $name = trim(\Yii::$app->request->post('name', ''));
+            if (!$name) return ['error' => 'Name required'];
+            $db = \Yii::$app->db;
+            $exists = $db->createCommand("SELECT id FROM iow_groups WHERE name = :n", [':n' => $name])->queryScalar();
+            if ($exists) return ['error' => 'Group already exists', 'id' => (int)$exists];
+            $db->createCommand("INSERT INTO iow_groups (name) VALUES (:n)", [':n' => $name])->execute();
+            $id = (int)$db->lastInsertID;
+            return ['ok' => true, 'id' => $id];
+        } catch (\Exception $e) {
+            return ['error' => $e->getMessage()];
+        }
     }
 
     public function actionAddiow()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $groupId = (int)\Yii::$app->request->post('group_id');
-        $name    = trim(\Yii::$app->request->post('name', ''));
-        if (!$groupId) return ['error' => 'Group required'];
-        if (!$name)    return ['error' => 'Name required'];
-        $db = \Yii::$app->db;
-        $exists = $db->createCommand(
-            "SELECT id FROM iow_groups WHERE name = :n", [':n' => $name]
-        )->queryScalar();
-        if ($exists) return ['error' => 'IOW already exists', 'id' => (int)$exists];
-        $db->createCommand("INSERT INTO iow_groups (name) VALUES (:n)", [':n' => $name])->execute();
-        $iowId = (int)$db->lastInsertID;
-        /* link to group via workgroups_new for the current project */
-        $uid      = Yii::$app->user->Id;
-        $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
-        if ($projuser) {
-            $pid = (int)$projuser->projectid;
-            $now = date('Y-m-d H:i:s');
-            $db->createCommand(
-                "INSERT INTO workgroups_new
-                 (iowGroupid, worktypegroup, Project_Id, Added_On, Updated_On, Added_By,
-                  start_date, end_date, duration, progress, open, parent, itemtype, worktype, wbs_estimate_id)
-                 VALUES (:ig, :wg, :pid, :now, :now, :uid, :now, :now, 0, 0, 1, 0, 0, 0, 0)",
-                [':ig' => $iowId, ':wg' => $groupId, ':pid' => $pid, ':now' => $now, ':uid' => $uid]
-            )->execute();
+        try {
+            $groupId = (int)\Yii::$app->request->post('group_id');
+            $name    = trim(\Yii::$app->request->post('name', ''));
+            if (!$groupId) return ['error' => 'Group required'];
+            if (!$name)    return ['error' => 'Name required'];
+            $db = \Yii::$app->db;
+            $exists = $db->createCommand(
+                "SELECT id FROM iow_groups WHERE name = :n", [':n' => $name]
+            )->queryScalar();
+            if ($exists) return ['error' => 'IOW already exists', 'id' => (int)$exists];
+            $db->createCommand("INSERT INTO iow_groups (name) VALUES (:n)", [':n' => $name])->execute();
+            $iowId = (int)$db->lastInsertID;
+            $uid      = Yii::$app->user->Id;
+            $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
+            if ($projuser) {
+                $pid = (int)$projuser->projectid;
+                $now = date('Y-m-d H:i:s');
+                $db->createCommand(
+                    "INSERT INTO workgroups_new
+                     (iowGroupid, worktypegroup, Project_Id, Added_On, Updated_On, Added_By,
+                      start_date, end_date, duration, progress, open, parent, itemtype, worktype, wbs_estimate_id)
+                     VALUES (:ig, :wg, :pid, :now, :now, :uid, :now, :now, 0, 0, 1, 0, 0, 0, 0)",
+                    [':ig' => $iowId, ':wg' => $groupId, ':pid' => $pid, ':now' => $now, ':uid' => $uid]
+                )->execute();
+            }
+            return ['ok' => true, 'id' => $iowId];
+        } catch (\Exception $e) {
+            return ['error' => $e->getMessage()];
         }
-        return ['ok' => true, 'id' => $iowId];
     }
 
     public function actionAddactivitytype()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $iowId = (int)\Yii::$app->request->post('iow_id');
-        $name  = trim(\Yii::$app->request->post('name', ''));
-        $unit  = trim(\Yii::$app->request->post('unit', ''));
-        if (!$iowId) return ['error' => 'IOW required'];
-        if (!$name)  return ['error' => 'Name required'];
-        $db = \Yii::$app->db;
-        $db->createCommand(
-            "INSERT INTO iowactivities (IOW_Id, Name, Budgeted_Duration, End_Duration)
-             VALUES (:iow, :n, 0, 0)",
-            [':iow' => $iowId, ':n' => $name]
-        )->execute();
-        $id = (int)$db->lastInsertID;
-        return ['ok' => true, 'id' => $id];
+        try {
+            $iowId = (int)\Yii::$app->request->post('iow_id');
+            $name  = trim(\Yii::$app->request->post('name', ''));
+            $unit  = trim(\Yii::$app->request->post('unit', ''));
+            if (!$iowId) return ['error' => 'IOW required'];
+            if (!$name)  return ['error' => 'Name required'];
+            $db = \Yii::$app->db;
+            $db->createCommand(
+                "INSERT INTO iowactivities (IOW_Id, Name, Budgeted_Duration, End_Duration)
+                 VALUES (:iow, :n, 0, 0)",
+                [':iow' => $iowId, ':n' => $name]
+            )->execute();
+            $id = (int)$db->lastInsertID;
+            return ['ok' => true, 'id' => $id];
+        } catch (\Exception $e) {
+            return ['error' => $e->getMessage()];
+        }
     }
 
     public function actionWbsadd()
