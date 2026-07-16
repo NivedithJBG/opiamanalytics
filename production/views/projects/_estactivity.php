@@ -513,6 +513,23 @@ use app\models\Resources;
 /* Move modals to <body> so accordion overflow/z-index doesn't trap them */
 $('#alAddActivityPopup, #alProjTypePopup, #alIowGroupPopup, #alIowPopup, #alActTypePopup').appendTo('body');
 
+/* No accordion in this overlay — stop over_menu_projectmaster.js collapsing content on icon click */
+$(document).off('click', '.overNow4');
+$(document).on('click', '.navbar-nav .overNow4', function(e){
+    e.preventDefault();
+    $('.overNow4').toggleClass('active');
+    if($('.overNow4').hasClass('active')){
+        $('#project-title-head, #prjct_head, #procurement-title-head').html('Activity Library');
+        $('.menu4-popup-cntnr').addClass('active');
+        $('body').css('overflow-y','hidden');
+    } else {
+        $('#prjct_head').html('Operations');
+        $('#project-title-head').html('Projects');
+        $('.menu4-popup-cntnr').removeClass('active');
+        $('body').css('overflow-y','auto');
+    }
+});
+
 /* ── Project Type modal ── */
 $('#alProjTypePopup').on('shown.bs.modal', function(){
     $('#alProjTypeName').val('').focus();
