@@ -93,7 +93,7 @@ use app\models\Resources;
                             </div>
                             <div class="content-action-wrpr col-md-6 col-sm-6" style="white-space:nowrap;">
                                 <a href="#alIowGroupPopup" class="btn btn-default" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW Group</a>
-                                <a href="#alIowPopup" class="btn btn-default" data-toggle="modal" data-target="#alIowPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW</a>
+                                <a href="#alProjTypePopup" class="btn btn-default" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Project Type</a>
                                 <a href="#alActTypePopup" class="btn btn-default" data-toggle="modal" data-target="#alActTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Activity Type</a>
                                 <a href="#alAddActivityPopup" class="btn btn-primary" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities"><span class="icon-add"></span> Activity</a>
                                 <a href="#" class="btn btn-primary list-accountType" id="listestactivity"><span class="icon-th-list"></span> List</a>
@@ -383,6 +383,37 @@ use app\models\Resources;
     </div>
 </div>
 
+<!-- ── PROJECT TYPE MODAL ────────────────────────────────────────────── -->
+<div class="modal fade" id="alProjTypePopup">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" style="float:left;">Project Type</h4>
+                <button type="button" class="close" data-dismiss="modal" style="float:right;font-size:30px;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-2"></div>
+                    <div class="col-md-6">
+                        <label>Project Type</label>
+                        <input type="text" class="form-control" id="alProjTypeName" placeholder="Project Type">
+                        <span class="error" id="alProjTypeErr" style="color:red;display:none;"></span>
+                    </div>
+                    <div class="col-md-4" style="padding-top:25px;">
+                        <button type="button" class="btn btn-danger" id="alCancelProjType"><span class="icon-close"></span> Cancel</button>
+                        <button type="button" class="btn btn-primary" id="alSaveProjType"><span class="icon-check"></span> Add Project Type</button>
+                    </div>
+                </div>
+                <hr>
+                <div id="alProjTypeListContainer" class="row"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal" style="background:#e67e22;color:#fff;border-color:#d35400;"><span class="icon-close"></span> Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ── IOW GROUP MODAL ──────────────────────────────────────────────── -->
 <div class="modal fade" id="alIowGroupPopup">
     <div class="modal-dialog modal-lg">
@@ -491,7 +522,55 @@ use app\models\Resources;
 (function(){
 
 /* Move modals to <body> so accordion overflow/z-index doesn't trap them */
-$('#alAddActivityPopup, #alIowGroupPopup, #alIowPopup, #alActTypePopup').appendTo('body');
+$('#alAddActivityPopup, #alProjTypePopup, #alIowGroupPopup, #alIowPopup, #alActTypePopup').appendTo('body');
+
+/* ── Project Type modal ── */
+$('#alProjTypePopup').on('shown.bs.modal', function(){
+    $('#alProjTypeName').val('').focus();
+    $('#alProjTypeErr').hide();
+    alLoadProjTypeList();
+});
+
+$('#alCancelProjType').on('click', function(){
+    $('#alProjTypeName').val('');
+    $('#alProjTypeErr').hide();
+});
+
+function alLoadProjTypeList(){
+    $('#alProjTypeListContainer').html('<div class="col-md-12" style="padding:8px 15px;color:#999;">Loading…</div>');
+    $.ajax({
+        url: '<?php echo \yii\helpers\Url::to(["/projects/listworktype"]); ?>',
+        type: 'POST',
+        dataType: 'json',
+        data: { worktypename: '' },
+        success: function(data){
+            $('#alProjTypeListContainer').html(data.result || '<div class="col-md-12" style="padding:8px 15px;color:#999;">No project types yet.</div>');
+        }
+    });
+}
+
+$(document).on('click', '#alSaveProjType', function(){
+    var name = $('#alProjTypeName').val().trim();
+    if(!name){ $('#alProjTypeErr').html('Enter project type name').show(); return; }
+    $('#alProjTypeErr').hide();
+    var btn = $(this).prop('disabled', true);
+    $.ajax({
+        type: 'POST',
+        url: '<?php echo \yii\helpers\Url::to(["/projects/createworktype"]); ?>',
+        dataType: 'json',
+        data: { worktypename: name },
+        success: function(data){
+            btn.prop('disabled', false);
+            if(data.error === 'No'){
+                $('#alProjTypeName').val('');
+                alLoadProjTypeList();
+            } else {
+                $('#alProjTypeErr').html(data.errortext || 'Could not save.').show();
+            }
+        },
+        error: function(){ btn.prop('disabled', false); alert('Server error.'); }
+    });
+});
 
 /* ── Add Activity modal ── */
 $('#alAddActivityPopup').on('shown.bs.modal', function(){
