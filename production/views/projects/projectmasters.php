@@ -24,12 +24,9 @@ $(function(){
 				</div>
 				<!--<div style="text-align: center;"><b><h4>Project Master</h4></b></div>-->
 				<div class="col-md-12">
-					<div class="panel-group acco-one-active" id="accordionpromasterind">
-
 					<?php //echo $this->render('_projects'); ?>
 					<?php echo $this->render('_estactivity'); ?>
 					<?php //echo $this->render('_resourceallocation'); ?><!-- tab copy inside _estactivity -->
-					</div>
 				</div>
 			</div>
 		</div>

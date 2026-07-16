@@ -57,7 +57,7 @@ use app\models\Resources;
 
        
     </script>
-    <div id="collapsemasteract" class="tab-content cOrder-body">
+    <div id="collapsemasteract">
         <div class="panel-body">
 
                     <div class="search-and-content-wrpr">
