@@ -61,9 +61,9 @@ use app\models\Resources;
         <div class="panel-body">
 
                     <div class="search-and-content-wrpr">
-                        <div class="search-and-actions-wrpr row" id="AR-allocate-body-one-head" style="display:flex;align-items:center;margin:0;padding:4px 0;">
+                        <div class="search-and-actions-wrpr row" id="AR-allocate-body-one-head" style="display:flex !important;align-items:center;margin:0;padding:4px 0;">
 
-                            <div class="content-action-wrpr col-md-8 col-sm-8" style="white-space:nowrap;text-align:left;padding:0;margin:0;justify-content:flex-start !important;">
+                            <div class="content-action-wrpr col-md-8 col-sm-8" style="display:flex !important;white-space:nowrap;text-align:left;padding:0;margin:0;justify-content:flex-start !important;">
                                 <a href="#alProjTypePopup" class="btn btn-default" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Project Type</a>
                                 <a href="#alIowGroupPopup" class="btn btn-default" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW Group</a>
                                 <a href="#alActTypePopup" class="btn btn-default" data-toggle="modal" data-target="#alActTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Activity Type</a>
@@ -512,6 +512,12 @@ use app\models\Resources;
 
 /* Move modals to <body> so accordion overflow/z-index doesn't trap them */
 $('#alAddActivityPopup, #alProjTypePopup, #alIowGroupPopup, #alIowPopup, #alActTypePopup').appendTo('body');
+
+/* Restore action bar whenever Add Activity modal closes (estactivity.js hides it on #addestactivity click) */
+$('#alAddActivityPopup').on('hidden.bs.modal', function(){
+    $('.search-and-actions-wrpr').css('display','flex');
+    $('.content-action-wrpr').css('display','flex');
+});
 
 /* ── Project Type modal ── */
 $('#alProjTypePopup').on('shown.bs.modal', function(){
