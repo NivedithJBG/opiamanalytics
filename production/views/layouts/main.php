@@ -2267,7 +2267,7 @@ if($action=='login')
           <div class="qe-field wide">
             <span class="qe-label">Activity</span>
             <select id="qe-activity" class="qe-select">
-              <option value="">— Select Project Type &amp; Group first —</option>
+              <option value="">— Select Activity —</option>
             </select>
           </div>
         </div>
@@ -2430,7 +2430,7 @@ function loadProjTypes(){
 function loadGroups(typeId){
   var sel = document.getElementById('qe-group');
   sel.innerHTML = '<option value="">— Select Group —</option>';
-  document.getElementById('qe-activity').innerHTML = '<option value="">— Select Project Type &amp; Group first —</option>';
+  document.getElementById('qe-activity').innerHTML = '<option value="">— Select Activity —</option>';
   if(!typeId) return;
   $.ajax({
     type:'POST', url:'../projectsmain/getwbgrouplist', dataType:'json',
@@ -2448,7 +2448,7 @@ function loadGroups(typeId){
 function loadActivities(typeId, groupId){
   var sel = document.getElementById('qe-activity');
   sel.innerHTML = '<option value="">— Loading… —</option>';
-  if(!typeId && !groupId){ sel.innerHTML = '<option value="">— Select Project Type &amp; Group first —</option>'; return; }
+  if(!typeId && !groupId){ sel.innerHTML = '<option value="">— Select Activity —</option>'; return; }
   $.ajax({
     type:'POST', url:'../projectsmain/getactivitiesbytypeandgroup', dataType:'json',
     data:{typeId: typeId, groupId: groupId},
