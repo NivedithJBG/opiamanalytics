@@ -627,26 +627,46 @@ class ProjectsmainController extends Controller
     public function actionWbsget()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $saId = (int)\Yii::$app->request->post('sa_id', 0);
-        if (!$saId) return ['error' => 'No id'];
+        $saId  = (int)\Yii::$app->request->post('sa_id', 0);
+        $wanId = (int)\Yii::$app->request->post('wan_id', 0);
+        if (!$saId && !$wanId) return ['error' => 'No id'];
         $db = \Yii::$app->db;
 
-        // scheduleactivities row
-        $sa = $db->createCommand(
-            "SELECT sa.*, wga.activity_Id AS iow_act_id, wga.activitytype_id, wga.wbs_id,
-                    wga.activity_Unit AS est_unit, wga.estimate AS est_qty, wga.amount AS est_amt,
-                    wga.cycle_Unit AS sch_unit, wga.cycle_Quantity AS sch_qty,
-                    wg.iowGroupid, wg.Name AS iow_group_name,
-                    ig.name AS iow_group_name2,
-                    ea.activity_name, ea.activity_unit
-             FROM scheduleactivities sa
-             LEFT JOIN workgroup_activities_new wga ON wga.id = sa.activity_id
-             LEFT JOIN workgroups_new wg ON wg.Workgroup_Id = wga.wbs_id
-             LEFT JOIN iow_groups ig ON ig.id = wg.iowGroupid
-             LEFT JOIN estimateactivities ea ON ea.activity_id = wga.activity_Id
-             WHERE sa.id = :id AND sa.status = 0 LIMIT 1",
-            [':id' => $saId]
-        )->queryOne();
+        // Look up via scheduleactivities (preferred) or directly via workgroup_activities_new
+        if ($saId) {
+            $sa = $db->createCommand(
+                "SELECT sa.name, sa.unit, sa.quantity,
+                        wga.activity_Id AS iow_act_id, wga.activitytype_id, wga.wbs_id,
+                        wga.activity_Unit AS est_unit, wga.estimate AS est_qty,
+                        wga.cycle_Unit AS sch_unit, wga.cycle_Quantity AS sch_qty,
+                        wg.iowGroupid, ig.name AS iow_group_name,
+                        ea.activity_name, ea.activity_unit
+                 FROM scheduleactivities sa
+                 LEFT JOIN workgroup_activities_new wga ON wga.id = sa.activity_id
+                 LEFT JOIN workgroups_new wg ON wg.Workgroup_Id = wga.wbs_id
+                 LEFT JOIN iow_groups ig ON ig.id = wg.iowGroupid
+                 LEFT JOIN estimateactivities ea ON ea.activity_id = wga.activity_Id
+                 WHERE sa.id = :id AND sa.status = 0 LIMIT 1",
+                [':id' => $saId]
+            )->queryOne();
+        } else {
+            // Fallback: look up directly from workgroup_activities_new (old bars without scheduleactivities row)
+            $sa = $db->createCommand(
+                "SELECT wga.activity_Name AS name, wga.activity_Unit AS unit,
+                        wga.estimate AS quantity,
+                        wga.activity_Id AS iow_act_id, wga.activitytype_id, wga.wbs_id,
+                        wga.activity_Unit AS est_unit, wga.estimate AS est_qty,
+                        wga.cycle_Unit AS sch_unit, wga.cycle_Quantity AS sch_qty,
+                        wg.iowGroupid, ig.name AS iow_group_name,
+                        ea.activity_name, ea.activity_unit
+                 FROM workgroup_activities_new wga
+                 LEFT JOIN workgroups_new wg ON wg.Workgroup_Id = wga.wbs_id
+                 LEFT JOIN iow_groups ig ON ig.id = wg.iowGroupid
+                 LEFT JOIN estimateactivities ea ON ea.activity_id = wga.activity_Id
+                 WHERE wga.id = :id LIMIT 1",
+                [':id' => $wanId]
+            )->queryOne();
+        }
         if (!$sa) return ['error' => 'Not found'];
 
         $iowActId = (int)($sa['iow_act_id'] ?? 0);
@@ -8553,6 +8573,7 @@ class ProjectsmainController extends Controller
         $itemId = (int)$_POST['itemId'];
         $rows = \Yii::$app->db->createCommand("
             SELECT sa.id, sa.name,
+                   sa.activity_id AS wan_id,
                    sa.start_date, sa.actual_start_date, sa.actual_end_date,
                    sa.old_duration, sa.quantity,
                    sa.scheduleitem_id, sa.critical_status,

@@ -2396,7 +2396,7 @@ if($action=='login')
 'use strict';
 
 /* ── open / close ── */
-function openModal(saId){
+function openModal(saId, wanId){
   document.getElementById('qe-bk').classList.add('qe-open');
   document.getElementById('qe-modal').classList.add('qe-open');
   var pname = (document.getElementById('selectedProject')||{}).value || '';
@@ -2404,11 +2404,11 @@ function openModal(saId){
   if(lbl && pname) lbl.textContent = '— ' + pname;
   loadProjTypes();
 
-  if(saId){
+  if(saId || wanId){
     /* editing existing bar — fetch and prefill */
     $.ajax({
       type:'POST', url:'../projectsmain/wbsget', dataType:'json',
-      data:{ sa_id: saId },
+      data:{ sa_id: saId || 0, wan_id: wanId || 0 },
       success: function(d){
         if(d.error) { addTaskRow(); loadResTypes(function(){ addResRow(); }); return; }
         _prefillModal(d);

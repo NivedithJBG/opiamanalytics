@@ -596,7 +596,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     actdur: actDur !== '' ? actDur : act.old_duration,
                     astart: aStart || act.actual_start_date,
                     aend:   aEndComputed || act.actual_end_date,
-                    rawId:  act.id
+                    rawId:  act.id,
+                    wanId:  act.wan_id
                   };
                   g.AddTaskItem(_ti);
                 }
@@ -2092,14 +2093,15 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     $(document).on('click', '.gtaskbarcontainer:not(.gplan)', function() {
       var idAttr = this.id || '';
       var pfx = 'gantt-containerbardiv_';
-      var rawId = null;
+      var rawId = null, wanId = null;
       if (idAttr.indexOf(pfx) === 0) {
         var tid = idAttr.slice(pfx.length);
         var cells = window._ganttActCells || {};
         var db = cells[tid];
         rawId = (db && db.rawId) ? db.rawId : null;
+        wanId = (db && db.wanId)  ? db.wanId  : null;
       }
-      if (typeof window.openQeModal === 'function') window.openQeModal(rawId || null);
+      if (typeof window.openQeModal === 'function') window.openQeModal(rawId || null, wanId || null);
     });
   })();
 
