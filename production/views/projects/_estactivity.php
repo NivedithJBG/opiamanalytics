@@ -532,6 +532,9 @@ use app\models\Resources;
 /* Move modals to <body> so accordion overflow/z-index doesn't trap them */
 $('#alAddActivityPopup, #alProjTypePopup, #alIowGroupPopup, #alIowPopup, #alActTypePopup').appendTo('body');
 
+/* Auto-open Project Type popup when Activity Library page loads */
+setTimeout(function(){ $('#alOpenProjTypePopup').trigger('click'); }, 400);
+
 /* Restore action bar whenever Add Activity modal closes (estactivity.js hides it on #addestactivity click) */
 $('#alAddActivityPopup').on('hidden.bs.modal', function(){
     $('.search-and-actions-wrpr').css('display','flex');
