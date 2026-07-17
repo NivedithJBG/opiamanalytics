@@ -2290,7 +2290,7 @@ if($action=='login')
           </div>
           <div class="qe-field xs">
             <span class="qe-label">Rate</span>
-            <input id="qe-rate" type="number" class="qe-input" placeholder="0.00" step="0.01">
+            <input id="qe-rate" type="number" class="qe-input" placeholder="0.00" step="0.01" readonly>
           </div>
           <div class="qe-field xs">
             <span class="qe-label">Amount</span>
@@ -2527,7 +2527,7 @@ function addTaskRow(){
   tr.innerHTML =
     '<td><input type="text" class="qe-task-name" placeholder="Task name"></td>'+
     '<td><input type="text" class="qe-task-unit" placeholder="Unit"></td>'+
-    '<td><input type="number" class="qe-task-prod" placeholder="0.00" step="0.001" min="0"></td>'+
+    '<td><input type="number" class="qe-task-prod" placeholder="0.00" step="0.01" min="0"></td>'+
     '<td><input type="number" class="qe-task-resunits" placeholder="1" step="1" min="1"></td>'+
     '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
   tbody.appendChild(tr);
@@ -2605,7 +2605,7 @@ function addResRow(){
     '<td><select class="qe-res-type">'+makeResTypeOptions()+'</select></td>'+
     '<td><select class="qe-res-group">'+makeResGroupOptions()+'</select></td>'+
     '<td><input type="text" class="qe-res-name" placeholder="Resource name"></td>'+
-    '<td><input type="number" class="qe-res-qty" placeholder="0" step="0.001"></td>'+
+    '<td><input type="number" class="qe-res-qty" value="1" step="0.001"></td>'+
     '<td><input type="number" class="qe-res-rate" placeholder="0.00" step="0.01"></td>'+
     '<td><input type="number" class="qe-res-amt" placeholder="0.00" readonly></td>'+
     '<td style="text-align:right;white-space:nowrap;">'+
@@ -2624,12 +2624,13 @@ function addResRow(){
   function calcAmt(){
     var q = parseFloat(qtyEl.value)||0, r = parseFloat(rateEl.value)||0;
     amtEl.value = (q*r).toFixed(2);
+    recalcEstRate();
   }
   qtyEl.addEventListener('input', calcAmt);
   rateEl.addEventListener('input', calcAmt);
 
   tr.querySelector('.qe-res-del').addEventListener('click', function(){
-    if(document.querySelectorAll('#qe-res-body tr').length > 1) tr.remove();
+    if(document.querySelectorAll('#qe-res-body tr').length > 1){ tr.remove(); recalcEstRate(); }
   });
 
   tr.querySelector('.qe-map-btn').addEventListener('click', function(){ openMapPopup(tr); });
@@ -2782,7 +2783,7 @@ document.addEventListener('DOMContentLoaded', function(){
             tr.innerHTML =
               '<td><input type="text" class="qe-task-name" value="'+task.task_name.replace(/"/g,'&quot;')+'" placeholder="Task name"></td>'+
               '<td><input type="text" class="qe-task-unit" value="'+task.task_unit.replace(/"/g,'&quot;')+'" placeholder="Unit"></td>'+
-              '<td><input type="number" class="qe-task-prod" value="'+task.productivity+'" placeholder="0.00" step="0.001" min="0"></td>'+
+              '<td><input type="number" class="qe-task-prod" value="'+parseFloat(task.productivity).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
               '<td><input type="number" class="qe-task-resunits" placeholder="1" step="1" min="1"></td>'+
               '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
             taskBody.appendChild(tr);
@@ -2816,24 +2817,36 @@ document.addEventListener('DOMContentLoaded', function(){
                   '<button class="qe-del-btn qe-res-del" title="Remove">&times;</button>'+
                 '</td>';
               tbody.appendChild(tr);
-              tr.querySelector('.qe-res-qty').addEventListener('input', function(){
-                var q = parseFloat(tr.querySelector('.qe-res-qty').value)||0;
-                var r = parseFloat(tr.querySelector('.qe-res-rate').value)||0;
-                tr.querySelector('.qe-res-amt').value = (q*r).toFixed(2);
-              });
-              tr.querySelector('.qe-res-rate').addEventListener('input', function(){
-                var q = parseFloat(tr.querySelector('.qe-res-qty').value)||0;
-                var r = parseFloat(tr.querySelector('.qe-res-rate').value)||0;
-                tr.querySelector('.qe-res-amt').value = (q*r).toFixed(2);
-              });
-              tr.querySelector('.qe-res-del').addEventListener('click', function(){ tr.remove(); });
+              function bindPrefillAmt(row){
+                function calcRow(){
+                  var q = parseFloat(row.querySelector('.qe-res-qty').value)||0;
+                  var r = parseFloat(row.querySelector('.qe-res-rate').value)||0;
+                  row.querySelector('.qe-res-amt').value = (q*r).toFixed(2);
+                  recalcEstRate();
+                }
+                row.querySelector('.qe-res-qty').addEventListener('input', calcRow);
+                row.querySelector('.qe-res-rate').addEventListener('input', calcRow);
+              }
+              bindPrefillAmt(tr);
+              tr.querySelector('.qe-res-del').addEventListener('click', function(){ tr.remove(); recalcEstRate(); });
               tr.querySelector('.qe-map-btn').addEventListener('click', function(){ openMapPopup(tr); });
             });
+            recalcEstRate();
           });
         });
       }
     });
   });
+
+  /* rate = sum of all resource amounts */
+  function recalcEstRate(){
+    var total = 0;
+    document.querySelectorAll('#qe-res-body .qe-res-amt').forEach(function(el){
+      total += parseFloat(el.value) || 0;
+    });
+    document.getElementById('qe-rate').value = total.toFixed(2);
+    calcActivityAmount();
+  }
 
   /* estimate amount = qty × rate */
   function calcActivityAmount(){
@@ -2842,7 +2855,6 @@ document.addEventListener('DOMContentLoaded', function(){
     document.getElementById('qe-amount').value = (q * r).toFixed(2);
   }
   document.getElementById('qe-qty').addEventListener('input', function(){ calcActivityAmount(); recalcDuration(); });
-  document.getElementById('qe-rate').addEventListener('input', calcActivityAmount);
   document.getElementById('qe-sch-qty').addEventListener('input', recalcDuration);
 
   /* add task row */
