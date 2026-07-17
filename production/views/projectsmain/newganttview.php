@@ -430,6 +430,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     var _actStatus = {};
     // Map from hashed task ID → raw DB values, used after Draw() to patch B. columns
     var _actCells = {};
+    window._ganttActCells = _actCells;
     // A. Duration/Start/End for group rows (WBS items and IOW groups) — separate to avoid clearing B. columns
     var _groupActDur   = {};
     var _groupActStart = {};
@@ -2016,7 +2017,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var pfx = 'gantt-containerbardiv_';
       if (idAttr.indexOf(pfx) !== 0) return null;
       var tid = idAttr.slice(pfx.length);
-      var db  = _actCells[tid];
+      var cells = _actCells || window._ganttActCells || {};
+      var db  = cells[tid];
       return (db && db.rawId) ? db.rawId : null;
     }
 
@@ -2088,7 +2090,15 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
     // Bar click — open WBS Quick Entry prefilled with saved data
     $(document).on('click', '.gtaskbarcontainer:not(.gplan)', function() {
-      var rawId = _getActIdFromBarDiv(this);
+      var idAttr = this.id || '';
+      var pfx = 'gantt-containerbardiv_';
+      var rawId = null;
+      if (idAttr.indexOf(pfx) === 0) {
+        var tid = idAttr.slice(pfx.length);
+        var cells = window._ganttActCells || {};
+        var db = cells[tid];
+        rawId = (db && db.rawId) ? db.rawId : null;
+      }
       if (typeof window.openQeModal === 'function') window.openQeModal(rawId || null);
     });
   })();
