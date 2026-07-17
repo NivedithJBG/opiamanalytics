@@ -22,7 +22,7 @@ $(function(){
 				<div class="icon-groups type"> 
 					<!-- <a href="#" title="Close" class="btn btn-primary text-button menu-win-close">&#10006; Close</a> -->
 				</div>
-				<!--<div style="text-align: center;"><b><h4>Project Master</h4></b></div>-->
+				<div style="padding:10px 20px 6px;"><h4 style="margin:0;font-weight:700;color:#1a202c;">Activity Library <small style="font-size:13px;font-weight:400;color:#888;">— choose to add</small></h4></div>
 				<div class="col-md-12">
 					<?php //echo $this->render('_projects'); ?>
 					<?php echo $this->render('_estactivity'); ?>
