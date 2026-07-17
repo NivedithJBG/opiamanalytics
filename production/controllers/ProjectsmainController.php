@@ -220,32 +220,51 @@ class ProjectsmainController extends Controller
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $activityId = (int)\Yii::$app->request->post('activity_id', 0);
-        if(!$activityId) return ['items' => [], 'tasks' => [], 'unit' => ''];
+        if(!$activityId) return ['items' => [], 'tasks' => [], 'unit' => '', 'rate' => 0, 'qty' => 0];
+        $db = \Yii::$app->db;
 
-        $activity = \Yii::$app->db->createCommand(
-            "SELECT activity_unit FROM estimateactivities WHERE activity_id = :aid"
+        $activity = $db->createCommand(
+            "SELECT activity_unit, activity_rate FROM estimateactivities WHERE activity_id = :aid LIMIT 1"
         )->bindValue(':aid', $activityId)->queryOne();
 
-        $resources = \Yii::$app->db->createCommand(
+        $resources = $db->createCommand(
             "SELECT ar.estactres_id, ar.est_resource_id, ar.est_resource_rate, ar.est_resource_quantity, ar.est_resource_amount,
-                    r.Name AS resource_name, r.Unit AS resource_unit, r.ResourceType_Id AS type_id, r.Resource_group_Id AS group_id,
-                    rt.Name AS type_name, rg.Resource_group_Name AS group_name
+                    r.Name AS resource_name, r.Unit AS resource_unit, r.ResourceType_Id AS type_id, r.Resource_group_Id AS group_id
              FROM estactivity_resources ar
              JOIN resources r ON r.Resource_Id = ar.est_resource_id
-             LEFT JOIN resourcetype rt ON rt.ResourceType_Id = r.ResourceType_Id
-             LEFT JOIN resource_group rg ON rg.Resource_group_Id = r.Resource_group_Id
              WHERE ar.estactivity_id = :aid AND ar.est_resource_status = 0
              ORDER BY ar.estactres_id ASC"
         )->bindValue(':aid', $activityId)->queryAll();
 
-        $tasks = \Yii::$app->db->createCommand(
+        $tasks = $db->createCommand(
             "SELECT task_name, task_unit, productivity FROM activity_tasks WHERE activity_id = :aid ORDER BY sort_order ASC, id ASC"
         )->bindValue(':aid', $activityId)->queryAll();
+
+        // estimate qty for this project
+        $uid      = \Yii::$app->user->Id;
+        $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
+        $pid      = $projuser ? (int)$projuser->projectid : 0;
+        $estQty   = 0.0;
+        if ($pid) {
+            $peRow = $db->createCommand(
+                "SELECT activity_qty FROM pricing_estimate_new
+                 WHERE activity_Id = :a AND project_Id = :p AND pricing_status = 0 LIMIT 1",
+                [':a' => $activityId, ':p' => $pid]
+            )->queryOne();
+            if ($peRow) $estQty = (float)$peRow['activity_qty'];
+        }
+
+        // calculated rate from resources
+        $calcRate = 0.0;
+        foreach ($resources as $r) { $calcRate += (float)$r['est_resource_rate'] * (float)$r['est_resource_quantity']; }
+        if (!$calcRate && $activity) $calcRate = (float)$activity['activity_rate'];
 
         return [
             'items' => $resources,
             'tasks' => $tasks,
             'unit'  => $activity ? $activity['activity_unit'] : '',
+            'rate'  => round($calcRate, 2),
+            'qty'   => $estQty,
         ];
     }
 
@@ -538,43 +557,105 @@ class ProjectsmainController extends Controller
             )->execute();
         }
 
-        // 6. Create workgroup_activities_new row
-        $lastSort = $db->createCommand(
-            "SELECT COALESCE(MAX(sortorder),0) AS s FROM workgroup_activities_new WHERE wbs_id=:w",
-            [':w' => $wgId]
-        )->queryOne();
-        $sortorder = ((int)($lastSort['s'] ?? 0)) + 1;
-
-        $db->createCommand(
-            "INSERT INTO workgroup_activities_new
-             (project_Id, wbs_id, worktype_Id, activitytype_id, activity_Id, activity_Unit,
-              estimate, amount, sortorder, type, activity_Name, process_Id, schedule, duration,
-              cycle_Unit, cycle_Quantity, pr_status, pricing_status, operations_status, wbs_estimate_id)
-             VALUES (:p, :w, 0, 0, :ia, :u, 1, :amt, :s, 0, :n, 0, 1, :d, :cu, :cq, 0, 0, 0, 0)",
-            [
-                ':p'   => $pid,
-                ':w'   => $wgId,
-                ':ia'  => $iowActId,
-                ':u'   => $unit ?: $schUnit,
-                ':amt' => round($qty * $rate, 2),
-                ':s'   => $sortorder,
-                ':n'   => $actName,
-                ':d'   => $duration,
-                ':cu'  => $schUnit,
-                ':cq'  => $schQty,
-            ]
-        )->execute();
-        $wanId = (int)$db->lastInsertID;
-
-        // 7. Save resources — stored alongside tasks in iowschmethedology as a second JSON row
-        if (!empty($resources)) {
-            $db->createCommand(
-                "INSERT INTO iowschmethedology (IOW_Id, methedologies, pro_estimate_id)
-                 VALUES (:iow, :data, 1)
-                 ON DUPLICATE KEY UPDATE methedologies = VALUES(methedologies)",
-                [':iow' => $iowActId, ':data' => json_encode($resources)]
-            )->execute();
+        // 6. Find existing workgroup_activities_new row or create new one
+        $wanRow = null;
+        if ($iowActId) {
+            $wanRow = $db->createCommand(
+                "SELECT id FROM workgroup_activities_new WHERE project_Id=:p AND activity_Id=:a AND wbs_id=:w LIMIT 1",
+                [':p' => $pid, ':a' => $iowActId, ':w' => $wgId]
+            )->queryOne();
         }
+
+        if ($wanRow) {
+            // update existing row with schedule unit/qty and amount
+            $wanId = (int)$wanRow['id'];
+            $db->createCommand(
+                "UPDATE workgroup_activities_new
+                 SET activity_Unit=:u, estimate=1, amount=:amt, duration=:d,
+                     cycle_Unit=:cu, cycle_Quantity=:cq, activity_Name=:n
+                 WHERE id=:id",
+                [
+                    ':u'   => $unit ?: $schUnit,
+                    ':amt' => round($qty * $rate, 2),
+                    ':d'   => $duration,
+                    ':cu'  => $schUnit,
+                    ':cq'  => $schQty,
+                    ':n'   => $actName,
+                    ':id'  => $wanId,
+                ]
+            )->execute();
+        } else {
+            $lastSort = $db->createCommand(
+                "SELECT COALESCE(MAX(sortorder),0) AS s FROM workgroup_activities_new WHERE wbs_id=:w",
+                [':w' => $wgId]
+            )->queryOne();
+            $sortorder = ((int)($lastSort['s'] ?? 0)) + 1;
+
+            $db->createCommand(
+                "INSERT INTO workgroup_activities_new
+                 (project_Id, wbs_id, worktype_Id, activitytype_id, activity_Id, activity_Unit,
+                  estimate, amount, sortorder, type, activity_Name, process_Id, schedule, duration,
+                  cycle_Unit, cycle_Quantity, pr_status, pricing_status, operations_status, wbs_estimate_id)
+                 VALUES (:p, :w, 0, 0, :ia, :u, 1, :amt, :s, 0, :n, 0, 1, :d, :cu, :cq, 0, 0, 0, 0)",
+                [
+                    ':p'   => $pid,
+                    ':w'   => $wgId,
+                    ':ia'  => $iowActId,
+                    ':u'   => $unit ?: $schUnit,
+                    ':amt' => round($qty * $rate, 2),
+                    ':s'   => $sortorder,
+                    ':n'   => $actName,
+                    ':d'   => $duration,
+                    ':cu'  => $schUnit,
+                    ':cq'  => $schQty,
+                ]
+            )->execute();
+            $wanId = (int)$db->lastInsertID;
+        }
+
+        // 7. Save resources to estactivity_resources (the real allocation table)
+        if (!empty($resources)) {
+            // mark existing rows inactive then re-insert
+            $db->createCommand(
+                "UPDATE estactivity_resources SET est_resource_status = 1 WHERE estactivity_id = :id",
+                [':id' => $iowActId]
+            )->execute();
+            foreach ($resources as $res) {
+                $resId  = (int)($res['resource_id'] ?? 0);
+                $resQty = (float)($res['qty']  ?? 0);
+                $resRate= (float)($res['rate'] ?? 0);
+                $resAmt = round($resQty * $resRate, 2);
+                if (!$resId) continue;
+                $db->createCommand(
+                    "INSERT INTO estactivity_resources
+                     (estactivity_id, est_resource_id, est_resource_quantity, est_resource_rate,
+                      est_resource_amount, est_resource_status, fuel_vendor_id, powerstatus)
+                     VALUES (:act, :res, :qty, :rate, :amt, 0, 0, 0)
+                     ON DUPLICATE KEY UPDATE
+                       est_resource_quantity = VALUES(est_resource_quantity),
+                       est_resource_rate     = VALUES(est_resource_rate),
+                       est_resource_amount   = VALUES(est_resource_amount),
+                       est_resource_status   = 0",
+                    [':act' => $iowActId, ':res' => $resId,
+                     ':qty' => $resQty, ':rate' => $resRate, ':amt' => $resAmt]
+                )->execute();
+            }
+        }
+
+        // 7b. Save estimate qty and rate to pricing_estimate_new
+        $calcRate = 0.0;
+        foreach ($resources as $res) { $calcRate += (float)($res['rate'] ?? 0) * (float)($res['qty'] ?? 0); }
+        $db->createCommand(
+            "INSERT INTO pricing_estimate_new
+             (project_Id, activity_Id, activity_qty, specific_rate, est_activity_Id,
+              pricing_status, operations_status, primavera_id)
+             VALUES (:p, :a, :qty, :rate, :ea, 0, 0, 0)
+             ON DUPLICATE KEY UPDATE
+               activity_qty  = VALUES(activity_qty),
+               specific_rate = VALUES(specific_rate)",
+            [':p' => $pid, ':a' => $iowActId, ':qty' => $qty,
+             ':rate' => round($calcRate, 2), ':ea' => $iowActId]
+        )->execute();
 
         // 8. Create scheduleactivities row
         $lastSchSort = $db->createCommand(
@@ -670,63 +751,93 @@ class ProjectsmainController extends Controller
         if (!$sa) return ['error' => 'Not found'];
 
         $iowActId = (int)($sa['iow_act_id'] ?? 0);
+        $uid      = \Yii::$app->user->Id;
+        $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
+        $pid      = $projuser ? (int)$projuser->projectid : 0;
 
-        // tasks
+        // tasks — from iowschmethedology linked to the activity
         $tasksRow = $db->createCommand(
             "SELECT methedologies FROM iowschmethedology WHERE IOW_Id = :id AND pro_estimate_id = 0 LIMIT 1",
             [':id' => $iowActId]
         )->queryOne();
         $tasks = ($tasksRow && $tasksRow['methedologies']) ? json_decode($tasksRow['methedologies'], true) : [];
 
-        // resources
-        $resRow = $db->createCommand(
-            "SELECT methedologies FROM iowschmethedology WHERE IOW_Id = :id AND pro_estimate_id = 1 LIMIT 1",
-            [':id' => $iowActId]
-        )->queryOne();
-        $resources = ($resRow && $resRow['methedologies']) ? json_decode($resRow['methedologies'], true) : [];
-
-        // enrich resources with type/group names
-        foreach ($resources as &$res) {
-            if (!empty($res['type_id'])) {
-                $rt = $db->createCommand("SELECT Name FROM resourcetype WHERE ResourceType_Id=:id", [':id' => $res['type_id']])->queryOne();
-                $res['type_name'] = $rt ? $rt['Name'] : '';
-            }
-            if (!empty($res['group_id'])) {
-                $rg = $db->createCommand("SELECT Resource_group_Name FROM resource_group WHERE Resource_group_Id=:id", [':id' => $res['group_id']])->queryOne();
-                $res['group_name'] = $rg ? $rg['Resource_group_Name'] : '';
+        // resources — from estactivity_resources (the real allocation table)
+        $resources = [];
+        if ($iowActId) {
+            $resRows = $db->createCommand(
+                "SELECT er.estactres_id, er.est_resource_id AS resource_id,
+                        r.Name AS resource_name, r.Unit AS resource_unit,
+                        r.ResourceType_Id AS type_id, r.Resource_group_Id AS group_id,
+                        er.est_resource_rate AS rate, er.est_resource_quantity AS qty,
+                        er.est_resource_amount AS amount
+                 FROM estactivity_resources er
+                 JOIN resources r ON r.Resource_Id = er.est_resource_id
+                 WHERE er.estactivity_id = :id AND er.est_resource_status = 0
+                 ORDER BY er.estactres_id ASC",
+                [':id' => $iowActId]
+            )->queryAll();
+            foreach ($resRows as $r) {
+                $resources[] = [
+                    'estactres_id' => (int)$r['estactres_id'],
+                    'resource_id'  => (int)$r['resource_id'],
+                    'type_id'      => (int)$r['type_id'],
+                    'group_id'     => (int)$r['group_id'],
+                    'rate'         => (float)$r['rate'],
+                    'qty'          => (float)$r['qty'],
+                    'amount'       => (float)$r['amount'],
+                ];
             }
         }
-        unset($res);
 
-        // proj type & activity type group — read from estimateactivities
-        // ea.work_type = estimateworktypes.estworktype_id (Project Type)
-        // ea.activity_type = estimateactivitytypes.activitytype_id (Group)
-        $projTypeId = 0; $actTypeId = 0;
+        // proj type, activity type, unit, rate — from estimateactivities
+        $projTypeId = 0; $actTypeId = 0; $estUnit = ''; $estRate = 0.0;
         if ($iowActId) {
-            $iat = $db->createCommand(
-                "SELECT ea.work_type AS proj_type_id, ea.activity_type AS act_type_id
-                 FROM estimateactivities ea
-                 WHERE ea.activity_id = :id LIMIT 1",
+            $ea = $db->createCommand(
+                "SELECT work_type AS proj_type_id, activity_type AS act_type_id,
+                        activity_unit AS unit, activity_rate AS rate
+                 FROM estimateactivities WHERE activity_id = :id LIMIT 1",
                 [':id' => $iowActId]
             )->queryOne();
-            if ($iat) {
-                $projTypeId = (int)($iat['proj_type_id'] ?? 0);
-                $actTypeId  = (int)($iat['act_type_id'] ?? 0);
+            if ($ea) {
+                $projTypeId = (int)$ea['proj_type_id'];
+                $actTypeId  = (int)$ea['act_type_id'];
+                $estUnit    = $ea['unit'] ?? '';
+                $estRate    = (float)$ea['rate'];
             }
         }
+
+        // estimate quantity — from pricing_estimate_new for this project + activity
+        $estQty = 0.0;
+        if ($iowActId && $pid) {
+            $peRow = $db->createCommand(
+                "SELECT activity_qty FROM pricing_estimate_new
+                 WHERE activity_Id = :a AND project_Id = :p AND pricing_status = 0 LIMIT 1",
+                [':a' => $iowActId, ':p' => $pid]
+            )->queryOne();
+            if ($peRow) $estQty = (float)$peRow['activity_qty'];
+        }
+
+        // if estQty still 0, fall back to workgroup_activities_new.estimate
+        if (!$estQty) $estQty = (float)($sa['est_qty'] ?? $sa['quantity'] ?? 0);
+
+        // calculated rate = sum of (resource rate × qty) — recalculated fresh
+        $calcRate = 0.0;
+        foreach ($resources as $r) { $calcRate += $r['rate'] * $r['qty']; }
+        if (!$calcRate) $calcRate = $estRate;
 
         return [
             'sa_id'          => $saId,
             'proj_type_id'   => $projTypeId,
             'act_type_id'    => $actTypeId,
             'iow_group_id'   => (int)($sa['iowGroupid'] ?? 0),
-            'iow_group_name' => $sa['iow_group_name2'] ?: $sa['iow_group_name'] ?: '',
+            'iow_group_name' => $sa['iow_group_name'] ?? '',
             'iow_act_id'     => $iowActId,
             'act_name'       => $sa['name'] ?? '',
-            'est_unit'       => $sa['est_unit'] ?? $sa['activity_unit'] ?? '',
-            'est_qty'        => (float)($sa['est_qty'] ?? $sa['quantity'] ?? 0),
-            'est_rate'       => 0,
-            'est_amt'        => 0,
+            'est_unit'       => $estUnit ?: ($sa['est_unit'] ?? $sa['activity_unit'] ?? ''),
+            'est_qty'        => $estQty,
+            'est_rate'       => round($calcRate, 2),
+            'est_amt'        => round($estQty * $calcRate, 2),
             'sch_unit'       => $sa['sch_unit'] ?? $sa['unit'] ?? '',
             'sch_qty'        => (float)($sa['sch_qty'] ?? $sa['quantity'] ?? 0),
             'duration'       => (int)($sa['duration'] ?? 0),
