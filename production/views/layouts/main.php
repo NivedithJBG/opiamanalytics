@@ -2124,6 +2124,22 @@ if($action=='login')
   flex-shrink:0;opacity:.9;
 }
 .qe-del-btn:hover{opacity:1;background:#ca6f1e}
+.qe-map-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:18px;height:18px;border-radius:50%;border:none;cursor:pointer;
+  background:#27ae60;color:#fff;font-size:10px;line-height:1;
+  flex-shrink:0;opacity:.9;
+}
+.qe-map-btn:hover{opacity:1;background:#1e8449}
+.qe-res-map-row td{padding:4px 6px 8px 6px;}
+.qe-map-panel{
+  background:#f0faf4;border:1px solid #a9dfbf;border-radius:4px;
+  padding:6px 10px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;
+}
+.qe-map-label{font-size:10px;font-weight:700;color:#1e8449;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;}
+.qe-map-tasks{display:flex;flex-wrap:wrap;gap:4px 10px;}
+.qe-map-chk{font-size:11px;color:#2d3748;display:flex;align-items:center;gap:3px;cursor:pointer;}
+.qe-map-chk input{cursor:pointer;accent-color:#27ae60;}
 
 /* Footer bar */
 #qe-footer{
@@ -2454,8 +2470,19 @@ function addResRow(){
     '<td><input type="number" class="qe-res-qty" placeholder="0" step="0.001"></td>'+
     '<td><input type="number" class="qe-res-rate" placeholder="0.00" step="0.01"></td>'+
     '<td><input type="number" class="qe-res-amt" placeholder="0.00" readonly></td>'+
-    '<td style="text-align:right"><button class="qe-del-btn qe-res-del" title="Remove">&times;</button></td>';
+    '<td style="text-align:right;white-space:nowrap;">'+
+      '<button class="qe-map-btn" title="Map to Tasks">&#x1F517;</button> '+
+      '<button class="qe-del-btn qe-res-del" title="Remove">&times;</button>'+
+    '</td>';
+
+  /* mapping row — hidden panel spanning all columns */
+  var mapTr = document.createElement('tr');
+  mapTr.className = 'qe-res-map-row';
+  mapTr.style.display = 'none';
+  mapTr.innerHTML = '<td colspan="7"><div class="qe-map-panel"><span class="qe-map-label">Map to tasks:</span><span class="qe-map-tasks"></span></div></td>';
+
   tbody.appendChild(tr);
+  tbody.appendChild(mapTr);
 
   var qtyEl  = tr.querySelector('.qe-res-qty');
   var rateEl = tr.querySelector('.qe-res-rate');
@@ -2466,8 +2493,38 @@ function addResRow(){
   }
   qtyEl.addEventListener('input', calcAmt);
   rateEl.addEventListener('input', calcAmt);
+
   tr.querySelector('.qe-res-del').addEventListener('click', function(){
-    if(document.querySelectorAll('#qe-res-body tr').length > 1) tr.remove();
+    if(document.querySelectorAll('#qe-res-body tr:not(.qe-res-map-row)').length > 1){
+      mapTr.remove(); tr.remove();
+    }
+  });
+
+  tr.querySelector('.qe-map-btn').addEventListener('click', function(){
+    var isOpen = mapTr.style.display !== 'none';
+    if(isOpen){ mapTr.style.display = 'none'; return; }
+    /* build task checkboxes from current task rows */
+    var tasksEl = mapTr.querySelector('.qe-map-tasks');
+    tasksEl.innerHTML = '';
+    var taskRows = document.querySelectorAll('#qe-task-body tr');
+    if(!taskRows.length){ tasksEl.innerHTML = '<em style="color:#999;font-size:11px;">No tasks added yet.</em>'; }
+    taskRows.forEach(function(ttr, idx){
+      var tname = ttr.querySelector('.qe-task-name') ? ttr.querySelector('.qe-task-name').value.trim() : '';
+      var label = tname || ('Task '+(idx+1));
+      var chk = document.createElement('label');
+      chk.className = 'qe-map-chk';
+      chk.innerHTML = '<input type="checkbox" value="'+idx+'"> '+label;
+      /* restore previous selection */
+      var prev = mapTr._taskMap || [];
+      if(prev.indexOf(idx) !== -1) chk.querySelector('input').checked = true;
+      chk.querySelector('input').addEventListener('change', function(){
+        var sel = [];
+        mapTr.querySelectorAll('.qe-map-chk input:checked').forEach(function(c){ sel.push(+c.value); });
+        mapTr._taskMap = sel;
+      });
+      tasksEl.appendChild(chk);
+    });
+    mapTr.style.display = '';
   });
 }
 
@@ -2501,15 +2558,18 @@ function collectPayload(){
     });
   });
   var resources = [];
-  document.querySelectorAll('#qe-res-body tr').forEach(function(tr){
+  document.querySelectorAll('#qe-res-body tr:not(.qe-res-map-row)').forEach(function(tr){
     var name = tr.querySelector('.qe-res-name') ? tr.querySelector('.qe-res-name').value.trim() : '';
     if(!name) return;
+    var mapTr = tr.nextElementSibling;
+    var taskMap = (mapTr && mapTr._taskMap) ? mapTr._taskMap : [];
     resources.push({
       group_id: tr.querySelector('.qe-res-group').value,
       type_id:  tr.querySelector('.qe-res-type').value,
       name:     name,
       qty:      parseFloat(tr.querySelector('.qe-res-qty').value)  || 0,
-      rate:     parseFloat(tr.querySelector('.qe-res-rate').value) || 0
+      rate:     parseFloat(tr.querySelector('.qe-res-rate').value) || 0,
+      task_map: taskMap
     });
   });
 
