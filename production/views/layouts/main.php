@@ -2135,15 +2135,74 @@ if($action=='login')
   flex-shrink:0;opacity:.9;
 }
 .qe-map-btn:hover{opacity:1;background:#1e8449}
-.qe-res-map-row td{padding:4px 6px 8px 6px;}
-.qe-map-panel{
-  background:#f0faf4;border:1px solid #a9dfbf;border-radius:4px;
-  padding:6px 10px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;
+.qe-map-btn.has-map{background:#1a7a42;box-shadow:0 0 0 2px #a9dfbf;}
+
+/* Task Mapping Popup */
+#qe-map-bk{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10100;}
+#qe-map-bk.open{display:block;}
+#qe-map-popup{
+  display:none;position:fixed;z-index:10101;
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  width:420px;max-width:92vw;max-height:80vh;
+  background:#fff;border-radius:0;
+  box-shadow:0 12px 40px rgba(0,0,0,.6);
+  flex-direction:column;overflow:hidden;
+  font-family:'Barlow',sans-serif;
 }
-.qe-map-label{font-size:10px;font-weight:700;color:#1e8449;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;}
-.qe-map-tasks{display:flex;flex-wrap:wrap;gap:4px 10px;}
-.qe-map-chk{font-size:11px;color:#2d3748;display:flex;align-items:center;gap:3px;cursor:pointer;}
-.qe-map-chk input{cursor:pointer;accent-color:#27ae60;}
+#qe-map-popup.open{display:flex;}
+#qe-map-hdr{
+  background:#1a3052;padding:12px 16px;flex-shrink:0;
+}
+#qe-map-title{
+  font-size:13px;font-weight:900;color:#e8f0fb;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+#qe-map-res-name{
+  font-size:11px;color:#7aacda;margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#qe-map-body{
+  flex:1;min-height:0;overflow-y:auto;padding:0;
+}
+#qe-map-no-tasks{
+  padding:30px 16px;text-align:center;
+}
+.qe-map-item{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 16px;border-bottom:1px solid #edf0f4;
+  cursor:pointer;transition:background .1s;
+}
+.qe-map-item:hover{background:#f0faf4;}
+.qe-map-item.selected{background:#e8f8ef;}
+.qe-map-item input[type=checkbox]{
+  width:16px;height:16px;flex-shrink:0;
+  accent-color:#27ae60;cursor:pointer;
+}
+.qe-map-item-idx{
+  width:22px;height:22px;border-radius:50%;
+  background:#e2e8f0;color:#4a5568;
+  font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.qe-map-item.selected .qe-map-item-idx{background:#27ae60;color:#fff;}
+.qe-map-item-name{font-size:13px;color:#1a202c;font-weight:600;flex:1;}
+.qe-map-item-unit{font-size:11px;color:#718096;}
+#qe-map-footer{
+  background:#f7f8fa;border-top:1px solid #dde;
+  padding:8px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0;
+}
+#qe-map-select-all,#qe-map-clear{
+  background:none;border:1px solid #a0aab8;color:#4a5568;
+  font-size:11px;font-weight:700;padding:4px 12px;cursor:pointer;border-radius:3px;
+}
+#qe-map-select-all:hover{background:#edf0f4;}
+#qe-map-clear:hover{background:#edf0f4;}
+#qe-map-done{
+  background:#27ae60;color:#fff;border:none;
+  font-size:12px;font-weight:700;padding:6px 20px;
+  cursor:pointer;border-radius:3px;
+}
+#qe-map-done:hover{background:#1e8449;}
 
 /* Footer bar */
 #qe-footer{
@@ -2306,6 +2365,28 @@ if($action=='login')
   </div>
 </div><!-- /qe-modal -->
 
+<!-- ── Task Mapping Popup ──────────────────────────────────────────────── -->
+<div id="qe-map-bk"></div>
+<div id="qe-map-popup">
+  <div id="qe-map-hdr">
+    <div id="qe-map-title">Map Resource to Tasks</div>
+    <div id="qe-map-res-name"></div>
+  </div>
+  <div id="qe-map-body">
+    <div id="qe-map-no-tasks" style="display:none;">
+      <div class="icon-info3" style="font-size:32px;color:#a0aab8;margin-bottom:8px;"></div>
+      <div style="color:#6b7a93;font-size:13px;">No tasks added yet.<br>Add tasks in the Tasks section first.</div>
+    </div>
+    <div id="qe-map-list"></div>
+  </div>
+  <div id="qe-map-footer">
+    <button id="qe-map-select-all">Select All</button>
+    <button id="qe-map-clear">Clear</button>
+    <div style="flex:1"></div>
+    <button id="qe-map-done">&#10003; Done</button>
+  </div>
+</div>
+
 <script>
 (function(){
 'use strict';
@@ -2464,9 +2545,62 @@ function makeResTypeOptions(){
   return html;
 }
 
+/* ── Task Map Popup ── */
+var _mapTargetTr = null;
+
+function openMapPopup(resTr){
+  _mapTargetTr = resTr;
+  var resName = resTr.querySelector('.qe-res-name').value.trim() || 'Resource';
+  document.getElementById('qe-map-res-name').textContent = resName;
+
+  var list = document.getElementById('qe-map-list');
+  var noTasks = document.getElementById('qe-map-no-tasks');
+  list.innerHTML = '';
+  var taskRows = document.querySelectorAll('#qe-task-body tr');
+
+  if(!taskRows.length){
+    noTasks.style.display = 'block'; list.style.display = 'none';
+  } else {
+    noTasks.style.display = 'none'; list.style.display = 'block';
+    var prev = resTr._taskMap || [];
+    taskRows.forEach(function(ttr, idx){
+      var tname = (ttr.querySelector('.qe-task-name')||{}).value || '';
+      tname = tname.trim() || ('Task '+(idx+1));
+      var tunit = (ttr.querySelector('.qe-task-unit')||{}).value || '';
+      var sel = prev.indexOf(idx) !== -1;
+      var item = document.createElement('div');
+      item.className = 'qe-map-item' + (sel ? ' selected' : '');
+      item.innerHTML =
+        '<input type="checkbox" value="'+idx+'"'+(sel?' checked':'')+'>'+
+        '<div class="qe-map-item-idx">'+(idx+1)+'</div>'+
+        '<div class="qe-map-item-name">'+tname+'</div>'+
+        (tunit ? '<div class="qe-map-item-unit">'+tunit+'</div>' : '');
+      var chk = item.querySelector('input');
+      function toggle(){
+        chk.checked = !chk.checked;
+        item.classList.toggle('selected', chk.checked);
+      }
+      item.addEventListener('click', function(e){
+        if(e.target !== chk) toggle(); else item.classList.toggle('selected', chk.checked);
+      });
+      list.appendChild(item);
+    });
+  }
+
+  document.getElementById('qe-map-bk').classList.add('open');
+  document.getElementById('qe-map-popup').classList.add('open');
+}
+
+function closeMapPopup(){
+  document.getElementById('qe-map-bk').classList.remove('open');
+  document.getElementById('qe-map-popup').classList.remove('open');
+  _mapTargetTr = null;
+}
+
 function addResRow(){
   var tbody = document.getElementById('qe-res-body');
   var tr = document.createElement('tr');
+  tr._taskMap = [];
   tr.innerHTML =
     '<td><select class="qe-res-type">'+makeResTypeOptions()+'</select></td>'+
     '<td><select class="qe-res-group">'+makeResGroupOptions()+'</select></td>'+
@@ -2478,15 +2612,7 @@ function addResRow(){
       '<button class="qe-map-btn" title="Map to Tasks">&#x1F517;</button> '+
       '<button class="qe-del-btn qe-res-del" title="Remove">&times;</button>'+
     '</td>';
-
-  /* mapping row — hidden panel spanning all columns */
-  var mapTr = document.createElement('tr');
-  mapTr.className = 'qe-res-map-row';
-  mapTr.style.display = 'none';
-  mapTr.innerHTML = '<td colspan="7"><div class="qe-map-panel"><span class="qe-map-label">Map to tasks:</span><span class="qe-map-tasks"></span></div></td>';
-
   tbody.appendChild(tr);
-  tbody.appendChild(mapTr);
 
   /* scroll body so new row is visible */
   var body = document.getElementById('qe-body');
@@ -2503,37 +2629,10 @@ function addResRow(){
   rateEl.addEventListener('input', calcAmt);
 
   tr.querySelector('.qe-res-del').addEventListener('click', function(){
-    if(document.querySelectorAll('#qe-res-body tr:not(.qe-res-map-row)').length > 1){
-      mapTr.remove(); tr.remove();
-    }
+    if(document.querySelectorAll('#qe-res-body tr').length > 1) tr.remove();
   });
 
-  tr.querySelector('.qe-map-btn').addEventListener('click', function(){
-    var isOpen = mapTr.style.display !== 'none';
-    if(isOpen){ mapTr.style.display = 'none'; return; }
-    /* build task checkboxes from current task rows */
-    var tasksEl = mapTr.querySelector('.qe-map-tasks');
-    tasksEl.innerHTML = '';
-    var taskRows = document.querySelectorAll('#qe-task-body tr');
-    if(!taskRows.length){ tasksEl.innerHTML = '<em style="color:#999;font-size:11px;">No tasks added yet.</em>'; }
-    taskRows.forEach(function(ttr, idx){
-      var tname = ttr.querySelector('.qe-task-name') ? ttr.querySelector('.qe-task-name').value.trim() : '';
-      var label = tname || ('Task '+(idx+1));
-      var chk = document.createElement('label');
-      chk.className = 'qe-map-chk';
-      chk.innerHTML = '<input type="checkbox" value="'+idx+'"> '+label;
-      /* restore previous selection */
-      var prev = mapTr._taskMap || [];
-      if(prev.indexOf(idx) !== -1) chk.querySelector('input').checked = true;
-      chk.querySelector('input').addEventListener('change', function(){
-        var sel = [];
-        mapTr.querySelectorAll('.qe-map-chk input:checked').forEach(function(c){ sel.push(+c.value); });
-        mapTr._taskMap = sel;
-      });
-      tasksEl.appendChild(chk);
-    });
-    mapTr.style.display = '';
-  });
+  tr.querySelector('.qe-map-btn').addEventListener('click', function(){ openMapPopup(tr); });
 }
 
 /* ── clear activity fields (keeps Project Type, Group, IOW, Activity selections) ── */
@@ -2566,18 +2665,16 @@ function collectPayload(){
     });
   });
   var resources = [];
-  document.querySelectorAll('#qe-res-body tr:not(.qe-res-map-row)').forEach(function(tr){
+  document.querySelectorAll('#qe-res-body tr').forEach(function(tr){
     var name = tr.querySelector('.qe-res-name') ? tr.querySelector('.qe-res-name').value.trim() : '';
     if(!name) return;
-    var mapTr = tr.nextElementSibling;
-    var taskMap = (mapTr && mapTr._taskMap) ? mapTr._taskMap : [];
     resources.push({
       group_id: tr.querySelector('.qe-res-group').value,
       type_id:  tr.querySelector('.qe-res-type').value,
       name:     name,
       qty:      parseFloat(tr.querySelector('.qe-res-qty').value)  || 0,
       rate:     parseFloat(tr.querySelector('.qe-res-rate').value) || 0,
-      task_map: taskMap
+      task_map: tr._taskMap || []
     });
   });
 
@@ -2623,10 +2720,36 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   });
 
-  /* close */
+  /* close WBS modal */
   document.getElementById('qe-close').addEventListener('click', closeModal);
   document.getElementById('qe-close-btn').addEventListener('click', closeModal);
   document.getElementById('qe-bk').addEventListener('click', closeModal);
+
+  /* task map popup */
+  document.getElementById('qe-map-bk').addEventListener('click', closeMapPopup);
+  document.getElementById('qe-map-done').addEventListener('click', function(){
+    if(!_mapTargetTr) return;
+    var sel = [];
+    document.querySelectorAll('#qe-map-list .qe-map-item input:checked').forEach(function(c){ sel.push(+c.value); });
+    _mapTargetTr._taskMap = sel;
+    /* update button style to show mapping exists */
+    var btn = _mapTargetTr.querySelector('.qe-map-btn');
+    btn.classList.toggle('has-map', sel.length > 0);
+    btn.title = sel.length > 0 ? 'Mapped to '+sel.length+' task(s) — click to edit' : 'Map to Tasks';
+    closeMapPopup();
+  });
+  document.getElementById('qe-map-select-all').addEventListener('click', function(){
+    document.querySelectorAll('#qe-map-list .qe-map-item').forEach(function(item){
+      item.querySelector('input').checked = true;
+      item.classList.add('selected');
+    });
+  });
+  document.getElementById('qe-map-clear').addEventListener('click', function(){
+    document.querySelectorAll('#qe-map-list .qe-map-item').forEach(function(item){
+      item.querySelector('input').checked = false;
+      item.classList.remove('selected');
+    });
+  });
 
   /* cascade: Project Type → Groups + reload Activities */
   document.getElementById('qe-proj-type').addEventListener('change', function(){
