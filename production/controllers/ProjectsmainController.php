@@ -661,20 +661,20 @@ class ProjectsmainController extends Controller
         }
         unset($res);
 
-        // proj type & activity type group
+        // proj type & activity type group — read from estimateactivities
+        // ea.work_type = estimateworktypes.estworktype_id (Project Type)
+        // ea.activity_type = estimateactivitytypes.activitytype_id (Group)
         $projTypeId = 0; $actTypeId = 0;
         if ($iowActId) {
             $iat = $db->createCommand(
-                "SELECT wga.activitytype_id,
-                        aty.project_type_id
-                 FROM workgroup_activities_new wga
-                 LEFT JOIN estimateactivitytypes aty ON aty.id = wga.activitytype_id
-                 WHERE wga.activity_Id = :id LIMIT 1",
+                "SELECT ea.work_type AS proj_type_id, ea.activity_type AS act_type_id
+                 FROM estimateactivities ea
+                 WHERE ea.activity_id = :id LIMIT 1",
                 [':id' => $iowActId]
             )->queryOne();
             if ($iat) {
-                $actTypeId  = (int)($iat['activitytype_id'] ?? 0);
-                $projTypeId = (int)($iat['project_type_id'] ?? 0);
+                $projTypeId = (int)($iat['proj_type_id'] ?? 0);
+                $actTypeId  = (int)($iat['act_type_id'] ?? 0);
             }
         }
 
