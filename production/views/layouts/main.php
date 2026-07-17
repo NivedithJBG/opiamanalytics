@@ -2064,10 +2064,14 @@ if($action=='login')
 #qe-modal.qe-open{display:flex}
 #qe-hdr{display:none}
 #qe-close{display:none}
-#qe-body{flex:1;min-height:0;overflow-y:auto;padding:0 20px 20px;display:flex;flex-direction:column;gap:0}
+#qe-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 20px 20px;display:flex;flex-direction:column;gap:0;scroll-behavior:smooth;}
+#qe-body::-webkit-scrollbar{width:5px}
+#qe-body::-webkit-scrollbar-track{background:#f1f1f1}
+#qe-body::-webkit-scrollbar-thumb{background:#a0aab8;border-radius:3px}
+#qe-body::-webkit-scrollbar-thumb:hover{background:#6b7a93}
 
 /* Section wrapper */
-.qe-section{background:#fff;border-radius:0;border:none;margin-bottom:0;overflow:hidden}
+.qe-section{background:#fff;border-radius:0;border:none;margin-bottom:0;overflow:visible}
 .qe-section+.qe-section{margin-top:0}
 .qe-sec-hdr{display:none}
 .qe-sec-body{padding:14px 16px}
@@ -2483,6 +2487,10 @@ function addResRow(){
 
   tbody.appendChild(tr);
   tbody.appendChild(mapTr);
+
+  /* scroll body so new row is visible */
+  var body = document.getElementById('qe-body');
+  if(body) setTimeout(function(){ body.scrollTop = body.scrollHeight; }, 50);
 
   var qtyEl  = tr.querySelector('.qe-res-qty');
   var rateEl = tr.querySelector('.qe-res-rate');
