@@ -498,7 +498,7 @@ use app\models\Resources;
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title" style="float:left;">Add Activity Type</h4>
+                <h4 class="modal-title" style="float:left;"></h4>
                 <button type="button" class="close" data-dismiss="modal" style="float:right;font-size:30px;">&times;</button>
             </div>
             <div class="modal-body">
