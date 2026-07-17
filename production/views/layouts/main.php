@@ -2292,11 +2292,11 @@ if($action=='login')
             <span class="qe-label">Quantity</span>
             <input id="qe-qty" type="number" class="qe-input qe-needs-data" placeholder="0" step="0.001">
           </div>
-          <div class="qe-field sm">
+          <div class="qe-field xs">
             <span class="qe-label">Rate</span>
             <input id="qe-rate" type="number" class="qe-input" placeholder="0.00" step="0.01" readonly>
           </div>
-          <div class="qe-field sm">
+          <div class="qe-field" style="flex:0 0 120px;">
             <span class="qe-label">Amount</span>
             <input id="qe-amount" type="number" class="qe-input" placeholder="0.00" readonly>
           </div>
