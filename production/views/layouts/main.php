@@ -2094,13 +2094,7 @@ if($action=='login')
 .qe-input[readonly]{background:#f5f5f5;color:#555;cursor:default}
 .qe-needs-data{border-color:#e53e3e !important;}
 .qe-repeat-tbl td input,.qe-repeat-tbl td select{font-weight:700;}
-.qe-repeat-tbl td input.qe-task-name,
-.qe-repeat-tbl td input.qe-task-unit,
-.qe-repeat-tbl td input.qe-task-prod,
-.qe-repeat-tbl td input.qe-task-resunits,
-.qe-repeat-tbl td input.qe-res-name,
-.qe-repeat-tbl td input.qe-res-qty,
-.qe-repeat-tbl td input.qe-res-rate{border:1px solid #e53e3e;}
+.qe-repeat-tbl td input,.qe-repeat-tbl td select{height:32px;}
 .qe-repeat-tbl td input.qe-res-amt{border:1px solid #a0aab8;}
 .qe-persist-note{font-size:9px;color:#888;font-style:italic;margin-top:2px}
 
@@ -2864,14 +2858,6 @@ document.addEventListener('DOMContentLoaded', function(){
     if(!el) return;
     el.addEventListener('change', function(){ if(this.value.trim()) this.classList.remove('qe-needs-data'); else this.classList.add('qe-needs-data'); });
     el.addEventListener('input',  function(){ if(this.value.trim()) this.classList.remove('qe-needs-data'); else this.classList.add('qe-needs-data'); });
-  });
-  /* also clear task/resource row red border on input */
-  document.addEventListener('input', function(e){
-    var el = e.target;
-    if(el.matches('.qe-task-name,.qe-task-unit,.qe-task-prod,.qe-task-resunits,.qe-res-name,.qe-res-qty,.qe-res-rate')){
-      if(el.value.trim()) el.style.borderColor = '#a0aab8';
-      else el.style.borderColor = '#e53e3e';
-    }
   });
 
   /* estimate amount = qty × rate */
