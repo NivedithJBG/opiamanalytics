@@ -2275,8 +2275,8 @@ if($action=='login')
         <table class="qe-repeat-tbl" id="qe-res-tbl">
           <thead>
             <tr>
-              <th style="width:18%">Resource Group</th>
               <th style="width:18%">Resource Type</th>
+              <th style="width:18%">Resource Group</th>
               <th style="width:22%">Resource Name</th>
               <th style="width:10%">Quantity</th>
               <th style="width:12%">Rate</th>
@@ -2464,8 +2464,8 @@ function addResRow(){
   var tbody = document.getElementById('qe-res-body');
   var tr = document.createElement('tr');
   tr.innerHTML =
-    '<td><select class="qe-res-group">'+makeResGroupOptions()+'</select></td>'+
     '<td><select class="qe-res-type">'+makeResTypeOptions()+'</select></td>'+
+    '<td><select class="qe-res-group">'+makeResGroupOptions()+'</select></td>'+
     '<td><input type="text" class="qe-res-name" placeholder="Resource name"></td>'+
     '<td><input type="number" class="qe-res-qty" placeholder="0" step="0.001"></td>'+
     '<td><input type="number" class="qe-res-rate" placeholder="0.00" step="0.01"></td>'+
