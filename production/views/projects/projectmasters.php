@@ -5,7 +5,7 @@ $(function(){
     if (!$('.overNow4').hasClass('active')) {
         $('.menu4-popup-cntnr').addClass('active');
         $('body').css('overflow-y','hidden');
-        $('#project-title-head, #prjct_head, #procurement-title-head').html('Activity Library');
+        $('#project-title-head, #prjct_head, #procurement-title-head').html('Activity Resource Allocation');
         $('.overNow4').addClass('active');
     }
 });
