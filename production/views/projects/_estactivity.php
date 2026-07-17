@@ -396,9 +396,9 @@ use app\models\Resources;
 <div class="modal fade" id="alProjTypePopup">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title" style="float:left;">Activity Library <small style="font-size:13px;font-weight:400;color:#888;">— choose to add</small></h4>
-                <button type="button" class="close" data-dismiss="modal" style="float:right;font-size:30px;">&times;</button>
+            <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;">
+                <h4 class="modal-title" style="margin:0;">Activity Library <small style="font-size:13px;font-weight:400;color:#888;">— choose to add</small></h4>
+                <button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin:0;">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="row">
