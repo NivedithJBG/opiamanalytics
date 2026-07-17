@@ -2259,12 +2259,13 @@ if($action=='login')
         <table class="qe-repeat-tbl" id="qe-res-tbl">
           <thead>
             <tr>
-              <th style="width:20%">Resource Type</th>
-              <th style="width:28%">Resource Name</th>
-              <th style="width:12%">Quantity</th>
-              <th style="width:14%">Rate</th>
-              <th style="width:14%">Amount</th>
-              <th style="width:12%;text-align:right">
+              <th style="width:18%">Resource Group</th>
+              <th style="width:18%">Resource Type</th>
+              <th style="width:22%">Resource Name</th>
+              <th style="width:10%">Quantity</th>
+              <th style="width:12%">Rate</th>
+              <th style="width:12%">Amount</th>
+              <th style="width:8%;text-align:right">
                 <button class="qe-add-btn" id="qe-res-add" title="Add resource row">+</button>
               </th>
             </tr>
@@ -2298,7 +2299,7 @@ function openModal(){
   if(lbl && pname) lbl.textContent = '— ' + pname;
   loadProjTypes();
   if(!document.querySelector('#qe-task-body tr')) addTaskRow();
-  if(!document.querySelector('#qe-res-body tr'))  { loadResTypes(function(){ addResRow(); }); }
+  if(!document.querySelector('#qe-res-body tr'))  { loadResGroups(function(){ loadResTypes(function(){ addResRow(); }); }); }
   recalcDuration();
 }
 window.openQeModal    = openModal;
@@ -2382,6 +2383,23 @@ function recalcDuration(){
   return duration;
 }
 
+/* ── Resource Groups ── */
+var _resGroups = [];
+var _resGroupsLoaded = false;
+function loadResGroups(cb){
+  if(_resGroupsLoaded){ if(cb) cb(); return; }
+  $.ajax({
+    type:'POST', url:'../projectsmain/getresgrouplist', dataType:'json',
+    success: function(d){ _resGroups = d.items || []; _resGroupsLoaded = true; if(cb) cb(); },
+    error: function(){ _resGroupsLoaded = true; if(cb) cb(); }
+  });
+}
+function makeResGroupOptions(){
+  var html = '<option value="">— Group —</option>';
+  _resGroups.forEach(function(g){ html += '<option value="'+g.id+'">'+g.name+'</option>'; });
+  return html;
+}
+
 /* ── Resource Types ── */
 var _resTypes = [];
 var _resTypesLoaded = false;
@@ -2430,6 +2448,7 @@ function addResRow(){
   var tbody = document.getElementById('qe-res-body');
   var tr = document.createElement('tr');
   tr.innerHTML =
+    '<td><select class="qe-res-group">'+makeResGroupOptions()+'</select></td>'+
     '<td><select class="qe-res-type">'+makeResTypeOptions()+'</select></td>'+
     '<td><input type="text" class="qe-res-name" placeholder="Resource name"></td>'+
     '<td><input type="number" class="qe-res-qty" placeholder="0" step="0.001"></td>'+
@@ -2464,7 +2483,7 @@ function clearActivityFields(){
   document.getElementById('qe-task-body').innerHTML = '';
   document.getElementById('qe-res-body').innerHTML  = '';
   addTaskRow();
-  loadResTypes(function(){ addResRow(); });
+  loadResGroups(function(){ loadResTypes(function(){ addResRow(); }); });
   recalcDuration();
 }
 
@@ -2486,10 +2505,11 @@ function collectPayload(){
     var name = tr.querySelector('.qe-res-name') ? tr.querySelector('.qe-res-name').value.trim() : '';
     if(!name) return;
     resources.push({
-      type_id: tr.querySelector('.qe-res-type').value,
-      name:    name,
-      qty:     parseFloat(tr.querySelector('.qe-res-qty').value)  || 0,
-      rate:    parseFloat(tr.querySelector('.qe-res-rate').value) || 0
+      group_id: tr.querySelector('.qe-res-group').value,
+      type_id:  tr.querySelector('.qe-res-type').value,
+      name:     name,
+      qty:      parseFloat(tr.querySelector('.qe-res-qty').value)  || 0,
+      rate:     parseFloat(tr.querySelector('.qe-res-rate').value) || 0
     });
   });
 
@@ -2566,7 +2586,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   /* add resource row */
   document.getElementById('qe-res-add').addEventListener('click', function(){
-    if(_resTypesLoaded){ addResRow(); } else { loadResTypes(function(){ addResRow(); }); }
+    loadResGroups(function(){ loadResTypes(function(){ addResRow(); }); });
   });
 
   /* ── Add to Gantt ── */

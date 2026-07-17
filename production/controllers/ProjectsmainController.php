@@ -190,6 +190,15 @@ class ProjectsmainController extends Controller
         return ['items' => $rows];
     }
 
+    public function actionGetresgrouplist()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $rows = \Yii::$app->db->createCommand(
+            "SELECT Resource_group_Id AS id, Resource_group_Name AS name FROM resource_group ORDER BY RG_sortorder ASC, Resource_group_Name ASC"
+        )->queryAll();
+        return ['items' => $rows];
+    }
+
     public function actionGetwbtypelist()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
