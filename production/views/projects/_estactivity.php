@@ -809,17 +809,62 @@ function alLoadActTypeList(){
                 $('#alActTypeListContainer').html('<div class="col-md-12" style="padding:8px 15px;color:#999;">No activity types yet.</div>');
                 return;
             }
-            var html = '<div class="col-md-12 scheduleitemheader schdhead" style="padding:6px 15px;font-size:13px;margin-top:0;"><div class="row"><div class="col-md-1"><label>#</label></div><div class="col-md-7" style="padding-left:5px;"><label>Activity Type</label></div></div></div>';
+            var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+                     + '<thead><tr>'
+                     + '<th style="background:#555;color:#fff;padding:8px 12px;border:1px solid #444;text-align:center;width:42px;">#</th>'
+                     + '<th style="background:#555;color:#fff;padding:8px 12px;border:1px solid #444;">Activity Type</th>'
+                     + '<th style="background:#555;color:#fff;padding:8px 12px;border:1px solid #444;text-align:center;width:60px;"></th>'
+                     + '</tr></thead><tbody>';
             data.items.forEach(function(at, i){
-                html += '<div class="col-md-12 datalists scheduleitemcontent"><div class="row datslis" style="cursor:pointer;">'
-                      + '<div class="col-md-1"><span class="number">'+(i+1)+'</span></div>'
-                      + '<div class="col-md-7 type">'+at.name+'</div>'
-                      + '</div></div>';
+                var safeName = $('<div>').text(at.name).html();
+                html += '<tr data-acttype-id="'+at.id+'">'
+                      + '<td style="padding:8px 12px;border:1px solid #ddd;text-align:center;color:#999;">'+(i+1)+'</td>'
+                      + '<td style="padding:8px 12px;border:1px solid #ddd;">'
+                      +   '<span class="al-acttype-label">'+safeName+'</span>'
+                      +   '<input type="text" class="al-acttype-input form-control input-sm" value="'+safeName+'" style="display:none;margin:0;">'
+                      + '</td>'
+                      + '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;white-space:nowrap;">'
+                      +   '<button class="al-acttype-edit btn btn-default btn-xs" title="Edit" style="border-radius:50%;width:28px;height:28px;padding:0;"><span class="icon-pencil"></span></button>'
+                      +   '<button class="al-acttype-save btn btn-success btn-xs" title="Save" style="border-radius:50%;width:28px;height:28px;padding:0;display:none;"><span class="icon-check"></span></button>'
+                      + '</td>'
+                      + '</tr>';
             });
+            html += '</tbody></table>';
             $('#alActTypeListContainer').html(html);
         }
     });
 }
+
+$(document).on('click', '.al-acttype-edit', function(){
+    var tr = $(this).closest('tr');
+    tr.find('.al-acttype-label').hide();
+    tr.find('.al-acttype-input').show().focus();
+    $(this).hide();
+    tr.find('.al-acttype-save').show();
+});
+
+$(document).on('click', '.al-acttype-save', function(){
+    var tr = $(this).closest('tr');
+    var id = tr.data('acttype-id');
+    var newName = tr.find('.al-acttype-input').val().trim();
+    if(!newName){ alert('Name cannot be empty.'); return; }
+    var btn = $(this).prop('disabled', true);
+    $.ajax({
+        type: 'POST',
+        url: '<?php echo \yii\helpers\Url::to(["/projects/updateactivitytype"]); ?>',
+        dataType: 'json',
+        data: { activitytypeid: id, activitytype: newName, schedule_type: 0 },
+        success: function(data){
+            btn.prop('disabled', false);
+            if(data.error && data.error !== 'No'){ alert('Error saving.'); return; }
+            tr.find('.al-acttype-label').text(newName).show();
+            tr.find('.al-acttype-input').hide();
+            tr.find('.al-acttype-save').hide();
+            tr.find('.al-acttype-edit').show();
+        },
+        error: function(){ btn.prop('disabled', false); alert('Request failed.'); }
+    });
+});
 
 $(document).on('click', '#alSaveActType', function(){
     var name = $('#alActTypeName').val().trim();
