@@ -448,7 +448,16 @@ class ProjectsmainController extends Controller
         $tasks        = $p['tasks']     ?? [];
         $resources    = $p['resources'] ?? [];
 
-        if (!$iowGroupId || !$actName) return ['error' => 'Missing required fields'];
+        if (!$actName) return ['error' => 'Missing required fields'];
+
+        // resolve iow group id from name if not supplied
+        if (!$iowGroupId && $iowGroupName !== '') {
+            $igRow = $db->createCommand(
+                "SELECT id FROM iow_groups WHERE name=:n AND status=0 LIMIT 1",
+                [':n' => $iowGroupName]
+            )->queryOne();
+            if ($igRow) $iowGroupId = (int)$igRow['id'];
+        }
 
         $now   = date('Y-m-d H:i:s');
         $today = date('Y-m-d');
