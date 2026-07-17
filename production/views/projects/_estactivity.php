@@ -604,6 +604,10 @@ $('#alAddActivityPopup').on('shown.bs.modal', function(){
     alRefreshActIowGroupDropdown();
 });
 
+$(document).on('click', '#addestactivity', function(){
+    setTimeout(function(){ alRefreshActIowGroupDropdown(); }, 400);
+});
+
 function alRefreshActIowGroupDropdown(){
     $.ajax({
         url: '<?php echo \yii\helpers\Url::to(["/projects/getiowgrouplist"]); ?>',
