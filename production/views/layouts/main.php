@@ -2088,10 +2088,20 @@ if($action=='login')
   width:100%;padding:5px 10px;font-size:13px;color:#2d3748;
   border:1px solid #a0aab8;border-radius:0;background:#fff;
   outline:none;box-sizing:border-box;font-family:'Barlow',sans-serif;
-  transition:border-color .15s;height:28px;
+  transition:border-color .15s;height:28px;font-weight:700;
 }
 .qe-input:focus,.qe-select:focus{border-color:#4a5568;background:#fff}
-.qe-input[readonly]{background:#f5f5f5;color:#666;cursor:default}
+.qe-input[readonly]{background:#f5f5f5;color:#555;cursor:default}
+.qe-needs-data{border-color:#e53e3e !important;}
+.qe-repeat-tbl td input,.qe-repeat-tbl td select{font-weight:700;}
+.qe-repeat-tbl td input.qe-task-name,
+.qe-repeat-tbl td input.qe-task-unit,
+.qe-repeat-tbl td input.qe-task-prod,
+.qe-repeat-tbl td input.qe-task-resunits,
+.qe-repeat-tbl td input.qe-res-name,
+.qe-repeat-tbl td input.qe-res-qty,
+.qe-repeat-tbl td input.qe-res-rate{border:1px solid #e53e3e;}
+.qe-repeat-tbl td input.qe-res-amt{border:1px solid #a0aab8;}
 .qe-persist-note{font-size:9px;color:#888;font-style:italic;margin-top:2px}
 
 /* Divider */
@@ -2240,13 +2250,13 @@ if($action=='login')
         <div class="qe-row">
           <div class="qe-field wide">
             <span class="qe-label">Project Type</span>
-            <select id="qe-proj-type" class="qe-select">
+            <select id="qe-proj-type" class="qe-select qe-needs-data">
               <option value="">— Select Project Type —</option>
             </select>
           </div>
           <div class="qe-field wide">
             <span class="qe-label">Activity Type</span>
-            <select id="qe-group" class="qe-select">
+            <select id="qe-group" class="qe-select qe-needs-data">
               <option value="">— Select Group —</option>
             </select>
           </div>
@@ -2262,11 +2272,11 @@ if($action=='login')
         <div class="qe-row">
           <div class="qe-field wide">
             <span class="qe-label">IOW</span>
-            <input type="text" id="qe-iow" class="qe-input" placeholder="Enter IOW name">
+            <input type="text" id="qe-iow" class="qe-input qe-needs-data" placeholder="Enter IOW name">
           </div>
           <div class="qe-field wide">
             <span class="qe-label">Activity</span>
-            <select id="qe-activity" class="qe-select">
+            <select id="qe-activity" class="qe-select qe-needs-data">
               <option value="">— Select Activity —</option>
             </select>
           </div>
@@ -2286,7 +2296,7 @@ if($action=='login')
           </div>
           <div class="qe-field xs">
             <span class="qe-label">Quantity</span>
-            <input id="qe-qty" type="number" class="qe-input" placeholder="0" step="0.001">
+            <input id="qe-qty" type="number" class="qe-input qe-needs-data" placeholder="0" step="0.001">
           </div>
           <div class="qe-field sm">
             <span class="qe-label">Rate</span>
@@ -2298,11 +2308,11 @@ if($action=='login')
           </div>
           <div class="qe-field sm">
             <span class="qe-label">Sch. Unit</span>
-            <input id="qe-sch-unit" type="text" class="qe-input" placeholder="e.g. Nos">
+            <input id="qe-sch-unit" type="text" class="qe-input qe-needs-data" placeholder="e.g. Nos">
           </div>
           <div class="qe-field xs">
             <span class="qe-label">Sch. Qty</span>
-            <input id="qe-sch-qty" type="number" class="qe-input" placeholder="0" step="0.001">
+            <input id="qe-sch-qty" type="number" class="qe-input qe-needs-data" placeholder="0" step="0.001">
           </div>
         </div>
       </div>
@@ -2847,6 +2857,22 @@ document.addEventListener('DOMContentLoaded', function(){
     document.getElementById('qe-rate').value = total.toFixed(2);
     calcActivityAmount();
   }
+
+  /* remove red border when field is filled */
+  ['qe-proj-type','qe-group','qe-iow','qe-activity','qe-qty','qe-sch-unit','qe-sch-qty'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('change', function(){ if(this.value.trim()) this.classList.remove('qe-needs-data'); else this.classList.add('qe-needs-data'); });
+    el.addEventListener('input',  function(){ if(this.value.trim()) this.classList.remove('qe-needs-data'); else this.classList.add('qe-needs-data'); });
+  });
+  /* also clear task/resource row red border on input */
+  document.addEventListener('input', function(e){
+    var el = e.target;
+    if(el.matches('.qe-task-name,.qe-task-unit,.qe-task-prod,.qe-task-resunits,.qe-res-name,.qe-res-qty,.qe-res-rate')){
+      if(el.value.trim()) el.style.borderColor = '#a0aab8';
+      else el.style.borderColor = '#e53e3e';
+    }
+  });
 
   /* estimate amount = qty × rate */
   function calcActivityAmount(){
