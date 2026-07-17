@@ -199,6 +199,25 @@ class ProjectsmainController extends Controller
         return ['items' => $rows];
     }
 
+    public function actionGetactivityresources()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $activityId = (int)\Yii::$app->request->post('activity_id', 0);
+        if(!$activityId) return ['items' => []];
+        $rows = \Yii::$app->db->createCommand(
+            "SELECT ar.estactres_id, ar.est_resource_id, ar.est_resource_rate, ar.est_resource_quantity, ar.est_resource_amount,
+                    r.Name AS resource_name, r.Unit AS resource_unit, r.ResourceType_Id AS type_id, r.Resource_group_Id AS group_id,
+                    rt.Name AS type_name, rg.Resource_group_Name AS group_name
+             FROM estactivity_resources ar
+             JOIN resources r ON r.Resource_Id = ar.est_resource_id
+             LEFT JOIN resourcetype rt ON rt.ResourceType_Id = r.ResourceType_Id
+             LEFT JOIN resource_group rg ON rg.Resource_group_Id = r.Resource_group_Id
+             WHERE ar.estactivity_id = :aid AND ar.est_resource_status = 0
+             ORDER BY ar.estactres_id ASC"
+        )->bindValue(':aid', $activityId)->queryAll();
+        return ['items' => $rows];
+    }
+
     public function actionGetwbtypelist()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;

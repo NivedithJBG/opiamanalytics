@@ -2495,9 +2495,9 @@ function loadResGroups(cb){
     error: function(){ _resGroupsLoaded = true; if(cb) cb(); }
   });
 }
-function makeResGroupOptions(){
+function makeResGroupOptions(selectedId){
   var html = '<option value="">— Group —</option>';
-  _resGroups.forEach(function(g){ html += '<option value="'+g.id+'">'+g.name+'</option>'; });
+  _resGroups.forEach(function(g){ html += '<option value="'+g.id+'"'+(selectedId && +g.id===+selectedId?' selected':'')+'>'+g.name+'</option>'; });
   return html;
 }
 
@@ -2539,9 +2539,9 @@ function addTaskRow(){
 }
 
 /* ── Resource rows ── */
-function makeResTypeOptions(){
+function makeResTypeOptions(selectedId){
   var html = '<option value="">— Type —</option>';
-  _resTypes.forEach(function(t){ html += '<option value="'+t.id+'">'+t.name+'</option>'; });
+  _resTypes.forEach(function(t){ html += '<option value="'+t.id+'"'+(selectedId && +t.id===+selectedId?' selected':'')+'>'+t.name+'</option>'; });
   return html;
 }
 
@@ -2760,6 +2760,54 @@ document.addEventListener('DOMContentLoaded', function(){
   /* cascade: Group → Activities */
   document.getElementById('qe-group').addEventListener('change', function(){
     loadActivities(document.getElementById('qe-proj-type').value, this.value);
+  });
+
+  /* prefill resources when activity is selected */
+  document.getElementById('qe-activity').addEventListener('change', function(){
+    var actId = this.value;
+    if(!actId) return;
+    $.ajax({
+      type:'POST', url:'../projectsmain/getactivityresources', dataType:'json',
+      data:{ activity_id: actId },
+      success: function(data){
+        if(!data.items || !data.items.length) return;
+        var tbody = document.getElementById('qe-res-body');
+        tbody.innerHTML = '';
+        loadResGroups(function(){
+          loadResTypes(function(){
+            data.items.forEach(function(res){
+              var tr = document.createElement('tr');
+              tr._taskMap = [];
+              tr.innerHTML =
+                '<td><select class="qe-res-type">'+makeResTypeOptions(res.type_id)+'</select></td>'+
+                '<td><select class="qe-res-group">'+makeResGroupOptions(res.group_id)+'</select></td>'+
+                '<td><input type="text" class="qe-res-name" value="'+res.resource_name.replace(/"/g,'&quot;')+'" placeholder="Resource name"></td>'+
+                '<td><input type="number" class="qe-res-qty" value="'+res.est_resource_quantity+'" step="0.001"></td>'+
+                '<td><input type="number" class="qe-res-rate" value="'+res.est_resource_rate+'" step="0.01"></td>'+
+                '<td><input type="number" class="qe-res-amt" value="'+res.est_resource_amount+'" step="0.01" readonly></td>'+
+                '<td style="text-align:right;white-space:nowrap;">'+
+                  '<button class="qe-map-btn" title="Map to Tasks">&#x1F517;</button> '+
+                  '<button class="qe-del-btn qe-res-del" title="Remove">&times;</button>'+
+                '</td>';
+              tbody.appendChild(tr);
+              /* calc amount on qty/rate change */
+              tr.querySelector('.qe-res-qty').addEventListener('input', function(){
+                var q = parseFloat(tr.querySelector('.qe-res-qty').value)||0;
+                var r = parseFloat(tr.querySelector('.qe-res-rate').value)||0;
+                tr.querySelector('.qe-res-amt').value = (q*r).toFixed(2);
+              });
+              tr.querySelector('.qe-res-rate').addEventListener('input', function(){
+                var q = parseFloat(tr.querySelector('.qe-res-qty').value)||0;
+                var r = parseFloat(tr.querySelector('.qe-res-rate').value)||0;
+                tr.querySelector('.qe-res-amt').value = (q*r).toFixed(2);
+              });
+              tr.querySelector('.qe-res-del').addEventListener('click', function(){ tr.remove(); });
+              tr.querySelector('.qe-map-btn').addEventListener('click', function(){ openMapPopup(tr); });
+            });
+          });
+        });
+      }
+    });
   });
 
   /* estimate amount = qty × rate */
