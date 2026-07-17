@@ -5,13 +5,14 @@ use app\models\Resources;
 
 <div class="panel panel-default  allocate-resource-tab tab tab-wrapper acco-five">
 			  <input type="radio" class="resourceallocationaccordian" id="rd5" name="rd">
-				
-				<div class="panel-heading" >
+
+				<div class="panel-heading" style="display:none;">
 				  <h4 class="panel-title">
 					<a  href="#">
 					<span class="icon-directions_run"></span>Allocate Resources</a>
 				  </h4>
 				</div>
+				<div style="padding:10px 15px 6px;"><h4 style="margin:0;font-weight:700;color:#1a202c;">Activity-Resource Allocation</h4></div>
 				
 				
 				<div  class="tab-content cOrder-body panel-collapse ">
