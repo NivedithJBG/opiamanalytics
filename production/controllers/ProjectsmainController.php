@@ -515,7 +515,8 @@ class ProjectsmainController extends Controller
         if (!empty($tasks)) {
             $db->createCommand(
                 "INSERT INTO iowschmethedology (IOW_Id, methedologies, pro_estimate_id)
-                 VALUES (:iow, :data, 0)",
+                 VALUES (:iow, :data, 0)
+                 ON DUPLICATE KEY UPDATE methedologies = VALUES(methedologies)",
                 [':iow' => $iowActId, ':data' => json_encode($tasks)]
             )->execute();
         }
@@ -552,7 +553,8 @@ class ProjectsmainController extends Controller
         if (!empty($resources)) {
             $db->createCommand(
                 "INSERT INTO iowschmethedology (IOW_Id, methedologies, pro_estimate_id)
-                 VALUES (:iow, :data, 1)",
+                 VALUES (:iow, :data, 1)
+                 ON DUPLICATE KEY UPDATE methedologies = VALUES(methedologies)",
                 [':iow' => $iowActId, ':data' => json_encode($resources)]
             )->execute();
         }
