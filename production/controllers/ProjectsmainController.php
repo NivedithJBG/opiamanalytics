@@ -607,6 +607,97 @@ class ProjectsmainController extends Controller
         ];
     }
 
+    public function actionWbsget()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $saId = (int)\Yii::$app->request->post('sa_id', 0);
+        if (!$saId) return ['error' => 'No id'];
+        $db = \Yii::$app->db;
+
+        // scheduleactivities row
+        $sa = $db->createCommand(
+            "SELECT sa.*, wga.activity_Id AS iow_act_id, wga.activitytype_id, wga.wbs_id,
+                    wga.activity_Unit AS est_unit, wga.estimate AS est_qty, wga.amount AS est_amt,
+                    wga.cycle_Unit AS sch_unit, wga.cycle_Quantity AS sch_qty,
+                    wg.iowGroupid, wg.Name AS iow_group_name,
+                    ig.name AS iow_group_name2,
+                    ea.activity_name, ea.activity_unit
+             FROM scheduleactivities sa
+             LEFT JOIN workgroup_activities_new wga ON wga.id = sa.activity_id
+             LEFT JOIN workgroups_new wg ON wg.Workgroup_Id = wga.wbs_id
+             LEFT JOIN iow_groups ig ON ig.id = wg.iowGroupid
+             LEFT JOIN estimateactivities ea ON ea.activity_id = wga.activity_Id
+             WHERE sa.id = :id AND sa.status = 0 LIMIT 1",
+            [':id' => $saId]
+        )->queryOne();
+        if (!$sa) return ['error' => 'Not found'];
+
+        $iowActId = (int)($sa['iow_act_id'] ?? 0);
+
+        // tasks
+        $tasksRow = $db->createCommand(
+            "SELECT methedologies FROM iowschmethedology WHERE IOW_Id = :id AND pro_estimate_id = 0 LIMIT 1",
+            [':id' => $iowActId]
+        )->queryOne();
+        $tasks = ($tasksRow && $tasksRow['methedologies']) ? json_decode($tasksRow['methedologies'], true) : [];
+
+        // resources
+        $resRow = $db->createCommand(
+            "SELECT methedologies FROM iowschmethedology WHERE IOW_Id = :id AND pro_estimate_id = 1 LIMIT 1",
+            [':id' => $iowActId]
+        )->queryOne();
+        $resources = ($resRow && $resRow['methedologies']) ? json_decode($resRow['methedologies'], true) : [];
+
+        // enrich resources with type/group names
+        foreach ($resources as &$res) {
+            if (!empty($res['type_id'])) {
+                $rt = $db->createCommand("SELECT Name FROM resourcetype WHERE ResourceType_Id=:id", [':id' => $res['type_id']])->queryOne();
+                $res['type_name'] = $rt ? $rt['Name'] : '';
+            }
+            if (!empty($res['group_id'])) {
+                $rg = $db->createCommand("SELECT Resource_group_Name FROM resource_group WHERE Resource_group_Id=:id", [':id' => $res['group_id']])->queryOne();
+                $res['group_name'] = $rg ? $rg['Resource_group_Name'] : '';
+            }
+        }
+        unset($res);
+
+        // proj type & activity type group
+        $projTypeId = 0; $actTypeId = 0;
+        if ($iowActId) {
+            $iat = $db->createCommand(
+                "SELECT wga.activitytype_id,
+                        aty.project_type_id
+                 FROM workgroup_activities_new wga
+                 LEFT JOIN estimateactivitytypes aty ON aty.id = wga.activitytype_id
+                 WHERE wga.activity_Id = :id LIMIT 1",
+                [':id' => $iowActId]
+            )->queryOne();
+            if ($iat) {
+                $actTypeId  = (int)($iat['activitytype_id'] ?? 0);
+                $projTypeId = (int)($iat['project_type_id'] ?? 0);
+            }
+        }
+
+        return [
+            'sa_id'          => $saId,
+            'proj_type_id'   => $projTypeId,
+            'act_type_id'    => $actTypeId,
+            'iow_group_id'   => (int)($sa['iowGroupid'] ?? 0),
+            'iow_group_name' => $sa['iow_group_name2'] ?: $sa['iow_group_name'] ?: '',
+            'iow_act_id'     => $iowActId,
+            'act_name'       => $sa['name'] ?? '',
+            'est_unit'       => $sa['est_unit'] ?? $sa['activity_unit'] ?? '',
+            'est_qty'        => (float)($sa['est_qty'] ?? $sa['quantity'] ?? 0),
+            'est_rate'       => $sa['est_qty'] > 0 ? round((float)($sa['est_amt'] ?? 0) / (float)$sa['est_qty'], 2) : 0,
+            'est_amt'        => (float)($sa['est_amt'] ?? 0),
+            'sch_unit'       => $sa['sch_unit'] ?? $sa['unit'] ?? '',
+            'sch_qty'        => (float)($sa['sch_qty'] ?? $sa['quantity'] ?? 0),
+            'duration'       => (int)($sa['duration'] ?? 0),
+            'tasks'          => $tasks,
+            'resources'      => $resources,
+        ];
+    }
+
     public function actionPerformancedashboard()
     {
         $uid  = Yii::$app->user->Id;

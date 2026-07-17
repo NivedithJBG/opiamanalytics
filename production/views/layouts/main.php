@@ -2396,17 +2396,137 @@ if($action=='login')
 'use strict';
 
 /* ── open / close ── */
-function openModal(){
+function openModal(saId){
   document.getElementById('qe-bk').classList.add('qe-open');
   document.getElementById('qe-modal').classList.add('qe-open');
   var pname = (document.getElementById('selectedProject')||{}).value || '';
   var lbl = document.getElementById('qe-proj-label');
   if(lbl && pname) lbl.textContent = '— ' + pname;
   loadProjTypes();
-  if(!document.querySelector('#qe-task-body tr')) addTaskRow();
-  if(!document.querySelector('#qe-res-body tr'))  { loadResGroups(function(){ loadResTypes(function(){ addResRow(); }); }); }
+
+  if(saId){
+    /* editing existing bar — fetch and prefill */
+    $.ajax({
+      type:'POST', url:'../projectsmain/wbsget', dataType:'json',
+      data:{ sa_id: saId },
+      success: function(d){
+        if(d.error) { addTaskRow(); loadResGroups(function(){ loadResTypes(function(){ addResRow(); }); }); return; }
+        _prefillModal(d);
+      },
+      error: function(){ addTaskRow(); loadResGroups(function(){ loadResTypes(function(){ addResRow(); }); }); }
+    });
+  } else {
+    if(!document.querySelector('#qe-task-body tr')) addTaskRow();
+    if(!document.querySelector('#qe-res-body tr'))  { loadResGroups(function(){ loadResTypes(function(){ addResRow(); }); }); }
+    recalcDuration();
+  }
+}
+
+function _prefillModal(d){
+  /* Project Type */
+  var ptSel = document.getElementById('qe-proj-type');
+  if(d.proj_type_id){ ptSel.value = d.proj_type_id; ptSel.classList.remove('qe-needs-data'); }
+
+  /* Activity Type Group — load types first then set */
+  loadProjTypes(function(){
+    if(d.proj_type_id){
+      ptSel.value = d.proj_type_id;
+      loadGroups(d.proj_type_id, function(){
+        var grpSel = document.getElementById('qe-group');
+        if(d.act_type_id){ grpSel.value = d.act_type_id; grpSel.classList.remove('qe-needs-data'); }
+        loadActivities(d.proj_type_id, d.act_type_id, function(){
+          var actSel = document.getElementById('qe-activity');
+          if(d.iow_act_id){ actSel.value = d.iow_act_id; actSel.classList.remove('qe-needs-data'); }
+        });
+      });
+    }
+  });
+
+  /* IOW */
+  var iowEl = document.getElementById('qe-iow');
+  iowEl.value = d.iow_group_name || '';
+  if(iowEl.value) iowEl.classList.remove('qe-needs-data');
+
+  /* Estimate fields */
+  document.getElementById('qe-unit').value   = d.est_unit  || '';
+  document.getElementById('qe-qty').value    = d.est_qty   || '';
+  document.getElementById('qe-rate').value   = d.est_rate  || '';
+  document.getElementById('qe-amount').value = d.est_amt   || '';
+  if(d.est_qty) document.getElementById('qe-qty').classList.remove('qe-needs-data');
+
+  /* Schedule fields */
+  document.getElementById('qe-sch-unit').value = d.sch_unit || '';
+  document.getElementById('qe-sch-qty').value  = d.sch_qty  || '';
+  if(d.sch_unit) document.getElementById('qe-sch-unit').classList.remove('qe-needs-data');
+  if(d.sch_qty)  document.getElementById('qe-sch-qty').classList.remove('qe-needs-data');
+
+  /* Tasks */
+  var taskBody = document.getElementById('qe-task-body');
+  taskBody.innerHTML = '';
+  if(d.tasks && d.tasks.length){
+    d.tasks.forEach(function(task){
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td><input type="text" class="qe-task-name" value="'+(task.name||'').replace(/"/g,'&quot;')+'" placeholder="Task name"></td>'+
+        '<td><input type="text" class="qe-task-unit" value="'+(task.unit||'').replace(/"/g,'&quot;')+'" placeholder="Unit"></td>'+
+        '<td><input type="number" class="qe-task-prod" value="'+parseFloat(task.prod||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
+        '<td><input type="number" class="qe-task-resunits" value="'+(task.resunits||1)+'" placeholder="1" step="1" min="1"></td>'+
+        '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
+      taskBody.appendChild(tr);
+      tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
+      tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
+      tr.querySelector('.qe-task-del').addEventListener('click', function(){
+        if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
+      });
+    });
+  } else {
+    addTaskRow();
+  }
+
+  /* Resources */
+  var resBody = document.getElementById('qe-res-body');
+  resBody.innerHTML = '';
+  if(d.resources && d.resources.length){
+    loadResGroups(function(){
+      loadResTypes(function(){
+        d.resources.forEach(function(res){
+          var tr = document.createElement('tr');
+          tr._taskMap = res.task_map || [];
+          tr.innerHTML =
+            '<td><select class="qe-res-type">'+makeResTypeOptions(res.type_id)+'</select></td>'+
+            '<td><select class="qe-res-group">'+makeResGroupOptions(res.group_id)+'</select></td>'+
+            '<td><input type="text" class="qe-res-name" value="'+(res.name||'').replace(/"/g,'&quot;')+'" placeholder="Resource name"></td>'+
+            '<td><input type="number" class="qe-res-qty" value="'+(res.qty||1)+'" step="0.001"></td>'+
+            '<td><input type="number" class="qe-res-rate" value="'+(res.rate||0)+'" step="0.01"></td>'+
+            '<td><input type="number" class="qe-res-amt" value="'+((res.qty||0)*(res.rate||0)).toFixed(2)+'" step="0.01" readonly></td>'+
+            '<td style="text-align:right;white-space:nowrap;">'+
+              '<button class="qe-map-btn" title="Map to Tasks">&#x1F517;</button> '+
+              '<button class="qe-del-btn qe-res-del" title="Remove">&times;</button>'+
+            '</td>';
+          resBody.appendChild(tr);
+          (function(row){
+            function calcRow(){
+              var q=parseFloat(row.querySelector('.qe-res-qty').value)||0;
+              var r=parseFloat(row.querySelector('.qe-res-rate').value)||0;
+              row.querySelector('.qe-res-amt').value=(q*r).toFixed(2);
+              recalcEstRate();
+            }
+            row.querySelector('.qe-res-qty').addEventListener('input', calcRow);
+            row.querySelector('.qe-res-rate').addEventListener('input', calcRow);
+            row.querySelector('.qe-res-del').addEventListener('click', function(){ row.remove(); recalcEstRate(); });
+            row.querySelector('.qe-map-btn').addEventListener('click', function(){ openMapPopup(row); });
+          })(tr);
+        });
+        recalcEstRate();
+      });
+    });
+  } else {
+    loadResGroups(function(){ loadResTypes(function(){ addResRow(); }); });
+  }
+
   recalcDuration();
 }
+
 window.openQeModal    = openModal;
 window.loadActivities = function(typeId, groupId){ loadActivities(typeId, groupId); };
 function closeModal(){
@@ -2416,9 +2536,9 @@ function closeModal(){
 
 /* ── cascading dropdowns ── */
 
-function loadProjTypes(){
+function loadProjTypes(cb){
   var sel = document.getElementById('qe-proj-type');
-  if(sel.options.length > 1) return;
+  if(sel.options.length > 1){ if(cb) cb(); return; }
   $.ajax({
     type:'POST', url:'../projectsmain/getwbtypelist', dataType:'json',
     success: function(d){
@@ -2427,15 +2547,16 @@ function loadProjTypes(){
         o.value = item.id; o.textContent = item.name;
         sel.appendChild(o);
       });
+      if(cb) cb();
     }
   });
 }
 
-function loadGroups(typeId){
+function loadGroups(typeId, cb){
   var sel = document.getElementById('qe-group');
   sel.innerHTML = '<option value="">— Select Group —</option>';
   document.getElementById('qe-activity').innerHTML = '<option value="">— Select Activity —</option>';
-  if(!typeId) return;
+  if(!typeId){ if(cb) cb(); return; }
   $.ajax({
     type:'POST', url:'../projectsmain/getwbgrouplist', dataType:'json',
     data:{typeId: typeId},
@@ -2445,14 +2566,15 @@ function loadGroups(typeId){
         o.value = item.id; o.textContent = item.name;
         sel.appendChild(o);
       });
+      if(cb) cb();
     }
   });
 }
 
-function loadActivities(typeId, groupId){
+function loadActivities(typeId, groupId, cb){
   var sel = document.getElementById('qe-activity');
   sel.innerHTML = '<option value="">— Loading… —</option>';
-  if(!typeId && !groupId){ sel.innerHTML = '<option value="">— Select Activity —</option>'; return; }
+  if(!typeId && !groupId){ sel.innerHTML = '<option value="">— Select Activity —</option>'; if(cb) cb(); return; }
   $.ajax({
     type:'POST', url:'../projectsmain/getactivitiesbytypeandgroup', dataType:'json',
     data:{typeId: typeId, groupId: groupId},
@@ -2464,6 +2586,7 @@ function loadActivities(typeId, groupId){
         sel.appendChild(o);
       });
       if(!d.items || !d.items.length) sel.innerHTML = '<option value="">— No activities found —</option>';
+      if(cb) cb();
     }
   });
 }

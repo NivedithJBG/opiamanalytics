@@ -1673,11 +1673,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     }
   });
 
-  // ---- Click on any activity bar opens Quick Entry (temporary) -------------
+  // ---- Click on any activity bar opens Quick Entry prefilled ---------------
   $(document).on('click', '#gantt-container .gtaskblue, #gantt-container .gtaskpink', function() {
-    $('#qe-bk').addClass('qe-open');
-    $('#qe-modal').addClass('qe-open');
-    if (typeof window.openQeModal === 'function') window.openQeModal();
+    var rawId = _getActIdFromBarDiv(this);
+    if (typeof window.openQeModal === 'function') window.openQeModal(rawId || null);
   });
 
   // ---- Init -----------------------------------------------------------------
