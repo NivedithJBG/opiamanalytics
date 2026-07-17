@@ -2152,7 +2152,7 @@ if($action=='login')
   </div>
   <div id="qe-body">
 
-    <div style="padding:14px 4px 10px;font-family:'Nunito',sans-serif;font-size:18px;font-weight:900;color:#1a202c;letter-spacing:.5px;text-transform:uppercase;border-bottom:3px solid #1a202c;margin-bottom:14px;">WBS</div>
+    <div style="padding:14px 4px 10px;font-family:'Nunito',sans-serif;font-size:18px;font-weight:900;color:#1a202c;letter-spacing:.5px;text-transform:uppercase;border-bottom:3px solid #1a202c;margin-bottom:14px;">WBS <span id="qe-proj-label" style="font-size:13px;font-weight:600;color:#4a5568;text-transform:none;letter-spacing:0;"></span></div>
 
     <!-- ── SECTION 1 : Project Type + Group (persists) ─────────────── -->
     <div class="qe-section">
@@ -2293,6 +2293,9 @@ if($action=='login')
 function openModal(){
   document.getElementById('qe-bk').classList.add('qe-open');
   document.getElementById('qe-modal').classList.add('qe-open');
+  var pname = (document.getElementById('selectedProject')||{}).value || '';
+  var lbl = document.getElementById('qe-proj-label');
+  if(lbl && pname) lbl.textContent = '— ' + pname;
   loadProjTypes();
   if(!document.querySelector('#qe-task-body tr')) addTaskRow();
   if(!document.querySelector('#qe-res-body tr'))  { loadResTypes(function(){ addResRow(); }); }
