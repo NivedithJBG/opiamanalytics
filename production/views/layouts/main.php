@@ -2762,7 +2762,7 @@ document.addEventListener('DOMContentLoaded', function(){
     loadActivities(document.getElementById('qe-proj-type').value, this.value);
   });
 
-  /* prefill resources when activity is selected */
+  /* prefill unit, tasks and resources when activity is selected */
   document.getElementById('qe-activity').addEventListener('change', function(){
     var actId = this.value;
     if(!actId) return;
@@ -2770,6 +2770,32 @@ document.addEventListener('DOMContentLoaded', function(){
       type:'POST', url:'../projectsmain/getactivityresources', dataType:'json',
       data:{ activity_id: actId },
       success: function(data){
+        /* prefill Unit */
+        if(data.unit) document.getElementById('qe-unit').value = data.unit;
+
+        /* prefill Tasks */
+        if(data.tasks && data.tasks.length){
+          var taskBody = document.getElementById('qe-task-body');
+          taskBody.innerHTML = '';
+          data.tasks.forEach(function(task){
+            var tr = document.createElement('tr');
+            tr.innerHTML =
+              '<td><input type="text" class="qe-task-name" value="'+task.task_name.replace(/"/g,'&quot;')+'" placeholder="Task name"></td>'+
+              '<td><input type="text" class="qe-task-unit" value="'+task.task_unit.replace(/"/g,'&quot;')+'" placeholder="Unit"></td>'+
+              '<td><input type="number" class="qe-task-prod" value="'+task.productivity+'" placeholder="0.00" step="0.001" min="0"></td>'+
+              '<td><input type="number" class="qe-task-resunits" placeholder="1" step="1" min="1"></td>'+
+              '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
+            taskBody.appendChild(tr);
+            tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
+            tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
+            tr.querySelector('.qe-task-del').addEventListener('click', function(){
+              if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
+            });
+          });
+          recalcDuration();
+        }
+
+        /* prefill Resources */
         if(!data.items || !data.items.length) return;
         var tbody = document.getElementById('qe-res-body');
         tbody.innerHTML = '';
@@ -2790,7 +2816,6 @@ document.addEventListener('DOMContentLoaded', function(){
                   '<button class="qe-del-btn qe-res-del" title="Remove">&times;</button>'+
                 '</td>';
               tbody.appendChild(tr);
-              /* calc amount on qty/rate change */
               tr.querySelector('.qe-res-qty').addEventListener('input', function(){
                 var q = parseFloat(tr.querySelector('.qe-res-qty').value)||0;
                 var r = parseFloat(tr.querySelector('.qe-res-rate').value)||0;

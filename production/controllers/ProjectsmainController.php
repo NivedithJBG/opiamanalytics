@@ -203,8 +203,13 @@ class ProjectsmainController extends Controller
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $activityId = (int)\Yii::$app->request->post('activity_id', 0);
-        if(!$activityId) return ['items' => []];
-        $rows = \Yii::$app->db->createCommand(
+        if(!$activityId) return ['items' => [], 'tasks' => [], 'unit' => ''];
+
+        $activity = \Yii::$app->db->createCommand(
+            "SELECT activity_unit FROM estimateactivities WHERE activity_id = :aid"
+        )->bindValue(':aid', $activityId)->queryOne();
+
+        $resources = \Yii::$app->db->createCommand(
             "SELECT ar.estactres_id, ar.est_resource_id, ar.est_resource_rate, ar.est_resource_quantity, ar.est_resource_amount,
                     r.Name AS resource_name, r.Unit AS resource_unit, r.ResourceType_Id AS type_id, r.Resource_group_Id AS group_id,
                     rt.Name AS type_name, rg.Resource_group_Name AS group_name
@@ -215,7 +220,16 @@ class ProjectsmainController extends Controller
              WHERE ar.estactivity_id = :aid AND ar.est_resource_status = 0
              ORDER BY ar.estactres_id ASC"
         )->bindValue(':aid', $activityId)->queryAll();
-        return ['items' => $rows];
+
+        $tasks = \Yii::$app->db->createCommand(
+            "SELECT task_name, task_unit, productivity FROM activity_tasks WHERE activity_id = :aid ORDER BY sort_order ASC, id ASC"
+        )->bindValue(':aid', $activityId)->queryAll();
+
+        return [
+            'items' => $resources,
+            'tasks' => $tasks,
+            'unit'  => $activity ? $activity['activity_unit'] : '',
+        ];
     }
 
     public function actionGetwbtypelist()
