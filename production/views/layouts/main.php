@@ -2891,6 +2891,22 @@ function collectPayload(){
   };
 }
 
+/* ── Estimate rate / amount recalc (module-level so _bindResRow can call them) ── */
+function calcActivityAmount(){
+  var q = parseFloat(document.getElementById('qe-qty').value)  || 0;
+  var r = parseFloat(document.getElementById('qe-rate').value) || 0;
+  document.getElementById('qe-amount').value = (q * r).toFixed(2);
+}
+
+function recalcEstRate(){
+  var total = 0;
+  document.querySelectorAll('#qe-res-body .qe-res-amt').forEach(function(el){
+    total += parseFloat(el.value) || 0;
+  });
+  document.getElementById('qe-rate').value = total.toFixed(2);
+  calcActivityAmount();
+}
+
 /* ── Bind ── */
 document.addEventListener('DOMContentLoaded', function(){
 
@@ -2999,15 +3015,7 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   });
 
-  /* rate = sum of all resource amounts */
-  function recalcEstRate(){
-    var total = 0;
-    document.querySelectorAll('#qe-res-body .qe-res-amt').forEach(function(el){
-      total += parseFloat(el.value) || 0;
-    });
-    document.getElementById('qe-rate').value = total.toFixed(2);
-    calcActivityAmount();
-  }
+  /* recalcEstRate and calcActivityAmount are defined at module level below */
 
   /* remove red border when field is filled */
   ['qe-proj-type','qe-group','qe-iow','qe-activity','qe-qty','qe-sch-unit','qe-sch-qty'].forEach(function(id){
@@ -3017,12 +3025,6 @@ document.addEventListener('DOMContentLoaded', function(){
     el.addEventListener('input',  function(){ if(this.value.trim()) this.classList.remove('qe-needs-data'); else this.classList.add('qe-needs-data'); });
   });
 
-  /* estimate amount = qty × rate */
-  function calcActivityAmount(){
-    var q = parseFloat(document.getElementById('qe-qty').value)  || 0;
-    var r = parseFloat(document.getElementById('qe-rate').value) || 0;
-    document.getElementById('qe-amount').value = (q * r).toFixed(2);
-  }
   document.getElementById('qe-qty').addEventListener('input', function(){ calcActivityAmount(); recalcDuration(); });
   document.getElementById('qe-sch-qty').addEventListener('input', recalcDuration);
 
