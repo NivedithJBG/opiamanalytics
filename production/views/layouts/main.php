@@ -2427,7 +2427,10 @@ function _prefillModal(d){
   var ptSel = document.getElementById('qe-proj-type');
   if(d.proj_type_id){ ptSel.value = d.proj_type_id; ptSel.classList.remove('qe-needs-data'); }
 
-  /* Activity Type Group — load types first then set */
+  /* Activity Type Group — load types first then set.
+     Set _qePrefilling so the activity change handler does not overwrite
+     our saved tasks/resources with the activity-library defaults. */
+  window._qePrefilling = true;
   loadProjTypes(function(){
     if(d.proj_type_id){
       ptSel.value = d.proj_type_id;
@@ -2437,8 +2440,11 @@ function _prefillModal(d){
         loadActivities(d.proj_type_id, d.act_type_id, function(){
           var actSel = document.getElementById('qe-activity');
           if(d.iow_act_id){ actSel.value = d.iow_act_id; actSel.classList.remove('qe-needs-data'); }
+          window._qePrefilling = false;
         });
       });
+    } else {
+      window._qePrefilling = false;
     }
   });
 
@@ -2894,6 +2900,7 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('qe-activity').addEventListener('change', function(){
     var actId = this.value;
     if(!actId) return;
+    if(window._qePrefilling) return; /* suppress during bar-click prefill */
     $.ajax({
       type:'POST', url:'../projectsmain/getactivityresources', dataType:'json',
       data:{ activity_id: actId },
