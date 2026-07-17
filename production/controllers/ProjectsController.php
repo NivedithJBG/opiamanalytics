@@ -25068,7 +25068,7 @@ public function actionActivitymusterprocess()
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         try {
             $rows = \Yii::$app->db->createCommand(
-                "SELECT estworktype_id AS id, estworktype_name AS name FROM estimateworktypes WHERE estworktype_status=0 ORDER BY sortorder ASC, estworktype_name ASC"
+                "SELECT activitytype_id AS id, activitytype_name AS name FROM estimateactivitytypes WHERE activitytype_status=0 ORDER BY sortorder ASC, activitytype_name ASC"
             )->queryAll();
             return ['items' => $rows];
         } catch (\Exception $e) { return ['error' => $e->getMessage()]; }
