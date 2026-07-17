@@ -2410,14 +2410,14 @@ function openModal(saId){
       type:'POST', url:'../projectsmain/wbsget', dataType:'json',
       data:{ sa_id: saId },
       success: function(d){
-        if(d.error) { addTaskRow(); loadResGroups(function(){ loadResTypes(function(){ addResRow(); }); }); return; }
+        if(d.error) { addTaskRow(); loadResTypes(function(){ addResRow(); }); return; }
         _prefillModal(d);
       },
-      error: function(){ addTaskRow(); loadResGroups(function(){ loadResTypes(function(){ addResRow(); }); }); }
+      error: function(){ addTaskRow(); loadResTypes(function(){ addResRow(); }); }
     });
   } else {
     if(!document.querySelector('#qe-task-body tr')) addTaskRow();
-    if(!document.querySelector('#qe-res-body tr'))  { loadResGroups(function(){ loadResTypes(function(){ addResRow(); }); }); }
+    if(!document.querySelector('#qe-res-body tr'))  { loadResTypes(function(){ addResRow(); }); }
     recalcDuration();
   }
 }
@@ -2493,41 +2493,14 @@ function _prefillModal(d){
   var resBody = document.getElementById('qe-res-body');
   resBody.innerHTML = '';
   if(d.resources && d.resources.length){
-    loadResGroups(function(){
-      loadResTypes(function(){
-        d.resources.forEach(function(res){
-          var tr = document.createElement('tr');
-          tr._taskMap = res.task_map || [];
-          tr.innerHTML =
-            '<td><select class="qe-res-type">'+makeResTypeOptions(res.type_id)+'</select></td>'+
-            '<td><select class="qe-res-group">'+makeResGroupOptions(res.group_id)+'</select></td>'+
-            '<td><input type="text" class="qe-res-name" value="'+(res.name||'').replace(/"/g,'&quot;')+'" placeholder="Resource name"></td>'+
-            '<td><input type="number" class="qe-res-qty" value="'+(res.qty||1)+'" step="0.001"></td>'+
-            '<td><input type="number" class="qe-res-rate" value="'+(res.rate||0)+'" step="0.01"></td>'+
-            '<td><input type="number" class="qe-res-amt" value="'+((res.qty||0)*(res.rate||0)).toFixed(2)+'" step="0.01" readonly></td>'+
-            '<td style="text-align:right;white-space:nowrap;">'+
-              '<button class="qe-map-btn" title="Map to Tasks">&#x1F517;</button> '+
-              '<button class="qe-del-btn qe-res-del" title="Remove">&times;</button>'+
-            '</td>';
-          resBody.appendChild(tr);
-          (function(row){
-            function calcRow(){
-              var q=parseFloat(row.querySelector('.qe-res-qty').value)||0;
-              var r=parseFloat(row.querySelector('.qe-res-rate').value)||0;
-              row.querySelector('.qe-res-amt').value=(q*r).toFixed(2);
-              recalcEstRate();
-            }
-            row.querySelector('.qe-res-qty').addEventListener('input', calcRow);
-            row.querySelector('.qe-res-rate').addEventListener('input', calcRow);
-            row.querySelector('.qe-res-del').addEventListener('click', function(){ row.remove(); recalcEstRate(); });
-            row.querySelector('.qe-map-btn').addEventListener('click', function(){ openMapPopup(row); });
-          })(tr);
-        });
-        recalcEstRate();
+    loadResTypes(function(){
+      d.resources.forEach(function(res){
+        addResRow({ type_id: res.type_id, group_id: res.group_id, resource_id: res.resource_id,
+                    qty: res.qty, rate: res.rate, task_map: res.task_map });
       });
     });
   } else {
-    loadResGroups(function(){ loadResTypes(function(){ addResRow(); }); });
+    loadResTypes(function(){ addResRow(); });
   }
 
   recalcDuration();
@@ -2617,20 +2590,24 @@ function recalcDuration(){
   return duration;
 }
 
-/* ── Resource Groups ── */
-var _resGroups = [];
-var _resGroupsLoaded = false;
-function loadResGroups(cb){
-  if(_resGroupsLoaded){ if(cb) cb(); return; }
+/* ── Resource Groups (keyed by typeId, '' = all) ── */
+var _resGroupCache = {};
+function loadResGroups(cb, typeId){
+  var key = typeId ? String(typeId) : '';
+  if(_resGroupCache[key]){ if(cb) cb(_resGroupCache[key]); return; }
   $.ajax({
     type:'POST', url:'../projectsmain/getresgrouplist', dataType:'json',
-    success: function(d){ _resGroups = d.items || []; _resGroupsLoaded = true; if(cb) cb(); },
-    error: function(){ _resGroupsLoaded = true; if(cb) cb(); }
+    data: typeId ? {type_id: typeId} : {},
+    success: function(d){
+      _resGroupCache[key] = d.items || [];
+      if(cb) cb(_resGroupCache[key]);
+    },
+    error: function(){ if(cb) cb([]); }
   });
 }
-function makeResGroupOptions(selectedId){
+function makeResGroupOptions(groups, selectedId){
   var html = '<option value="">— Group —</option>';
-  _resGroups.forEach(function(g){ html += '<option value="'+g.id+'"'+(selectedId && +g.id===+selectedId?' selected':'')+'>'+g.name+'</option>'; });
+  (groups||[]).forEach(function(g){ html += '<option value="'+g.id+'"'+(selectedId && +g.id===+selectedId?' selected':'')+'>'+g.name+'</option>'; });
   return html;
 }
 
@@ -2678,12 +2655,90 @@ function makeResTypeOptions(selectedId){
   return html;
 }
 
+function _loadRowGroups(tr, typeId, selectedGroupId, cb){
+  loadResGroups(function(groups){
+    tr.querySelector('.qe-res-group').innerHTML = makeResGroupOptions(groups, selectedGroupId);
+    if(cb) cb();
+  }, typeId||null);
+}
+
+function _loadRowResources(tr, typeId, groupId, selectedResId, cb){
+  var sel = tr.querySelector('.qe-res-name');
+  sel.innerHTML = '<option value="">— loading… —</option>';
+  if(!typeId && !groupId){ sel.innerHTML = '<option value="">— select type/group first —</option>'; if(cb) cb(); return; }
+  $.ajax({
+    type:'POST', url:'../projectsmain/getwbresources', dataType:'json',
+    data:{ type_id: typeId||0, group_id: groupId||0 },
+    success: function(d){
+      var items = d.items || [];
+      var html = '<option value="">— Select Resource —</option>';
+      items.forEach(function(r){
+        html += '<option value="'+r.id+'" data-unit="'+r.unit+'" data-price="'+r.price+'"'+(selectedResId && +r.id===+selectedResId?' selected':'')+'>'+r.name+'</option>';
+      });
+      if(!items.length) html = '<option value="">— No resources found —</option>';
+      sel.innerHTML = html;
+      /* auto-fill rate if a resource is already selected */
+      var opt = sel.options[sel.selectedIndex];
+      if(opt && opt.value){
+        var rateEl = tr.querySelector('.qe-res-rate');
+        if(!parseFloat(rateEl.value)) rateEl.value = opt.getAttribute('data-price')||'';
+      }
+      if(cb) cb();
+    },
+    error: function(){ sel.innerHTML = '<option value="">— Error loading —</option>'; if(cb) cb(); }
+  });
+}
+
+function _bindResRow(tr){
+  var typeEl  = tr.querySelector('.qe-res-type');
+  var grpEl   = tr.querySelector('.qe-res-group');
+  var nameSel = tr.querySelector('.qe-res-name');
+  var qtyEl   = tr.querySelector('.qe-res-qty');
+  var rateEl  = tr.querySelector('.qe-res-rate');
+  var amtEl   = tr.querySelector('.qe-res-amt');
+
+  function calcAmt(){
+    var q = parseFloat(qtyEl.value)||0, r = parseFloat(rateEl.value)||0;
+    amtEl.value = (q*r).toFixed(2);
+    recalcEstRate();
+  }
+  qtyEl.addEventListener('input', calcAmt);
+  rateEl.addEventListener('input', calcAmt);
+
+  typeEl.addEventListener('change', function(){
+    grpEl.innerHTML = '<option value="">— Group —</option>';
+    nameSel.innerHTML = '<option value="">— Select Resource —</option>';
+    _loadRowGroups(tr, typeEl.value, null, function(){
+      _loadRowResources(tr, typeEl.value, null, null);
+    });
+  });
+
+  grpEl.addEventListener('change', function(){
+    _loadRowResources(tr, typeEl.value, grpEl.value, null);
+  });
+
+  nameSel.addEventListener('change', function(){
+    var opt = this.options[this.selectedIndex];
+    if(opt && opt.value){
+      rateEl.value = opt.getAttribute('data-price') || '';
+      calcAmt();
+    }
+  });
+
+  tr.querySelector('.qe-res-del').addEventListener('click', function(){
+    if(document.querySelectorAll('#qe-res-body tr').length > 1){ tr.remove(); recalcEstRate(); }
+  });
+
+  tr.querySelector('.qe-map-btn').addEventListener('click', function(){ openMapPopup(tr); });
+}
+
 /* ── Task Map Popup ── */
 var _mapTargetTr = null;
 
 function openMapPopup(resTr){
   _mapTargetTr = resTr;
-  var resName = resTr.querySelector('.qe-res-name').value.trim() || 'Resource';
+  var nameSel = resTr.querySelector('.qe-res-name');
+  var resName = (nameSel.selectedIndex > 0 ? nameSel.options[nameSel.selectedIndex].text : '') || 'Resource';
   document.getElementById('qe-map-res-name').textContent = resName;
 
   var list = document.getElementById('qe-map-list');
@@ -2730,43 +2785,40 @@ function closeMapPopup(){
   _mapTargetTr = null;
 }
 
-function addResRow(){
+function addResRow(prefill){
+  /* prefill = {type_id, group_id, resource_id, qty, rate, task_map} optional */
   var tbody = document.getElementById('qe-res-body');
   var tr = document.createElement('tr');
-  tr._taskMap = [];
+  tr._taskMap = (prefill && prefill.task_map) || [];
   tr.innerHTML =
-    '<td><select class="qe-res-type">'+makeResTypeOptions()+'</select></td>'+
-    '<td><select class="qe-res-group">'+makeResGroupOptions()+'</select></td>'+
-    '<td><input type="text" class="qe-res-name" placeholder="Resource name"></td>'+
-    '<td><input type="number" class="qe-res-qty" value="1" step="0.001"></td>'+
-    '<td><input type="number" class="qe-res-rate" placeholder="0.00" step="0.01"></td>'+
+    '<td><select class="qe-res-type">'+makeResTypeOptions(prefill&&prefill.type_id)+'</select></td>'+
+    '<td><select class="qe-res-group"><option value="">— Group —</option></select></td>'+
+    '<td><select class="qe-res-name"><option value="">— select type/group first —</option></select></td>'+
+    '<td><input type="number" class="qe-res-qty" value="'+(prefill&&prefill.qty!=null?prefill.qty:1)+'" step="0.001"></td>'+
+    '<td><input type="number" class="qe-res-rate" value="'+(prefill&&prefill.rate||'')+'" placeholder="0.00" step="0.01"></td>'+
     '<td><input type="number" class="qe-res-amt" placeholder="0.00" readonly></td>'+
     '<td style="text-align:right;white-space:nowrap;">'+
       '<button class="qe-map-btn" title="Map to Tasks">&#x1F517;</button> '+
       '<button class="qe-del-btn qe-res-del" title="Remove">&times;</button>'+
     '</td>';
   tbody.appendChild(tr);
+  _bindResRow(tr);
 
-  /* scroll body so new row is visible */
+  /* if prefilling, cascade type→group→resource then recalc */
+  if(prefill && (prefill.type_id || prefill.group_id)){
+    _loadRowGroups(tr, prefill.type_id, prefill.group_id, function(){
+      _loadRowResources(tr, prefill.type_id, prefill.group_id, prefill.resource_id, function(){
+        /* recalc amount after rate is populated */
+        var q = parseFloat(tr.querySelector('.qe-res-qty').value)||0;
+        var r = parseFloat(tr.querySelector('.qe-res-rate').value)||0;
+        tr.querySelector('.qe-res-amt').value = (q*r).toFixed(2);
+        recalcEstRate();
+      });
+    });
+  }
+
   var body = document.getElementById('qe-body');
   if(body) setTimeout(function(){ body.scrollTop = body.scrollHeight; }, 50);
-
-  var qtyEl  = tr.querySelector('.qe-res-qty');
-  var rateEl = tr.querySelector('.qe-res-rate');
-  var amtEl  = tr.querySelector('.qe-res-amt');
-  function calcAmt(){
-    var q = parseFloat(qtyEl.value)||0, r = parseFloat(rateEl.value)||0;
-    amtEl.value = (q*r).toFixed(2);
-    recalcEstRate();
-  }
-  qtyEl.addEventListener('input', calcAmt);
-  rateEl.addEventListener('input', calcAmt);
-
-  tr.querySelector('.qe-res-del').addEventListener('click', function(){
-    if(document.querySelectorAll('#qe-res-body tr').length > 1){ tr.remove(); recalcEstRate(); }
-  });
-
-  tr.querySelector('.qe-map-btn').addEventListener('click', function(){ openMapPopup(tr); });
 }
 
 /* ── clear activity fields (keeps Project Type, Group, IOW, Activity selections) ── */
@@ -2781,7 +2833,7 @@ function clearActivityFields(){
   document.getElementById('qe-task-body').innerHTML = '';
   document.getElementById('qe-res-body').innerHTML  = '';
   addTaskRow();
-  loadResGroups(function(){ loadResTypes(function(){ addResRow(); }); });
+  loadResTypes(function(){ addResRow(); });
   recalcDuration();
 }
 
@@ -2800,15 +2852,18 @@ function collectPayload(){
   });
   var resources = [];
   document.querySelectorAll('#qe-res-body tr').forEach(function(tr){
-    var name = tr.querySelector('.qe-res-name') ? tr.querySelector('.qe-res-name').value.trim() : '';
+    var nameSel = tr.querySelector('.qe-res-name');
+    var resId   = nameSel ? nameSel.value : '';
+    var name    = (nameSel && nameSel.selectedIndex > 0) ? nameSel.options[nameSel.selectedIndex].text.trim() : '';
     if(!name) return;
     resources.push({
-      group_id: tr.querySelector('.qe-res-group').value,
-      type_id:  tr.querySelector('.qe-res-type').value,
-      name:     name,
-      qty:      parseFloat(tr.querySelector('.qe-res-qty').value)  || 0,
-      rate:     parseFloat(tr.querySelector('.qe-res-rate').value) || 0,
-      task_map: tr._taskMap || []
+      resource_id: resId,
+      group_id:    tr.querySelector('.qe-res-group').value,
+      type_id:     tr.querySelector('.qe-res-type').value,
+      name:        name,
+      qty:         parseFloat(tr.querySelector('.qe-res-qty').value)  || 0,
+      rate:        parseFloat(tr.querySelector('.qe-res-rate').value) || 0,
+      task_map:    tr._taskMap || []
     });
   });
 
@@ -2930,42 +2985,14 @@ document.addEventListener('DOMContentLoaded', function(){
           recalcDuration();
         }
 
-        /* prefill Resources */
+        /* prefill Resources from activity library using resource_id lookup */
         if(!data.items || !data.items.length) return;
-        var tbody = document.getElementById('qe-res-body');
-        tbody.innerHTML = '';
-        loadResGroups(function(){
-          loadResTypes(function(){
-            data.items.forEach(function(res){
-              var tr = document.createElement('tr');
-              tr._taskMap = [];
-              tr.innerHTML =
-                '<td><select class="qe-res-type">'+makeResTypeOptions(res.type_id)+'</select></td>'+
-                '<td><select class="qe-res-group">'+makeResGroupOptions(res.group_id)+'</select></td>'+
-                '<td><input type="text" class="qe-res-name" value="'+res.resource_name.replace(/"/g,'&quot;')+'" placeholder="Resource name"></td>'+
-                '<td><input type="number" class="qe-res-qty" value="'+res.est_resource_quantity+'" step="0.001"></td>'+
-                '<td><input type="number" class="qe-res-rate" value="'+res.est_resource_rate+'" step="0.01"></td>'+
-                '<td><input type="number" class="qe-res-amt" value="'+res.est_resource_amount+'" step="0.01" readonly></td>'+
-                '<td style="text-align:right;white-space:nowrap;">'+
-                  '<button class="qe-map-btn" title="Map to Tasks">&#x1F517;</button> '+
-                  '<button class="qe-del-btn qe-res-del" title="Remove">&times;</button>'+
-                '</td>';
-              tbody.appendChild(tr);
-              function bindPrefillAmt(row){
-                function calcRow(){
-                  var q = parseFloat(row.querySelector('.qe-res-qty').value)||0;
-                  var r = parseFloat(row.querySelector('.qe-res-rate').value)||0;
-                  row.querySelector('.qe-res-amt').value = (q*r).toFixed(2);
-                  recalcEstRate();
-                }
-                row.querySelector('.qe-res-qty').addEventListener('input', calcRow);
-                row.querySelector('.qe-res-rate').addEventListener('input', calcRow);
-              }
-              bindPrefillAmt(tr);
-              tr.querySelector('.qe-res-del').addEventListener('click', function(){ tr.remove(); recalcEstRate(); });
-              tr.querySelector('.qe-map-btn').addEventListener('click', function(){ openMapPopup(tr); });
-            });
-            recalcEstRate();
+        document.getElementById('qe-res-body').innerHTML = '';
+        loadResTypes(function(){
+          data.items.forEach(function(res){
+            addResRow({ type_id: res.type_id, group_id: res.group_id,
+                        resource_id: res.Resource_Id||res.resource_id||res.est_resource_id,
+                        qty: res.est_resource_quantity, rate: res.est_resource_rate });
           });
         });
       }
@@ -3004,7 +3031,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   /* add resource row */
   document.getElementById('qe-res-add').addEventListener('click', function(){
-    loadResGroups(function(){ loadResTypes(function(){ addResRow(); }); });
+    loadResTypes(function(){ addResRow(); });
   });
 
   /* ── Add to Gantt ── */

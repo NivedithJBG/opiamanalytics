@@ -193,9 +193,26 @@ class ProjectsmainController extends Controller
     public function actionGetresgrouplist()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $rows = \Yii::$app->db->createCommand(
-            "SELECT Resource_group_Id AS id, Resource_group_Name AS name FROM resource_group ORDER BY RG_sortorder ASC, Resource_group_Name ASC"
-        )->queryAll();
+        $typeId = (int)\Yii::$app->request->post('type_id', 0);
+        $sql = "SELECT Resource_group_Id AS id, Resource_group_Name AS name FROM resource_group WHERE status=0";
+        if ($typeId) $sql .= " AND ResourceType_Id=" . $typeId;
+        $sql .= " ORDER BY RG_sortorder ASC, Resource_group_Name ASC";
+        $rows = \Yii::$app->db->createCommand($sql)->queryAll();
+        return ['items' => $rows];
+    }
+
+    public function actionGetwbresources()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $typeId  = (int)\Yii::$app->request->post('type_id', 0);
+        $groupId = (int)\Yii::$app->request->post('group_id', 0);
+        if (!$typeId && !$groupId) return ['items' => []];
+        $sql = "SELECT Resource_Id AS id, Name AS name, Unit AS unit, Price AS price
+                FROM resources WHERE Status=0";
+        if ($typeId)  $sql .= " AND ResourceType_Id=" . $typeId;
+        if ($groupId) $sql .= " AND Resource_group_Id=" . $groupId;
+        $sql .= " ORDER BY Name ASC";
+        $rows = \Yii::$app->db->createCommand($sql)->queryAll();
         return ['items' => $rows];
     }
 
