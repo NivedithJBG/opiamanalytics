@@ -529,12 +529,11 @@ class ProjectsetupController extends Controller
 				$childdataProvider=$dataReader->readAll();
 				$childdatarows='';
 				foreach($childdataProvider AS $childdata):
-					$vendor=Vendors::find()->where(['Vendor_Id'=>$childdata['Vendor_Id']])->one();
 					$vendorname='';
-					if($vendor)
-					{
-						$vendorname=$vendor->Name." ".$vendor->Brand;
-					} 
+					try {
+						$vendor=\Yii::$app->db->createCommand("SELECT Name, Brand FROM vendors WHERE Vendor_Id=:id")->bindValue(':id',$childdata['Vendor_Id'])->queryOne();
+						if($vendor) $vendorname=$vendor['Name']." ".$vendor['Brand'];
+					} catch(\Exception $e) {}
 
 					if(isset($_POST['mode'])){
 						if($restypeid==26){
