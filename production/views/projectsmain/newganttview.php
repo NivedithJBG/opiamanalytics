@@ -2087,9 +2087,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     });
 
     // Bar click — open WBS Quick Entry prefilled with saved data
-    $(document).on('click', '#gantt-container .gtaskblue, #gantt-container .gtaskpink', function() {
-      var bardiv = $(this).closest('[id^="gantt-containerbardiv_"]')[0];
-      var rawId = bardiv ? _getActIdFromBarDiv(bardiv) : null;
+    $(document).on('click', '#gantt-container .gtaskbarcontainer:not(.gplan)', function() {
+      var rawId = _getActIdFromBarDiv(this);
       if (typeof window.openQeModal === 'function') window.openQeModal(rawId || null);
     });
   })();
