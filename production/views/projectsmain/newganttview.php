@@ -1674,10 +1674,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   });
 
   // ---- Click on any activity bar opens Quick Entry prefilled ---------------
-  $(document).on('click', '#gantt-container .gtaskblue, #gantt-container .gtaskpink', function() {
-    var rawId = _getActIdFromBarDiv(this);
-    if (typeof window.openQeModal === 'function') window.openQeModal(rawId || null);
-  });
+  // (rawId lookup happens inside the IIFE where _actCells is in scope — see below)
 
   // ---- Init -----------------------------------------------------------------
 
@@ -2087,6 +2084,13 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     // Also hide if mouse leaves the whole gantt container
     $(document).on('mouseleave', '#gantt-container', function() {
       _hidePopup();
+    });
+
+    // Bar click — open WBS Quick Entry prefilled with saved data
+    $(document).on('click', '#gantt-container .gtaskblue, #gantt-container .gtaskpink', function() {
+      var bardiv = $(this).closest('[id^="gantt-containerbardiv_"]')[0];
+      var rawId = bardiv ? _getActIdFromBarDiv(bardiv) : null;
+      if (typeof window.openQeModal === 'function') window.openQeModal(rawId || null);
     });
   })();
 
