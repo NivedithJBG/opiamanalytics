@@ -2466,44 +2466,65 @@ function _prefillModal(d){
   if(d.sch_unit) document.getElementById('qe-sch-unit').classList.remove('qe-needs-data');
   if(d.sch_qty)  document.getElementById('qe-sch-qty').classList.remove('qe-needs-data');
 
-  /* Tasks */
-  var taskBody = document.getElementById('qe-task-body');
-  taskBody.innerHTML = '';
-  if(d.tasks && d.tasks.length){
-    d.tasks.forEach(function(task){
-      var tr = document.createElement('tr');
-      tr.innerHTML =
-        '<td><input type="text" class="qe-task-name" value="'+(task.name||'').replace(/"/g,'&quot;')+'" placeholder="Task name"></td>'+
-        '<td><input type="text" class="qe-task-unit" value="'+(task.unit||'').replace(/"/g,'&quot;')+'" placeholder="Unit"></td>'+
-        '<td><input type="number" class="qe-task-prod" value="'+parseFloat(task.prod||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
-        '<td><input type="number" class="qe-task-resunits" value="'+(task.resunits||1)+'" placeholder="1" step="1" min="1"></td>'+
-        '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
-      taskBody.appendChild(tr);
-      tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
-      tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
-      tr.querySelector('.qe-task-del').addEventListener('click', function(){
-        if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
-      });
+  /* Tasks and Resources — call getactivityresources directly with the activity id.
+     This is the same call the activity change event makes, bypassing the suppressed event. */
+  if(d.iow_act_id){
+    $.ajax({
+      type:'POST', url:'../projectsmain/getactivityresources', dataType:'json',
+      data:{ activity_id: d.iow_act_id },
+      success: function(data){
+        /* Unit (only fill if not already set from wbsget) */
+        if(data.unit && !document.getElementById('qe-unit').value)
+          document.getElementById('qe-unit').value = data.unit;
+
+        /* Tasks */
+        var taskBody = document.getElementById('qe-task-body');
+        taskBody.innerHTML = '';
+        if(data.tasks && data.tasks.length){
+          data.tasks.forEach(function(task){
+            var tr = document.createElement('tr');
+            tr.innerHTML =
+              '<td><input type="text" class="qe-task-name" value="'+(task.task_name||task.name||'').replace(/"/g,'&quot;')+'" placeholder="Task name"></td>'+
+              '<td><input type="text" class="qe-task-unit" value="'+(task.task_unit||task.unit||'').replace(/"/g,'&quot;')+'" placeholder="Unit"></td>'+
+              '<td><input type="number" class="qe-task-prod" value="'+parseFloat(task.productivity||task.prod||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
+              '<td><input type="number" class="qe-task-resunits" value="'+(task.resunits||1)+'" placeholder="1" step="1" min="1"></td>'+
+              '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
+            taskBody.appendChild(tr);
+            tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
+            tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
+            tr.querySelector('.qe-task-del').addEventListener('click', function(){
+              if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
+            });
+          });
+        } else {
+          addTaskRow();
+        }
+
+        /* Resources */
+        document.getElementById('qe-res-body').innerHTML = '';
+        if(data.items && data.items.length){
+          loadResTypes(function(){
+            data.items.forEach(function(res){
+              addResRow({
+                type_id:     res.type_id,
+                group_id:    res.group_id,
+                resource_id: res.est_resource_id,
+                qty:         res.est_resource_quantity,
+                rate:        res.est_resource_rate
+              });
+            });
+          });
+        } else {
+          loadResTypes(function(){ addResRow(); });
+        }
+        recalcDuration();
+      }
     });
   } else {
     addTaskRow();
-  }
-
-  /* Resources */
-  var resBody = document.getElementById('qe-res-body');
-  resBody.innerHTML = '';
-  if(d.resources && d.resources.length){
-    loadResTypes(function(){
-      d.resources.forEach(function(res){
-        addResRow({ type_id: res.type_id, group_id: res.group_id, resource_id: res.resource_id,
-                    qty: res.qty, rate: res.rate, task_map: res.task_map });
-      });
-    });
-  } else {
     loadResTypes(function(){ addResRow(); });
+    recalcDuration();
   }
-
-  recalcDuration();
 }
 
 window.openQeModal    = openModal;
