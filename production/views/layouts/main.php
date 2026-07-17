@@ -2788,7 +2788,7 @@ document.addEventListener('DOMContentLoaded', function(){
               '<td><input type="text" class="qe-task-name" value="'+task.task_name.replace(/"/g,'&quot;')+'" placeholder="Task name"></td>'+
               '<td><input type="text" class="qe-task-unit" value="'+task.task_unit.replace(/"/g,'&quot;')+'" placeholder="Unit"></td>'+
               '<td><input type="number" class="qe-task-prod" value="'+parseFloat(task.productivity).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
-              '<td><input type="number" class="qe-task-resunits" placeholder="1" step="1" min="1"></td>'+
+              '<td><input type="number" class="qe-task-resunits" value="1" placeholder="1" step="1" min="1"></td>'+
               '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
             taskBody.appendChild(tr);
             tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
@@ -2881,7 +2881,6 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('qe-btn-add').addEventListener('click', function(){
     var payload = collectPayload();
     if(!payload.iow_act_id)  { alert('Please select an Activity.'); return; }
-    if(payload.duration < 1) { alert('Duration is 0. Please fill in task productivity and resource units.'); return; }
 
     var btn = document.getElementById('qe-btn-add');
     btn.disabled = true; btn.textContent = 'Saving…';
