@@ -490,13 +490,21 @@ class ProjectsmainController extends Controller
 
         if (!$actNameInput) return ['error' => 'Activity name is required'];
 
-        // resolve iow group id from name if not supplied
+        // resolve or create iow group from name
         if (!$iowGroupId && $iowGroupName !== '') {
             $igRow = $db->createCommand(
-                "SELECT id FROM iow_groups WHERE name=:n AND status=0 LIMIT 1",
-                [':n' => $iowGroupName]
+                "SELECT id FROM iow_groups WHERE name=:n AND project_id=:p AND status=0 LIMIT 1",
+                [':n' => $iowGroupName, ':p' => $pid]
             )->queryOne();
-            if ($igRow) $iowGroupId = (int)$igRow['id'];
+            if ($igRow) {
+                $iowGroupId = (int)$igRow['id'];
+            } else {
+                $db->createCommand(
+                    "INSERT INTO iow_groups (name, project_id, status, primavera_id) VALUES (:n, :p, 0, 0)",
+                    [':n' => $iowGroupName, ':p' => $pid]
+                )->execute();
+                $iowGroupId = (int)$db->lastInsertID;
+            }
         }
 
         $now = date('Y-m-d H:i:s');
