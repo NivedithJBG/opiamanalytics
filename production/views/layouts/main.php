@@ -2050,20 +2050,27 @@ if($action=='login')
      WBS / IOW ENTRY MODAL
 ════════════════════════════════════════════════════════════════════════ -->
 <style>
-#qe-bk{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000}
-#qe-bk.qe-open{display:block}
+#qe-bk{display:none}
 #qe-modal{
-  display:none;position:fixed;top:50%;left:50%;
-  transform:translate(-50%,-50%);
-  width:920px;max-width:96vw;height:94vh;max-height:94vh;
-  z-index:10001;border-radius:0;overflow:hidden;
-  background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.75);
+  display:none;position:fixed;top:80px;right:30px;
+  width:860px;max-width:96vw;height:88vh;max-height:88vh;
+  z-index:10001;border-radius:6px;overflow:hidden;
+  background:#fff;box-shadow:0 8px 32px rgba(0,0,0,.45);
   flex-direction:column;
   font-family:'Barlow',sans-serif;
 }
 #qe-modal.qe-open{display:flex}
-#qe-hdr{display:none}
-#qe-close{display:none}
+#qe-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  background:#1a202c;color:#fff;padding:8px 14px;
+  cursor:move;user-select:none;flex-shrink:0;
+  font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;
+}
+#qe-close{
+  display:inline-flex;align-items:center;justify-content:center;
+  background:transparent;border:none;color:#fff;font-size:18px;
+  cursor:pointer;padding:0 4px;line-height:1;
+}
 #qe-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 20px 20px;display:flex;flex-direction:column;gap:0;scroll-behavior:smooth;}
 #qe-body::-webkit-scrollbar{width:5px}
 #qe-body::-webkit-scrollbar-track{background:#f1f1f1}
@@ -2237,7 +2244,7 @@ if($action=='login')
 <div id="qe-bk"></div>
 <div id="qe-modal">
   <div id="qe-hdr">
-    <span>Add Activity to Schedule</span>
+    <span>&#9998; WBS Entry &mdash; <span style="font-weight:400;opacity:.75;font-size:11px;">drag to move</span></span>
     <button id="qe-close">&times;</button>
   </div>
   <div id="qe-body">
@@ -2412,7 +2419,6 @@ var _wbsWanId  = 0;   /* wan_id returned by wbssave / from wbsget */
 
 /* ── open / close ── */
 function openModal(saId, wanId){
-  document.getElementById('qe-bk').classList.add('qe-open');
   document.getElementById('qe-modal').classList.add('qe-open');
   var pname = (document.getElementById('selectedProject')||{}).value || '';
   var lbl = document.getElementById('qe-proj-label');
@@ -2554,7 +2560,6 @@ function _prefillModal(d){
 
 window.openQeModal    = openModal;
 function closeModal(){
-  document.getElementById('qe-bk').classList.remove('qe-open');
   document.getElementById('qe-modal').classList.remove('qe-open');
   _wbsMode = 'new'; _wbsWanId = 0;
 }
@@ -3039,7 +3044,35 @@ document.addEventListener('DOMContentLoaded', function(){
   /* close WBS modal */
   document.getElementById('qe-close').addEventListener('click', closeModal);
   document.getElementById('qe-close-btn').addEventListener('click', closeModal);
-  document.getElementById('qe-bk').addEventListener('click', closeModal);
+
+  /* drag to move */
+  (function(){
+    var modal = document.getElementById('qe-modal');
+    var hdr   = document.getElementById('qe-hdr');
+    var _dx=0,_dy=0,_dragging=false;
+    hdr.addEventListener('mousedown', function(e){
+      if(e.target.id==='qe-close') return;
+      _dragging = true;
+      var r = modal.getBoundingClientRect();
+      /* switch from right-anchored to left-anchored positioning */
+      modal.style.right  = 'auto';
+      modal.style.left   = r.left + 'px';
+      modal.style.top    = r.top  + 'px';
+      _dx = e.clientX - r.left;
+      _dy = e.clientY - r.top;
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function(e){
+      if(!_dragging) return;
+      var x = e.clientX - _dx;
+      var y = e.clientY - _dy;
+      x = Math.max(0, Math.min(x, window.innerWidth  - modal.offsetWidth));
+      y = Math.max(0, Math.min(y, window.innerHeight - modal.offsetHeight));
+      modal.style.left = x + 'px';
+      modal.style.top  = y + 'px';
+    });
+    document.addEventListener('mouseup', function(){ _dragging = false; });
+  })();
 
   /* task map popup */
   document.getElementById('qe-map-bk').addEventListener('click', closeMapPopup);
