@@ -879,6 +879,7 @@ class ProjectsmainController extends Controller
                     'resource_id'  => (int)$r['resource_id'],
                     'type_id'      => (int)$r['type_id'],
                     'group_id'     => (int)$r['group_id'],
+                    'unit'         => $r['resource_unit'] ?? '',
                     'rate'         => (float)$r['rate'],
                     'qty'          => (float)$r['qty'],
                     'amount'       => (float)$r['amount'],

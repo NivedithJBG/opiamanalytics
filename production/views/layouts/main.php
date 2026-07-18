@@ -2055,7 +2055,7 @@ if($action=='login')
 #qe-modal{
   display:none;position:fixed;top:50%;left:50%;
   transform:translate(-50%,-50%);
-  width:740px;max-width:94vw;height:94vh;max-height:94vh;
+  width:920px;max-width:96vw;height:94vh;max-height:94vh;
   z-index:10001;border-radius:0;overflow:hidden;
   background:#fff;box-shadow:0 12px 40px rgba(0,0,0,.75);
   flex-direction:column;
@@ -2349,13 +2349,14 @@ if($action=='login')
         <table class="qe-repeat-tbl" id="qe-res-tbl">
           <thead>
             <tr>
-              <th style="width:18%">Resource Type</th>
-              <th style="width:18%">Resource Group</th>
-              <th style="width:22%">Resource Name</th>
-              <th style="width:10%">Qty/Unit</th>
-              <th style="width:12%">Rate/Unit</th>
-              <th style="width:12%">Amount</th>
-              <th style="width:8%;text-align:right">
+              <th style="width:15%">Resource Type</th>
+              <th style="width:15%">Resource Group</th>
+              <th style="width:18%">Resource Name</th>
+              <th style="width:9%">Unit</th>
+              <th style="width:9%">Qty/Unit</th>
+              <th style="width:10%">Rate/Unit</th>
+              <th style="width:10%">Amount</th>
+              <th style="width:7%;text-align:right">
                 <button class="qe-add-btn" id="qe-res-add" title="Add resource row">+</button>
               </th>
             </tr>
@@ -2532,9 +2533,10 @@ function _prefillModal(d){
               addResRow({
                 type_id:     res.type_id,
                 group_id:    res.group_id,
-                resource_id: res.est_resource_id,
-                qty:         res.est_resource_quantity,
-                rate:        res.est_resource_rate
+                resource_id: res.est_resource_id || res.resource_id,
+                unit:        res.resource_unit || res.unit || '',
+                qty:         res.est_resource_quantity || res.qty,
+                rate:        res.est_resource_rate || res.rate
               });
             });
           });
@@ -2768,10 +2770,12 @@ function _bindResRow(tr){
   var typeEl  = tr.querySelector('.qe-res-type');
   var grpEl   = tr.querySelector('.qe-res-group');
   var nameSel = tr.querySelector('.qe-res-name');
+  var unitEl  = tr.querySelector('.qe-res-unit');
   var qtyEl   = tr.querySelector('.qe-res-qty');
   var rateEl  = tr.querySelector('.qe-res-rate');
   var amtEl   = tr.querySelector('.qe-res-amt');
 
+  _bindAlphaField(unitEl);
   _bindNumField(qtyEl);
   _bindNumField(rateEl);
 
@@ -2872,6 +2876,7 @@ function addResRow(prefill){
     '<td><select class="qe-res-type">'+makeResTypeOptions(prefill&&prefill.type_id)+'</select></td>'+
     '<td><select class="qe-res-group"><option value="">— Group —</option></select></td>'+
     '<td><select class="qe-res-name"><option value="">— select type/group first —</option></select></td>'+
+    '<td><input type="text" class="qe-res-unit" value="'+(prefill&&prefill.unit||'')+'" placeholder="e.g. m³" data-alpha="1"></td>'+
     '<td><input type="number" class="qe-res-qty" value="'+(prefill&&prefill.qty!=null?prefill.qty:1)+'" step="0.001"></td>'+
     '<td><input type="number" class="qe-res-rate" value="'+(prefill&&prefill.rate||'')+'" placeholder="0.00" step="0.01"></td>'+
     '<td><input type="number" class="qe-res-amt" placeholder="0.00" readonly></td>'+
@@ -2943,6 +2948,7 @@ function collectPayload(){
       group_id:    tr.querySelector('.qe-res-group').value,
       type_id:     tr.querySelector('.qe-res-type').value,
       name:        name,
+      unit:        tr.querySelector('.qe-res-unit') ? tr.querySelector('.qe-res-unit').value.trim() : '',
       qty:         parseFloat(tr.querySelector('.qe-res-qty').value)  || 0,
       rate:        parseFloat(tr.querySelector('.qe-res-rate').value) || 0,
       task_map:    tr._taskMap || []
