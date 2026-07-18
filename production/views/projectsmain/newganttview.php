@@ -103,7 +103,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 #gcm-popup {
   display: none; position: fixed; z-index: 10015;
   top: 80px; left: calc(50% - 380px);
-  width: 760px; height: 28vh;
+  width: 760px; height: 38vh;
   min-width: 420px; min-height: 280px;
   background: #f0f3fa;
   border-radius: 10px; box-shadow: 0 8px 36px rgba(0,0,0,0.32);
