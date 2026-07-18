@@ -21574,13 +21574,13 @@ public function actionActivitymusterprocess()
         } else {
             $html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
                   . '<thead><tr>'
-                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:4px 8px;border:1px solid #444;text-align:center;width:42px;">#</th>'
-                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:4px 8px;border:1px solid #444;">Project Type</th>'
-                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:4px 8px;border:1px solid #444;">Type</th>'
-                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:4px 8px;border:1px solid #444;">Activity</th>'
-                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:4px 8px;border:1px solid #444;text-align:center;width:70px;">Unit</th>'
-                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:4px 8px;border:1px solid #444;text-align:right;width:80px;">Rate</th>'
-                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:4px 8px;border:1px solid #444;text-align:center;width:120px;"></th>'
+                  . '<th style="background:#555;color:#fff;font-weight:600;font-size:11px;line-height:1;padding:3px 6px;border:1px solid #444;text-align:center;width:42px;">#</th>'
+                  . '<th style="background:#555;color:#fff;font-weight:600;font-size:11px;line-height:1;padding:3px 6px;border:1px solid #444;">Project Type</th>'
+                  . '<th style="background:#555;color:#fff;font-weight:600;font-size:11px;line-height:1;padding:3px 6px;border:1px solid #444;">Type</th>'
+                  . '<th style="background:#555;color:#fff;font-weight:600;font-size:11px;line-height:1;padding:3px 6px;border:1px solid #444;">Activity</th>'
+                  . '<th style="background:#555;color:#fff;font-weight:600;font-size:11px;line-height:1;padding:3px 6px;border:1px solid #444;text-align:center;width:70px;">Unit</th>'
+                  . '<th style="background:#555;color:#fff;font-weight:600;font-size:11px;line-height:1;padding:3px 6px;border:1px solid #444;text-align:right;width:80px;">Rate</th>'
+                  . '<th style="background:#555;color:#fff;font-weight:600;font-size:11px;line-height:1;padding:3px 6px;border:1px solid #444;text-align:center;width:120px;"></th>'
                   . '</tr></thead><tbody>';
             foreach ($estimateworktypes as $i => $data) {
                 $safeName = htmlspecialchars($data['activity_name'], ENT_QUOTES);
