@@ -1587,12 +1587,14 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       _hideCostPopup();
     });
 
-    // ── KPI icon click → open KPI modal (full detail view) ───────────────────
+    // ── KPI icon click → open KPI float panel ────────────────────────────────
     var _gkmCache = {};
-    $(document).on('click', '#gantt-container .gcol-kpi span[data-kpiactid]', function() {
+    $(document).on('click', '#gantt-container .gcol-kpi span[data-kpiactid]', function(e) {
+      e.stopPropagation();
       var actId = $(this).data('kpiactid');
       if (!actId) return;
-      _hidePopup(); // close hover popup first
+      _showKpiForAct(actId, function(){});
+      return; // everything below is dead code kept for reference
       $('#gkm-loading').show();
       $('#gkm-content').hide();
       $('#gkm-title').text('KPI Dashboard — Loading…');
@@ -2204,15 +2206,6 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       }, 300);
     });
 
-
-    // KPI column icon click — open float panel
-    $(document).on('click', '#gantt-container .gcol-kpi span[data-kpiactid]', function(e) {
-      e.stopPropagation();
-      var actId = $(this).data('kpiactid');
-      if (!actId) return;
-      _hidePopup();
-      _showKpiForAct(actId, function(){ });
-    });
 
     $('#gkp-close').on('click', function() { _hidePopup(); });
 
