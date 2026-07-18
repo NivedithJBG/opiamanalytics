@@ -3176,13 +3176,20 @@ document.addEventListener('DOMContentLoaded', function(){
         btn.disabled = false; btn.textContent = '💾 Save';
         if(d.error && d.error !== 'No'){ alert('Save error: ' + d.error); return; }
         _wbsWanId = d.wan_id || 0;
-        /* update hidden activity id in case a new activity was created */
         if(d.iow_act_id) document.getElementById('qe-activity-id').value = d.iow_act_id;
-        /* enable Add to Gantt */
-        document.getElementById('qe-btn-add').disabled = false;
-        var msg = document.getElementById('qe-save-msg');
-        msg.style.color = '#27ae60'; msg.textContent = '✔ Saved successfully';
-        setTimeout(function(){ msg.textContent = ''; }, 3000);
+        if(_wbsMode === 'edit'){
+          /* edit mode: reload gantt then clear for next entry */
+          if(typeof window.loadGantt === 'function') window.loadGantt();
+          clearActivityFields();
+          _wbsMode = 'new';
+          document.getElementById('qe-btn-add').style.display = '';
+        } else {
+          /* new mode: just enable Add to Gantt */
+          document.getElementById('qe-btn-add').disabled = false;
+          var msg = document.getElementById('qe-save-msg');
+          msg.style.color = '#27ae60'; msg.textContent = '✔ Saved — click Add to Gantt';
+          setTimeout(function(){ msg.textContent = ''; }, 3000);
+        }
       },
       error: function(){
         btn.disabled = false; btn.textContent = '💾 Save';
