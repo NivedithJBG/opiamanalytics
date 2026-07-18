@@ -25,7 +25,7 @@ $(function(){
   <div class="m4-rs m4-rs-se" data-dir="se"></div>
   <div class="m4-rs m4-rs-sw" data-dir="sw"></div>
   <div class="menu4-win-hdr">
-    <span style="font-size:16px;font-weight:700;color:#333;">Activity Library</span>
+    <span style="font-size:18px;font-weight:700;color:#333;">Activity Library</span>
     <div class="menu4-win-hdr-btns">
       <button class="menu4-win-expand" title="Fullscreen">&#x26F6;</button>
       <button class="menu4-win-close" title="Close">&times;</button>

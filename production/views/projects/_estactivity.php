@@ -65,8 +65,8 @@ use app\models\Resources;
                             <a href="#alProjTypePopup" class="btn btn-default" id="alOpenProjTypePopup" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ Project Type</a>
                             <a href="#alIowGroupPopup" class="btn btn-default" id="alOpenIowGroupPopup" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ IOW Group</a>
                             <a href="#alActTypePopup" class="btn btn-default" id="alOpenActTypePopup" data-toggle="modal" data-target="#alActTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ Activity Type</a>
-                            <a href="#alAddActivityPopup" class="btn btn-primary" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities" style="border-radius:20px;"><span class="icon-add"></span> Activity</a>
-                            <a href="#" class="btn btn-primary list-accountType" id="listestactivity" style="border-radius:20px;"><span class="icon-th-list"></span> List</a>
+                            <a href="#alAddActivityPopup" class="btn" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-add"></span> Activity</a>
+                            <a href="#" class="btn list-accountType" id="listestactivity" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-th-list"></span> List</a>
                             <select id="searchestworktypelist" class="form-control" style="margin-left:10px;width:160px;border-radius:20px;height:34px;display:inline-block;">
                                 <option value="0">All Project Types</option>
                                 <?php
