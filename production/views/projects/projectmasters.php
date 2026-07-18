@@ -18,10 +18,17 @@ $(function(){
 <div class="container-fluid procu-accordion">
 	<div class="row">
 		<div class="menu4-popup-cntnr">
+			<div class="menu4-rs menu4-rs-e"  data-dir="e"></div>
+			<div class="menu4-rs menu4-rs-w"  data-dir="w"></div>
+			<div class="menu4-rs menu4-rs-s"  data-dir="s"></div>
+			<div class="menu4-rs menu4-rs-se" data-dir="se"></div>
+			<div class="menu4-rs menu4-rs-sw" data-dir="sw"></div>
+			<div class="menu4-drag-hdr">
+				<span>&#128218; Activity Library &mdash; <span style="font-weight:400;opacity:.75;font-size:11px;">drag to move</span></span>
+				<a href="#" class="menu4-win-close" style="color:#fff;font-size:18px;text-decoration:none;line-height:1;">&times;</a>
+			</div>
 			<div class="menu4-cntnt-wrpr">
-				<div class="icon-groups type"> 
-					<!-- <a href="#" title="Close" class="btn btn-primary text-button menu-win-close">&#10006; Close</a> -->
-				</div>
+				<div class="icon-groups type"></div>
 				<div style="padding:10px 20px 6px;"><h4 style="margin:0;font-weight:700;color:#1a202c;">Activity Resource Allocation</h4></div>
 				<div class="col-md-12">
 					<?php //echo $this->render('_projects'); ?>
