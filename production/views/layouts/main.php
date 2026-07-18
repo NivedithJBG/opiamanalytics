@@ -81,7 +81,7 @@ $subDomain = array_shift(($HTTP_HOST));
     <!-- <link href="<//?php echo Yii::$app->request->baseUrl; ?>/cssnew/style.css?v=1.18" rel="stylesheet"> -->
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer.css?v=1.18" rel="stylesheet">
   <!--   <link href="<//?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer1.css" rel="stylesheet"> -->
-    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer2.css?v=20260718i" rel="stylesheet">
+    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer2.css?v=20260718j" rel="stylesheet">
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer3.css" rel="stylesheet">
 
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer4.css" rel="stylesheet">
@@ -342,7 +342,7 @@ if($action=='login')
 
                 if($ProjectId && Yii::$app->controller->id != 'procurement') {  ?>
                 <li>
-                    <a class="icon-chart3" title="Gantt Chart" href="<?php echo Yii::$app->urlManager->createUrl('projectsmain/newganttchart?id='.$ProjectId)?>"></a>
+                    <a class="icon-chart3" id="gantt-win-open" title="Gantt Chart" href="#" data-projectid="<?php echo $ProjectId?>"></a>
                 </li>
                 <?php if(Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'newganttchart') { ?>
                 <li><a class="icon-tools overNow4" title="Activity Library" href="<?php echo Yii::$app->urlManager->createUrl('projects/projectmasters')?>"></a></li>
@@ -3309,4 +3309,154 @@ document.addEventListener('DOMContentLoaded', function(){
 
 })();
 </script>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     GANTT CHART FLOATING WINDOW
+════════════════════════════════════════════════════════════════════════ -->
+<style>
+#gantt-win {
+  display:none; position:fixed; top:80px; left:20px;
+  width:calc(100vw - 40px); height:calc(100vh - 100px);
+  min-width:500px; min-height:300px;
+  z-index:10002; background:#fff; border-radius:6px;
+  box-shadow:0 8px 32px rgba(0,0,0,.45);
+  flex-direction:column; overflow:hidden;
+}
+#gantt-win.gw-open { display:flex; }
+#gantt-win-hdr {
+  background:#1a202c; color:#fff; padding:7px 14px;
+  display:flex; align-items:center; justify-content:space-between;
+  cursor:move; user-select:none; flex-shrink:0;
+  font-family:'Nunito',sans-serif; font-size:13px; font-weight:700;
+}
+#gantt-win-hdr-btns { display:flex; align-items:center; gap:8px; }
+#gantt-win-hdr-btns button {
+  background:none; border:none; color:#fff; font-size:16px;
+  cursor:pointer; line-height:1; padding:0 4px;
+}
+#gantt-win-body { flex:1; min-height:0; overflow:auto; }
+#gantt-win-loading { padding:50px; text-align:center; color:#666; font-size:14px; }
+.gw-rs { position:absolute; z-index:10; background:transparent; }
+.gw-rs-e  { right:0;  top:6px;    bottom:6px; width:6px;  cursor:e-resize; }
+.gw-rs-w  { left:0;   top:6px;    bottom:6px; width:6px;  cursor:w-resize; }
+.gw-rs-s  { bottom:0; left:6px;   right:6px;  height:6px; cursor:s-resize; }
+.gw-rs-n  { top:0;    left:6px;   right:6px;  height:6px; cursor:n-resize; }
+.gw-rs-se { right:0;  bottom:0; width:14px; height:14px; cursor:se-resize; }
+.gw-rs-sw { left:0;   bottom:0; width:14px; height:14px; cursor:sw-resize; }
+.gw-rs-ne { right:0;  top:0;    width:14px; height:14px; cursor:ne-resize; }
+.gw-rs-nw { left:0;   top:0;    width:14px; height:14px; cursor:nw-resize; }
+</style>
+
+<div id="gantt-win">
+  <div class="gw-rs gw-rs-n" data-dir="n"></div>
+  <div class="gw-rs gw-rs-s" data-dir="s"></div>
+  <div class="gw-rs gw-rs-e" data-dir="e"></div>
+  <div class="gw-rs gw-rs-w" data-dir="w"></div>
+  <div class="gw-rs gw-rs-ne" data-dir="ne"></div>
+  <div class="gw-rs gw-rs-nw" data-dir="nw"></div>
+  <div class="gw-rs gw-rs-se" data-dir="se"></div>
+  <div class="gw-rs gw-rs-sw" data-dir="sw"></div>
+  <div id="gantt-win-hdr">
+    <span>&#9776; Gantt Chart — drag to move</span>
+    <div id="gantt-win-hdr-btns">
+      <button id="gantt-win-expand" title="Fullscreen">&#x26F6;</button>
+      <button id="gantt-win-close" title="Close">&times;</button>
+    </div>
+  </div>
+  <div id="gantt-win-body">
+    <div id="gantt-win-loading">Loading Gantt chart&hellip;</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var win = document.getElementById('gantt-win');
+  var hdr = document.getElementById('gantt-win-hdr');
+  var body = document.getElementById('gantt-win-body');
+  var MIN_W=500, MIN_H=300, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0, _saved=null;
+  var _loaded = false;
+
+  function _anchor(){
+    var r=win.getBoundingClientRect();
+    win.style.right='auto'; win.style.left=r.left+'px';
+    win.style.top=r.top+'px'; win.style.width=r.width+'px';
+    win.style.height=r.height+'px'; return r;
+  }
+
+  // Open
+  var openBtn = document.getElementById('gantt-win-open');
+  if(openBtn){
+    openBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      win.classList.add('gw-open');
+      if(!_loaded){
+        _loaded = true;
+        var pid = this.getAttribute('data-projectid');
+        var url = '<?php echo Yii::$app->urlManager->createUrl("projectsmain/newganttchart")?>' + '?id=' + pid + '&layout=false';
+        $.ajax({ url: url, success: function(html){
+          document.getElementById('gantt-win-body').innerHTML = html;
+        }, error: function(){
+          document.getElementById('gantt-win-body').innerHTML = '<div style="padding:30px;color:red;">Failed to load Gantt.</div>';
+        }});
+      }
+    });
+  }
+
+  // Close
+  document.getElementById('gantt-win-close').addEventListener('click', function(){
+    win.classList.remove('gw-open');
+  });
+
+  // Expand / restore
+  document.getElementById('gantt-win-expand').addEventListener('click', function(){
+    if(_saved){
+      win.style.left=_saved.left; win.style.top=_saved.top;
+      win.style.width=_saved.width; win.style.height=_saved.height;
+      _saved=null; this.innerHTML='&#x26F6;'; this.title='Fullscreen';
+    } else {
+      var r=win.getBoundingClientRect();
+      _saved={left:win.style.left,top:win.style.top,width:win.style.width,height:win.style.height};
+      win.style.left='0'; win.style.top='0';
+      win.style.width='100vw'; win.style.height='100vh';
+      this.innerHTML='&#x2716;'; this.title='Restore';
+    }
+  });
+
+  // Drag
+  hdr.addEventListener('mousedown', function(e){
+    if(e.target.closest('#gantt-win-hdr-btns')) return;
+    var r=_anchor(); _action='drag';
+    _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault();
+  });
+
+  // Resize
+  document.querySelectorAll('.gw-rs').forEach(function(el){
+    el.addEventListener('mousedown', function(e){
+      var r=_anchor(); _action=el.getAttribute('data-dir');
+      _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height;
+      e.preventDefault(); e.stopPropagation();
+    });
+  });
+
+  document.addEventListener('mousemove', function(e){
+    if(!_action) return;
+    var dx=e.clientX-_sx, dy=e.clientY-_sy;
+    if(_action==='drag'){
+      var x=Math.max(0,Math.min(_ox+dx,window.innerWidth-win.offsetWidth));
+      var y=Math.max(0,Math.min(_oy+dy,window.innerHeight-win.offsetHeight));
+      win.style.left=x+'px'; win.style.top=y+'px';
+    } else {
+      var l=_ox,t=_oy,w=_ow,h=_oh;
+      if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);}
+      if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);}
+      if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;}
+      if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;}
+      win.style.left=l+'px'; win.style.top=t+'px';
+      win.style.width=w+'px'; win.style.height=h+'px';
+    }
+  });
+  document.addEventListener('mouseup', function(){ _action=null; });
+})();
+</script>
+
 <?php $this->endPage() ?>
