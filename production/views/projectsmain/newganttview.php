@@ -2144,10 +2144,10 @@ $(document).ready(function(){
     $('.overNow4').toggleClass('active');
     if(!isActive){
       $('#project-title-head,#prjct_head,#procurement-title-head').html('Activity Library');
-      $('.menu4-popup-cntnr').addClass('active');
+      $('.menu4-popup-cntnr').css('z-index','10002').addClass('active');
       $('body').css('overflow-y','hidden');
     } else {
-      $('.menu4-popup-cntnr').removeClass('active');
+      $('.menu4-popup-cntnr').css('z-index','').removeClass('active');
       $('body').css('overflow-y','auto');
     }
   });
