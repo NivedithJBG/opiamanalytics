@@ -61,7 +61,7 @@ use app\models\Resources;
         <div class="panel-body">
 
                     <div class="search-and-content-wrpr">
-                        <div class="search-and-actions-wrpr" id="AR-allocate-body-one-head" style="display:flex;align-items:center;gap:3px;padding:4px 0;flex-wrap:nowrap;">
+                        <div class="search-and-actions-wrpr" id="AR-allocate-body-one-head" style="display:flex;align-items:center;gap:3px;padding:4px 0;flex-wrap:nowrap;justify-content:flex-start;">
                             <a href="#alProjTypePopup" class="btn btn-default" id="alOpenProjTypePopup" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ Project Type</a>
                             <a href="#alIowGroupPopup" class="btn btn-default" id="alOpenIowGroupPopup" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ IOW Group</a>
                             <a href="#alActTypePopup" class="btn btn-default" id="alOpenActTypePopup" data-toggle="modal" data-target="#alActTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ Activity Type</a>
