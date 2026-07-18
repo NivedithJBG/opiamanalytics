@@ -254,17 +254,20 @@ body > .modal-backdrop { z-index: 10090 !important; }
     display: flex;
 }
 .menu4-win-hdr {
-    background: #1a202c; color: #fff;
-    padding: 7px 14px;
+    background: #fff; color: #333;
+    padding: 10px 15px;
     display: flex; align-items: center; justify-content: space-between;
     cursor: move; user-select: none; flex-shrink: 0;
-    font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700;
+    font-family: 'Nunito',sans-serif; font-size: 16px; font-weight: 700;
+    border-bottom: 1px solid #e5e5e5;
 }
-.menu4-win-hdr-btns { display:flex; align-items:center; gap:8px; }
+.menu4-win-hdr-btns { display:flex; align-items:center; gap:4px; }
 .menu4-win-hdr-btns button {
-    background:none; border:none; color:#fff; font-size:16px;
-    cursor:pointer; line-height:1; padding:0 4px;
+    background: none; border: none; color: #333;
+    font-size: 22px; line-height: 1; cursor: pointer;
+    padding: 0 4px; opacity: 0.6;
 }
+.menu4-win-hdr-btns button:hover { opacity: 1; }
 .menu4-cntnt-wrpr {
     flex: 1; min-height: 0; overflow: auto;
 }

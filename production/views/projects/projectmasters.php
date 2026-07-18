@@ -25,7 +25,7 @@ $(function(){
   <div class="m4-rs m4-rs-se" data-dir="se"></div>
   <div class="m4-rs m4-rs-sw" data-dir="sw"></div>
   <div class="menu4-win-hdr">
-    <span>&#9776; Activity Library — drag to move</span>
+    <span style="font-size:16px;font-weight:700;color:#333;">Activity Library</span>
     <div class="menu4-win-hdr-btns">
       <button class="menu4-win-expand" title="Fullscreen">&#x26F6;</button>
       <button class="menu4-win-close" title="Close">&times;</button>
@@ -33,6 +33,9 @@ $(function(){
   </div>
   <div class="menu4-cntnt-wrpr" style="padding:0 15px;">
     <?php echo $this->render('_estactivity'); ?>
+  </div>
+  <div style="padding:10px 15px;border-top:1px solid #e5e5e5;text-align:right;flex-shrink:0;">
+    <button class="menu4-win-close btn" style="background:#e67e22;color:#fff;border-color:#d35400;border-radius:4px;padding:6px 14px;"><span class="icon-close"></span> Close</button>
   </div>
 </div>
 
