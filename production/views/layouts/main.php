@@ -1174,7 +1174,7 @@ if($action=='login')
 
 
         <!-- Gantt Chart popup  -->
-        <div class="modal fade ganttchartPopup" id="ganttchartPopup" >
+        <div class="modal fade ganttchartPopup" id="ganttchartPopup" style="display:none !important;">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
 
