@@ -2055,7 +2055,7 @@ if($action=='login')
   display:none;position:fixed;top:74px;right:30px;
   width:860px;height:88vh;
   min-width:380px;min-height:280px;
-  z-index:10001;border-radius:6px;overflow:hidden;
+  z-index:10010;border-radius:6px;overflow:hidden;
   background:#fff;box-shadow:0 8px 32px rgba(0,0,0,.45);
   flex-direction:column;
   font-family:'Barlow',sans-serif;
