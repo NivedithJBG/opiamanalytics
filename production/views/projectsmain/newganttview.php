@@ -75,8 +75,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 #gkp-popup {
   display: none; position: fixed; z-index: 10015;
   top: 80px; left: calc(50% - 490px);
-  width: 980px; height: 36vh;
-  min-width: 500px; min-height: 200px;
+  width: 980px; height: 30vh;
+  min-width: 500px; min-height: 180px;
   background: #f0f3fa;
   border-radius: 10px; box-shadow: 0 8px 36px rgba(0,0,0,0.32);
   overflow: hidden; pointer-events: auto;
