@@ -2899,9 +2899,8 @@ function addResRow(prefill){
   if(body) setTimeout(function(){ body.scrollTop = body.scrollHeight; }, 50);
 }
 
-/* ── clear activity fields (keeps Project Type and Group selections) ── */
+/* ── clear activity fields (keeps Project Type, Activity Type and IOW) ── */
 function clearActivityFields(){
-  document.getElementById('qe-iow').value           = '';
   document.getElementById('qe-activity-text').value = '';
   document.getElementById('qe-activity-id').value   = '';
   document.getElementById('qe-unit').value          = '';
@@ -2914,6 +2913,7 @@ function clearActivityFields(){
   document.getElementById('qe-res-body').innerHTML  = '';
   _wbsWanId = 0;
   document.getElementById('qe-btn-add').disabled = true;
+  document.getElementById('qe-save-msg').textContent = '';
   addTaskRow();
   loadResTypes(function(){ addResRow(); });
   recalcDuration();
@@ -3201,7 +3201,7 @@ document.addEventListener('DOMContentLoaded', function(){
         btn.disabled = false; btn.textContent = '+ Add to Gantt';
         if(d.error && d.error !== 'No'){ alert('Error: ' + d.error); return; }
         if(typeof window.loadGantt === 'function') window.loadGantt();
-        closeModal();
+        clearActivityFields();
       },
       error: function(){
         btn.disabled = false; btn.textContent = '+ Add to Gantt';
