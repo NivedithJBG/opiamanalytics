@@ -2054,10 +2054,12 @@ if($action=='login')
 #qe-modal{
   display:none;position:fixed;top:80px;right:30px;
   width:860px;max-width:96vw;height:88vh;max-height:88vh;
-  z-index:10001;border-radius:6px;overflow:hidden;
+  min-width:400px;min-height:300px;
+  z-index:10001;border-radius:6px;overflow:auto;
   background:#fff;box-shadow:0 8px 32px rgba(0,0,0,.45);
   flex-direction:column;
   font-family:'Barlow',sans-serif;
+  resize:both;
 }
 #qe-modal.qe-open{display:flex}
 #qe-hdr{
