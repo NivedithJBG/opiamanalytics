@@ -122,7 +122,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 #gcm-pop-body {
   display: flex; flex-direction: column; gap: 5px; padding: 6px; flex: 1; min-height: 0; overflow: hidden;
 }
-#gcm-pop-row1, #gcm-pop-row2 { display: flex; gap: 5px; flex: 1; min-height: 0; }
+#gcm-pop-row1 { display: flex; gap: 5px; flex: 1; min-height: 0; }
+#gcm-pop-row2 { display: none !important; }
 .gcm-rs { position:absolute; z-index:20; background:transparent; }
 .gcm-rs-e  { right:-4px; top:10px; bottom:10px; width:10px; cursor:e-resize; }
 .gcm-rs-w  { left:-4px;  top:10px; bottom:10px; width:10px; cursor:w-resize; }
@@ -344,12 +345,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Unit Cost of Activity</div><div class="gcm-pop-panel-body" id="gm-cd-g5" style="align-items:center;justify-content:center"></div></div>
       <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Work Done</div><div class="gcm-pop-panel-body" id="gm-cd-g4" style="align-items:center;justify-content:center"></div></div>
       <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Cost of Activity</div><div class="gcm-pop-panel-body" id="gm-cd-g2"></div></div>
-    </div>
-    <div id="gcm-pop-row2" style="display:none">
-      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Unit Cost of Resources</div><div class="gcm-pop-panel-body" id="gm-cd-c6"></div></div>
-      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Consumption of Resources</div><div class="gcm-pop-panel-body" id="gm-cd-c7"></div></div>
       <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Cost of Resources</div><div class="gcm-pop-panel-body" id="gm-cd-rcost"></div></div>
     </div>
+    <div id="gcm-pop-row2" style="display:none"></div>
   </div>
 </div>
 
@@ -1510,15 +1508,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       if (!pop) return;
 
       function _doRender(d) {
-        document.getElementById('gcm-pop-hdr').textContent = 'Cost Dashboard — ' + (d.activity_name || '');
-        ['gm-cd-c6','gm-cd-c7','gm-cd-rcost','gm-cd-g5','gm-cd-g4','gm-cd-g2'].forEach(function(id) {
+        document.getElementById('gcm-pop-hdr').childNodes[0].textContent = 'Cost Dashboard — ' + (d.activity_name || '');
+        ['gm-cd-rcost','gm-cd-g5','gm-cd-g4','gm-cd-g2'].forEach(function(id) {
           var el = document.getElementById(id); if (el) el.innerHTML = '';
         });
         document.getElementById('gcm-pop-loading').style.display = 'none';
         document.getElementById('gcm-pop-row1').style.display = 'flex';
-        document.getElementById('gcm-pop-row2').style.display = 'flex';
-        _renderUnitCostOfResource(d.items, d.activity_name);
-        _renderResourceConsumption(d.items, d.activity_name, d.last_report_qty, d.unit);
         _renderResourceCost(d.items, d.activity_name, d.unit);
         _renderUnitCostOfActivity(d.items, d.activity_name, d.unit, d.schedule_qty);
         _renderValueOfWorkDone(d);
@@ -1535,10 +1530,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       }
 
       // Show loading state
-      document.getElementById('gcm-pop-hdr').textContent = 'Cost Dashboard — Loading…';
+      document.getElementById('gcm-pop-hdr').childNodes[0].textContent = 'Cost Dashboard — Loading…';
       document.getElementById('gcm-pop-loading').style.display = 'block';
       document.getElementById('gcm-pop-row1').style.display = 'none';
-      document.getElementById('gcm-pop-row2').style.display = 'none';
       pop.classList.add('gcm-visible');
       _positionCostPopup(anchorEl);
 
