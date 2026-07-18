@@ -81,7 +81,7 @@ $subDomain = array_shift(($HTTP_HOST));
     <!-- <link href="<//?php echo Yii::$app->request->baseUrl; ?>/cssnew/style.css?v=1.18" rel="stylesheet"> -->
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer.css?v=1.18" rel="stylesheet">
   <!--   <link href="<//?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer1.css" rel="stylesheet"> -->
-    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer2.css?v=20260718j" rel="stylesheet">
+    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer2.css?v=20260718k" rel="stylesheet">
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer3.css" rel="stylesheet">
 
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer4.css" rel="stylesheet">
@@ -780,12 +780,8 @@ if($action=='login')
         }
         //Finance Master Overrelay end
         
-        //Project Master Overrelay start
-        if(Yii::$app->controller->id == 'projects' && Yii::$app->controller->action->id == 'report' || Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'index' || Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'reports' || Yii::$app->controller->id == 'projects' && Yii::$app->controller->action->id == 'projectmasters') {
-
-            echo \Yii::$app->view->renderFile(Yii::getAlias('@app') . '/views/projects/projectmasters.php');
-        }
-        //Project Master Overrelay end
+        //Project Master Overrelay — always in DOM so icon works on any page
+        echo \Yii::$app->view->renderFile(Yii::getAlias('@app') . '/views/projects/projectmasters.php');
 
         //Resource Library Overrelay start
         if(Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'index' || Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'reports' || Yii::$app->controller->id == 'projects' && Yii::$app->controller->action->id == 'projectmasters') {

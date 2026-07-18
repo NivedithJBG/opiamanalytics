@@ -134,7 +134,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column;
 }
 
-/* Gantt floating panel */
+/* Gantt floating panel — standalone page only */
+<?php if(empty($embedMode)): ?>
 #gantt-float {
   position: fixed;
   top: 74px; left: 20px;
@@ -148,6 +149,14 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   display: flex; flex-direction: column;
   overflow: hidden;
 }
+<?php endif; ?>
+/* Embed mode: fill the gantt-win-body container */
+<?php if(!empty($embedMode)): ?>
+#gantt-embed-wrap {
+  display: flex; flex-direction: column;
+  width: 100%; height: 100%; overflow: hidden;
+}
+<?php endif; ?>
 #gantt-float-hdr {
   background: #1a202c; color: #fff;
   padding: 7px 14px;
@@ -240,6 +249,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 </style>
 
+<?php if(empty($embedMode)): ?>
 <div id="gantt-float">
   <!-- resize handles -->
   <div class="gf-rs gf-rs-n"  data-dir="n"></div>
@@ -260,6 +270,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   </div>
   <!-- body -->
   <div id="gantt-float-body">
+<?php else: ?>
+<div id="gantt-embed-wrap">
+  <div id="gantt-float-body" style="flex:1;min-height:0;display:flex;flex-direction:column;padding:8px 10px;overflow:hidden;">
+<?php endif; ?>
     <div id="gantt-act-tooltip"></div>
     <div id="gantt-toolbar">
       <button class="btn-opiam" id="btn-manage-relations">Manage Relations</button>
@@ -282,7 +296,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       <div id="relations-content"><em>Loading&hellip;</em></div>
     </div>
   </div>
+<?php if(empty($embedMode)): ?>
 </div>
+<?php else: ?>
+</div>
+<?php endif; ?>
 
 <!-- Gantt Cost Hover Popup -->
 <div id="gcm-popup">
@@ -2176,6 +2194,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
 })(jQuery);
 
+<?php if(empty($embedMode)): ?>
 // Gantt float panel: close + fullscreen
 (function(){
   var panel = document.getElementById('gantt-float');
@@ -2244,5 +2263,6 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   });
   document.addEventListener('mouseup',function(){_action=null;});
 })();
+<?php endif; ?>
 
 </script>

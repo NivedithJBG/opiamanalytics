@@ -8292,7 +8292,7 @@ class ProjectsmainController extends Controller
         }
         Yii::$app->helper->GetRelationcorrect($id);
         $project = Projects::findOne($id);
-        return $this->render('newganttview', ['projectId' => $id, 'project' => $project]);
+        return $this->render('newganttview', ['projectId' => $id, 'project' => $project, 'embedMode' => ($layout === 'false')]);
     }
 
     public function actionSavescheduledata()
