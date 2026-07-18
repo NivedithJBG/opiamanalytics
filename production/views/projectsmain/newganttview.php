@@ -114,6 +114,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   background: #1a2540; border-bottom: 1px solid #0d1f3c;
 }
 .gkp-panel-body { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.gkp-kv { display:flex; justify-content:space-around; padding:3px 4px; background:#f5f7fc; border-top:1px solid #e0e6f0; flex-shrink:0; font-family:'Barlow Condensed',sans-serif; font-size:10px; }
+.gkp-kv-item { display:flex; flex-direction:column; align-items:center; }
+.gkp-kv-lbl { font-size:8px; color:#7a8aaa; text-transform:uppercase; letter-spacing:0.03em; }
+.gkp-kv-val { font-size:11px; font-weight:700; color:#1a2540; }
+.gkp-kv-val.over { color:#e53935; }
+.gkp-kv-val.good { color:#27ae60; }
 
 /* ── Gantt Cost Float Panel ─────────────────────────────────────────────────── */
 #gcm-popup {
@@ -2010,6 +2016,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         '<text x="90" y="60" text-anchor="middle" font-size="19" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+pct+'%</text>'
         +'<text x="90" y="72" text-anchor="middle" font-size="8" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Used '+_fmK(used)+'h / Max '+_fmK(maxV)+'h</text>',
         'Low','High');
+      var el=document.getElementById('gkp-g5'); if(!el) return;
+      el.insertAdjacentHTML('beforeend','<div class="gkp-kv">'
+        +'<div class="gkp-kv-item"><span class="gkp-kv-lbl">Target (Max)</span><span class="gkp-kv-val">'+_fmK(maxV)+' h</span></div>'
+        +'<div class="gkp-kv-item"><span class="gkp-kv-lbl">Actual (Used)</span><span class="gkp-kv-val '+(used>maxV?'over':'good')+'">'+_fmK(used)+' h</span></div>'
+        +'</div>');
     }
 
     function _renderKpuCycleTime(k) {
@@ -2022,6 +2033,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         +'<text x="90" y="74" text-anchor="middle" font-size="8" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual</text>'
         +'<text x="90" y="85" text-anchor="middle" font-size="13" font-weight="700" fill="'+acCol+'" font-family="Barlow Condensed,Arial">'+_fmK(ac)+' Hrs</text>',
         'Fast','Slow');
+      var el=document.getElementById('gkp-g4'); if(!el) return;
+      var acCls=ac>tc?'over':ac<tc?'good':'';
+      el.insertAdjacentHTML('beforeend','<div class="gkp-kv">'
+        +'<div class="gkp-kv-item"><span class="gkp-kv-lbl">Target</span><span class="gkp-kv-val">'+_fmK(tc)+' Hrs</span></div>'
+        +'<div class="gkp-kv-item"><span class="gkp-kv-lbl">Actual</span><span class="gkp-kv-val '+acCls+'">'+_fmK(ac)+' Hrs</span></div>'
+        +'</div>');
     }
 
     function _renderKpuProductivity(k) {
@@ -2034,6 +2051,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         +'<text x="90" y="74" text-anchor="middle" font-size="8" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual</text>'
         +'<text x="90" y="85" text-anchor="middle" font-size="13" font-weight="700" fill="'+apCol+'" font-family="Barlow Condensed,Arial">'+_fmK(ap)+u+'/d</text>',
         'Low','High');
+      var el=document.getElementById('gkp-g3'); if(!el) return;
+      var apCls=ap<tp?'over':ap>tp?'good':'';
+      el.insertAdjacentHTML('beforeend','<div class="gkp-kv">'
+        +'<div class="gkp-kv-item"><span class="gkp-kv-lbl">Target</span><span class="gkp-kv-val">'+_fmK(tp)+u+'/d</span></div>'
+        +'<div class="gkp-kv-item"><span class="gkp-kv-lbl">Actual</span><span class="gkp-kv-val '+apCls+'">'+_fmK(ap)+u+'/d</span></div>'
+        +'</div>');
     }
 
     function _renderKpuTargetProd(k) {
@@ -2060,6 +2083,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         +'<text x="4" y="100" text-anchor="start" font-size="9" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual <tspan font-weight="700" fill="'+actCol+'">'+_fmK(aq)+u+'</tspan></text>'
         +'<text x="176" y="100" text-anchor="end" font-size="9" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Schedule <tspan font-weight="700" fill="#1a2540">'+_fmK(tq)+u+'</tspan></text>'
         +'</svg>';
+      var actCls=aq<compTarget?'over':aq>=compTarget?'good':'';
+      el.insertAdjacentHTML('beforeend','<div class="gkp-kv">'
+        +'<div class="gkp-kv-item"><span class="gkp-kv-lbl">Target to Date</span><span class="gkp-kv-val">'+_fmK(compTarget)+u+'</span></div>'
+        +'<div class="gkp-kv-item"><span class="gkp-kv-lbl">Actual</span><span class="gkp-kv-val '+actCls+'">'+_fmK(aq)+u+'</span></div>'
+        +'</div>');
     }
 
     function _renderKpuDuration(k) {
@@ -2101,6 +2129,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         +'<span>Plan End: <b style="color:#1a2540;">'+(_fmDateK(k.adj_end_date)||'—')+'</b></span>'
         +'</div>'
         +'</div>';
+      var durCls=aDur>bDur?'over':aDur<bDur?'good':'';
+      el.insertAdjacentHTML('beforeend','<div class="gkp-kv">'
+        +'<div class="gkp-kv-item"><span class="gkp-kv-lbl">Target (Planned)</span><span class="gkp-kv-val">'+bDur+' d</span></div>'
+        +'<div class="gkp-kv-item"><span class="gkp-kv-lbl">Actual (Projected)</span><span class="gkp-kv-val '+durCls+'">'+aDur+' d</span></div>'
+        +'</div>');
     }
 
     function _renderKpi(k) {
