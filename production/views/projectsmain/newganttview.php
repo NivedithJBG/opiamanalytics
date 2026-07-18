@@ -218,7 +218,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 <div id="gantt-toolbar">
     <button class="btn-opiam" id="btn-manage-relations">Manage Relations</button>
     <button class="btn-opiam" id="btn-refresh-cpm">Refresh Critical Path</button>
-<a class="icon-tools" id="btn-actlib-entry" title="Activity Library" href="#" onclick="(function(e){e.preventDefault();var isActive=$('.overNow4').hasClass('active');$('.overNow4').toggleClass('active');if(!isActive){$('#project-title-head,#prjct_head,#procurement-title-head').html('Activity Library');$('.menu4-popup-cntnr').addClass('active');$('body').css('overflow-y','hidden');}else{$('.menu4-popup-cntnr').removeClass('active');$('body').css('overflow-y','auto');}})(event)" style="position:absolute;top:10px;right:44px;z-index:999;width:22px;height:22px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#5cb85c;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.25);"></a>
+<a class="icon-tools" id="btn-actlib-entry" title="Activity Library" href="#" style="position:absolute;top:10px;right:44px;z-index:999;width:22px;height:22px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#5cb85c;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.25);"></a>
 <a class="icon-pencil" id="btn-quick-entry" title="WBS" href="#" style="position:absolute;top:10px;right:16px;z-index:999;width:22px;height:22px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#5cb85c;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.25);"> </a>
     <span id="gantt-status" style="font-size:12px;color:#666;margin-left:8px;"></span>
   </div>
@@ -2135,4 +2135,21 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   }
 
 })(jQuery);
+
+// Activity Library icon on Gantt toolbar
+$(document).ready(function(){
+  $('#btn-actlib-entry').on('click', function(e){
+    e.preventDefault();
+    var isActive = $('.overNow4').hasClass('active');
+    $('.overNow4').toggleClass('active');
+    if(!isActive){
+      $('#project-title-head,#prjct_head,#procurement-title-head').html('Activity Library');
+      $('.menu4-popup-cntnr').addClass('active');
+      $('body').css('overflow-y','hidden');
+    } else {
+      $('.menu4-popup-cntnr').removeClass('active');
+      $('body').css('overflow-y','auto');
+    }
+  });
+});
 </script>
