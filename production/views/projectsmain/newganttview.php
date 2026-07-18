@@ -1724,7 +1724,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   });
 
   // ---- Quick Entry button ---------------------------------------------------
-  $('#btn-quick-entry').on('click', function() {
+  $(document).off('click.qe').on('click.qe', '#btn-quick-entry', function(e) {
+    e.preventDefault();
     if (typeof openQeModal === 'function') {
       openQeModal();
     } else {
