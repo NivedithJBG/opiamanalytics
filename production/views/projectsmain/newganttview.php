@@ -359,12 +359,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   </div>
 </div>
 
-<script language="javascript" src="<?= Yii::$app->request->baseUrl ?>/jsnew/projectsmain/jsgantt.js"></script>
 <script type="text/javascript">
 (function($) {
   var criticalid = [];
   var projectId  = <?= (int)$projectId ?>;
   var projectName = '<?= addslashes(isset($project) && $project ? $project->Name : 'Project') ?>';
+  var _base = '<?= Yii::$app->urlManager->createUrl("projectsmain/index") ?>'.replace(/\/index$/, '');
 
   // ---- Date helpers ---------------------------------------------------------
 
@@ -414,7 +414,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   function refreshCriticalPath(callback) {
     $.ajax({
       type: 'POST',
-      url: '../projectsmain/ganttlastactivity',
+      url: _base + '/ganttlastactivity',
       dataType: 'json',
       async: false,
       data: { projectid: projectId },
@@ -422,7 +422,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         if (!data.id) { if (callback) callback(); return; }
         $.ajax({
           type: 'POST',
-          url: '../projectsmain/getcriticalpath',
+          url: _base + '/getcriticalpath',
           dataType: 'json',
           async: false,
           data: { activityid: data.id },
@@ -508,7 +508,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     // Load WBS items synchronously
     $.ajax({
       type: 'POST',
-      url: '../projectsmain/ganttitems',
+      url: _base + '/ganttitems',
       dataType: 'json',
       async: false,
       data: { projectid: projectId },
@@ -592,7 +592,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           // Load activities for this WBS item synchronously
           $.ajax({
             type: 'POST',
-            url: '../projectsmain/ganttactivities',
+            url: _base + '/ganttactivities',
             dataType: 'json',
             async: false,
             data: { itemId: item.scheduleitem_id },
@@ -1503,7 +1503,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
       if (_gcpXhr) _gcpXhr.abort();
       _gcpXhr = $.ajax({
-        type: 'POST', url: '../projectsmain/costdashboardactivity',
+        type: 'POST', url: _base + '/costdashboardactivity',
         data: { actid: actId }, dataType: 'json',
         success: function(d) {
           _gcpXhr = null;
@@ -1670,7 +1670,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         return;
       }
       $.ajax({
-        type: 'POST', url: '../projectsmain/performancedashboardkpi',
+        type: 'POST', url: _base + '/performancedashboardkpi',
         data: { actid: actId }, dataType: 'json',
         success: function(d) {
           if (!d || !d.kpi) { $('#gkm-loading').text('No KPI data.'); return; }
@@ -1697,7 +1697,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     panel.slideDown(200);
     $.ajax({
       type: 'POST',
-      url: '../projectsmain/activityrelation',
+      url: _base + '/activityrelation',
       dataType: 'json',
       data: { projectid: projectId },
       success: function(data) {
@@ -1754,7 +1754,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     $(this).addClass('active');
     $('#schedule_item_first-new').val(itemId);
     $.ajax({
-      type: 'POST', url: '../projectsmain/getscheduleactivityone', dataType: 'json',
+      type: 'POST', url: _base + '/getscheduleactivityone', dataType: 'json',
       data: { scheduleItem: itemId, projectid: $('#selectedProjectId').val() },
       success: function(data){ if(data.error=='No') $('#schedule_activity_first-data').html(data.result); }
     });
@@ -1771,7 +1771,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     $(this).addClass('active');
     $('#schedule_item_second-new').val(itemId);
     $.ajax({
-      type: 'POST', url: '../projectsmain/getscheduleactivitytwo', dataType: 'json',
+      type: 'POST', url: _base + '/getscheduleactivitytwo', dataType: 'json',
       data: { scheduleItem: itemId, projectid: $('#selectedProjectId').val() },
       success: function(data){ if(data.error=='No') $('#schedule_activity_second-data').html(data.result); }
     });
@@ -1806,7 +1806,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     var origText = $('.save_relation_new').first().text();
     $('.save_relation_new').attr('disabled', true).text('Saving…');
     $.ajax({
-      type: 'POST', url: '../projectsmain/saverelation', dataType: 'json',
+      type: 'POST', url: _base + '/saverelation', dataType: 'json',
       data: {
         lag: lag, firstItem: firstItem, firstActivity: firstActivity,
         secondItem: secondItem, secondActivity: secondActivity,
@@ -1847,7 +1847,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   $(document).on('click.ganttrelation', '.saveeditrelation', function(){
     var id = $(this).attr('data-v') || $(this).attr('value');
     $.ajax({
-      type: 'POST', url: '../projectsmain/updaterelation', dataType: 'json',
+      type: 'POST', url: _base + '/updaterelation', dataType: 'json',
       data: {
         id: id,
         firstItem:      $('#editrelationprecedentitem'+id).val(),
@@ -1874,7 +1874,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     var id = $(this).attr('data-v');
     if(!confirm('Are you sure you want to delete this Relation?')) return;
     $.ajax({
-      type: 'POST', url: '../projectsmain/deleterelation', dataType: 'json',
+      type: 'POST', url: _base + '/deleterelation', dataType: 'json',
       data: { relationId: id },
       success: function(data){
         if(data.error == 'No') {
@@ -2100,7 +2100,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       pop.classList.add('gkp-visible');
       positionFn();
       _kpXhr = $.ajax({
-        type: 'POST', url: '../projectsmain/performancedashboardkpi',
+        type: 'POST', url: _base + '/performancedashboardkpi',
         data: { actid: actId }, dataType: 'json',
         success: function(d) {
           _kpXhr = null;
@@ -2166,7 +2166,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
   function reloadRelationsPanel(notice, warningText) {
     $.ajax({
-      type: 'POST', url: '../projectsmain/activityrelation', dataType: 'json',
+      type: 'POST', url: _base + '/activityrelation', dataType: 'json',
       data: { projectid: projectId },
       success: function(data) {
         if (data && data.error === 'No') {

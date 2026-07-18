@@ -81,7 +81,7 @@ $subDomain = array_shift(($HTTP_HOST));
     <!-- <link href="<//?php echo Yii::$app->request->baseUrl; ?>/cssnew/style.css?v=1.18" rel="stylesheet"> -->
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer.css?v=1.18" rel="stylesheet">
   <!--   <link href="<//?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer1.css" rel="stylesheet"> -->
-    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer2.css?v=20260718k" rel="stylesheet">
+    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer2.css?v=20260718l" rel="stylesheet">
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer3.css" rel="stylesheet">
 
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer4.css" rel="stylesheet">
@@ -94,6 +94,7 @@ $subDomain = array_shift(($HTTP_HOST));
 
     <link rel="stylesheet" type="text/css" href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/jsgantt.css" />
     <link rel="stylesheet" type="text/css" href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/jsgantt-extra.css" />
+    <script language="javascript" src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/jsgantt.js"></script>
 
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/custom.css?v=20260716d" rel="stylesheet">
 
@@ -3390,9 +3391,9 @@ document.addEventListener('DOMContentLoaded', function(){
         var pid = this.getAttribute('data-projectid');
         var url = '<?php echo Yii::$app->urlManager->createUrl("projectsmain/newganttchart")?>' + '?id=' + pid + '&layout=false';
         $.ajax({ url: url, success: function(html){
-          document.getElementById('gantt-win-body').innerHTML = html;
+          $('#gantt-win-body').html(html);
         }, error: function(){
-          document.getElementById('gantt-win-body').innerHTML = '<div style="padding:30px;color:red;">Failed to load Gantt.</div>';
+          $('#gantt-win-body').html('<div style="padding:30px;color:red;">Failed to load Gantt.</div>');
         }});
       }
     });
