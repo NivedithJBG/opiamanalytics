@@ -28,12 +28,12 @@
 tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8820c; outline-offset: -1px; }
 
 /* ── KPI Click Modal ─────────────────────────────────────────────────────── */
-#gkm-bk { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:10000; }
-#gkm-bk.gkm-open { display:block; }
+#gkm-bk { display:none; }
 #gkm-modal {
-  display:none; position:fixed; z-index:10001;
-  top:50%; left:50%; transform:translate(-50%,-50%);
-  width:69vw; max-width:825px; height:65vh;
+  display:none; position:fixed; z-index:10015;
+  top:80px; left:calc(50% - 412px);
+  width:825px; height:65vh;
+  min-width:420px; min-height:280px;
   background:#f0f3fa; border-radius:10px;
   box-shadow:0 8px 40px rgba(0,0,0,0.28);
   flex-direction:column; overflow:hidden;
@@ -42,9 +42,19 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 #gkm-header {
   background:#1a2540; color:#fff; padding:10px 16px;
   display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+  cursor:move; user-select:none;
 }
 #gkm-title { font-size:13px; font-weight:600; font-family:'Barlow Condensed',sans-serif; }
 #gkm-close { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:0 4px; line-height:1; }
+.gkm-rs { position:absolute; z-index:20; background:transparent; }
+.gkm-rs-e  { right:-4px; top:10px; bottom:10px; width:10px; cursor:e-resize; }
+.gkm-rs-w  { left:-4px;  top:10px; bottom:10px; width:10px; cursor:w-resize; }
+.gkm-rs-s  { bottom:-4px; left:10px; right:10px; height:10px; cursor:s-resize; }
+.gkm-rs-n  { top:-4px;  left:10px; right:10px; height:10px; cursor:n-resize; }
+.gkm-rs-se { right:-4px; bottom:-4px; width:14px; height:14px; cursor:se-resize; }
+.gkm-rs-sw { left:-4px;  bottom:-4px; width:14px; height:14px; cursor:sw-resize; }
+.gkm-rs-ne { right:-4px; top:-4px; width:14px; height:14px; cursor:ne-resize; }
+.gkm-rs-nw { left:-4px;  top:-4px; width:14px; height:14px; cursor:nw-resize; }
 #gkm-loading { text-align:center; padding:40px; font-size:13px; color:#5a6e8c; }
 #gkm-body { flex:1; min-height:0; display:flex; flex-direction:column; padding:10px; gap:8px; overflow:hidden; }
 #gkm-content { display:flex; flex-direction:column; gap:8px; flex:1; min-height:0; }
@@ -89,23 +99,39 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 .gkp-panel-body { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 
-/* ── Gantt Cost Hover Popup ─────────────────────────────────────────────────── */
+/* ── Gantt Cost Float Panel ─────────────────────────────────────────────────── */
 #gcm-popup {
-  display: none; position: fixed; z-index: 9998;
-  width: 760px; background: #f0f3fa;
+  display: none; position: fixed; z-index: 10015;
+  top: 80px; left: calc(50% - 380px);
+  width: 760px; height: 60vh;
+  min-width: 420px; min-height: 280px;
+  background: #f0f3fa;
   border-radius: 10px; box-shadow: 0 8px 36px rgba(0,0,0,0.32);
-  overflow: hidden; pointer-events: none;
+  overflow: hidden; pointer-events: auto;
+  flex-direction: column;
 }
-#gcm-popup.gcm-visible { display: block; }
+#gcm-popup.gcm-visible { display: flex; }
 #gcm-pop-hdr {
-  background: #1a2540; color: #fff; padding: 7px 12px;
-  font-size: 12px; font-weight: 600; font-family: 'Barlow Condensed', sans-serif;
+  background: #1a2540; color: #fff; padding: 10px 14px;
+  font-size: 13px; font-weight: 600; font-family: 'Barlow Condensed', sans-serif;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  cursor: move; user-select: none;
 }
+#gcm-pop-close { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:0 4px; line-height:1; flex-shrink:0; }
 #gcm-pop-body {
-  display: flex; flex-direction: column; gap: 5px; padding: 6px;
+  display: flex; flex-direction: column; gap: 5px; padding: 6px; flex: 1; min-height: 0; overflow: hidden;
 }
-#gcm-pop-row1, #gcm-pop-row2 { display: flex; gap: 5px; height: 205px; }
+#gcm-pop-row1, #gcm-pop-row2 { display: flex; gap: 5px; flex: 1; min-height: 0; }
+.gcm-rs { position:absolute; z-index:20; background:transparent; }
+.gcm-rs-e  { right:-4px; top:10px; bottom:10px; width:10px; cursor:e-resize; }
+.gcm-rs-w  { left:-4px;  top:10px; bottom:10px; width:10px; cursor:w-resize; }
+.gcm-rs-s  { bottom:-4px; left:10px; right:10px; height:10px; cursor:s-resize; }
+.gcm-rs-n  { top:-4px;  left:10px; right:10px; height:10px; cursor:n-resize; }
+.gcm-rs-se { right:-4px; bottom:-4px; width:14px; height:14px; cursor:se-resize; }
+.gcm-rs-sw { left:-4px;  bottom:-4px; width:14px; height:14px; cursor:sw-resize; }
+.gcm-rs-ne { right:-4px; top:-4px; width:14px; height:14px; cursor:ne-resize; }
+.gcm-rs-nw { left:-4px;  top:-4px; width:14px; height:14px; cursor:nw-resize; }
 .gcm-pop-panel {
   flex: 1; background: #fff; border-radius: 5px; border: 1px solid #dde3ef;
   display: flex; flex-direction: column; overflow: hidden; min-width: 0;
@@ -301,9 +327,17 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 </div>
 <?php endif; ?>
 
-<!-- Gantt Cost Hover Popup -->
+<!-- Gantt Cost Float Panel -->
 <div id="gcm-popup">
-  <div id="gcm-pop-hdr">Cost Dashboard</div>
+  <div class="gcm-rs gcm-rs-n" data-dir="n"></div>
+  <div class="gcm-rs gcm-rs-s" data-dir="s"></div>
+  <div class="gcm-rs gcm-rs-e" data-dir="e"></div>
+  <div class="gcm-rs gcm-rs-w" data-dir="w"></div>
+  <div class="gcm-rs gcm-rs-ne" data-dir="ne"></div>
+  <div class="gcm-rs gcm-rs-nw" data-dir="nw"></div>
+  <div class="gcm-rs gcm-rs-se" data-dir="se"></div>
+  <div class="gcm-rs gcm-rs-sw" data-dir="sw"></div>
+  <div id="gcm-pop-hdr">Cost Dashboard <button id="gcm-pop-close" title="Close">&times;</button></div>
   <div id="gcm-pop-body">
     <div id="gcm-pop-loading">Loading&hellip;</div>
     <div id="gcm-pop-row1" style="display:none">
@@ -322,6 +356,14 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 <!-- KPI Click Modal -->
 <div id="gkm-bk"></div>
 <div id="gkm-modal">
+  <div class="gkm-rs gkm-rs-n" data-dir="n"></div>
+  <div class="gkm-rs gkm-rs-s" data-dir="s"></div>
+  <div class="gkm-rs gkm-rs-e" data-dir="e"></div>
+  <div class="gkm-rs gkm-rs-w" data-dir="w"></div>
+  <div class="gkm-rs gkm-rs-ne" data-dir="ne"></div>
+  <div class="gkm-rs gkm-rs-nw" data-dir="nw"></div>
+  <div class="gkm-rs gkm-rs-se" data-dir="se"></div>
+  <div class="gkm-rs gkm-rs-sw" data-dir="sw"></div>
   <div id="gkm-header">
     <span id="gkm-title">KPI Dashboard</span>
     <button id="gkm-close" title="Close">&times;</button>
@@ -1517,17 +1559,14 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       });
     }
 
-    $(document).on('mouseenter', '#gantt-container .gcol-cost span[data-actid]', function() {
+    $(document).on('click', '#gantt-container .gcol-cost span[data-actid]', function(e) {
+      e.stopPropagation();
       var actId = $(this).data('actid');
       if (!actId) return;
-      clearTimeout(_gcpTimer);
-      var self = this;
-      _gcpTimer = setTimeout(function() {
-        _showCostPopup(actId, self);
-      }, 200);
+      _showCostPopup(actId, this);
     });
 
-    $(document).on('mouseleave', '#gantt-container .gcol-cost span[data-actid]', function() {
+    $('#gcm-pop-close').on('click', function() {
       _hideCostPopup();
     });
 
@@ -1681,10 +1720,33 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     });
 
     // ── Close KPI modal ────────────────────────────────────────────────────────
-    $('#gkm-close, #gkm-bk').on('click', function(e) {
-      if (e.target !== this) return;
+    $('#gkm-close').on('click', function() {
       $('#gkm-bk, #gkm-modal').removeClass('gkm-open');
     });
+
+    // ── Drag + Resize: KPI modal ───────────────────────────────────────────────
+    (function(){
+      var win = document.getElementById('gkm-modal');
+      var hdr = document.getElementById('gkm-header');
+      var MIN_W=420, MIN_H=280, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0;
+      function _anchor(){ var r=win.getBoundingClientRect(); win.style.left=r.left+'px'; win.style.top=r.top+'px'; win.style.width=r.width+'px'; win.style.height=r.height+'px'; return r; }
+      hdr.addEventListener('mousedown', function(e){ if(e.target.id==='gkm-close') return; var r=_anchor(); _action='drag'; _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault(); });
+      document.querySelectorAll('.gkm-rs').forEach(function(el){ el.addEventListener('mousedown', function(e){ var r=_anchor(); _action=el.getAttribute('data-dir'); _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height; e.preventDefault(); e.stopPropagation(); }); });
+      document.addEventListener('mousemove', function(e){ if(!_action) return; var dx=e.clientX-_sx, dy=e.clientY-_sy; if(_action==='drag'){ win.style.left=Math.max(0,_ox+dx)+'px'; win.style.top=Math.max(0,_oy+dy)+'px'; } else { var l=_ox,t=_oy,w=_ow,h=_oh; if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);} if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);} if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;} if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;} win.style.left=l+'px'; win.style.top=t+'px'; win.style.width=w+'px'; win.style.height=h+'px'; } });
+      document.addEventListener('mouseup', function(){ _action=null; });
+    })();
+
+    // ── Drag + Resize: Cost panel ──────────────────────────────────────────────
+    (function(){
+      var win = document.getElementById('gcm-popup');
+      var hdr = document.getElementById('gcm-pop-hdr');
+      var MIN_W=420, MIN_H=280, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0;
+      function _anchor(){ var r=win.getBoundingClientRect(); win.style.left=r.left+'px'; win.style.top=r.top+'px'; win.style.width=r.width+'px'; win.style.height=r.height+'px'; return r; }
+      hdr.addEventListener('mousedown', function(e){ if(e.target.id==='gcm-pop-close') return; var r=_anchor(); _action='drag'; _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault(); });
+      document.querySelectorAll('.gcm-rs').forEach(function(el){ el.addEventListener('mousedown', function(e){ var r=_anchor(); _action=el.getAttribute('data-dir'); _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height; e.preventDefault(); e.stopPropagation(); }); });
+      document.addEventListener('mousemove', function(e){ if(!_action) return; var dx=e.clientX-_sx, dy=e.clientY-_sy; if(_action==='drag'){ win.style.left=Math.max(0,_ox+dx)+'px'; win.style.top=Math.max(0,_oy+dy)+'px'; } else { var l=_ox,t=_oy,w=_ow,h=_oh; if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);} if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);} if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;} if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;} win.style.left=l+'px'; win.style.top=t+'px'; win.style.width=w+'px'; win.style.height=h+'px'; } });
+      document.addEventListener('mouseup', function(){ _action=null; });
+    })();
   })();
 
   // ---- Manage Relations panel -----------------------------------------------
