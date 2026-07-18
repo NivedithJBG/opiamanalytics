@@ -31,10 +31,8 @@ $(function(){
       <button class="menu4-win-close" title="Close">&times;</button>
     </div>
   </div>
-  <div class="menu4-cntnt-wrpr">
-    <div class="col-md-12">
-      <?php echo $this->render('_estactivity'); ?>
-    </div>
+  <div class="menu4-cntnt-wrpr" style="padding:0 15px;">
+    <?php echo $this->render('_estactivity'); ?>
   </div>
 </div>
 
