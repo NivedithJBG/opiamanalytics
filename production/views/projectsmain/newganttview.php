@@ -126,31 +126,33 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   display:none; position:fixed; z-index:10050;
   background:#1a2540; color:#e8efff;
   border-radius:8px; box-shadow:0 6px 28px rgba(0,0,0,0.45);
-  padding:10px 12px; min-width:320px; max-width:480px;
+  padding:10px 12px; min-width:340px; max-width:560px;
   font-family:'Barlow Condensed',sans-serif; font-size:11px;
   pointer-events:none;
 }
 #rcost-tt .tt-type-hdr {
   font-size:10px; font-weight:700; color:#7eb3ff; text-transform:uppercase;
-  letter-spacing:0.05em; padding:5px 0 3px; border-top:1px solid #2d3f66;
-  margin-top:4px;
+  letter-spacing:0.05em; padding:5px 0 4px; border-top:1px solid #2d3f66;
+  margin-top:6px;
 }
 #rcost-tt .tt-type-hdr:first-child { border-top:none; margin-top:0; padding-top:0; }
-#rcost-tt .tt-res-row { display:flex; align-items:center; gap:6px; padding:2px 0; }
-#rcost-tt .tt-res-name { flex:1; color:#c8d8ff; font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#rcost-tt .tt-uc-est { color:#94a3b8; font-size:10px; white-space:nowrap; }
-#rcost-tt .tt-uc-act { font-weight:700; font-size:10px; white-space:nowrap; }
-#rcost-tt .tt-uc-diff { font-size:9px; font-weight:700; white-space:nowrap; }
-#rcost-tt .tt-bar-row { display:flex; align-items:center; gap:6px; padding:2px 0 4px; }
-#rcost-tt .tt-bar-wrap { flex:1; position:relative; height:8px; background:#2d3f66; border-radius:3px; overflow:hidden; }
-#rcost-tt .tt-bar-est { position:absolute; top:0; left:0; height:100%; background:#4a6fa5; border-radius:3px; }
-#rcost-tt .tt-bar-act { position:absolute; top:0; left:0; height:100%; border-radius:3px; opacity:0.85; }
-#rcost-tt .tt-bar-lbl { font-size:9px; color:#94a3b8; white-space:nowrap; }
-#rcost-tt .tt-bar-diff { font-size:9px; font-weight:700; white-space:nowrap; }
+/* vertical bar chart per resource group */
+#rcost-tt .tt-vbar-section { display:flex; gap:4px; align-items:flex-end; padding:0 0 4px; }
+#rcost-tt .tt-vbar-col { display:flex; flex-direction:column; align-items:center; flex:1; min-width:0; }
+#rcost-tt .tt-vbar-vals { font-size:8px; color:#94a3b8; text-align:center; line-height:1.3; margin-bottom:2px; width:100%; }
+#rcost-tt .tt-vbar-vals b { display:block; font-size:9px; }
+#rcost-tt .tt-vbar-bars { width:100%; display:flex; gap:2px; align-items:flex-end; height:60px; }
+#rcost-tt .tt-vbar-est { flex:1; background:#4a6fa5; border-radius:2px 2px 0 0; min-height:2px; }
+#rcost-tt .tt-vbar-act { flex:1; border-radius:2px 2px 0 0; min-height:2px; }
+#rcost-tt .tt-vbar-diff { font-size:8px; font-weight:700; text-align:center; margin-top:2px; }
+#rcost-tt .tt-vbar-name { font-size:8px; color:#c8d8ff; text-align:center; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; }
+#rcost-tt .tt-legend { display:flex; gap:10px; margin-top:6px; padding-top:5px; border-top:1px solid #2d3f66; }
+#rcost-tt .tt-legend span { font-size:8px; color:#94a3b8; display:flex; align-items:center; gap:3px; }
+#rcost-tt .tt-legend i { display:inline-block; width:8px; height:8px; border-radius:1px; }
 .rcost-info-icon {
   display:inline-flex; align-items:center; justify-content:center;
-  width:14px; height:14px; border-radius:50%;
-  background:#3461b8; color:#fff; font-size:9px; font-weight:700;
+  width:16px; height:16px; border-radius:50%;
+  background:#3461b8; color:#fff; font-size:12px; font-weight:400;
   cursor:default; flex-shrink:0; line-height:1; user-select:none;
   margin-left:4px; vertical-align:middle;
 }
@@ -1434,7 +1436,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
       el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;display:flex;align-items:center;justify-content:space-between">'
         + '<span>' + _sh(actName||'', 40) + '</span>'
-        + '<span class="rcost-info-icon" id="rcost-info-btn" title="Resource detail">i</span>'
+        + '<span class="rcost-info-icon" id="rcost-info-btn" title="Resource detail">&#9432;</span>'
         + '</div>'
         + '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">'
         +   '<div style="display:flex;gap:2px;padding:2px 6px 0;flex-shrink:0">' + estRow + '</div>'
@@ -1449,44 +1451,75 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         +   '<div style="overflow-y:auto;flex-shrink:0;max-height:80px;border-top:1px solid #e8efff;margin-top:2px">' + legendRows3 + '</div>'
         + '</div>';
 
-      // Build tooltip content
+      // Build tooltip content — vertical bar chart per resource, grouped by type
       var ttHtml = '';
       labels.forEach(function(typeName) {
         ttHtml += '<div class="tt-type-hdr">' + typeName + '</div>';
         var resArr = groupItems[typeName];
-        var maxCons = 0;
-        resArr.forEach(function(r){ maxCons = Math.max(maxCons, r.estCons, r.actCons); });
+        // Compute maxima across all resources in this type for scaling
+        var maxCons = 0, maxUC = 0;
+        resArr.forEach(function(r){
+          maxCons = Math.max(maxCons, r.estCons, r.actCons);
+          maxUC   = Math.max(maxUC,  r.estUC,   r.actUC);
+        });
         if (maxCons === 0) maxCons = 1;
+        if (maxUC   === 0) maxUC   = 1;
+
+        // Section header row labels
+        ttHtml += '<div style="display:flex;gap:4px;margin-bottom:2px;">';
         resArr.forEach(function(r) {
-          var ucDiff = r.actUC - r.estUC;
-          var ucDiffCol = ucDiff > 0 ? '#e8820c' : (ucDiff < 0 ? '#1b9e8e' : '#94a3b8');
+          ttHtml += '<div style="flex:1;min-width:0;text-align:center;font-size:8px;color:#7eb3ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + r.name + '">' + r.name + '</div>';
+        });
+        ttHtml += '</div>';
+
+        // Two rows of vertical bars: row 1 = Unit Cost, row 2 = Consumption
+        // Row 1: Unit Cost bars
+        ttHtml += '<div style="font-size:8px;color:#94a3b8;margin-bottom:1px;margin-top:4px;">Unit Cost</div>';
+        ttHtml += '<div class="tt-vbar-section">';
+        resArr.forEach(function(r) {
+          var ucDiff   = r.actUC - r.estUC;
+          var actUCCol = ucDiff > 0 ? '#e8820c' : (ucDiff < 0 ? '#1b9e8e' : '#4a6fa5');
           var ucDiffStr = ucDiff > 0 ? '+' + _fmtCost(ucDiff) : (ucDiff < 0 ? '−' + _fmtCost(Math.abs(ucDiff)) : '');
-          var consDiff = r.actCons - r.estCons;
-          var consDiffCol = consDiff > 0 ? '#e8820c' : (consDiff < 0 ? '#1b9e8e' : '#94a3b8');
-          var consDiffStr = consDiff > 0 ? '+' + _fmtFull(consDiff) : (consDiff < 0 ? '−' + _fmtFull(Math.abs(consDiff)) : '=');
-          var estBarPct  = (r.estCons / maxCons * 100).toFixed(1);
-          var actBarPct  = (r.actCons / maxCons * 100).toFixed(1);
-          var actBarCol  = consDiff > 0 ? '#e8820c' : (consDiff < 0 ? '#1b9e8e' : '#4a6fa5');
-          // Row 1: unit cost
-          ttHtml += '<div class="tt-res-row">'
-            + '<span class="tt-res-name" title="' + r.name + '">' + r.name + '</span>'
-            + '<span class="tt-uc-est">Est&nbsp;<b>' + _fmtCost(r.estUC) + '</b></span>'
-            + '<span class="tt-uc-act" style="color:' + (ucDiff>0?'#e8820c':ucDiff<0?'#1b9e8e':'#94a3b8') + '">'
-            + 'Act&nbsp;<b>' + _fmtCost(r.actUC) + '</b></span>'
-            + (ucDiffStr ? '<span class="tt-uc-diff" style="color:' + ucDiffCol + '">(' + ucDiffStr + ')</span>' : '')
-            + '</div>';
-          // Row 2: consumption bar
-          ttHtml += '<div class="tt-bar-row">'
-            + '<span class="tt-bar-lbl" style="min-width:24px;text-align:right">' + _fmtFull(r.estCons) + '</span>'
-            + '<div class="tt-bar-wrap">'
-            + '<div class="tt-bar-est" style="width:' + estBarPct + '%"></div>'
-            + '<div class="tt-bar-act" style="width:' + actBarPct + '%;background:' + actBarCol + '"></div>'
+          var estH = Math.max(2, (r.estUC / maxUC * 60)).toFixed(1);
+          var actH = Math.max(2, (r.actUC / maxUC * 60)).toFixed(1);
+          ttHtml += '<div class="tt-vbar-col">'
+            + '<div class="tt-vbar-vals"><span style="color:#94a3b8">' + _fmtCost(r.estUC) + '</span><b style="color:' + actUCCol + '">' + _fmtCost(r.actUC) + '</b></div>'
+            + '<div class="tt-vbar-bars">'
+            + '<div class="tt-vbar-est" style="height:' + estH + 'px"></div>'
+            + '<div class="tt-vbar-act" style="height:' + actH + 'px;background:' + actUCCol + '"></div>'
             + '</div>'
-            + '<span class="tt-bar-lbl">' + _fmtFull(r.actCons) + (r.unit ? ' ' + r.unit : '') + '</span>'
-            + (consDiffStr !== '=' ? '<span class="tt-bar-diff" style="color:' + consDiffCol + '">' + consDiffStr + '</span>' : '')
+            + (ucDiffStr ? '<div class="tt-vbar-diff" style="color:' + (ucDiff>0?'#e8820c':'#1b9e8e') + '">' + ucDiffStr + '</div>' : '<div class="tt-vbar-diff"></div>')
             + '</div>';
         });
+        ttHtml += '</div>';
+
+        // Row 2: Consumption bars
+        ttHtml += '<div style="font-size:8px;color:#94a3b8;margin-bottom:1px;margin-top:6px;">Consumption</div>';
+        ttHtml += '<div class="tt-vbar-section">';
+        resArr.forEach(function(r) {
+          var cDiff    = r.actCons - r.estCons;
+          var actCCol  = cDiff > 0 ? '#e8820c' : (cDiff < 0 ? '#1b9e8e' : '#4a6fa5');
+          var cDiffStr = cDiff > 0 ? '+' + _fmtFull(cDiff) : (cDiff < 0 ? '−' + _fmtFull(Math.abs(cDiff)) : '');
+          var estH = Math.max(2, (r.estCons / maxCons * 60)).toFixed(1);
+          var actH = Math.max(2, (r.actCons / maxCons * 60)).toFixed(1);
+          ttHtml += '<div class="tt-vbar-col">'
+            + '<div class="tt-vbar-vals"><span style="color:#94a3b8">' + _fmtFull(r.estCons) + '</span><b style="color:' + actCCol + '">' + _fmtFull(r.actCons) + (r.unit?' '+r.unit:'') + '</b></div>'
+            + '<div class="tt-vbar-bars">'
+            + '<div class="tt-vbar-est" style="height:' + estH + 'px"></div>'
+            + '<div class="tt-vbar-act" style="height:' + actH + 'px;background:' + actCCol + '"></div>'
+            + '</div>'
+            + (cDiffStr ? '<div class="tt-vbar-diff" style="color:' + (cDiff>0?'#e8820c':'#1b9e8e') + '">' + cDiffStr + '</div>' : '<div class="tt-vbar-diff"></div>')
+            + '</div>';
+        });
+        ttHtml += '</div>';
       });
+
+      ttHtml += '<div class="tt-legend">'
+        + '<span><i style="background:#4a6fa5"></i>Estimated</span>'
+        + '<span><i style="background:#e8820c"></i>Over</span>'
+        + '<span><i style="background:#1b9e8e"></i>Saving</span>'
+        + '</div>';
+
       var ttEl = document.getElementById('rcost-tt');
       if (ttEl) ttEl.innerHTML = ttHtml;
 
@@ -1496,7 +1529,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         iconEl.addEventListener('mouseenter', function(e) {
           ttEl.style.display = 'block';
           var r = iconEl.getBoundingClientRect();
-          var ttW = 360;
+          var ttW = 400;
           var left = Math.min(r.right + 8, window.innerWidth - ttW - 8);
           ttEl.style.left = Math.max(8, left) + 'px';
           ttEl.style.top  = Math.max(8, r.top - 10) + 'px';
