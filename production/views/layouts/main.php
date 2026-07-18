@@ -2743,7 +2743,7 @@ function _loadRowGroups(tr, typeId, selectedGroupId, cb){
 function _loadRowResources(tr, typeId, groupId, selectedResId, cb){
   var sel = tr.querySelector('.qe-res-name');
   sel.innerHTML = '<option value="">— loading… —</option>';
-  if(!typeId && !groupId){ sel.innerHTML = '<option value="">— select type/group first —</option>'; if(cb) cb(); return; }
+  if(!typeId && !groupId){ sel.innerHTML = '<option value="">— Resource Name —</option>'; if(cb) cb(); return; }
   $.ajax({
     type:'POST', url:'../projectsmain/getwbresources', dataType:'json',
     data:{ type_id: typeId||0, group_id: groupId||0 },
@@ -2876,7 +2876,7 @@ function addResRow(prefill){
   tr.innerHTML =
     '<td><select class="qe-res-type">'+makeResTypeOptions(prefill&&prefill.type_id)+'</select></td>'+
     '<td><select class="qe-res-group"><option value="">— Group —</option></select></td>'+
-    '<td><select class="qe-res-name"><option value="">— select type/group first —</option></select></td>'+
+    '<td><select class="qe-res-name"><option value="">— Resource Name —</option></select></td>'+
     '<td><input type="text" class="qe-res-unit" value="'+(prefill&&prefill.unit||'')+'" placeholder="e.g. m³" data-alpha="1"></td>'+
     '<td><input type="number" class="qe-res-qty" value="'+(prefill&&prefill.qty!=null?prefill.qty:1)+'" step="0.001"></td>'+
     '<td><input type="number" class="qe-res-rate" value="'+(prefill&&prefill.rate||'')+'" placeholder="0.00" step="0.01"></td>'+
