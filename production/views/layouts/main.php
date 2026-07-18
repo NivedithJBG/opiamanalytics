@@ -2346,6 +2346,7 @@ if($action=='login')
     <div class="qe-section">
       <div class="qe-sec-hdr">Resources</div>
       <div class="qe-sec-body">
+        <div style="font-size:11px;color:#4a5568;font-style:italic;margin-bottom:8px;">Resources Qty should be allocated for one unit of the activity</div>
         <table class="qe-repeat-tbl" id="qe-res-tbl">
           <thead>
             <tr>
