@@ -1587,14 +1587,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       _hideCostPopup();
     });
 
-    // ── KPI icon click → open KPI float panel ────────────────────────────────
+    // ── KPI icon click → handled inside KPI IIFE where _showKpiForAct is in scope ──
     var _gkmCache = {};
     $(document).on('click', '#gantt-container .gcol-kpi span[data-kpiactid]', function(e) {
       e.stopPropagation();
-      var actId = $(this).data('kpiactid');
-      if (!actId) return;
-      _showKpiForAct(actId, function(){});
-      return; // everything below is dead code kept for reference
+      return; // handled below inside KPI IIFE
       $('#gkm-loading').show();
       $('#gkm-content').hide();
       $('#gkm-title').text('KPI Dashboard — Loading…');
@@ -2208,6 +2205,14 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
 
     $('#gkp-close').on('click', function() { _hidePopup(); });
+
+    // KPI icon click — inside this IIFE so _showKpiForAct is in scope
+    $(document).on('click', '#gantt-container .gcol-kpi span[data-kpiactid]', function(e) {
+      e.stopPropagation();
+      var actId = $(this).data('kpiactid');
+      if (!actId) return;
+      _showKpiForAct(actId, function(){});
+    });
 
     // Drag + Resize: KPI float panel
     (function(){
