@@ -71,23 +71,38 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 .gkm-panel-body { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; }
 
-/* ── KPI Hover Popup ─────────────────────────────────────────────────────── */
+/* ── KPI Float Panel ─────────────────────────────────────────────────────── */
 #gkp-popup {
-  display: none; position: fixed; z-index: 9998;
-  width: 680px; background: #f0f3fa;
+  display: none; position: fixed; z-index: 10015;
+  top: 80px; left: calc(50% - 340px);
+  width: 680px; height: 55vh;
+  min-width: 400px; min-height: 280px;
+  background: #f0f3fa;
   border-radius: 10px; box-shadow: 0 8px 36px rgba(0,0,0,0.32);
-  overflow: hidden; pointer-events: none;
+  overflow: hidden; pointer-events: auto;
+  flex-direction: column;
 }
-#gkp-popup.gkp-visible { display: block; }
+#gkp-popup.gkp-visible { display: flex; }
 #gkp-hdr {
-  background: #1a2540; color: #fff; padding: 7px 12px;
-  font-size: 12px; font-weight: 600; font-family: 'Barlow Condensed', sans-serif;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: #1a2540; color: #fff; padding: 10px 14px;
+  font-size: 13px; font-weight: 600; font-family: 'Barlow Condensed', sans-serif;
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  cursor: move; user-select: none;
 }
+#gkp-close { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:0 4px; line-height:1; flex-shrink:0; }
 #gkp-body {
-  display: flex; flex-direction: column; gap: 5px; padding: 6px;
+  display: flex; flex-direction: column; gap: 5px; padding: 6px; flex: 1; min-height: 0; overflow: hidden;
 }
-#gkp-row1, #gkp-row2 { display: flex; gap: 5px; height: 175px; }
+#gkp-row1, #gkp-row2 { display: flex; gap: 5px; flex: 1; min-height: 0; }
+.gkp-rs { position:absolute; z-index:20; background:transparent; }
+.gkp-rs-e  { right:-4px; top:10px; bottom:10px; width:10px; cursor:e-resize; }
+.gkp-rs-w  { left:-4px;  top:10px; bottom:10px; width:10px; cursor:w-resize; }
+.gkp-rs-s  { bottom:-4px; left:10px; right:10px; height:10px; cursor:s-resize; }
+.gkp-rs-n  { top:-4px;  left:10px; right:10px; height:10px; cursor:n-resize; }
+.gkp-rs-se { right:-4px; bottom:-4px; width:14px; height:14px; cursor:se-resize; }
+.gkp-rs-sw { left:-4px;  bottom:-4px; width:14px; height:14px; cursor:sw-resize; }
+.gkp-rs-ne { right:-4px; top:-4px; width:14px; height:14px; cursor:ne-resize; }
+.gkp-rs-nw { left:-4px;  top:-4px; width:14px; height:14px; cursor:nw-resize; }
 .gkp-panel {
   flex: 1; background: #fff; border-radius: 5px; border: 1px solid #dde3ef;
   display: flex; flex-direction: column; overflow: hidden; min-width: 0;
@@ -382,9 +397,17 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   </div>
 </div>
 
-<!-- KPI Hover Popup -->
+<!-- KPI Float Panel -->
 <div id="gkp-popup">
-  <div id="gkp-hdr">KPI</div>
+  <div class="gkp-rs gkp-rs-n" data-dir="n"></div>
+  <div class="gkp-rs gkp-rs-s" data-dir="s"></div>
+  <div class="gkp-rs gkp-rs-e" data-dir="e"></div>
+  <div class="gkp-rs gkp-rs-w" data-dir="w"></div>
+  <div class="gkp-rs gkp-rs-ne" data-dir="ne"></div>
+  <div class="gkp-rs gkp-rs-nw" data-dir="nw"></div>
+  <div class="gkp-rs gkp-rs-se" data-dir="se"></div>
+  <div class="gkp-rs gkp-rs-sw" data-dir="sw"></div>
+  <div id="gkp-hdr">KPI <button id="gkp-close" title="Close">&times;</button></div>
   <div id="gkp-body">
     <div id="gkp-row1">
       <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Target Production</div><div class="gkp-panel-body" id="gkp-tp"></div></div>
@@ -2169,8 +2192,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       });
     }
 
-    // Bar hover — KPI popup
+    // Bar hover — KPI popup (disabled: now click-only)
     $(document).on('mouseover', '#gantt-container .gtaskbarcontainer:not(.gplan)', function(e) {
+      return; // click on KPI icon opens the panel instead
       var actId = _getActIdFromBarDiv(this);
       if (!actId) return;
       clearTimeout(_kpTimer);
@@ -2180,29 +2204,29 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       }, 300);
     });
 
-    $(document).on('mouseleave', '#gantt-container .gtaskbarcontainer:not(.gplan)', function() {
-      _hidePopup();
-    });
 
-    // KPI column icon hover — same popup
-    $(document).on('mouseenter', '#gantt-container .gcol-kpi span[data-kpiactid]', function() {
+    // KPI column icon click — open float panel
+    $(document).on('click', '#gantt-container .gcol-kpi span[data-kpiactid]', function(e) {
+      e.stopPropagation();
       var actId = $(this).data('kpiactid');
       if (!actId) return;
-      clearTimeout(_kpTimer);
-      var self = this;
-      _kpTimer = setTimeout(function() {
-        _showKpiForAct(actId, function(){ _positionPopupRight(self); });
-      }, 200);
+      _hidePopup();
+      _showKpiForAct(actId, function(){ });
     });
 
-    $(document).on('mouseleave', '#gantt-container .gcol-kpi span[data-kpiactid]', function() {
-      _hidePopup();
-    });
+    $('#gkp-close').on('click', function() { _hidePopup(); });
 
-    // Also hide if mouse leaves the whole gantt container
-    $(document).on('mouseleave', '#gantt-container', function() {
-      _hidePopup();
-    });
+    // Drag + Resize: KPI float panel
+    (function(){
+      var win = document.getElementById('gkp-popup');
+      var hdr = document.getElementById('gkp-hdr');
+      var MIN_W=400, MIN_H=280, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0;
+      function _anchor(){ var r=win.getBoundingClientRect(); win.style.left=r.left+'px'; win.style.top=r.top+'px'; win.style.width=r.width+'px'; win.style.height=r.height+'px'; return r; }
+      hdr.addEventListener('mousedown', function(e){ if(e.target.id==='gkp-close') return; var r=_anchor(); _action='drag'; _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault(); });
+      document.querySelectorAll('.gkp-rs').forEach(function(el){ el.addEventListener('mousedown', function(e){ var r=_anchor(); _action=el.getAttribute('data-dir'); _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height; e.preventDefault(); e.stopPropagation(); }); });
+      document.addEventListener('mousemove', function(e){ if(!_action) return; var dx=e.clientX-_sx, dy=e.clientY-_sy; if(_action==='drag'){ win.style.left=Math.max(0,_ox+dx)+'px'; win.style.top=Math.max(0,_oy+dy)+'px'; } else { var l=_ox,t=_oy,w=_ow,h=_oh; if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);} if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);} if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;} if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;} win.style.left=l+'px'; win.style.top=t+'px'; win.style.width=w+'px'; win.style.height=h+'px'; } });
+      document.addEventListener('mouseup', function(){ _action=null; });
+    })();
 
     // Bar click — open WBS Quick Entry prefilled with saved data
     $(document).on('click', '.gtaskbarcontainer:not(.gplan)', function() {
