@@ -2083,9 +2083,9 @@ if($action=='login')
 .qe-field.med{flex:1 1 120px}
 .qe-field.sm{flex:0 0 100px}
 .qe-field.xs{flex:0 0 80px}
-.qe-label{font-size:11px;font-weight:900;color:#1a202c;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.qe-label{font-size:11px;font-weight:900;color:#1a202c !important;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
 .qe-input,.qe-select{
-  width:100%;padding:5px 10px;font-size:13px;color:#718096;
+  width:100%;padding:5px 10px;font-size:13px;color:#718096 !important;
   border:1px solid #a0aab8;border-radius:0;background:#fff;
   outline:none;box-sizing:border-box;font-family:'Barlow',sans-serif;
   transition:border-color .15s;height:28px;font-weight:600;
@@ -2104,14 +2104,14 @@ if($action=='login')
 /* Repeating rows (tasks / resources) */
 .qe-repeat-tbl{width:100%;border-collapse:collapse}
 .qe-repeat-tbl th{
-  font-size:11px;font-weight:900;color:#1a202c;text-transform:uppercase;
+  font-size:11px;font-weight:900;color:#1a202c !important;text-transform:uppercase;
   letter-spacing:.4px;padding:0 6px 8px 0;border-bottom:2px solid #1a202c;
   white-space:nowrap;
 }
 .qe-repeat-tbl td{padding:6px 6px 6px 0;vertical-align:middle}
 .qe-repeat-tbl td:last-child{padding-right:0}
 .qe-repeat-tbl input,.qe-repeat-tbl select{
-  width:100%;padding:7px 9px;font-size:13px;color:#718096;
+  width:100%;padding:7px 9px;font-size:13px;color:#718096 !important;
   border:1px solid #a0aab8;border-radius:0;background:#fff;
   outline:none;font-family:'Barlow',sans-serif;transition:border-color .15s;
   box-sizing:border-box;height:28px;
@@ -2226,7 +2226,7 @@ if($action=='login')
 #qe-btn-save:hover{background:#1e8449}
 #qe-btn-save:disabled{background:#aaa;cursor:default}
 #qe-btn-add{
-  background:#4a4a4a;color:#fff;border:none;border-radius:999px;
+  background:#4a4a4a !important;color:#fff !important;border:none;border-radius:999px;
   padding:6px 22px;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;
   cursor:pointer;letter-spacing:.3px;text-transform:uppercase;
 }
