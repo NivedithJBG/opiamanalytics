@@ -3326,7 +3326,7 @@ document.addEventListener('DOMContentLoaded', function(){
   background:#fff; color:#333; padding:10px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
-  font-family:'Nunito',sans-serif; font-size:18px; font-weight:700;
+  font-family:'Nunito',sans-serif; font-size:20px; font-weight:700;
   border-bottom:1px solid #e5e5e5;
 }
 #gantt-win-hdr-btns { display:flex; align-items:center; gap:8px; }

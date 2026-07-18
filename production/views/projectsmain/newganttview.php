@@ -277,8 +277,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 <?php endif; ?>
     <div id="gantt-act-tooltip"></div>
     <div id="gantt-toolbar">
-      <button class="btn-opiam" id="btn-manage-relations">Manage Relations</button>
-      <button class="btn-opiam" id="btn-refresh-cpm">Refresh Critical Path</button>
+
       <a class="icon-pencil" id="btn-quick-entry" title="WBS" href="#" style="position:absolute;top:4px;right:4px;z-index:999;width:22px;height:22px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#5cb85c;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.25);"> </a>
       <span id="gantt-status" style="font-size:12px;color:#666;margin-left:8px;"></span>
     </div>
