@@ -2226,11 +2226,11 @@ if($action=='login')
 #qe-btn-save:hover{background:#1e8449}
 #qe-btn-save:disabled{background:#aaa;cursor:default}
 #qe-btn-add{
-  background:#00838f;color:#fff;border:none;border-radius:999px;
+  background:#4a4a4a;color:#fff;border:none;border-radius:999px;
   padding:6px 22px;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;
   cursor:pointer;letter-spacing:.3px;text-transform:uppercase;
 }
-#qe-btn-add:hover{background:#006b75}
+#qe-btn-add:hover{background:#333}
 #qe-btn-add:disabled{background:#aaa;cursor:default}
 </style>
 
@@ -2293,7 +2293,7 @@ if($action=='login')
           <div style="font-size:9px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;width:100%;margin-bottom:2px;">Estimate</div>
           <div class="qe-field sm">
             <span class="qe-label">Unit</span>
-            <input id="qe-unit" type="text" class="qe-input" placeholder="e.g. m³">
+            <input id="qe-unit" type="text" class="qe-input" placeholder="e.g. m³" data-alpha="1">
           </div>
           <div class="qe-field xs">
             <span class="qe-label">Quantity</span>
@@ -2309,7 +2309,7 @@ if($action=='login')
           </div>
           <div class="qe-field sm">
             <span class="qe-label">Sch. Unit</span>
-            <input id="qe-sch-unit" type="text" class="qe-input qe-needs-data" placeholder="e.g. Nos">
+            <input id="qe-sch-unit" type="text" class="qe-input qe-needs-data" placeholder="e.g. Nos" data-alpha="1">
           </div>
           <div class="qe-field xs">
             <span class="qe-label">Sch. Qty</span>
@@ -2352,8 +2352,8 @@ if($action=='login')
               <th style="width:18%">Resource Type</th>
               <th style="width:18%">Resource Group</th>
               <th style="width:22%">Resource Name</th>
-              <th style="width:10%">Quantity</th>
-              <th style="width:12%">Rate</th>
+              <th style="width:10%">Qty/Unit</th>
+              <th style="width:12%">Rate/Unit</th>
               <th style="width:12%">Amount</th>
               <th style="width:8%;text-align:right">
                 <button class="qe-add-btn" id="qe-res-add" title="Add resource row">+</button>
@@ -2421,7 +2421,7 @@ function openModal(saId, wanId){
     /* edit mode — existing bar */
     _wbsMode  = 'edit';
     _wbsWanId = wanId || 0;
-    document.getElementById('qe-btn-add').disabled  = false;
+    document.getElementById('qe-btn-add').style.display = 'none';
     document.getElementById('qe-btn-save').textContent = '💾 Save';
     $.ajax({
       type:'POST', url:'../projectsmain/wbsget', dataType:'json',
@@ -2437,6 +2437,7 @@ function openModal(saId, wanId){
     /* new entry mode — WBS icon */
     _wbsMode  = 'new';
     _wbsWanId = 0;
+    document.getElementById('qe-btn-add').style.display = '';
     document.getElementById('qe-btn-add').disabled  = true;
     document.getElementById('qe-btn-save').textContent = '💾 Save';
     if(!document.querySelector('#qe-task-body tr')) addTaskRow();
@@ -2712,6 +2713,9 @@ function addTaskRow(){
     '<td><input type="number" class="qe-task-resunits" placeholder="1" step="1" min="1"></td>'+
     '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
   tbody.appendChild(tr);
+  _bindAlphaField(tr.querySelector('.qe-task-unit'));
+  _bindNumField(tr.querySelector('.qe-task-prod'));
+  _bindNumField(tr.querySelector('.qe-task-resunits'));
   tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
   tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
   tr.querySelector('.qe-task-del').addEventListener('click', function(){
@@ -2767,6 +2771,9 @@ function _bindResRow(tr){
   var qtyEl   = tr.querySelector('.qe-res-qty');
   var rateEl  = tr.querySelector('.qe-res-rate');
   var amtEl   = tr.querySelector('.qe-res-amt');
+
+  _bindNumField(qtyEl);
+  _bindNumField(rateEl);
 
   function calcAmt(){
     var q = parseFloat(qtyEl.value)||0, r = parseFloat(rateEl.value)||0;
@@ -2983,8 +2990,29 @@ function recalcEstRate(){
   calcActivityAmount();
 }
 
+/* ── Input validation helpers ── */
+/* Blocks digits in alpha-only fields; blocks letters in number fields */
+function _bindAlphaField(el){
+  el.addEventListener('keypress', function(e){
+    if(/[0-9]/.test(e.key)) e.preventDefault();
+  });
+  el.addEventListener('input', function(){
+    this.value = this.value.replace(/[0-9]/g, '');
+  });
+}
+function _bindNumField(el){
+  el.addEventListener('keypress', function(e){
+    if(!/[0-9.\-]/.test(e.key) && !e.ctrlKey && !e.metaKey) e.preventDefault();
+  });
+}
+/* Apply to static fields after DOM ready; dynamic rows call these on creation */
+function bindStaticFieldValidation(){
+  document.querySelectorAll('[data-alpha]').forEach(_bindAlphaField);
+}
+
 /* ── Bind ── */
 document.addEventListener('DOMContentLoaded', function(){
+  bindStaticFieldValidation();
 
   /* open via .qe-btn class anywhere on page */
   document.addEventListener('click', function(e){
@@ -3170,13 +3198,10 @@ document.addEventListener('DOMContentLoaded', function(){
       type:'POST', url:'../projectsmain/wbsadd',
       data:{ payload: JSON.stringify(payload) }, dataType:'json',
       success: function(d){
-        btn.disabled = (_wbsMode === 'new'); btn.textContent = '+ Add to Gantt';
+        btn.disabled = false; btn.textContent = '+ Add to Gantt';
         if(d.error && d.error !== 'No'){ alert('Error: ' + d.error); return; }
-        var msg = document.getElementById('qe-save-msg');
-        msg.style.color = '#2980b9'; msg.textContent = '✔ Activity added to Gantt!';
-        setTimeout(function(){ msg.textContent = ''; }, 3000);
-        if(_wbsMode === 'new') clearActivityFields();
         if(typeof window.loadGantt === 'function') window.loadGantt();
+        closeModal();
       },
       error: function(){
         btn.disabled = false; btn.textContent = '+ Add to Gantt';
