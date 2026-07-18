@@ -142,7 +142,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   letter-spacing: 0.04em; padding: 4px 7px; flex-shrink: 0;
   background: #1a2540; border-bottom: 1px solid #0d1f3c;
 }
-.gcm-pop-panel-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+.gcm-pop-panel-body { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 #gcm-pop-loading { text-align: center; padding: 18px; font-size: 11px; color: #5a6e8c; }
 
 /* ── Gantt Cost Modal (kept for backwards compat, hidden by default) ─────── */
