@@ -674,6 +674,8 @@ class ProjectsmainController extends Controller
             'act_name'    => $actNameInput,
             'duration'    => $duration,
             'calc_rate'   => round($calcRate, 2),
+            'sch_unit'    => $schUnit,
+            'sch_qty'     => $schQty,
         ];
     }
 
@@ -921,8 +923,8 @@ class ProjectsmainController extends Controller
             'est_qty'        => $estQty,
             'est_rate'       => round($calcRate, 2),
             'est_amt'        => round($estQty * $calcRate, 2),
-            'sch_unit'       => $sa['sch_unit'] ?? $sa['unit'] ?? '',
-            'sch_qty'        => (float)($sa['sch_qty'] ?? $sa['quantity'] ?? 0),
+            'sch_unit'       => ($sa['sch_unit'] !== null && $sa['sch_unit'] !== '') ? $sa['sch_unit'] : ($sa['unit'] ?? ''),
+            'sch_qty'        => ($sa['sch_qty'] !== null && (float)$sa['sch_qty'] > 0) ? (float)$sa['sch_qty'] : (float)($sa['quantity'] ?? 0),
             'duration'       => (int)($sa['duration'] ?? 0),
             'tasks'          => $tasks,
             'resources'      => $resources,

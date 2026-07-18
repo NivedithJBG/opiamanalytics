@@ -2477,10 +2477,12 @@ function _prefillModal(d){
   if(d.est_qty) document.getElementById('qe-qty').classList.remove('qe-needs-data');
 
   /* Schedule fields */
-  document.getElementById('qe-sch-unit').value = d.sch_unit || '';
-  document.getElementById('qe-sch-qty').value  = d.sch_qty  || '';
-  if(d.sch_unit) document.getElementById('qe-sch-unit').classList.remove('qe-needs-data');
-  if(d.sch_qty)  document.getElementById('qe-sch-qty').classList.remove('qe-needs-data');
+  var schUnitEl = document.getElementById('qe-sch-unit');
+  var schQtyEl  = document.getElementById('qe-sch-qty');
+  schUnitEl.value = d.sch_unit || '';
+  schQtyEl.value  = (d.sch_qty != null && d.sch_qty !== '') ? d.sch_qty : '';
+  if(schUnitEl.value) schUnitEl.classList.remove('qe-needs-data');
+  if(schQtyEl.value)  schQtyEl.classList.remove('qe-needs-data');
 
   /* Tasks and Resources — fetch from getactivityresources directly */
   if(d.iow_act_id){
