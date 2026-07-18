@@ -3323,14 +3323,15 @@ document.addEventListener('DOMContentLoaded', function(){
 }
 #gantt-win.gw-open { display:flex; }
 #gantt-win-hdr {
-  background:#1a202c; color:#fff; padding:7px 14px;
+  background:#fff; color:#333; padding:10px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
-  font-family:'Nunito',sans-serif; font-size:13px; font-weight:700;
+  font-family:'Nunito',sans-serif; font-size:18px; font-weight:700;
+  border-bottom:1px solid #e5e5e5;
 }
 #gantt-win-hdr-btns { display:flex; align-items:center; gap:8px; }
 #gantt-win-hdr-btns button {
-  background:none; border:none; color:#fff; font-size:16px;
+  background:none; border:none; color:#333; font-size:20px;
   cursor:pointer; line-height:1; padding:0 4px;
 }
 #gantt-win-body { flex:1; min-height:0; overflow:auto; }
