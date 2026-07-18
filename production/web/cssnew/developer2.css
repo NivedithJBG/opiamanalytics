@@ -295,23 +295,23 @@ color:red !important;
 
 .leftside .navbar.navbar-default {
     background: #dcdddf;
-    height: 44px;
+    height: 56px;
     border-radius: 0;
-    min-height: 44px;
+    min-height: 56px;
 }
 .leftside .navbar.navbar-default .navbar-header,
 .leftside .navbar.navbar-default .navbar-collapse {
-    height: 44px;
+    height: 56px;
 }
 .leftside .navbar.navbar-default .round-icons > li > a {
-    height: 26px !important;
-    width: 26px !important;
-    font-size: 11px !important;
-    margin-top: 9px !important;
+    height: 30px !important;
+    width: 30px !important;
+    font-size: 12px !important;
+    margin-top: 13px !important;
 }
 .leftside .navbar.navbar-default .opiam-logo img {
-    width: 50px !important;
-    margin-top: 2px !important;
+    width: 55px !important;
+    margin-top: 6px !important;
 }
 
 
