@@ -3326,7 +3326,7 @@ document.addEventListener('DOMContentLoaded', function(){
   background:#fff; color:#333; padding:16px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
-  font-family:'Nunito',sans-serif; font-size:22px; font-weight:700;
+  font-family:'Nunito',sans-serif;
   border-bottom:1px solid #e5e5e5;
 }
 #gantt-win-hdr-btns { display:flex; align-items:center; gap:8px; }
@@ -3357,7 +3357,10 @@ document.addEventListener('DOMContentLoaded', function(){
   <div class="gw-rs gw-rs-se" data-dir="se"></div>
   <div class="gw-rs gw-rs-sw" data-dir="sw"></div>
   <div id="gantt-win-hdr">
-    <span>&#9776; Gantt Chart — drag to move</span>
+    <div style="display:flex;flex-direction:column;line-height:1.2;">
+      <span style="font-size:22px;font-weight:700;">Schedule Gantt Chart</span>
+      <span style="font-size:20px;font-weight:600;color:#555;" id="gantt-win-proj-name"><?php echo htmlspecialchars($ProjectName); ?></span>
+    </div>
     <div id="gantt-win-hdr-btns">
       <button id="gantt-win-expand" title="Fullscreen">&#x26F6;</button>
       <button id="gantt-win-close" title="Close">&times;</button>
