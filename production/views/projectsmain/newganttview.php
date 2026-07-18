@@ -253,6 +253,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   <!-- drag header -->
   <div id="gantt-float-hdr">
     <span>&#9776; Gantt Chart — drag to move</span>
+    <span style="display:flex;align-items:center;gap:8px;">
+      <button id="gantt-btn-expand" title="Fullscreen" style="background:none;border:none;color:#fff;font-size:16px;cursor:pointer;line-height:1;padding:0 4px;">&#x26F6;</button>
+      <button id="gantt-btn-close" title="Close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;padding:0 4px;">&times;</button>
+    </span>
   </div>
   <!-- body -->
   <div id="gantt-float-body">
@@ -2171,6 +2175,32 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   }
 
 })(jQuery);
+
+// Gantt float panel: close + fullscreen
+(function(){
+  var panel = document.getElementById('gantt-float');
+  var _saved = null;
+
+  document.getElementById('gantt-btn-close').addEventListener('click', function(){
+    window.history.back();
+  });
+
+  document.getElementById('gantt-btn-expand').addEventListener('click', function(){
+    var btn = this;
+    if(_saved){
+      panel.style.left=_saved.left; panel.style.top=_saved.top;
+      panel.style.width=_saved.width; panel.style.height=_saved.height;
+      panel.style.right=''; panel.style.bottom='';
+      _saved=null; btn.innerHTML='&#x26F6;'; btn.title='Fullscreen';
+    } else {
+      var r=panel.getBoundingClientRect();
+      _saved={left:panel.style.left,top:panel.style.top,width:panel.style.width,height:panel.style.height};
+      panel.style.left='0'; panel.style.top='0';
+      panel.style.width='100vw'; panel.style.height='100vh';
+      btn.innerHTML='&#x2716;'; btn.title='Restore';
+    }
+  });
+})();
 
 // Gantt float panel: drag + resize
 (function(){
