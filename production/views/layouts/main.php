@@ -2219,14 +2219,14 @@ if($action=='login')
 #qe-duration-display span{color:#4a5568;margin-left:4px}
 #qe-save-msg{font-size:11px;font-weight:700;flex:1}
 #qe-btn-save{
-  background:#27ae60;color:#fff;border:none;border-radius:4px;
+  background:#27ae60;color:#fff;border:none;border-radius:999px;
   padding:6px 22px;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;
   cursor:pointer;letter-spacing:.3px;text-transform:uppercase;
 }
 #qe-btn-save:hover{background:#1e8449}
 #qe-btn-save:disabled{background:#aaa;cursor:default}
 #qe-btn-add{
-  background:#00838f;color:#fff;border:none;border-radius:4px;
+  background:#00838f;color:#fff;border:none;border-radius:999px;
   padding:6px 22px;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;
   cursor:pointer;letter-spacing:.3px;text-transform:uppercase;
 }
@@ -2373,7 +2373,7 @@ if($action=='login')
     <div id="qe-save-msg"></div>
     <button id="qe-btn-save">&#128190; Save</button>
     <button id="qe-btn-add" disabled>&#43; Add to Gantt</button>
-    <button id="qe-close-btn" style="background:#e67e22;color:#fff;border:none;padding:6px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;border-radius:0;">&#10005; Close</button>
+    <button id="qe-close-btn" style="background:#e67e22;color:#fff;border:none;padding:6px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;border-radius:999px;">&#10005; Close</button>
   </div>
 </div><!-- /qe-modal -->
 
