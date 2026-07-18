@@ -121,6 +121,40 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 .gkp-kv-val.over { color:#e53935; }
 .gkp-kv-val.good { color:#27ae60; }
 
+/* ── Resource Cost Tooltip ──────────────────────────────────────────────────── */
+#rcost-tt {
+  display:none; position:fixed; z-index:10050;
+  background:#1a2540; color:#e8efff;
+  border-radius:8px; box-shadow:0 6px 28px rgba(0,0,0,0.45);
+  padding:10px 12px; min-width:320px; max-width:480px;
+  font-family:'Barlow Condensed',sans-serif; font-size:11px;
+  pointer-events:none;
+}
+#rcost-tt .tt-type-hdr {
+  font-size:10px; font-weight:700; color:#7eb3ff; text-transform:uppercase;
+  letter-spacing:0.05em; padding:5px 0 3px; border-top:1px solid #2d3f66;
+  margin-top:4px;
+}
+#rcost-tt .tt-type-hdr:first-child { border-top:none; margin-top:0; padding-top:0; }
+#rcost-tt .tt-res-row { display:flex; align-items:center; gap:6px; padding:2px 0; }
+#rcost-tt .tt-res-name { flex:1; color:#c8d8ff; font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#rcost-tt .tt-uc-est { color:#94a3b8; font-size:10px; white-space:nowrap; }
+#rcost-tt .tt-uc-act { font-weight:700; font-size:10px; white-space:nowrap; }
+#rcost-tt .tt-uc-diff { font-size:9px; font-weight:700; white-space:nowrap; }
+#rcost-tt .tt-bar-row { display:flex; align-items:center; gap:6px; padding:2px 0 4px; }
+#rcost-tt .tt-bar-wrap { flex:1; position:relative; height:8px; background:#2d3f66; border-radius:3px; overflow:hidden; }
+#rcost-tt .tt-bar-est { position:absolute; top:0; left:0; height:100%; background:#4a6fa5; border-radius:3px; }
+#rcost-tt .tt-bar-act { position:absolute; top:0; left:0; height:100%; border-radius:3px; opacity:0.85; }
+#rcost-tt .tt-bar-lbl { font-size:9px; color:#94a3b8; white-space:nowrap; }
+#rcost-tt .tt-bar-diff { font-size:9px; font-weight:700; white-space:nowrap; }
+.rcost-info-icon {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:14px; height:14px; border-radius:50%;
+  background:#3461b8; color:#fff; font-size:9px; font-weight:700;
+  cursor:default; flex-shrink:0; line-height:1; user-select:none;
+  margin-left:4px; vertical-align:middle;
+}
+
 /* ── Gantt Cost Float Panel ─────────────────────────────────────────────────── */
 #gcm-popup {
   display: none; position: fixed; z-index: 10015;
@@ -372,6 +406,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     <div id="gcm-pop-row2" style="display:none"></div>
   </div>
 </div>
+
+<div id="rcost-tt"></div>
 
 <!-- KPI Click Modal -->
 <div id="gkm-bk"></div>
@@ -1336,15 +1372,28 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       if (!el) return;
       items = items || [];
       if (!items.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No resources</div>'; return; }
-      var groups = {};
+
+      // Build grouped data (for chart) and per-resource detail (for tooltip)
+      var groups = {}, groupItems = {};
       items.forEach(function(r) {
         var key = r.type_name || 'Other';
-        if (!groups[key]) groups[key] = { est: 0, act: 0 };
+        if (!groups[key]) { groups[key] = { est: 0, act: 0 }; groupItems[key] = []; }
         var estUC = +r.rate || 0;
         var actUC = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined) ? +r.actual_unit_cost : estUC;
-        groups[key].est += estUC * (+r.planned_consumption || 0);
-        groups[key].act += actUC * (+r.actual_consumption  || 0);
+        var estC  = estUC * (+r.planned_consumption || 0);
+        var actC  = actUC * (+r.actual_consumption  || 0);
+        groups[key].est += estC;
+        groups[key].act += actC;
+        groupItems[key].push({
+          name: r.name || r.resource_name || '—',
+          estUC: estUC, actUC: actUC,
+          estCons: +r.planned_consumption || 0,
+          actCons: +r.actual_consumption  || 0,
+          estCost: estC, actCost: actC,
+          unit: r.consumption_unit || actUnit || ''
+        });
       });
+
       var labels = Object.keys(groups);
       if (!labels.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No data</div>'; return; }
       var maxVal = 0;
@@ -1382,7 +1431,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + actCol + '">' + _fmtFull(act) + (actUnit ? ' ' + actUnit : '') + '</b></span>'
           + '</div>';
       });
-      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0">' + _sh(actName||'', 40) + '</div>'
+
+      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;display:flex;align-items:center;justify-content:space-between">'
+        + '<span>' + _sh(actName||'', 40) + '</span>'
+        + '<span class="rcost-info-icon" id="rcost-info-btn" title="Resource detail">i</span>'
+        + '</div>'
         + '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">'
         +   '<div style="display:flex;gap:2px;padding:2px 6px 0;flex-shrink:0">' + estRow + '</div>'
         +   '<div style="display:flex;gap:2px;padding:0 6px;flex-shrink:0">' + actRow + '</div>'
@@ -1395,6 +1448,63 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         +   '</div>'
         +   '<div style="overflow-y:auto;flex-shrink:0;max-height:80px;border-top:1px solid #e8efff;margin-top:2px">' + legendRows3 + '</div>'
         + '</div>';
+
+      // Build tooltip content
+      var ttHtml = '';
+      labels.forEach(function(typeName) {
+        ttHtml += '<div class="tt-type-hdr">' + typeName + '</div>';
+        var resArr = groupItems[typeName];
+        var maxCons = 0;
+        resArr.forEach(function(r){ maxCons = Math.max(maxCons, r.estCons, r.actCons); });
+        if (maxCons === 0) maxCons = 1;
+        resArr.forEach(function(r) {
+          var ucDiff = r.actUC - r.estUC;
+          var ucDiffCol = ucDiff > 0 ? '#e8820c' : (ucDiff < 0 ? '#1b9e8e' : '#94a3b8');
+          var ucDiffStr = ucDiff > 0 ? '+' + _fmtCost(ucDiff) : (ucDiff < 0 ? '−' + _fmtCost(Math.abs(ucDiff)) : '');
+          var consDiff = r.actCons - r.estCons;
+          var consDiffCol = consDiff > 0 ? '#e8820c' : (consDiff < 0 ? '#1b9e8e' : '#94a3b8');
+          var consDiffStr = consDiff > 0 ? '+' + _fmtFull(consDiff) : (consDiff < 0 ? '−' + _fmtFull(Math.abs(consDiff)) : '=');
+          var estBarPct  = (r.estCons / maxCons * 100).toFixed(1);
+          var actBarPct  = (r.actCons / maxCons * 100).toFixed(1);
+          var actBarCol  = consDiff > 0 ? '#e8820c' : (consDiff < 0 ? '#1b9e8e' : '#4a6fa5');
+          // Row 1: unit cost
+          ttHtml += '<div class="tt-res-row">'
+            + '<span class="tt-res-name" title="' + r.name + '">' + r.name + '</span>'
+            + '<span class="tt-uc-est">Est&nbsp;<b>' + _fmtCost(r.estUC) + '</b></span>'
+            + '<span class="tt-uc-act" style="color:' + (ucDiff>0?'#e8820c':ucDiff<0?'#1b9e8e':'#94a3b8') + '">'
+            + 'Act&nbsp;<b>' + _fmtCost(r.actUC) + '</b></span>'
+            + (ucDiffStr ? '<span class="tt-uc-diff" style="color:' + ucDiffCol + '">(' + ucDiffStr + ')</span>' : '')
+            + '</div>';
+          // Row 2: consumption bar
+          ttHtml += '<div class="tt-bar-row">'
+            + '<span class="tt-bar-lbl" style="min-width:24px;text-align:right">' + _fmtFull(r.estCons) + '</span>'
+            + '<div class="tt-bar-wrap">'
+            + '<div class="tt-bar-est" style="width:' + estBarPct + '%"></div>'
+            + '<div class="tt-bar-act" style="width:' + actBarPct + '%;background:' + actBarCol + '"></div>'
+            + '</div>'
+            + '<span class="tt-bar-lbl">' + _fmtFull(r.actCons) + (r.unit ? ' ' + r.unit : '') + '</span>'
+            + (consDiffStr !== '=' ? '<span class="tt-bar-diff" style="color:' + consDiffCol + '">' + consDiffStr + '</span>' : '')
+            + '</div>';
+        });
+      });
+      var ttEl = document.getElementById('rcost-tt');
+      if (ttEl) ttEl.innerHTML = ttHtml;
+
+      // Wire hover on info icon
+      var iconEl = document.getElementById('rcost-info-btn');
+      if (iconEl && ttEl) {
+        iconEl.addEventListener('mouseenter', function(e) {
+          ttEl.style.display = 'block';
+          var r = iconEl.getBoundingClientRect();
+          var ttW = 360;
+          var left = Math.min(r.right + 8, window.innerWidth - ttW - 8);
+          ttEl.style.left = Math.max(8, left) + 'px';
+          ttEl.style.top  = Math.max(8, r.top - 10) + 'px';
+        });
+        iconEl.addEventListener('mouseleave', function() {
+          ttEl.style.display = 'none';
+        });
+      }
     }
 
     // 4. Unit Cost of Activity → gm-cd-g5
