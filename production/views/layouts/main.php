@@ -342,7 +342,7 @@ if($action=='login')
 
                 if($ProjectId && Yii::$app->controller->id != 'procurement') {  ?>
                 <li>
-                    <a class="icon-chart3" title="Gantt Chart" href="<?php echo Yii::$app->urlManager->createUrl('projectsmain/newganttview?id='.$ProjectId)?>"></a>
+                    <a class="icon-chart3" title="Gantt Chart" href="<?php echo Yii::$app->urlManager->createUrl('projectsmain/newganttchart?id='.$ProjectId)?>"></a>
                 </li>
                 
 
