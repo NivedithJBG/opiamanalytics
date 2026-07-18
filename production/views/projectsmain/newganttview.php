@@ -124,31 +124,31 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 /* ── Resource Cost Tooltip ──────────────────────────────────────────────────── */
 #rcost-tt {
   display:none; position:fixed; z-index:10050;
-  background:#1a2540; color:#e8efff;
-  border-radius:8px; box-shadow:0 6px 28px rgba(0,0,0,0.45);
-  padding:10px 12px; min-width:340px; max-width:560px;
+  background:#fff; color:#1a2540;
+  border-radius:8px; box-shadow:0 6px 28px rgba(0,0,0,0.28); border:1px solid #dde3ef;
+  padding:12px 16px; min-width:480px; max-width:700px;
   font-family:'Barlow Condensed',sans-serif; font-size:11px;
   pointer-events:none;
 }
 #rcost-tt .tt-type-hdr {
-  font-size:10px; font-weight:700; color:#7eb3ff; text-transform:uppercase;
-  letter-spacing:0.05em; padding:5px 0 4px; border-top:1px solid #2d3f66;
+  font-size:10px; font-weight:700; color:#3461b8; text-transform:uppercase;
+  letter-spacing:0.05em; padding:6px 0 4px; border-top:1px solid #e5eaf5;
   margin-top:6px;
 }
 #rcost-tt .tt-type-hdr:first-child { border-top:none; margin-top:0; padding-top:0; }
 /* vertical bar chart per resource group */
-#rcost-tt .tt-vbar-section { display:flex; gap:4px; align-items:flex-end; padding:0 0 4px; }
+#rcost-tt .tt-vbar-section { display:flex; gap:6px; align-items:flex-end; padding:0 0 4px; }
 #rcost-tt .tt-vbar-col { display:flex; flex-direction:column; align-items:center; flex:1; min-width:0; }
-#rcost-tt .tt-vbar-vals { font-size:8px; color:#94a3b8; text-align:center; line-height:1.3; margin-bottom:2px; width:100%; }
+#rcost-tt .tt-vbar-vals { font-size:8px; color:#7a8aaa; text-align:center; line-height:1.3; margin-bottom:2px; width:100%; }
 #rcost-tt .tt-vbar-vals b { display:block; font-size:9px; }
-#rcost-tt .tt-vbar-bars { width:100%; display:flex; gap:2px; align-items:flex-end; height:60px; }
+#rcost-tt .tt-vbar-bars { width:100%; display:flex; gap:3px; align-items:flex-end; height:80px; }
 #rcost-tt .tt-vbar-est { flex:1; background:#4a6fa5; border-radius:2px 2px 0 0; min-height:2px; }
 #rcost-tt .tt-vbar-act { flex:1; border-radius:2px 2px 0 0; min-height:2px; }
 #rcost-tt .tt-vbar-diff { font-size:8px; font-weight:700; text-align:center; margin-top:2px; }
-#rcost-tt .tt-vbar-name { font-size:8px; color:#c8d8ff; text-align:center; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; }
-#rcost-tt .tt-legend { display:flex; gap:10px; margin-top:6px; padding-top:5px; border-top:1px solid #2d3f66; }
-#rcost-tt .tt-legend span { font-size:8px; color:#94a3b8; display:flex; align-items:center; gap:3px; }
-#rcost-tt .tt-legend i { display:inline-block; width:8px; height:8px; border-radius:1px; }
+#rcost-tt .tt-vbar-name { font-size:8px; color:#1a2540; text-align:center; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; }
+#rcost-tt .tt-legend { display:flex; gap:12px; margin-top:8px; padding-top:6px; border-top:1px solid #e5eaf5; }
+#rcost-tt .tt-legend span { font-size:9px; color:#7a8aaa; display:flex; align-items:center; gap:3px; }
+#rcost-tt .tt-legend i { display:inline-block; width:9px; height:9px; border-radius:1px; }
 .rcost-info-icon {
   display:inline-flex; align-items:center; justify-content:center;
   width:16px; height:16px; border-radius:50%;
@@ -1436,7 +1436,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
       el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;display:flex;align-items:center;justify-content:space-between">'
         + '<span>' + _sh(actName||'', 40) + '</span>'
-        + '<span class="rcost-info-icon" id="rcost-info-btn" title="Resource detail">&#9432;</span>'
+        + '<span class="rcost-info-icon" id="rcost-info-btn">&#9432;</span>'
         + '</div>'
         + '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">'
         +   '<div style="display:flex;gap:2px;padding:2px 6px 0;flex-shrink:0">' + estRow + '</div>'
@@ -1466,24 +1466,23 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         if (maxUC   === 0) maxUC   = 1;
 
         // Section header row labels
-        ttHtml += '<div style="display:flex;gap:4px;margin-bottom:2px;">';
+        ttHtml += '<div style="display:flex;gap:6px;margin-bottom:3px;">';
         resArr.forEach(function(r) {
-          ttHtml += '<div style="flex:1;min-width:0;text-align:center;font-size:8px;color:#7eb3ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + r.name + '">' + r.name + '</div>';
+          ttHtml += '<div style="flex:1;min-width:0;text-align:center;font-size:9px;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + r.name + '">' + r.name + '</div>';
         });
         ttHtml += '</div>';
 
-        // Two rows of vertical bars: row 1 = Unit Cost, row 2 = Consumption
         // Row 1: Unit Cost bars
-        ttHtml += '<div style="font-size:8px;color:#94a3b8;margin-bottom:1px;margin-top:4px;">Unit Cost</div>';
+        ttHtml += '<div style="font-size:9px;color:#7a8aaa;margin-bottom:2px;margin-top:5px;font-weight:600;">Unit Cost</div>';
         ttHtml += '<div class="tt-vbar-section">';
         resArr.forEach(function(r) {
           var ucDiff   = r.actUC - r.estUC;
           var actUCCol = ucDiff > 0 ? '#e8820c' : (ucDiff < 0 ? '#1b9e8e' : '#4a6fa5');
           var ucDiffStr = ucDiff > 0 ? '+' + _fmtCost(ucDiff) : (ucDiff < 0 ? '−' + _fmtCost(Math.abs(ucDiff)) : '');
-          var estH = Math.max(2, (r.estUC / maxUC * 60)).toFixed(1);
-          var actH = Math.max(2, (r.actUC / maxUC * 60)).toFixed(1);
+          var estH = Math.max(2, (r.estUC / maxUC * 80)).toFixed(1);
+          var actH = Math.max(2, (r.actUC / maxUC * 80)).toFixed(1);
           ttHtml += '<div class="tt-vbar-col">'
-            + '<div class="tt-vbar-vals"><span style="color:#94a3b8">' + _fmtCost(r.estUC) + '</span><b style="color:' + actUCCol + '">' + _fmtCost(r.actUC) + '</b></div>'
+            + '<div class="tt-vbar-vals"><span style="color:#7a8aaa">' + _fmtCost(r.estUC) + '</span><b style="color:' + actUCCol + '">' + _fmtCost(r.actUC) + '</b></div>'
             + '<div class="tt-vbar-bars">'
             + '<div class="tt-vbar-est" style="height:' + estH + 'px"></div>'
             + '<div class="tt-vbar-act" style="height:' + actH + 'px;background:' + actUCCol + '"></div>'
@@ -1494,16 +1493,16 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         ttHtml += '</div>';
 
         // Row 2: Consumption bars
-        ttHtml += '<div style="font-size:8px;color:#94a3b8;margin-bottom:1px;margin-top:6px;">Consumption</div>';
+        ttHtml += '<div style="font-size:9px;color:#7a8aaa;margin-bottom:2px;margin-top:8px;font-weight:600;">Consumption</div>';
         ttHtml += '<div class="tt-vbar-section">';
         resArr.forEach(function(r) {
           var cDiff    = r.actCons - r.estCons;
           var actCCol  = cDiff > 0 ? '#e8820c' : (cDiff < 0 ? '#1b9e8e' : '#4a6fa5');
           var cDiffStr = cDiff > 0 ? '+' + _fmtFull(cDiff) : (cDiff < 0 ? '−' + _fmtFull(Math.abs(cDiff)) : '');
-          var estH = Math.max(2, (r.estCons / maxCons * 60)).toFixed(1);
-          var actH = Math.max(2, (r.actCons / maxCons * 60)).toFixed(1);
+          var estH = Math.max(2, (r.estCons / maxCons * 80)).toFixed(1);
+          var actH = Math.max(2, (r.actCons / maxCons * 80)).toFixed(1);
           ttHtml += '<div class="tt-vbar-col">'
-            + '<div class="tt-vbar-vals"><span style="color:#94a3b8">' + _fmtFull(r.estCons) + '</span><b style="color:' + actCCol + '">' + _fmtFull(r.actCons) + (r.unit?' '+r.unit:'') + '</b></div>'
+            + '<div class="tt-vbar-vals"><span style="color:#7a8aaa">' + _fmtFull(r.estCons) + '</span><b style="color:' + actCCol + '">' + _fmtFull(r.actCons) + (r.unit?' '+r.unit:'') + '</b></div>'
             + '<div class="tt-vbar-bars">'
             + '<div class="tt-vbar-est" style="height:' + estH + 'px"></div>'
             + '<div class="tt-vbar-act" style="height:' + actH + 'px;background:' + actCCol + '"></div>'
@@ -1529,7 +1528,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         iconEl.addEventListener('mouseenter', function(e) {
           ttEl.style.display = 'block';
           var r = iconEl.getBoundingClientRect();
-          var ttW = 400;
+          var ttW = 560;
           var left = Math.min(r.right + 8, window.innerWidth - ttW - 8);
           ttEl.style.left = Math.max(8, left) + 'px';
           ttEl.style.top  = Math.max(8, r.top - 10) + 'px';
