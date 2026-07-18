@@ -409,7 +409,7 @@ if($action=='login')
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -425,7 +425,7 @@ if($action=='login')
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1555" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -498,7 +498,7 @@ if($action=='login')
                     <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -552,7 +552,7 @@ if($action=='login')
                     </li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-pencil qe-btn" title="Quick Entry" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
                 <?php  } } } ?>
 
 
@@ -2217,7 +2217,14 @@ if($action=='login')
   flex:1;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;color:#2d3748;
 }
 #qe-duration-display span{color:#4a5568;margin-left:4px}
-#qe-save-msg{font-size:11px;color:#27ae60;display:none}
+#qe-save-msg{font-size:11px;font-weight:700;flex:1}
+#qe-btn-save{
+  background:#27ae60;color:#fff;border:none;border-radius:4px;
+  padding:6px 22px;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;
+  cursor:pointer;letter-spacing:.3px;text-transform:uppercase;
+}
+#qe-btn-save:hover{background:#1e8449}
+#qe-btn-save:disabled{background:#aaa;cursor:default}
 #qe-btn-add{
   background:#00838f;color:#fff;border:none;border-radius:4px;
   padding:6px 22px;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;
@@ -2270,9 +2277,9 @@ if($action=='login')
           </div>
           <div class="qe-field wide">
             <span class="qe-label">Activity</span>
-            <select id="qe-activity" class="qe-select qe-needs-data">
-              <option value="">— Select Activity —</option>
-            </select>
+            <input type="text" id="qe-activity-text" class="qe-input qe-needs-data" placeholder="Select or type new activity" list="qe-activity-list" autocomplete="off">
+            <datalist id="qe-activity-list"></datalist>
+            <input type="hidden" id="qe-activity-id">
           </div>
         </div>
       </div>
@@ -2363,8 +2370,9 @@ if($action=='login')
   </div><!-- /qe-body -->
 
   <div id="qe-footer">
-    <div id="qe-save-msg">&#10003; Activity added to Gantt!</div>
-    <button id="qe-btn-add">&#43; Add to Gantt</button>
+    <div id="qe-save-msg"></div>
+    <button id="qe-btn-save">&#128190; Save</button>
+    <button id="qe-btn-add" disabled>&#43; Add to Gantt</button>
     <button id="qe-close-btn" style="background:#e67e22;color:#fff;border:none;padding:6px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;border-radius:0;">&#10005; Close</button>
   </div>
 </div><!-- /qe-modal -->
@@ -2395,6 +2403,11 @@ if($action=='login')
 (function(){
 'use strict';
 
+/* ── mode tracking ── */
+/* _wbsMode: 'new' (WBS icon) or 'edit' (bar click) */
+var _wbsMode   = 'new';
+var _wbsWanId  = 0;   /* wan_id returned by wbssave / from wbsget */
+
 /* ── open / close ── */
 function openModal(saId, wanId){
   document.getElementById('qe-bk').classList.add('qe-open');
@@ -2405,17 +2418,27 @@ function openModal(saId, wanId){
   loadProjTypes();
 
   if(saId || wanId){
-    /* editing existing bar — fetch and prefill */
+    /* edit mode — existing bar */
+    _wbsMode  = 'edit';
+    _wbsWanId = wanId || 0;
+    document.getElementById('qe-btn-add').disabled  = false;
+    document.getElementById('qe-btn-save').textContent = '💾 Save';
     $.ajax({
       type:'POST', url:'../projectsmain/wbsget', dataType:'json',
       data:{ sa_id: saId || 0, wan_id: wanId || 0 },
       success: function(d){
         if(d.error) { addTaskRow(); loadResTypes(function(){ addResRow(); }); return; }
+        if(d.wan_id) _wbsWanId = d.wan_id;
         _prefillModal(d);
       },
       error: function(){ addTaskRow(); loadResTypes(function(){ addResRow(); }); }
     });
   } else {
+    /* new entry mode — WBS icon */
+    _wbsMode  = 'new';
+    _wbsWanId = 0;
+    document.getElementById('qe-btn-add').disabled  = true;
+    document.getElementById('qe-btn-save').textContent = '💾 Save';
     if(!document.querySelector('#qe-task-body tr')) addTaskRow();
     if(!document.querySelector('#qe-res-body tr'))  { loadResTypes(function(){ addResRow(); }); }
     recalcDuration();
@@ -2423,28 +2446,21 @@ function openModal(saId, wanId){
 }
 
 function _prefillModal(d){
-  /* Project Type */
+  /* Project Type — cascade: type → groups → activities, then set all values */
   var ptSel = document.getElementById('qe-proj-type');
-  if(d.proj_type_id){ ptSel.value = d.proj_type_id; ptSel.classList.remove('qe-needs-data'); }
-
-  /* Activity Type Group — load types first then set.
-     Set _qePrefilling so the activity change handler does not overwrite
-     our saved tasks/resources with the activity-library defaults. */
-  window._qePrefilling = true;
   loadProjTypes(function(){
     if(d.proj_type_id){
       ptSel.value = d.proj_type_id;
+      ptSel.classList.remove('qe-needs-data');
       loadGroups(d.proj_type_id, function(){
         var grpSel = document.getElementById('qe-group');
         if(d.act_type_id){ grpSel.value = d.act_type_id; grpSel.classList.remove('qe-needs-data'); }
         loadActivities(d.proj_type_id, d.act_type_id, function(){
-          var actSel = document.getElementById('qe-activity');
-          if(d.iow_act_id){ actSel.value = d.iow_act_id; actSel.classList.remove('qe-needs-data'); }
-          window._qePrefilling = false;
+          if(d.iow_act_id){
+            _setActivityById(d.iow_act_id, d.act_name);
+          }
         });
       });
-    } else {
-      window._qePrefilling = false;
     }
   });
 
@@ -2466,14 +2482,12 @@ function _prefillModal(d){
   if(d.sch_unit) document.getElementById('qe-sch-unit').classList.remove('qe-needs-data');
   if(d.sch_qty)  document.getElementById('qe-sch-qty').classList.remove('qe-needs-data');
 
-  /* Tasks and Resources — call getactivityresources directly with the activity id.
-     This is the same call the activity change event makes, bypassing the suppressed event. */
+  /* Tasks and Resources — fetch from getactivityresources directly */
   if(d.iow_act_id){
     $.ajax({
       type:'POST', url:'../projectsmain/getactivityresources', dataType:'json',
       data:{ activity_id: d.iow_act_id },
       success: function(data){
-        /* Unit (only fill if not already set from wbsget) */
         if(data.unit && !document.getElementById('qe-unit').value)
           document.getElementById('qe-unit').value = data.unit;
 
@@ -2496,9 +2510,7 @@ function _prefillModal(d){
               if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
             });
           });
-        } else {
-          addTaskRow();
-        }
+        } else { addTaskRow(); }
 
         /* Resources */
         document.getElementById('qe-res-body').innerHTML = '';
@@ -2514,9 +2526,7 @@ function _prefillModal(d){
               });
             });
           });
-        } else {
-          loadResTypes(function(){ addResRow(); });
-        }
+        } else { loadResTypes(function(){ addResRow(); }); }
         recalcDuration();
       }
     });
@@ -2528,10 +2538,10 @@ function _prefillModal(d){
 }
 
 window.openQeModal    = openModal;
-window.loadActivities = function(typeId, groupId){ loadActivities(typeId, groupId); };
 function closeModal(){
   document.getElementById('qe-bk').classList.remove('qe-open');
   document.getElementById('qe-modal').classList.remove('qe-open');
+  _wbsMode = 'new'; _wbsWanId = 0;
 }
 
 /* ── cascading dropdowns ── */
@@ -2555,7 +2565,8 @@ function loadProjTypes(cb){
 function loadGroups(typeId, cb){
   var sel = document.getElementById('qe-group');
   sel.innerHTML = '<option value="">— Select Group —</option>';
-  document.getElementById('qe-activity').innerHTML = '<option value="">— Select Activity —</option>';
+  document.getElementById('qe-activity-list').innerHTML = '';
+  _activityItems = [];
   if(!typeId){ if(cb) cb(); return; }
   $.ajax({
     type:'POST', url:'../projectsmain/getwbgrouplist', dataType:'json',
@@ -2571,24 +2582,52 @@ function loadGroups(typeId, cb){
   });
 }
 
+/* activity items cache for the current type/group combo */
+var _activityItems = [];
+
 function loadActivities(typeId, groupId, cb){
-  var sel = document.getElementById('qe-activity');
-  sel.innerHTML = '<option value="">— Loading… —</option>';
-  if(!typeId && !groupId){ sel.innerHTML = '<option value="">— Select Activity —</option>'; if(cb) cb(); return; }
+  var dl = document.getElementById('qe-activity-list');
+  dl.innerHTML = '';
+  _activityItems = [];
+  if(!typeId && !groupId){ if(cb) cb(); return; }
   $.ajax({
     type:'POST', url:'../projectsmain/getactivitiesbytypeandgroup', dataType:'json',
     data:{typeId: typeId, groupId: groupId},
     success: function(d){
-      sel.innerHTML = '<option value="">— Select Activity —</option>';
-      (d.items||[]).forEach(function(item){
+      _activityItems = d.items || [];
+      _activityItems.forEach(function(item){
         var o = document.createElement('option');
-        o.value = item.id; o.textContent = item.name;
-        sel.appendChild(o);
+        o.value = item.name;
+        o.setAttribute('data-id', item.id);
+        dl.appendChild(o);
       });
-      if(!d.items || !d.items.length) sel.innerHTML = '<option value="">— No activities found —</option>';
       if(cb) cb();
     }
   });
+}
+
+/* set activity text+id by id (used during prefill) */
+function _setActivityById(actId, actName){
+  var textEl = document.getElementById('qe-activity-text');
+  var idEl   = document.getElementById('qe-activity-id');
+  /* find name from cached items */
+  var found = _activityItems.filter(function(i){ return +i.id === +actId; });
+  textEl.value = found.length ? found[0].name : (actName || '');
+  idEl.value   = actId;
+  if(textEl.value) textEl.classList.remove('qe-needs-data');
+}
+
+/* resolve typed text to an id (or 0 for new activity) */
+function _resolveActivityId(){
+  var text   = document.getElementById('qe-activity-text').value.trim();
+  var idEl   = document.getElementById('qe-activity-id');
+  var found  = _activityItems.filter(function(i){ return i.name.toLowerCase() === text.toLowerCase(); });
+  if(found.length){
+    idEl.value = found[0].id;
+  } else {
+    idEl.value = '';  /* new activity — backend will create */
+  }
+  return { id: idEl.value, name: text };
 }
 
 /* ── duration calculation ── */
@@ -2842,17 +2881,21 @@ function addResRow(prefill){
   if(body) setTimeout(function(){ body.scrollTop = body.scrollHeight; }, 50);
 }
 
-/* ── clear activity fields (keeps Project Type, Group, IOW, Activity selections) ── */
+/* ── clear activity fields (keeps Project Type and Group selections) ── */
 function clearActivityFields(){
-  document.getElementById('qe-iow').value      = '';
-  document.getElementById('qe-unit').value     = '';
-  document.getElementById('qe-qty').value      = '';
-  document.getElementById('qe-rate').value     = '';
-  document.getElementById('qe-amount').value   = '';
-  document.getElementById('qe-sch-unit').value = '';
-  document.getElementById('qe-sch-qty').value  = '';
+  document.getElementById('qe-iow').value           = '';
+  document.getElementById('qe-activity-text').value = '';
+  document.getElementById('qe-activity-id').value   = '';
+  document.getElementById('qe-unit').value          = '';
+  document.getElementById('qe-qty').value           = '';
+  document.getElementById('qe-rate').value          = '';
+  document.getElementById('qe-amount').value        = '';
+  document.getElementById('qe-sch-unit').value      = '';
+  document.getElementById('qe-sch-qty').value       = '';
   document.getElementById('qe-task-body').innerHTML = '';
   document.getElementById('qe-res-body').innerHTML  = '';
+  _wbsWanId = 0;
+  document.getElementById('qe-btn-add').disabled = true;
   addTaskRow();
   loadResTypes(function(){ addResRow(); });
   recalcDuration();
@@ -2889,18 +2932,19 @@ function collectPayload(){
   });
 
   var iowEl       = document.getElementById('qe-iow');
-  var actSel      = document.getElementById('qe-activity');
   var projTypeSel = document.getElementById('qe-proj-type');
   var groupSel    = document.getElementById('qe-group');
+  var act         = _resolveActivityId();
 
   return {
     proj_type_id: projTypeSel.value,
     group_id:     groupSel.value,
     iow_group_id: '',
     iow_group:    iowEl.value.trim(),
-    iow_act_id:   actSel.value,
-    iow_name:     actSel.options[actSel.selectedIndex] ? actSel.options[actSel.selectedIndex].text : '',
-    act_name:     actSel.options[actSel.selectedIndex] ? actSel.options[actSel.selectedIndex].text : '',
+    iow_act_id:   act.id,
+    iow_name:     act.name,
+    act_name:     act.name,
+    wan_id:       _wbsWanId,
     unit:         document.getElementById('qe-unit').value.trim(),
     qty:          parseFloat(document.getElementById('qe-qty').value)     || 0,
     rate:         parseFloat(document.getElementById('qe-rate').value)    || 0,
@@ -2979,37 +3023,32 @@ document.addEventListener('DOMContentLoaded', function(){
 
   /* cascade: Project Type → Groups + reload Activities */
   document.getElementById('qe-proj-type').addEventListener('change', function(){
+    document.getElementById('qe-activity-text').value = '';
+    document.getElementById('qe-activity-id').value   = '';
     loadGroups(this.value);
     loadActivities(this.value, document.getElementById('qe-group').value);
   });
 
   /* cascade: Group → Activities */
   document.getElementById('qe-group').addEventListener('change', function(){
+    document.getElementById('qe-activity-text').value = '';
+    document.getElementById('qe-activity-id').value   = '';
     loadActivities(document.getElementById('qe-proj-type').value, this.value);
   });
 
-  /* prefill unit, tasks and resources when activity is selected */
-  document.getElementById('qe-activity').addEventListener('change', function(){
-    var actId = this.value;
-    if(!actId) return;
-    if(window._qePrefilling) return; /* suppress during bar-click prefill */
+  /* activity typeahead — prefill when user selects an existing activity */
+  document.getElementById('qe-activity-text').addEventListener('change', function(){
+    var text = this.value.trim();
+    if(!text) return;
+    var act = _resolveActivityId();
+    if(!act.id) return; /* new activity — nothing to prefill yet */
     $.ajax({
       type:'POST', url:'../projectsmain/getactivityresources', dataType:'json',
-      data:{ activity_id: actId },
+      data:{ activity_id: act.id },
       success: function(data){
-        /* Unit */
-        if(data.unit){
-          document.getElementById('qe-unit').value = data.unit;
-          document.getElementById('qe-unit').classList.remove('qe-needs-data');
-        }
+        if(data.unit){ document.getElementById('qe-unit').value = data.unit; }
+        if(data.qty) { document.getElementById('qe-qty').value  = data.qty;  }
 
-        /* Estimate qty from pricing_estimate_new for this project */
-        if(data.qty){
-          document.getElementById('qe-qty').value = data.qty;
-          document.getElementById('qe-qty').classList.remove('qe-needs-data');
-        }
-
-        /* Tasks */
         var taskBody = document.getElementById('qe-task-body');
         taskBody.innerHTML = '';
         if(data.tasks && data.tasks.length){
@@ -3028,12 +3067,9 @@ document.addEventListener('DOMContentLoaded', function(){
               if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
             });
           });
-        } else {
-          addTaskRow();
-        }
+        } else { addTaskRow(); }
         recalcDuration();
 
-        /* Resources from estactivity_resources */
         document.getElementById('qe-res-body').innerHTML = '';
         if(data.items && data.items.length){
           loadResTypes(function(){
@@ -3047,17 +3083,13 @@ document.addEventListener('DOMContentLoaded', function(){
               });
             });
           });
-        } else {
-          loadResTypes(function(){ addResRow(); });
-        }
+        } else { loadResTypes(function(){ addResRow(); }); }
       }
     });
   });
 
-  /* recalcEstRate and calcActivityAmount are defined at module level below */
-
   /* remove red border when field is filled */
-  ['qe-proj-type','qe-group','qe-iow','qe-activity','qe-qty','qe-sch-unit','qe-sch-qty'].forEach(function(id){
+  ['qe-proj-type','qe-group','qe-iow','qe-activity-text','qe-qty','qe-sch-unit','qe-sch-qty'].forEach(function(id){
     var el = document.getElementById(id);
     if(!el) return;
     el.addEventListener('change', function(){ if(this.value.trim()) this.classList.remove('qe-needs-data'); else this.classList.add('qe-needs-data'); });
@@ -3075,24 +3107,56 @@ document.addEventListener('DOMContentLoaded', function(){
     loadResTypes(function(){ addResRow(); });
   });
 
+  /* ── Save button ── */
+  document.getElementById('qe-btn-save').addEventListener('click', function(){
+    var payload = collectPayload();
+    var actText = document.getElementById('qe-activity-text').value.trim();
+    if(!actText){ alert('Please enter or select an Activity.'); return; }
+
+    var btn = document.getElementById('qe-btn-save');
+    btn.disabled = true; btn.textContent = 'Saving…';
+
+    $.ajax({
+      type:'POST', url:'../projectsmain/wbssave',
+      data:{ payload: JSON.stringify(payload) }, dataType:'json',
+      success: function(d){
+        btn.disabled = false; btn.textContent = '💾 Save';
+        if(d.error && d.error !== 'No'){ alert('Save error: ' + d.error); return; }
+        _wbsWanId = d.wan_id || 0;
+        /* update hidden activity id in case a new activity was created */
+        if(d.iow_act_id) document.getElementById('qe-activity-id').value = d.iow_act_id;
+        /* enable Add to Gantt */
+        document.getElementById('qe-btn-add').disabled = false;
+        var msg = document.getElementById('qe-save-msg');
+        msg.style.color = '#27ae60'; msg.textContent = '✔ Saved successfully';
+        setTimeout(function(){ msg.textContent = ''; }, 3000);
+      },
+      error: function(){
+        btn.disabled = false; btn.textContent = '💾 Save';
+        alert('Server error — please try again.');
+      }
+    });
+  });
+
   /* ── Add to Gantt ── */
   document.getElementById('qe-btn-add').addEventListener('click', function(){
     var payload = collectPayload();
-    if(!payload.iow_act_id)  { alert('Please select an Activity.'); return; }
+    if(!_wbsWanId){ alert('Please Save first.'); return; }
+    payload.wan_id = _wbsWanId;
 
     var btn = document.getElementById('qe-btn-add');
-    btn.disabled = true; btn.textContent = 'Saving…';
+    btn.disabled = true; btn.textContent = 'Adding…';
 
     $.ajax({
       type:'POST', url:'../projectsmain/wbsadd',
       data:{ payload: JSON.stringify(payload) }, dataType:'json',
       success: function(d){
-        btn.disabled = false; btn.textContent = '+ Add to Gantt';
+        btn.disabled = (_wbsMode === 'new'); btn.textContent = '+ Add to Gantt';
         if(d.error && d.error !== 'No'){ alert('Error: ' + d.error); return; }
         var msg = document.getElementById('qe-save-msg');
-        msg.style.display = 'block';
-        setTimeout(function(){ msg.style.display = 'none'; }, 3000);
-        clearActivityFields();
+        msg.style.color = '#2980b9'; msg.textContent = '✔ Activity added to Gantt!';
+        setTimeout(function(){ msg.textContent = ''; }, 3000);
+        if(_wbsMode === 'new') clearActivityFields();
         if(typeof window.loadGantt === 'function') window.loadGantt();
       },
       error: function(){

@@ -456,7 +456,11 @@ class ProjectsmainController extends Controller
         }
     }
 
-    public function actionWbsadd()
+    /**
+     * actionWbssave — saves all WBS data to DB (does NOT create Gantt bar).
+     * Returns wan_id so the frontend can pass it to actionWbsadd.
+     */
+    public function actionWbssave()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $uid      = Yii::$app->user->Id;
@@ -473,18 +477,18 @@ class ProjectsmainController extends Controller
         $iowGroupId   = (int)($p['iow_group_id'] ?? 0);
         $iowGroupName = trim($p['iow_group']    ?? '');
         $iowActId     = (int)($p['iow_act_id']  ?? 0);
-        $iowName      = trim($p['iow_name']     ?? '');
-        $actName      = trim($p['act_name']     ?? '');
+        $actNameInput = trim($p['act_name']     ?? ($p['iow_name'] ?? ''));
         $unit         = trim($p['unit']         ?? '');
         $schUnit      = trim($p['sch_unit']     ?? '');
         $qty          = (float)($p['qty']        ?? 0);
         $schQty       = (float)($p['sch_qty']    ?? 0);
-        $rate         = (float)($p['rate']       ?? 0);
         $duration     = max(1, (int)($p['duration'] ?? 1));
         $tasks        = $p['tasks']     ?? [];
         $resources    = $p['resources'] ?? [];
+        $projTypeId   = (int)($p['proj_type_id'] ?? 0);
+        $actTypeId    = (int)($p['group_id']     ?? 0);
 
-        if (!$actName) return ['error' => 'Missing required fields'];
+        if (!$actNameInput) return ['error' => 'Activity name is required'];
 
         // resolve iow group id from name if not supplied
         if (!$iowGroupId && $iowGroupName !== '') {
@@ -495,129 +499,87 @@ class ProjectsmainController extends Controller
             if ($igRow) $iowGroupId = (int)$igRow['id'];
         }
 
-        $now   = date('Y-m-d H:i:s');
-        $today = date('Y-m-d');
+        $now = date('Y-m-d H:i:s');
 
-        // 2. Find or create workgroups_new row for this IOW group in this project
-        $wgRow = $db->createCommand(
-            "SELECT Workgroup_Id FROM workgroups_new WHERE Project_Id=:p AND iowGroupid=:g AND Status=0 LIMIT 1",
-            [':p' => $pid, ':g' => $iowGroupId]
-        )->queryOne();
-        if (!$wgRow) {
-            $nextSort = (int)($db->createCommand(
-                "SELECT COALESCE(MAX(sortorder),0)+1 AS s FROM workgroups_new WHERE Project_Id=:p", [':p'=>$pid]
-            )->queryOne()['s'] ?? 0);
-            $db->createCommand(
-                "INSERT INTO workgroups_new
-                 (Project_Id, Name, iowGroupid, Status, sortorder, Added_On, Updated_On, Added_By,
-                  start_date, end_date, duration, progress, open, parent, itemtype, worktype, worktypegroup,
-                  wbs_estimate_id, pricing_status, notes, primavera_id)
-                 VALUES (:p, :n, :g, 0, :s, :t, :t, :uid,
-                  :t, :t, 0, 0, 0, 0, '', 0, 0, 0, 0, '', 0)",
-                [':p'=>$pid, ':n'=>$iowGroupName, ':g'=>$iowGroupId, ':s'=>$nextSort, ':t'=>$now, ':uid'=>$uid]
-            )->execute();
-            $wgId = (int)$db->lastInsertID;
-        } else {
-            $wgId = (int)$wgRow['Workgroup_Id'];
+        // 1. Find or create workgroups_new row for this IOW group in this project
+        $wgId = 0;
+        if ($iowGroupId) {
+            $wgRow = $db->createCommand(
+                "SELECT Workgroup_Id FROM workgroups_new WHERE Project_Id=:p AND iowGroupid=:g AND Status=0 LIMIT 1",
+                [':p' => $pid, ':g' => $iowGroupId]
+            )->queryOne();
+            if (!$wgRow) {
+                $nextSort = (int)($db->createCommand(
+                    "SELECT COALESCE(MAX(sortorder),0)+1 AS s FROM workgroups_new WHERE Project_Id=:p", [':p'=>$pid]
+                )->queryOne()['s'] ?? 0);
+                $db->createCommand(
+                    "INSERT INTO workgroups_new
+                     (Project_Id, Name, iowGroupid, Status, sortorder, Added_On, Updated_On, Added_By,
+                      start_date, end_date, duration, progress, open, parent, itemtype, worktype, worktypegroup,
+                      wbs_estimate_id, pricing_status, notes, primavera_id)
+                     VALUES (:p, :n, :g, 0, :s, :t, :t, :uid,
+                      :t, :t, 0, 0, 0, 0, '', 0, 0, 0, 0, '', 0)",
+                    [':p'=>$pid, ':n'=>$iowGroupName, ':g'=>$iowGroupId, ':s'=>$nextSort, ':t'=>$now, ':uid'=>$uid]
+                )->execute();
+                $wgId = (int)$db->lastInsertID;
+            } else {
+                $wgId = (int)$wgRow['Workgroup_Id'];
+            }
         }
 
-        // 3. Find or create wbsscheduleitems row for this workgroup
-        $wbsItem = $db->createCommand(
-            "SELECT scheduleitem_id FROM wbsscheduleitems WHERE wbsid=:w AND projectId=:p AND status=0 LIMIT 1",
-            [':w' => $wgId, ':p' => $pid]
-        )->queryOne();
-        if (!$wbsItem) {
-            $db->createCommand(
-                "INSERT INTO wbsscheduleitems (name, projectId, wbsid, schedulegrp_id, status)
-                 VALUES (:n, :p, :w, 0, 0)",
-                [':n' => $iowGroupName, ':p' => $pid, ':w' => $wgId]
-            )->execute();
-            $scheduleItemId = (int)$db->lastInsertID;
-        } else {
-            $scheduleItemId = (int)$wbsItem['scheduleitem_id'];
-        }
-
-        // 4. Use selected iowactivities row, or create a new one if none selected
+        // 2. Find or create activity in estimateactivities; if iowActId=0 create new one
         if (!$iowActId) {
+            // Check if activity with this name already exists for this type/group
+            $existAct = $db->createCommand(
+                "SELECT activity_id FROM estimateactivities
+                 WHERE activity_name=:n AND work_type=:wt AND activity_type=:at AND status=0 LIMIT 1",
+                [':n' => $actNameInput, ':wt' => $projTypeId, ':at' => $actTypeId]
+            )->queryOne();
+            if ($existAct) {
+                $iowActId = (int)$existAct['activity_id'];
+            } else {
+                $db->createCommand(
+                    "INSERT INTO estimateactivities
+                     (activity_name, activity_unit, work_type, activity_type, activity_rate, status)
+                     VALUES (:n, :u, :wt, :at, 0, 0)",
+                    [':n' => $actNameInput, ':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId]
+                )->execute();
+                $iowActId = (int)$db->lastInsertID;
+            }
+        } else {
+            // Update existing activity's unit/type in estimateactivities
             $db->createCommand(
-                "INSERT INTO iowactivities (IOW_Id, Name, Budgeted_Duration, End_Duration)
-                 VALUES (:iow, :n, :d, :d)",
-                [':iow' => $iowGroupId, ':n' => $iowName ?: $actName, ':d' => (string)$duration]
+                "UPDATE estimateactivities SET activity_unit=:u, work_type=:wt, activity_type=:at
+                 WHERE activity_id=:id",
+                [':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId, ':id' => $iowActId]
             )->execute();
-            $iowActId = (int)$db->lastInsertID;
         }
 
-        // 5. Save task rows to iowschmethedology (stored as JSON in methedologies field)
+        // 3. Save tasks to activity_tasks
         if (!empty($tasks)) {
             $db->createCommand(
-                "INSERT INTO iowschmethedology (IOW_Id, methedologies, pro_estimate_id)
-                 VALUES (:iow, :data, 0)
-                 ON DUPLICATE KEY UPDATE methedologies = VALUES(methedologies)",
-                [':iow' => $iowActId, ':data' => json_encode($tasks)]
+                "DELETE FROM activity_tasks WHERE activity_id=:id",
+                [':id' => $iowActId]
             )->execute();
+            $sort = 0;
+            foreach ($tasks as $task) {
+                $tname = trim($task['name'] ?? '');
+                if (!$tname) continue;
+                $db->createCommand(
+                    "INSERT INTO activity_tasks (activity_id, task_name, task_unit, productivity, sort_order)
+                     VALUES (:a, :n, :u, :p, :s)",
+                    [':a' => $iowActId, ':n' => $tname,
+                     ':u' => trim($task['unit'] ?? ''),
+                     ':p' => (float)($task['prod'] ?? 0),
+                     ':s' => $sort++]
+                )->execute();
+            }
         }
 
-        // 6. Find existing workgroup_activities_new row or create new one
-        $wanRow = null;
-        if ($iowActId) {
-            $wanRow = $db->createCommand(
-                "SELECT id FROM workgroup_activities_new WHERE project_Id=:p AND activity_Id=:a AND wbs_id=:w LIMIT 1",
-                [':p' => $pid, ':a' => $iowActId, ':w' => $wgId]
-            )->queryOne();
-        }
-
-        if ($wanRow) {
-            // update existing row with schedule unit/qty and amount
-            $wanId = (int)$wanRow['id'];
-            $db->createCommand(
-                "UPDATE workgroup_activities_new
-                 SET activity_Unit=:u, estimate=1, amount=:amt, duration=:d,
-                     cycle_Unit=:cu, cycle_Quantity=:cq, activity_Name=:n
-                 WHERE id=:id",
-                [
-                    ':u'   => $unit ?: $schUnit,
-                    ':amt' => round($qty * $rate, 2),
-                    ':d'   => $duration,
-                    ':cu'  => $schUnit,
-                    ':cq'  => $schQty,
-                    ':n'   => $actName,
-                    ':id'  => $wanId,
-                ]
-            )->execute();
-        } else {
-            $lastSort = $db->createCommand(
-                "SELECT COALESCE(MAX(sortorder),0) AS s FROM workgroup_activities_new WHERE wbs_id=:w",
-                [':w' => $wgId]
-            )->queryOne();
-            $sortorder = ((int)($lastSort['s'] ?? 0)) + 1;
-
-            $db->createCommand(
-                "INSERT INTO workgroup_activities_new
-                 (project_Id, wbs_id, worktype_Id, activitytype_id, activity_Id, activity_Unit,
-                  estimate, amount, sortorder, type, activity_Name, process_Id, schedule, duration,
-                  cycle_Unit, cycle_Quantity, pr_status, pricing_status, operations_status, wbs_estimate_id)
-                 VALUES (:p, :w, 0, 0, :ia, :u, 1, :amt, :s, 0, :n, 0, 1, :d, :cu, :cq, 0, 0, 0, 0)",
-                [
-                    ':p'   => $pid,
-                    ':w'   => $wgId,
-                    ':ia'  => $iowActId,
-                    ':u'   => $unit ?: $schUnit,
-                    ':amt' => round($qty * $rate, 2),
-                    ':s'   => $sortorder,
-                    ':n'   => $actName,
-                    ':d'   => $duration,
-                    ':cu'  => $schUnit,
-                    ':cq'  => $schQty,
-                ]
-            )->execute();
-            $wanId = (int)$db->lastInsertID;
-        }
-
-        // 7. Save resources to estactivity_resources (the real allocation table)
+        // 4. Save resources to estactivity_resources
         if (!empty($resources)) {
-            // mark existing rows inactive then re-insert
             $db->createCommand(
-                "UPDATE estactivity_resources SET est_resource_status = 1 WHERE estactivity_id = :id",
+                "UPDATE estactivity_resources SET est_resource_status=1 WHERE estactivity_id=:id",
                 [':id' => $iowActId]
             )->execute();
             foreach ($resources as $res) {
@@ -642,7 +604,7 @@ class ProjectsmainController extends Controller
             }
         }
 
-        // 7b. Save estimate qty and rate to pricing_estimate_new
+        // 5. Save estimate qty and calculated rate to pricing_estimate_new
         $calcRate = 0.0;
         foreach ($resources as $res) { $calcRate += (float)($res['rate'] ?? 0) * (float)($res['qty'] ?? 0); }
         $db->createCommand(
@@ -657,14 +619,123 @@ class ProjectsmainController extends Controller
              ':rate' => round($calcRate, 2), ':ea' => $iowActId]
         )->execute();
 
-        // 8. Create scheduleactivities row
+        // 6. Find or update workgroup_activities_new row (schedule data)
+        $wanId = 0;
+        if ($iowActId && $wgId) {
+            $wanRow = $db->createCommand(
+                "SELECT id FROM workgroup_activities_new WHERE project_Id=:p AND activity_Id=:a AND wbs_id=:w LIMIT 1",
+                [':p' => $pid, ':a' => $iowActId, ':w' => $wgId]
+            )->queryOne();
+            if ($wanRow) {
+                $wanId = (int)$wanRow['id'];
+                $db->createCommand(
+                    "UPDATE workgroup_activities_new
+                     SET activity_Unit=:u, estimate=1, amount=:amt, duration=:d,
+                         cycle_Unit=:cu, cycle_Quantity=:cq, activity_Name=:n
+                     WHERE id=:id",
+                    [':u' => $unit ?: $schUnit, ':amt' => round($qty * $calcRate, 2),
+                     ':d' => $duration, ':cu' => $schUnit, ':cq' => $schQty,
+                     ':n' => $actNameInput, ':id' => $wanId]
+                )->execute();
+            } else {
+                $lastSort = $db->createCommand(
+                    "SELECT COALESCE(MAX(sortorder),0) AS s FROM workgroup_activities_new WHERE wbs_id=:w",
+                    [':w' => $wgId]
+                )->queryOne();
+                $sortorder = ((int)($lastSort['s'] ?? 0)) + 1;
+                $db->createCommand(
+                    "INSERT INTO workgroup_activities_new
+                     (project_Id, wbs_id, worktype_Id, activitytype_id, activity_Id, activity_Unit,
+                      estimate, amount, sortorder, type, activity_Name, process_Id, schedule, duration,
+                      cycle_Unit, cycle_Quantity, pr_status, pricing_status, operations_status, wbs_estimate_id)
+                     VALUES (:p, :w, 0, 0, :ia, :u, 1, :amt, :s, 0, :n, 0, 1, :d, :cu, :cq, 0, 0, 0, 0)",
+                    [':p' => $pid, ':w' => $wgId, ':ia' => $iowActId,
+                     ':u' => $unit ?: $schUnit, ':amt' => round($qty * $calcRate, 2),
+                     ':s' => $sortorder, ':n' => $actNameInput,
+                     ':d' => $duration, ':cu' => $schUnit, ':cq' => $schQty]
+                )->execute();
+                $wanId = (int)$db->lastInsertID;
+            }
+        }
+
+        return [
+            'error'       => 'No',
+            'iow_act_id'  => $iowActId,
+            'wan_id'      => $wanId,
+            'wg_id'       => $wgId,
+            'act_name'    => $actNameInput,
+            'duration'    => $duration,
+            'calc_rate'   => round($calcRate, 2),
+        ];
+    }
+
+    /**
+     * actionWbsadd — creates a Gantt bar (scheduleactivities row) using already-saved data.
+     * Expects wan_id (workgroup_activities_new.id) from a prior wbssave call.
+     */
+    public function actionWbsadd()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid      = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return ['error' => 'No project selected'];
+        $pid = (int)$projuser->projectid;
+        $db  = \Yii::$app->db;
+
+        $raw = \Yii::$app->request->post('payload');
+        if (!$raw) return ['error' => 'No payload'];
+        $p = json_decode($raw, true);
+        if (!$p) return ['error' => 'Bad payload'];
+
+        $wanId        = (int)($p['wan_id']      ?? 0);
+        $iowGroupName = trim($p['iow_group']    ?? '');
+        $actName      = trim($p['act_name']     ?? ($p['iow_name'] ?? ''));
+        $unit         = trim($p['unit']         ?? '');
+        $schUnit      = trim($p['sch_unit']     ?? '');
+        $qty          = (float)($p['qty']        ?? 0);
+        $schQty       = (float)($p['sch_qty']    ?? 0);
+        $duration     = max(1, (int)($p['duration'] ?? 1));
+
+        if (!$wanId) return ['error' => 'No wan_id — save first'];
+
+        // Fetch wgId and actName from the saved wan row
+        $wanRow = $db->createCommand(
+            "SELECT wbs_id, activity_Name, activity_Unit, cycle_Unit, cycle_Quantity, duration
+             FROM workgroup_activities_new WHERE id=:id LIMIT 1",
+            [':id' => $wanId]
+        )->queryOne();
+        if (!$wanRow) return ['error' => 'WAN row not found'];
+
+        $wgId        = (int)$wanRow['wbs_id'];
+        $savedName   = $wanRow['activity_Name'] ?: $actName;
+        $savedUnit   = $wanRow['cycle_Unit']    ?: ($schUnit ?: $unit);
+        $savedSchQty = (float)$wanRow['cycle_Quantity'] ?: $schQty;
+        $savedDur    = (int)$wanRow['duration']         ?: $duration;
+
+        // Find wbsscheduleitems for this wg
+        $wbsItem = $db->createCommand(
+            "SELECT scheduleitem_id FROM wbsscheduleitems WHERE wbsid=:w AND projectId=:p AND status=0 LIMIT 1",
+            [':w' => $wgId, ':p' => $pid]
+        )->queryOne();
+        if (!$wbsItem) {
+            $db->createCommand(
+                "INSERT INTO wbsscheduleitems (name, projectId, wbsid, schedulegrp_id, status)
+                 VALUES (:n, :p, :w, 0, 0)",
+                [':n' => $iowGroupName, ':p' => $pid, ':w' => $wgId]
+            )->execute();
+            $scheduleItemId = (int)$db->lastInsertID;
+        } else {
+            $scheduleItemId = (int)$wbsItem['scheduleitem_id'];
+        }
+
+        $today   = date('Y-m-d');
+        $endDate = date('Y-m-d', strtotime($today . ' + ' . ($savedDur - 1) . ' days'));
+
         $lastSchSort = $db->createCommand(
             "SELECT COALESCE(MAX(sortorder),0) AS s FROM scheduleactivities WHERE projectId=:p",
             [':p' => $pid]
         )->queryOne();
         $schSort = ((int)($lastSchSort['s'] ?? 0)) + 1;
-
-        $endDate = date('Y-m-d', strtotime($today . ' + ' . ($duration - 1) . ' days'));
 
         $db->createCommand(
             "INSERT INTO scheduleactivities
@@ -672,13 +743,13 @@ class ProjectsmainController extends Controller
               scheduleitem_id, projectId, status, sortorder, resource_units)
              VALUES (:n, :aid, :u, :q, :sd, :ed, :dur, :dur, :si, :p, 0, :so, 1)",
             [
-                ':n'   => $actName,
+                ':n'   => $savedName,
                 ':aid' => $wanId,
-                ':u'   => $schUnit ?: $unit,
-                ':q'   => $schQty ?: $qty,
+                ':u'   => $savedUnit,
+                ':q'   => $savedSchQty ?: $qty,
                 ':sd'  => $today,
                 ':ed'  => $endDate,
-                ':dur' => $duration,
+                ':dur' => $savedDur,
                 ':si'  => $scheduleItemId,
                 ':p'   => $pid,
                 ':so'  => $schSort,
@@ -686,7 +757,7 @@ class ProjectsmainController extends Controller
         )->execute();
         $saId = (int)$db->lastInsertID;
 
-        // 9. Auto-wire existing activity_relations where both ends now exist in this project
+        // Auto-wire activity_relations
         $db->createCommand(
             "UPDATE activity_relations ar
              JOIN scheduleactivities sa_pre ON sa_pre.id = ar.precedent_activity AND sa_pre.projectId = :p AND sa_pre.status = 0
@@ -697,11 +768,11 @@ class ProjectsmainController extends Controller
         )->execute();
 
         return [
-            'error'          => 'No',
-            'sa_id'          => $saId,
-            'scheduleitem_id'=> $scheduleItemId,
-            'duration'       => $duration,
-            'act_name'       => $actName,
+            'error'           => 'No',
+            'sa_id'           => $saId,
+            'scheduleitem_id' => $scheduleItemId,
+            'duration'        => $savedDur,
+            'act_name'        => $savedName,
         ];
     }
 
@@ -716,8 +787,8 @@ class ProjectsmainController extends Controller
         // Look up via scheduleactivities (preferred) or directly via workgroup_activities_new
         if ($saId) {
             $sa = $db->createCommand(
-                "SELECT sa.name, sa.unit, sa.quantity,
-                        wga.activity_Id AS iow_act_id, wga.activitytype_id, wga.wbs_id,
+                "SELECT sa.name, sa.unit, sa.quantity, sa.duration,
+                        wga.id AS wan_id, wga.activity_Id AS iow_act_id, wga.activitytype_id, wga.wbs_id,
                         wga.activity_Unit AS est_unit, wga.estimate AS est_qty,
                         wga.cycle_Unit AS sch_unit, wga.cycle_Quantity AS sch_qty,
                         wg.iowGroupid, ig.name AS iow_group_name,
@@ -733,8 +804,8 @@ class ProjectsmainController extends Controller
         } else {
             // Fallback: look up directly from workgroup_activities_new (old bars without scheduleactivities row)
             $sa = $db->createCommand(
-                "SELECT wga.activity_Name AS name, wga.activity_Unit AS unit,
-                        wga.estimate AS quantity,
+                "SELECT wga.id AS wan_id, wga.activity_Name AS name, wga.activity_Unit AS unit,
+                        wga.estimate AS quantity, wga.duration,
                         wga.activity_Id AS iow_act_id, wga.activitytype_id, wga.wbs_id,
                         wga.activity_Unit AS est_unit, wga.estimate AS est_qty,
                         wga.cycle_Unit AS sch_unit, wga.cycle_Quantity AS sch_qty,
@@ -826,8 +897,12 @@ class ProjectsmainController extends Controller
         foreach ($resources as $r) { $calcRate += $r['rate'] * $r['qty']; }
         if (!$calcRate) $calcRate = $estRate;
 
+        // wan_id = workgroup_activities_new.id
+        $wanIdReturn = (int)($sa['wan_id'] ?? 0) ?: $wanId;
+
         return [
             'sa_id'          => $saId,
+            'wan_id'         => $wanIdReturn,
             'proj_type_id'   => $projTypeId,
             'act_type_id'    => $actTypeId,
             'iow_group_id'   => (int)($sa['iowGroupid'] ?? 0),
