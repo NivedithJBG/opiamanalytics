@@ -2053,14 +2053,23 @@ if($action=='login')
 #qe-bk{display:none}
 #qe-modal{
   display:none;position:fixed;top:80px;right:30px;
-  width:860px;max-width:96vw;height:88vh;max-height:88vh;
-  min-width:400px;min-height:300px;
-  z-index:10001;border-radius:6px;overflow:auto;
+  width:860px;height:88vh;
+  min-width:380px;min-height:280px;
+  z-index:10001;border-radius:6px;overflow:hidden;
   background:#fff;box-shadow:0 8px 32px rgba(0,0,0,.45);
   flex-direction:column;
   font-family:'Barlow',sans-serif;
-  resize:both;
 }
+/* resize handles */
+.qe-rs{position:absolute;z-index:10;background:transparent;}
+.qe-rs-e {right:0;top:6px;bottom:6px;width:6px;cursor:e-resize;}
+.qe-rs-w {left:0;top:6px;bottom:6px;width:6px;cursor:w-resize;}
+.qe-rs-s {bottom:0;left:6px;right:6px;height:6px;cursor:s-resize;}
+.qe-rs-n {top:0;left:6px;right:6px;height:6px;cursor:n-resize;}
+.qe-rs-se{right:0;bottom:0;width:14px;height:14px;cursor:se-resize;}
+.qe-rs-sw{left:0;bottom:0;width:14px;height:14px;cursor:sw-resize;}
+.qe-rs-ne{right:0;top:0;width:14px;height:14px;cursor:ne-resize;}
+.qe-rs-nw{left:0;top:0;width:14px;height:14px;cursor:nw-resize;}
 #qe-modal.qe-open{display:flex}
 #qe-hdr{
   display:flex;align-items:center;justify-content:space-between;
@@ -2245,6 +2254,14 @@ if($action=='login')
 
 <div id="qe-bk"></div>
 <div id="qe-modal">
+  <div class="qe-rs qe-rs-e"  data-dir="e"></div>
+  <div class="qe-rs qe-rs-w"  data-dir="w"></div>
+  <div class="qe-rs qe-rs-s"  data-dir="s"></div>
+  <div class="qe-rs qe-rs-n"  data-dir="n"></div>
+  <div class="qe-rs qe-rs-se" data-dir="se"></div>
+  <div class="qe-rs qe-rs-sw" data-dir="sw"></div>
+  <div class="qe-rs qe-rs-ne" data-dir="ne"></div>
+  <div class="qe-rs qe-rs-nw" data-dir="nw"></div>
   <div id="qe-hdr">
     <span>&#9998; WBS Entry &mdash; <span style="font-weight:400;opacity:.75;font-size:11px;">drag to move</span></span>
     <button id="qe-close">&times;</button>
@@ -3047,33 +3064,61 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('qe-close').addEventListener('click', closeModal);
   document.getElementById('qe-close-btn').addEventListener('click', closeModal);
 
-  /* drag to move */
+  /* drag + resize */
   (function(){
     var modal = document.getElementById('qe-modal');
     var hdr   = document.getElementById('qe-hdr');
-    var _dx=0,_dy=0,_dragging=false;
+    var MIN_W = 380, MIN_H = 280;
+    var _action=null, _sx=0,_sy=0,_ox=0,_oy=0,_ow=0,_oh=0;
+
+    function _anchorLeft(){
+      var r = modal.getBoundingClientRect();
+      modal.style.right = 'auto';
+      modal.style.left  = r.left + 'px';
+      modal.style.top   = r.top  + 'px';
+      modal.style.width  = r.width  + 'px';
+      modal.style.height = r.height + 'px';
+      return r;
+    }
+
+    /* drag */
     hdr.addEventListener('mousedown', function(e){
       if(e.target.id==='qe-close') return;
-      _dragging = true;
-      var r = modal.getBoundingClientRect();
-      /* switch from right-anchored to left-anchored positioning */
-      modal.style.right  = 'auto';
-      modal.style.left   = r.left + 'px';
-      modal.style.top    = r.top  + 'px';
-      _dx = e.clientX - r.left;
-      _dy = e.clientY - r.top;
+      var r = _anchorLeft();
+      _action='drag'; _sx=e.clientX; _sy=e.clientY;
+      _ox=r.left; _oy=r.top;
       e.preventDefault();
     });
-    document.addEventListener('mousemove', function(e){
-      if(!_dragging) return;
-      var x = e.clientX - _dx;
-      var y = e.clientY - _dy;
-      x = Math.max(0, Math.min(x, window.innerWidth  - modal.offsetWidth));
-      y = Math.max(0, Math.min(y, window.innerHeight - modal.offsetHeight));
-      modal.style.left = x + 'px';
-      modal.style.top  = y + 'px';
+
+    /* resize handles */
+    document.querySelectorAll('.qe-rs').forEach(function(el){
+      el.addEventListener('mousedown', function(e){
+        var r = _anchorLeft();
+        _action = el.getAttribute('data-dir');
+        _sx=e.clientX; _sy=e.clientY;
+        _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height;
+        e.preventDefault(); e.stopPropagation();
+      });
     });
-    document.addEventListener('mouseup', function(){ _dragging = false; });
+
+    document.addEventListener('mousemove', function(e){
+      if(!_action) return;
+      var dx=e.clientX-_sx, dy=e.clientY-_sy;
+      if(_action==='drag'){
+        var x=Math.max(0,Math.min(_ox+dx, window.innerWidth -modal.offsetWidth));
+        var y=Math.max(0,Math.min(_oy+dy, window.innerHeight-modal.offsetHeight));
+        modal.style.left=x+'px'; modal.style.top=y+'px';
+      } else {
+        var l=_ox,t=_oy,w=_ow,h=_oh;
+        if(_action.indexOf('e')>-1){ w=Math.max(MIN_W,_ow+dx); }
+        if(_action.indexOf('s')>-1){ h=Math.max(MIN_H,_oh+dy); }
+        if(_action.indexOf('w')>-1){ var nw=Math.max(MIN_W,_ow-dx); l=_ox+(_ow-nw); w=nw; }
+        if(_action.indexOf('n')>-1){ var nh=Math.max(MIN_H,_oh-dy); t=_oy+(_oh-nh); h=nh; }
+        modal.style.left=l+'px'; modal.style.top=t+'px';
+        modal.style.width=w+'px'; modal.style.height=h+'px';
+      }
+    });
+    document.addEventListener('mouseup', function(){ _action=null; });
   })();
 
   /* task map popup */
