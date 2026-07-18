@@ -295,7 +295,7 @@ color:red !important;
 
 .leftside .navbar.navbar-default {
     background: #dcdddf;
-    height: 60px;
+    height: 50px;
     border-radius: 0;
     position: fixed !important;
     top: 0 !important;
@@ -305,7 +305,7 @@ color:red !important;
     width: 100% !important;
 }
 aside.leftside {
-    padding-top: 64px !important;
+    padding-top: 58px !important;
 }
 
 

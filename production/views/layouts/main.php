@@ -81,7 +81,7 @@ $subDomain = array_shift(($HTTP_HOST));
     <!-- <link href="<//?php echo Yii::$app->request->baseUrl; ?>/cssnew/style.css?v=1.18" rel="stylesheet"> -->
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer.css?v=1.18" rel="stylesheet">
   <!--   <link href="<//?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer1.css" rel="stylesheet"> -->
-    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer2.css?v=20260718d" rel="stylesheet">
+    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer2.css?v=20260718e" rel="stylesheet">
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer3.css" rel="stylesheet">
 
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer4.css" rel="stylesheet">
@@ -2052,7 +2052,7 @@ if($action=='login')
 <style>
 #qe-bk{display:none}
 #qe-modal{
-  display:none;position:fixed;top:68px;right:30px;
+  display:none;position:fixed;top:58px;right:30px;
   width:860px;height:88vh;
   min-width:380px;min-height:280px;
   z-index:10001;border-radius:6px;overflow:hidden;
