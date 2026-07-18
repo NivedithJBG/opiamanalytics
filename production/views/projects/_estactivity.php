@@ -76,8 +76,9 @@ use app\models\Resources;
                                 endforeach;
                                 ?>
                             </select>
+                            <input type="text" id="searchestactivityname" placeholder="Search activity..." class="form-control" style="margin-left:6px;width:160px;border-radius:20px;height:34px;display:inline-block;">
+                            <button id="estactivitysearch" class="btn btn-primary" type="button" style="margin-left:3px;border-radius:20px;"><span class="icon-search5"></span></button>
                             <input type="hidden" name="estworktypedisplay" id="estworktypedisplay">
-                            <input type="hidden" id="searchestactivityname" value="">
                         </div>
                         <div class="content-wrpr">
 
