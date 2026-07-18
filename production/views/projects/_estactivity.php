@@ -67,8 +67,16 @@ use app\models\Resources;
                             <a href="#alActTypePopup" class="btn btn-default" id="alOpenActTypePopup" data-toggle="modal" data-target="#alActTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ Activity Type</a>
                             <a href="#alAddActivityPopup" class="btn btn-primary" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities" style="border-radius:20px;"><span class="icon-add"></span> Activity</a>
                             <a href="#" class="btn btn-primary list-accountType" id="listestactivity" style="border-radius:20px;"><span class="icon-th-list"></span> List</a>
+                            <select id="searchestworktypelist" class="form-control" style="margin-left:10px;width:160px;border-radius:20px;height:34px;display:inline-block;">
+                                <option value="0">All Project Types</option>
+                                <?php
+                                $typelist = EstimateWorkType::find()->orderBy(['estworktype_name' => SORT_ASC])->all();
+                                foreach ($typelist as $list):
+                                    echo "<option value='".$list->estworktype_id."'>".$list->estworktype_name."</option>";
+                                endforeach;
+                                ?>
+                            </select>
                             <input type="hidden" name="estworktypedisplay" id="estworktypedisplay">
-                            <input type="hidden" id="searchestworktypelist" value="0">
                             <input type="hidden" id="searchestactivityname" value="">
                         </div>
                         <div class="content-wrpr">
