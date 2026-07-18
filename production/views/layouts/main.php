@@ -2083,12 +2083,12 @@ if($action=='login')
 .qe-field.med{flex:1 1 120px}
 .qe-field.sm{flex:0 0 100px}
 .qe-field.xs{flex:0 0 80px}
-.qe-label{font-size:11px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.qe-label{font-size:11px;font-weight:900;color:#1a202c;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
 .qe-input,.qe-select{
-  width:100%;padding:5px 10px;font-size:13px;color:#2d3748;
+  width:100%;padding:5px 10px;font-size:13px;color:#718096;
   border:1px solid #a0aab8;border-radius:0;background:#fff;
   outline:none;box-sizing:border-box;font-family:'Barlow',sans-serif;
-  transition:border-color .15s;height:28px;font-weight:700;
+  transition:border-color .15s;height:28px;font-weight:600;
 }
 .qe-input:focus,.qe-select:focus{border-color:#4a5568;background:#fff}
 .qe-input[readonly]{background:#f5f5f5;color:#555;cursor:default}
@@ -2104,14 +2104,14 @@ if($action=='login')
 /* Repeating rows (tasks / resources) */
 .qe-repeat-tbl{width:100%;border-collapse:collapse}
 .qe-repeat-tbl th{
-  font-size:11px;font-weight:900;color:#000;text-transform:uppercase;
-  letter-spacing:.4px;padding:0 6px 8px 0;border-bottom:2px solid #2d3748;
+  font-size:11px;font-weight:900;color:#1a202c;text-transform:uppercase;
+  letter-spacing:.4px;padding:0 6px 8px 0;border-bottom:2px solid #1a202c;
   white-space:nowrap;
 }
 .qe-repeat-tbl td{padding:6px 6px 6px 0;vertical-align:middle}
 .qe-repeat-tbl td:last-child{padding-right:0}
 .qe-repeat-tbl input,.qe-repeat-tbl select{
-  width:100%;padding:7px 9px;font-size:13px;color:#2d3748;
+  width:100%;padding:7px 9px;font-size:13px;color:#718096;
   border:1px solid #a0aab8;border-radius:0;background:#fff;
   outline:none;font-family:'Barlow',sans-serif;transition:border-color .15s;
   box-sizing:border-box;height:28px;
