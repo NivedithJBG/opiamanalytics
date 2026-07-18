@@ -244,6 +244,13 @@ color:red !important;
     flex-direction: column;
     overflow: hidden;
 }
+/* Activity Library modals are moved to <body> by JS — ensure they sit above the floating panel */
+#alAddActivityPopup,
+#alProjTypePopup,
+#alIowGroupPopup,
+#alIowPopup,
+#alActTypePopup { z-index: 10100 !important; }
+body > .modal-backdrop { z-index: 10090 !important; }
 .menu4-popup-cntnr.active {
     display: flex;
 }
