@@ -344,6 +344,9 @@ if($action=='login')
                 <li>
                     <a class="icon-chart3" title="Gantt Chart" href="<?php echo Yii::$app->urlManager->createUrl('projectsmain/newganttchart?id='.$ProjectId)?>"></a>
                 </li>
+                <?php if(Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'newganttchart') { ?>
+                <li><a class="icon-tools overNow4" title="Activity Library" href="<?php echo Yii::$app->urlManager->createUrl('projects/projectmasters')?>"></a></li>
+                <?php } ?>
                 
 
                 <?php if(Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'index') {  ?>
