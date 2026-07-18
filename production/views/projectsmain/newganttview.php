@@ -74,9 +74,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 /* ── KPI Float Panel ─────────────────────────────────────────────────────── */
 #gkp-popup {
   display: none; position: fixed; z-index: 10015;
-  top: 80px; left: calc(50% - 340px);
-  width: 680px; height: 55vh;
-  min-width: 400px; min-height: 280px;
+  top: 80px; left: calc(50% - 490px);
+  width: 980px; height: 55vh;
+  min-width: 500px; min-height: 280px;
   background: #f0f3fa;
   border-radius: 10px; box-shadow: 0 8px 36px rgba(0,0,0,0.32);
   overflow: hidden; pointer-events: auto;
@@ -91,9 +91,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 #gkp-close { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:0 4px; line-height:1; flex-shrink:0; }
 #gkp-body {
-  display: flex; flex-direction: column; gap: 5px; padding: 6px; flex: 1; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: row; gap: 5px; padding: 6px; flex: 1; min-height: 0; overflow: hidden;
 }
-#gkp-row1, #gkp-row2 { display: flex; gap: 5px; flex: 1; min-height: 0; }
+#gkp-row1 { display: contents; }
+#gkp-row2 { display: contents; }
 .gkp-rs { position:absolute; z-index:20; background:transparent; }
 .gkp-rs-e  { right:-4px; top:10px; bottom:10px; width:10px; cursor:e-resize; }
 .gkp-rs-w  { left:-4px;  top:10px; bottom:10px; width:10px; cursor:w-resize; }
@@ -411,12 +412,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   <div id="gkp-body">
     <div id="gkp-row1">
       <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Target Production</div><div class="gkp-panel-body" id="gkp-tp"></div></div>
-      <div class="gkp-panel" style="flex:1.4"><div class="gkp-panel-title">Activity Duration</div><div class="gkp-panel-body" id="gkp-dur"></div></div>
+      <div class="gkp-panel" style="flex:0.7"><div class="gkp-panel-title">Activity Duration</div><div class="gkp-panel-body" id="gkp-dur"></div></div>
     </div>
     <div id="gkp-row2">
-      <div class="gkp-panel"><div class="gkp-panel-title">Capacity Utilisation</div><div class="gkp-panel-body" id="gkp-g5"></div></div>
-      <div class="gkp-panel"><div class="gkp-panel-title">Cycle Time</div><div class="gkp-panel-body" id="gkp-g4"></div></div>
-      <div class="gkp-panel"><div class="gkp-panel-title">Productivity</div><div class="gkp-panel-body" id="gkp-g3"></div></div>
+      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Capacity Utilisation</div><div class="gkp-panel-body" id="gkp-g5"></div></div>
+      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Cycle Time</div><div class="gkp-panel-body" id="gkp-g4"></div></div>
+      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Productivity</div><div class="gkp-panel-body" id="gkp-g3"></div></div>
     </div>
   </div>
 </div>
