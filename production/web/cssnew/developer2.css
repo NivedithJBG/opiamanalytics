@@ -295,8 +295,23 @@ color:red !important;
 
 .leftside .navbar.navbar-default {
     background: #dcdddf;
-    height: 86px;
+    height: 44px;
     border-radius: 0;
+    min-height: 44px;
+}
+.leftside .navbar.navbar-default .navbar-header,
+.leftside .navbar.navbar-default .navbar-collapse {
+    height: 44px;
+}
+.leftside .navbar.navbar-default .round-icons > li > a {
+    height: 26px !important;
+    width: 26px !important;
+    font-size: 11px !important;
+    margin-top: 9px !important;
+}
+.leftside .navbar.navbar-default .opiam-logo img {
+    width: 50px !important;
+    margin-top: 2px !important;
 }
 
 
