@@ -134,20 +134,50 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column;
 }
 
+/* Gantt floating panel */
+#gantt-float {
+  position: fixed;
+  top: 100px; left: 20px;
+  width: calc(100vw - 40px);
+  height: calc(100vh - 120px);
+  min-width: 500px; min-height: 300px;
+  z-index: 9500;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+#gantt-float-hdr {
+  background: #1a202c; color: #fff;
+  padding: 7px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: move; user-select: none; flex-shrink: 0;
+  font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700;
+}
+#gantt-float-body {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  padding: 8px 10px; overflow: hidden;
+}
+/* resize handles */
+.gf-rs { position: absolute; z-index: 10; background: transparent; }
+.gf-rs-e  { right:0;  top:6px;    bottom:6px; width:6px;  cursor:e-resize; }
+.gf-rs-w  { left:0;   top:6px;    bottom:6px; width:6px;  cursor:w-resize; }
+.gf-rs-s  { bottom:0; left:6px;   right:6px;  height:6px; cursor:s-resize; }
+.gf-rs-n  { top:0;    left:6px;   right:6px;  height:6px; cursor:n-resize; }
+.gf-rs-se { right:0;  bottom:0; width:14px; height:14px; cursor:se-resize; }
+.gf-rs-sw { left:0;   bottom:0; width:14px; height:14px; cursor:sw-resize; }
+.gf-rs-ne { right:0;  top:0;    width:14px; height:14px; cursor:ne-resize; }
+.gf-rs-nw { left:0;   top:0;    width:14px; height:14px; cursor:nw-resize; }
 #gantt-toolbar {
-  padding: 8px 0;
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  padding: 4px 0 6px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex-shrink: 0;
+  position: relative;
 }
 #gantt-container {
   border: 2px solid #000;
-  overflow-y: auto;
-  overflow-x: hidden;
-  width: 100%;
-  height: calc(100vh - 260px);
+  overflow-y: auto; overflow-x: hidden;
+  width: 100%; flex: 1; min-height: 0;
 }
 /* Left panel: wider, never scrolls horizontally */
 #gantt-container .gmainleft {
@@ -210,37 +240,44 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 </style>
 
-<div class="container-fluid">
-<div class="row">
-<div class="col-md-12">
-
-  <div id="gantt-act-tooltip"></div>
-<div id="gantt-toolbar">
-    <button class="btn-opiam" id="btn-manage-relations">Manage Relations</button>
-    <button class="btn-opiam" id="btn-refresh-cpm">Refresh Critical Path</button>
-<a class="icon-pencil" id="btn-quick-entry" title="WBS" href="#" style="position:absolute;top:10px;right:16px;z-index:999;width:22px;height:22px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#5cb85c;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.25);"> </a>
-    <span id="gantt-status" style="font-size:12px;color:#666;margin-left:8px;"></span>
+<div id="gantt-float">
+  <!-- resize handles -->
+  <div class="gf-rs gf-rs-n"  data-dir="n"></div>
+  <div class="gf-rs gf-rs-s"  data-dir="s"></div>
+  <div class="gf-rs gf-rs-e"  data-dir="e"></div>
+  <div class="gf-rs gf-rs-w"  data-dir="w"></div>
+  <div class="gf-rs gf-rs-ne" data-dir="ne"></div>
+  <div class="gf-rs gf-rs-nw" data-dir="nw"></div>
+  <div class="gf-rs gf-rs-se" data-dir="se"></div>
+  <div class="gf-rs gf-rs-sw" data-dir="sw"></div>
+  <!-- drag header -->
+  <div id="gantt-float-hdr">
+    <span>&#9776; Gantt Chart — drag to move</span>
   </div>
-
-  <div id="gantt-container">
-    <div id="gantt-loading" style="padding:50px;text-align:center;">Loading Gantt chart&hellip;</div>
+  <!-- body -->
+  <div id="gantt-float-body">
+    <div id="gantt-act-tooltip"></div>
+    <div id="gantt-toolbar">
+      <button class="btn-opiam" id="btn-manage-relations">Manage Relations</button>
+      <button class="btn-opiam" id="btn-refresh-cpm">Refresh Critical Path</button>
+      <a class="icon-pencil" id="btn-quick-entry" title="WBS" href="#" style="position:absolute;top:4px;right:4px;z-index:999;width:22px;height:22px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#5cb85c;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.25);"> </a>
+      <span id="gantt-status" style="font-size:12px;color:#666;margin-left:8px;"></span>
+    </div>
+    <div id="gantt-container">
+      <div id="gantt-loading" style="padding:50px;text-align:center;">Loading Gantt chart&hellip;</div>
+    </div>
+    <div class="gantt-legend-row" style="margin-top:6px;">
+      <div class="gantt-legend-item"><span class="gantt-legend-dot dot-critical"></span> Critical Path</div>
+      <div class="gantt-legend-item"><span class="gantt-legend-dot dot-normal"></span> Normal Activity</div>
+      <div class="gantt-legend-item"><span class="act-dot" style="background:#0d2b6e;display:inline-block;width:12px;height:12px;border-radius:50%;"></span> Upcoming</div>
+      <div class="gantt-legend-item"><span class="act-dot ongoing"></span> Ongoing</div>
+      <div class="gantt-legend-item"><span class="act-dot overdue"></span> Overdue</div>
+      <div class="gantt-legend-item"><span class="act-dot-check">✓</span> Completed</div>
+    </div>
+    <div id="relations-panel">
+      <div id="relations-content"><em>Loading&hellip;</em></div>
+    </div>
   </div>
-
-  <div class="gantt-legend-row" style="margin-top:10px;">
-    <div class="gantt-legend-item"><span class="gantt-legend-dot dot-critical"></span> Critical Path</div>
-    <div class="gantt-legend-item"><span class="gantt-legend-dot dot-normal"></span> Normal Activity</div>
-    <div class="gantt-legend-item"><span class="act-dot" style="background:#0d2b6e;display:inline-block;width:12px;height:12px;border-radius:50%;"></span> Upcoming</div>
-    <div class="gantt-legend-item"><span class="act-dot ongoing"></span> Ongoing</div>
-    <div class="gantt-legend-item"><span class="act-dot overdue"></span> Overdue</div>
-    <div class="gantt-legend-item"><span class="act-dot-check">✓</span> Completed</div>
-  </div>
-
-  <div id="relations-panel">
-    <div id="relations-content"><em>Loading&hellip;</em></div>
-  </div>
-
-</div>
-</div>
 </div>
 
 <!-- Gantt Cost Hover Popup -->
@@ -2134,5 +2171,48 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   }
 
 })(jQuery);
+
+// Gantt float panel: drag + resize
+(function(){
+  var panel = document.getElementById('gantt-float');
+  var hdr   = document.getElementById('gantt-float-hdr');
+  var MIN_W = 500, MIN_H = 300;
+  var _action=null,_sx=0,_sy=0,_ox=0,_oy=0,_ow=0,_oh=0;
+  function _anchor(){
+    var r = panel.getBoundingClientRect();
+    panel.style.right='auto'; panel.style.left=r.left+'px';
+    panel.style.top=r.top+'px'; panel.style.width=r.width+'px';
+    panel.style.height=r.height+'px'; return r;
+  }
+  hdr.addEventListener('mousedown',function(e){
+    var r=_anchor(); _action='drag';
+    _sx=e.clientX;_sy=e.clientY;_ox=r.left;_oy=r.top; e.preventDefault();
+  });
+  document.querySelectorAll('.gf-rs').forEach(function(el){
+    el.addEventListener('mousedown',function(e){
+      var r=_anchor(); _action=el.getAttribute('data-dir');
+      _sx=e.clientX;_sy=e.clientY;_ox=r.left;_oy=r.top;_ow=r.width;_oh=r.height;
+      e.preventDefault(); e.stopPropagation();
+    });
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!_action) return;
+    var dx=e.clientX-_sx, dy=e.clientY-_sy;
+    if(_action==='drag'){
+      var x=Math.max(0,Math.min(_ox+dx,window.innerWidth-panel.offsetWidth));
+      var y=Math.max(0,Math.min(_oy+dy,window.innerHeight-panel.offsetHeight));
+      panel.style.left=x+'px'; panel.style.top=y+'px';
+    } else {
+      var l=_ox,t=_oy,w=_ow,h=_oh;
+      if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);}
+      if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);}
+      if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;}
+      if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;}
+      panel.style.left=l+'px';panel.style.top=t+'px';
+      panel.style.width=w+'px';panel.style.height=h+'px';
+    }
+  });
+  document.addEventListener('mouseup',function(){_action=null;});
+})();
 
 </script>

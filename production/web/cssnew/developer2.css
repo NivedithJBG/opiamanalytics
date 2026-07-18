@@ -295,17 +295,8 @@ color:red !important;
 
 .leftside .navbar.navbar-default {
     background: #dcdddf;
-    height: 50px;
+    height: 86px;
     border-radius: 0;
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    z-index: 10010 !important;
-    width: 100% !important;
-}
-aside.leftside {
-    padding-top: 58px !important;
 }
 
 
