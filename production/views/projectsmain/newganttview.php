@@ -158,11 +158,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 <?php endif; ?>
 #gantt-float-hdr {
-  background: #1a202c; color: #fff;
-  padding: 7px 14px;
+  background: #fff; color: #333;
+  padding: 10px 15px;
   display: flex; align-items: center; justify-content: space-between;
   cursor: move; user-select: none; flex-shrink: 0;
-  font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700;
+  font-family: 'Nunito',sans-serif; font-size: 18px; font-weight: 700;
+  border-bottom: 1px solid #e5e5e5;
 }
 #gantt-float-body {
   flex: 1; min-height: 0; display: flex; flex-direction: column;
@@ -264,8 +265,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   <div id="gantt-float-hdr">
     <span>&#9776; Gantt Chart — drag to move</span>
     <span style="display:flex;align-items:center;gap:8px;">
-      <button id="gantt-btn-expand" title="Fullscreen" style="background:none;border:none;color:#fff;font-size:16px;cursor:pointer;line-height:1;padding:0 4px;">&#x26F6;</button>
-      <button id="gantt-btn-close" title="Close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;padding:0 4px;">&times;</button>
+      <button id="gantt-btn-expand" title="Fullscreen" style="background:none;border:none;color:#333;font-size:16px;cursor:pointer;line-height:1;padding:0 4px;">&#x26F6;</button>
+      <button id="gantt-btn-close" title="Close" style="background:none;border:none;color:#333;font-size:22px;cursor:pointer;line-height:1;padding:0 4px;">&times;</button>
     </span>
   </div>
   <!-- body -->
