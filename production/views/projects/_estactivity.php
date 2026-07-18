@@ -61,34 +61,16 @@ use app\models\Resources;
         <div class="panel-body">
 
                     <div class="search-and-content-wrpr">
-                        <div class="search-and-actions-wrpr" id="AR-allocate-body-one-head" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:4px 0;">
-                            <div class="content-action-wrpr" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;flex:1;min-width:0;">
-                                <a href="#alProjTypePopup" class="btn btn-default" id="alOpenProjTypePopup" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Project Type</a>
-                                <a href="#alIowGroupPopup" class="btn btn-default" id="alOpenIowGroupPopup" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW Group</a>
-                                <a href="#alActTypePopup" class="btn btn-default" id="alOpenActTypePopup" data-toggle="modal" data-target="#alActTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Activity Type</a>
-                                <a href="#alAddActivityPopup" class="btn btn-primary" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities"><span class="icon-add"></span> Activity</a>
-                                <a href="#" class="btn btn-primary list-accountType" id="listestactivity"><span class="icon-th-list"></span> List</a>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-                                <div id="searchestworktypediv" style="min-width:130px;">
-                                    <select id="searchestworktypelist" class="form-control">
-                                        <option value="0">All Project Types</option>
-                                        <?php
-                                        $typelist=EstimateWorkType::find()->orderBy(['estworktype_name'=>SORT_ASC])->all();
-                                        foreach($typelist AS $list):
-                                            echo "<option value='".$list->estworktype_id."'>".$list->estworktype_name."</option>";
-                                        endforeach;
-                                        ?>
-                                    </select>
-                                    <input type="hidden" name="estworktypedisplay" id="estworktypedisplay">
-                                </div>
-                                <div class="content-search-wrpr" style="display:flex;align-items:center;">
-                                    <input type="text" placeholder="Search" id="searchestactivityname" class="form-control" style="width:130px;">
-                                    <button id="estactivitysearch" class="btn btn-primary" type="button" style="margin-left:4px;"><span class="icon-search5"></span></button>
-                                </div>
-                            </div>
+                        <div class="search-and-actions-wrpr" id="AR-allocate-body-one-head" style="display:flex;align-items:center;gap:4px;padding:4px 0;white-space:nowrap;">
+                            <a href="#alProjTypePopup" class="btn btn-default" id="alOpenProjTypePopup" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Project Type</a>
+                            <a href="#alIowGroupPopup" class="btn btn-default" id="alOpenIowGroupPopup" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ IOW Group</a>
+                            <a href="#alActTypePopup" class="btn btn-default" id="alOpenActTypePopup" data-toggle="modal" data-target="#alActTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;">+ Activity Type</a>
+                            <a href="#alAddActivityPopup" class="btn btn-primary" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities"><span class="icon-add"></span> Activity</a>
+                            <a href="#" class="btn btn-primary list-accountType" id="listestactivity"><span class="icon-th-list"></span> List</a>
+                            <input type="hidden" name="estworktypedisplay" id="estworktypedisplay">
+                            <input type="hidden" id="searchestworktypelist" value="0">
+                            <input type="hidden" id="searchestactivityname" value="">
                         </div>
-                        <div style="height:40px;"></div>
                         <div class="content-wrpr">
 
                             <!-- add-activity-form kept as hidden placeholder so existing JS hide/show calls don't error -->
