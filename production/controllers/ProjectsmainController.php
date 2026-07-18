@@ -240,11 +240,13 @@ class ProjectsmainController extends Controller
             "SELECT task_name, task_unit, productivity FROM activity_tasks WHERE activity_id = :aid ORDER BY sort_order ASC, id ASC"
         )->bindValue(':aid', $activityId)->queryAll();
 
-        // estimate qty for this project
+        // estimate qty + schedule unit/qty for this project
         $uid      = \Yii::$app->user->Id;
         $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
         $pid      = $projuser ? (int)$projuser->projectid : 0;
         $estQty   = 0.0;
+        $schUnit  = '';
+        $schQty   = 0.0;
         if ($pid) {
             $peRow = $db->createCommand(
                 "SELECT activity_qty FROM pricing_estimate_new
@@ -252,6 +254,17 @@ class ProjectsmainController extends Controller
                 [':a' => $activityId, ':p' => $pid]
             )->queryOne();
             if ($peRow) $estQty = (float)$peRow['activity_qty'];
+
+            // schedule unit and qty from workgroup_activities_new
+            $wanRow = $db->createCommand(
+                "SELECT cycle_Unit, cycle_Quantity FROM workgroup_activities_new
+                 WHERE project_Id = :p AND activity_Id = :a LIMIT 1",
+                [':p' => $pid, ':a' => $activityId]
+            )->queryOne();
+            if ($wanRow) {
+                $schUnit = $wanRow['cycle_Unit']     ?? '';
+                $schQty  = (float)($wanRow['cycle_Quantity'] ?? 0);
+            }
         }
 
         // calculated rate from resources
@@ -260,11 +273,13 @@ class ProjectsmainController extends Controller
         if (!$calcRate && $activity) $calcRate = (float)$activity['activity_rate'];
 
         return [
-            'items' => $resources,
-            'tasks' => $tasks,
-            'unit'  => $activity ? $activity['activity_unit'] : '',
-            'rate'  => round($calcRate, 2),
-            'qty'   => $estQty,
+            'items'    => $resources,
+            'tasks'    => $tasks,
+            'unit'     => $activity ? $activity['activity_unit'] : '',
+            'rate'     => round($calcRate, 2),
+            'qty'      => $estQty,
+            'sch_unit' => $schUnit,
+            'sch_qty'  => $schQty,
         ];
     }
 

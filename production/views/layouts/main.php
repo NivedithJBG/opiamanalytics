@@ -2492,6 +2492,15 @@ function _prefillModal(d){
       success: function(data){
         if(data.unit && !document.getElementById('qe-unit').value)
           document.getElementById('qe-unit').value = data.unit;
+        /* Schedule unit/qty — only fill if not already set from wbsget */
+        if(data.sch_unit && !document.getElementById('qe-sch-unit').value){
+          document.getElementById('qe-sch-unit').value = data.sch_unit;
+          document.getElementById('qe-sch-unit').classList.remove('qe-needs-data');
+        }
+        if(data.sch_qty && !document.getElementById('qe-sch-qty').value){
+          document.getElementById('qe-sch-qty').value = data.sch_qty;
+          document.getElementById('qe-sch-qty').classList.remove('qe-needs-data');
+        }
 
         /* Tasks */
         var taskBody = document.getElementById('qe-task-body');
@@ -3050,6 +3059,14 @@ document.addEventListener('DOMContentLoaded', function(){
       success: function(data){
         if(data.unit){ document.getElementById('qe-unit').value = data.unit; }
         if(data.qty) { document.getElementById('qe-qty').value  = data.qty;  }
+        if(data.sch_unit){
+          document.getElementById('qe-sch-unit').value = data.sch_unit;
+          document.getElementById('qe-sch-unit').classList.remove('qe-needs-data');
+        }
+        if(data.sch_qty){
+          document.getElementById('qe-sch-qty').value = data.sch_qty;
+          document.getElementById('qe-sch-qty').classList.remove('qe-needs-data');
+        }
 
         var taskBody = document.getElementById('qe-task-body');
         taskBody.innerHTML = '';
