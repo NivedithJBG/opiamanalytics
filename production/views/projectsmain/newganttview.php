@@ -147,7 +147,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   overflow-y: auto;
   overflow-x: hidden;
   width: 100%;
-  height: calc(100vh - 220px);
+  height: calc(100vh - 306px);
 }
 /* Left panel: wider, never scrolls horizontally */
 #gantt-container .gmainleft {
