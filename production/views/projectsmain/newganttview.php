@@ -75,8 +75,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 #gkp-popup {
   display: none; position: fixed; z-index: 10015;
   top: 80px; left: calc(50% - 490px);
-  width: 980px; height: 55vh;
-  min-width: 500px; min-height: 280px;
+  width: 980px; height: 28vh;
+  min-width: 500px; min-height: 180px;
   background: #f0f3fa;
   border-radius: 10px; box-shadow: 0 8px 36px rgba(0,0,0,0.32);
   overflow: hidden; pointer-events: auto;
@@ -411,13 +411,13 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   <div id="gkp-hdr">KPI <button id="gkp-close" title="Close">&times;</button></div>
   <div id="gkp-body">
     <div id="gkp-row1">
+      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Capacity Utilisation</div><div class="gkp-panel-body" id="gkp-g5"></div></div>
+      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Cycle Time</div><div class="gkp-panel-body" id="gkp-g4"></div></div>
+      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Productivity</div><div class="gkp-panel-body" id="gkp-g3"></div></div>
       <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Target Production</div><div class="gkp-panel-body" id="gkp-tp"></div></div>
       <div class="gkp-panel" style="flex:0.7"><div class="gkp-panel-title">Activity Duration</div><div class="gkp-panel-body" id="gkp-dur"></div></div>
     </div>
     <div id="gkp-row2">
-      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Capacity Utilisation</div><div class="gkp-panel-body" id="gkp-g5"></div></div>
-      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Cycle Time</div><div class="gkp-panel-body" id="gkp-g4"></div></div>
-      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Productivity</div><div class="gkp-panel-body" id="gkp-g3"></div></div>
     </div>
   </div>
 </div>
