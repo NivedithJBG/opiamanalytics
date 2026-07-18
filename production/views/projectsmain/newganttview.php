@@ -408,7 +408,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   <div class="gkp-rs gkp-rs-nw" data-dir="nw"></div>
   <div class="gkp-rs gkp-rs-se" data-dir="se"></div>
   <div class="gkp-rs gkp-rs-sw" data-dir="sw"></div>
-  <div id="gkp-hdr">KPI <button id="gkp-close" title="Close">&times;</button></div>
+  <div id="gkp-hdr"><span id="gkp-title">KPI Dashboard</span><button id="gkp-close" title="Close">&times;</button></div>
   <div id="gkp-body">
     <div id="gkp-row1">
       <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Capacity Utilisation</div><div class="gkp-panel-body" id="gkp-g5"></div></div>
@@ -2104,7 +2104,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     }
 
     function _renderKpi(k) {
-      document.getElementById('gkp-hdr').textContent = k.activity_name || 'KPI';
+      document.getElementById('gkp-title').textContent = 'KPI — ' + (k.activity_name || '');
       _renderKpuCapacity(k);
       _renderKpuCycleTime(k);
       _renderKpuProductivity(k);
@@ -2171,7 +2171,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         return;
       }
       if (_kpXhr) _kpXhr.abort();
-      document.getElementById('gkp-hdr').textContent = 'Loading KPI…';
+      document.getElementById('gkp-title').textContent = 'Loading KPI…';
       ['gkp-g5','gkp-g4','gkp-g3','gkp-tp','gkp-dur'].forEach(function(id){
         var el=document.getElementById(id); if(el) el.innerHTML='';
       });
