@@ -137,9 +137,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 /* Gantt floating panel */
 #gantt-float {
   position: fixed;
-  top: 100px; left: 20px;
+  top: 95px; left: 20px;
   width: calc(100vw - 40px);
-  height: calc(100vh - 120px);
+  height: calc(100vh - 110px);
   min-width: 500px; min-height: 300px;
   z-index: 9500;
   background: #fff;
