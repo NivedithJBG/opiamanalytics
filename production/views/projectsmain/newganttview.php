@@ -1105,7 +1105,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var lblSvg = '';
       if (lbl1) lblSvg += '<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">' + lbl1 + ' <tspan font-weight="700">' + v1 + '</tspan></text>';
       if (lbl2) lblSvg += '<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">' + lbl2 + ' <tspan font-weight="700">' + v2 + '</tspan></text>';
-      var svg = '<svg width="210" height="138" viewBox="0 0 210 138" xmlns="http://www.w3.org/2000/svg">'
+      var svg = '<svg width="100%" height="100%" viewBox="0 0 210 138" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:hidden;">'
         + trackSvg
         + (f > 0 ? arc(0, f, fillCol, (trackStyle === 'cost' ? 'butt' : 'round')) : '')
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
@@ -1406,7 +1406,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var nr=r-15,na=Math.PI*(1-f);
       var nx=(cx+nr*Math.cos(na)).toFixed(1),ny=(cy-nr*Math.sin(na)).toFixed(1);
       var pct=schedQty>0?(lastQty/schedQty*100).toFixed(1):'0.0';
-      var svg='<svg width="210" height="138" viewBox="0 0 210 138" xmlns="http://www.w3.org/2000/svg">'
+      var svg='<svg width="100%" height="100%" viewBox="0 0 210 138" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:hidden;">'
         +arc(0,1,'#64748b')+(f>0?arc(0,f,'#94a3b8','butt'):'')
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
