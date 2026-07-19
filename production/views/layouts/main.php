@@ -1677,83 +1677,81 @@ if($action=='login')
 </script>
 <!-- ── End Chatbot ─────────────────────────────────────────────────────── -->
 
-<!-- ── Add Project Modal (global, accessible from top nav) ───────────── -->
-<div class="modal fade" id="globalAddProjectPopup" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title" style="float:left;"><span class="icon-add"></span> Add New Project</h4>
-                <button type="button" class="close" data-dismiss="modal" style="float:right;font-size:30px;">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="globalAddProjectForm">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label>Project Name <span style="color:red;">*</span></label>
-                                <input id="gp_name" type="text" class="form-control" placeholder="Project Name">
-                                <span class="text-danger gp-err" id="gp_name_err" style="display:none;font-size:12px;"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label>Duration (days) <span style="color:red;">*</span></label>
-                                <input id="gp_duration" type="number" class="form-control" placeholder="Project Duration">
-                                <span class="text-danger gp-err" id="gp_duration_err" style="display:none;font-size:12px;"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="form-group">
-                                <label>Start Date <span style="color:red;">*</span></label>
-                                <input id="gp_startdate" type="date" class="form-control">
-                                <span class="text-danger gp-err" id="gp_startdate_err" style="display:none;font-size:12px;"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="form-group">
-                                <label>End Date <span style="color:red;">*</span></label>
-                                <input id="gp_enddate" type="date" class="form-control">
-                                <span class="text-danger gp-err" id="gp_enddate_err" style="display:none;font-size:12px;"></span>
-                            </div>
+<!-- ── Add Project Overlay (global, accessible from top nav) ───────────── -->
+<div id="globalAddProjectPopup" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:6px;width:780px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 5px 30px rgba(0,0,0,0.4);">
+        <div style="padding:15px 20px;border-bottom:1px solid #e5e5e5;display:flex;align-items:center;justify-content:space-between;">
+            <h4 style="margin:0;font-size:18px;font-weight:700;"><span class="icon-add"></span> Add New Project</h4>
+            <button id="gp_close_x" type="button" style="background:none;border:none;font-size:28px;line-height:1;cursor:pointer;color:#666;">&times;</button>
+        </div>
+        <div style="padding:20px;">
+            <form id="globalAddProjectForm">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Project Name <span style="color:red;">*</span></label>
+                            <input id="gp_name" type="text" class="form-control" placeholder="Project Name">
+                            <span class="text-danger gp-err" id="gp_name_err" style="display:none;font-size:12px;"></span>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label>Project Value <span style="color:red;">*</span></label>
-                                <input id="gp_value" type="text" class="form-control" placeholder="Project Value">
-                                <span class="text-danger gp-err" id="gp_value_err" style="display:none;font-size:12px;"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label>Client Name <span style="color:red;">*</span></label>
-                                <input id="gp_client" type="text" class="form-control" placeholder="Client Name">
-                                <span class="text-danger gp-err" id="gp_client_err" style="display:none;font-size:12px;"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label>Location</label>
-                                <input id="gp_location" type="text" class="form-control" placeholder="Site Location">
-                            </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Duration (days) <span style="color:red;">*</span></label>
+                            <input id="gp_duration" type="number" class="form-control" placeholder="Project Duration">
+                            <span class="text-danger gp-err" id="gp_duration_err" style="display:none;font-size:12px;"></span>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label>Work Hours <span style="color:red;">*</span></label>
-                                <input id="gp_wrkhrs" type="text" class="form-control" placeholder="Work Hours">
-                                <span class="text-danger gp-err" id="gp_wrkhrs_err" style="display:none;font-size:12px;"></span>
-                            </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>Start Date <span style="color:red;">*</span></label>
+                            <input id="gp_startdate" type="date" class="form-control">
+                            <span class="text-danger gp-err" id="gp_startdate_err" style="display:none;font-size:12px;"></span>
                         </div>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" id="gp_cancel" class="btn btn-danger" style="border-radius:20px;"><span class="icon-close"></span> Cancel</button>
-                <button type="button" class="btn btn-primary" id="gp_save" style="border-radius:20px;"><span class="icon-check"></span> Add Project</button>
-            </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>End Date <span style="color:red;">*</span></label>
+                            <input id="gp_enddate" type="date" class="form-control">
+                            <span class="text-danger gp-err" id="gp_enddate_err" style="display:none;font-size:12px;"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Project Value <span style="color:red;">*</span></label>
+                            <input id="gp_value" type="text" class="form-control" placeholder="Project Value">
+                            <span class="text-danger gp-err" id="gp_value_err" style="display:none;font-size:12px;"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Client Name <span style="color:red;">*</span></label>
+                            <input id="gp_client" type="text" class="form-control" placeholder="Client Name">
+                            <span class="text-danger gp-err" id="gp_client_err" style="display:none;font-size:12px;"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Location</label>
+                            <input id="gp_location" type="text" class="form-control" placeholder="Site Location">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Work Hours <span style="color:red;">*</span></label>
+                            <input id="gp_wrkhrs" type="text" class="form-control" placeholder="Work Hours">
+                            <span class="text-danger gp-err" id="gp_wrkhrs_err" style="display:none;font-size:12px;"></span>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div style="padding:12px 20px;border-top:1px solid #e5e5e5;text-align:right;">
+            <button type="button" id="gp_cancel" class="btn btn-danger" style="border-radius:20px;margin-right:8px;"><span class="icon-close"></span> Cancel</button>
+            <button type="button" id="gp_save" class="btn btn-primary" style="border-radius:20px;"><span class="icon-check"></span> Add Project</button>
         </div>
     </div>
 </div>
@@ -1761,14 +1759,12 @@ if($action=='login')
 <script>
 (function(){
     function gpShowModal(){
-        $('#globalAddProjectPopup').css('display','block').addClass('in');
-        $('body').addClass('modal-open');
-        if(!$('.modal-backdrop').length) $('<div class="modal-backdrop fade in"></div>').appendTo('body');
+        $('#globalAddProjectPopup').show();
+        $('body').css('overflow','hidden');
     }
     function gpHideModal(){
-        $('#globalAddProjectPopup').css('display','none').removeClass('in');
-        $('body').removeClass('modal-open');
-        $('.modal-backdrop').remove();
+        $('#globalAddProjectPopup').hide();
+        $('body').css('overflow','');
     }
 
     /* open modal from nav icon */
@@ -1779,18 +1775,12 @@ if($action=='login')
         gpShowModal();
     });
 
-    /* close on backdrop click or × button */
-    $(document).on('click', '#globalAddProjectPopup [data-dismiss="modal"], #globalAddProjectPopup .close', function(e){
-        e.preventDefault();
-        gpHideModal();
-    });
-    $(document).on('click', '#globalAddProjectPopup', function(e){
-        if($(e.target).is('#globalAddProjectPopup')) gpHideModal();
-    });
+    /* close on × or Cancel */
+    $(document).on('click', '#gp_close_x, #gp_cancel', function(){ gpHideModal(); });
 
-    $(document).on('click', '#gp_cancel', function(e){
-        e.preventDefault();
-        gpHideModal();
+    /* close on backdrop click (clicking the overlay but not the dialog) */
+    $(document).on('click', '#globalAddProjectPopup', function(e){
+        if(e.target === this) gpHideModal();
     });
 
     $(document).on('click', '#gp_save', function(){
