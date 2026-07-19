@@ -125,6 +125,7 @@ $(function() {
                 activity_id:          $('#editingActivityId').val(),
                 activitytypeid:       $('#estactivitytypeid').val(),
                 worktypeid:           $('#estworktypelistss1').val() || 0,
+                iow_group_id:         $('#actIowGroupId').val() || 0,
                 working_hours:        $('#est_working_hours').val(),
                 'estactivityname[]':  [$('#estactivityname1').val()],
                 'estactivityunit[]':  [$('#estactivityunit1').val()],
@@ -288,8 +289,11 @@ $(document).on('click', '.al-edit-activity-btn', function(){
                 $('#editingActivityId').val(idval);
                 $('#saveestactivity').html('<span class="icon-check"></span> Update Activity');
                 $('#alAddActivityTitle').text('Edit Activity');
-                /* populate IOW group dropdown (not stored per activity, just needs options loaded) */
-                if(typeof alRefreshActIowGroupDropdown === 'function') alRefreshActIowGroupDropdown();
+                /* load IOW group options then select the saved value */
+                if(typeof alRefreshActIowGroupDropdown === 'function'){
+                    $('#actIowGroupId').val(act.iow_group_id || '');
+                    alRefreshActIowGroupDropdown();
+                }
 
                 /* rebuild task rows */
                 $('#task-rows-container').empty();

@@ -21492,6 +21492,7 @@ public function actionActivitymusterprocess()
             $activityType = intval(isset($_POST['activitytypeid']) ? $_POST['activitytypeid'] : 0);
             $workType     = intval(isset($_POST['worktypeid'])     ? $_POST['worktypeid']     : 0);
             $workingHours = intval(isset($_POST['working_hours'])  ? $_POST['working_hours']  : 8);
+            $iowGroupId   = intval(isset($_POST['iow_group_id'])   ? $_POST['iow_group_id']   : 0);
             $names = isset($_POST['estactivityname']) ? (array)$_POST['estactivityname'] : [];
 
             if ($activityType <= 0) {
@@ -21503,6 +21504,7 @@ public function actionActivitymusterprocess()
                 $connection->createCommand()->insert('estimateactivities', [
                     'activity_type'  => $activityType,
                     'work_type'      => $workType,
+                    'iow_group_id'   => $iowGroupId,
                     'activity_name'  => $names[$i],
                     'activity_unit'  => isset($_POST['estactivityunit'][$i]) ? $_POST['estactivityunit'][$i] : '',
                     'activity_status' => 0,
@@ -21643,6 +21645,7 @@ public function actionActivitymusterprocess()
         $connection->createCommand()->update('estimateactivities', [
             'activity_type' => (int)($_POST['activitytypeid'] ?? 0),
             'work_type'     => (int)($_POST['worktypeid'] ?? 0),
+            'iow_group_id'  => (int)($_POST['iow_group_id'] ?? 0),
             'activity_name' => $_POST['estactivityname'][0],
             'activity_unit' => $_POST['estactivityunit'][0],
             'working_hours' => $workingHours,
