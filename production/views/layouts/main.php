@@ -1679,7 +1679,7 @@ if($action=='login')
 
 <!-- ── Add Project Overlay (global, accessible from top nav) ───────────── -->
 <div id="globalAddProjectPopup" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;">
-    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:6px;width:780px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 5px 30px rgba(0,0,0,0.4);">
+    <div id="globalAddProjectDialog" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:6px;width:780px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 5px 30px rgba(0,0,0,0.4);">
         <div style="padding:15px 20px;border-bottom:1px solid #e5e5e5;display:flex;align-items:center;justify-content:space-between;">
             <h4 style="margin:0;font-size:18px;font-weight:700;"><span class="icon-add"></span> Add New Project</h4>
             <button id="gp_close_x" type="button" style="background:none;border:none;font-size:28px;line-height:1;cursor:pointer;color:#666;">&times;</button>
@@ -1758,13 +1758,14 @@ if($action=='login')
 
 <script>
 (function(){
+    /* ensure overflow is never stuck from a previous session */
+    $(function(){ $('body').css('overflow',''); });
+
     function gpShowModal(){
         $('#globalAddProjectPopup').show();
-        $('body').css('overflow','hidden');
     }
     function gpHideModal(){
         $('#globalAddProjectPopup').hide();
-        $('body').css('overflow','');
     }
 
     /* open modal from nav icon */
@@ -1779,6 +1780,9 @@ if($action=='login')
     $(document).on('click', '#gp_close_x, #gp_cancel', function(){ gpHideModal(); });
 
     /* close on backdrop click (clicking the overlay but not the dialog) */
+    /* clicks inside the dialog must not bubble up to the overlay */
+    $(document).on('click', '#globalAddProjectDialog', function(e){ e.stopPropagation(); });
+    /* click on the overlay background (outside dialog) closes it */
     $(document).on('click', '#globalAddProjectPopup', function(e){
         if(e.target === this) gpHideModal();
     });
