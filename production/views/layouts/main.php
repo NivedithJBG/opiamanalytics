@@ -2243,7 +2243,6 @@ if($action=='login')
           <th>Project</th>
           <th>Addressee</th>
           <th>Subject / File</th>
-          <th style="width:100px;">Type</th>
           <th style="width:60px;text-align:center;">View</th>
         </tr>
       </thead>
@@ -2335,7 +2334,6 @@ if($action=='login')
                         +'<td>'+proj+'</td>'
                         +'<td>'+addr+'</td>'
                         +'<td>'+subjCell+'</td>'
-                        +'<td>'+badge+'</td>'
                         +'<td style="text-align:center;"><button class="pdoc-view-btn" data-fn="'+f.filename+'" data-name="'+fn+'">View</button></td>'
                         +'</tr>';
                 });
