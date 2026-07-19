@@ -170,7 +170,6 @@ $subDomain = array_shift(($HTTP_HOST));
         #pdoc-popup {
             display:none; flex-direction:column;
             position:fixed;
-            top:80px; left:50%; transform:translateX(-50%);
             width:1100px; height:520px; min-width:500px; min-height:300px;
             z-index:99999;
             background:#fff; border-radius:10px; overflow:hidden;
@@ -238,7 +237,6 @@ $subDomain = array_shift(($HTTP_HOST));
         #pdoc-viewer-popup {
             display:none; flex-direction:column;
             position:fixed;
-            top:60px; left:calc(50% + 40px);
             width:780px; height:560px; min-width:320px; min-height:260px;
             z-index:199999;
             background:#fff; border-radius:10px; overflow:hidden;
@@ -2274,11 +2272,17 @@ if($action=='login')
     function pdocShow(){
         var $p = $('#pdoc-popup');
         if(!pdocInited){
+            /* show briefly off-screen to measure, then position */
+            $p.css({ visibility:'hidden', top:0, left:0 }).addClass('pdoc-open');
+            var pw = $p.outerWidth(), ph = $p.outerHeight();
+            var ww = $(window).width(), wh = $(window).height();
+            $p.css({ visibility:'', top: Math.max(60, (wh - ph) / 2), left: Math.max(0, (ww - pw) / 2) });
             $p.draggable({ handle:'#pdoc-header', containment:'window', scroll:false });
-            $p.resizable({ minWidth:420, minHeight:280, handles:'all' });
+            $p.resizable({ minWidth:500, minHeight:280, handles:'all' });
             pdocInited = true;
+        } else {
+            $p.addClass('pdoc-open');
         }
-        $p.addClass('pdoc-open');
         pdocLoadProjects();
         pdocSearch();
     }
@@ -2356,11 +2360,16 @@ if($action=='login')
             $body.html('<div class="pdoc-no-preview"><div style="font-size:44px;">&#128196;</div><div>Preview not available.</div><a href="'+url+'" target="_blank" style="color:#1565C0;font-weight:600;">Download / Open in new tab</a></div>');
         }
         if(!pdocViewerInited){
+            $vp.css({ visibility:'hidden', top:0, left:0 }).addClass('pdoc-open');
+            var vw = $vp.outerWidth(), vh = $vp.outerHeight();
+            var ww = $(window).width(), wh = $(window).height();
+            $vp.css({ visibility:'', top: Math.max(40, (wh - vh) / 2), left: Math.max(0, (ww - vw) / 2) });
             $vp.draggable({ handle:'#pdoc-viewer-header', containment:'window', scroll:false });
             $vp.resizable({ minWidth:320, minHeight:260, handles:'all' });
             pdocViewerInited = true;
+        } else {
+            $vp.addClass('pdoc-open');
         }
-        $vp.addClass('pdoc-open');
     }
 
     $(document).on('click','#pdoc-nav-btn',  function(e){ e.preventDefault(); pdocShow(); });
