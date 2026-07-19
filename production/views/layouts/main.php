@@ -170,9 +170,9 @@ $subDomain = array_shift(($HTTP_HOST));
         #pdoc-popup {
             display:none; flex-direction:column;
             position:fixed;
-            width:1100px; height:520px; min-width:500px; min-height:300px;
+            width:1100px; max-height:88vh; min-width:500px; min-height:200px;
             z-index:100000;
-            background:#fff; border-radius:10px; overflow:hidden;
+            background:#fff; border-radius:10px; overflow-y:auto; overflow-x:hidden;
             box-shadow:0 8px 40px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.12);
         }
         #pdoc-popup.pdoc-open { display:flex; }
@@ -208,7 +208,7 @@ $subDomain = array_shift(($HTTP_HOST));
             padding:0 10px; height:28px; font-size:12px; cursor:pointer; align-self:flex-end;
         }
         #pdoc-clear-btn:hover { background:#ddd; }
-        #pdoc-table-wrap { flex:1; overflow-y:auto; padding:10px 14px; min-height:120px; height:0; }
+        #pdoc-table-wrap { padding:10px 14px; min-height:120px; }
         #pdoc-table-wrap table { width:100%; border-collapse:collapse; font-size:12px; }
         #pdoc-table-wrap thead th {
             background:#1565C0; color:#fff; padding:8px 10px; text-align:left;
@@ -2223,7 +2223,7 @@ if($action=='login')
     <button id="pdoc-close-x">&times;</button>
   </div>
   <!-- Upload Panel -->
-  <div id="pdoc-upload-panel" style="display:none;background:#f0f4fb;border-bottom:2px solid #dde3ef;padding:14px 16px;overflow-y:auto;max-height:55%;flex-shrink:0;">
+  <div id="pdoc-upload-panel" style="display:none;background:#f0f4fb;border-bottom:2px solid #dde3ef;padding:14px 16px;">
     <!-- Active project name display -->
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
       <label style="font-size:11px;color:#555;font-weight:700;white-space:nowrap;">Project:</label>
@@ -2243,7 +2243,7 @@ if($action=='login')
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
           <button id="pdoc-up-doc-submit" style="padding:5px 20px;background:#1565C0;color:#fff;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">&#8679; Upload</button>
-          <button id="pdoc-up-doc-cancel" type="button" style="padding:5px 16px;background:#f0f0f0;color:#555;border:1px solid #ccc;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;">Cancel</button>
+          <button id="pdoc-up-doc-cancel" type="button" style="padding:5px 16px;background:#fdecea;color:#c0392b;border:1px solid #f5c6c2;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;">Cancel</button>
           <span id="pdoc-up-doc-msg" style="font-size:12px;font-weight:600;"></span>
         </div>
       </div>
@@ -2267,7 +2267,7 @@ if($action=='login')
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
           <button id="pdoc-up-corr-submit" style="padding:5px 20px;background:#6a1b9a;color:#fff;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">&#8679; Upload</button>
-          <button id="pdoc-up-corr-cancel" type="button" style="padding:5px 16px;background:#f0f0f0;color:#555;border:1px solid #ccc;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;">Cancel</button>
+          <button id="pdoc-up-corr-cancel" type="button" style="padding:5px 16px;background:#fdecea;color:#c0392b;border:1px solid #f5c6c2;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;">Cancel</button>
           <span id="pdoc-up-corr-msg" style="font-size:12px;font-weight:600;"></span>
         </div>
       </div>
