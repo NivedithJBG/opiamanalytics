@@ -260,7 +260,7 @@ use app\models\Resources;
 </div>
 
 <!-- ── ADD ACTIVITY MODAL ───────────────────────────────────────────── -->
-<div class="modal fade" id="alAddActivityPopup">
+<div class="modal fade" id="alAddActivityPopup" data-backdrop="false">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -383,7 +383,7 @@ use app\models\Resources;
 </div>
 
 <!-- ── PROJECT TYPE MODAL ────────────────────────────────────────────── -->
-<div class="modal fade" id="alProjTypePopup">
+<div class="modal fade" id="alProjTypePopup" data-backdrop="false">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -413,7 +413,7 @@ use app\models\Resources;
 </div>
 
 <!-- ── IOW GROUP MODAL ──────────────────────────────────────────────── -->
-<div class="modal fade" id="alIowGroupPopup">
+<div class="modal fade" id="alIowGroupPopup" data-backdrop="false">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -484,7 +484,7 @@ use app\models\Resources;
 </div>
 
 <!-- ── ACTIVITY TYPE MODAL ───────────────────────────────────────────── -->
-<div class="modal fade" id="alActTypePopup">
+<div class="modal fade" id="alActTypePopup" data-backdrop="false">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
