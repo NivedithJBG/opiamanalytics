@@ -291,8 +291,7 @@ $(document).on('click', '.al-edit-activity-btn', function(){
                 $('#alAddActivityTitle').text('Edit Activity');
                 /* load IOW group options then select the saved value */
                 if(typeof alRefreshActIowGroupDropdown === 'function'){
-                    $('#actIowGroupId').val(act.iow_group_id || '');
-                    alRefreshActIowGroupDropdown();
+                    alRefreshActIowGroupDropdown(act.iow_group_id || '');
                 }
 
                 /* rebuild task rows */

@@ -601,13 +601,13 @@ $(document).on('click', '#addestactivity', function(){
     setTimeout(function(){ alRefreshActIowGroupDropdown(); }, 400);
 });
 
-function alRefreshActIowGroupDropdown(){
+function alRefreshActIowGroupDropdown(selectVal){
+    var cur = (selectVal !== undefined) ? selectVal : $('#actIowGroupId').val();
     $.ajax({
         url: '<?php echo \yii\helpers\Url::to(["/projects/getiowgrouplist"]); ?>',
         dataType: 'json',
         success: function(data){
             var sel = $('#actIowGroupId');
-            var cur = sel.val();
             sel.html('<option value="">Select IOW Group</option>');
             (data.items||[]).forEach(function(g){
                 sel.append('<option value="'+g.id+'">'+g.name+'</option>');
