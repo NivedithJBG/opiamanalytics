@@ -216,7 +216,7 @@ $subDomain = array_shift(($HTTP_HOST));
         }
         #pdoc-table-wrap tbody tr { border-bottom:1px solid #f0f0f0; transition:background .15s; }
         #pdoc-table-wrap tbody tr:hover { background:#f0f6ff; }
-        #pdoc-table-wrap tbody td { padding:7px 10px; color:#333; vertical-align:middle; }
+        #pdoc-table-wrap tbody td { padding:7px 10px; color:#1a1a1a; vertical-align:middle; }
         .pdoc-type-badge {
             display:inline-block; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:600;
         }
@@ -2219,7 +2219,7 @@ if($action=='login')
   <div id="pdoc-header">
     <span style="font-size:15px;opacity:.85;">&#128196;</span>
     <h4>Project Documents</h4>
-    <button id="pdoc-upload-toggle" title="Upload Document" style="margin-left:auto;margin-right:8px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:20px;padding:3px 14px;font-size:12px;cursor:pointer;font-weight:600;">&#8679; Upload</button>
+    <button id="pdoc-upload-toggle" title="Upload Document" style="margin-left:auto;margin-right:8px;background:#27ae60;border:1px solid #1e8449;color:#fff;border-radius:20px;padding:3px 14px;font-size:12px;cursor:pointer;font-weight:600;">&#8679; Upload</button>
     <button id="pdoc-close-x">&times;</button>
   </div>
   <!-- Upload Panel -->
