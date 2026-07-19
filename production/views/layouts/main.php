@@ -2413,7 +2413,7 @@ if($action=='login')
   <div id="qe-footer">
     <div id="qe-save-msg"></div>
     <button id="qe-btn-save">&#128190; Save</button>
-    <button id="qe-btn-add" disabled>&#43; Add to Gantt</button>
+    <button id="qe-btn-add">&#43; Add to Gantt</button>
     <button id="qe-btn-delete" style="display:none;background:#c0392b;color:#fff;border:none;padding:6px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;border-radius:999px;">&#128465; Delete</button>
     <button id="qe-close-btn" style="background:#e67e22;color:#fff;border:none;padding:6px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;border-radius:999px;">&#10005; Close</button>
   </div>
@@ -2485,7 +2485,6 @@ function openModal(saId, wanId){
     _wbsWanId = 0;
     _wbsSaId  = 0;
     document.getElementById('qe-btn-add').style.display = '';
-    document.getElementById('qe-btn-add').disabled  = true;
     document.getElementById('qe-btn-delete').style.display = 'none';
     document.getElementById('qe-btn-save').textContent = '💾 Save';
     if(!document.querySelector('#qe-task-body tr')) addTaskRow();
@@ -2636,7 +2635,6 @@ function _resetModal(){
   loadResTypes(function(){ addResRow(); });
 
   /* Footer */
-  document.getElementById('qe-btn-add').disabled = true;
   document.getElementById('qe-save-msg').textContent = '';
   recalcDuration();
 }
@@ -3041,7 +3039,6 @@ function clearActivityFields(){
   document.getElementById('qe-task-body').innerHTML = '';
   document.getElementById('qe-res-body').innerHTML  = '';
   _wbsWanId = 0;
-  document.getElementById('qe-btn-add').disabled = true;
   document.getElementById('qe-save-msg').textContent = '';
   addTaskRow();
   loadResTypes(function(){ addResRow(); });
