@@ -227,6 +227,11 @@ $subDomain = array_shift(($HTTP_HOST));
             padding:3px 10px; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap;
         }
         .pdoc-view-btn:hover { background:#0d47a1; }
+        .pdoc-remove-btn {
+            background:#fdecea; color:#c0392b; border:1px solid #f5c6c2; border-radius:4px;
+            padding:3px 10px; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap;
+        }
+        .pdoc-remove-btn:hover { background:#f9b3ae; }
         #pdoc-empty { display:none; text-align:center; color:#888; padding:30px; font-size:13px; }
         #pdoc-loading { display:none; text-align:center; color:#888; padding:30px; font-size:13px; }
         /* resize handle hint */
@@ -2315,6 +2320,7 @@ if($action=='login')
           <th>Addressee</th>
           <th>Subject / File</th>
           <th style="width:60px;text-align:center;">View</th>
+          <th style="width:70px;text-align:center;">Remove</th>
         </tr>
       </thead>
       <tbody id="pdoc-tbody"></tbody>
@@ -2335,7 +2341,8 @@ if($action=='login')
 (function(){
     var PDOC_LIST_URL  = '<?php echo \yii\helpers\Url::to(["/projects/pdoclist"]); ?>';
     var PDOC_PROJ_URL  = '<?php echo \yii\helpers\Url::to(["/projects/pdocprojects"]); ?>';
-    var PDOC_FILE_BASE = '/uploads/projects/';
+    var PDOC_FILE_BASE   = '/uploads/projects/';
+    var PDOC_DELETE_URL  = '<?php echo \yii\helpers\Url::to(["/projects/deleteprojectfile"]); ?>';
     var pdocInited = false, pdocViewerInited = false;
 
     function pdocShow(){
@@ -2399,14 +2406,15 @@ if($action=='login')
                     var subj = f.subject ? $('<div>').text(f.subject).html() : '';
                     var proj = $('<div>').text(f.project_name||'—').html();
                     var subjCell = subj
-                        ? subj + '<div style="font-size:10px;color:#999;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+fn+'">'+fn+'</div>'
-                        : '<span style="color:#999;">'+fn+'</span>';
+                        ? '<span style="color:#1a1a1a;">'+subj+'</span><div style="font-size:10px;color:#444;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+fn+'">'+fn+'</div>'
+                        : '<span style="color:#1a1a1a;">'+fn+'</span>';
                     rows += '<tr>'
                         +'<td style="white-space:nowrap;">'+f.uploaded_at+'</td>'
                         +'<td>'+proj+'</td>'
-                        +'<td>'+addr+'</td>'
+                        +'<td style="color:#1a1a1a;">'+addr+'</td>'
                         +'<td>'+subjCell+'</td>'
                         +'<td style="text-align:center;"><button class="pdoc-view-btn" data-fn="'+f.filename+'" data-name="'+fn+'">View</button></td>'
+                        +'<td style="text-align:center;"><button class="pdoc-remove-btn" data-id="'+f.id+'" data-name="'+fn+'">Remove</button></td>'
                         +'</tr>';
                 });
                 $('#pdoc-tbody').html(rows);
@@ -2540,6 +2548,19 @@ if($action=='login')
     });
     $(document).on('click','.pdoc-view-btn', function(){
         pdocViewFile($(this).data('fn'), $(this).data('name'));
+    });
+    $(document).on('click','.pdoc-remove-btn', function(){
+        var id   = $(this).data('id');
+        var name = $(this).data('name');
+        if(!confirm('Remove "'+name+'"? This cannot be undone.')) return;
+        var $btn = $(this).prop('disabled',true).text('…');
+        $.ajax({ type:'POST', url:PDOC_DELETE_URL, dataType:'json', data:{fileid:id},
+            success:function(d){
+                if(d && d.error==='No'){ $btn.closest('tr').fadeOut(200,function(){ $(this).remove(); }); }
+                else { $btn.prop('disabled',false).text('Remove'); alert('Could not remove file.'); }
+            },
+            error:function(){ $btn.prop('disabled',false).text('Remove'); alert('Server error.'); }
+        });
     });
     $(document).on('click','#pdoc-viewer-close', function(){
         $('#pdoc-viewer-popup').removeClass('pdoc-open');
