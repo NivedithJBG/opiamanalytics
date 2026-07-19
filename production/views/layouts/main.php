@@ -171,7 +171,7 @@ $subDomain = array_shift(($HTTP_HOST));
             display:none; flex-direction:column;
             position:fixed;
             top:80px; left:50%; transform:translateX(-50%);
-            width:900px; height:520px; min-width:420px; min-height:300px;
+            width:1100px; height:520px; min-width:500px; min-height:300px;
             z-index:99999;
             background:#fff; border-radius:10px; overflow:hidden;
             box-shadow:0 8px 40px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.12);
@@ -2221,12 +2221,8 @@ if($action=='login')
       <input type="text" id="pdoc-filter-subject" placeholder="Subject…" style="width:120px;">
     </div>
     <div class="pdoc-sf">
-      <label>From</label>
-      <input type="date" id="pdoc-filter-from" style="width:118px;">
-    </div>
-    <div class="pdoc-sf">
-      <label>To</label>
-      <input type="date" id="pdoc-filter-to" style="width:118px;">
+      <label>Date</label>
+      <input type="date" id="pdoc-filter-date" style="width:130px;">
     </div>
     <div class="pdoc-sf">
       <label>Type</label>
@@ -2313,8 +2309,7 @@ if($action=='login')
                 project_id : $('#pdoc-filter-project').val(),
                 addressee  : $('#pdoc-filter-addressee').val(),
                 subject    : $('#pdoc-filter-subject').val(),
-                date_from  : $('#pdoc-filter-from').val(),
-                date_to    : $('#pdoc-filter-to').val(),
+                date_filter: $('#pdoc-filter-date').val(),
                 file_type  : $('#pdoc-filter-type').val()
             },
             success:function(d){
@@ -2373,7 +2368,7 @@ if($action=='login')
     $(document).on('click','#pdoc-search-btn',function(){ pdocSearch(); });
     $(document).on('click','#pdoc-clear-btn', function(){
         $('#pdoc-filter-project,#pdoc-filter-type').val('');
-        $('#pdoc-filter-addressee,#pdoc-filter-subject,#pdoc-filter-from,#pdoc-filter-to').val('');
+        $('#pdoc-filter-addressee,#pdoc-filter-subject,#pdoc-filter-date').val('');
         pdocSearch();
     });
     $(document).on('click','.pdoc-view-btn', function(){

@@ -4034,16 +4034,10 @@ class ProjectsController extends Controller
             $params[':subj'] = '%' . $subject . '%';
         }
 
-        $dateFrom = trim($_POST['date_from'] ?? '');
-        if ($dateFrom !== '') {
-            $where[] = 'DATE(pf.uploaded_at) >= :dfrom';
-            $params[':dfrom'] = $dateFrom;
-        }
-
-        $dateTo = trim($_POST['date_to'] ?? '');
-        if ($dateTo !== '') {
-            $where[] = 'DATE(pf.uploaded_at) <= :dto';
-            $params[':dto'] = $dateTo;
+        $dateFilter = trim($_POST['date_filter'] ?? '');
+        if ($dateFilter !== '') {
+            $where[] = 'DATE(pf.uploaded_at) = :dfilter';
+            $params[':dfilter'] = $dateFilter;
         }
 
         $fileType = trim($_POST['file_type'] ?? '');
