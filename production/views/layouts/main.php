@@ -170,9 +170,9 @@ $subDomain = array_shift(($HTTP_HOST));
         #pdoc-popup {
             display:none; flex-direction:column;
             position:fixed;
-            width:1100px; max-height:88vh; min-width:500px; min-height:200px;
+            width:1100px; height:600px; min-width:500px; min-height:280px;
             z-index:100000;
-            background:#fff; border-radius:10px; overflow-y:auto; overflow-x:hidden;
+            background:#fff; border-radius:10px; overflow:hidden;
             box-shadow:0 8px 40px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.12);
         }
         #pdoc-popup.pdoc-open { display:flex; }
@@ -208,7 +208,7 @@ $subDomain = array_shift(($HTTP_HOST));
             padding:0 10px; height:28px; font-size:12px; cursor:pointer; align-self:flex-end;
         }
         #pdoc-clear-btn:hover { background:#ddd; }
-        #pdoc-table-wrap { padding:10px 14px; min-height:120px; }
+        #pdoc-table-wrap { flex:1; overflow-y:auto; padding:10px 14px; min-height:0; height:0; }
         #pdoc-table-wrap table { width:100%; border-collapse:collapse; font-size:12px; }
         #pdoc-table-wrap thead th {
             background:#1565C0; color:#fff; padding:8px 10px; text-align:left;
