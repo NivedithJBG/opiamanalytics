@@ -3141,7 +3141,7 @@ function bindStaticFieldValidation(){
 }
 
 /* ── Bind ── */
-document.addEventListener('DOMContentLoaded', function(){
+$(function(){
   bindStaticFieldValidation();
 
   /* open via .qe-btn class anywhere on page */
