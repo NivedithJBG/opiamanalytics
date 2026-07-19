@@ -4002,21 +4002,10 @@ class ProjectsController extends Controller
 
     public function actionPdocprojects()
     {
-        $uid = \Yii::$app->user->id;
-        $row = \app\models\User::findOne($uid);
-        $db  = \Yii::$app->db;
-        if ($row && $row->superuser == 1) {
-            $projects = $db->createCommand(
-                "SELECT Project_Id AS id, Name AS name FROM projects WHERE status='0' AND Project_Delete_Status='0' ORDER BY Name ASC"
-            )->queryAll();
-        } else {
-            $projects = $db->createCommand(
-                "SELECT p.Project_Id AS id, p.Name AS name FROM projects p
-                 INNER JOIN user_projects up ON p.Project_Id = up.projectid
-                 WHERE up.userid = :uid AND p.status='0' AND p.Project_Delete_Status='0' ORDER BY p.Name ASC",
-                [':uid' => $uid]
-            )->queryAll();
-        }
+        $db = \Yii::$app->db;
+        $projects = $db->createCommand(
+            "SELECT Project_Id AS id, Name AS name FROM projects WHERE status='0' AND Project_Delete_Status='0' ORDER BY Name ASC"
+        )->queryAll();
         echo json_encode(['error' => 'No', 'projects' => $projects]);
     }
 

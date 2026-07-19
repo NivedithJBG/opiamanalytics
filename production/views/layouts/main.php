@@ -242,7 +242,7 @@ $subDomain = array_shift(($HTTP_HOST));
         #pdoc-viewer-popup {
             display:none; flex-direction:column;
             position:fixed;
-            width:1000px; height:720px; min-width:400px; min-height:320px;
+            width:90vw; height:90vh; min-width:400px; min-height:320px;
             z-index:100100;
             background:#fff; border-radius:10px; overflow:hidden;
             box-shadow:0 12px 48px rgba(0,0,0,0.4);
