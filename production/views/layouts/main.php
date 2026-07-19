@@ -4327,16 +4327,17 @@ $(function(){
   width:calc(100vw - 40px); height:calc(100vh - 100px);
   min-width:500px; min-height:300px;
   z-index:100000; background:#fff; border-radius:6px;
-  box-shadow:0 8px 32px rgba(0,0,0,.45);
+  border:1px solid #d0d0d0;
+  box-shadow:0 4px 16px rgba(0,0,0,.15);
   flex-direction:column; overflow:hidden;
 }
 #gantt-win.gw-open { display:flex; }
 #gantt-win-hdr {
-  background:#fff; color:#333; padding:10px 15px;
+  background:#fff; color:#333; padding:18px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   font-family:'Nunito',sans-serif;
-  border-bottom:1px solid #e5e5e5;
+  border-bottom:1px solid #e0e0e0;
 }
 #gantt-win-hdr-btns { display:flex; align-items:center; gap:8px; }
 #gantt-win-hdr-btns button {
