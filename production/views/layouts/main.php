@@ -1905,35 +1905,6 @@ if($action=='login')
               </div>
             </div>
           </div>
-          <!-- Document Upload -->
-          <div style="border-top:1px solid #e5e5e5;margin-top:14px;padding-top:14px;">
-            <label style="font-weight:600;font-size:13px;color:#444;margin-bottom:8px;display:block;"><span class="icon-paperclip"></span> Project Documents <span style="font-weight:400;color:#999;font-size:11px;">(PDF, Word, Excel, Images)</span></label>
-            <div class="row">
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label style="font-size:12px;color:#666;">Documents</label>
-                  <input id="gpm_docs" type="file" name="project_documents[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" class="form-control" style="height:auto;padding:4px;">
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label style="font-size:12px;color:#666;">Correspondence</label>
-                  <input id="gpm_corr" type="file" name="project_correspondence[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" class="form-control" style="height:auto;padding:4px;">
-                </div>
-                <div id="gpm-corr-meta" style="display:none;">
-                  <div class="form-group" style="margin-top:6px;">
-                    <label style="font-size:12px;color:#666;">Addressee</label>
-                    <input id="gpm_addressee" type="text" class="form-control" placeholder="Name of addressee" style="height:30px;font-size:12px;">
-                  </div>
-                  <div class="form-group" style="margin-top:6px;">
-                    <label style="font-size:12px;color:#666;">Subject</label>
-                    <input id="gpm_subject" type="text" class="form-control" placeholder="Subject of correspondence" style="height:30px;font-size:12px;">
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div style="text-align:right;margin-top:12px;">
             <button type="button" id="gpm-form-cancel" class="btn btn-default" style="border-radius:20px;margin-right:6px;"><span class="icon-close"></span> Cancel</button>
             <button type="button" id="gpm-form-save" class="btn btn-primary" style="border-radius:20px;"><span class="icon-check"></span> Save Project</button>
@@ -2000,15 +1971,6 @@ if($action=='login')
     }
     $(document).on('change input','#gpm_startdate,#gpm_duration',gpmCalcEnd);
 
-    /* show/hide addressee+subject when correspondence file chosen */
-    $(document).on('change','#gpm_corr',function(){
-        if(this.files && this.files.length > 0){
-            $('#gpm-corr-meta').show();
-        } else {
-            $('#gpm-corr-meta').hide();
-            $('#gpm_addressee,#gpm_subject').val('');
-        }
-    });
 
     /* ── load project list ── */
     function gpmShowList(){
@@ -2119,10 +2081,6 @@ if($action=='login')
                 $('#gpm_client').val(d.client_name);
                 $('#gpm_location').val(d.location);
                 $('#gpm_wrkhrs').val(d.wrkhours);
-                $('#gpm_docs').val('');
-                $('#gpm_corr').val('');
-                $('#gpm_addressee,#gpm_subject').val('');
-                $('#gpm-corr-meta').hide();
                 $('.gpm-err').hide();
                 gpmShowFormPanel(true);
                 gpmLoadFiles(d.Project_Id);
@@ -2181,14 +2139,6 @@ if($action=='login')
         fd.append('wrkhrss', hrs);
         if(isEdit) fd.append('project_id', pid);
 
-        /* attach files */
-        var docsFiles = $('#gpm_docs')[0].files;
-        var corrFiles = $('#gpm_corr')[0].files;
-        for(var i=0;i<docsFiles.length;i++) fd.append('project_documents[]', docsFiles[i]);
-        for(var j=0;j<corrFiles.length;j++) fd.append('project_correspondence[]', corrFiles[j]);
-        fd.append('corr_addressee', $.trim($('#gpm_addressee').val()));
-        fd.append('corr_subject',   $.trim($('#gpm_subject').val()));
-
         var btn=$('#gpm-form-save').prop('disabled',true).text('Saving…');
         $.ajax({
             type:'POST',
@@ -2220,7 +2170,43 @@ if($action=='login')
   <div id="pdoc-header">
     <span style="font-size:15px;opacity:.85;">&#128196;</span>
     <h4>Project Documents</h4>
+    <button id="pdoc-upload-toggle" title="Upload Document" style="margin-left:auto;margin-right:8px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:20px;padding:3px 14px;font-size:12px;cursor:pointer;font-weight:600;">&#8679; Upload</button>
     <button id="pdoc-close-x">&times;</button>
+  </div>
+  <!-- Upload Panel -->
+  <div id="pdoc-upload-panel" style="display:none;background:#f7f9fc;border-bottom:1px solid #dde3ef;padding:12px 16px;">
+    <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:160px;">
+        <label style="font-size:11px;color:#666;font-weight:600;">Project <span style="color:red">*</span></label>
+        <select id="pdoc-up-project" style="height:30px;font-size:12px;border:1px solid #ccc;border-radius:4px;padding:0 6px;">
+          <option value="">— Select Project —</option>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:140px;">
+        <label style="font-size:11px;color:#666;font-weight:600;">Type <span style="color:red">*</span></label>
+        <select id="pdoc-up-type" style="height:30px;font-size:12px;border:1px solid #ccc;border-radius:4px;padding:0 6px;">
+          <option value="">— Select Type —</option>
+          <option value="documents">Document</option>
+          <option value="correspondence">Correspondence</option>
+        </select>
+      </div>
+      <div id="pdoc-up-meta" style="display:none;display:flex;gap:10px;">
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <label style="font-size:11px;color:#666;font-weight:600;">Addressee</label>
+          <input id="pdoc-up-addressee" type="text" placeholder="Name of addressee" style="height:30px;font-size:12px;border:1px solid #ccc;border-radius:4px;padding:0 8px;width:180px;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <label style="font-size:11px;color:#666;font-weight:600;">Subject</label>
+          <input id="pdoc-up-subject" type="text" placeholder="Subject" style="height:30px;font-size:12px;border:1px solid #ccc;border-radius:4px;padding:0 8px;width:200px;">
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <label style="font-size:11px;color:#666;font-weight:600;">File <span style="color:red">*</span></label>
+        <input id="pdoc-up-file" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="font-size:12px;">
+      </div>
+      <button id="pdoc-up-submit" style="height:30px;padding:0 18px;background:#1565C0;color:#fff;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">&#8679; Upload</button>
+      <span id="pdoc-up-msg" style="font-size:12px;font-weight:600;"></span>
+    </div>
   </div>
   <div id="pdoc-search-bar">
     <div class="pdoc-sf">
@@ -2312,9 +2298,12 @@ if($action=='login')
         if($('#pdoc-filter-project option').length > 1) return;
         $.ajax({ type:'POST', url:PDOC_PROJ_URL, dataType:'json', success:function(d){
             if(!d || d.error !== 'No') return;
-            var sel = $('#pdoc-filter-project');
+            var sel    = $('#pdoc-filter-project');
+            var selUp  = $('#pdoc-up-project');
             $.each(d.projects||[], function(i,p){
-                sel.append('<option value="'+p.id+'">'+$('<div>').text(p.name).html()+'</option>');
+                var opt = '<option value="'+p.id+'">'+$('<div>').text(p.name).html()+'</option>';
+                sel.append(opt);
+                selUp.append(opt);
             });
         }});
     }
@@ -2389,6 +2378,79 @@ if($action=='login')
             $vp.addClass('pdoc-open');
         }
     }
+
+    var PDOC_UPLOAD_URL = '<?php echo \yii\helpers\Url::to(["/projects/pdocupload"]); ?>';
+
+    /* ── Upload panel toggle ── */
+    $(document).on('click','#pdoc-upload-toggle', function(){
+        var $p = $('#pdoc-upload-panel');
+        if($p.is(':visible')){
+            $p.slideUp(150);
+        } else {
+            /* populate project dropdown from already-loaded list */
+            var $upProj = $('#pdoc-up-project');
+            if($upProj.find('option').length <= 1){
+                $('#pdoc-filter-project option').each(function(){
+                    if($(this).val()) $upProj.append('<option value="'+$(this).val()+'">'+$(this).text()+'</option>');
+                });
+            }
+            $p.slideDown(150);
+        }
+    });
+
+    /* show/hide Addressee+Subject when type = correspondence */
+    $(document).on('change','#pdoc-up-type', function(){
+        if($(this).val() === 'correspondence'){
+            $('#pdoc-up-meta').css('display','flex');
+        } else {
+            $('#pdoc-up-meta').hide();
+            $('#pdoc-up-addressee,#pdoc-up-subject').val('');
+        }
+    });
+
+    /* ── Upload submit ── */
+    $(document).on('click','#pdoc-up-submit', function(){
+        var pid  = $('#pdoc-up-project').val();
+        var type = $('#pdoc-up-type').val();
+        var file = $('#pdoc-up-file')[0].files;
+        var $msg = $('#pdoc-up-msg');
+        $msg.css('color','#c00').text('');
+        if(!pid)         { $msg.text('Please select a project.'); return; }
+        if(!type)        { $msg.text('Please select a type.'); return; }
+        if(!file.length) { $msg.text('Please choose a file.'); return; }
+
+        var fd = new FormData();
+        fd.append('project_id', pid);
+        fd.append('file_type',  type);
+        fd.append('addressee',  $.trim($('#pdoc-up-addressee').val()));
+        fd.append('subject',    $.trim($('#pdoc-up-subject').val()));
+        var field = (type === 'correspondence') ? 'project_correspondence[]' : 'project_documents[]';
+        for(var i=0;i<file.length;i++) fd.append(field, file[i]);
+
+        var $btn = $(this).prop('disabled',true).text('Uploading…');
+        $.ajax({
+            type:'POST', url:PDOC_UPLOAD_URL,
+            data:fd, dataType:'json', contentType:false, processData:false,
+            success:function(d){
+                $btn.prop('disabled',false).html('&#8679; Upload');
+                if(d.error !== 'No'){
+                    $msg.css('color','#c00').text(d.errortext||'Upload failed.');
+                } else {
+                    $msg.css('color','#197a3a').text('Uploaded successfully.');
+                    $('#pdoc-up-file').val('');
+                    $('#pdoc-up-addressee,#pdoc-up-subject').val('');
+                    $('#pdoc-up-meta').hide();
+                    $('#pdoc-up-type').val('');
+                    pdocSearch(); /* refresh the list */
+                    setTimeout(function(){ $msg.text(''); }, 3000);
+                }
+            },
+            error:function(xhr){
+                $btn.prop('disabled',false).html('&#8679; Upload');
+                $msg.css('color','#c00').text('Server error ('+xhr.status+').');
+            }
+        });
+    });
 
     $(document).on('click','#pdoc-nav-btn',  function(e){ e.preventDefault(); pdocShow(); });
     $(document).on('click','#pdoc-close-x',  function(){ pdocHide(); });

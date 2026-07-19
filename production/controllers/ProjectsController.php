@@ -4076,6 +4076,42 @@ class ProjectsController extends Controller
         echo json_encode(['error' => 'No', 'files' => $files]);
     }
 
+    public function actionPdocupload()
+    {
+        $uid = \Yii::$app->user->id;
+        $pid = (int)($_POST['project_id'] ?? 0);
+        if (!$pid) { echo json_encode(['error'=>'Yes','errortext'=>'No project selected.']); return; }
+
+        $type = trim($_POST['file_type'] ?? '');
+        if (!in_array($type, ['documents','correspondence'])) { echo json_encode(['error'=>'Yes','errortext'=>'Invalid file type.']); return; }
+
+        $addr = ($type === 'correspondence') ? trim($_POST['addressee'] ?? '') : '';
+        $subj = ($type === 'correspondence') ? trim($_POST['subject']   ?? '') : '';
+
+        $uploadDir = \Yii::getAlias('@webroot') . '/uploads/projects/';
+        $allowed   = ['pdf','doc','docx','xls','xlsx','jpg','jpeg','png'];
+        $db        = \Yii::$app->db;
+        $saved     = 0;
+
+        $field = ($type === 'correspondence') ? 'project_correspondence' : 'project_documents';
+        if (!empty($_FILES[$field]['name'][0])) {
+            foreach ($_FILES[$field]['name'] as $i => $origName) {
+                $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+                if (!in_array($ext, $allowed)) continue;
+                $storedName = uniqid('pf_') . '.' . $ext;
+                if (move_uploaded_file($_FILES[$field]['tmp_name'][$i], $uploadDir . $storedName)) {
+                    $db->createCommand("INSERT INTO project_files (project_id, file_type, addressee, subject, filename, original_name, uploaded_by) VALUES (:pid,:type,:addr,:subj,:fn,:on,:uid)")
+                        ->bindValues([':pid'=>$pid,':type'=>$type,':addr'=>$addr,':subj'=>$subj,':fn'=>$storedName,':on'=>$origName,':uid'=>$uid])
+                        ->execute();
+                    $saved++;
+                }
+            }
+        }
+
+        if ($saved === 0) { echo json_encode(['error'=>'Yes','errortext'=>'No valid file uploaded.']); return; }
+        echo json_encode(['error'=>'No','saved'=>$saved]);
+    }
+
     public function actionDuplicate(){
         $connection = \Yii::$app->db;
         $projectid = $_POST['projectid'];
