@@ -3380,17 +3380,14 @@ $(function(){
         _wbsWanId = d.wan_id || 0;
         if(d.iow_act_id) document.getElementById('qe-activity-id').value = d.iow_act_id;
         if(_wbsMode === 'edit'){
-          /* edit mode: reload gantt then clear for next entry */
           if(typeof window.loadGantt === 'function') window.loadGantt();
           clearActivityFields();
           _wbsMode = 'new';
           document.getElementById('qe-btn-add').style.display = '';
         } else {
-          /* new mode: just enable Add to Gantt */
-          document.getElementById('qe-btn-add').disabled = false;
           var msg = document.getElementById('qe-save-msg');
-          msg.style.color = '#27ae60'; msg.textContent = '✔ Saved — click Add to Gantt';
-          setTimeout(function(){ msg.textContent = ''; }, 3000);
+          msg.style.color = '#27ae60'; msg.textContent = '✔ Saved';
+          setTimeout(function(){ msg.textContent = ''; }, 2000);
         }
       },
       error: function(){
@@ -3402,21 +3399,41 @@ $(function(){
 
   /* ── Add to Gantt ── */
   document.getElementById('qe-btn-add').addEventListener('click', function(){
-    var payload = collectPayload();
-    if(!_wbsWanId){ alert('Please Save first.'); return; }
-    payload.wan_id = _wbsWanId;
+    var actText = document.getElementById('qe-activity-text').value.trim();
+    if(!actText){ alert('Please enter or select an Activity.'); return; }
 
     var btn = document.getElementById('qe-btn-add');
     btn.disabled = true; btn.textContent = 'Adding…';
 
+    var payload = collectPayload();
+
+    /* save first to get wan_id, then immediately add to gantt */
     $.ajax({
-      type:'POST', url:'../projectsmain/wbsadd',
+      type:'POST', url:'../projectsmain/wbssave',
       data:{ payload: JSON.stringify(payload) }, dataType:'json',
-      success: function(d){
-        btn.disabled = false; btn.textContent = '+ Add to Gantt';
-        if(d.error && d.error !== 'No'){ alert('Error: ' + d.error); return; }
-        if(typeof window.loadGantt === 'function') window.loadGantt();
-        clearActivityFields();
+      success: function(ds){
+        if(ds.error && ds.error !== 'No'){
+          btn.disabled = false; btn.textContent = '+ Add to Gantt';
+          alert('Save error: ' + ds.error); return;
+        }
+        _wbsWanId = ds.wan_id || 0;
+        if(ds.iow_act_id) document.getElementById('qe-activity-id').value = ds.iow_act_id;
+        payload.wan_id = _wbsWanId;
+
+        $.ajax({
+          type:'POST', url:'../projectsmain/wbsadd',
+          data:{ payload: JSON.stringify(payload) }, dataType:'json',
+          success: function(da){
+            btn.disabled = false; btn.textContent = '+ Add to Gantt';
+            if(da.error && da.error !== 'No'){ alert('Error: ' + da.error); return; }
+            if(typeof window.loadGantt === 'function') window.loadGantt();
+            clearActivityFields();
+          },
+          error: function(){
+            btn.disabled = false; btn.textContent = '+ Add to Gantt';
+            alert('Server error — please try again.');
+          }
+        });
       },
       error: function(){
         btn.disabled = false; btn.textContent = '+ Add to Gantt';
