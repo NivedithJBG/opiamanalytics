@@ -3175,7 +3175,7 @@ $(function(){
           alert(d.error);
         } else {
           closeModal();
-          if(typeof window.loadGantt === 'function') window.loadGantt();
+          if(typeof window.reloadGantt === 'function') window.reloadGantt();
         }
       },
       error: function(){ btn.disabled = false; alert('Delete failed. Please try again.'); }
@@ -3377,7 +3377,7 @@ $(function(){
         _wbsWanId = d.wan_id || 0;
         if(d.iow_act_id) document.getElementById('qe-activity-id').value = d.iow_act_id;
         if(_wbsMode === 'edit'){
-          if(typeof window.loadGantt === 'function') window.loadGantt();
+          if(typeof window.reloadGantt === 'function') window.reloadGantt();
           clearActivityFields();
           _wbsMode = 'new';
           document.getElementById('qe-btn-add').style.display = '';
@@ -3410,7 +3410,7 @@ $(function(){
       success: function(d){
         btn.disabled = false; btn.textContent = '+ Add to Gantt';
         if(d.error && d.error !== 'No'){ alert(d.error); return; }
-        if(typeof window.loadGantt === 'function') window.loadGantt();
+        if(typeof window.reloadGantt === 'function') window.reloadGantt();
         closeModal();
       },
       error: function(x){ btn.disabled = false; btn.textContent = '+ Add to Gantt'; alert('Failed: ' + x.status); }
@@ -3501,6 +3501,31 @@ $(function(){
     win.style.height=r.height+'px'; return r;
   }
 
+  var _ganttPid = (document.getElementById('gantt-win-open') || {}).getAttribute ? document.getElementById('gantt-win-open').getAttribute('data-projectid') : '';
+  var _ganttUrl = '<?php echo Yii::$app->urlManager->createUrl("projectsmain/newganttchart")?>' + '?layout=false';
+
+  function _loadGanttWin(pid) {
+    var url = _ganttUrl + '&id=' + (pid || _ganttPid);
+    $('#gantt-win-body').html('<div id="gantt-win-loading">Loading Gantt chart&hellip;</div>');
+    $.ajax({ url: url, success: function(html){
+      $('#gantt-win-body').html(html);
+    }, error: function(){
+      $('#gantt-win-body').html('<div style="padding:30px;color:red;">Failed to load Gantt.</div>');
+    }});
+  }
+
+  // Expose for external callers (WBS modal Add to Gantt / Delete)
+  window.reloadGantt = function() {
+    if(win.classList.contains('gw-open')){
+      // Floating gantt window is open — reload its content
+      _loaded = true;
+      _loadGanttWin();
+    } else if(typeof window.loadGantt === 'function'){
+      // Full-page gantt view
+      window.loadGantt();
+    }
+  };
+
   // Open
   var openBtn = document.getElementById('gantt-win-open');
   if(openBtn){
@@ -3509,13 +3534,7 @@ $(function(){
       win.classList.add('gw-open');
       if(!_loaded){
         _loaded = true;
-        var pid = this.getAttribute('data-projectid');
-        var url = '<?php echo Yii::$app->urlManager->createUrl("projectsmain/newganttchart")?>' + '?id=' + pid + '&layout=false';
-        $.ajax({ url: url, success: function(html){
-          $('#gantt-win-body').html(html);
-        }, error: function(){
-          $('#gantt-win-body').html('<div style="padding:30px;color:red;">Failed to load Gantt.</div>');
-        }});
+        _loadGanttWin(this.getAttribute('data-projectid'));
       }
     });
   }
