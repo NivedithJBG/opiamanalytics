@@ -1921,6 +1921,14 @@ if($action=='login')
                   <label style="font-size:12px;color:#666;">Correspondence</label>
                   <input id="gpm_corr" type="file" name="project_correspondence[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" class="form-control" style="height:auto;padding:4px;">
                 </div>
+                <div class="form-group" style="margin-top:6px;">
+                  <label style="font-size:12px;color:#666;">Addressee</label>
+                  <input id="gpm_addressee" type="text" class="form-control" placeholder="Name of addressee" style="height:30px;font-size:12px;">
+                </div>
+                <div class="form-group" style="margin-top:6px;">
+                  <label style="font-size:12px;color:#666;">Subject</label>
+                  <input id="gpm_subject" type="text" class="form-control" placeholder="Subject of correspondence" style="height:30px;font-size:12px;">
+                </div>
               </div>
             </div>
             <div id="gpm-existing-files" style="display:none;">
@@ -2106,6 +2114,8 @@ if($action=='login')
                 $('#gpm_wrkhrs').val(d.wrkhours);
                 $('#gpm_docs').val('');
                 $('#gpm_corr').val('');
+                $('#gpm_addressee').val('');
+                $('#gpm_subject').val('');
                 $('.gpm-err').hide();
                 gpmShowFormPanel(true);
                 gpmLoadFiles(d.Project_Id);
@@ -2169,6 +2179,8 @@ if($action=='login')
         var corrFiles = $('#gpm_corr')[0].files;
         for(var i=0;i<docsFiles.length;i++) fd.append('project_documents[]', docsFiles[i]);
         for(var j=0;j<corrFiles.length;j++) fd.append('project_correspondence[]', corrFiles[j]);
+        fd.append('corr_addressee', $.trim($('#gpm_addressee').val()));
+        fd.append('corr_subject',   $.trim($('#gpm_subject').val()));
 
         var btn=$('#gpm-form-save').prop('disabled',true).text('Saving…');
         $.ajax({

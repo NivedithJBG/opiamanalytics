@@ -414,6 +414,8 @@ class ProjectsController extends Controller
 
                 $uploadDir = Yii::getAlias('@webroot') . '/uploads/projects/';
                 $allowed = ['pdf','doc','docx','xls','xlsx','jpg','jpeg','png'];
+                $corrAddresse = trim($_POST['corr_addressee'] ?? '');
+                $corrSubject  = trim($_POST['corr_subject'] ?? '');
                 foreach (['project_documents' => 'documents', 'project_correspondence' => 'correspondence'] as $field => $type) {
                     if (!empty($_FILES[$field]['name'][0])) {
                         foreach ($_FILES[$field]['name'] as $i => $origName) {
@@ -421,8 +423,10 @@ class ProjectsController extends Controller
                             if (!in_array($ext, $allowed)) continue;
                             $storedName = uniqid('pf_') . '.' . $ext;
                             move_uploaded_file($_FILES[$field]['tmp_name'][$i], $uploadDir . $storedName);
-                            $connection->createCommand("INSERT INTO project_files (project_id, file_type, filename, original_name, uploaded_by) VALUES (:pid,:type,:fn,:on,:uid)")
-                                ->bindValues([':pid' => $model->Project_Id, ':type' => $type, ':fn' => $storedName, ':on' => $origName, ':uid' => $uid])
+                            $addr = ($type === 'correspondence') ? $corrAddresse : '';
+                            $subj = ($type === 'correspondence') ? $corrSubject  : '';
+                            $connection->createCommand("INSERT INTO project_files (project_id, file_type, addressee, subject, filename, original_name, uploaded_by) VALUES (:pid,:type,:addr,:subj,:fn,:on,:uid)")
+                                ->bindValues([':pid' => $model->Project_Id, ':type' => $type, ':addr' => $addr, ':subj' => $subj, ':fn' => $storedName, ':on' => $origName, ':uid' => $uid])
                                 ->execute();
                         }
                     }
@@ -483,6 +487,8 @@ class ProjectsController extends Controller
             $uploadDir = Yii::getAlias('@webroot') . '/uploads/projects/';
             $allowed = ['pdf','doc','docx','xls','xlsx','jpg','jpeg','png'];
             $uid = Yii::$app->user->Id;
+            $corrAddresse = trim($_POST['corr_addressee'] ?? '');
+            $corrSubject  = trim($_POST['corr_subject'] ?? '');
             foreach (['project_documents' => 'documents', 'project_correspondence' => 'correspondence'] as $field => $type) {
                 if (!empty($_FILES[$field]['name'][0])) {
                     foreach ($_FILES[$field]['name'] as $i => $origName) {
@@ -490,8 +496,10 @@ class ProjectsController extends Controller
                         if (!in_array($ext, $allowed)) continue;
                         $storedName = uniqid('pf_') . '.' . $ext;
                         move_uploaded_file($_FILES[$field]['tmp_name'][$i], $uploadDir . $storedName);
-                        $connection->createCommand("INSERT INTO project_files (project_id, file_type, filename, original_name, uploaded_by) VALUES (:pid,:type,:fn,:on,:uid)")
-                            ->bindValues([':pid' => $id, ':type' => $type, ':fn' => $storedName, ':on' => $origName, ':uid' => $uid])
+                        $addr = ($type === 'correspondence') ? $corrAddresse : '';
+                        $subj = ($type === 'correspondence') ? $corrSubject  : '';
+                        $connection->createCommand("INSERT INTO project_files (project_id, file_type, addressee, subject, filename, original_name, uploaded_by) VALUES (:pid,:type,:addr,:subj,:fn,:on,:uid)")
+                            ->bindValues([':pid' => $id, ':type' => $type, ':addr' => $addr, ':subj' => $subj, ':fn' => $storedName, ':on' => $origName, ':uid' => $uid])
                             ->execute();
                     }
                 }
