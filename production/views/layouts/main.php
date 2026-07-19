@@ -140,7 +140,8 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-copy.duplicateProject,
         .round-icons .icon-tools.overNow4,
         .round-icons .icon-wrench.overNow,
-        .round-icons .icon-document.overNow8,
+        .round-icons .pdoc-btn,
+
         .round-icons .perf-dashboard-btn,
         .round-icons .cost-dashboard-btn,
         .round-icons .qe-btn { color: #fff !important; }
@@ -150,7 +151,6 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-copy.duplicateProject { background-color: #E65C00 !important; }
         .round-icons .icon-tools.overNow4    { background-color: #CC0000 !important; }
         .round-icons .icon-wrench.overNow    { background-color: #555555 !important; }
-        .round-icons .icon-document.overNow8 { background-color: #000000 !important; }
         .round-icons .perf-dashboard-btn     { background-color: #2e7d32 !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
         .round-icons .cost-dashboard-btn     { background-color: #7b1fa2 !important; height: 26px !important; width: 26px !important; font-size: 9px !important; padding: 0 !important; box-sizing: content-box !important; }
         .round-icons .qe-btn                 { background-color: #00838f !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
@@ -160,10 +160,108 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-copy.duplicateProject:hover, .round-icons .icon-copy.duplicateProject:focus { background: #b84400 !important; }
         .round-icons .icon-tools.overNow4:hover,    .round-icons .icon-tools.overNow4:focus    { background: #990000 !important; }
         .round-icons .icon-wrench.overNow:hover,    .round-icons .icon-wrench.overNow:focus    { background: #333333 !important; }
-        .round-icons .icon-document.overNow8:hover, .round-icons .icon-document.overNow8:focus { background: #222222 !important; }
         .round-icons .perf-dashboard-btn:hover,     .round-icons .perf-dashboard-btn:focus     { background: #1b5e20 !important; }
         .round-icons .cost-dashboard-btn:hover,     .round-icons .cost-dashboard-btn:focus     { background: #4a148c !important; }
         .round-icons .qe-btn:hover,                 .round-icons .qe-btn:focus                 { background: #005f6b !important; }
+        .round-icons .pdoc-btn                      { background-color: #1565C0 !important; }
+        .round-icons .pdoc-btn:hover,               .round-icons .pdoc-btn:focus               { background: #0d47a1 !important; }
+
+        /* ── Project Documents Floating Popup ── */
+        #pdoc-popup {
+            display:none; flex-direction:column;
+            position:fixed;
+            top:80px; left:50%; transform:translateX(-50%);
+            width:900px; height:520px; min-width:420px; min-height:300px;
+            z-index:99999;
+            background:#fff; border-radius:10px; overflow:hidden;
+            box-shadow:0 8px 40px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.12);
+        }
+        #pdoc-popup.pdoc-open { display:flex; }
+        #pdoc-header {
+            background:linear-gradient(135deg,#1565C0,#0d47a1);
+            color:#fff; padding:10px 16px; display:flex; align-items:center; gap:8px;
+            cursor:move; user-select:none; flex-shrink:0;
+        }
+        #pdoc-header h4 { margin:0; font-size:14px; font-weight:700; flex:1; }
+        #pdoc-close-x {
+            background:rgba(255,255,255,0.2); border:none; color:#fff; border-radius:50%;
+            width:24px; height:24px; font-size:15px; cursor:pointer; line-height:24px; text-align:center; flex-shrink:0;
+        }
+        #pdoc-close-x:hover { background:rgba(255,255,255,0.35); }
+        #pdoc-search-bar {
+            background:#f5f7fa; border-bottom:1px solid #e0e0e0;
+            padding:10px 14px; display:flex; gap:8px; flex-wrap:wrap; flex-shrink:0; align-items:flex-end;
+        }
+        #pdoc-search-bar .pdoc-sf { display:flex; flex-direction:column; gap:2px; }
+        #pdoc-search-bar .pdoc-sf label { font-size:10px; font-weight:600; color:#555; margin:0; }
+        #pdoc-search-bar select, #pdoc-search-bar input[type=text], #pdoc-search-bar input[type=date] {
+            border:1px solid #ccc; border-radius:5px; padding:4px 8px; font-size:12px;
+            height:28px; background:#fff; outline:none;
+        }
+        #pdoc-search-bar select:focus, #pdoc-search-bar input:focus { border-color:#1565C0; }
+        #pdoc-search-btn {
+            background:#1565C0; color:#fff; border:none; border-radius:5px;
+            padding:0 14px; height:28px; font-size:12px; font-weight:600; cursor:pointer; align-self:flex-end;
+        }
+        #pdoc-search-btn:hover { background:#0d47a1; }
+        #pdoc-clear-btn {
+            background:#eee; color:#333; border:none; border-radius:5px;
+            padding:0 10px; height:28px; font-size:12px; cursor:pointer; align-self:flex-end;
+        }
+        #pdoc-clear-btn:hover { background:#ddd; }
+        #pdoc-table-wrap { flex:1; overflow-y:auto; padding:10px 14px; min-height:120px; height:0; }
+        #pdoc-table-wrap table { width:100%; border-collapse:collapse; font-size:12px; }
+        #pdoc-table-wrap thead th {
+            background:#1565C0; color:#fff; padding:8px 10px; text-align:left;
+            font-weight:600; font-size:11px; position:sticky; top:0; z-index:1;
+        }
+        #pdoc-table-wrap tbody tr { border-bottom:1px solid #f0f0f0; transition:background .15s; }
+        #pdoc-table-wrap tbody tr:hover { background:#f0f6ff; }
+        #pdoc-table-wrap tbody td { padding:7px 10px; color:#333; vertical-align:middle; }
+        .pdoc-type-badge {
+            display:inline-block; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:600;
+        }
+        .pdoc-badge-doc  { background:#e3f2fd; color:#1565C0; }
+        .pdoc-badge-corr { background:#f3e5f5; color:#7b1fa2; }
+        .pdoc-view-btn {
+            background:#1565C0; color:#fff; border:none; border-radius:4px;
+            padding:3px 10px; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap;
+        }
+        .pdoc-view-btn:hover { background:#0d47a1; }
+        #pdoc-empty { display:none; text-align:center; color:#888; padding:30px; font-size:13px; }
+        #pdoc-loading { display:none; text-align:center; color:#888; padding:30px; font-size:13px; }
+        /* resize handle hint */
+        #pdoc-popup .ui-resizable-se { background:#1565C0; opacity:.4; border-radius:0 0 8px 0; }
+        #pdoc-popup .ui-resizable-se:hover { opacity:.7; }
+
+        /* ── File Viewer Floating Popup ── */
+        #pdoc-viewer-popup {
+            display:none; flex-direction:column;
+            position:fixed;
+            top:60px; left:calc(50% + 40px);
+            width:780px; height:560px; min-width:320px; min-height:260px;
+            z-index:199999;
+            background:#fff; border-radius:10px; overflow:hidden;
+            box-shadow:0 12px 48px rgba(0,0,0,0.4);
+        }
+        #pdoc-viewer-popup.pdoc-open { display:flex; }
+        #pdoc-viewer-header {
+            background:#1565C0; color:#fff; padding:9px 14px;
+            display:flex; align-items:center; gap:8px; cursor:move; user-select:none; flex-shrink:0;
+        }
+        #pdoc-viewer-title { flex:1; font-size:12px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        #pdoc-viewer-close {
+            background:rgba(255,255,255,0.2); border:none; color:#fff; border-radius:50%;
+            width:22px; height:22px; font-size:14px; cursor:pointer; line-height:22px; text-align:center; flex-shrink:0;
+        }
+        #pdoc-viewer-close:hover { background:rgba(255,255,255,0.35); }
+        #pdoc-viewer-body { flex:1; overflow:hidden; min-height:200px; height:0; }
+        #pdoc-viewer-body iframe { width:100%; height:100%; border:none; display:block; }
+        #pdoc-viewer-body img { max-width:100%; max-height:100%; object-fit:contain; display:block; margin:auto; }
+        #pdoc-viewer-body .pdoc-no-preview {
+            display:flex; align-items:center; justify-content:center; height:100%;
+            flex-direction:column; gap:12px; color:#555; padding:30px;
+        }
     </style>
 
     <?php $this->registerCsrfMetaTags() ?>
@@ -345,6 +443,9 @@ if($action=='login')
                 <li>
                     <a class="icon-add" id="add-project-nav-btn" title="Projects" href="#" style="font-size:18px;"></a>
                 </li>
+                <li>
+                    <a class="icon-document pdoc-btn" id="pdoc-nav-btn" title="Project Documents" href="#"></a>
+                </li>
                 <?php if($ProjectId && Yii::$app->controller->id != 'procurement') {  ?>
                 <li>
                     <a class="icon-chart3" id="gantt-win-open" title="Gantt Chart" href="#" data-projectid="<?php echo $ProjectId?>"></a>
@@ -396,7 +497,6 @@ if($action=='login')
                                     </a>
                                 </li>
                                 <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
-                                <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                                             <li style="'.$dashboard.'"><a class="icon-dashboard prjcet-dashboard" title="Dashboard" href="'.Yii::$app->urlManager->createUrl("projectsmain/dashboard").'">
                                     </a>
                                 </li>';
@@ -412,7 +512,6 @@ if($action=='login')
                         </a>
                     </li>
                     <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
-                    <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
@@ -428,7 +527,6 @@ if($action=='login')
                         </a>
                     </li>
                     <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
-                    <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
@@ -501,7 +599,6 @@ if($action=='login')
                         </a>
                     </li>
                     <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
-                    <li><a class="icon-document overNow8" title="Project Documents" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
@@ -2100,6 +2197,195 @@ if($action=='login')
 })();
 </script>
 <!-- ── End Projects Manager Overlay ───────────────────────────────────── -->
+
+<!-- ── Project Documents Floating Popup ──────────────────────────────── -->
+<div id="pdoc-popup">
+  <div id="pdoc-header">
+    <span style="font-size:15px;opacity:.85;">&#128196;</span>
+    <h4>Project Documents</h4>
+    <button id="pdoc-close-x">&times;</button>
+  </div>
+  <div id="pdoc-search-bar">
+    <div class="pdoc-sf">
+      <label>Project</label>
+      <select id="pdoc-filter-project" style="min-width:140px;">
+        <option value="">All Projects</option>
+      </select>
+    </div>
+    <div class="pdoc-sf">
+      <label>Addressee</label>
+      <input type="text" id="pdoc-filter-addressee" placeholder="Addressee…" style="width:120px;">
+    </div>
+    <div class="pdoc-sf">
+      <label>Subject</label>
+      <input type="text" id="pdoc-filter-subject" placeholder="Subject…" style="width:120px;">
+    </div>
+    <div class="pdoc-sf">
+      <label>From</label>
+      <input type="date" id="pdoc-filter-from" style="width:118px;">
+    </div>
+    <div class="pdoc-sf">
+      <label>To</label>
+      <input type="date" id="pdoc-filter-to" style="width:118px;">
+    </div>
+    <div class="pdoc-sf">
+      <label>Type</label>
+      <select id="pdoc-filter-type" style="min-width:110px;">
+        <option value="">All Types</option>
+        <option value="documents">Documents</option>
+        <option value="correspondence">Correspondence</option>
+      </select>
+    </div>
+    <button id="pdoc-search-btn">Search</button>
+    <button id="pdoc-clear-btn">Clear</button>
+  </div>
+  <div id="pdoc-table-wrap">
+    <div id="pdoc-loading">Loading…</div>
+    <div id="pdoc-empty">No documents found.</div>
+    <table id="pdoc-table" style="display:none;">
+      <thead>
+        <tr>
+          <th style="width:90px;">Date</th>
+          <th>Project</th>
+          <th>Addressee</th>
+          <th>Subject</th>
+          <th style="width:100px;">Type</th>
+          <th style="width:90px;">File</th>
+          <th style="width:60px;text-align:center;">View</th>
+        </tr>
+      </thead>
+      <tbody id="pdoc-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- File Viewer Floating Popup -->
+<div id="pdoc-viewer-popup">
+  <div id="pdoc-viewer-header">
+    <span id="pdoc-viewer-title"></span>
+    <button id="pdoc-viewer-close">&times;</button>
+  </div>
+  <div id="pdoc-viewer-body"></div>
+</div>
+
+<script>
+(function(){
+    var PDOC_LIST_URL  = '<?php echo \yii\helpers\Url::to(["/projects/pdoclist"]); ?>';
+    var PDOC_PROJ_URL  = '<?php echo \yii\helpers\Url::to(["/projects/pdocprojects"]); ?>';
+    var PDOC_FILE_BASE = '/uploads/projects/';
+    var pdocInited = false, pdocViewerInited = false;
+
+    function pdocShow(){
+        var $p = $('#pdoc-popup');
+        if(!pdocInited){
+            $p.draggable({ handle:'#pdoc-header', containment:'window', scroll:false });
+            $p.resizable({ minWidth:420, minHeight:280, handles:'all' });
+            pdocInited = true;
+        }
+        $p.addClass('pdoc-open');
+        pdocLoadProjects();
+        pdocSearch();
+    }
+
+    function pdocHide(){
+        $('#pdoc-popup').removeClass('pdoc-open');
+    }
+
+    function pdocLoadProjects(){
+        if($('#pdoc-filter-project option').length > 1) return;
+        $.ajax({ type:'POST', url:PDOC_PROJ_URL, dataType:'json', success:function(d){
+            if(!d || d.error !== 'No') return;
+            var sel = $('#pdoc-filter-project');
+            $.each(d.projects||[], function(i,p){
+                sel.append('<option value="'+p.id+'">'+$('<div>').text(p.name).html()+'</option>');
+            });
+        }});
+    }
+
+    function pdocSearch(){
+        $('#pdoc-loading').show();
+        $('#pdoc-empty').hide();
+        $('#pdoc-table').hide();
+        $('#pdoc-tbody').empty();
+        $.ajax({
+            type:'POST', url:PDOC_LIST_URL, dataType:'json',
+            data:{
+                project_id : $('#pdoc-filter-project').val(),
+                addressee  : $('#pdoc-filter-addressee').val(),
+                subject    : $('#pdoc-filter-subject').val(),
+                date_from  : $('#pdoc-filter-from').val(),
+                date_to    : $('#pdoc-filter-to').val(),
+                file_type  : $('#pdoc-filter-type').val()
+            },
+            success:function(d){
+                $('#pdoc-loading').hide();
+                if(!d || d.error!=='No' || !d.files || !d.files.length){ $('#pdoc-empty').show(); return; }
+                var rows='';
+                $.each(d.files,function(i,f){
+                    var badge = f.file_type==='documents'
+                        ? '<span class="pdoc-type-badge pdoc-badge-doc">Document</span>'
+                        : '<span class="pdoc-type-badge pdoc-badge-corr">Correspondence</span>';
+                    var fn   = $('<div>').text(f.original_name).html();
+                    var addr = $('<div>').text(f.addressee||'—').html();
+                    var subj = $('<div>').text(f.subject||'—').html();
+                    var proj = $('<div>').text(f.project_name||'—').html();
+                    rows += '<tr>'
+                        +'<td style="white-space:nowrap;">'+f.uploaded_at+'</td>'
+                        +'<td>'+proj+'</td>'
+                        +'<td>'+addr+'</td>'
+                        +'<td>'+subj+'</td>'
+                        +'<td>'+badge+'</td>'
+                        +'<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+fn+'">'+fn+'</td>'
+                        +'<td style="text-align:center;"><button class="pdoc-view-btn" data-fn="'+f.filename+'" data-name="'+fn+'">View</button></td>'
+                        +'</tr>';
+                });
+                $('#pdoc-tbody').html(rows);
+                $('#pdoc-table').show();
+            },
+            error:function(){ $('#pdoc-loading').hide(); $('#pdoc-empty').show(); }
+        });
+    }
+
+    function pdocViewFile(filename, displayName){
+        var url = PDOC_FILE_BASE + filename;
+        var ext = filename.split('.').pop().toLowerCase();
+        var $body = $('#pdoc-viewer-body');
+        var $vp   = $('#pdoc-viewer-popup');
+        $body.empty();
+        $('#pdoc-viewer-title').text(displayName);
+        if(ext==='pdf'){
+            $body.html('<iframe src="'+url+'" style="width:100%;height:100%;border:none;display:block;"></iframe>');
+        } else if(['jpg','jpeg','png','gif','bmp','webp','svg'].indexOf(ext)>=0){
+            $body.html('<img src="'+url+'" alt="'+displayName+'" style="max-width:100%;max-height:100%;object-fit:contain;display:block;margin:auto;">');
+        } else {
+            $body.html('<div class="pdoc-no-preview"><div style="font-size:44px;">&#128196;</div><div>Preview not available.</div><a href="'+url+'" target="_blank" style="color:#1565C0;font-weight:600;">Download / Open in new tab</a></div>');
+        }
+        if(!pdocViewerInited){
+            $vp.draggable({ handle:'#pdoc-viewer-header', containment:'window', scroll:false });
+            $vp.resizable({ minWidth:320, minHeight:260, handles:'all' });
+            pdocViewerInited = true;
+        }
+        $vp.addClass('pdoc-open');
+    }
+
+    $(document).on('click','#pdoc-nav-btn',  function(e){ e.preventDefault(); pdocShow(); });
+    $(document).on('click','#pdoc-close-x',  function(){ pdocHide(); });
+    $(document).on('click','#pdoc-search-btn',function(){ pdocSearch(); });
+    $(document).on('click','#pdoc-clear-btn', function(){
+        $('#pdoc-filter-project,#pdoc-filter-type').val('');
+        $('#pdoc-filter-addressee,#pdoc-filter-subject,#pdoc-filter-from,#pdoc-filter-to').val('');
+        pdocSearch();
+    });
+    $(document).on('click','.pdoc-view-btn', function(){
+        pdocViewFile($(this).data('fn'), $(this).data('name'));
+    });
+    $(document).on('click','#pdoc-viewer-close', function(){
+        $('#pdoc-viewer-popup').removeClass('pdoc-open');
+        $('#pdoc-viewer-body').empty();
+    });
+})();
+</script>
+<!-- ── End Project Documents Floating Popup ───────────────────────────── -->
 
 </body>
 </html>

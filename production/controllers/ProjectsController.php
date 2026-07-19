@@ -3987,6 +3987,90 @@ class ProjectsController extends Controller
         }
     }
 
+    public function actionPdocprojects()
+    {
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid = \Yii::$app->user->id;
+        $row = \app\models\User::findOne($uid);
+        $db  = \Yii::$app->db;
+        if ($row && $row->superuser == 1) {
+            $projects = $db->createCommand(
+                "SELECT Project_Id AS id, Name AS name FROM projects WHERE status='0' AND Project_Delete_Status='0' ORDER BY Name ASC"
+            )->queryAll();
+        } else {
+            $projects = $db->createCommand(
+                "SELECT p.Project_Id AS id, p.Name AS name FROM projects p
+                 INNER JOIN user_projects up ON p.Project_Id = up.projectid
+                 WHERE up.userid = :uid AND p.status='0' AND p.Project_Delete_Status='0' ORDER BY p.Name ASC",
+                [':uid' => $uid]
+            )->queryAll();
+        }
+        return ['error' => 'No', 'projects' => $projects];
+    }
+
+    public function actionPdoclist()
+    {
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $db = \Yii::$app->db;
+
+        $where = ['1=1'];
+        $params = [];
+
+        $projectId = (int)($_POST['project_id'] ?? 0);
+        if ($projectId) {
+            $where[] = 'pf.project_id = :pid';
+            $params[':pid'] = $projectId;
+        }
+
+        $addressee = trim($_POST['addressee'] ?? '');
+        if ($addressee !== '') {
+            $where[] = 'pf.addressee LIKE :addr';
+            $params[':addr'] = '%' . $addressee . '%';
+        }
+
+        $subject = trim($_POST['subject'] ?? '');
+        if ($subject !== '') {
+            $where[] = 'pf.subject LIKE :subj';
+            $params[':subj'] = '%' . $subject . '%';
+        }
+
+        $dateFrom = trim($_POST['date_from'] ?? '');
+        if ($dateFrom !== '') {
+            $where[] = 'DATE(pf.uploaded_at) >= :dfrom';
+            $params[':dfrom'] = $dateFrom;
+        }
+
+        $dateTo = trim($_POST['date_to'] ?? '');
+        if ($dateTo !== '') {
+            $where[] = 'DATE(pf.uploaded_at) <= :dto';
+            $params[':dto'] = $dateTo;
+        }
+
+        $fileType = trim($_POST['file_type'] ?? '');
+        if ($fileType !== '') {
+            $where[] = 'pf.file_type = :ftype';
+            $params[':ftype'] = $fileType;
+        }
+
+        $whereStr = implode(' AND ', $where);
+
+        $files = $db->createCommand(
+            "SELECT pf.id, pf.filename, pf.original_name, pf.file_type,
+                    COALESCE(pf.addressee,'') AS addressee,
+                    COALESCE(pf.subject,'') AS subject,
+                    DATE_FORMAT(pf.uploaded_at,'%d %b %Y') AS uploaded_at,
+                    p.Name AS project_name
+             FROM project_files pf
+             JOIN projects p ON p.Project_Id = pf.project_id
+             WHERE $whereStr
+             ORDER BY pf.uploaded_at DESC
+             LIMIT 500",
+            $params
+        )->queryAll();
+
+        return ['error' => 'No', 'files' => $files];
+    }
+
     public function actionDuplicate(){
         $connection = \Yii::$app->db;
         $projectid = $_POST['projectid'];
