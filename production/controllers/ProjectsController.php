@@ -388,12 +388,14 @@ class ProjectsController extends Controller
                 $sql = "UPDATE projects SET itemtype='project' WHERE Project_Id='" . $model->Project_Id . "' ";
                 $command = $connection->createCommand($sql);
                 $dataReader = $command->query();
-                $sql = "UPDATE accounts_item set projectid='" . $model->Project_Id . "' where id='" . $_POST['cashaccount'] . "' ";
-                $command = $connection->createCommand($sql);
-                $dataReader = $command->query();
-                $sql = "UPDATE accounts_item set projectid='" . $model->Project_Id . "' where id='" . $_POST['bankaccount'] . "' ";
-                $command = $connection->createCommand($sql);
-                $dataReader = $command->query();
+                if (!empty($_POST['cashaccount'])) {
+                    $sql = "UPDATE accounts_item set projectid='" . $model->Project_Id . "' where id='" . $_POST['cashaccount'] . "' ";
+                    $connection->createCommand($sql)->query();
+                }
+                if (!empty($_POST['bankaccount'])) {
+                    $sql = "UPDATE accounts_item set projectid='" . $model->Project_Id . "' where id='" . $_POST['bankaccount'] . "' ";
+                    $connection->createCommand($sql)->query();
+                }
 
 
                 $uid = Yii::$app->user->Id;
