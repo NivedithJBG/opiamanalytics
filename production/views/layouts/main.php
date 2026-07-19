@@ -2242,9 +2242,8 @@ if($action=='login')
           <th style="width:90px;">Date</th>
           <th>Project</th>
           <th>Addressee</th>
-          <th>Subject</th>
+          <th>Subject / File</th>
           <th style="width:100px;">Type</th>
-          <th style="width:90px;">File</th>
           <th style="width:60px;text-align:center;">View</th>
         </tr>
       </thead>
@@ -2326,15 +2325,17 @@ if($action=='login')
                         : '<span class="pdoc-type-badge pdoc-badge-corr">Correspondence</span>';
                     var fn   = $('<div>').text(f.original_name).html();
                     var addr = $('<div>').text(f.addressee||'—').html();
-                    var subj = $('<div>').text(f.subject||'—').html();
+                    var subj = f.subject ? $('<div>').text(f.subject).html() : '';
                     var proj = $('<div>').text(f.project_name||'—').html();
+                    var subjCell = subj
+                        ? subj + '<div style="font-size:10px;color:#999;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+fn+'">'+fn+'</div>'
+                        : '<span style="color:#999;">'+fn+'</span>';
                     rows += '<tr>'
                         +'<td style="white-space:nowrap;">'+f.uploaded_at+'</td>'
                         +'<td>'+proj+'</td>'
                         +'<td>'+addr+'</td>'
-                        +'<td>'+subj+'</td>'
+                        +'<td>'+subjCell+'</td>'
                         +'<td>'+badge+'</td>'
-                        +'<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+fn+'">'+fn+'</td>'
                         +'<td style="text-align:center;"><button class="pdoc-view-btn" data-fn="'+f.filename+'" data-name="'+fn+'">View</button></td>'
                         +'</tr>';
                 });
