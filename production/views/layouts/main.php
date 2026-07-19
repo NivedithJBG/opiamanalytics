@@ -3266,7 +3266,6 @@ document.addEventListener('DOMContentLoaded', function(){
       data:{ activity_id: actId },
       success: function(data){
         if(data.unit){ document.getElementById('qe-unit').value = data.unit; }
-        if(data.qty) { document.getElementById('qe-qty').value  = data.qty;  }
         if(data.sch_unit){
           document.getElementById('qe-sch-unit').value = data.sch_unit;
           document.getElementById('qe-sch-unit').classList.remove('qe-needs-data');
