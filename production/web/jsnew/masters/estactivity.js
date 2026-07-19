@@ -286,8 +286,7 @@ $(document).on( "click", ".cancelactivity", function(){
      $('#saveestactivity').html('<span class="icon-check"></span> Add Activity');
 });
 
-$(document).on('click', '.editactivitybutton', function(){
-    var idval = $(this).data('id');
+function alEditActivity(idval){
     $.ajax({
         type: 'POST',
         url: '../projects/getactivityforedit',
@@ -338,13 +337,11 @@ $(document).on('click', '.editactivitybutton', function(){
                 $('#saveestactivity').html('<span class="icon-check"></span> Update Activity');
                 $('#alAddActivityTitle').text('Edit Activity');
                 window._alEditMode = true;
-                var $m = $('#alAddActivityPopup');
-                if(!$m.length){ alert('Popup not found'); return; }
-                $m.modal('show');
+                $('#alAddActivityPopup').modal('show');
             }
         }
     });
-});
+}
 
  $(document).on( "click", "#resourceallocation", function(){
 
