@@ -505,6 +505,9 @@ class ProjectsmainController extends Controller
 
         if (!$actNameInput) return ['error' => 'Activity name is required'];
 
+        // if no IOW group name supplied, default to the activity name
+        if (!$iowGroupId && $iowGroupName === '') $iowGroupName = $actNameInput;
+
         // resolve or create iow group from name
         if (!$iowGroupId && $iowGroupName !== '') {
             $igRow = $db->createCommand(

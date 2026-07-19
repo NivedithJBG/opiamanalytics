@@ -3165,7 +3165,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
   /* delete activity from gantt */
   document.getElementById('qe-btn-delete').addEventListener('click', function(){
-    alert('DEBUG: _wbsSaId=' + _wbsSaId + '  _wbsWanId=' + _wbsWanId + '  _wbsMode=' + _wbsMode);
     if(!_wbsSaId){ alert('No activity to delete.'); return; }
     if(!confirm('Delete this activity from the Gantt chart?')) return;
     var btn = this;
