@@ -3409,12 +3409,15 @@ $(function(){
       type:'POST', url:'../projectsmain/wbssave',
       data:{ payload: JSON.stringify(payload) }, dataType:'json',
       success: function(ds){
-        alert('SAVE response: ' + JSON.stringify(ds));
         if(ds.error && ds.error !== 'No'){
           btn.disabled = false; btn.textContent = '+ Add to Gantt';
           alert('Save error: ' + ds.error); return;
         }
         _wbsWanId = ds.wan_id || 0;
+        if(!_wbsWanId){
+          btn.disabled = false; btn.textContent = '+ Add to Gantt';
+          alert('Could not save activity. Please check all fields.'); return;
+        }
         if(ds.iow_act_id) document.getElementById('qe-activity-id').value = ds.iow_act_id;
         payload.wan_id = _wbsWanId;
 
@@ -3422,16 +3425,15 @@ $(function(){
           type:'POST', url:'../projectsmain/wbsadd',
           data:{ payload: JSON.stringify(payload) }, dataType:'json',
           success: function(da){
-            alert('ADD response: ' + JSON.stringify(da));
             btn.disabled = false; btn.textContent = '+ Add to Gantt';
-            if(da.error && da.error !== 'No'){ alert('Error: ' + da.error); return; }
+            if(da.error && da.error !== 'No'){ alert('Add error: ' + da.error); return; }
             if(typeof window.loadGantt === 'function') window.loadGantt();
-            clearActivityFields();
+            closeModal();
           },
-          error: function(x){ btn.disabled = false; btn.textContent = '+ Add to Gantt'; alert('ADD ajax error: ' + x.status + ' ' + x.responseText); }
+          error: function(x){ btn.disabled = false; btn.textContent = '+ Add to Gantt'; alert('Add failed: ' + x.status); }
         });
       },
-      error: function(x){ btn.disabled = false; btn.textContent = '+ Add to Gantt'; alert('SAVE ajax error: ' + x.status + ' ' + x.responseText); }
+      error: function(x){ btn.disabled = false; btn.textContent = '+ Add to Gantt'; alert('Save failed: ' + x.status); }
     });
   });
 

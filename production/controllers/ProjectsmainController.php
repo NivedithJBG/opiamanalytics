@@ -704,6 +704,7 @@ class ProjectsmainController extends Controller
     public function actionWbsadd()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        try {
         $uid      = Yii::$app->user->Id;
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) return ['error' => 'No project selected'];
@@ -802,6 +803,9 @@ class ProjectsmainController extends Controller
             'duration'        => $savedDur,
             'act_name'        => $savedName,
         ];
+        } catch (\Exception $e) {
+            return ['error' => $e->getMessage()];
+        }
     }
 
     public function actionWbsget()
