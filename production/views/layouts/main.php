@@ -461,7 +461,7 @@ if($action=='login')
                     <a href="javascript:;" class=" icon-copy duplicateProject"  data-projectid="<?php echo $ProjectId; ?>" id="duplicateProject_<?php echo $ProjectId; ?>"  title="Duplicate Project"></a>
                 </li> 
 
-                <?php } } ?>
+                <?php } ?>
 
                 <?php if(Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'index') {
 
