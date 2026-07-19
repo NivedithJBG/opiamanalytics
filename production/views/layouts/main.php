@@ -1921,19 +1921,17 @@ if($action=='login')
                   <label style="font-size:12px;color:#666;">Correspondence</label>
                   <input id="gpm_corr" type="file" name="project_correspondence[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" class="form-control" style="height:auto;padding:4px;">
                 </div>
-                <div class="form-group" style="margin-top:6px;">
-                  <label style="font-size:12px;color:#666;">Addressee</label>
-                  <input id="gpm_addressee" type="text" class="form-control" placeholder="Name of addressee" style="height:30px;font-size:12px;">
-                </div>
-                <div class="form-group" style="margin-top:6px;">
-                  <label style="font-size:12px;color:#666;">Subject</label>
-                  <input id="gpm_subject" type="text" class="form-control" placeholder="Subject of correspondence" style="height:30px;font-size:12px;">
+                <div id="gpm-corr-meta" style="display:none;">
+                  <div class="form-group" style="margin-top:6px;">
+                    <label style="font-size:12px;color:#666;">Addressee</label>
+                    <input id="gpm_addressee" type="text" class="form-control" placeholder="Name of addressee" style="height:30px;font-size:12px;">
+                  </div>
+                  <div class="form-group" style="margin-top:6px;">
+                    <label style="font-size:12px;color:#666;">Subject</label>
+                    <input id="gpm_subject" type="text" class="form-control" placeholder="Subject of correspondence" style="height:30px;font-size:12px;">
+                  </div>
                 </div>
               </div>
-            </div>
-            <div id="gpm-existing-files" style="display:none;">
-              <label style="font-size:12px;color:#666;font-weight:600;">Uploaded Files</label>
-              <div class="gpm-file-list" id="gpm-file-list-inner"></div>
             </div>
           </div>
 
@@ -2002,6 +2000,16 @@ if($action=='login')
         } else { $('#gpm_enddate').val(''); }
     }
     $(document).on('change input','#gpm_startdate,#gpm_duration',gpmCalcEnd);
+
+    /* show/hide addressee+subject when correspondence file chosen */
+    $(document).on('change','#gpm_corr',function(){
+        if(this.files && this.files.length > 0){
+            $('#gpm-corr-meta').show();
+        } else {
+            $('#gpm-corr-meta').hide();
+            $('#gpm_addressee,#gpm_subject').val('');
+        }
+    });
 
     /* ── load project list ── */
     function gpmShowList(){
@@ -2114,8 +2122,8 @@ if($action=='login')
                 $('#gpm_wrkhrs').val(d.wrkhours);
                 $('#gpm_docs').val('');
                 $('#gpm_corr').val('');
-                $('#gpm_addressee').val('');
-                $('#gpm_subject').val('');
+                $('#gpm_addressee,#gpm_subject').val('');
+                $('#gpm-corr-meta').hide();
                 $('.gpm-err').hide();
                 gpmShowFormPanel(true);
                 gpmLoadFiles(d.Project_Id);
