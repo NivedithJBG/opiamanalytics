@@ -4337,4 +4337,16 @@ $(function(){
 })();
 </script>
 
+<script>
+/* Ensure all floating popups are direct children of <body> so they
+   are never trapped inside a parent stacking context */
+(function(){
+  var ids = ['pdoc-popup','pdoc-viewer-popup','gpm-overlay','gantt-win','qe-modal','qe-map-bk','cb-win','cb-btn'];
+  ids.forEach(function(id){
+    var el = document.getElementById(id);
+    if(el && el.parentNode !== document.body) document.body.appendChild(el);
+  });
+})();
+</script>
+
 <?php $this->endPage() ?>
