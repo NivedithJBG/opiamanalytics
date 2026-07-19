@@ -341,7 +341,11 @@ if($action=='login')
 
                 }
 
-                if($ProjectId && Yii::$app->controller->id != 'procurement') {  ?>
+                ?>
+                <li>
+                    <a class="icon-add" id="add-project-nav-btn" title="Add New Project" href="#" style="font-size:18px;"></a>
+                </li>
+                <?php if($ProjectId && Yii::$app->controller->id != 'procurement') {  ?>
                 <li>
                     <a class="icon-chart3" id="gantt-win-open" title="Gantt Chart" href="#" data-projectid="<?php echo $ProjectId?>"></a>
                 </li>
@@ -1672,6 +1676,157 @@ if($action=='login')
 })();
 </script>
 <!-- ── End Chatbot ─────────────────────────────────────────────────────── -->
+
+<!-- ── Add Project Modal (global, accessible from top nav) ───────────── -->
+<div class="modal fade" id="globalAddProjectPopup" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" style="float:left;"><span class="icon-add"></span> Add New Project</h4>
+                <button type="button" class="close" data-dismiss="modal" style="float:right;font-size:30px;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="globalAddProjectForm">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Project Name <span style="color:red;">*</span></label>
+                                <input id="gp_name" type="text" class="form-control" placeholder="Project Name">
+                                <span class="text-danger gp-err" id="gp_name_err" style="display:none;font-size:12px;"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Duration (days) <span style="color:red;">*</span></label>
+                                <input id="gp_duration" type="number" class="form-control" placeholder="Project Duration">
+                                <span class="text-danger gp-err" id="gp_duration_err" style="display:none;font-size:12px;"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>Start Date <span style="color:red;">*</span></label>
+                                <input id="gp_startdate" type="date" class="form-control">
+                                <span class="text-danger gp-err" id="gp_startdate_err" style="display:none;font-size:12px;"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>End Date <span style="color:red;">*</span></label>
+                                <input id="gp_enddate" type="date" class="form-control">
+                                <span class="text-danger gp-err" id="gp_enddate_err" style="display:none;font-size:12px;"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Project Value <span style="color:red;">*</span></label>
+                                <input id="gp_value" type="text" class="form-control" placeholder="Project Value">
+                                <span class="text-danger gp-err" id="gp_value_err" style="display:none;font-size:12px;"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Client Name <span style="color:red;">*</span></label>
+                                <input id="gp_client" type="text" class="form-control" placeholder="Client Name">
+                                <span class="text-danger gp-err" id="gp_client_err" style="display:none;font-size:12px;"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Location</label>
+                                <input id="gp_location" type="text" class="form-control" placeholder="Site Location">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Work Hours <span style="color:red;">*</span></label>
+                                <input id="gp_wrkhrs" type="text" class="form-control" placeholder="Work Hours">
+                                <span class="text-danger gp-err" id="gp_wrkhrs_err" style="display:none;font-size:12px;"></span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-dismiss="modal" style="border-radius:20px;"><span class="icon-close"></span> Cancel</button>
+                <button type="button" class="btn btn-primary" id="gp_save" style="border-radius:20px;"><span class="icon-check"></span> Add Project</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    /* open modal from nav icon */
+    $(document).on('click', '#add-project-nav-btn', function(e){
+        e.preventDefault();
+        $('#globalAddProjectForm')[0].reset();
+        $('.gp-err').hide();
+        $('#globalAddProjectPopup').modal('show');
+    });
+
+    $('#gp_save').on('click', function(){
+        var err = 0;
+        $('.gp-err').hide();
+        var name    = $.trim($('#gp_name').val());
+        var dur     = $.trim($('#gp_duration').val());
+        var sd      = $.trim($('#gp_startdate').val());
+        var ed      = $.trim($('#gp_enddate').val());
+        var val     = $.trim($('#gp_value').val()).replace(/,/g,'');
+        var client  = $.trim($('#gp_client').val());
+        var hrs     = $.trim($('#gp_wrkhrs').val());
+
+        if(!name)   { $('#gp_name_err').text('Enter Project Name').show(); err=1; }
+        if(!dur)    { $('#gp_duration_err').text('Enter Duration').show(); err=1; }
+        if(!sd)     { $('#gp_startdate_err').text('Select Start Date').show(); err=1; }
+        if(!ed)     { $('#gp_enddate_err').text('Select End Date').show(); err=1; }
+        if(!val)    { $('#gp_value_err').text('Enter Project Value').show(); err=1; }
+        if(!client) { $('#gp_client_err').text('Enter Client Name').show(); err=1; }
+        if(!hrs)    { $('#gp_wrkhrs_err').text('Enter Work Hours').show(); err=1; }
+        if(err) return;
+
+        var fd = new FormData();
+        fd.append('projectname', name);
+        fd.append('projectvalue', val);
+        fd.append('clientname', client);
+        fd.append('location', $('#gp_location').val());
+        fd.append('duration', dur);
+        fd.append('startdate', sd);
+        fd.append('enddate', ed);
+        fd.append('wrkhrss', hrs);
+
+        var btn = $('#gp_save').attr('disabled', true).text('Saving…');
+        $.ajax({
+            type: 'POST',
+            url: '<?php echo \yii\helpers\Url::to(["/projects/create"]); ?>',
+            data: fd,
+            dataType: 'json',
+            contentType: false,
+            processData: false,
+            success: function(data){
+                $('#gp_save').attr('disabled', false).html('<span class="icon-check"></span> Add Project');
+                if(data.error === 'No'){
+                    $('#globalAddProjectPopup').modal('hide');
+                    alert('Project "' + data.Name + '" created successfully!');
+                    /* if on projects index, refresh the list */
+                    if(typeof window.listprojects !== 'undefined') window.listprojects();
+                    if($('#listprj').length) $('#listprj').trigger('click');
+                } else {
+                    alert(data.errortext || 'Could not save project.');
+                }
+            },
+            error: function(xhr){
+                $('#gp_save').attr('disabled', false).html('<span class="icon-check"></span> Add Project');
+                alert('Server error (' + xhr.status + '). Please try again.');
+            }
+        });
+    });
+})();
+</script>
+<!-- ── End Add Project Modal ──────────────────────────────────────────── -->
 
 </body>
 </html>
