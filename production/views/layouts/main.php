@@ -1669,6 +1669,7 @@ if($action=='login')
     /* Open / close */
     function openChat(){
         win.style.display = 'flex';
+        document.dispatchEvent(new Event('chat:open'));
         if(window.innerWidth <= 600) document.body.style.overflow = 'hidden';
         setTimeout(function(){ inp.focus(); }, 50);
     }
@@ -2346,6 +2347,7 @@ if($action=='login')
     var pdocInited = false, pdocViewerInited = false;
 
     function pdocShow(){
+        document.dispatchEvent(new Event('pdoc:open'));
         var $p = $('#pdoc-popup');
         if(!pdocInited){
             /* show briefly off-screen to measure, then position */
@@ -2425,6 +2427,7 @@ if($action=='login')
     }
 
     function pdocViewFile(filename, displayName){
+        document.dispatchEvent(new Event('pdocv:open'));
         var url = PDOC_FILE_BASE + filename;
         var ext = filename.split('.').pop().toLowerCase();
         var $body = $('#pdoc-viewer-body');
@@ -3351,6 +3354,7 @@ var _wbsSaId   = 0;   /* scheduleactivities.id — set in edit mode */
 /* ── open / close ── */
 function openModal(saId, wanId){
   document.getElementById('qe-modal').classList.add('qe-open');
+  document.dispatchEvent(new Event('wbs:open'));
   if(window._actComboInit) _actComboInit();
   var pname = (document.getElementById('selectedProject')||{}).value || '';
   var lbl = document.getElementById('qe-proj-label');
@@ -4431,10 +4435,12 @@ $(function(){
       var pid = this.getAttribute('data-projectid');
       if(!pid){
         win.classList.add('gw-open');
+        document.dispatchEvent(new Event('gantt:open'));
         document.getElementById('gantt-win-body').innerHTML = '<div style="padding:50px;text-align:center;color:#888;font-size:14px;">Please select a project first.</div>';
         return;
       }
       win.classList.add('gw-open');
+      document.dispatchEvent(new Event('gantt:open'));
       if(!_loaded){
         _loaded = true;
         _loadGanttWin(pid);
@@ -4508,6 +4514,34 @@ $(function(){
     var el = document.getElementById(id);
     if(el && el.parentNode !== document.body) document.body.appendChild(el);
   });
+})();
+</script>
+
+<script>
+/* ── Popup focus manager: clicking any floating window brings it to front ── */
+(function(){
+  var _z = 100200; /* base — all floaters start here and increment up */
+  var floaters = ['pdoc-popup','pdoc-viewer-popup','gantt-win','qe-modal','cb-win'];
+
+  window.popupBringToFront = function(id){
+    var el = document.getElementById(id);
+    if(el) el.style.zIndex = ++_z;
+  };
+
+  floaters.forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('mousedown', function(){ window.popupBringToFront(id); }, true);
+  });
+
+  /* Also bring to front on open */
+  var _orig_pdocShow = window.pdocShow;
+  /* patch pdocShow — it lives inside a closure so we hook via open event instead */
+  document.addEventListener('pdoc:open',   function(){ window.popupBringToFront('pdoc-popup'); });
+  document.addEventListener('pdocv:open',  function(){ window.popupBringToFront('pdoc-viewer-popup'); });
+  document.addEventListener('gantt:open',  function(){ window.popupBringToFront('gantt-win'); });
+  document.addEventListener('wbs:open',    function(){ window.popupBringToFront('qe-modal'); });
+  document.addEventListener('chat:open',   function(){ window.popupBringToFront('cb-win'); });
 })();
 </script>
 
