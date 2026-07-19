@@ -2212,11 +2212,11 @@ if($action=='login')
     </div>
     <div class="pdoc-sf">
       <label>Addressee</label>
-      <input type="text" id="pdoc-filter-addressee" placeholder="Addressee…" style="width:200px;">
+      <input type="text" id="pdoc-filter-addressee" placeholder="Addressee…" style="width:280px;">
     </div>
     <div class="pdoc-sf">
       <label>Subject</label>
-      <input type="text" id="pdoc-filter-subject" placeholder="Subject…" style="width:200px;">
+      <input type="text" id="pdoc-filter-subject" placeholder="Subject…" style="width:280px;">
     </div>
     <div class="pdoc-sf">
       <label>Date</label>
