@@ -1789,9 +1789,24 @@ if($action=='login')
     border:1px solid #e0e0e0;border-radius:10px;padding:0;width:calc(33.33% - 10px);
     box-sizing:border-box;position:relative;background:#fff;overflow:hidden;
     box-shadow:0 2px 6px rgba(0,0,0,0.08), 0 6px 16px rgba(0,0,0,0.06);
-    transition:box-shadow .2s, transform .2s;
+    transition:box-shadow .2s, transform .2s, background .2s, border-color .2s;
+    cursor:pointer;
 }
-.gpm-card:hover { box-shadow:0 8px 24px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.08); transform:translateY(-3px); }
+.gpm-card:hover { box-shadow:0 8px 24px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.08); transform:translateY(-2px); }
+.gpm-card.gpm-card-selected {
+    background:#e8ecf0;border-color:#a0adb8;
+    box-shadow:0 0 0 2px #7090a8, 0 4px 14px rgba(70,100,130,0.18);
+    transform:none;
+}
+.gpm-card.gpm-card-selected .gpm-card-top { background:#e8ecf0; }
+.gpm-card.gpm-card-selected .gpm-card-body { background:#e8ecf0; }
+.gpm-card.gpm-card-selected .gpm-card-actions { background:#dde3ea;border-top-color:#c0c8d0; }
+.gpm-card.gpm-card-selected .gpm-card-name { color:#1a3a52; }
+.gpm-selected-badge {
+    display:inline-block;font-size:10px;font-weight:700;color:#fff;
+    background:#4a7090;border-radius:10px;padding:1px 8px;margin-left:6px;
+    vertical-align:middle;letter-spacing:.3px;
+}
 .gpm-card-top { background:#fff;padding:12px 14px 8px;border-bottom:1px solid #f0f0f0; }
 .gpm-card .gpm-card-name { font-size:13px;font-weight:700;color:#1a1a1a;margin:0; }
 .gpm-card-body { padding:10px 14px 4px;background:#fff; }
@@ -1990,9 +2005,11 @@ if($action=='login')
         });
     }
 
-    var URL_FILES  = '<?php echo \yii\helpers\Url::to(["/projects/globalprojectfiles"]); ?>';
-    var URL_DELFILE= '<?php echo \yii\helpers\Url::to(["/projects/deleteprojectfile"]); ?>';
-    var BASE_UPLOAD= '<?php echo \yii\helpers\Url::base(true); ?>/uploads/projects/';
+    var URL_FILES     = '<?php echo \yii\helpers\Url::to(["/projects/globalprojectfiles"]); ?>';
+    var URL_DELFILE   = '<?php echo \yii\helpers\Url::to(["/projects/deleteprojectfile"]); ?>';
+    var BASE_UPLOAD   = '<?php echo \yii\helpers\Url::base(true); ?>/uploads/projects/';
+    var URL_SELECT    = '<?php echo \yii\helpers\Url::to(["/projectsmain/userprojectmain"]); ?>';
+    var CURRENT_PID   = '<?php echo $ProjectId; ?>';
 
     function gpmRenderCards(html){
         var $tmp = $('<div>').html(html);
@@ -2004,13 +2021,16 @@ if($action=='login')
         }
         var out = '';
         cards.each(function(){
-            var pid   = $(this).data('id');
-            var name  = $(this).find('.card-body a').text().replace(/^\s*[✓✓]\s*/,'').trim();
-            var client= $(this).find('.project-client-name span').text().trim();
-            var dur   = $(this).find('.type:not(.project-client-name):not(.text-right) span').first().text().trim();
-            var val   = $(this).find('.type.text-right span').text().trim();
-            out += '<div class="gpm-card" id="gpm-card-'+pid+'">'
-                 + '<div class="gpm-card-top"><div class="gpm-card-name">'+name+'</div></div>'
+            var pid    = $(this).data('id');
+            var name   = $(this).find('.card-body a').text().replace(/^\s*[✓✓]\s*/,'').trim();
+            var client = $(this).find('.project-client-name span').text().trim();
+            var dur    = $(this).find('.type:not(.project-client-name):not(.text-right) span').first().text().trim();
+            var val    = $(this).find('.type.text-right span').text().trim();
+            var isSel  = (String(pid) === String(CURRENT_PID));
+            var selCls = isSel ? ' gpm-card-selected' : '';
+            var badge  = isSel ? '<span class="gpm-selected-badge">Active</span>' : '';
+            out += '<div class="gpm-card'+selCls+'" id="gpm-card-'+pid+'" data-id="'+pid+'" data-name="'+name.replace(/"/g,'&quot;')+'">'
+                 + '<div class="gpm-card-top"><div class="gpm-card-name">'+name+badge+'</div></div>'
                  + '<div class="gpm-card-body">'
                  + '<div class="gpm-card-row"><label>Client</label><span>'+client+'</span></div>'
                  + '<div class="gpm-card-row"><label>Duration</label><span>'+dur+'</span></div>'
@@ -2062,6 +2082,35 @@ if($action=='login')
                 if(!$('.gpm-file-item').length) $('#gpm-existing-files').hide();
             },
             error:function(xhr){ alert('Could not delete file ('+xhr.status+').'); }
+        });
+    });
+
+    /* ── select project by clicking the card body (not the action buttons) ── */
+    $(document).on('click','.gpm-card',function(e){
+        if($(e.target).closest('.gpm-card-actions').length) return; /* ignore button clicks */
+        var pid  = $(this).data('id');
+        var name = $(this).data('name');
+        if(String(pid) === String(CURRENT_PID)) return; /* already selected */
+
+        var $card = $(this);
+        $card.css('opacity','0.6');
+        $.ajax({
+            type:'POST', url:URL_SELECT, dataType:'json', data:{prjctid:pid},
+            success:function(d){
+                $card.css('opacity','');
+                if(d.error !== 'No'){ alert('Could not select project.'); return; }
+                /* update selection state */
+                CURRENT_PID = String(pid);
+                $('.gpm-card').removeClass('gpm-card-selected');
+                $('.gpm-card .gpm-card-name .gpm-selected-badge').remove();
+                $card.addClass('gpm-card-selected');
+                $card.find('.gpm-card-name').append('<span class="gpm-selected-badge">Active</span>');
+                /* update nav project name */
+                $('#selectedProject').val(name);
+                /* reload page so Gantt/WBS/procurement all pick up the new project */
+                window.location.reload();
+            },
+            error:function(){ $card.css('opacity',''); alert('Server error selecting project.'); }
         });
     });
 
