@@ -2595,6 +2595,43 @@ window.openQeModal    = openModal;
 function closeModal(){
   document.getElementById('qe-modal').classList.remove('qe-open');
   _wbsMode = 'new'; _wbsWanId = 0;
+  _resetModal();
+}
+
+function _resetModal(){
+  /* Section 1 — Project Type & Group */
+  var ptEl = document.getElementById('qe-proj-type');
+  if(ptEl){ ptEl.selectedIndex = 0; ptEl.classList.add('qe-needs-data'); }
+  var grpEl = document.getElementById('qe-group');
+  if(grpEl){ grpEl.innerHTML = '<option value="">— Select Group —</option>'; grpEl.classList.add('qe-needs-data'); }
+  _activityItems = [];
+  if(window._actListClose) _actListClose();
+
+  /* Section 2 — IOW & Activity */
+  var iowEl = document.getElementById('qe-iow');
+  if(iowEl){ iowEl.value = ''; iowEl.classList.add('qe-needs-data'); }
+  var actTxt = document.getElementById('qe-activity-text');
+  if(actTxt){ actTxt.value = ''; actTxt.classList.add('qe-needs-data'); }
+  document.getElementById('qe-activity-id').value = '';
+
+  /* Section 3 — Activity Details */
+  ['qe-unit','qe-qty','qe-rate','qe-amount','qe-sch-unit','qe-sch-qty'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.value = '';
+    if(el.classList.contains('qe-needs-data') !== undefined){ el.classList.add('qe-needs-data'); }
+  });
+
+  /* Section 4 & 5 — Tasks & Resources */
+  document.getElementById('qe-task-body').innerHTML = '';
+  document.getElementById('qe-res-body').innerHTML  = '';
+  addTaskRow();
+  loadResTypes(function(){ addResRow(); });
+
+  /* Footer */
+  document.getElementById('qe-btn-add').disabled = true;
+  document.getElementById('qe-save-msg').textContent = '';
+  recalcDuration();
 }
 
 /* ── cascading dropdowns ── */
