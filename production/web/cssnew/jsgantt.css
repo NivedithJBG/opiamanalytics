@@ -29,7 +29,7 @@ div.gantt {
 .gtaskcellwkend {
   height: 19px;
   font-size: 12px;
-  border: #d4d4d4 1px solid;
+  border: #e8e8e8 1px solid;
   text-align: center;
   cursor: default
 }
@@ -40,7 +40,7 @@ div.gantt {
   min-width: 5px;
   max-width: 5px;
   width: 5px;
-  border: #d4d4d4 1px solid;
+  border: #e8e8e8 1px solid;
   border-right: none;
 }
 
@@ -101,7 +101,7 @@ td.gspanning {
 .genddate {
   height: 18px;
   white-space: nowrap;
-  border: #d4d4d4 1px solid;
+  border: #e8e8e8 1px solid;
 }
 
 .gtaskheading div,
@@ -205,7 +205,7 @@ span.gfoldercollapse {
 
 .gtasktableh,
 .gtasktable {
-  border-right: #d4d4d4 1px solid;
+  border-right: #e8e8e8 1px solid;
   width: 100%;
 }
 
@@ -222,7 +222,7 @@ span.gfoldercollapse {
 }
 
 .gcharttable {
-  border: #d4d4d4 1px solid;
+  border: #e8e8e8 1px solid;
 }
 
 /* for some reason firefox needs this */
