@@ -547,7 +547,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   // ---- Gantt loader ---------------------------------------------------------
 
   // Exception-safe wrapper: a JS error mid-build must never leave the chart blank
-  function loadGantt() {
+  window.loadGantt = function loadGantt() {
     try {
       loadGanttInner();
     } catch (err) {
