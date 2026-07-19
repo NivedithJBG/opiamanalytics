@@ -444,11 +444,10 @@ if($action=='login')
                 <li>
                     <a class="icon-document pdoc-btn" id="pdoc-nav-btn" title="Project Documents" href="#"></a>
                 </li>
-                <?php if($ProjectId && Yii::$app->controller->id != 'procurement') {  ?>
                 <li>
                     <a class="icon-chart3" id="gantt-win-open" title="Gantt Chart" href="#" data-projectid="<?php echo $ProjectId?>"></a>
                 </li>
-                <?php if(Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'newganttchart') { ?>
+                <?php if($ProjectId && Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'newganttchart') { ?>
                 <li><a class="icon-tools overNow4" title="Activity Library" href="<?php echo Yii::$app->urlManager->createUrl('projects/projectmasters')?>"></a></li>
                 <?php } ?>
                 
@@ -4267,10 +4266,16 @@ $(function(){
   if(openBtn){
     openBtn.addEventListener('click', function(e){
       e.preventDefault();
+      var pid = this.getAttribute('data-projectid');
+      if(!pid){
+        win.classList.add('gw-open');
+        document.getElementById('gantt-win-body').innerHTML = '<div style="padding:50px;text-align:center;color:#888;font-size:14px;">Please select a project first.</div>';
+        return;
+      }
       win.classList.add('gw-open');
       if(!_loaded){
         _loaded = true;
-        _loadGanttWin(this.getAttribute('data-projectid'));
+        _loadGanttWin(pid);
       }
     });
   }
