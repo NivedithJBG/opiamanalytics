@@ -444,13 +444,18 @@ class ProjectsController extends Controller
         if (!$id) { echo json_encode(['error'=>'Yes','errortext'=>'Invalid ID']); return; }
         $p = Projects::findOne($id);
         if (!$p) { echo json_encode(['error'=>'Yes','errortext'=>'Not found']); return; }
+        $fmtDate = function($d) {
+            if (!$d) return '';
+            $ts = strtotime($d);
+            return $ts ? date('Y-m-d', $ts) : '';
+        };
         echo json_encode([
             'error'         => 'No',
             'Project_Id'    => $p->Project_Id,
             'Name'          => $p->Name,
             'duration'      => $p->duration,
-            'start_date'    => $p->start_date,
-            'end_date'      => $p->end_date,
+            'start_date'    => $fmtDate($p->start_date),
+            'end_date'      => $fmtDate($p->end_date),
             'project_value' => $p->project_value,
             'client_name'   => $p->client_name,
             'location'      => $p->location,
@@ -467,8 +472,8 @@ class ProjectsController extends Controller
         if (!$p) { echo json_encode(['error'=>'Yes','errortext'=>'Not found']); return; }
         $p->Name          = trim($_POST['projectname'] ?? '');
         $p->duration      = intval($_POST['duration'] ?? 0);
-        $p->start_date    = $_POST['startdate'] ?? '';
-        $p->end_date      = $_POST['enddate'] ?? '';
+        if (!empty($_POST['startdate'])) $p->start_date = $_POST['startdate'];
+        if (!empty($_POST['enddate']))   $p->end_date   = $_POST['enddate'];
         $p->project_value = $_POST['projectvalue'] ?? '';
         $p->client_name   = trim($_POST['clientname'] ?? '');
         $p->location      = trim($_POST['location'] ?? '');
