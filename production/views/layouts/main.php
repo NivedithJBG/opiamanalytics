@@ -2474,6 +2474,7 @@ function openModal(saId, wanId){
       success: function(d){
         if(d.error) { addTaskRow(); loadResTypes(function(){ addResRow(); }); return; }
         if(d.wan_id) _wbsWanId = d.wan_id;
+        if(d.sa_id)  _wbsSaId  = d.sa_id;
         _prefillModal(d);
       },
       error: function(){ addTaskRow(); loadResTypes(function(){ addResRow(); }); }

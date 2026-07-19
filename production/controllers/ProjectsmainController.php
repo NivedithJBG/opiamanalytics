@@ -843,6 +843,13 @@ class ProjectsmainController extends Controller
                  WHERE wga.id = :id LIMIT 1",
                 [':id' => $wanId]
             )->queryOne();
+            // Also look up the scheduleactivities.id so the JS can use it for delete
+            if ($sa && !$saId) {
+                $saId = (int)$db->createCommand(
+                    "SELECT id FROM scheduleactivities WHERE activity_id = :w AND status = 0 LIMIT 1",
+                    [':w' => $wanId]
+                )->queryScalar();
+            }
         }
         if (!$sa) return ['error' => 'Not found'];
 
