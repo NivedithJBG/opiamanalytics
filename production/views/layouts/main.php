@@ -2224,12 +2224,12 @@ if($action=='login')
   </div>
   <!-- Upload Panel -->
   <div id="pdoc-upload-panel" style="display:none;background:#f0f4fb;border-bottom:2px solid #dde3ef;padding:14px 16px;">
-    <!-- Project selector shared row -->
+    <!-- Active project name display -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-      <label style="font-size:11px;color:#555;font-weight:700;white-space:nowrap;">Project <span style="color:red">*</span></label>
-      <select id="pdoc-up-project" style="height:30px;font-size:12px;border:1px solid #bbc;border-radius:4px;padding:0 8px;min-width:220px;">
-        <option value="">— Select Project —</option>
-      </select>
+      <label style="font-size:11px;color:#555;font-weight:700;white-space:nowrap;">Project</label>
+      <span id="pdoc-up-project-name" style="font-size:13px;font-weight:600;color:#1565C0;background:#e3eaf5;border-radius:5px;padding:4px 12px;border:1px solid #b3c6e0;">
+        <?php echo $ProjectName ? Html::encode($ProjectName) : '<span style="color:#999;font-weight:400;">No project selected</span>'; ?>
+      </span>
     </div>
     <!-- Two upload columns -->
     <div style="display:flex;gap:16px;align-items:flex-start;">
@@ -2362,12 +2362,10 @@ if($action=='login')
         if($('#pdoc-filter-project option').length > 1) return;
         $.ajax({ type:'POST', url:PDOC_PROJ_URL, dataType:'json', success:function(d){
             if(!d || d.error !== 'No') return;
-            var sel    = $('#pdoc-filter-project');
-            var selUp  = $('#pdoc-up-project');
+            var sel = $('#pdoc-filter-project');
             $.each(d.projects||[], function(i,p){
                 var opt = '<option value="'+p.id+'">'+$('<div>').text(p.name).html()+'</option>';
                 sel.append(opt);
-                selUp.append(opt);
             });
         }});
     }
@@ -2462,10 +2460,10 @@ if($action=='login')
 
     /* ── Generic upload helper ── */
     function pdocDoUpload(type, fileInput, $btn, $msg, onSuccess){
-        var pid   = $('#pdoc-up-project').val();
+        var pid   = CURRENT_PID;
         var files = fileInput.files;
         $msg.css('color','#c00').text('');
-        if(!pid)         { $msg.text('Select a project first.'); return; }
+        if(!pid)         { $msg.text('No active project. Please select a project first.'); return; }
         if(!files.length){ $msg.text('Choose a file first.'); return; }
 
         var fd = new FormData();
