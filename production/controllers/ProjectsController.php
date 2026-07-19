@@ -3994,7 +3994,6 @@ class ProjectsController extends Controller
 
     public function actionPdocprojects()
     {
-        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $uid = \Yii::$app->user->id;
         $row = \app\models\User::findOne($uid);
         $db  = \Yii::$app->db;
@@ -4010,12 +4009,11 @@ class ProjectsController extends Controller
                 [':uid' => $uid]
             )->queryAll();
         }
-        return ['error' => 'No', 'projects' => $projects];
+        echo json_encode(['error' => 'No', 'projects' => $projects]);
     }
 
     public function actionPdoclist()
     {
-        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $db = \Yii::$app->db;
 
         $where = ['1=1'];
@@ -4067,7 +4065,7 @@ class ProjectsController extends Controller
             $params
         )->queryAll();
 
-        return ['error' => 'No', 'files' => $files];
+        echo json_encode(['error' => 'No', 'files' => $files]);
     }
 
     public function actionDuplicate(){
