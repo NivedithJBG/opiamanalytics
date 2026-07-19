@@ -3221,11 +3221,12 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('qe-activity-text').addEventListener('change', function(){
     var text = this.value.trim();
     if(!text) return;
-    var act = _resolveActivityId();
-    if(!act.id) return; /* new activity — nothing to prefill yet */
+    var actId = document.getElementById('qe-activity-id').value;
+    if(!actId) { _resolveActivityId(); actId = document.getElementById('qe-activity-id').value; }
+    if(!actId) return; /* new activity — nothing to prefill yet */
     $.ajax({
       type:'POST', url:'../projectsmain/getactivityresources', dataType:'json',
-      data:{ activity_id: act.id },
+      data:{ activity_id: actId },
       success: function(data){
         if(data.unit){ document.getElementById('qe-unit').value = data.unit; }
         if(data.qty) { document.getElementById('qe-qty').value  = data.qty;  }
