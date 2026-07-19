@@ -336,9 +336,9 @@ $(document).on('click', '.editactivitybutton', function(){
                 }
                 $('#editingActivityId').val(idval);
                 $('#saveestactivity').html('<span class="icon-check"></span> Update Activity');
-                $(".search-and-actions-wrpr").hide();
-                $(".add-activity-form").show();
-                $("#estactivityitems").hide();
+                $('#alAddActivityTitle').text('Edit Activity');
+                window._alEditMode = true;
+                $('#alAddActivityPopup').modal('show');
             }
         }
     });
