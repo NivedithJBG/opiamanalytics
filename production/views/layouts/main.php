@@ -2174,38 +2174,53 @@ if($action=='login')
     <button id="pdoc-close-x">&times;</button>
   </div>
   <!-- Upload Panel -->
-  <div id="pdoc-upload-panel" style="display:none;background:#f7f9fc;border-bottom:1px solid #dde3ef;padding:12px 16px;">
-    <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
-      <div style="display:flex;flex-direction:column;gap:3px;min-width:160px;">
-        <label style="font-size:11px;color:#666;font-weight:600;">Project <span style="color:red">*</span></label>
-        <select id="pdoc-up-project" style="height:30px;font-size:12px;border:1px solid #ccc;border-radius:4px;padding:0 6px;">
-          <option value="">— Select Project —</option>
-        </select>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:3px;min-width:140px;">
-        <label style="font-size:11px;color:#666;font-weight:600;">Type <span style="color:red">*</span></label>
-        <select id="pdoc-up-type" style="height:30px;font-size:12px;border:1px solid #ccc;border-radius:4px;padding:0 6px;">
-          <option value="">— Select Type —</option>
-          <option value="documents">Document</option>
-          <option value="correspondence">Correspondence</option>
-        </select>
-      </div>
-      <div id="pdoc-up-meta" style="display:none;display:flex;gap:10px;">
-        <div style="display:flex;flex-direction:column;gap:3px;">
-          <label style="font-size:11px;color:#666;font-weight:600;">Addressee</label>
-          <input id="pdoc-up-addressee" type="text" placeholder="Name of addressee" style="height:30px;font-size:12px;border:1px solid #ccc;border-radius:4px;padding:0 8px;width:180px;">
+  <div id="pdoc-upload-panel" style="display:none;background:#f0f4fb;border-bottom:2px solid #dde3ef;padding:14px 16px;">
+    <!-- Project selector shared row -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <label style="font-size:11px;color:#555;font-weight:700;white-space:nowrap;">Project <span style="color:red">*</span></label>
+      <select id="pdoc-up-project" style="height:30px;font-size:12px;border:1px solid #bbc;border-radius:4px;padding:0 8px;min-width:220px;">
+        <option value="">— Select Project —</option>
+      </select>
+    </div>
+    <!-- Two upload columns -->
+    <div style="display:flex;gap:16px;align-items:flex-start;">
+
+      <!-- LEFT: Documents -->
+      <div style="flex:1;background:#fff;border:1px solid #dde3ef;border-radius:8px;padding:14px 16px;">
+        <div style="font-size:12px;font-weight:700;color:#1565C0;margin-bottom:10px;border-bottom:1px solid #e8eaf0;padding-bottom:6px;">&#128196; Upload Document</div>
+        <div style="margin-bottom:8px;">
+          <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px;">File <span style="color:red">*</span></label>
+          <input id="pdoc-up-doc-file" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="font-size:12px;width:100%;">
         </div>
-        <div style="display:flex;flex-direction:column;gap:3px;">
-          <label style="font-size:11px;color:#666;font-weight:600;">Subject</label>
-          <input id="pdoc-up-subject" type="text" placeholder="Subject" style="height:30px;font-size:12px;border:1px solid #ccc;border-radius:4px;padding:0 8px;width:200px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+          <button id="pdoc-up-doc-submit" style="padding:5px 20px;background:#1565C0;color:#fff;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">&#8679; Upload</button>
+          <span id="pdoc-up-doc-msg" style="font-size:12px;font-weight:600;"></span>
         </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:3px;">
-        <label style="font-size:11px;color:#666;font-weight:600;">File <span style="color:red">*</span></label>
-        <input id="pdoc-up-file" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="font-size:12px;">
+
+      <!-- RIGHT: Correspondence -->
+      <div style="flex:1;background:#fff;border:1px solid #dde3ef;border-radius:8px;padding:14px 16px;">
+        <div style="font-size:12px;font-weight:700;color:#6a1b9a;margin-bottom:10px;border-bottom:1px solid #e8eaf0;padding-bottom:6px;">&#9993; Upload Correspondence</div>
+        <div style="margin-bottom:8px;">
+          <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px;">File <span style="color:red">*</span></label>
+          <input id="pdoc-up-corr-file" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="font-size:12px;width:100%;">
+        </div>
+        <div id="pdoc-up-corr-meta" style="display:none;">
+          <div style="margin-bottom:6px;">
+            <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px;">Addressee</label>
+            <input id="pdoc-up-addressee" type="text" placeholder="Name of addressee" style="height:30px;font-size:12px;border:1px solid #ccc;border-radius:4px;padding:0 8px;width:100%;box-sizing:border-box;">
+          </div>
+          <div style="margin-bottom:6px;">
+            <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px;">Subject</label>
+            <input id="pdoc-up-subject" type="text" placeholder="Subject of correspondence" style="height:30px;font-size:12px;border:1px solid #ccc;border-radius:4px;padding:0 8px;width:100%;box-sizing:border-box;">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+          <button id="pdoc-up-corr-submit" style="padding:5px 20px;background:#6a1b9a;color:#fff;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">&#8679; Upload</button>
+          <span id="pdoc-up-corr-msg" style="font-size:12px;font-weight:600;"></span>
+        </div>
       </div>
-      <button id="pdoc-up-submit" style="height:30px;padding:0 18px;background:#1565C0;color:#fff;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">&#8679; Upload</button>
-      <span id="pdoc-up-msg" style="font-size:12px;font-weight:600;"></span>
+
     </div>
   </div>
   <div id="pdoc-search-bar">
@@ -2383,51 +2398,38 @@ if($action=='login')
 
     /* ── Upload panel toggle ── */
     $(document).on('click','#pdoc-upload-toggle', function(){
-        var $p = $('#pdoc-upload-panel');
-        if($p.is(':visible')){
-            $p.slideUp(150);
-        } else {
-            /* populate project dropdown from already-loaded list */
-            var $upProj = $('#pdoc-up-project');
-            if($upProj.find('option').length <= 1){
-                $('#pdoc-filter-project option').each(function(){
-                    if($(this).val()) $upProj.append('<option value="'+$(this).val()+'">'+$(this).text()+'</option>');
-                });
-            }
-            $p.slideDown(150);
-        }
+        $('#pdoc-upload-panel').slideToggle(150);
     });
 
-    /* show/hide Addressee+Subject when type = correspondence */
-    $(document).on('change','#pdoc-up-type', function(){
-        if($(this).val() === 'correspondence'){
-            $('#pdoc-up-meta').css('display','flex');
+    /* Show Addressee+Subject as soon as a correspondence file is chosen */
+    $(document).on('change','#pdoc-up-corr-file', function(){
+        if(this.files && this.files.length > 0){
+            $('#pdoc-up-corr-meta').slideDown(150);
         } else {
-            $('#pdoc-up-meta').hide();
+            $('#pdoc-up-corr-meta').slideUp(150);
             $('#pdoc-up-addressee,#pdoc-up-subject').val('');
         }
     });
 
-    /* ── Upload submit ── */
-    $(document).on('click','#pdoc-up-submit', function(){
-        var pid  = $('#pdoc-up-project').val();
-        var type = $('#pdoc-up-type').val();
-        var file = $('#pdoc-up-file')[0].files;
-        var $msg = $('#pdoc-up-msg');
+    /* ── Generic upload helper ── */
+    function pdocDoUpload(type, fileInput, $btn, $msg, onSuccess){
+        var pid   = $('#pdoc-up-project').val();
+        var files = fileInput.files;
         $msg.css('color','#c00').text('');
-        if(!pid)         { $msg.text('Please select a project.'); return; }
-        if(!type)        { $msg.text('Please select a type.'); return; }
-        if(!file.length) { $msg.text('Please choose a file.'); return; }
+        if(!pid)         { $msg.text('Select a project first.'); return; }
+        if(!files.length){ $msg.text('Choose a file first.'); return; }
 
         var fd = new FormData();
         fd.append('project_id', pid);
         fd.append('file_type',  type);
-        fd.append('addressee',  $.trim($('#pdoc-up-addressee').val()));
-        fd.append('subject',    $.trim($('#pdoc-up-subject').val()));
+        if(type === 'correspondence'){
+            fd.append('addressee', $.trim($('#pdoc-up-addressee').val()));
+            fd.append('subject',   $.trim($('#pdoc-up-subject').val()));
+        }
         var field = (type === 'correspondence') ? 'project_correspondence[]' : 'project_documents[]';
-        for(var i=0;i<file.length;i++) fd.append(field, file[i]);
+        for(var i=0;i<files.length;i++) fd.append(field, files[i]);
 
-        var $btn = $(this).prop('disabled',true).text('Uploading…');
+        $btn.prop('disabled',true).text('Uploading…');
         $.ajax({
             type:'POST', url:PDOC_UPLOAD_URL,
             data:fd, dataType:'json', contentType:false, processData:false,
@@ -2437,11 +2439,8 @@ if($action=='login')
                     $msg.css('color','#c00').text(d.errortext||'Upload failed.');
                 } else {
                     $msg.css('color','#197a3a').text('Uploaded successfully.');
-                    $('#pdoc-up-file').val('');
-                    $('#pdoc-up-addressee,#pdoc-up-subject').val('');
-                    $('#pdoc-up-meta').hide();
-                    $('#pdoc-up-type').val('');
-                    pdocSearch(); /* refresh the list */
+                    onSuccess();
+                    pdocSearch();
                     setTimeout(function(){ $msg.text(''); }, 3000);
                 }
             },
@@ -2450,6 +2449,24 @@ if($action=='login')
                 $msg.css('color','#c00').text('Server error ('+xhr.status+').');
             }
         });
+    }
+
+    /* Document upload */
+    $(document).on('click','#pdoc-up-doc-submit', function(){
+        pdocDoUpload('documents', document.getElementById('pdoc-up-doc-file'),
+            $(this), $('#pdoc-up-doc-msg'), function(){
+                $('#pdoc-up-doc-file').val('');
+            });
+    });
+
+    /* Correspondence upload */
+    $(document).on('click','#pdoc-up-corr-submit', function(){
+        pdocDoUpload('correspondence', document.getElementById('pdoc-up-corr-file'),
+            $(this), $('#pdoc-up-corr-msg'), function(){
+                $('#pdoc-up-corr-file').val('');
+                $('#pdoc-up-addressee,#pdoc-up-subject').val('');
+                $('#pdoc-up-corr-meta').slideUp(150);
+            });
     });
 
     $(document).on('click','#pdoc-nav-btn',  function(e){ e.preventDefault(); pdocShow(); });
