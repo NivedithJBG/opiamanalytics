@@ -474,10 +474,40 @@ class ProjectsController extends Controller
         $p->location      = trim($_POST['location'] ?? '');
         $p->wrkhours      = intval($_POST['wrkhrss'] ?? 0);
         if ($p->save(false)) {
+            $connection = \Yii::$app->db;
+            $uploadDir = Yii::getAlias('@webroot') . '/uploads/projects/';
+            $allowed = ['pdf','doc','docx','xls','xlsx','jpg','jpeg','png'];
+            $uid = Yii::$app->user->Id;
+            foreach (['project_documents' => 'documents', 'project_correspondence' => 'correspondence'] as $field => $type) {
+                if (!empty($_FILES[$field]['name'][0])) {
+                    foreach ($_FILES[$field]['name'] as $i => $origName) {
+                        $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+                        if (!in_array($ext, $allowed)) continue;
+                        $storedName = uniqid('pf_') . '.' . $ext;
+                        move_uploaded_file($_FILES[$field]['tmp_name'][$i], $uploadDir . $storedName);
+                        $connection->createCommand("INSERT INTO project_files (project_id, file_type, filename, original_name, uploaded_by) VALUES (:pid,:type,:fn,:on,:uid)")
+                            ->bindValues([':pid' => $id, ':type' => $type, ':fn' => $storedName, ':on' => $origName, ':uid' => $uid])
+                            ->execute();
+                    }
+                }
+            }
             echo json_encode(['error'=>'No','Name'=>$p->Name]);
         } else {
             echo json_encode(['error'=>'Yes','errortext'=>'Could not update.']);
         }
+    }
+
+    /* Global popup: list uploaded files for a project */
+    public function actionGlobalprojectfiles()
+    {
+        $id = intval($_POST['project_id'] ?? 0);
+        if (!$id) { echo json_encode(['error'=>'Yes','files',[]]); return; }
+        $connection = \Yii::$app->db;
+        $files = $connection->createCommand(
+            "SELECT id, file_type, original_name, filename, DATE_FORMAT(uploaded_at,'%d %b %Y') AS uploaded_at
+             FROM project_files WHERE project_id=:pid ORDER BY uploaded_at DESC"
+        )->bindValue(':pid', $id)->queryAll();
+        echo json_encode(['error'=>'No','files'=>$files]);
     }
 
     /* Global popup: soft-delete a project */

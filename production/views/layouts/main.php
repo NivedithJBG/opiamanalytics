@@ -1692,15 +1692,21 @@ if($action=='login')
 #gpm-list-panel .gpm-toolbar h5 { margin:0;font-size:14px;color:#555; }
 #gpm-cards { display:flex;flex-wrap:wrap;gap:14px; }
 .gpm-card {
-    border:1px solid #e0e0e0;border-radius:8px;padding:14px 16px;width:calc(33.33% - 10px);
-    box-sizing:border-box;position:relative;background:#fafafa;transition:box-shadow .15s;
+    border:1px solid #c8c8c8;border-radius:8px;padding:0;width:calc(33.33% - 10px);
+    box-sizing:border-box;position:relative;background:#e8e8e8;transition:box-shadow .15s;overflow:hidden;
 }
-.gpm-card:hover { box-shadow:0 3px 12px rgba(0,0,0,0.12); }
-.gpm-card .gpm-card-name { font-size:14px;font-weight:700;color:#222;margin-bottom:6px;padding-right:20px; }
-.gpm-card .gpm-card-row { font-size:12px;color:#666;margin-bottom:3px; }
-.gpm-card .gpm-card-row label { font-weight:600;color:#444;margin:0;min-width:80px;display:inline-block; }
-.gpm-card .gpm-card-actions { margin-top:10px;display:flex;gap:6px; }
+.gpm-card:hover { box-shadow:0 4px 14px rgba(0,0,0,0.18);background:#dcdcdc; }
+.gpm-card-top { background:#d0d0d0;padding:11px 14px 8px;border-bottom:1px solid #bbb; }
+.gpm-card .gpm-card-name { font-size:13px;font-weight:700;color:#1a1a1a;margin:0; }
+.gpm-card-body { padding:10px 14px 4px; }
+.gpm-card .gpm-card-row { font-size:12px;color:#555;margin-bottom:4px;display:flex;gap:4px; }
+.gpm-card .gpm-card-row label { font-weight:600;color:#333;margin:0;min-width:76px;flex-shrink:0; }
+.gpm-card .gpm-card-actions { padding:8px 14px 10px;display:flex;gap:6px;border-top:1px solid #c0c0c0;background:#d8d8d8;margin-top:6px; }
 .gpm-no-projects { color:#999;padding:30px 0;text-align:center;font-size:14px;width:100%; }
+.gpm-file-list { margin-top:6px; }
+.gpm-file-item { display:flex;align-items:center;justify-content:space-between;padding:4px 8px;border-radius:4px;background:#f0f0f0;margin-bottom:4px;font-size:12px; }
+.gpm-file-item a { color:#337ab7;text-decoration:none;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.gpm-file-item .gpm-del-file { color:#c00;cursor:pointer;margin-left:8px;font-size:14px;line-height:1;background:none;border:none;padding:0; }
 
 /* ── Panel: Add / Edit Form ── */
 #gpm-form-panel { display:none;padding:16px 20px;border-top:1px solid #eee; }
@@ -1803,7 +1809,30 @@ if($action=='login')
               </div>
             </div>
           </div>
-          <div style="text-align:right;margin-top:6px;">
+          <!-- Document Upload -->
+          <div style="border-top:1px solid #e5e5e5;margin-top:14px;padding-top:14px;">
+            <label style="font-weight:600;font-size:13px;color:#444;margin-bottom:8px;display:block;"><span class="icon-paperclip"></span> Project Documents <span style="font-weight:400;color:#999;font-size:11px;">(PDF, Word, Excel, Images)</span></label>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label style="font-size:12px;color:#666;">Documents</label>
+                  <input id="gpm_docs" type="file" name="project_documents[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" class="form-control" style="height:auto;padding:4px;">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label style="font-size:12px;color:#666;">Correspondence</label>
+                  <input id="gpm_corr" type="file" name="project_correspondence[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" class="form-control" style="height:auto;padding:4px;">
+                </div>
+              </div>
+            </div>
+            <div id="gpm-existing-files" style="display:none;">
+              <label style="font-size:12px;color:#666;font-weight:600;">Uploaded Files</label>
+              <div class="gpm-file-list" id="gpm-file-list-inner"></div>
+            </div>
+          </div>
+
+          <div style="text-align:right;margin-top:12px;">
             <button type="button" id="gpm-form-cancel" class="btn btn-default" style="border-radius:20px;margin-right:6px;"><span class="icon-close"></span> Cancel</button>
             <button type="button" id="gpm-form-save" class="btn btn-primary" style="border-radius:20px;"><span class="icon-check"></span> Save Project</button>
           </div>
@@ -1887,11 +1916,11 @@ if($action=='login')
         });
     }
 
+    var URL_FILES  = '<?php echo \yii\helpers\Url::to(["/projects/globalprojectfiles"]); ?>';
+    var URL_DELFILE= '<?php echo \yii\helpers\Url::to(["/projects/deleteprojectfile"]); ?>';
+    var BASE_UPLOAD= '<?php echo \yii\helpers\Url::base(true); ?>/uploads/projects/';
+
     function gpmRenderCards(html){
-        /* The server returns HTML card markup — parse project IDs/names from it
-           OR we re-fetch clean JSON. Since actionProjectsearch returns HTML, we
-           call a fresh JSON approach using the raw project data. */
-        /* Simpler: re-use the HTML but inject edit/delete buttons into each card */
         var $tmp = $('<div>').html(html);
         var cards = $tmp.find('.fav-project-wrpr');
         if(!cards.length){
@@ -1902,15 +1931,17 @@ if($action=='login')
         var out = '';
         cards.each(function(){
             var pid   = $(this).data('id');
-            var name  = $(this).find('.card-body a').text().replace(/^\s*✓\s*/,'').trim();
+            var name  = $(this).find('.card-body a').text().replace(/^\s*[✓✓]\s*/,'').trim();
             var client= $(this).find('.project-client-name span').text().trim();
             var dur   = $(this).find('.type:not(.project-client-name):not(.text-right) span').first().text().trim();
             var val   = $(this).find('.type.text-right span').text().trim();
             out += '<div class="gpm-card" id="gpm-card-'+pid+'">'
-                 + '<div class="gpm-card-name">'+name+'</div>'
-                 + '<div class="gpm-card-row"><label>Client</label> '+client+'</div>'
-                 + '<div class="gpm-card-row"><label>Duration</label> '+dur+'</div>'
-                 + '<div class="gpm-card-row"><label>Value</label> '+val+'</div>'
+                 + '<div class="gpm-card-top"><div class="gpm-card-name">'+name+'</div></div>'
+                 + '<div class="gpm-card-body">'
+                 + '<div class="gpm-card-row"><label>Client</label><span>'+client+'</span></div>'
+                 + '<div class="gpm-card-row"><label>Duration</label><span>'+dur+'</span></div>'
+                 + '<div class="gpm-card-row"><label>Value</label><span>'+val+'</span></div>'
+                 + '</div>'
                  + '<div class="gpm-card-actions">'
                  + '<button class="btn btn-xs btn-info gpm-edit-btn" data-id="'+pid+'"><span class="icon-edit"></span> Edit</button>'
                  + '<button class="btn btn-xs btn-danger gpm-delete-btn" data-id="'+pid+'" data-name="'+name.replace(/"/g,'&quot;')+'"><span class="icon-trash"></span> Delete</button>'
@@ -1920,6 +1951,45 @@ if($action=='login')
         $('#gpm-cards').html(out);
         $('#gpm-count-label').text(cards.length + ' project' + (cards.length===1?'':'s'));
     }
+
+    /* ── load existing files for a project ── */
+    function gpmLoadFiles(pid){
+        $('#gpm-existing-files').hide();
+        $('#gpm-file-list-inner').html('<span style="color:#999;font-size:12px;">Loading…</span>');
+        $.ajax({
+            type:'POST', url:URL_FILES, dataType:'json', data:{project_id:pid},
+            success:function(d){
+                if(!d.files || !d.files.length){ $('#gpm-existing-files').hide(); return; }
+                var html='';
+                $.each(d.files,function(i,f){
+                    var icon = /\.(jpg|jpeg|png)$/i.test(f.original_name) ? 'icon-image' : 'icon-file-pdf';
+                    html += '<div class="gpm-file-item" id="gpm-file-'+f.id+'">'
+                          + '<span class="'+icon+'" style="margin-right:6px;color:#666;"></span>'
+                          + '<a href="'+BASE_UPLOAD+f.filename+'" target="_blank" title="'+f.original_name+'">'+f.original_name+'</a>'
+                          + '<span style="color:#999;font-size:11px;margin:0 8px;white-space:nowrap;">'+f.uploaded_at+'</span>'
+                          + '<button class="gpm-del-file" data-fileid="'+f.id+'" title="Remove">&times;</button>'
+                          + '</div>';
+                });
+                $('#gpm-file-list-inner').html(html);
+                $('#gpm-existing-files').show();
+            }
+        });
+    }
+
+    /* ── delete a file ── */
+    $(document).on('click','.gpm-del-file',function(){
+        var fid=$(this).data('fileid');
+        if(!confirm('Remove this file?')) return;
+        var $row=$('#gpm-file-'+fid);
+        $.ajax({
+            type:'POST', url:URL_DELFILE, dataType:'json', data:{fileid:fid},
+            success:function(d){
+                $row.remove();
+                if(!$('.gpm-file-item').length) $('#gpm-existing-files').hide();
+            },
+            error:function(xhr){ alert('Could not delete file ('+xhr.status+').'); }
+        });
+    });
 
     /* ── edit project ── */
     $(document).on('click','.gpm-edit-btn',function(){
@@ -1937,8 +2007,11 @@ if($action=='login')
                 $('#gpm_client').val(d.client_name);
                 $('#gpm_location').val(d.location);
                 $('#gpm_wrkhrs').val(d.wrkhours);
+                $('#gpm_docs').val('');
+                $('#gpm_corr').val('');
                 $('.gpm-err').hide();
                 gpmShowFormPanel(true);
+                gpmLoadFiles(d.Project_Id);
             },
             error:function(xhr){ alert('Server error ('+xhr.status+').'); }
         });
@@ -1962,7 +2035,7 @@ if($action=='login')
         });
     });
 
-    /* ── save (add or update) ── */
+    /* ── save (add or update) using FormData for file upload ── */
     $(document).on('click','#gpm-form-save',function(){
         var err=0; $('.gpm-err').hide();
         var name   = $.trim($('#gpm_name').val());
@@ -1982,19 +2055,32 @@ if($action=='login')
         if(!hrs)    { $('#gpm_wrkhrs_err').text('Select work hours').show(); err=1; }
         if(err) return;
 
-        var btn=$('#gpm-form-save').prop('disabled',true).text('Saving…');
         var isEdit = pid ? true : false;
-        var postData = {
-            projectname:name, duration:dur, startdate:sd, enddate:ed,
-            projectvalue:val, clientname:client, location:$('#gpm_location').val(), wrkhrss:hrs
-        };
-        if(isEdit) postData.project_id = pid;
+        var fd = new FormData();
+        fd.append('projectname', name);
+        fd.append('duration', dur);
+        fd.append('startdate', sd);
+        fd.append('enddate', ed);
+        fd.append('projectvalue', val);
+        fd.append('clientname', client);
+        fd.append('location', $('#gpm_location').val());
+        fd.append('wrkhrss', hrs);
+        if(isEdit) fd.append('project_id', pid);
 
+        /* attach files */
+        var docsFiles = $('#gpm_docs')[0].files;
+        var corrFiles = $('#gpm_corr')[0].files;
+        for(var i=0;i<docsFiles.length;i++) fd.append('project_documents[]', docsFiles[i]);
+        for(var j=0;j<corrFiles.length;j++) fd.append('project_correspondence[]', corrFiles[j]);
+
+        var btn=$('#gpm-form-save').prop('disabled',true).text('Saving…');
         $.ajax({
             type:'POST',
             url: isEdit ? URL_UPDATE : URL_CREATE,
-            data: postData,
+            data: fd,
             dataType:'json',
+            contentType:false,
+            processData:false,
             success:function(data){
                 btn.prop('disabled',false).html('<span class="icon-check"></span> '+(isEdit?'Update Project':'Save Project'));
                 if(data.error==='No'){
