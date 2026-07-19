@@ -2111,6 +2111,18 @@ if($action=='login')
 .qe-input:focus,.qe-select:focus{border-color:#4a5568;background:#fff}
 .qe-input[readonly]{background:#f5f5f5;color:#555;cursor:default}
 .qe-needs-data{border-color:#e53e3e !important;}
+/* Activity combobox */
+.qe-act-combo{position:relative;display:flex;align-items:stretch;}
+.qe-act-combo .qe-input{flex:1;border-radius:4px 0 0 4px;border-right:none;}
+.qe-act-combo-btn{width:28px;flex-shrink:0;border:1px solid #a0aab8;border-left:none;border-radius:0 4px 4px 0;background:#f0f3fa;color:#4a5568;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
+.qe-act-combo-btn:hover{background:#e2e8f0;}
+.qe-act-dropdown{display:none;position:absolute;top:100%;left:0;right:0;z-index:99999;background:#fff;border:1px solid #a0aab8;border-top:none;border-radius:0 0 4px 4px;max-height:200px;overflow-y:auto;margin:0;padding:0;list-style:none;box-shadow:0 4px 12px rgba(0,0,0,.15);}
+.qe-act-dropdown.open{display:block;}
+.qe-act-dropdown li{padding:6px 10px;font-size:12px;color:#1a202c;cursor:pointer;border-bottom:1px solid #f0f3fa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.qe-act-dropdown li:last-child{border-bottom:none;}
+.qe-act-dropdown li:hover,.qe-act-dropdown li.active{background:#ebf0ff;color:#1a2540;}
+.qe-act-dropdown li.new-entry{color:#3461b8;font-style:italic;font-weight:600;}
+.qe-act-dropdown li.new-entry:hover{background:#ebf0ff;}
 .qe-repeat-tbl td input,.qe-repeat-tbl td select{font-weight:700;}
 .qe-repeat-tbl td input,.qe-repeat-tbl td select{height:32px;}
 .qe-repeat-tbl td input.qe-res-amt{border:1px solid #a0aab8;}
@@ -2303,8 +2315,11 @@ if($action=='login')
           </div>
           <div class="qe-field wide">
             <span class="qe-label">Activity</span>
-            <input type="text" id="qe-activity-text" class="qe-input qe-needs-data" placeholder="Select or type new activity" list="qe-activity-list" autocomplete="off">
-            <datalist id="qe-activity-list"></datalist>
+            <div class="qe-act-combo" id="qe-act-combo">
+              <input type="text" id="qe-activity-text" class="qe-input qe-needs-data" placeholder="Select or type new activity" autocomplete="off">
+              <button type="button" class="qe-act-combo-btn" id="qe-act-combo-btn" tabindex="-1">&#9660;</button>
+              <ul class="qe-act-dropdown" id="qe-act-dropdown"></ul>
+            </div>
             <input type="hidden" id="qe-activity-id">
           </div>
         </div>
@@ -2439,6 +2454,7 @@ var _wbsWanId  = 0;   /* wan_id returned by wbssave / from wbsget */
 /* ── open / close ── */
 function openModal(saId, wanId){
   document.getElementById('qe-modal').classList.add('qe-open');
+  if(window._actComboInit) window._actComboInit();
   var pname = (document.getElementById('selectedProject')||{}).value || '';
   var lbl = document.getElementById('qe-proj-label');
   if(lbl && pname) lbl.textContent = '— ' + pname;
@@ -2624,22 +2640,99 @@ function loadGroups(typeId, cb){
 /* activity items cache for the current type/group combo */
 var _activityItems = [];
 
+/* ── Activity combobox ─────────────────────────────────────────────────────── */
+(function(){
+  var _input  = null, _btn = null, _drop = null;
+
+  function _init(){
+    _input = document.getElementById('qe-activity-text');
+    _btn   = document.getElementById('qe-act-combo-btn');
+    _drop  = document.getElementById('qe-act-dropdown');
+    if(!_input || !_btn || !_drop) return;
+
+    _input.addEventListener('input',  _onInput);
+    _input.addEventListener('keydown', _onKey);
+    _input.addEventListener('focus',  function(){ _renderList(_input.value); });
+    _btn.addEventListener('mousedown', function(e){
+      e.preventDefault();
+      if(_drop.classList.contains('open')){ _close(); } else { _input.focus(); _renderList(''); }
+    });
+    document.addEventListener('mousedown', function(e){
+      if(!document.getElementById('qe-act-combo').contains(e.target)) _close();
+    });
+  }
+
+  function _renderList(filter){
+    if(!_drop) return;
+    _drop.innerHTML = '';
+    var q = filter.trim().toLowerCase();
+    var matched = q ? _activityItems.filter(function(i){ return i.name.toLowerCase().indexOf(q) !== -1; }) : _activityItems;
+    matched.forEach(function(item){
+      var li = document.createElement('li');
+      li.textContent = item.name;
+      li.addEventListener('mousedown', function(e){ e.preventDefault(); _select(item); });
+      _drop.appendChild(li);
+    });
+    /* "Save as new" option when typed text doesn't exactly match */
+    if(q && !_activityItems.some(function(i){ return i.name.toLowerCase() === q; })){
+      var li = document.createElement('li');
+      li.className = 'new-entry';
+      li.textContent = '+ Save as new: "' + filter.trim() + '"';
+      li.addEventListener('mousedown', function(e){ e.preventDefault(); _selectNew(filter.trim()); });
+      _drop.appendChild(li);
+    }
+    if(_drop.children.length) _drop.classList.add('open'); else _drop.classList.remove('open');
+  }
+
+  function _select(item){
+    _input.value = item.name;
+    document.getElementById('qe-activity-id').value = item.id;
+    _input.classList.remove('qe-needs-data');
+    _close();
+  }
+
+  function _selectNew(name){
+    _input.value = name;
+    document.getElementById('qe-activity-id').value = '';
+    _input.classList.remove('qe-needs-data');
+    _close();
+  }
+
+  function _close(){ if(_drop) _drop.classList.remove('open'); }
+
+  function _onInput(){ _renderList(_input.value); document.getElementById('qe-activity-id').value = ''; }
+
+  function _onKey(e){
+    if(!_drop || !_drop.classList.contains('open')) return;
+    var items = _drop.querySelectorAll('li');
+    var active = _drop.querySelector('li.active');
+    var idx = active ? Array.prototype.indexOf.call(items, active) : -1;
+    if(e.key === 'ArrowDown'){ e.preventDefault(); _setActive(items, idx + 1); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); _setActive(items, idx - 1); }
+    else if(e.key === 'Enter' && active){ e.preventDefault(); active.dispatchEvent(new MouseEvent('mousedown')); }
+    else if(e.key === 'Escape'){ _close(); }
+  }
+
+  function _setActive(items, idx){
+    items.forEach(function(li){ li.classList.remove('active'); });
+    if(idx >= 0 && idx < items.length){ items[idx].classList.add('active'); items[idx].scrollIntoView({block:'nearest'}); }
+  }
+
+  /* expose re-init so loadActivities can call after DOM ready */
+  window._actComboInit = _init;
+  window._actComboClose = _close;
+})();
+
 function loadActivities(typeId, groupId, cb){
-  var dl = document.getElementById('qe-activity-list');
-  dl.innerHTML = '';
   _activityItems = [];
+  var drop = document.getElementById('qe-act-dropdown');
+  if(drop) drop.classList.remove('open');
   if(!typeId && !groupId){ if(cb) cb(); return; }
   $.ajax({
     type:'POST', url:'../projectsmain/getactivitiesbytypeandgroup', dataType:'json',
     data:{typeId: typeId, groupId: groupId},
     success: function(d){
       _activityItems = d.items || [];
-      _activityItems.forEach(function(item){
-        var o = document.createElement('option');
-        o.value = item.name;
-        o.setAttribute('data-id', item.id);
-        dl.appendChild(o);
-      });
       if(cb) cb();
     }
   });
@@ -2649,7 +2742,6 @@ function loadActivities(typeId, groupId, cb){
 function _setActivityById(actId, actName){
   var textEl = document.getElementById('qe-activity-text');
   var idEl   = document.getElementById('qe-activity-id');
-  /* find name from cached items */
   var found = _activityItems.filter(function(i){ return +i.id === +actId; });
   textEl.value = found.length ? found[0].name : (actName || '');
   idEl.value   = actId;
