@@ -21598,7 +21598,7 @@ public function actionActivitymusterprocess()
                        . '<td style="padding:8px 12px;border:1px solid #ddd;text-align:right;">' . number_format((float)$data['activity_rate'], 2) . '</td>'
                        . '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;white-space:nowrap;">'
                        .     '<button type="button" id="resourceallocation" data-id="' . $data['activity_id'] . '" class="btn btn-default btn-xs allocate-resosurces-btn res_actlibrary_' . $data['activity_id'] . '" style="border-radius:50%;width:28px;height:28px;padding:0;margin-right:2px;" title="Allocate Resources"><span class="icon-library_books"></span></button>'
-                       .     '<button type="button" onclick="alEditActivity(' . $data['activity_id'] . ')" style="border-radius:50%;width:28px;height:28px;padding:0;margin-right:2px;background:#e8f0fe;border:1px solid #b0c4f8;cursor:pointer;" title="Edit"><span class="icon-pencil" style="color:#3a7bd5;font-size:13px;"></span></button>'
+                       .     '<button type="button" class="al-edit-activity-btn" data-actid="' . $data['activity_id'] . '" style="border-radius:50%;width:28px;height:28px;padding:0;margin-right:2px;background:#e8f0fe;border:1px solid #b0c4f8;cursor:pointer;" title="Edit"><span class="icon-pencil" style="color:#3a7bd5;font-size:13px;"></span></button>'
                        .     '<button type="button" class="deleteestactivitybutton btn btn-danger btn-xs" data-id="' . $data['activity_id'] . '" style="border-radius:50%;width:28px;height:28px;padding:0;" title="Delete"><span class="icon-trash1"></span></button>'
                        . '</td></tr>';
             }

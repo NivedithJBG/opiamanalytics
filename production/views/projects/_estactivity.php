@@ -617,8 +617,13 @@ function alRefreshActIowGroupDropdown(){
     });
 }
 
-/* Global edit function called by inline onclick on list rows */
-window.alEditActivity = function(idval){
+/* Edit button in activity list */
+$(document).on('click', '.al-edit-activity-btn', function(){
+    var idval = $(this).data('actid');
+    alEditActivity(idval);
+});
+
+function alEditActivity(idval){
     $.ajax({
         type: 'POST',
         url: '<?php echo \yii\helpers\Url::to(["/projects/getactivityforedit"]); ?>',
