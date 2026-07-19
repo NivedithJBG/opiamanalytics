@@ -1710,8 +1710,8 @@ if($action=='login')
                     </div>
                     <div class="col-md-2">
                         <div class="form-group">
-                            <label>End Date <span style="color:red;">*</span></label>
-                            <input id="gp_enddate" type="date" class="form-control">
+                            <label>End Date</label>
+                            <input id="gp_enddate" type="date" class="form-control" readonly style="background:#f5f5f5;">
                             <span class="text-danger gp-err" id="gp_enddate_err" style="display:none;font-size:12px;"></span>
                         </div>
                     </div>
@@ -1742,7 +1742,13 @@ if($action=='login')
                     <div class="col-md-4">
                         <div class="form-group">
                             <label>Work Hours <span style="color:red;">*</span></label>
-                            <input id="gp_wrkhrs" type="text" class="form-control" placeholder="Work Hours">
+                            <select id="gp_wrkhrs" class="form-control">
+                                <option value="">-- Select --</option>
+                                <option value="8">8 hrs</option>
+                                <option value="10">10 hrs</option>
+                                <option value="12">12 hrs</option>
+                                <option value="24">24 hrs</option>
+                            </select>
                             <span class="text-danger gp-err" id="gp_wrkhrs_err" style="display:none;font-size:12px;"></span>
                         </div>
                     </div>
@@ -1767,6 +1773,22 @@ if($action=='login')
     function gpHideModal(){
         $('#globalAddProjectPopup').hide();
     }
+
+    function gpCalcEndDate(){
+        var sd  = $('#gp_startdate').val();
+        var dur = parseInt($('#gp_duration').val(), 10);
+        if(sd && dur > 0){
+            var d = new Date(sd);
+            d.setDate(d.getDate() + dur - 1);
+            var y = d.getFullYear();
+            var m = String(d.getMonth()+1).padStart(2,'0');
+            var day = String(d.getDate()).padStart(2,'0');
+            $('#gp_enddate').val(y+'-'+m+'-'+day);
+        } else {
+            $('#gp_enddate').val('');
+        }
+    }
+    $(document).on('change input', '#gp_startdate, #gp_duration', gpCalcEndDate);
 
     /* open modal from nav icon */
     $(document).on('click', '#add-project-nav-btn', function(e){
@@ -1801,10 +1823,9 @@ if($action=='login')
         if(!name)   { $('#gp_name_err').text('Enter Project Name').show(); err=1; }
         if(!dur)    { $('#gp_duration_err').text('Enter Duration').show(); err=1; }
         if(!sd)     { $('#gp_startdate_err').text('Select Start Date').show(); err=1; }
-        if(!ed)     { $('#gp_enddate_err').text('Select End Date').show(); err=1; }
         if(!val)    { $('#gp_value_err').text('Enter Project Value').show(); err=1; }
         if(!client) { $('#gp_client_err').text('Enter Client Name').show(); err=1; }
-        if(!hrs)    { $('#gp_wrkhrs_err').text('Enter Work Hours').show(); err=1; }
+        if(!hrs)    { $('#gp_wrkhrs_err').text('Select Work Hours').show(); err=1; }
         if(err) return;
 
         var fd = new FormData();
