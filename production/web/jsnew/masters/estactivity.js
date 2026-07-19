@@ -312,9 +312,19 @@ $(document).on('click', '.al-edit-activity-btn', function(){
             $('#saveestactivity').html('<span class="icon-check"></span> Update Activity');
             $('#alAddActivityTitle').text('Edit Activity');
             window._alEditMode = true;
-            $('#alAddActivityPopup').modal('show');
+            /* Bootstrap not available here — show modal manually */
+            $('#alAddActivityPopup').css('display','block').addClass('in').attr('aria-hidden','false');
+            $('body').addClass('modal-open');
+            if(!$('.modal-backdrop').length) $('<div class="modal-backdrop fade in"></div>').appendTo('body');
         }
     });
+});
+
+/* close manually-opened modal */
+$(document).on('click', '[data-dismiss="modal"], .cancelactivity', function(){
+    $('#alAddActivityPopup').css('display','none').removeClass('in').attr('aria-hidden','true');
+    $('body').removeClass('modal-open');
+    $('.modal-backdrop').remove();
 });
 
 $(document).on( "click", "#addestactivity", function(){
