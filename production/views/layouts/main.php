@@ -2111,6 +2111,16 @@ if($action=='login')
 .qe-input:focus,.qe-select:focus{border-color:#4a5568;background:#fff}
 .qe-input[readonly]{background:#f5f5f5;color:#555;cursor:default}
 .qe-needs-data{border-color:#e53e3e !important;}
+.qe-act-wrap{position:relative;display:flex;align-items:stretch;}
+.qe-act-wrap .qe-input{flex:1;border-radius:4px 0 0 4px;border-right:none;}
+.qe-act-drop-btn{width:26px;flex-shrink:0;border:1px solid #a0aab8;border-left:none;border-radius:0 4px 4px 0;background:#f0f3fa;color:#4a5568;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;}
+.qe-act-drop-btn:hover{background:#dde3ef;}
+.qe-act-list{display:none;position:absolute;top:100%;left:0;right:0;z-index:99999;background:#fff;border:1px solid #a0aab8;border-top:none;border-radius:0 0 4px 4px;max-height:220px;overflow-y:auto;margin:0;padding:0;list-style:none;box-shadow:0 4px 14px rgba(0,0,0,.18);}
+.qe-act-list.open{display:block;}
+.qe-act-list li{padding:6px 10px;font-size:12px;color:#1a202c;cursor:pointer;border-bottom:1px solid #f0f3fa;}
+.qe-act-list li:last-child{border-bottom:none;}
+.qe-act-list li:hover,.qe-act-list li.hl{background:#ebf0ff;color:#1a2540;}
+.qe-act-list li.new-act{color:#2b6cb0;font-style:italic;}
 .qe-repeat-tbl td input,.qe-repeat-tbl td select{font-weight:700;}
 .qe-repeat-tbl td input,.qe-repeat-tbl td select{height:32px;}
 .qe-repeat-tbl td input.qe-res-amt{border:1px solid #a0aab8;}
@@ -2303,8 +2313,11 @@ if($action=='login')
           </div>
           <div class="qe-field wide">
             <span class="qe-label">Activity</span>
-            <input type="text" id="qe-activity-text" class="qe-input qe-needs-data" placeholder="Select or type new activity" list="qe-activity-list" autocomplete="off">
-            <datalist id="qe-activity-list"></datalist>
+            <div class="qe-act-wrap">
+              <input type="text" id="qe-activity-text" class="qe-input qe-needs-data" placeholder="Select or type activity" autocomplete="off">
+              <button type="button" class="qe-act-drop-btn" id="qe-act-drop-btn" tabindex="-1">&#9660;</button>
+              <ul class="qe-act-list" id="qe-act-list"></ul>
+            </div>
             <input type="hidden" id="qe-activity-id">
           </div>
         </div>
@@ -2439,6 +2452,7 @@ var _wbsWanId  = 0;   /* wan_id returned by wbssave / from wbsget */
 /* ── open / close ── */
 function openModal(saId, wanId){
   document.getElementById('qe-modal').classList.add('qe-open');
+  if(window._actComboInit) _actComboInit();
   var pname = (document.getElementById('selectedProject')||{}).value || '';
   var lbl = document.getElementById('qe-proj-label');
   if(lbl && pname) lbl.textContent = '— ' + pname;
@@ -2604,8 +2618,8 @@ function loadProjTypes(cb){
 function loadGroups(typeId, cb){
   var sel = document.getElementById('qe-group');
   sel.innerHTML = '<option value="">— Select Group —</option>';
-  document.getElementById('qe-activity-list').innerHTML = '';
   _activityItems = [];
+  if(window._actListClose) _actListClose();
   if(!typeId){ if(cb) cb(); return; }
   $.ajax({
     type:'POST', url:'../projectsmain/getwbgrouplist', dataType:'json',
@@ -2625,25 +2639,67 @@ function loadGroups(typeId, cb){
 var _activityItems = [];
 
 function loadActivities(typeId, groupId, cb){
-  var dl = document.getElementById('qe-activity-list');
-  dl.innerHTML = '';
   _activityItems = [];
+  _actListClose();
   if(!typeId && !groupId){ if(cb) cb(); return; }
   $.ajax({
     type:'POST', url:'../projectsmain/getactivitiesbytypeandgroup', dataType:'json',
     data:{typeId: typeId, groupId: groupId},
     success: function(d){
       _activityItems = d.items || [];
-      _activityItems.forEach(function(item){
-        var o = document.createElement('option');
-        o.value = item.name;
-        o.setAttribute('data-id', item.id);
-        dl.appendChild(o);
-      });
       if(cb) cb();
     }
   });
 }
+
+/* ── Activity combobox ── */
+(function(){
+  var _inp, _btn, _list;
+  function _init(){
+    _inp  = document.getElementById('qe-activity-text');
+    _btn  = document.getElementById('qe-act-drop-btn');
+    _list = document.getElementById('qe-act-list');
+    if(!_inp||!_btn||!_list) return;
+    _inp.addEventListener('input', function(){ document.getElementById('qe-activity-id').value=''; _render(_inp.value); });
+    _inp.addEventListener('keydown', _key);
+    _inp.addEventListener('focus', function(){ _render(_inp.value); });
+    _btn.addEventListener('mousedown', function(e){ e.preventDefault(); _list.classList.contains('open') ? _actListClose() : (_inp.focus(), _render('')); });
+    document.addEventListener('mousedown', function(e){ if(!e.target.closest('.qe-act-wrap')) _actListClose(); });
+  }
+  function _render(q){
+    _list.innerHTML='';
+    var f=q.trim().toLowerCase();
+    var matched=f ? _activityItems.filter(function(i){return i.name.toLowerCase().indexOf(f)!==-1;}) : _activityItems;
+    matched.forEach(function(item){
+      var li=document.createElement('li'); li.textContent=item.name;
+      li.addEventListener('mousedown',function(e){e.preventDefault();_pick(item);});
+      _list.appendChild(li);
+    });
+    if(f && !_activityItems.some(function(i){return i.name.toLowerCase()===f;})){
+      var li=document.createElement('li'); li.className='new-act';
+      li.textContent='+ New: "'+q.trim()+'"';
+      li.addEventListener('mousedown',function(e){e.preventDefault();_inp.value=q.trim();document.getElementById('qe-activity-id').value='';_inp.classList.remove('qe-needs-data');_actListClose();});
+      _list.appendChild(li);
+    }
+    _list.children.length ? _list.classList.add('open') : _list.classList.remove('open');
+  }
+  function _pick(item){ _inp.value=item.name; document.getElementById('qe-activity-id').value=item.id; _inp.classList.remove('qe-needs-data'); _actListClose(); }
+  function _key(e){
+    if(!_list.classList.contains('open')) return;
+    var items=_list.querySelectorAll('li'), cur=_list.querySelector('li.hl'), idx=cur?Array.prototype.indexOf.call(items,cur):-1;
+    if(e.key==='ArrowDown'){e.preventDefault();_hl(items,idx+1);}
+    else if(e.key==='ArrowUp'){e.preventDefault();_hl(items,idx-1);}
+    else if(e.key==='Enter'&&cur){e.preventDefault();cur.dispatchEvent(new MouseEvent('mousedown'));}
+    else if(e.key==='Escape'){_actListClose();}
+  }
+  function _hl(items,i){ items.forEach(function(l){l.classList.remove('hl');}); if(i>=0&&i<items.length){items[i].classList.add('hl');items[i].scrollIntoView({block:'nearest'});} }
+  window._actListClose=function(){ if(_list) _list.classList.remove('open'); };
+  /* init on first modal open */
+  var _ready=false;
+  var _orig=window.openQeModal;
+  document.addEventListener('DOMContentLoaded',function(){ _init(); _ready=true; });
+  window._actComboInit=function(){ if(!_ready){_init();_ready=true;} };
+})();
 
 /* set activity text+id by id (used during prefill) */
 function _setActivityById(actId, actName){
