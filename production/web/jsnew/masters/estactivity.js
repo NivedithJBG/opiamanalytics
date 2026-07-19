@@ -338,7 +338,9 @@ $(document).on('click', '.editactivitybutton', function(){
                 $('#saveestactivity').html('<span class="icon-check"></span> Update Activity');
                 $('#alAddActivityTitle').text('Edit Activity');
                 window._alEditMode = true;
-                $('#alAddActivityPopup').modal('show');
+                var $m = $('#alAddActivityPopup');
+                if(!$m.length){ alert('Popup not found'); return; }
+                $m.modal('show');
             }
         }
     });
