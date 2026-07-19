@@ -2683,7 +2683,7 @@ function loadActivities(typeId, groupId, cb){
     }
     _list.children.length ? _list.classList.add('open') : _list.classList.remove('open');
   }
-  function _pick(item){ _inp.value=item.name; document.getElementById('qe-activity-id').value=item.id; _inp.classList.remove('qe-needs-data'); _actListClose(); }
+  function _pick(item){ _inp.value=item.name; document.getElementById('qe-activity-id').value=item.id; _inp.classList.remove('qe-needs-data'); _actListClose(); _inp.dispatchEvent(new Event('change')); }
   function _key(e){
     if(!_list.classList.contains('open')) return;
     var items=_list.querySelectorAll('li'), cur=_list.querySelector('li.hl'), idx=cur?Array.prototype.indexOf.call(items,cur):-1;
