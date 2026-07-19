@@ -947,6 +947,34 @@ class ProjectsmainController extends Controller
         ];
     }
 
+    public function actionWbsdelete()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $saId = (int)\Yii::$app->request->post('sa_id', 0);
+        if (!$saId) return ['error' => 'No activity id'];
+
+        $db = \Yii::$app->db;
+
+        // Check for any active relationships (as predecessor or successor)
+        $relCount = (int)$db->createCommand(
+            "SELECT COUNT(*) FROM activity_relations
+             WHERE (precedent_activity = :id OR dependent_activity = :id) AND status = 0",
+            [':id' => $saId]
+        )->queryScalar();
+
+        if ($relCount > 0) {
+            return ['error' => 'Please remove the relation before deleting this activity'];
+        }
+
+        // Soft-delete the scheduleactivities row
+        $db->createCommand(
+            "UPDATE scheduleactivities SET status = 1 WHERE id = :id",
+            [':id' => $saId]
+        )->execute();
+
+        return ['ok' => true];
+    }
+
     public function actionPerformancedashboard()
     {
         $uid  = Yii::$app->user->Id;

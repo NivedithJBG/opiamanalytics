@@ -2414,6 +2414,7 @@ if($action=='login')
     <div id="qe-save-msg"></div>
     <button id="qe-btn-save">&#128190; Save</button>
     <button id="qe-btn-add" disabled>&#43; Add to Gantt</button>
+    <button id="qe-btn-delete" style="display:none;background:#c0392b;color:#fff;border:none;padding:6px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;border-radius:999px;">&#128465; Delete</button>
     <button id="qe-close-btn" style="background:#e67e22;color:#fff;border:none;padding:6px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;border-radius:999px;">&#10005; Close</button>
   </div>
 </div><!-- /qe-modal -->
@@ -2448,6 +2449,7 @@ if($action=='login')
 /* _wbsMode: 'new' (WBS icon) or 'edit' (bar click) */
 var _wbsMode   = 'new';
 var _wbsWanId  = 0;   /* wan_id returned by wbssave / from wbsget */
+var _wbsSaId   = 0;   /* scheduleactivities.id — set in edit mode */
 
 /* ── open / close ── */
 function openModal(saId, wanId){
@@ -2462,7 +2464,9 @@ function openModal(saId, wanId){
     /* edit mode — existing bar */
     _wbsMode  = 'edit';
     _wbsWanId = wanId || 0;
+    _wbsSaId  = saId  || 0;
     document.getElementById('qe-btn-add').style.display = 'none';
+    document.getElementById('qe-btn-delete').style.display = '';
     document.getElementById('qe-btn-save').textContent = '💾 Save';
     $.ajax({
       type:'POST', url:'../projectsmain/wbsget', dataType:'json',
@@ -2478,8 +2482,10 @@ function openModal(saId, wanId){
     /* new entry mode — WBS icon */
     _wbsMode  = 'new';
     _wbsWanId = 0;
+    _wbsSaId  = 0;
     document.getElementById('qe-btn-add').style.display = '';
     document.getElementById('qe-btn-add').disabled  = true;
+    document.getElementById('qe-btn-delete').style.display = 'none';
     document.getElementById('qe-btn-save').textContent = '💾 Save';
     if(!document.querySelector('#qe-task-body tr')) addTaskRow();
     if(!document.querySelector('#qe-res-body tr'))  { loadResTypes(function(){ addResRow(); }); }
@@ -2594,7 +2600,7 @@ function _prefillModal(d){
 window.openQeModal    = openModal;
 function closeModal(){
   document.getElementById('qe-modal').classList.remove('qe-open');
-  _wbsMode = 'new'; _wbsWanId = 0;
+  _wbsMode = 'new'; _wbsWanId = 0; _wbsSaId = 0;
   _resetModal();
 }
 
@@ -3155,6 +3161,28 @@ document.addEventListener('DOMContentLoaded', function(){
   /* close WBS modal */
   document.getElementById('qe-close').addEventListener('click', closeModal);
   document.getElementById('qe-close-btn').addEventListener('click', closeModal);
+
+  /* delete activity from gantt */
+  document.getElementById('qe-btn-delete').addEventListener('click', function(){
+    if(!_wbsSaId){ alert('No activity to delete.'); return; }
+    if(!confirm('Delete this activity from the Gantt chart?')) return;
+    var btn = this;
+    btn.disabled = true;
+    $.ajax({
+      type:'POST', url:'../projectsmain/wbsdelete', dataType:'json',
+      data:{ sa_id: _wbsSaId },
+      success: function(d){
+        btn.disabled = false;
+        if(d.error){
+          alert(d.error);
+        } else {
+          closeModal();
+          if(typeof window.loadGantt === 'function') window.loadGantt();
+        }
+      },
+      error: function(){ btn.disabled = false; alert('Delete failed. Please try again.'); }
+    });
+  });
 
   /* drag + resize */
   (function(){
