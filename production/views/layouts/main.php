@@ -2223,12 +2223,12 @@ if($action=='login')
     <button id="pdoc-close-x">&times;</button>
   </div>
   <!-- Upload Panel -->
-  <div id="pdoc-upload-panel" style="display:none;background:#f0f4fb;border-bottom:2px solid #dde3ef;padding:14px 16px;">
+  <div id="pdoc-upload-panel" style="display:none;background:#f0f4fb;border-bottom:2px solid #dde3ef;padding:14px 16px;overflow-y:auto;max-height:55%;flex-shrink:0;">
     <!-- Active project name display -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-      <label style="font-size:11px;color:#555;font-weight:700;white-space:nowrap;">Project</label>
-      <span id="pdoc-up-project-name" style="font-size:13px;font-weight:600;color:#1565C0;background:#e3eaf5;border-radius:5px;padding:4px 12px;border:1px solid #b3c6e0;">
-        <?php echo $ProjectName ? Html::encode($ProjectName) : '<span style="color:#999;font-weight:400;">No project selected</span>'; ?>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <label style="font-size:11px;color:#555;font-weight:700;white-space:nowrap;">Project:</label>
+      <span id="pdoc-up-project-name" style="font-size:13px;font-weight:700;color:#1565C0;">
+        <?php echo $ProjectName ? Html::encode($ProjectName) : '<span style="color:#999;font-weight:400;font-style:italic;">No project selected</span>'; ?>
       </span>
     </div>
     <!-- Two upload columns -->
@@ -2243,6 +2243,7 @@ if($action=='login')
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
           <button id="pdoc-up-doc-submit" style="padding:5px 20px;background:#1565C0;color:#fff;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">&#8679; Upload</button>
+          <button id="pdoc-up-doc-cancel" type="button" style="padding:5px 16px;background:#f0f0f0;color:#555;border:1px solid #ccc;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;">Cancel</button>
           <span id="pdoc-up-doc-msg" style="font-size:12px;font-weight:600;"></span>
         </div>
       </div>
@@ -2266,6 +2267,7 @@ if($action=='login')
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
           <button id="pdoc-up-corr-submit" style="padding:5px 20px;background:#6a1b9a;color:#fff;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">&#8679; Upload</button>
+          <button id="pdoc-up-corr-cancel" type="button" style="padding:5px 16px;background:#f0f0f0;color:#555;border:1px solid #ccc;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;">Cancel</button>
           <span id="pdoc-up-corr-msg" style="font-size:12px;font-weight:600;"></span>
         </div>
       </div>
@@ -2514,6 +2516,18 @@ if($action=='login')
                 $('#pdoc-up-addressee,#pdoc-up-subject').val('');
                 $('#pdoc-up-corr-meta').slideUp(150);
             });
+    });
+
+    /* Cancel buttons */
+    $(document).on('click','#pdoc-up-doc-cancel', function(){
+        $('#pdoc-up-doc-file').val('');
+        $('#pdoc-up-doc-msg').text('');
+    });
+    $(document).on('click','#pdoc-up-corr-cancel', function(){
+        $('#pdoc-up-corr-file').val('');
+        $('#pdoc-up-addressee,#pdoc-up-subject').val('');
+        $('#pdoc-up-corr-meta').slideUp(150);
+        $('#pdoc-up-corr-msg').text('');
     });
 
     $(document).on('click','#pdoc-nav-btn',  function(e){ e.preventDefault(); pdocShow(); });
