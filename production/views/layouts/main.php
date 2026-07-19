@@ -343,7 +343,7 @@ if($action=='login')
 
                 ?>
                 <li>
-                    <a class="icon-add" id="add-project-nav-btn" title="Add New Project" href="#" style="font-size:18px;"></a>
+                    <a class="icon-add" id="add-project-nav-btn" title="Projects" href="#" style="font-size:18px;"></a>
                 </li>
                 <?php if($ProjectId && Yii::$app->controller->id != 'procurement') {  ?>
                 <li>
@@ -1677,194 +1677,341 @@ if($action=='login')
 </script>
 <!-- ── End Chatbot ─────────────────────────────────────────────────────── -->
 
-<!-- ── Add Project Overlay (global, accessible from top nav) ───────────── -->
-<div id="globalAddProjectPopup" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;">
-    <div id="globalAddProjectDialog" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:6px;width:780px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 5px 30px rgba(0,0,0,0.4);">
-        <div style="padding:15px 20px;border-bottom:1px solid #e5e5e5;display:flex;align-items:center;justify-content:space-between;">
-            <h4 style="margin:0;font-size:18px;font-weight:700;"><span class="icon-add"></span> Add New Project</h4>
-            <button id="gp_close_x" type="button" style="background:none;border:none;font-size:28px;line-height:1;cursor:pointer;color:#666;">&times;</button>
-        </div>
-        <div style="padding:20px;">
-            <form id="globalAddProjectForm">
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Project Name <span style="color:red;">*</span></label>
-                            <input id="gp_name" type="text" class="form-control" placeholder="Project Name">
-                            <span class="text-danger gp-err" id="gp_name_err" style="display:none;font-size:12px;"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Duration (days) <span style="color:red;">*</span></label>
-                            <input id="gp_duration" type="number" class="form-control" placeholder="Project Duration">
-                            <span class="text-danger gp-err" id="gp_duration_err" style="display:none;font-size:12px;"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-group">
-                            <label>Start Date <span style="color:red;">*</span></label>
-                            <input id="gp_startdate" type="date" class="form-control">
-                            <span class="text-danger gp-err" id="gp_startdate_err" style="display:none;font-size:12px;"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-group">
-                            <label>End Date</label>
-                            <input id="gp_enddate" type="date" class="form-control" readonly style="background:#f5f5f5;">
-                            <span class="text-danger gp-err" id="gp_enddate_err" style="display:none;font-size:12px;"></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Project Value <span style="color:red;">*</span></label>
-                            <input id="gp_value" type="text" class="form-control" placeholder="Project Value">
-                            <span class="text-danger gp-err" id="gp_value_err" style="display:none;font-size:12px;"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Client Name <span style="color:red;">*</span></label>
-                            <input id="gp_client" type="text" class="form-control" placeholder="Client Name">
-                            <span class="text-danger gp-err" id="gp_client_err" style="display:none;font-size:12px;"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Location</label>
-                            <input id="gp_location" type="text" class="form-control" placeholder="Site Location">
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Work Hours <span style="color:red;">*</span></label>
-                            <select id="gp_wrkhrs" class="form-control">
-                                <option value="">-- Select --</option>
-                                <option value="8">8 hrs</option>
-                                <option value="10">10 hrs</option>
-                                <option value="12">12 hrs</option>
-                                <option value="24">24 hrs</option>
-                            </select>
-                            <span class="text-danger gp-err" id="gp_wrkhrs_err" style="display:none;font-size:12px;"></span>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-        <div style="padding:12px 20px;border-top:1px solid #e5e5e5;text-align:right;">
-            <button type="button" id="gp_cancel" class="btn btn-danger" style="border-radius:20px;margin-right:8px;"><span class="icon-close"></span> Cancel</button>
-            <button type="button" id="gp_save" class="btn btn-primary" style="border-radius:20px;"><span class="icon-check"></span> Add Project</button>
-        </div>
+<!-- ── Projects Manager Overlay ───────────────────────────────────────── -->
+<style>
+#gpm-overlay { display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:99999; }
+#gpm-dialog  { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:8px;width:900px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.4); }
+#gpm-header  { padding:14px 20px;border-bottom:1px solid #e5e5e5;display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
+#gpm-header h4 { margin:0;font-size:17px;font-weight:700;color:#333; }
+#gpm-close-x { background:none;border:none;font-size:28px;line-height:1;cursor:pointer;color:#999;padding:0; }
+#gpm-body    { flex:1;overflow-y:auto;padding:0; }
+
+/* ── Panel: Project List ── */
+#gpm-list-panel { padding:16px 20px; }
+#gpm-list-panel .gpm-toolbar { display:flex;align-items:center;justify-content:space-between;margin-bottom:14px; }
+#gpm-list-panel .gpm-toolbar h5 { margin:0;font-size:14px;color:#555; }
+#gpm-cards { display:flex;flex-wrap:wrap;gap:14px; }
+.gpm-card {
+    border:1px solid #e0e0e0;border-radius:8px;padding:14px 16px;width:calc(33.33% - 10px);
+    box-sizing:border-box;position:relative;background:#fafafa;transition:box-shadow .15s;
+}
+.gpm-card:hover { box-shadow:0 3px 12px rgba(0,0,0,0.12); }
+.gpm-card .gpm-card-name { font-size:14px;font-weight:700;color:#222;margin-bottom:6px;padding-right:20px; }
+.gpm-card .gpm-card-row { font-size:12px;color:#666;margin-bottom:3px; }
+.gpm-card .gpm-card-row label { font-weight:600;color:#444;margin:0;min-width:80px;display:inline-block; }
+.gpm-card .gpm-card-actions { margin-top:10px;display:flex;gap:6px; }
+.gpm-no-projects { color:#999;padding:30px 0;text-align:center;font-size:14px;width:100%; }
+
+/* ── Panel: Add / Edit Form ── */
+#gpm-form-panel { display:none;padding:16px 20px;border-top:1px solid #eee; }
+#gpm-form-panel .gpm-form-header { display:flex;align-items:center;gap:10px;margin-bottom:14px; }
+#gpm-form-panel .gpm-form-header h5 { margin:0;font-size:15px;font-weight:700;color:#333; }
+.gpm-back-btn { background:none;border:1px solid #ccc;border-radius:20px;padding:3px 12px;font-size:12px;cursor:pointer;color:#555; }
+.gpm-back-btn:hover { background:#f0f0f0; }
+</style>
+
+<div id="gpm-overlay">
+  <div id="gpm-dialog">
+    <div id="gpm-header">
+      <h4 id="gpm-title"><span class="icon-copy"></span> Projects</h4>
+      <button id="gpm-close-x" type="button">&times;</button>
     </div>
-</div>
+    <div id="gpm-body">
+
+      <!-- LIST PANEL -->
+      <div id="gpm-list-panel">
+        <div class="gpm-toolbar">
+          <h5 id="gpm-count-label">Loading projects…</h5>
+          <button id="gpm-open-add-form" class="btn btn-primary btn-sm" style="border-radius:20px;">
+            <span class="icon-add"></span> Add Project
+          </button>
+        </div>
+        <div id="gpm-cards"></div>
+      </div>
+
+      <!-- ADD / EDIT FORM PANEL -->
+      <div id="gpm-form-panel">
+        <div class="gpm-form-header">
+          <button class="gpm-back-btn" id="gpm-back-to-list"><span class="icon-arrow-left"></span> Back to list</button>
+          <h5 id="gpm-form-title">Add New Project</h5>
+        </div>
+        <form id="gpm-form" autocomplete="off">
+          <input type="hidden" id="gpm_editing_id" value="">
+          <div class="row">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>Project Name <span style="color:red">*</span></label>
+                <input id="gpm_name" type="text" class="form-control" placeholder="Project Name">
+                <span class="text-danger gpm-err" id="gpm_name_err" style="display:none;font-size:12px;"></span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>Duration (days) <span style="color:red">*</span></label>
+                <input id="gpm_duration" type="number" min="1" class="form-control" placeholder="e.g. 180">
+                <span class="text-danger gpm-err" id="gpm_duration_err" style="display:none;font-size:12px;"></span>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="form-group">
+                <label>Start Date <span style="color:red">*</span></label>
+                <input id="gpm_startdate" type="date" class="form-control">
+                <span class="text-danger gpm-err" id="gpm_startdate_err" style="display:none;font-size:12px;"></span>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="form-group">
+                <label>End Date</label>
+                <input id="gpm_enddate" type="date" class="form-control" readonly style="background:#f5f5f5;">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>Project Value <span style="color:red">*</span></label>
+                <input id="gpm_value" type="text" class="form-control" placeholder="e.g. 5000000">
+                <span class="text-danger gpm-err" id="gpm_value_err" style="display:none;font-size:12px;"></span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>Client Name <span style="color:red">*</span></label>
+                <input id="gpm_client" type="text" class="form-control" placeholder="Client Name">
+                <span class="text-danger gpm-err" id="gpm_client_err" style="display:none;font-size:12px;"></span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>Location</label>
+                <input id="gpm_location" type="text" class="form-control" placeholder="Site Location">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>Work Hours <span style="color:red">*</span></label>
+                <select id="gpm_wrkhrs" class="form-control">
+                  <option value="">-- Select --</option>
+                  <option value="8">8 hrs</option>
+                  <option value="10">10 hrs</option>
+                  <option value="12">12 hrs</option>
+                  <option value="24">24 hrs</option>
+                </select>
+                <span class="text-danger gpm-err" id="gpm_wrkhrs_err" style="display:none;font-size:12px;"></span>
+              </div>
+            </div>
+          </div>
+          <div style="text-align:right;margin-top:6px;">
+            <button type="button" id="gpm-form-cancel" class="btn btn-default" style="border-radius:20px;margin-right:6px;"><span class="icon-close"></span> Cancel</button>
+            <button type="button" id="gpm-form-save" class="btn btn-primary" style="border-radius:20px;"><span class="icon-check"></span> Save Project</button>
+          </div>
+        </form>
+      </div>
+
+    </div><!-- /gpm-body -->
+  </div><!-- /gpm-dialog -->
+</div><!-- /gpm-overlay -->
 
 <script>
 (function(){
-    /* ensure overflow is never stuck from a previous session */
-    $(function(){ $('body').css('overflow',''); });
+    var URL_LIST   = '<?php echo \yii\helpers\Url::to(["/projects/projectsearch"]); ?>';
+    var URL_CREATE = '<?php echo \yii\helpers\Url::to(["/projects/create"]); ?>';
+    var URL_GET    = '<?php echo \yii\helpers\Url::to(["/projects/globalgetproject"]); ?>';
+    var URL_UPDATE = '<?php echo \yii\helpers\Url::to(["/projects/globalupdateproject"]); ?>';
+    var URL_DELETE = '<?php echo \yii\helpers\Url::to(["/projects/globaldeleteproject"]); ?>';
 
-    function gpShowModal(){
-        $('#globalAddProjectPopup').show();
+    /* ── open / close overlay ── */
+    function gpmShow(){
+        $('#gpm-overlay').show();
+        gpmShowList();
     }
-    function gpHideModal(){
-        $('#globalAddProjectPopup').hide();
+    function gpmHide(){
+        $('#gpm-overlay').hide();
+        gpmShowListPanel();
     }
+    $(document).on('click','#add-project-nav-btn',function(e){ e.preventDefault(); gpmShow(); });
+    $(document).on('click','#gpm-close-x',function(){ gpmHide(); });
+    $(document).on('click','#gpm-overlay',function(e){ if(e.target===this) gpmHide(); });
+    $(document).on('click','#gpm-dialog',function(e){ e.stopPropagation(); });
 
-    function gpCalcEndDate(){
-        var sd  = $('#gp_startdate').val();
-        var dur = parseInt($('#gp_duration').val(), 10);
-        if(sd && dur > 0){
-            var d = new Date(sd);
-            d.setDate(d.getDate() + dur - 1);
-            var y = d.getFullYear();
-            var m = String(d.getMonth()+1).padStart(2,'0');
-            var day = String(d.getDate()).padStart(2,'0');
-            $('#gp_enddate').val(y+'-'+m+'-'+day);
-        } else {
-            $('#gp_enddate').val('');
-        }
+    /* ── panel switching ── */
+    function gpmShowListPanel(){
+        $('#gpm-list-panel').show();
+        $('#gpm-form-panel').hide();
+        $('#gpm-title').html('<span class="icon-copy"></span> Projects');
     }
-    $(document).on('change input', '#gp_startdate, #gp_duration', gpCalcEndDate);
-
-    /* open modal from nav icon */
-    $(document).on('click', '#add-project-nav-btn', function(e){
-        e.preventDefault();
-        $('#globalAddProjectForm')[0].reset();
-        $('.gp-err').hide();
-        gpShowModal();
+    function gpmShowFormPanel(isEdit){
+        $('#gpm-list-panel').hide();
+        $('#gpm-form-panel').show();
+        $('#gpm-title').html(isEdit ? '<span class="icon-edit"></span> Edit Project' : '<span class="icon-add"></span> Add Project');
+        $('#gpm-form-title').text(isEdit ? 'Edit Project' : 'Add New Project');
+        $('#gpm-form-save').html('<span class="icon-check"></span> ' + (isEdit ? 'Update Project' : 'Save Project'));
+    }
+    $(document).on('click','#gpm-back-to-list, #gpm-form-cancel',function(){ gpmShowListPanel(); });
+    $(document).on('click','#gpm-open-add-form',function(){
+        $('#gpm_editing_id').val('');
+        $('#gpm-form')[0].reset();
+        $('.gpm-err').hide();
+        gpmShowFormPanel(false);
     });
 
-    /* close on × or Cancel */
-    $(document).on('click', '#gp_close_x, #gp_cancel', function(){ gpHideModal(); });
+    /* ── auto-calculate end date ── */
+    function gpmCalcEnd(){
+        var sd  = $('#gpm_startdate').val();
+        var dur = parseInt($('#gpm_duration').val(),10);
+        if(sd && dur>0){
+            var d=new Date(sd); d.setDate(d.getDate()+dur-1);
+            var y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+            $('#gpm_enddate').val(y+'-'+m+'-'+day);
+        } else { $('#gpm_enddate').val(''); }
+    }
+    $(document).on('change input','#gpm_startdate,#gpm_duration',gpmCalcEnd);
 
-    /* close on backdrop click (clicking the overlay but not the dialog) */
-    /* clicks inside the dialog must not bubble up to the overlay */
-    $(document).on('click', '#globalAddProjectDialog', function(e){ e.stopPropagation(); });
-    /* click on the overlay background (outside dialog) closes it */
-    $(document).on('click', '#globalAddProjectPopup', function(e){
-        if(e.target === this) gpHideModal();
-    });
-
-    $(document).on('click', '#gp_save', function(){
-        var err = 0;
-        $('.gp-err').hide();
-        var name    = $.trim($('#gp_name').val());
-        var dur     = $.trim($('#gp_duration').val());
-        var sd      = $.trim($('#gp_startdate').val());
-        var ed      = $.trim($('#gp_enddate').val());
-        var val     = $.trim($('#gp_value').val()).replace(/,/g,'');
-        var client  = $.trim($('#gp_client').val());
-        var hrs     = $.trim($('#gp_wrkhrs').val());
-
-        if(!name)   { $('#gp_name_err').text('Enter Project Name').show(); err=1; }
-        if(!dur)    { $('#gp_duration_err').text('Enter Duration').show(); err=1; }
-        if(!sd)     { $('#gp_startdate_err').text('Select Start Date').show(); err=1; }
-        if(!val)    { $('#gp_value_err').text('Enter Project Value').show(); err=1; }
-        if(!client) { $('#gp_client_err').text('Enter Client Name').show(); err=1; }
-        if(!hrs)    { $('#gp_wrkhrs_err').text('Select Work Hours').show(); err=1; }
-        if(err) return;
-
-        var fd = new FormData();
-        fd.append('projectname', name);
-        fd.append('projectvalue', val);
-        fd.append('clientname', client);
-        fd.append('location', $('#gp_location').val());
-        fd.append('duration', dur);
-        fd.append('startdate', sd);
-        fd.append('enddate', ed);
-        fd.append('wrkhrss', hrs);
-
-        var btn = $('#gp_save').attr('disabled', true).text('Saving…');
+    /* ── load project list ── */
+    function gpmShowList(){
+        gpmShowListPanel();
+        $('#gpm-cards').html('<div style="padding:20px;color:#999;font-size:13px;">Loading…</div>');
+        $('#gpm-count-label').text('Loading projects…');
         $.ajax({
-            type: 'POST',
-            url: '<?php echo \yii\helpers\Url::to(["/projects/create"]); ?>',
-            data: fd,
-            dataType: 'json',
-            contentType: false,
-            processData: false,
-            success: function(data){
-                $('#gp_save').attr('disabled', false).html('<span class="icon-check"></span> Add Project');
-                if(data.error === 'No'){
-                    gpHideModal();
-                    alert('Project "' + data.Name + '" created successfully! The page will now reload.');
-                    window.location.href = '<?php echo \yii\helpers\Url::to(["/projectsmain/index"]); ?>';
+            type:'POST', url:URL_LIST, dataType:'json',
+            success:function(data){
+                if(data.error==='No'){
+                    gpmRenderCards(data.result);
                 } else {
-                    alert(data.errortext || 'Could not save project.');
+                    $('#gpm-cards').html('<div class="gpm-no-projects">Could not load projects.</div>');
                 }
             },
-            error: function(xhr){
-                $('#gp_save').attr('disabled', false).html('<span class="icon-check"></span> Add Project');
-                alert('Server error (' + xhr.status + '). Please try again.');
+            error:function(){ $('#gpm-cards').html('<div class="gpm-no-projects">Server error loading projects.</div>'); }
+        });
+    }
+
+    function gpmRenderCards(html){
+        /* The server returns HTML card markup — parse project IDs/names from it
+           OR we re-fetch clean JSON. Since actionProjectsearch returns HTML, we
+           call a fresh JSON approach using the raw project data. */
+        /* Simpler: re-use the HTML but inject edit/delete buttons into each card */
+        var $tmp = $('<div>').html(html);
+        var cards = $tmp.find('.fav-project-wrpr');
+        if(!cards.length){
+            $('#gpm-cards').html('<div class="gpm-no-projects">No projects found. Click <strong>Add Project</strong> to create one.</div>');
+            $('#gpm-count-label').text('No projects');
+            return;
+        }
+        var out = '';
+        cards.each(function(){
+            var pid   = $(this).data('id');
+            var name  = $(this).find('.card-body a').text().replace(/^\s*✓\s*/,'').trim();
+            var client= $(this).find('.project-client-name span').text().trim();
+            var dur   = $(this).find('.type:not(.project-client-name):not(.text-right) span').first().text().trim();
+            var val   = $(this).find('.type.text-right span').text().trim();
+            out += '<div class="gpm-card" id="gpm-card-'+pid+'">'
+                 + '<div class="gpm-card-name">'+name+'</div>'
+                 + '<div class="gpm-card-row"><label>Client</label> '+client+'</div>'
+                 + '<div class="gpm-card-row"><label>Duration</label> '+dur+'</div>'
+                 + '<div class="gpm-card-row"><label>Value</label> '+val+'</div>'
+                 + '<div class="gpm-card-actions">'
+                 + '<button class="btn btn-xs btn-info gpm-edit-btn" data-id="'+pid+'"><span class="icon-edit"></span> Edit</button>'
+                 + '<button class="btn btn-xs btn-danger gpm-delete-btn" data-id="'+pid+'" data-name="'+name.replace(/"/g,'&quot;')+'"><span class="icon-trash"></span> Delete</button>'
+                 + '</div>'
+                 + '</div>';
+        });
+        $('#gpm-cards').html(out);
+        $('#gpm-count-label').text(cards.length + ' project' + (cards.length===1?'':'s'));
+    }
+
+    /* ── edit project ── */
+    $(document).on('click','.gpm-edit-btn',function(){
+        var pid=$(this).data('id');
+        $.ajax({
+            type:'POST', url:URL_GET, dataType:'json', data:{project_id:pid},
+            success:function(d){
+                if(d.error!=='No'){ alert(d.errortext||'Could not load project.'); return; }
+                $('#gpm_editing_id').val(d.Project_Id);
+                $('#gpm_name').val(d.Name);
+                $('#gpm_duration').val(d.duration);
+                $('#gpm_startdate').val(d.start_date);
+                $('#gpm_enddate').val(d.end_date);
+                $('#gpm_value').val(d.project_value);
+                $('#gpm_client').val(d.client_name);
+                $('#gpm_location').val(d.location);
+                $('#gpm_wrkhrs').val(d.wrkhours);
+                $('.gpm-err').hide();
+                gpmShowFormPanel(true);
+            },
+            error:function(xhr){ alert('Server error ('+xhr.status+').'); }
+        });
+    });
+
+    /* ── delete project ── */
+    $(document).on('click','.gpm-delete-btn',function(){
+        var pid=$(this).data('id'), name=$(this).data('name');
+        if(!confirm('Delete project "'+name+'"? This cannot be undone.')) return;
+        $.ajax({
+            type:'POST', url:URL_DELETE, dataType:'json', data:{project_id:pid},
+            success:function(d){
+                if(d.error==='No'){
+                    $('#gpm-card-'+pid).remove();
+                    var remaining=$('.gpm-card').length;
+                    $('#gpm-count-label').text(remaining+' project'+(remaining===1?'':'s'));
+                    if(!remaining) $('#gpm-cards').html('<div class="gpm-no-projects">No projects found. Click <strong>Add Project</strong> to create one.</div>');
+                } else { alert(d.errortext||'Could not delete.'); }
+            },
+            error:function(xhr){ alert('Server error ('+xhr.status+').'); }
+        });
+    });
+
+    /* ── save (add or update) ── */
+    $(document).on('click','#gpm-form-save',function(){
+        var err=0; $('.gpm-err').hide();
+        var name   = $.trim($('#gpm_name').val());
+        var dur    = $.trim($('#gpm_duration').val());
+        var sd     = $('#gpm_startdate').val();
+        var ed     = $('#gpm_enddate').val();
+        var val    = $.trim($('#gpm_value').val()).replace(/,/g,'');
+        var client = $.trim($('#gpm_client').val());
+        var hrs    = $('#gpm_wrkhrs').val();
+        var pid    = $('#gpm_editing_id').val();
+
+        if(!name)   { $('#gpm_name_err').text('Enter project name').show(); err=1; }
+        if(!dur)    { $('#gpm_duration_err').text('Enter duration').show(); err=1; }
+        if(!sd)     { $('#gpm_startdate_err').text('Select start date').show(); err=1; }
+        if(!val)    { $('#gpm_value_err').text('Enter project value').show(); err=1; }
+        if(!client) { $('#gpm_client_err').text('Enter client name').show(); err=1; }
+        if(!hrs)    { $('#gpm_wrkhrs_err').text('Select work hours').show(); err=1; }
+        if(err) return;
+
+        var btn=$('#gpm-form-save').prop('disabled',true).text('Saving…');
+        var isEdit = pid ? true : false;
+        var postData = {
+            projectname:name, duration:dur, startdate:sd, enddate:ed,
+            projectvalue:val, clientname:client, location:$('#gpm_location').val(), wrkhrss:hrs
+        };
+        if(isEdit) postData.project_id = pid;
+
+        $.ajax({
+            type:'POST',
+            url: isEdit ? URL_UPDATE : URL_CREATE,
+            data: postData,
+            dataType:'json',
+            success:function(data){
+                btn.prop('disabled',false).html('<span class="icon-check"></span> '+(isEdit?'Update Project':'Save Project'));
+                if(data.error==='No'){
+                    gpmShowList();
+                } else {
+                    alert(data.errortext||'Could not save project.');
+                }
+            },
+            error:function(xhr){
+                btn.prop('disabled',false).html('<span class="icon-check"></span> '+(isEdit?'Update Project':'Save Project'));
+                alert('Server error ('+xhr.status+'). Please try again.');
             }
         });
     });
 })();
 </script>
-<!-- ── End Add Project Modal ──────────────────────────────────────────── -->
+<!-- ── End Projects Manager Overlay ───────────────────────────────────── -->
 
 </body>
 </html>

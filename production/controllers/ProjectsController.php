@@ -437,6 +437,61 @@ class ProjectsController extends Controller
         }
     }
 
+    /* Global popup: get one project for editing */
+    public function actionGlobalgetproject()
+    {
+        $id = intval($_POST['project_id'] ?? 0);
+        if (!$id) { echo json_encode(['error'=>'Yes','errortext'=>'Invalid ID']); return; }
+        $p = Projects::findOne($id);
+        if (!$p) { echo json_encode(['error'=>'Yes','errortext'=>'Not found']); return; }
+        echo json_encode([
+            'error'         => 'No',
+            'Project_Id'    => $p->Project_Id,
+            'Name'          => $p->Name,
+            'duration'      => $p->duration,
+            'start_date'    => $p->start_date,
+            'end_date'      => $p->end_date,
+            'project_value' => $p->project_value,
+            'client_name'   => $p->client_name,
+            'location'      => $p->location,
+            'wrkhours'      => $p->wrkhours,
+        ]);
+    }
+
+    /* Global popup: update a project */
+    public function actionGlobalupdateproject()
+    {
+        $id = intval($_POST['project_id'] ?? 0);
+        if (!$id) { echo json_encode(['error'=>'Yes','errortext'=>'Invalid ID']); return; }
+        $p = Projects::findOne($id);
+        if (!$p) { echo json_encode(['error'=>'Yes','errortext'=>'Not found']); return; }
+        $p->Name          = trim($_POST['projectname'] ?? '');
+        $p->duration      = intval($_POST['duration'] ?? 0);
+        $p->start_date    = $_POST['startdate'] ?? '';
+        $p->end_date      = $_POST['enddate'] ?? '';
+        $p->project_value = $_POST['projectvalue'] ?? '';
+        $p->client_name   = trim($_POST['clientname'] ?? '');
+        $p->location      = trim($_POST['location'] ?? '');
+        $p->wrkhours      = intval($_POST['wrkhrss'] ?? 0);
+        if ($p->save(false)) {
+            echo json_encode(['error'=>'No','Name'=>$p->Name]);
+        } else {
+            echo json_encode(['error'=>'Yes','errortext'=>'Could not update.']);
+        }
+    }
+
+    /* Global popup: soft-delete a project */
+    public function actionGlobaldeleteproject()
+    {
+        $id = intval($_POST['project_id'] ?? 0);
+        if (!$id) { echo json_encode(['error'=>'Yes','errortext'=>'Invalid ID']); return; }
+        $connection = \Yii::$app->db;
+        $connection->createCommand()->update('projects', ['Project_Delete_Status' => 1], 'Project_Id = :id', [':id' => $id])->execute();
+        /* clear projuser_selection if deleted project was active */
+        $connection->createCommand()->delete('projuser_selection', 'projectid = :id', [':id' => $id])->execute();
+        echo json_encode(['error'=>'No']);
+    }
+
     //status active
     public function actionProjectsearch()
     {
