@@ -1850,10 +1850,8 @@ if($action=='login')
                 $('#gp_save').attr('disabled', false).html('<span class="icon-check"></span> Add Project');
                 if(data.error === 'No'){
                     gpHideModal();
-                    alert('Project "' + data.Name + '" created successfully!');
-                    /* if on projects index, refresh the list */
-                    if(typeof window.listprojects !== 'undefined') window.listprojects();
-                    if($('#listprj').length) $('#listprj').trigger('click');
+                    alert('Project "' + data.Name + '" created successfully! The page will now reload.');
+                    window.location.href = '<?php echo \yii\helpers\Url::to(["/projectsmain/index"]); ?>';
                 } else {
                     alert(data.errortext || 'Could not save project.');
                 }
