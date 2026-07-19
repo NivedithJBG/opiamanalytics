@@ -1760,12 +1760,32 @@ if($action=='login')
 
 <script>
 (function(){
+    function gpShowModal(){
+        $('#globalAddProjectPopup').css('display','block').addClass('in');
+        $('body').addClass('modal-open');
+        if(!$('.modal-backdrop').length) $('<div class="modal-backdrop fade in"></div>').appendTo('body');
+    }
+    function gpHideModal(){
+        $('#globalAddProjectPopup').css('display','none').removeClass('in');
+        $('body').removeClass('modal-open');
+        $('.modal-backdrop').remove();
+    }
+
     /* open modal from nav icon */
     $(document).on('click', '#add-project-nav-btn', function(e){
         e.preventDefault();
         $('#globalAddProjectForm')[0].reset();
         $('.gp-err').hide();
-        $('#globalAddProjectPopup').modal('show');
+        gpShowModal();
+    });
+
+    /* close on backdrop click or × button */
+    $(document).on('click', '#globalAddProjectPopup [data-dismiss="modal"], #globalAddProjectPopup .close', function(e){
+        e.preventDefault();
+        gpHideModal();
+    });
+    $(document).on('click', '#globalAddProjectPopup', function(e){
+        if($(e.target).is('#globalAddProjectPopup')) gpHideModal();
     });
 
     $('#gp_save').on('click', function(){
@@ -1809,7 +1829,7 @@ if($action=='login')
             success: function(data){
                 $('#gp_save').attr('disabled', false).html('<span class="icon-check"></span> Add Project');
                 if(data.error === 'No'){
-                    $('#globalAddProjectPopup').modal('hide');
+                    gpHideModal();
                     alert('Project "' + data.Name + '" created successfully!');
                     /* if on projects index, refresh the list */
                     if(typeof window.listprojects !== 'undefined') window.listprojects();
