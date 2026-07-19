@@ -617,64 +617,7 @@ function alRefreshActIowGroupDropdown(){
     });
 }
 
-/* Edit button in activity list */
-$(document).on('click', '.al-edit-activity-btn', function(){
-    var idval = $(this).data('actid');
-    alEditActivity(idval);
-});
-
-function alEditActivity(idval){
-    $.ajax({
-        type: 'POST',
-        url: '<?php echo \yii\helpers\Url::to(["/projects/getactivityforedit"]); ?>',
-        dataType: 'json',
-        data: {activity_id: idval},
-        error: function(xhr){ alert('Could not load activity (' + xhr.status + ')'); },
-        success: function(data){
-            if(data.error !== 'No') return;
-            var act = data.activity;
-            $('#estworktypelistss1').val(act.work_type || 0);
-            $('#estactivitytypeid').val(act.activity_type);
-            $('#estactivityname1').val(act.activity_name);
-            $('#estactivityunit1').val(act.activity_unit);
-            $('#est_working_hours').val(act.working_hours);
-            $('#task-rows-container').empty();
-            var taskRowCount = 0;
-            if(data.tasks && data.tasks.length > 0){
-                $.each(data.tasks, function(i, task){
-                    taskRowCount++;
-                    var btnHtml = taskRowCount === 1
-                        ? '<button type="button" class="add-task-row" style="background:none;border:none;padding:6px 4px;"><span class="icon-add" style="color:#337ab7;font-size:18px;"></span></button>'
-                        : '<button type="button" class="remove-task-row" style="background:none;border:none;padding:6px 4px;"><span class="icon-minus" style="color:#d9534f;font-size:18px;"></span></button>';
-                    $('#task-rows-container').append(
-                        '<div class="row task-row" id="task-row-'+taskRowCount+'" style="margin-top:4px;">' +
-                        '<input type="hidden" class="task-id" name="task_id[]" value="'+(task.id||0)+'">' +
-                        '<div class="col-md-1"></div>' +
-                        '<div class="col-md-4"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name" value="'+$('<div/>').text(task.task_name).html()+'"></div>' +
-                        '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit" value="'+$('<div/>').text(task.task_unit||'').html()+'"></div>' +
-                        '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day" value="'+parseFloat(task.productivity||0).toFixed(3)+'"></div>' +
-                        '<div class="col-md-1">'+btnHtml+'</div></div>'
-                    );
-                });
-            } else {
-                taskRowCount = 1;
-                $('#task-rows-container').append(
-                    '<div class="row task-row" id="task-row-1" style="margin-top:4px;">' +
-                    '<div class="col-md-1"></div>' +
-                    '<div class="col-md-4"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name"></div>' +
-                    '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit"></div>' +
-                    '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day"></div>' +
-                    '<div class="col-md-1"><button type="button" class="add-task-row" style="background:none;border:none;padding:6px 4px;"><span class="icon-add" style="color:#337ab7;font-size:18px;"></span></button></div></div>'
-                );
-            }
-            $('#editingActivityId').val(idval);
-            $('#saveestactivity').html('<span class="icon-check"></span> Update Activity');
-            $('#alAddActivityTitle').text('Edit Activity');
-            window._alEditMode = true;
-            $('#alAddActivityPopup').modal('show');
-        }
-    });
-};
+/* Edit handler is in estactivity.js alongside the delete handler */;
 
 /* Intercept estactivity.js showing .add-activity-form (edit flow) → open modal instead */
 var alActObserver = new MutationObserver(function(mutations){
