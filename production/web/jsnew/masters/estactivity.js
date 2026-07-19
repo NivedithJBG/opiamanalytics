@@ -288,8 +288,7 @@ $(document).on('click', '.al-edit-activity-btn', function(){
                 $('#editingActivityId').val(idval);
                 $('#saveestactivity').html('<span class="icon-check"></span> Update Activity');
                 $('#alAddActivityTitle').text('Edit Activity');
-                /* set IOW group value before refresh so alRefreshActIowGroupDropdown restores it */
-                if(act.iow_group_id) $('#actIowGroupId').val(act.iow_group_id);
+                /* populate IOW group dropdown (not stored per activity, just needs options loaded) */
                 if(typeof alRefreshActIowGroupDropdown === 'function') alRefreshActIowGroupDropdown();
 
                 /* rebuild task rows */
