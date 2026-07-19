@@ -1692,16 +1692,16 @@ if($action=='login')
 #gpm-list-panel .gpm-toolbar h5 { margin:0;font-size:14px;color:#555; }
 #gpm-cards { display:flex;flex-wrap:wrap;gap:14px; }
 .gpm-card {
-    border:1px solid #c8c8c8;border-radius:8px;padding:0;width:calc(33.33% - 10px);
-    box-sizing:border-box;position:relative;background:#e8e8e8;transition:box-shadow .15s;overflow:hidden;
+    border:1px solid #ddd;border-radius:8px;padding:0;width:calc(33.33% - 10px);
+    box-sizing:border-box;position:relative;background:#f4f4f4;transition:box-shadow .15s;overflow:hidden;
 }
-.gpm-card:hover { box-shadow:0 4px 14px rgba(0,0,0,0.18);background:#dcdcdc; }
-.gpm-card-top { background:#d0d0d0;padding:11px 14px 8px;border-bottom:1px solid #bbb; }
+.gpm-card:hover { box-shadow:0 4px 14px rgba(0,0,0,0.12);background:#efefef; }
+.gpm-card-top { background:#e8e8e8;padding:11px 14px 8px;border-bottom:1px solid #d5d5d5; }
 .gpm-card .gpm-card-name { font-size:13px;font-weight:700;color:#1a1a1a;margin:0; }
 .gpm-card-body { padding:10px 14px 4px; }
 .gpm-card .gpm-card-row { font-size:12px;color:#555;margin-bottom:4px;display:flex;gap:4px; }
 .gpm-card .gpm-card-row label { font-weight:600;color:#333;margin:0;min-width:76px;flex-shrink:0; }
-.gpm-card .gpm-card-actions { padding:8px 14px 10px;display:flex;gap:6px;border-top:1px solid #c0c0c0;background:#d8d8d8;margin-top:6px; }
+.gpm-card .gpm-card-actions { padding:8px 14px 10px;display:flex;gap:6px;border-top:1px solid #d5d5d5;background:#ebebeb;margin-top:6px; }
 .gpm-no-projects { color:#999;padding:30px 0;text-align:center;font-size:14px;width:100%; }
 .gpm-file-list { margin-top:6px; }
 .gpm-file-item { display:flex;align-items:center;justify-content:space-between;padding:4px 8px;border-radius:4px;background:#f0f0f0;margin-bottom:4px;font-size:12px; }
