@@ -2738,8 +2738,7 @@ function loadActivities(typeId, groupId, cb){
   window._actListClose=function(){ if(_list) _list.classList.remove('open'); };
   /* init on first modal open */
   var _ready=false;
-  var _orig=window.openQeModal;
-  document.addEventListener('DOMContentLoaded',function(){ _init(); _ready=true; });
+  $(function(){ _init(); _ready=true; });
   window._actComboInit=function(){ if(!_ready){_init();_ready=true;} };
 })();
 
