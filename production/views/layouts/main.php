@@ -1751,7 +1751,7 @@ if($action=='login')
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-danger" data-dismiss="modal" style="border-radius:20px;"><span class="icon-close"></span> Cancel</button>
+                <button type="button" id="gp_cancel" class="btn btn-danger" style="border-radius:20px;"><span class="icon-close"></span> Cancel</button>
                 <button type="button" class="btn btn-primary" id="gp_save" style="border-radius:20px;"><span class="icon-check"></span> Add Project</button>
             </div>
         </div>
@@ -1788,7 +1788,12 @@ if($action=='login')
         if($(e.target).is('#globalAddProjectPopup')) gpHideModal();
     });
 
-    $('#gp_save').on('click', function(){
+    $(document).on('click', '#gp_cancel', function(e){
+        e.preventDefault();
+        gpHideModal();
+    });
+
+    $(document).on('click', '#gp_save', function(){
         var err = 0;
         $('.gp-err').hide();
         var name    = $.trim($('#gp_name').val());
