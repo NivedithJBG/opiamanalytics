@@ -388,4 +388,19 @@ class ResourcetypeController extends Controller
 			Yii::app()->end();
 		}
 	}
+
+    /* Returns <option> HTML for all active resource types — used to refresh
+       dropdowns after a new type is added without a page reload */
+    public function actionGetoptions()
+    {
+        $rows = \Yii::$app->db->createCommand(
+            "SELECT ResourceType_Id, Name FROM resourcetype WHERE Status='0' ORDER BY sortorder ASC, Name ASC"
+        )->queryAll();
+        $opts = '';
+        foreach ($rows as $r) {
+            $name = htmlspecialchars($r['Name'], ENT_QUOTES);
+            $opts .= '<option value="' . $r['ResourceType_Id'] . '">' . $name . '</option>';
+        }
+        return json_encode(['error' => 'No', 'options' => $opts]);
+    }
 }

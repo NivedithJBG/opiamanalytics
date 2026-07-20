@@ -486,9 +486,37 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     });
   });
 
-  /* reload list after save */
-  $(document).on('click','#saverestype',  function(){ setTimeout(rlLoadResTypeList,  500); });
-  $(document).on('click','#saveresgroup', function(){ setTimeout(rlLoadResGroupList, 500); });
+  /* reload sub-popup lists whenever the hidden list triggers fire
+     (resourcetype.js / resourcegroup.js / resource.js all call
+      #listrestype / #listresgroup / #listresource after every save/edit/cancel) */
+  $(document).on('click', '#listrestype',  function(){ rlLoadResTypeList(); });
+  $(document).on('click', '#listresgroup', function(){ rlLoadResGroupList(); });
+  $(document).on('click', '#listresource', function(){ /* list refresh handled by resource.js */ });
+
+  /* after a new resource type is saved, refresh type dropdowns everywhere */
+  function rlRefreshTypeDropdowns(){
+    $.ajax({ type:'POST', url:'../resourcetype/search', dataType:'json', data:{ restypename:'' },
+      success:function(d){
+        if(!d || d.error !== 'No' || !d.restypeoptions) return;
+        var opts = d.restypeoptions;
+        /* main-popup selects */
+        ['searchresourcetype','editresgrouptype','editresourcetype'].forEach(function(id){
+          var sel = document.getElementById(id);
+          if(!sel) return;
+          var cur = sel.value;
+          sel.innerHTML = opts;
+          sel.value = cur;
+        });
+        /* sub-popup selects */
+        ['addresgrouptype','addresourcetype'].forEach(function(id){
+          var sel = document.getElementById(id);
+          if(!sel) return;
+          sel.innerHTML = opts;
+        });
+      }
+    });
+  }
+
 
   /* bind drag+resize to each sub-popup */
   $(function(){
@@ -499,20 +527,53 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 
 
   /* ═══════════════════════════════════════════════════════════════
-     List loaders
+     List loaders — refresh sub-popup lists
   ═══════════════════════════════════════════════════════════════ */
   function rlLoadResTypeList(){
-    $('#rl-restype-modal-list').html('<div style="padding:8px;color:#999;">Loading…</div>');
+    var $list = $('#rl-restype-modal-list');
+    $list.html('<div style="padding:8px;color:#999;">Loading…</div>');
     $.ajax({ type:'POST', url:'../resourcetype/search', dataType:'json', data:{ restypename:'' },
-      success:function(d){ $('#rl-restype-modal-list').html((d&&d.error==='No'&&d.restype)?d.restype:'<div style="padding:8px;color:#999;">No resource types yet.</div>'); },
-      error:function(){ $('#rl-restype-modal-list').html('<div style="padding:8px;color:red;">Could not load.</div>'); }
+      success:function(d){
+        $list.html((d&&d.error==='No'&&d.restype)?d.restype:'<div style="padding:8px;color:#999;">No resource types yet.</div>');
+        /* also refresh all Resource Type <select> dropdowns with fresh data */
+        rlRefreshTypeDropdownsFromDB();
+      },
+      error:function(){ $list.html('<div style="padding:8px;color:red;">Could not load.</div>'); }
     });
   }
+
   function rlLoadResGroupList(){
-    $('#rl-resgroup-modal-list').html('<div style="padding:8px;color:#999;">Loading…</div>');
+    var $list = $('#rl-resgroup-modal-list');
+    $list.html('<div style="padding:8px;color:#999;">Loading…</div>');
     $.ajax({ type:'POST', url:'../resourcegroup/search', dataType:'json', data:{ resgroupname:'' },
-      success:function(d){ $('#rl-resgroup-modal-list').html((d&&d.error==='No'&&d.resgroup)?d.resgroup:'<div style="padding:8px;color:#999;">No resource groups yet.</div>'); },
-      error:function(){ $('#rl-resgroup-modal-list').html('<div style="padding:8px;color:red;">Could not load.</div>'); }
+      success:function(d){
+        $list.html((d&&d.error==='No'&&d.resgroup)?d.resgroup:'<div style="padding:8px;color:#999;">No resource groups yet.</div>');
+      },
+      error:function(){ $list.html('<div style="padding:8px;color:red;">Could not load.</div>'); }
+    });
+  }
+
+  /* Rebuild all Resource Type dropdowns from a fresh DB fetch */
+  function rlRefreshTypeDropdownsFromDB(){
+    $.ajax({ type:'POST', url:'../resourcetype/getoptions', dataType:'json',
+      success:function(d){
+        if(!d || d.error !== 'No' || !d.options) return;
+        var opts = '<option value="0">-- Select Type --</option>' + d.options;
+        var allOpts = '<option value="0">All Types</option>' + d.options;
+        /* type-filter in action bar */
+        var $sf = $('#searchresourcetype');
+        var sfVal = $sf.val();
+        $sf.html(allOpts).val(sfVal || '0');
+        /* sub-popup: Resource Group add form */
+        ['addresgrouptype','addresourcetype'].forEach(function(id){
+          $('#'+id).html(opts);
+        });
+        /* main-popup edit forms */
+        ['editresgrouptype','editresourcetype'].forEach(function(id){
+          var sel = document.getElementById(id);
+          if(sel){ var cur = sel.value; sel.innerHTML = opts; sel.value = cur; }
+        });
+      }
     });
   }
 
