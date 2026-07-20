@@ -9029,7 +9029,8 @@ class ProjectsmainController extends Controller
                    COALESCE(rpt.cumulated_qty, 0) AS cumulated_qty,
                    GROUP_CONCAT(
                        CONCAT(ar.precedent_activity,'ABC',ar.precedent_activity,
-                           CASE ar.relation_type WHEN 1 THEN 'SS' WHEN 2 THEN 'FS' WHEN 3 THEN 'FF' ELSE 'FS' END)
+                           CASE ar.relation_type WHEN 1 THEN 'SS' WHEN 2 THEN 'FS' WHEN 3 THEN 'FF' ELSE 'FS' END,
+                           IF(ar.lag_days != 0, CONCAT('|', ar.lag_days), ''))
                        ORDER BY ar.id SEPARATOR ','
                    ) AS depends
             FROM scheduleactivities AS sa

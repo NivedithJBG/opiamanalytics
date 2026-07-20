@@ -895,6 +895,9 @@ if($action=='login')
         }
         //Resource Library Overrelay end
 
+        //Activity Relations Overrelay — always present when gantt-win is available
+        echo \Yii::$app->view->renderFile(Yii::getAlias('@app') . '/views/projectsmain/overrelay-relations.php');
+
         //Vendor Library Overrelay start
         if(Yii::$app->controller->id == 'procurement') {
             echo \Yii::$app->view->renderFile(Yii::getAlias('@app') . '/views/procurement/overrelay-vendorlibrary.php');
@@ -4378,6 +4381,7 @@ $(function(){
     </div>
     <div id="gantt-win-hdr-btns">
       <a class="icon-pencil" id="btn-quick-entry" title="WBS" href="#" style="width:32px;height:32px;font-size:15px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#3a7d3a;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.25);"> </a>
+      <button id="btn-gantt-relations" title="Activity Relationships" style="width:auto;padding:0 12px;height:32px;font-size:12px;font-weight:600;background:#5c3d8f;color:#fff;border:none;border-radius:20px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.25);letter-spacing:0.3px;">&#x1F517; Relationships</button>
       <button id="gantt-win-expand" title="Fullscreen">&#x26F6;</button>
       <button id="gantt-win-close" title="Close">&times;</button>
     </div>
