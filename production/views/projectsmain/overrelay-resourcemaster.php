@@ -239,7 +239,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 
 
 <!-- ══ RESOURCE TYPE MODAL ══════════════════════════════════════ -->
-<div class="modal fade" id="rlResTypePopup" data-backdrop="false" style="z-index:10100!important;">
+<div class="modal fade" id="rlResTypePopup" data-backdrop="false" style="z-index:200000!important;">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
@@ -268,7 +268,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 </div>
 
 <!-- ══ RESOURCE GROUP MODAL ════════════════════════════════════ -->
-<div class="modal fade" id="rlResGroupPopup" data-backdrop="false" style="z-index:10100!important;">
+<div class="modal fade" id="rlResGroupPopup" data-backdrop="false" style="z-index:200000!important;">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
@@ -306,7 +306,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 </div>
 
 <!-- ══ RESOURCE MODAL — add form only ══════════════════════════ -->
-<div class="modal fade" id="rlResourcePopup" data-backdrop="false" style="z-index:10100!important;">
+<div class="modal fade" id="rlResourcePopup" data-backdrop="false" style="z-index:200000!important;">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">

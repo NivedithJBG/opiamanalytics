@@ -255,10 +255,10 @@ color:red !important;
 #alIowPopup .modal-content,
 #alActTypePopup .modal-content { box-shadow: 0 8px 40px rgba(0,0,0,0.45) !important; }
 
-/* Resource Library modals — same pattern as Activity Library */
+/* Resource Library modals — above focus-manager ceiling (100200+) */
 #rlResTypePopup,
 #rlResGroupPopup,
-#rlResourcePopup { z-index: 10100 !important; }
+#rlResourcePopup { z-index: 200000 !important; }
 #rlResTypePopup .modal-content,
 #rlResGroupPopup .modal-content,
 #rlResourcePopup .modal-content { box-shadow: 0 8px 40px rgba(0,0,0,0.45) !important; border-top: 3px solid #00796b; }
