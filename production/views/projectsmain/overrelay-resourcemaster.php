@@ -503,14 +503,19 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
   });
   document.addEventListener('mouseup', function(){ _action=null; });
 
-  /* ── Move to <body> ── */
-  $(function(){
-    if(win && win.parentNode !== document.body) document.body.appendChild(win);
-    ['rlResTypePopup','rlResGroupPopup','rlResourcePopup'].forEach(function(id){
-      var el = document.getElementById(id);
-      if(el && el.parentNode !== document.body) document.body.appendChild(el);
-    });
+  /* ── Move to <body> synchronously so Bootstrap finds them at document root ── */
+  ['reslib-win','rlResTypePopup','rlResGroupPopup','rlResourcePopup'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el && el.parentNode !== document.body) document.body.appendChild(el);
+  });
 
+  /* Force z-index above reslib-win (10003) every time a modal is about to show */
+  $(document).on('show.bs.modal','#rlResTypePopup,#rlResGroupPopup,#rlResourcePopup', function(){
+    $(this).css('z-index', 10300);
+    setTimeout(function(){ $('.modal-backdrop').css('z-index', 10299); }, 0);
+  });
+
+  $(function(){
     /* Load list inside Resource Type modal when it opens */
     $('#rlResTypePopup').on('shown.bs.modal', function(){
       $('#restypename1').val('').focus();
