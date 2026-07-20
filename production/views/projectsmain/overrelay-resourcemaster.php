@@ -24,9 +24,9 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 /* ── Resource Library main popup ──────────────────────────── */
 #reslib-win {
   display:none; position:fixed;
-  top:80px; left:calc(50% - 400px);
-  width:800px; height:calc(100vh - 110px);
-  min-width:420px; min-height:280px;
+  top:80px; left:calc(50% - 480px);
+  width:960px; height:calc(100vh - 110px);
+  min-width:480px; min-height:280px;
   background:#fff; border-radius:8px;
   box-shadow:0 8px 32px rgba(0,0,0,.35);
   z-index:10003; flex-direction:column; overflow:hidden;
@@ -128,6 +128,9 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
       <?php foreach ($resourceTypes as $rt): ?>
       <option value="<?php echo $rt->ResourceType_Id; ?>"><?php echo htmlspecialchars($rt->Name, ENT_QUOTES); ?></option>
       <?php endforeach; ?>
+    </select>
+    <select id="searchresourcegroup" style="display:none;margin-left:4px;width:160px;border-radius:20px;height:32px;border:1px solid #b2dfdb;padding:0 10px;font-size:13px;">
+      <option value="0">All Groups</option>
     </select>
     <button id="rl-resource-search-btn" style="display:none;height:32px;padding:0 12px;border-radius:20px;background:#00796b;color:#fff;border:none;cursor:pointer;font-size:13px;"><span class="icon-search5"></span></button>
   </div>
@@ -420,10 +423,35 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 
   document.getElementById('rl-list-btn').addEventListener('click', function(e){
     e.preventDefault();
-    $('#searchresourcetype').show(); $('#rl-resource-search-btn').show();
+    $('#searchresourcetype').show();
+    $('#searchresourcegroup').show();
+    $('#rl-resource-search-btn').show();
     setTimeout(function(){ $('#listresource').trigger('click'); }, 100);
   });
   $(document).on('click','#rl-resource-search-btn', function(){
+    setTimeout(function(){ $('#listresource').trigger('click'); }, 100);
+  });
+
+  /* Cascade: Type → Group in the list filter bar */
+  $(document).on('change', '#searchresourcetype', function(){
+    var typeId = $(this).val();
+    var $grp = $('#searchresourcegroup');
+    $grp.html('<option value="0">All Groups</option>');
+    if(typeId && typeId != '0'){
+      $.ajax({ type:'POST', url:'../resourcegroup/getbytype', dataType:'json',
+        data:{ restypeid: typeId },
+        success:function(d){
+          if(d && d.error === 'No'){
+            $.each(d.groups, function(i, g){
+              $grp.append('<option value="'+g.Resource_group_Id+'">'+g.Resource_group_Name+'</option>');
+            });
+          }
+        }
+      });
+    }
+    setTimeout(function(){ $('#listresource').trigger('click'); }, 100);
+  });
+  $(document).on('change', '#searchresourcegroup', function(){
     setTimeout(function(){ $('#listresource').trigger('click'); }, 100);
   });
 
@@ -500,6 +528,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     $('#saveresource').off('click');
     $('#listrestype').off('click');
     $('#listresgroup').off('click');
+    $('#listresource').off('click');
 
     /* ADD RESOURCE TYPE */
     $('#saverestype').on('click', function(){
@@ -573,6 +602,22 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     /* Rebind list triggers used by edit/delete handlers in the external JS files */
     $('#listrestype').on('click',  function(){ rlLoadResTypeList(); });
     $('#listresgroup').on('click', function(){ rlLoadResGroupList(); });
+    $('#listresource').on('click', function(){
+      $('.preloader-resource').show();
+      $.ajax({ type:'POST', url:'../resources/search', dataType:'json',
+        data:{
+          restypeid:  $('#searchresourcetype').val() || 0,
+          resgroupid: $('#searchresourcegroup').val() || 0
+        },
+        success:function(d){
+          $('.preloader-resource').hide();
+          if(d && d.error === 'No'){
+            $('#resourcelistsection').html(d.resource);
+          } else { alert(d && d.errortext ? d.errortext : 'Could not load.'); }
+        },
+        error:function(){ $('.preloader-resource').hide(); }
+      });
+    });
 
   });
 

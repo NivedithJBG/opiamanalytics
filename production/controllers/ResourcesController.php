@@ -16,8 +16,9 @@ class ResourcesController extends Controller
     public function actionSearch()
     {
         $connection = \Yii::$app->db;
-        $search = isset($_POST['resourcename']) ? trim($_POST['resourcename']) : '';
-        $typeId = isset($_POST['restypeid'])    ? (int)$_POST['restypeid']    : 0;
+        $search   = isset($_POST['resourcename']) ? trim($_POST['resourcename']) : '';
+        $typeId   = isset($_POST['restypeid'])    ? (int)$_POST['restypeid']   : 0;
+        $groupId  = isset($_POST['resgroupid'])   ? (int)$_POST['resgroupid']  : 0;
         $sql = "SELECT r.Resource_Id, r.Name, r.Unit, r.ResourceType_Id, r.Resource_group_Id, r.sortorder,
                        rt.Name AS TypeName, rg.Resource_group_Name AS GroupName
                 FROM resources r
@@ -26,6 +27,9 @@ class ResourcesController extends Controller
                 WHERE r.Status = 0";
         if ($typeId > 0) {
             $sql .= " AND r.ResourceType_Id = " . $typeId;
+        }
+        if ($groupId > 0) {
+            $sql .= " AND r.Resource_group_Id = " . $groupId;
         }
         if ($search !== '') {
             $sql .= " AND r.Name LIKE '%" . addslashes($search) . "%'";
