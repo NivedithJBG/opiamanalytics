@@ -432,28 +432,6 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     setTimeout(function(){ $('#listresource').trigger('click'); }, 100);
   });
 
-  /* Cascade: Type → Group in the list filter bar */
-  $(document).on('change', '#searchresourcetype', function(){
-    var typeId = $(this).val();
-    var $grp = $('#searchresourcegroup');
-    $grp.html('<option value="0">All Groups</option>');
-    if(typeId && typeId != '0'){
-      $.ajax({ type:'POST', url:'../resourcegroup/getbytype', dataType:'json',
-        data:{ restypeid: typeId },
-        success:function(d){
-          if(d && d.error === 'No'){
-            $.each(d.groups, function(i, g){
-              $grp.append('<option value="'+g.Resource_group_Id+'">'+g.Resource_group_Name+'</option>');
-            });
-          }
-        }
-      });
-    }
-    setTimeout(function(){ $('#listresource').trigger('click'); }, 100);
-  });
-  $(document).on('change', '#searchresourcegroup', function(){
-    setTimeout(function(){ $('#listresource').trigger('click'); }, 100);
-  });
 
 
   /* ═══════════════════════════════════════════════════════════════
@@ -529,6 +507,33 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     $('#listrestype').off('click');
     $('#listresgroup').off('click');
     $('#listresource').off('click');
+    $(document).off('change', '#searchresourcetype');  /* resource.js binds this too */
+
+    /* Cascade: Resource Type → Resource Group in list filter bar */
+    $(document).on('change', '#searchresourcetype', function(){
+      var typeId = $(this).val();
+      var $grp = $('#searchresourcegroup');
+      $grp.html('<option value="0">All Groups</option>');
+      if(typeId && typeId != '0'){
+        $.ajax({ type:'POST', url:'../resourcegroup/getbytype', dataType:'json',
+          data:{ restypeid: typeId },
+          success:function(d){
+            if(d && d.error === 'No' && d.groups){
+              $.each(d.groups, function(i, g){
+                $grp.append('<option value="'+g.Resource_group_Id+'">'+g.Resource_group_Name+'</option>');
+              });
+            }
+            /* refresh list after groups are loaded */
+            $('#listresource').trigger('click');
+          }
+        });
+      } else {
+        $('#listresource').trigger('click');
+      }
+    });
+    $(document).on('change', '#searchresourcegroup', function(){
+      $('#listresource').trigger('click');
+    });
 
     /* ADD RESOURCE TYPE */
     $('#saverestype').on('click', function(){
