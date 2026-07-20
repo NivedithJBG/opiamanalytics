@@ -139,7 +139,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-calendar,
         .round-icons .icon-copy.duplicateProject,
         .round-icons .icon-tools.overNow4,
-        .round-icons .icon-wrench.overNow,
+        .round-icons .icon-wrench.reslib-btn,
         .round-icons .pdoc-btn,
 
         .round-icons .perf-dashboard-btn,
@@ -150,7 +150,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-calendar          { background-color: #B8860B !important; }
         .round-icons .icon-copy.duplicateProject { background-color: #E65C00 !important; }
         .round-icons .icon-tools.overNow4    { background-color: #CC0000 !important; }
-        .round-icons .icon-wrench.overNow    { background-color: #555555 !important; }
+        .round-icons .icon-wrench.reslib-btn { background-color: #555555 !important; }
         .round-icons .perf-dashboard-btn     { background-color: #2e7d32 !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
         .round-icons .cost-dashboard-btn     { background-color: #7b1fa2 !important; height: 26px !important; width: 26px !important; font-size: 9px !important; padding: 0 !important; box-sizing: content-box !important; }
         .round-icons .qe-btn                 { background-color: #00838f !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
@@ -159,7 +159,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-calendar:hover,          .round-icons .icon-calendar:focus          { background: #8a6200 !important; }
         .round-icons .icon-copy.duplicateProject:hover, .round-icons .icon-copy.duplicateProject:focus { background: #b84400 !important; }
         .round-icons .icon-tools.overNow4:hover,    .round-icons .icon-tools.overNow4:focus    { background: #990000 !important; }
-        .round-icons .icon-wrench.overNow:hover,    .round-icons .icon-wrench.overNow:focus    { background: #333333 !important; }
+        .round-icons .icon-wrench.reslib-btn:hover, .round-icons .icon-wrench.reslib-btn:focus { background: #333333 !important; }
         .round-icons .perf-dashboard-btn:hover,     .round-icons .perf-dashboard-btn:focus     { background: #1b5e20 !important; }
         .round-icons .cost-dashboard-btn:hover,     .round-icons .cost-dashboard-btn:focus     { background: #4a148c !important; }
         .round-icons .qe-btn:hover,                 .round-icons .qe-btn:focus                 { background: #005f6b !important; }
@@ -498,7 +498,7 @@ if($action=='login')
                             echo '<li style="'.$proj_master.'"><a class="icon-tools overNow4" title="Activity Library" href="'.Yii::$app->urlManager->createUrl("projects/projectmasters").'">
                                     </a>
                                 </li>
-                                <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
+                                <li><a class="icon-wrench reslib-btn" title="Resource Library" href="#"> </a></li>
                                             <li style="'.$dashboard.'"><a class="icon-dashboard prjcet-dashboard" title="Dashboard" href="'.Yii::$app->urlManager->createUrl("projectsmain/dashboard").'">
                                     </a>
                                 </li>';
@@ -513,7 +513,7 @@ if($action=='login')
                     <li><a class="icon-tools overNow4" title="Activity Library" href="<?php echo Yii::$app->urlManager->createUrl('projects/projectmasters')?>">
                         </a>
                     </li>
-                    <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
+                    <li><a class="icon-wrench reslib-btn" title="Resource Library" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
@@ -528,7 +528,7 @@ if($action=='login')
                     <li><a class="icon-tools overNow4" title="Activity Library" href="<?php echo Yii::$app->urlManager->createUrl('projects/projectmasters')?>">
                         </a>
                     </li>
-                    <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
+                    <li><a class="icon-wrench reslib-btn" title="Resource Library" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
@@ -600,7 +600,7 @@ if($action=='login')
                     <li><a class="icon-tools overNow4" title="Activity Library" href="<?php echo Yii::$app->urlManager->createUrl('projects/projectmasters')?>">
                         </a>
                     </li>
-                    <li><a class="icon-wrench overNow" title="Resource Library" href="#"> </a></li>
+                    <li><a class="icon-wrench reslib-btn" title="Resource Library" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
@@ -4509,7 +4509,7 @@ $(function(){
 /* Ensure all floating popups are direct children of <body> so they
    are never trapped inside a parent stacking context */
 (function(){
-  var ids = ['pdoc-popup','pdoc-viewer-popup','gpm-overlay','gantt-win','qe-modal','qe-map-bk','cb-win','cb-btn'];
+  var ids = ['pdoc-popup','pdoc-viewer-popup','gpm-overlay','gantt-win','qe-modal','qe-map-bk','cb-win','cb-btn','reslib-win'];
   ids.forEach(function(id){
     var el = document.getElementById(id);
     if(el && el.parentNode !== document.body) document.body.appendChild(el);
@@ -4521,7 +4521,7 @@ $(function(){
 /* ── Popup focus manager: clicking any floating window brings it to front ── */
 (function(){
   var _z = 100200; /* base — all floaters start here and increment up */
-  var floaters = ['pdoc-popup','pdoc-viewer-popup','gantt-win','qe-modal','cb-win'];
+  var floaters = ['pdoc-popup','pdoc-viewer-popup','gantt-win','qe-modal','cb-win','reslib-win'];
 
   window.popupBringToFront = function(id){
     var el = document.getElementById(id);
@@ -4542,6 +4542,7 @@ $(function(){
   document.addEventListener('gantt:open',  function(){ window.popupBringToFront('gantt-win'); });
   document.addEventListener('wbs:open',    function(){ window.popupBringToFront('qe-modal'); });
   document.addEventListener('chat:open',   function(){ window.popupBringToFront('cb-win'); });
+  document.addEventListener('reslib:open', function(){ window.popupBringToFront('reslib-win'); });
 })();
 </script>
 
