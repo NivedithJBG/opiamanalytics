@@ -37,65 +37,50 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 }
 #reslib-win-hdr-btns button:hover { opacity:1; }
 
-/* action bar — teal colour scheme */
+/* action bar */
 #reslib-action-bar {
-  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
-  padding:10px 15px; border-bottom:1px solid #e0f2f1; flex-shrink:0;
+  display:flex; align-items:center; gap:4px; flex-wrap:nowrap;
+  padding:8px 15px; border-bottom:1px solid #e0f2f1; flex-shrink:0;
   background:#f5fffe;
 }
-/* "+ Type / + Group / + Resource" buttons — teal outline style */
-.rl-add-btn {
+/* teal type/group buttons (modal triggers) */
+#reslib-action-bar .rl-type-btn {
   background:#00796b; color:#fff !important; border:1px solid #00695c;
   border-radius:20px; padding:5px 16px; font-size:13px;
-  cursor:pointer; font-family:'Nunito',sans-serif; text-decoration:none !important;
-  display:inline-block; line-height:1.5;
+  cursor:pointer; text-decoration:none !important; display:inline-block; line-height:1.5;
 }
-.rl-add-btn:hover { background:#00695c; border-color:#004d40; color:#fff !important; }
+#reslib-action-bar .rl-type-btn:hover { background:#00695c; color:#fff !important; }
 
-/* "List" buttons */
-.rl-list-btn {
-  background:#00897b; color:#fff !important; border:1px solid #00796b;
+/* darker teal for Resource + List buttons */
+#reslib-action-bar .rl-action-btn {
+  background:#004d40; color:#fff !important; border:1px solid #003d33;
   border-radius:20px; padding:5px 16px; font-size:13px;
-  cursor:pointer; font-family:'Nunito',sans-serif; text-decoration:none !important;
-  display:inline-block; line-height:1.5;
+  cursor:pointer; text-decoration:none !important; display:inline-block; line-height:1.5;
 }
-.rl-list-btn:hover { background:#00796b; border-color:#00695c; color:#fff !important; }
-.rl-list-btn.active { background:#004d40; border-color:#00352c; }
+#reslib-action-bar .rl-action-btn:hover { background:#003d33; color:#fff !important; }
 
-/* separator between add buttons and list buttons */
-.rl-bar-sep {
-  width:1px; height:24px; background:#b2dfdb; margin:0 4px;
-  display:inline-block; vertical-align:middle;
-}
-
-/* search bar */
-#reslib-search-bar {
-  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+/* search + list area */
+#reslib-search-row {
+  display:none; align-items:center; gap:8px; flex-wrap:wrap;
   padding:8px 15px; border-bottom:1px solid #f0f0f0; flex-shrink:0;
 }
-#reslib-search-bar.hidden { display:none; }
-#reslib-search-bar input, #reslib-search-bar select {
+#reslib-search-row input, #reslib-search-row select {
   height:32px; border-radius:16px; border:1px solid #b2dfdb;
   padding:0 12px; font-size:13px;
 }
-#reslib-search-bar button {
+#reslib-search-row button {
   height:32px; padding:0 14px; border-radius:16px;
-  background:#00796b; color:#fff; border:none; cursor:pointer; font-size:13px;
+  background:#00796b; color:#fff; border:none; cursor:pointer;
 }
-#reslib-search-bar button:hover { background:#00695c; }
+#reslib-search-row button:hover { background:#00695c; }
 
 /* scrollable body */
 #reslib-body {
   flex:1; min-height:0; overflow-y:auto; padding:14px 18px;
 }
 
-/* list section heading */
-#reslib-list-title {
-  font-size:14px; font-weight:700; color:#00695c;
-  margin-bottom:10px; padding-bottom:6px; border-bottom:2px solid #b2dfdb;
-  display:none;
-}
-#reslib-list-title.visible { display:block; }
+/* edit forms in body */
+.edit-form { display:none; padding:10px 0; }
 
 /* resize handles */
 .rl-rs { position:absolute; z-index:10; background:transparent; }
@@ -108,22 +93,18 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 .rl-rs-ne { right:0;  top:0;    width:14px; height:14px; cursor:ne-resize; }
 .rl-rs-nw { left:0;   top:0;    width:14px; height:14px; cursor:nw-resize; }
 
-/* modals above the popup */
-#rlResTypePopup, #rlResGroupPopup, #rlResourcePopup {
-  z-index:10200 !important;
-}
-#rlResTypePopup .modal-content,
+/* modals float above the popup */
+#rlResTypePopup, #rlResGroupPopup, #rlResourcePopup { z-index:10200 !important; }
+#rlResTypePopup  .modal-content,
 #rlResGroupPopup .modal-content,
 #rlResourcePopup .modal-content {
   box-shadow:0 8px 40px rgba(0,0,0,.45) !important;
   border-top:3px solid #00796b;
 }
-#rlResTypePopup .modal-header,
+#rlResTypePopup  .modal-header,
 #rlResGroupPopup .modal-header,
-#rlResourcePopup .modal-header {
-  background:#e0f2f1; border-bottom:1px solid #b2dfdb;
-}
-#rlResTypePopup .modal-header h4,
+#rlResourcePopup .modal-header { background:#e0f2f1; border-bottom:1px solid #b2dfdb; }
+#rlResTypePopup  .modal-header h4,
 #rlResGroupPopup .modal-header h4,
 #rlResourcePopup .modal-header h4 { color:#004d40; font-weight:700; }
 .rl-modal-save {
@@ -131,16 +112,12 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
   border-color:#00695c !important; border-radius:20px !important;
 }
 .rl-modal-save:hover { background:#00695c !important; }
-
-/* edit row in list */
-.rl-edit-row input { width:100%; }
 </style>
 
-<!-- ══════════════════════════════════════════════════════
+<!-- ══════════════════════════════════════════════════════════════
      RESOURCE LIBRARY FLOATING POPUP
-══════════════════════════════════════════════════════ -->
+═══════════════════════════════════════════════════════════════ -->
 <div id="reslib-win">
-  <!-- resize handles -->
   <div class="rl-rs rl-rs-n"  data-dir="n"></div>
   <div class="rl-rs rl-rs-s"  data-dir="s"></div>
   <div class="rl-rs rl-rs-e"  data-dir="e"></div>
@@ -150,7 +127,6 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
   <div class="rl-rs rl-rs-se" data-dir="se"></div>
   <div class="rl-rs rl-rs-sw" data-dir="sw"></div>
 
-  <!-- header -->
   <div id="reslib-win-hdr">
     <span style="font-size:18px;font-weight:700;color:#004d40;">Resource Library</span>
     <div id="reslib-win-hdr-btns">
@@ -159,56 +135,31 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     </div>
   </div>
 
-  <!-- action bar -->
+  <!-- single action bar — mirrors Activity Library layout -->
   <div id="reslib-action-bar">
-    <!-- Add buttons → open modals -->
-    <a href="#rlResTypePopup"  class="rl-add-btn" id="rlOpenResTypePopup"  data-toggle="modal" data-target="#rlResTypePopup"><span class="icon-plus"></span> Resource Type</a>
-    <a href="#rlResGroupPopup" class="rl-add-btn" id="rlOpenResGroupPopup" data-toggle="modal" data-target="#rlResGroupPopup"><span class="icon-plus"></span> Resource Group</a>
-    <a href="#rlResourcePopup" class="rl-add-btn" id="rlOpenResourcePopup" data-toggle="modal" data-target="#rlResourcePopup"><span class="icon-plus"></span> Resource</a>
-
-    <span class="rl-bar-sep"></span>
-
-    <!-- List buttons → show list in body -->
-    <a href="#" class="rl-list-btn" id="rl-list-restype-btn"><span class="icon-th-list"></span> Resource Types</a>
-    <a href="#" class="rl-list-btn" id="rl-list-resgroup-btn"><span class="icon-th-list"></span> Resource Groups</a>
-    <a href="#" class="rl-list-btn" id="rl-list-resource-btn"><span class="icon-th-list"></span> Resources</a>
-  </div>
-
-  <!-- search bar (shown per active list) -->
-  <div id="reslib-search-bar" class="hidden">
-    <!-- Resource Type search -->
-    <div id="rl-search-restype" style="display:none;align-items:center;gap:6px;width:100%;">
-      <input type="text" id="searchrestypename" placeholder="Search resource type…" style="width:220px;">
-      <button id="resourcetypesearch"><span class="icon-search5"></span></button>
-    </div>
-    <!-- Resource Group search -->
-    <div id="rl-search-resgroup" style="display:none;align-items:center;gap:6px;width:100%;">
-      <input type="text" id="searchresgroupname" placeholder="Search resource group…" style="width:220px;">
-      <button id="resgroupsearch"><span class="icon-search5"></span></button>
-    </div>
-    <!-- Resource search -->
-    <div id="rl-search-resource" style="display:none;align-items:center;gap:6px;flex-wrap:wrap;width:100%;">
-      <select id="searchresourcetype" style="width:180px;">
-        <option value="0">-- All Types --</option>
-        <?php foreach ($resourceTypes as $rt): ?>
-        <option value="<?php echo $rt->ResourceType_Id; ?>"><?php echo htmlspecialchars($rt->Name, ENT_QUOTES); ?></option>
-        <?php endforeach; ?>
-      </select>
-      <button id="rl-resource-search-btn"><span class="icon-search5"></span></button>
-    </div>
+    <a href="#rlResTypePopup"  class="rl-type-btn"   id="rlOpenResTypePopup"  data-toggle="modal" data-target="#rlResTypePopup">+ Resource Type</a>
+    <a href="#rlResGroupPopup" class="rl-type-btn"   id="rlOpenResGroupPopup" data-toggle="modal" data-target="#rlResGroupPopup">+ Resource Group</a>
+    <a href="#rlResourcePopup" class="rl-action-btn" id="rlOpenResourcePopup" data-toggle="modal" data-target="#rlResourcePopup"><span class="icon-add"></span> Resource</a>
+    <a href="#"                class="rl-action-btn" id="rl-list-btn"><span class="icon-th-list"></span> List</a>
+    <!-- optional search — visible only when List is active -->
+    <select id="searchresourcetype" style="display:none;margin-left:8px;width:160px;border-radius:20px;height:34px;border:1px solid #b2dfdb;padding:0 10px;font-size:13px;">
+      <option value="0">All Types</option>
+      <?php foreach ($resourceTypes as $rt): ?>
+      <option value="<?php echo $rt->ResourceType_Id; ?>"><?php echo htmlspecialchars($rt->Name, ENT_QUOTES); ?></option>
+      <?php endforeach; ?>
+    </select>
+    <button id="rl-resource-search-btn" style="display:none;height:34px;padding:0 14px;border-radius:20px;background:#00796b;color:#fff;border:none;cursor:pointer;font-size:13px;"><span class="icon-search5"></span></button>
   </div>
 
   <!-- scrollable body -->
   <div id="reslib-body">
-    <!-- hidden trigger links for the existing JS files -->
-    <a href="#" id="listrestype"   style="display:none;"></a>
-    <a href="#" id="listresgroup"  style="display:none;"></a>
-    <a href="#" id="listresource"  style="display:none;"></a>
+    <!-- hidden triggers for existing JS files -->
+    <a href="#" id="listrestype"  style="display:none;"></a>
+    <a href="#" id="listresgroup" style="display:none;"></a>
+    <a href="#" id="listresource" style="display:none;"></a>
 
-    <div id="reslib-list-title"></div>
-
-    <!-- edit forms (hidden, shown by existing resourcetype.js etc.) -->
-    <div class="edit-form edit-resource-type-form" style="display:none;padding:10px 0;">
+    <!-- edit forms (populated by resourcetype.js / resourcegroup.js / resource.js) -->
+    <div class="edit-form edit-resource-type-form">
       <div class="row">
         <div class="col-md-1"></div>
         <div class="col-md-5">
@@ -227,7 +178,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
       </div>
     </div>
 
-    <div class="edit-form edit-resource-group-form" style="display:none;padding:10px 0;">
+    <div class="edit-form edit-resource-group-form">
       <div class="row">
         <div class="col-md-1"></div>
         <div class="col-md-4">
@@ -257,7 +208,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
       </div>
     </div>
 
-    <div class="edit-form edit-resource-form" style="display:none;padding:10px 0;">
+    <div class="edit-form edit-resource-form">
       <div class="row">
         <div class="col-md-1"></div>
         <div class="col-md-2">
@@ -309,40 +260,39 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     <div class="preloader-group"    style="display:none;text-align:center;padding:20px 0;"><img src="<?php echo Yii::$app->request->baseUrl; ?>/images/loader.gif"></div>
     <div class="preloader-resource" style="display:none;text-align:center;padding:20px 0;"><img src="<?php echo Yii::$app->request->baseUrl; ?>/images/loader.gif"></div>
 
-    <!-- list containers -->
+    <!-- list containers (filled by existing JS) -->
     <div id="restypelistsection"  class="data-content-list"></div>
     <div id="resgrouplistsection" class="data-content-list"></div>
     <div id="resourcelistsection" class="data-content-list"></div>
-  </div><!-- /#reslib-body -->
+  </div>
 
-  <!-- footer -->
   <div style="padding:8px 15px;border-top:1px solid #e5e5e5;text-align:right;flex-shrink:0;background:#f5fffe;">
     <button id="reslib-close-footer" class="btn" style="background:#e67e22;color:#fff;border-color:#d35400;border-radius:4px;padding:6px 14px;"><span class="icon-close"></span> Close</button>
   </div>
 </div>
 
 
-<!-- ══ ADD RESOURCE TYPE MODAL ══════════════════════════════════════ -->
+<!-- ══ RESOURCE TYPE MODAL — add form + list ════════════════════ -->
 <div class="modal fade" id="rlResTypePopup" data-backdrop="false">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h4 class="modal-title" style="float:left;">Add Resource Type</h4>
+        <h4 class="modal-title" style="float:left;">Resource Type</h4>
         <button type="button" class="close" data-dismiss="modal" style="float:right;font-size:28px;">&times;</button>
       </div>
       <div class="modal-body">
         <div class="row">
-          <div class="col-md-8">
+          <div class="col-md-7">
             <label>Resource Type Name</label>
             <input type="text" class="form-control" id="restypename1" placeholder="e.g. Labour, Material, Equipment">
-            <span id="rl-restype-err" class="error" style="color:red;display:none;"></span>
+            <span class="error" style="color:red;display:none;"></span>
           </div>
-          <div class="col-md-4" style="padding-top:25px;">
+          <div class="col-md-5" style="padding-top:25px;">
             <button type="button" id="saverestype" class="btn rl-modal-save"><span class="icon-check"></span> Add Resource Type</button>
           </div>
         </div>
         <hr>
-        <div id="rl-restype-list-container"></div>
+        <div id="rl-restype-modal-list"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" data-dismiss="modal" style="background:#e67e22;color:#fff;border-color:#d35400;border-radius:4px;"><span class="icon-close"></span> Close</button>
@@ -351,20 +301,20 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
   </div>
 </div>
 
-<!-- ══ ADD RESOURCE GROUP MODAL ═════════════════════════════════════ -->
+<!-- ══ RESOURCE GROUP MODAL — add form + list ══════════════════ -->
 <div class="modal fade" id="rlResGroupPopup" data-backdrop="false">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h4 class="modal-title" style="float:left;">Add Resource Group</h4>
+        <h4 class="modal-title" style="float:left;">Resource Group</h4>
         <button type="button" class="close" data-dismiss="modal" style="float:right;font-size:28px;">&times;</button>
       </div>
       <div class="modal-body">
         <div class="row">
-          <div class="col-md-5">
+          <div class="col-md-4">
             <label>Resource Group Name</label>
             <input type="text" class="form-control" id="resgroupname1" placeholder="Group name">
-            <span id="rl-resgroup-err" class="error" style="color:red;display:none;"></span>
+            <span class="error" style="color:red;display:none;"></span>
           </div>
           <div class="col-md-4">
             <label>Resource Type</label>
@@ -375,12 +325,12 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
               <?php endforeach; ?>
             </select>
           </div>
-          <div class="col-md-3" style="padding-top:25px;">
-            <button type="button" id="saveresgroup" class="btn rl-modal-save"><span class="icon-check"></span> Add Group</button>
+          <div class="col-md-4" style="padding-top:25px;">
+            <button type="button" id="saveresgroup" class="btn rl-modal-save"><span class="icon-check"></span> Add Resource Group</button>
           </div>
         </div>
         <hr>
-        <div id="rl-resgroup-list-container"></div>
+        <div id="rl-resgroup-modal-list"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" data-dismiss="modal" style="background:#e67e22;color:#fff;border-color:#d35400;border-radius:4px;"><span class="icon-close"></span> Close</button>
@@ -389,7 +339,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
   </div>
 </div>
 
-<!-- ══ ADD RESOURCE MODAL ════════════════════════════════════════════ -->
+<!-- ══ RESOURCE MODAL — add form only, no list ═════════════════ -->
 <div class="modal fade" id="rlResourcePopup" data-backdrop="false">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -449,8 +399,8 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 
 <script>
 (function(){
-  var win  = document.getElementById('reslib-win');
-  var hdr  = document.getElementById('reslib-win-hdr');
+  var win = document.getElementById('reslib-win');
+  var hdr = document.getElementById('reslib-win-hdr');
   var MIN_W=500, MIN_H=300, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0, _saved=null;
 
   function _anchor(){
@@ -463,66 +413,23 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     win.classList.add('rl-open');
     document.dispatchEvent(new Event('reslib:open'));
   }
-
   function closeReslib(){
     win.classList.remove('rl-open');
-    document.querySelectorAll('.icon-wrench.reslib-btn').forEach(function(el){ el.classList.remove('active'); });
+    document.querySelectorAll('.reslib-btn').forEach(function(el){ el.classList.remove('active'); });
   }
 
-  /* ── List button click: show that list in the body ── */
-  var listCfgs = [
-    { btn:'rl-list-restype-btn',  searchDiv:'rl-search-restype',  trigger:'listrestype',  title:'Resource Types',  clearOthers:['resgrouplistsection','resourcelistsection'] },
-    { btn:'rl-list-resgroup-btn', searchDiv:'rl-search-resgroup', trigger:'listresgroup', title:'Resource Groups', clearOthers:['restypelistsection','resourcelistsection'] },
-    { btn:'rl-list-resource-btn', searchDiv:'rl-search-resource', trigger:'listresource', title:'Resources',       clearOthers:['restypelistsection','resgrouplistsection'] }
-  ];
-
-  listCfgs.forEach(function(cfg){
-    document.getElementById(cfg.btn).addEventListener('click', function(e){
-      e.preventDefault();
-      var wasActive = this.classList.contains('active');
-
-      // deactivate all
-      listCfgs.forEach(function(c){
-        document.getElementById(c.btn).classList.remove('active');
-        var sd = document.getElementById(c.searchDiv);
-        if(sd) sd.style.display='none';
-      });
-      document.getElementById('reslib-search-bar').classList.add('hidden');
-      document.getElementById('reslib-list-title').classList.remove('visible');
-      document.getElementById('reslib-list-title').textContent='';
-      // clear all list containers
-      ['restypelistsection','resgrouplistsection','resourcelistsection'].forEach(function(id){
-        document.getElementById(id).innerHTML='';
-      });
-
-      if(!wasActive){
-        this.classList.add('active');
-        // show search bar for this section
-        document.getElementById('reslib-search-bar').classList.remove('hidden');
-        var sd = document.getElementById(cfg.searchDiv);
-        if(sd){ sd.style.display='flex'; }
-        // show title
-        var titleEl = document.getElementById('reslib-list-title');
-        titleEl.textContent = cfg.title;
-        titleEl.classList.add('visible');
-        // trigger the existing JS list load
-        setTimeout(function(){ $('#'+cfg.trigger).trigger('click'); }, 100);
-      }
-    });
-  });
-
-  /* resource type search triggers reload */
-  $(document).on('click','#resourcetypesearch', function(){
-    setTimeout(function(){ $('#listrestype').trigger('click'); }, 100);
-  });
-  $(document).on('click','#resgroupsearch', function(){
-    setTimeout(function(){ $('#listresgroup').trigger('click'); }, 100);
+  /* ── List button: show resource list in main body ── */
+  document.getElementById('rl-list-btn').addEventListener('click', function(e){
+    e.preventDefault();
+    $('#searchresourcetype').show();
+    $('#rl-resource-search-btn').show();
+    setTimeout(function(){ $('#listresource').trigger('click'); }, 100);
   });
   $(document).on('click','#rl-resource-search-btn', function(){
     setTimeout(function(){ $('#listresource').trigger('click'); }, 100);
   });
 
-  /* ── Open via .reslib-btn icons in navbar ── */
+  /* ── Open / close via navbar icon ── */
   $(document).on('click', '.navbar-nav .reslib-btn', function(e){
     e.preventDefault();
     if(win.classList.contains('rl-open')){
@@ -546,7 +453,6 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     }
   });
 
-  /* ── Close ── */
   document.getElementById('reslib-close').addEventListener('click', closeReslib);
   document.getElementById('reslib-close-footer').addEventListener('click', closeReslib);
 
@@ -597,7 +503,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
   });
   document.addEventListener('mouseup', function(){ _action=null; });
 
-  /* ── Move popup + modals to <body> to avoid stacking context clipping ── */
+  /* ── Move to <body> ── */
   $(function(){
     if(win && win.parentNode !== document.body) document.body.appendChild(win);
     ['rlResTypePopup','rlResGroupPopup','rlResourcePopup'].forEach(function(id){
@@ -605,61 +511,68 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
       if(el && el.parentNode !== document.body) document.body.appendChild(el);
     });
 
-    /* Reload list in body after modal saves (existing JS triggers listrestype etc.) */
-    $('#rlResTypePopup').on('hidden.bs.modal', function(){
-      if($('#rl-list-restype-btn').hasClass('active')){
-        setTimeout(function(){ $('#listrestype').trigger('click'); }, 200);
-      }
-    });
-    $('#rlResGroupPopup').on('hidden.bs.modal', function(){
-      if($('#rl-list-resgroup-btn').hasClass('active')){
-        setTimeout(function(){ $('#listresgroup').trigger('click'); }, 200);
-      }
-    });
-    $('#rlResourcePopup').on('hidden.bs.modal', function(){
-      if($('#rl-list-resource-btn').hasClass('active')){
-        setTimeout(function(){ $('#listresource').trigger('click'); }, 200);
-      }
-    });
-
-    /* Populate list inside Resource Type modal when it opens */
+    /* Load list inside Resource Type modal when it opens */
     $('#rlResTypePopup').on('shown.bs.modal', function(){
       $('#restypename1').val('').focus();
-      rlLoadResTypeModalList();
+      rlLoadResTypeList();
     });
+    /* Reload after save — resourcetype.js calls #listrestype trigger; also refresh modal list */
+    $(document).on('click','#saverestype', function(){
+      setTimeout(function(){ rlLoadResTypeList(); }, 500);
+    });
+
+    /* Load list inside Resource Group modal when it opens */
     $('#rlResGroupPopup').on('shown.bs.modal', function(){
       $('#resgroupname1').val('').focus();
-      rlLoadResGroupModalList();
+      rlLoadResGroupList();
+    });
+    $(document).on('click','#saveresgroup', function(){
+      setTimeout(function(){ rlLoadResGroupList(); }, 500);
+    });
+
+    /* After Resource modal closes, refresh list in body if it was showing */
+    $('#rlResourcePopup').on('hidden.bs.modal', function(){
+      if($('#resourcelistsection').html().trim()){
+        setTimeout(function(){ $('#listresource').trigger('click'); }, 200);
+      }
     });
   });
 
   /* ── Resource Type modal list ── */
-  function rlLoadResTypeModalList(){
-    $('#rl-restype-list-container').html('<div style="padding:8px;color:#999;">Loading…</div>');
+  function rlLoadResTypeList(){
+    $('#rl-restype-modal-list').html('<div style="padding:8px;color:#999;">Loading…</div>');
     $.ajax({
-      url:'<?php echo \yii\helpers\Url::to(["/projects/listresourcetype"]); ?>',
-      type:'POST', dataType:'json',
-      data:{ searchrestypename: $('#restypename1').val() },
+      type:'POST',
+      url:'../resourcetype/search',
+      dataType:'json',
+      data:{ restypename: '' },
       success:function(d){
-        if(!d || !d.result){ $('#rl-restype-list-container').html('<div style="padding:8px;color:#999;">No resource types yet.</div>'); return; }
-        $('#rl-restype-list-container').html(d.result);
+        if(d && d.error==='No' && d.restype){
+          $('#rl-restype-modal-list').html(d.restype);
+        } else {
+          $('#rl-restype-modal-list').html('<div style="padding:8px;color:#999;">No resource types yet.</div>');
+        }
       },
-      error:function(){ $('#rl-restype-list-container').html('<div style="padding:8px;color:red;">Could not load list.</div>'); }
+      error:function(){ $('#rl-restype-modal-list').html('<div style="padding:8px;color:red;">Could not load.</div>'); }
     });
   }
 
   /* ── Resource Group modal list ── */
-  function rlLoadResGroupModalList(){
-    $('#rl-resgroup-list-container').html('<div style="padding:8px;color:#999;">Loading…</div>');
+  function rlLoadResGroupList(){
+    $('#rl-resgroup-modal-list').html('<div style="padding:8px;color:#999;">Loading…</div>');
     $.ajax({
-      url:'<?php echo \yii\helpers\Url::to(["/projects/listresourcegroup"]); ?>',
-      type:'POST', dataType:'json',
-      data:{ searchresgroupname: '' },
+      type:'POST',
+      url:'../resourcegroup/search',
+      dataType:'json',
+      data:{ resgroupname: '' },
       success:function(d){
-        if(!d || !d.result){ $('#rl-resgroup-list-container').html('<div style="padding:8px;color:#999;">No resource groups yet.</div>'); return; }
-        $('#rl-resgroup-list-container').html(d.result);
+        if(d && d.error==='No' && d.resgroup){
+          $('#rl-resgroup-modal-list').html(d.resgroup);
+        } else {
+          $('#rl-resgroup-modal-list').html('<div style="padding:8px;color:#999;">No resource groups yet.</div>');
+        }
       },
-      error:function(){ $('#rl-resgroup-list-container').html('<div style="padding:8px;color:red;">Could not load list.</div>'); }
+      error:function(){ $('#rl-resgroup-modal-list').html('<div style="padding:8px;color:red;">Could not load.</div>'); }
     });
   }
 
