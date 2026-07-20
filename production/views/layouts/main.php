@@ -4328,7 +4328,7 @@ $(function(){
 <style>
 #gantt-win {
   display:none; position:fixed; top:80px; left:20px;
-  width:520px; height:calc(100vh - 110px);
+  width:1040px; height:calc(100vh - 110px);
   min-width:420px; min-height:300px;
   z-index:100000; background:#fff; border-radius:6px;
   border:1px solid #d0d0d0;
