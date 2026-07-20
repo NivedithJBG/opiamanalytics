@@ -509,10 +509,16 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     if(el && el.parentNode !== document.body) document.body.appendChild(el);
   });
 
-  /* Force z-index above reslib-win (10003) every time a modal is about to show */
-  $(document).on('show.bs.modal','#rlResTypePopup,#rlResGroupPopup,#rlResourcePopup', function(){
-    $(this).css('z-index', 10300);
-    setTimeout(function(){ $('.modal-backdrop').css('z-index', 10299); }, 0);
+  /* Force z-index above reslib-win (10003) — must run AFTER Bootstrap sets its own inline z-index */
+  $(document).on('show.bs.modal shown.bs.modal','#rlResTypePopup,#rlResGroupPopup,#rlResourcePopup', function(){
+    var $m = $(this);
+    /* immediate set */
+    $m[0].style.setProperty('z-index', '10300', 'important');
+    /* also after Bootstrap finishes its own show sequence */
+    setTimeout(function(){
+      $m[0].style.setProperty('z-index', '10300', 'important');
+      $('.modal-backdrop').each(function(){ this.style.setProperty('z-index','10299','important'); });
+    }, 0);
   });
 
   $(function(){
