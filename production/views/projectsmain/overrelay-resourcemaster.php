@@ -486,36 +486,95 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     });
   });
 
-  /* reload sub-popup lists whenever the hidden list triggers fire
-     (resourcetype.js / resourcegroup.js / resource.js all call
-      #listrestype / #listresgroup / #listresource after every save/edit/cancel) */
-  $(document).on('click', '#listrestype',  function(){ rlLoadResTypeList(); });
-  $(document).on('click', '#listresgroup', function(){ rlLoadResGroupList(); });
-  $(document).on('click', '#listresource', function(){ /* list refresh handled by resource.js */ });
+  /* ── Sub-popup save handlers ─────────────────────────────────
+     Replace the resourcetype.js / resourcegroup.js / resource.js
+     handlers by unbinding them after DOM-ready and re-binding here.
+     Those files target old tab-based DOM (#restypelistsection etc.)
+     that no longer exists in this sub-popup layout.
+  ─────────────────────────────────────────────────────────────── */
+  $(function(){
 
-  /* after a new resource type is saved, refresh type dropdowns everywhere */
-  function rlRefreshTypeDropdowns(){
-    $.ajax({ type:'POST', url:'../resourcetype/search', dataType:'json', data:{ restypename:'' },
-      success:function(d){
-        if(!d || d.error !== 'No' || !d.restypeoptions) return;
-        var opts = d.restypeoptions;
-        /* main-popup selects */
-        ['searchresourcetype','editresgrouptype','editresourcetype'].forEach(function(id){
-          var sel = document.getElementById(id);
-          if(!sel) return;
-          var cur = sel.value;
-          sel.innerHTML = opts;
-          sel.value = cur;
-        });
-        /* sub-popup selects */
-        ['addresgrouptype','addresourcetype'].forEach(function(id){
-          var sel = document.getElementById(id);
-          if(!sel) return;
-          sel.innerHTML = opts;
-        });
-      }
+    /* Unbind old handlers from the external JS files */
+    $('#saverestype').off('click');
+    $('#saveresgroup').off('click');
+    $('#saveresource').off('click');
+    $('#listrestype').off('click');
+    $('#listresgroup').off('click');
+
+    /* ADD RESOURCE TYPE */
+    $('#saverestype').on('click', function(){
+      var name = $('#restypename1').val().trim();
+      $('#restypename1').next('.error').hide();
+      if(!name){ $('#restypename1').next('.error').text('Enter Resource Type Name').show(); return; }
+      var $btn = $(this).attr('disabled', true);
+      $.ajax({ type:'POST', url:'../resourcetype/create', dataType:'json',
+        data:{ restypename: name, addacntgrp: 1 },
+        success:function(d){
+          $btn.attr('disabled', false);
+          if(d && d.error === 'No'){
+            $('#restypename1').val('').focus();
+            rlLoadResTypeList();
+            rlRefreshTypeDropdownsFromDB();
+          } else { alert(d && d.errortext ? d.errortext : 'Could not save.'); }
+        },
+        error:function(){ $btn.attr('disabled', false); alert('Server error. Please try again.'); }
+      });
     });
-  }
+
+    /* ADD RESOURCE GROUP */
+    $('#saveresgroup').on('click', function(){
+      var name = $('#resgroupname1').val().trim();
+      $('#resgroupname1').next('.error').hide();
+      if(!name){ $('#resgroupname1').next('.error').text('Enter Resource Group Name').show(); return; }
+      var $btn = $(this).attr('disabled', true);
+      $.ajax({ type:'POST', url:'../resourcegroup/create', dataType:'json',
+        data:{ resourcegroup: name, restypeid: $('#addresgrouptype').val() },
+        success:function(d){
+          $btn.attr('disabled', false);
+          if(d && d.error === 'No'){
+            $('#resgroupname1').val('').focus();
+            $('#addresgrouptype').val('0');
+            rlLoadResGroupList();
+          } else { alert(d && d.errortext ? d.errortext : 'Could not save.'); }
+        },
+        error:function(){ $btn.attr('disabled', false); alert('Server error. Please try again.'); }
+      });
+    });
+
+    /* ADD RESOURCE */
+    $('#saveresource').on('click', function(){
+      var name = $('#resourcename1').val().trim();
+      $('#resourcename1').next('.error').hide();
+      if(!name){ $('#resourcename1').next('.error').text('Enter Resource Name').show(); return; }
+      var $btn = $(this).attr('disabled', true);
+      $.ajax({ type:'POST', url:'../resources/create', dataType:'json',
+        data:{
+          resourcename: name,
+          unit:         $('#resourceunit1').val().trim(),
+          restypeid:    $('#addresourcetype').val(),
+          resgroupid:   $('#addresourcegroup').val()
+        },
+        success:function(d){
+          $btn.attr('disabled', false);
+          if(d && d.error === 'No'){
+            $('#resourcename1').val('').focus();
+            $('#resourceunit1').val('');
+            $('#addresourcetype').val('0');
+            $('#addresourcegroup').html('<option value="0">-- Select Group --</option>');
+            if($('#resourcelistsection').html().trim()){
+              setTimeout(function(){ $('#listresource').trigger('click'); }, 200);
+            }
+          } else { alert(d && d.errortext ? d.errortext : 'Could not save.'); }
+        },
+        error:function(){ $btn.attr('disabled', false); alert('Server error. Please try again.'); }
+      });
+    });
+
+    /* Rebind list triggers used by edit/delete handlers in the external JS files */
+    $('#listrestype').on('click',  function(){ rlLoadResTypeList(); });
+    $('#listresgroup').on('click', function(){ rlLoadResGroupList(); });
+
+  });
 
 
   /* bind drag+resize to each sub-popup */
