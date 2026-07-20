@@ -254,6 +254,20 @@ color:red !important;
 #alIowGroupPopup .modal-content,
 #alIowPopup .modal-content,
 #alActTypePopup .modal-content { box-shadow: 0 8px 40px rgba(0,0,0,0.45) !important; }
+
+/* Resource Library modals — same pattern as Activity Library */
+#rlResTypePopup,
+#rlResGroupPopup,
+#rlResourcePopup { z-index: 10100 !important; }
+#rlResTypePopup .modal-content,
+#rlResGroupPopup .modal-content,
+#rlResourcePopup .modal-content { box-shadow: 0 8px 40px rgba(0,0,0,0.45) !important; border-top: 3px solid #00796b; }
+#rlResTypePopup .modal-header,
+#rlResGroupPopup .modal-header,
+#rlResourcePopup .modal-header { background: #e0f2f1; border-bottom: 1px solid #b2dfdb; }
+#rlResTypePopup .modal-header h4,
+#rlResGroupPopup .modal-header h4,
+#rlResourcePopup .modal-header h4 { color: #004d40; font-weight: 700; }
 .menu4-popup-cntnr.active {
     display: flex;
 }
