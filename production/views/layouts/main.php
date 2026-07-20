@@ -4328,8 +4328,8 @@ $(function(){
 <style>
 #gantt-win {
   display:none; position:fixed; top:80px; left:20px;
-  width:calc(100vw - 40px); height:calc(100vh - 100px);
-  min-width:500px; min-height:300px;
+  width:520px; height:calc(100vh - 110px);
+  min-width:420px; min-height:300px;
   z-index:100000; background:#fff; border-radius:6px;
   border:1px solid #d0d0d0;
   box-shadow:0 4px 16px rgba(0,0,0,.15);
