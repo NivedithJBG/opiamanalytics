@@ -81,7 +81,7 @@ $subDomain = array_shift(($HTTP_HOST));
     <!-- <link href="<//?php echo Yii::$app->request->baseUrl; ?>/cssnew/style.css?v=1.18" rel="stylesheet"> -->
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer.css?v=1.18" rel="stylesheet">
   <!--   <link href="<//?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer1.css" rel="stylesheet"> -->
-    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer2.css?v=20260720b" rel="stylesheet">
+    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer2.css?v=20260720c" rel="stylesheet">
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer3.css" rel="stylesheet">
 
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer4.css" rel="stylesheet">
@@ -140,6 +140,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-copy.duplicateProject,
         .round-icons .icon-tools.overNow4,
         .round-icons .icon-wrench.reslib-btn,
+        .round-icons .rel-nav-btn,
         .round-icons .pdoc-btn,
 
         .round-icons .perf-dashboard-btn,
@@ -147,6 +148,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .qe-btn { color: #fff !important; }
 
         .round-icons .icon-chart3            { background-color: #003580 !important; }
+        .round-icons .rel-nav-btn            { background-color: #5c3d8f !important; }
         .round-icons .icon-calendar          { background-color: #B8860B !important; }
         .round-icons .icon-copy.duplicateProject { background-color: #E65C00 !important; }
         .round-icons .icon-tools.overNow4    { background-color: #CC0000 !important; }
@@ -156,6 +158,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .qe-btn                 { background-color: #00838f !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
         /* Keep coloured backgrounds on hover/focus */
         .round-icons .icon-chart3:hover,            .round-icons .icon-chart3:focus            { background: #002060 !important; }
+        .round-icons .rel-nav-btn:hover,            .round-icons .rel-nav-btn:focus            { background: #4a2f75 !important; }
         .round-icons .icon-calendar:hover,          .round-icons .icon-calendar:focus          { background: #8a6200 !important; }
         .round-icons .icon-copy.duplicateProject:hover, .round-icons .icon-copy.duplicateProject:focus { background: #b84400 !important; }
         .round-icons .icon-tools.overNow4:hover,    .round-icons .icon-tools.overNow4:focus    { background: #990000 !important; }
@@ -451,6 +454,9 @@ if($action=='login')
                 </li>
                 <li>
                     <a class="icon-chart3" id="gantt-win-open" title="Gantt Chart" href="#" data-projectid="<?php echo $ProjectId?>"></a>
+                </li>
+                <li>
+                    <a class="icon-sitemap rel-nav-btn" id="btn-gantt-relations" title="Activity Relationships" href="#" data-projectid="<?php echo $ProjectId?>"></a>
                 </li>
                 <?php if($ProjectId && Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'newganttchart') { ?>
                 <li><a class="icon-tools overNow4" title="Activity Library" href="<?php echo Yii::$app->urlManager->createUrl('projects/projectmasters')?>"></a></li>
@@ -4381,7 +4387,6 @@ $(function(){
     </div>
     <div id="gantt-win-hdr-btns">
       <a class="icon-pencil" id="btn-quick-entry" title="WBS" href="#" style="width:32px;height:32px;font-size:15px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#3a7d3a;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.25);"> </a>
-      <a class="icon-sitemap" id="btn-gantt-relations" title="Activity Relationships" href="#" style="width:32px;height:32px;font-size:15px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#5c3d8f;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.25);"> </a>
       <button id="gantt-win-expand" title="Fullscreen">&#x26F6;</button>
       <button id="gantt-win-close" title="Close">&times;</button>
     </div>
