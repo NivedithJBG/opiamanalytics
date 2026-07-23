@@ -21458,8 +21458,12 @@ public function actionActivitymusterprocess()
             $sortorder = 0 ;
         }
 
-        $sql = "INSERT INTO `estimateworktypes` (`estworktype_name`, `estworktype_status`,`sortorder`) VALUES ('".$_POST['name']."', '0', '".$sortorder."')";
-        //echo $sql;exit;
+        $name = isset($_POST['name']) ? trim($_POST['name']) : (isset($_POST['worktypename']) ? trim($_POST['worktypename']) : '');
+        if ($name === '') {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Name is required.']);
+        }
+        $name = addslashes($name);
+        $sql = "INSERT INTO `estimateworktypes` (`estworktype_name`, `estworktype_status`,`sortorder`) VALUES ('".$name."', '0', '".$sortorder."')";
         $command=$connection->createCommand($sql);
         $dataReader=$command->query();
 
@@ -21501,7 +21505,8 @@ public function actionActivitymusterprocess()
                    . '</td></tr>';
         }
         $html .= '</tbody></table>';
-        return ['error' => 'No', 'result' => $html];
+        $items = array_map(function($r){ return ['id' => $r['estworktype_id'], 'name' => $r['estworktype_name']]; }, $rows);
+        return ['error' => 'No', 'result' => $html, 'items' => $items];
     }
 
     public function actionUpdateprojecttypesort()
@@ -25179,8 +25184,32 @@ public function actionActivitymusterprocess()
             $rows = \Yii::$app->db->createCommand(
                 "SELECT id, name FROM iow_groups WHERE status = 0 ORDER BY name ASC"
             )->queryAll();
-            return ['items' => $rows];
-        } catch (\Exception $e) { return ['items' => [], 'error' => $e->getMessage()]; }
+            /* Also return items array for dropdowns (alRefreshIowGroupDropdown) */
+            $items = [];
+            if (empty($rows)) {
+                return ['items' => [], 'result' => '<p style="color:#aaa;font-size:13px;text-align:center;padding:30px 0;">No IOW groups found.</p>'];
+            }
+            $html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+                  . '<thead><tr>'
+                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:8px 12px;border:1px solid #444;text-align:center;width:42px;">#</th>'
+                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:8px 12px;border:1px solid #444;">IOW Group</th>'
+                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:8px 12px;border:1px solid #444;text-align:center;width:80px;"></th>'
+                  . '</tr></thead><tbody>';
+            foreach ($rows as $i => $row) {
+                $items[] = ['id' => $row['id'], 'name' => $row['name']];
+                $safeName = htmlspecialchars($row['name'], ENT_QUOTES);
+                $html .= '<tr class="iowgrouptypes" data-id="' . $row['id'] . '">'
+                       . '<td style="padding:8px 12px;border:1px solid #ddd;text-align:center;color:#999;">' . ($i + 1) . '</td>'
+                       . '<td style="padding:8px 12px;border:1px solid #ddd;">' . $safeName
+                       .     '<input type="hidden" id="iowgrp' . $row['id'] . '" value="' . $safeName . '"></td>'
+                       . '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;white-space:nowrap;">'
+                       .     '<button class="al-edit-iowgroup btn btn-default btn-xs" data-id="' . $row['id'] . '" style="border-radius:50%;width:28px;height:28px;padding:0;margin-right:4px;" title="Rename"><span class="icon-pencil"></span></button>'
+                       .     '<button class="al-delete-iowgroup btn btn-danger btn-xs" data-id="' . $row['id'] . '" style="border-radius:50%;width:28px;height:28px;padding:0;" title="Delete"><span class="icon-trash1"></span></button>'
+                       . '</td></tr>';
+            }
+            $html .= '</tbody></table>';
+            return ['items' => $items, 'result' => $html];
+        } catch (\Exception $e) { return ['items' => [], 'result' => '', 'error' => $e->getMessage()]; }
     }
 
     public function actionAddiowgroup()
@@ -25258,11 +25287,11 @@ public function actionActivitymusterprocess()
             if (!$name) return ['error' => 'Name required'];
             $db = \Yii::$app->db;
             $nextSort = (int)($db->createCommand(
-                "SELECT COALESCE(MAX(sortorder),0)+1 FROM estimateworktypes"
+                "SELECT COALESCE(MAX(sortorder),0)+1 FROM estimateactivitytypes"
             )->queryScalar() ?? 1);
             $db->createCommand(
-                "INSERT INTO estimateworktypes (estworktype_name, estworktype_status, sortorder) VALUES (:n, 0, :s)",
-                [':n' => $name, ':s' => $nextSort]
+                "INSERT INTO estimateactivitytypes (activitytype_name, activitytype_status, sortorder, schedule_type) VALUES (:n, 0, :s, :sc)",
+                [':n' => $name, ':s' => $nextSort, ':sc' => $schedule]
             )->execute();
             return ['ok' => true, 'id' => (int)$db->lastInsertID];
         } catch (\Exception $e) { return ['error' => $e->getMessage()]; }

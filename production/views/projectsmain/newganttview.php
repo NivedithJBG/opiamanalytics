@@ -290,6 +290,13 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   width: 260px !important;
   max-width: 260px !important;
 }
+/* Dedicated status-indicator column (sits just before the activity name column) */
+#gantt-container .gtasklist {
+  min-width: 16px !important;
+  width: 16px !important;
+  max-width: 16px !important;
+  text-align: center !important;
+}
 .btn-opiam {
   position: relative;
   padding: 4px 14px;
@@ -865,18 +872,22 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var _row = document.getElementById('gantt-container' + 'child_' + _tid);
       if (!_row) continue;
 
-      // Indentation + prepend status dot inside the activity name cell
+      // Indentation on the activity name cell
       var _cell = _row.querySelector('td.gtaskname');
       if (_cell) {
         var _indent = [0, 4, 18, 32, 46][_t.getLevel()] || 4;
         _cell.style.paddingLeft = _indent + 'px';
+      }
 
-        // Prepend dot for leaf activities only (not group rows)
+      // Status dot goes in its own dedicated column (td.gtasklist), leaf activities only
+      var _dotCell = _row.querySelector('td.gtasklist');
+      if (_dotCell) {
         var _st = _actStatus[_tid];
-        if (_st && !_row.querySelector('.act-dot-inline')) {
+        if (_st && !_dotCell.querySelector('.act-dot-inline')) {
+          _dotCell.innerHTML = '';
           var _dot = document.createElement('span');
           _dot.className = 'act-dot-inline';
-          _dot.style.cssText = 'display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle;flex-shrink:0;';
+          _dot.style.cssText = 'display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;';
           if (_st.critical) {
             // Critical path activities: always show critical bar colour (#00ACC1) regardless of status
             _dot.style.background = '#00ACC1';
@@ -899,7 +910,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
             _dot.style.background = '#0d2b6e';
             _dot.title = 'Upcoming';
           }
-          _cell.insertBefore(_dot, _cell.firstChild);
+          _dotCell.appendChild(_dot);
         }
       }
 

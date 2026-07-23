@@ -456,5 +456,21 @@ class Workgroups1Controller extends \yii\web\Controller
         }
     }
 
+    public function actionIowgroupdelete()
+    {
+        $iowGroup = IowGroup::findOne($_POST['groupid']);
+        if (!$iowGroup) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'IOW group not found.']);
+        }
+        $inUse = \Yii::$app->db->createCommand(
+            'SELECT COUNT(*) FROM workgroups_new WHERE iowGroupid = :id AND Status = 0', [':id' => $iowGroup->id]
+        )->queryScalar();
+        if ($inUse > 0) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Cannot delete — this group is still used by ' . $inUse . ' active IOW(s).']);
+        }
+        $iowGroup->delete();
+        return json_encode(['error' => 'No']);
+    }
+
 
 }

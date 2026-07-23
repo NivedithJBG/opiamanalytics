@@ -88,13 +88,29 @@
 }
 .rl2-add-grid {
   display:grid;
-  grid-template-columns: 1fr 60px 1fr;
-  gap:0 16px;
+  grid-template-columns: 1fr 48px 1fr;
+  gap:0 8px;
   align-items:start;
 }
-.rl2-mid-col {
-  display:flex; flex-direction:column; align-items:center;
-  justify-content:flex-start; padding-top:28px; gap:10px;
+.rl2-arrow-col {
+  display:flex; align-items:center; justify-content:center;
+  padding-top:135px;
+}
+#rel-type-badge {
+  display:inline-block; width:28px; height:28px; line-height:28px;
+  border-radius:50%; background:#5c3d8f; color:#fff;
+  font-size:10px; font-weight:700; text-align:center;
+  box-shadow:0 2px 6px rgba(92,61,143,.4);
+}
+.rl2-bottom-row {
+  grid-column: 1 / -1;
+  display:flex; align-items:center; justify-content:center;
+  gap:20px; padding-top:14px; margin-top:10px;
+  border-top:2px solid #ede7f6;
+}
+.rl2-bottom-row .rl2-section-lbl {
+  font-size:11px; font-weight:700; color:#5c3d8f; text-transform:uppercase;
+  letter-spacing:.5px; margin-right:6px;
 }
 .rl2-type-btn {
   width:52px; height:28px; border-radius:6px; border:1px solid #bbb;
@@ -104,7 +120,7 @@
 .rl2-type-btn.active { background:#5c3d8f; color:#fff; border-color:#5c3d8f; }
 
 .rl2-lag-wrap {
-  display:flex; align-items:center; gap:4px; margin-top:4px;
+  display:flex; align-items:center; gap:4px;
 }
 .rl2-lag-toggle {
   width:32px; height:28px; border-radius:6px; border:1px solid #bbb;
@@ -113,6 +129,7 @@
 .rl2-lag-toggle.lead { background:#e57373; color:#fff; border-color:#e57373; }
 .rl2-lag-toggle.lag  { background:#4caf50; color:#fff; border-color:#4caf50; }
 #rel-lag-days { width:52px; height:28px; border-radius:6px; border:1px solid #bbb; text-align:center; font-size:13px; }
+#rel-lag-label { font-size:11px; color:#888; min-width:54px; }
 
 /* ── List table ───────────────────────────────────────────────── */
 .rl2-list-table { width:100%; border-collapse:collapse; font-size:12px; }
@@ -159,7 +176,7 @@
 
 
 <!-- ══ ADD RELATIONSHIP SUB-POPUP ═══════════════════════════════ -->
-<div id="rel-add-popup" class="rl2-subwin" style="top:100px;left:calc(50% - 440px);width:880px;height:360px;">
+<div id="rel-add-popup" class="rl2-subwin" style="top:80px;left:calc(50% - 380px);width:760px;height:400px;">
   <div class="rl2-rs rl2-rs-n" data-dir="n"></div><div class="rl2-rs rl2-rs-s" data-dir="s"></div>
   <div class="rl2-rs rl2-rs-e" data-dir="e"></div><div class="rl2-rs rl2-rs-w" data-dir="w"></div>
   <div class="rl2-rs rl2-rs-ne" data-dir="ne"></div><div class="rl2-rs rl2-rs-nw" data-dir="nw"></div>
@@ -188,18 +205,9 @@
         </div>
       </div>
 
-      <!-- MIDDLE: type + lag -->
-      <div class="rl2-mid-col">
-        <div style="text-align:center;font-size:11px;color:#888;font-weight:600;margin-bottom:4px;">TYPE</div>
-        <button class="rl2-type-btn active" data-type="2">FS</button>
-        <button class="rl2-type-btn" data-type="1">SS</button>
-        <button class="rl2-type-btn" data-type="3">FF</button>
-        <div style="margin-top:8px;text-align:center;font-size:11px;color:#888;font-weight:600;">LAG / LEAD</div>
-        <div class="rl2-lag-wrap">
-          <button class="rl2-lag-toggle lag" id="rel-lag-toggle" title="Toggle Lag/Lead">+</button>
-          <input type="number" id="rel-lag-days" value="0" min="0">
-        </div>
-        <div id="rel-lag-label" style="font-size:10px;color:#888;text-align:center;">Lag days</div>
+      <!-- TYPE BADGE -->
+      <div class="rl2-arrow-col">
+        <span id="rel-type-badge">FS</span>
       </div>
 
       <!-- DEPENDENT -->
@@ -216,6 +224,20 @@
           <select id="rel-dep-act" class="form-control input-sm">
             <option value="">-- Select Activity --</option>
           </select>
+        </div>
+      </div>
+
+      <!-- BOTTOM ROW: Type + Lag/Lead -->
+      <div class="rl2-bottom-row">
+        <span class="rl2-section-lbl">Type:</span>
+        <button class="rl2-type-btn active" data-type="2">FS</button>
+        <button class="rl2-type-btn" data-type="1">SS</button>
+        <button class="rl2-type-btn" data-type="3">FF</button>
+        <span class="rl2-section-lbl" style="margin-left:16px;">Lag / Lead:</span>
+        <div class="rl2-lag-wrap">
+          <button class="rl2-lag-toggle lag" id="rel-lag-toggle" title="Toggle Lag/Lead">+</button>
+          <input type="number" id="rel-lag-days" value="0" min="0">
+          <span id="rel-lag-label">Lag days</span>
         </div>
       </div>
 
@@ -387,7 +409,7 @@
   /* ═══════════════════════════════════════════════════════════════
      ADD RELATIONSHIP popup
   ═══════════════════════════════════════════════════════════════ */
-  rl2BindDragResize(document.getElementById('rel-add-popup'), '.rl2-sw-hdr', 600, 280);
+  rl2BindDragResize(document.getElementById('rel-add-popup'), '.rl2-sw-hdr', 560, 240);
 
   document.getElementById('rel-btn-add').addEventListener('click', function(){
     loadGanttActivities(function(){
@@ -399,6 +421,7 @@
       document.getElementById('rel-lag-days').value = '0';
       /* reset type to FS */
       document.querySelectorAll('.rl2-type-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.type==='2'); });
+      document.getElementById('rel-type-badge').textContent = 'FS';
       openSub('rel-add-popup');
     });
   });
@@ -418,6 +441,7 @@
   $(document).on('click','.rl2-type-btn', function(){
     document.querySelectorAll('.rl2-type-btn').forEach(function(b){ b.classList.remove('active'); });
     this.classList.add('active');
+    document.getElementById('rel-type-badge').textContent = this.textContent;
   });
 
   /* Lag/Lead toggle */

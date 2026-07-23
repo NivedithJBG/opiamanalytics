@@ -1263,6 +1263,22 @@ $(document).on('click','.close-log-list-btn ', function(e){
 	$('.log-equipment-usage-log-book-tab').removeClass('log-list-active');
 	
 });
+
+/* ── Floating window z-index stacking ── */
+(function(){
+    var _zTop = 1000;
+    /* Matches all *-popup-cntnr windows */
+    jQuery(document).on('mousedown', '[class*="-popup-cntnr"]', function(){
+        var $wins = jQuery('[class*="-popup-cntnr"].active');
+        /* Only act if more than one window is open */
+        if($wins.length < 2) return;
+        var cur = parseInt(jQuery(this).css('z-index'), 10) || 0;
+        if(cur >= _zTop) return; /* already on top */
+        _zTop++;
+        jQuery(this).css('z-index', _zTop);
+    });
+})();
+
 /*Nov 4 2020 start*/
 /*Nov 18 2020 start*/
 	

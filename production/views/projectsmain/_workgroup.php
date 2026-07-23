@@ -31,8 +31,6 @@ use app\models\ProjuserSelection;
 											<div class="content-action-wrpr col-md-9 col-sm-9">
 												<!-- <a href="javascript:void(0);" class="btn btn-primary addForm" id="addworkgroup" title="Add IOW"><span class="icon-add"></span> Add</a> -->
 
-				                                <a  class="btn btn-primary addIowGroupForm" title="Add IOW Group" data-toggle="modal" data-target="#iowGroupPopup" href="#iowGroupPopup">IOW Group</a>
-
 				                                <a  class="btn btn-primary addIowForm" title="Add New IOW" data-toggle="modal" data-target="#iowFormPopup" href="#iowFormPopup"><span class="icon-add"></span> Add IOW</a>
 
 												<a href="javascript:void(0);" class="btn btn-primary list-fundreceipt" id="listworkgroup"><span class="icon-th-list"></span> List</a>
@@ -235,120 +233,7 @@ use app\models\ProjuserSelection;
 					</div>
 					<!-------------->
 
-					<!---  IOW GROUP POPUP ---->
-					<div class="modal fade iowGroupPopup" id="iowGroupPopup" >
-					    <div class="modal-dialog modal-lg">
-					        <div class="modal-content">
-
-					            <!-- Modal Header -->
-					            <div class="modal-header">
-					                <h4 class="modal-title"  style="float: left;">Manage IOW Groups</h4>
-					                <button type="button" class="close iowGroupPopup" data-dismiss="modal" style="float:right; font-size: 30px;">×</button>
-					            </div>
-
-					            <!-- Modal body -->
-					            <div class="modal-body">
-
-					                  <!-- form starts here -->
-					                    <div style="display: none;" id="addIowwindow" class="add-project-master-form row">
-					                        <form id="addworkgroupform">
-												<div class="row">
-													<div class="col-md-6">
-														<div class="form-group">
-															<label>Item of Work Name</label>
-															<input type="text" class="form-control" id="workgroupname" name="projectname" placeholder="IOW Name">
-															<span class="error" style="display: none;"></span>
-														</div>
-													</div>
-													<div class="col-md-3">
-														<div class="form-group">
-															<label>IOW Unit</label>
-															<input type="text" class="form-control textOnly" id="workgroupunit" name="workgroupunit" placeholder="IOW Unit">
-															<span class="error" style="display: none;"></span>
-															
-														</div>
-													</div>
-													<div class="col-md-3">
-														<div class="form-group">
-															<label>IOW Quantity</label>
-															<input type="number" class="form-control" id="workgroupquantity" name="workgroupquantity" placeholder="IOW Quantity">
-															<span class="error" style="display: none;"></span>
-															
-														</div>
-													</div>
-												</div>
-												<div class="row">
-													<div class="col-md-12 text-center">
-															<label>&nbsp;</label>
-															<button type="button" class="btn btn-primary" id="saveworkgroup"><span class="icon-check"></span> Add WBS</button>
-															<button type="button" class="btn btn-danger cancel iowFormPopup" id="cancelworkgroup" data-dismiss="modal"><span class="icon-close"></span> Cancel</button>
-
-													</div>
-												</div>
-											</form>  
-					                    </div>
-					                    <!-- form ends here -->
-
-
-
-					                    <div class="row">
-												
-												<div class="col-md-12">
-													<div class="preloader" id="Promain-preloader-Listwbs" style="display: none;" align="center">
-														<img src="/sreejith/opiam_analytics/web/images/loader.gif" align="middle">
-													</div>
-
-
-													<div class="row">
-					                                    <form id="estworktypeform">
-						                                    <div class="col-md-3"></div>
-						                                    <div class="col-md-5">
-						                                        <div class="form-group">
-						                                            <label>IOW Group</label>
-						                                            <input type="text" class="form-control" id="iowgroupname" placeholder="IOW Group">
-						                                            <span class="error" style="display: none;"></span>
-						                                        </div>  
-						                                    </div>
-						                                    <div class="col-md-4 text-left" style="padding-top: 5px;">
-						                                        <label></label>
-						                                        
-						                                        <button type="button" class="btn btn-primary save-btn" id="saveIowGroup"><span class="icon-check"></span> Add</button>
-						                                    </div>
-					                                    </form>
-					                                </div>
-
-					                                <hr>
-
-													<div id="iowGroupListContainer" class="row ">
-														
-													</div>
-
-
-												</div>
-												
-										</div>
-
-
-
-
-					                    
-
-					            </div>
-
-					            <!-- Modal footer -->
-					            <div class="modal-footer">
-					                <!--<button type="button" class="btn btn-primary" ><span class="icon-check"></span> Save</button>
-					                <button type="button" class="btn btn-danger cancel" data-dismiss="modal" ><span class="icon-close"></span> Cancel</button>-->
-					        
-					            </div>
-
-					        </div>
-					    </div>
-					</div>
-					<!-------------->
-
-
-			  </div>
+				  </div>
 			
 
 			

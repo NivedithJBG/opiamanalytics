@@ -70,7 +70,7 @@ use app\models\Resources;
                             <select id="searchestworktypelist" class="form-control" style="margin-left:10px;width:160px;border-radius:20px;height:34px;display:inline-block;">
                                 <option value="0">All Project Types</option>
                                 <?php
-                                $typelist = EstimateWorkType::find()->orderBy(['estworktype_name' => SORT_ASC])->all();
+                                $typelist = EstimateWorkType::find()->where(['estworktype_status' => 0])->orderBy(['estworktype_name' => SORT_ASC])->all();
                                 foreach ($typelist as $list):
                                     echo "<option value='".$list->estworktype_id."'>".$list->estworktype_name."</option>";
                                 endforeach;
@@ -279,7 +279,7 @@ use app\models\Resources;
                                     <select id="estworktypelistss1" data-id="1" class="form-control estworktypelistses" name="worktypeid">
                                         <option value="0">Select Project Type</option>
                                         <?php
-                                        $typelist=EstimateWorkType::find()->orderBy(['estworktype_name'=>SORT_ASC])->all();
+                                        $typelist=EstimateWorkType::find()->where(['estworktype_status'=>0])->orderBy(['estworktype_name'=>SORT_ASC])->all();
                                         foreach($typelist AS $list):
                                             echo "<option value='".$list->estworktype_id."'>".$list->estworktype_name."</option>";
                                         endforeach;
@@ -559,6 +559,80 @@ function alLoadProjTypeList(){
     });
 }
 
+/* ── Inline edit for project type rows ── */
+$(document).on('click', '.editForm', function(){
+    var id   = $(this).data('id');
+    var $tr  = $(this).closest('tr');
+    var cur  = $('#protype'+id).val();
+    /* Replace name cell with input + save/cancel */
+    $tr.find('td:nth-child(2)').html(
+        '<input type="text" class="form-control input-sm al-pt-edit-input" value="'+$('<div>').text(cur).html()+'" style="display:inline-block;width:70%;margin-right:4px;">'
+        + '<button class="btn btn-success btn-xs al-pt-save" data-id="'+id+'" style="border-radius:4px;padding:2px 8px;">Save</button>'
+        + '<button class="btn btn-default btn-xs al-pt-cancel" data-id="'+id+'" data-name="'+$('<div>').text(cur).html()+'" style="border-radius:4px;padding:2px 6px;margin-left:3px;">✕</button>'
+        + '<input type="hidden" id="protype'+id+'" value="'+$('<div>').text(cur).html()+'">'
+    );
+});
+
+$(document).on('click', '.al-pt-cancel', function(){
+    alLoadProjTypeList();
+});
+
+$(document).on('click', '.al-pt-save', function(){
+    var id   = $(this).data('id');
+    var name = $(this).closest('td').find('.al-pt-edit-input').val().trim();
+    if(!name){ alert('Enter a name.'); return; }
+    var $btn = $(this).prop('disabled', true);
+    $.ajax({
+        type: 'POST',
+        url: '<?php echo \yii\helpers\Url::to(["/projects/updateworktype"]); ?>',
+        dataType: 'json',
+        data: { worktypeid: id, worktype: name },
+        success: function(data){
+            $btn.prop('disabled', false);
+            alLoadProjTypeList();
+        },
+        error: function(){ $btn.prop('disabled', false); alert('Server error.'); }
+    });
+});
+
+function alRefreshProjTypeDropdowns(){
+    $.ajax({
+        url: '<?php echo \yii\helpers\Url::to(["/projects/listworktype"]); ?>',
+        type: 'POST',
+        dataType: 'json',
+        data: { worktypename: '' },
+        success: function(data){
+            if(!data || !data.items) return;
+            var opts = '<option value="0">Select Project Type</option>';
+            var filterOpts = '<option value="0">All Project Types</option>';
+            data.items.forEach(function(t){
+                opts       += '<option value="'+t.id+'">'+$('<div>').text(t.name).html()+'</option>';
+                filterOpts += '<option value="'+t.id+'">'+$('<div>').text(t.name).html()+'</option>';
+            });
+            $('.estworktypelistses').html(opts);
+            $('#searchestworktypelist').html(filterOpts);
+        }
+    });
+}
+
+$(document).on('click', '.deleteestworktypebutton', function(){
+    var id = $(this).data('id');
+    if(!confirm('Delete this project type?')) return;
+    var $btn = $(this).prop('disabled', true);
+    $.ajax({
+        type: 'POST',
+        url: '<?php echo \yii\helpers\Url::to(["/projects/deleteworktype"]); ?>',
+        dataType: 'json',
+        data: { worktypeid: id },
+        success: function(data){
+            $btn.prop('disabled', false);
+            alLoadProjTypeList();
+            alRefreshProjTypeDropdowns();
+        },
+        error: function(){ $btn.prop('disabled', false); alert('Server error.'); }
+    });
+});
+
 $(document).on('click', '#alSaveProjType', function(){
     var name = $('#alProjTypeName').val().trim();
     if(!name){ $('#alProjTypeErr').html('Enter project type name').show(); return; }
@@ -574,6 +648,7 @@ $(document).on('click', '#alSaveProjType', function(){
             if(data.error === 'No'){
                 $('#alProjTypeName').val('');
                 alLoadProjTypeList();
+                alRefreshProjTypeDropdowns();
             } else {
                 $('#alProjTypeErr').html(data.errortext || 'Could not save.').show();
             }
@@ -642,7 +717,7 @@ $(document).on('click', '#saveestactivity', function(){
 
 /* ── IOW Group modal ── */
 $(document).on('click', '#alOpenIowGroupPopup', function(){
-    $('#alIowGroupListContainer').html('<div class="col-md-12" style="padding:8px 15px;color:#999;">Loading…</div>');
+    $('#alIowGroupListContainer').html('<div style="padding:8px 15px;color:#999;">Loading…</div>');
     setTimeout(function(){ alLoadIowGroupList(); }, 300);
 });
 $('#alIowGroupPopup').on('shown.bs.modal', function(){
@@ -651,71 +726,76 @@ $('#alIowGroupPopup').on('shown.bs.modal', function(){
 });
 
 function alLoadIowGroupList(){
-    $('#alIowGroupListContainer').html('<div class="col-md-12" style="padding:8px 15px;color:#999;">Loading…</div>');
+    $('#alIowGroupListContainer').html('<div style="padding:8px 15px;color:#999;">Loading…</div>');
     $.ajax({
         url: '<?php echo \yii\helpers\Url::to(["/projects/getiowgrouplist"]); ?>',
         dataType: 'json',
         success: function(data){
-            var items = data.items || [];
-            if(!items.length){
-                $('#alIowGroupListContainer').html('<div class="col-md-12" style="padding:8px 15px;color:#999;">No groups yet.</div>');
-                return;
+            if(data.result){
+                $('#alIowGroupListContainer').html(data.result);
+            } else {
+                $('#alIowGroupListContainer').html('<div style="padding:8px 15px;color:#999;">No groups yet.</div>');
             }
-            var html = '<div class="col-md-12 scheduleitemheader schdhead" style="padding:6px 15px;font-size:13px;margin-top:0;">'
-                     + '<div class="row">'
-                     + '<div class="col-md-1"><label>#</label></div>'
-                     + '<div class="col-md-7" style="padding-left:5px;"><label>Group Name</label></div>'
-                     + '<div class="col-md-4"><label>&nbsp;</label></div>'
-                     + '</div></div>';
-            items.forEach(function(g, i){
-                html += '<div class="col-md-12 datalists scheduleitemcontent" id="alGrpRow'+g.id+'">'
-                      + '<div class="row datslis">'
-                      + '<div class="col-md-1"><span class="number">'+(i+1)+'</span></div>'
-                      + '<div class="col-md-7 type">'
-                      +   '<span id="alGrpName'+g.id+'">'+g.name+'</span>'
-                      +   '<input type="text" class="form-control" id="alGrpEdit'+g.id+'" value="'+g.name+'" style="display:none;">'
-                      + '</div>'
-                      + '<div class="col-md-4 icon-groups">'
-                      +   '<a class="btn btn-primary icon-pencil al-edit-iowgroup" data-id="'+g.id+'" href="#" title="Rename"></a>'
-                      +   '<a class="btn btn-primary icon-save al-save-iowgroup" data-id="'+g.id+'" href="#" style="display:none;" title="Save"></a>'
-                      + '</div>'
-                      + '</div></div>';
-            });
-            $('#alIowGroupListContainer').html(html);
         }
     });
 }
 
-/* inline edit handlers */
-$(document).on('click', '.al-edit-iowgroup', function(e){
-    e.preventDefault();
-    var id = $(this).data('id');
-    $('#alGrpName'+id).hide();
-    $('#alGrpEdit'+id).show().focus();
-    $(this).hide();
-    $('#alGrpRow'+id+' .al-save-iowgroup').show();
+/* ── IOW Group inline edit (table row) ── */
+$(document).on('click', '.al-edit-iowgroup', function(){
+    var id  = $(this).data('id');
+    var $tr = $(this).closest('tr');
+    var cur = $('#iowgrp'+id).val();
+    $tr.find('td:nth-child(2)').html(
+        '<input type="text" class="form-control input-sm al-iowgrp-edit-input" value="'+$('<div>').text(cur).html()+'" style="display:inline-block;width:70%;margin-right:4px;">'
+        + '<button class="btn btn-success btn-xs al-iowgrp-save" data-id="'+id+'" style="border-radius:4px;padding:2px 8px;">Save</button>'
+        + '<button class="btn btn-default btn-xs al-iowgrp-cancel" data-id="'+id+'" style="border-radius:4px;padding:2px 6px;margin-left:3px;">&#x2715;</button>'
+        + '<input type="hidden" id="iowgrp'+id+'" value="'+$('<div>').text(cur).html()+'">'
+    );
 });
 
-$(document).on('click', '.al-save-iowgroup', function(e){
-    e.preventDefault();
-    var id  = $(this).data('id');
-    var val = $('#alGrpEdit'+id).val().trim();
-    if(!val) return;
-    var btn = $(this);
+$(document).on('click', '.al-iowgrp-cancel', function(){
+    alLoadIowGroupList();
+});
+
+$(document).on('click', '.al-iowgrp-save', function(){
+    var id   = $(this).data('id');
+    var name = $(this).closest('td').find('.al-iowgrp-edit-input').val().trim();
+    if(!name){ alert('Enter a name.'); return; }
+    var $btn = $(this).prop('disabled', true);
     $.ajax({
         type: 'POST',
         url: '<?php echo \yii\helpers\Url::to(["/workgroups1/iowgroupupdate"]); ?>',
         dataType: 'json',
-        data: { groupid: id, groupname: val },
+        data: { groupid: id, groupname: name },
         success: function(data){
+            $btn.prop('disabled', false);
             if(data.error === 'No'){
-                $('#alGrpName'+id).text(val).show();
-                $('#alGrpEdit'+id).hide();
-                btn.hide();
-                $('#alGrpRow'+id+' .al-edit-iowgroup').show();
+                alLoadIowGroupList();
                 alRefreshIowGroupDropdown();
             } else {
                 alert(data.errortext || 'Could not save.');
+            }
+        },
+        error: function(){ $btn.prop('disabled', false); alert('Server error.'); }
+    });
+});
+
+$(document).on('click', '.al-delete-iowgroup', function(e){
+    e.preventDefault();
+    var id   = $(this).data('id');
+    var name = $(this).closest('tr').find('td:nth-child(2)').text().trim();
+    if(!confirm('Delete IOW Group "' + name + '"?')) return;
+    $.ajax({
+        type: 'POST',
+        url: '<?php echo \yii\helpers\Url::to(["/workgroups1/iowgroupdelete"]); ?>',
+        dataType: 'json',
+        data: { groupid: id },
+        success: function(data){
+            if(data.error === 'No'){
+                alLoadIowGroupList();
+                alRefreshIowGroupDropdown();
+            } else {
+                alert(data.errortext || 'Could not delete.');
             }
         }
     });
@@ -823,8 +903,9 @@ function alLoadActTypeList(){
                       +   '<input type="text" class="al-acttype-input form-control input-sm" value="'+safeName+'" style="display:none;margin:0;">'
                       + '</td>'
                       + '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;white-space:nowrap;">'
-                      +   '<button class="al-acttype-edit btn btn-default btn-xs" title="Edit" style="border-radius:50%;width:28px;height:28px;padding:0;"><span class="icon-pencil"></span></button>'
-                      +   '<button class="al-acttype-save btn btn-success btn-xs" title="Save" style="border-radius:50%;width:28px;height:28px;padding:0;display:none;"><span class="icon-check"></span></button>'
+                      +   '<button class="al-acttype-edit btn btn-default btn-xs" data-id="'+at.id+'" title="Edit" style="border-radius:50%;width:28px;height:28px;padding:0;margin-right:4px;"><span class="icon-pencil"></span></button>'
+                      +   '<button class="al-acttype-delete btn btn-danger btn-xs" data-id="'+at.id+'" title="Delete" style="border-radius:50%;width:28px;height:28px;padding:0;"><span class="icon-trash1"></span></button>'
+                      +   '<button class="al-acttype-save btn btn-success btn-xs" data-id="'+at.id+'" title="Save" style="border-radius:50%;width:28px;height:28px;padding:0;display:none;"><span class="icon-check"></span></button>'
                       + '</td>'
                       + '</tr>';
             });
@@ -838,7 +919,6 @@ $(document).on('click', '.al-acttype-edit', function(){
     var tr = $(this).closest('tr');
     tr.find('.al-acttype-label').hide();
     tr.find('.al-acttype-input').show().focus();
-    $(this).hide();
     tr.find('.al-acttype-save').show();
 });
 
@@ -862,6 +942,24 @@ $(document).on('click', '.al-acttype-save', function(){
             tr.find('.al-acttype-edit').show();
         },
         error: function(){ btn.prop('disabled', false); alert('Request failed.'); }
+    });
+});
+
+$(document).on('click', '.al-acttype-delete', function(){
+    var id = $(this).data('id');
+    var name = $(this).closest('tr').find('.al-acttype-label').text().trim();
+    if(!confirm('Delete activity type "' + name + '"?')) return;
+    var $btn = $(this).prop('disabled', true);
+    $.ajax({
+        type: 'POST',
+        url: '<?php echo \yii\helpers\Url::to(["/projects/deleteactivitytype"]); ?>',
+        dataType: 'json',
+        data: { activitytypeid: id },
+        success: function(data){
+            $btn.prop('disabled', false);
+            alLoadActTypeList();
+        },
+        error: function(){ $btn.prop('disabled', false); alert('Server error.'); }
     });
 });
 

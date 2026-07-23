@@ -81,7 +81,7 @@ $subDomain = array_shift(($HTTP_HOST));
     <!-- <link href="<//?php echo Yii::$app->request->baseUrl; ?>/cssnew/style.css?v=1.18" rel="stylesheet"> -->
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer.css?v=1.18" rel="stylesheet">
   <!--   <link href="<//?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer1.css" rel="stylesheet"> -->
-    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer2.css?v=20260720c" rel="stylesheet">
+    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer2.css?v=20260720d" rel="stylesheet">
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer3.css" rel="stylesheet">
 
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer4.css" rel="stylesheet">
@@ -464,13 +464,13 @@ if($action=='login')
                 
 
                 <?php if(Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'index') {  ?>
-                <li>
+                <li style="display:none;">
                     <a href="#holidayPopup" class="dropdown-toggle icon-calendar" data-toggle="modal" data-projectid="<?php echo $ProjectId; ?>" id="holidayPopupLink" data-target="#holidayPopup" title="Holidays"></a>
-                </li> 
+                </li>
 
-                <li>
+                <li style="display:none;">
                     <a href="javascript:;" class=" icon-copy duplicateProject"  data-projectid="<?php echo $ProjectId; ?>" id="duplicateProject_<?php echo $ProjectId; ?>"  title="Duplicate Project"></a>
-                </li> 
+                </li>
 
                 <?php } ?>
 
@@ -3210,16 +3210,24 @@ if($action=='login')
       </div>
     </div>
 
-    <!-- ── SECTION 2 : IOW + Activity (cascading) ────────────────────── -->
+    <!-- ── SECTION 2 : IOW Group + IOW + Activity ───────────────────── -->
     <div class="qe-section">
-      <div class="qe-sec-hdr">IOW &amp; Activity</div>
+      <div class="qe-sec-hdr">IOW Group, IOW &amp; Activity</div>
       <div class="qe-sec-body">
         <div style="border-top:2px solid #2d3748;margin-bottom:10px;"></div>
         <div class="qe-row">
           <div class="qe-field wide">
+            <span class="qe-label">IOW Group</span>
+            <select id="qe-iow-group" class="qe-select qe-needs-data">
+              <option value="">— Select IOW Group —</option>
+            </select>
+          </div>
+          <div class="qe-field wide">
             <span class="qe-label">IOW</span>
             <input type="text" id="qe-iow" class="qe-input qe-needs-data" placeholder="Enter IOW name">
           </div>
+        </div>
+        <div class="qe-row">
           <div class="qe-field wide">
             <span class="qe-label">Activity</span>
             <div class="qe-act-wrap">
@@ -3369,6 +3377,7 @@ function openModal(saId, wanId){
   var lbl = document.getElementById('qe-proj-label');
   if(lbl && pname) lbl.textContent = '— ' + pname;
   loadProjTypes();
+  loadIowGroups();
 
   if(saId || wanId){
     /* edit mode — existing bar */
@@ -3422,9 +3431,14 @@ function _prefillModal(d){
     }
   });
 
+  /* IOW Group */
+  loadIowGroups(function(){
+    var iowGrpSel = document.getElementById('qe-iow-group');
+    if(iowGrpSel && d.iow_group_id){ iowGrpSel.value = d.iow_group_id; iowGrpSel.classList.remove('qe-needs-data'); }
+  });
   /* IOW */
   var iowEl = document.getElementById('qe-iow');
-  iowEl.value = d.iow_group_name || '';
+  iowEl.value = d.iow_name || d.iow_group_name || '';
   if(iowEl.value) iowEl.classList.remove('qe-needs-data');
 
   /* Estimate fields */
@@ -3523,7 +3537,9 @@ function _resetModal(){
   _activityItems = [];
   if(window._actListClose) _actListClose();
 
-  /* Section 2 — IOW & Activity */
+  /* Section 2 — IOW Group, IOW & Activity */
+  var iowGrpSel = document.getElementById('qe-iow-group');
+  if(iowGrpSel){ iowGrpSel.selectedIndex = 0; iowGrpSel.classList.add('qe-needs-data'); }
   var iowEl = document.getElementById('qe-iow');
   if(iowEl){ iowEl.value = ''; iowEl.classList.add('qe-needs-data'); }
   var actTxt = document.getElementById('qe-activity-text');
@@ -3550,6 +3566,23 @@ function _resetModal(){
 }
 
 /* ── cascading dropdowns ── */
+
+function loadIowGroups(cb){
+  var sel = document.getElementById('qe-iow-group');
+  if(!sel) { if(cb) cb(); return; }
+  sel.innerHTML = '<option value="">— Select IOW Group —</option>';
+  $.ajax({
+    type:'POST', url:'../projects/getiowgrouplist', dataType:'json',
+    success: function(d){
+      (d.items||[]).forEach(function(item){
+        var o = document.createElement('option');
+        o.value = item.id; o.textContent = item.name;
+        sel.appendChild(o);
+      });
+      if(cb) cb();
+    }
+  });
+}
 
 function loadProjTypes(cb){
   var sel = document.getElementById('qe-proj-type');
@@ -3675,22 +3708,23 @@ function _resolveActivityId(){
   return { id: idEl.value, name: text };
 }
 
-/* ── duration calculation ── */
+/* ── duration calculation ──
+   Duration = ceil(SCH QTY / (Productivity/Day × Resource Units))
+   For multiple tasks, the one that takes longest controls the duration. */
 function recalcDuration(){
-  var estQty = parseFloat(document.getElementById('qe-qty').value) || 0;
   var schQty = parseFloat(document.getElementById('qe-sch-qty').value) || 0;
-  var qtyPerUnit = (schQty > 0) ? estQty / schQty : 0;
 
-  var cycleDays = 0;
+  var maxDays = 0;
   document.querySelectorAll('#qe-task-body tr').forEach(function(tr){
     var prod     = parseFloat(tr.querySelector('.qe-task-prod')     ? tr.querySelector('.qe-task-prod').value     : 0) || 0;
     var resUnits = parseFloat(tr.querySelector('.qe-task-resunits') ? tr.querySelector('.qe-task-resunits').value : 0) || 0;
-    if(prod > 0 && resUnits > 0 && qtyPerUnit > 0){
-      cycleDays += (qtyPerUnit / prod) / resUnits;
+    if(prod > 0 && resUnits > 0 && schQty > 0){
+      var days = schQty / (prod * resUnits);
+      if(days > maxDays) maxDays = days;
     }
   });
 
-  var duration = (schQty > 0 && cycleDays > 0) ? Math.ceil(cycleDays * schQty) : 0;
+  var duration = maxDays > 0 ? Math.ceil(maxDays) : 0;
   var durEl = document.getElementById('qe-dur-val'); if(durEl) durEl.textContent = duration > 0 ? duration : '—';
   return duration;
 }
@@ -3985,19 +4019,24 @@ function collectPayload(){
     });
   });
 
-  var iowEl       = document.getElementById('qe-iow');
-  var projTypeSel = document.getElementById('qe-proj-type');
-  var groupSel    = document.getElementById('qe-group');
-  var act         = _resolveActivityId();
+  var iowEl          = document.getElementById('qe-iow');
+  var iowGroupSel    = document.getElementById('qe-iow-group');
+  var projTypeSel    = document.getElementById('qe-proj-type');
+  var groupSel       = document.getElementById('qe-group');
+  var act            = _resolveActivityId();
+  var iowGroupId     = iowGroupSel ? iowGroupSel.value : '';
+  var iowGroupName   = iowGroupSel && iowGroupSel.selectedIndex > 0
+                       ? iowGroupSel.options[iowGroupSel.selectedIndex].text.trim() : '';
 
   return {
-    proj_type_id: projTypeSel.value,
-    group_id:     groupSel.value,
-    iow_group_id: '',
-    iow_group:    iowEl.value.trim(),
-    iow_act_id:   act.id,
-    iow_name:     act.name,
-    act_name:     act.name,
+    proj_type_id:    projTypeSel.value,
+    group_id:        groupSel.value,
+    iow_group_id:    iowGroupId,
+    iow_group_name:  iowGroupName,
+    iow_name:        iowEl.value.trim(),
+    iow_group:       iowEl.value.trim(),
+    iow_act_id:      act.id,
+    act_name:        act.name,
     wan_id:       _wbsWanId,
     unit:         document.getElementById('qe-unit').value.trim(),
     qty:          parseFloat(document.getElementById('qe-qty').value)     || 0,
@@ -4257,7 +4296,7 @@ $(function(){
     el.addEventListener('input',  function(){ if(this.value.trim()) this.classList.remove('qe-needs-data'); else this.classList.add('qe-needs-data'); });
   });
 
-  document.getElementById('qe-qty').addEventListener('input', function(){ calcActivityAmount(); recalcDuration(); });
+  document.getElementById('qe-qty').addEventListener('input', calcActivityAmount);
   document.getElementById('qe-sch-qty').addEventListener('input', recalcDuration);
 
   /* add task row */
@@ -4335,6 +4374,11 @@ $(function(){
      GANTT CHART FLOATING WINDOW
 ════════════════════════════════════════════════════════════════════════ -->
 <style>
+/* Holiday modal must appear above the Gantt window */
+#holidayPopup.modal { z-index: 110000 !important; }
+#holidayPopup + .modal-backdrop,
+.modal-backdrop { z-index: 109999 !important; }
+
 #gantt-win {
   display:none; position:fixed; top:80px; left:20px;
   width:1040px; height:calc(100vh - 110px);
@@ -4386,7 +4430,9 @@ $(function(){
       <span style="font-size:16px;font-weight:500;color:#888;" id="gantt-win-proj-name"><?php echo htmlspecialchars($ProjectName); ?></span>
     </div>
     <div id="gantt-win-hdr-btns">
-      <a class="icon-pencil" id="btn-quick-entry" title="WBS" href="#" style="width:32px;height:32px;font-size:15px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#3a7d3a;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.25);"> </a>
+      <a class="icon-pencil" id="btn-quick-entry" title="WBS" href="#" style="width:24px;height:24px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#3a7d3a;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.25);"> </a>
+      <a class="icon-sitemap" id="btn-gantt-relations-inline" title="Activity Relationships" href="#" style="width:24px;height:24px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#5c3d8f;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.2);"></a>
+      <a class="icon-calendar" id="btn-gantt-calendar-inline" title="Holidays" href="#" style="width:24px;height:24px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#B8860B;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.2);"></a>
       <button id="gantt-win-expand" title="Fullscreen">&#x26F6;</button>
       <button id="gantt-win-close" title="Close">&times;</button>
     </div>
@@ -4460,6 +4506,18 @@ $(function(){
   // Close
   document.getElementById('gantt-win-close').addEventListener('click', function(){
     win.classList.remove('gw-open');
+  });
+
+  // Relationships shortcut inside Gantt header
+  document.getElementById('btn-gantt-relations-inline').addEventListener('click', function(e){
+    e.preventDefault();
+    document.getElementById('btn-gantt-relations').click();
+  });
+
+  // Calendar shortcut inside Gantt header — delegates to the original link so getHolidayCalendar fires
+  document.getElementById('btn-gantt-calendar-inline').addEventListener('click', function(e){
+    e.preventDefault();
+    document.getElementById('holidayPopupLink').click();
   });
 
   // Expand / restore
