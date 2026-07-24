@@ -721,82 +721,49 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                   var pClass = ($.inArray(Number(act.id), criticalid) !== -1)
                                ? 'gtaskpink' : 'gtaskblue';
 
-                  // A. Duration: computed from actual progress reports
-                  var actDur = (act.actual_duration !== null && act.actual_duration !== undefined) ? act.actual_duration : '';
-                  // A. Start: activity start date from schedule_progress_report (falls back to planned start when no progress logged)
-                  var aStart = safeDate(act.spr_start_date);
-                  // A. End: A. Start + A. Duration - 1 (not the last report date)
-                  var aEndComputed = (aStart && act.actual_duration) ? addDays(aStart, act.actual_duration - 1) : null;
-
-                  // Start delay: days between the PLANNED start (act.actual_start_date —
-                  // see the codebase-wide B./A. naming convention) and the real reported
-                  // start (aStart). This delay is a fact of the activity's history and
-                  // must count toward the total actual duration regardless of whether
-                  // progress has since been reported — the productivity projection below
-                  // only measures pace FROM aStart onward, so on its own it silently
-                  // drops any time already lost before the activity started.
                   var plannedStart = safeDate(act.actual_start_date);
-                  var startDelayDays = (plannedStart && aStart && aStart > plannedStart)
-                    ? Math.round((new Date(aStart) - new Date(plannedStart)) / 86400000) : 0;
+                  var plannedEnd   = safeDate(act.actual_end_date);
+                  // B. Duration always matches Planned Start/End exactly.
+                  var bDur = (plannedStart && plannedEnd)
+                    ? Math.round((new Date(plannedEnd) - new Date(plannedStart)) / 86400000) + 1
+                    : act.old_duration;
 
-                  var noProgress = (act.actual_duration === null || act.actual_duration === undefined);
-                  if (noProgress) {
-                    // No progress logged yet: if the planned start has already passed,
-                    // push the end date out by the days late, same "start delay" the
-                    // dashboard's Upcoming bucket already shows.
-                    if (aStart && aStart < todayStr) {
-                      var noProgDelayDays = Math.round((new Date(todayStr) - new Date(aStart)) / 86400000);
-                      if (noProgDelayDays > 0) {
-                        var extendedDur = (parseFloat(act.old_duration) || 1) + noProgDelayDays;
-                        aEndComputed = addDays(aStart, extendedDur - 1);
-                        actDur = extendedDur;
-                      }
-                    }
+                  var hasProgress = (act.actual_duration !== null && act.actual_duration !== undefined);
+                  var aStart, aEndComputed, actDur;
+
+                  if (!hasProgress) {
+                    // No progress reported yet: Actual = Planned, shifted by the start
+                    // delay (days between planned start and today, if the planned
+                    // start has already passed). Duration itself doesn't change.
+                    aStart = plannedStart;
+                    var startDelayDays = (plannedStart && plannedStart < todayStr)
+                      ? Math.round((new Date(todayStr) - new Date(plannedStart)) / 86400000) : 0;
+                    aEndComputed = (plannedEnd && startDelayDays > 0) ? addDays(plannedEnd, startDelayDays) : plannedEnd;
+                    actDur = bDur;
                   } else {
-                    if (startDelayDays > 0 && aEndComputed) {
-                      // Progress has been reported: add the start delay on top of the
-                      // productivity-projected duration, so a late start is never lost
-                      // just because reporting has since begun.
-                      actDur = Number(act.actual_duration) + startDelayDays;
-                      aEndComputed = addDays(aEndComputed, startDelayDays);
-                    }
-                    // The projection is a rounded rate estimate (elapsed ÷ qty done ×
-                    // total qty) and can round down below what has actually already
-                    // been reported. Floor it at the last report date — real reported
-                    // progress can't be undone by a projection.
+                    // Progress has been reported: A. Start is the real reported start,
+                    // A. Duration/End follow the productivity projection (elapsed ÷ qty
+                    // done × total qty), floored at the last report date so a rounded
+                    // projection can never undo real reported progress.
+                    aStart = safeDate(act.spr_start_date) || plannedStart;
+                    aEndComputed = aStart ? addDays(aStart, act.actual_duration - 1) : null;
                     var lastReportDate = safeDate(act.spr_end_date);
                     if (lastReportDate && aEndComputed && lastReportDate > aEndComputed) {
                       aEndComputed = lastReportDate;
-                      if (aStart) {
-                        actDur = Math.round((new Date(aEndComputed) - new Date(aStart)) / 86400000) + 1;
-                      }
                     }
+                    actDur = (aStart && aEndComputed)
+                      ? Math.round((new Date(aEndComputed) - new Date(aStart)) / 86400000) + 1
+                      : act.actual_duration;
                   }
 
                   // Bar position uses A. dates when available, falls back to B. dates
                   var barStart = aStart       || act.actual_start_date;
                   var barEnd   = aEndComputed ? addOneDay(aEndComputed) : addOneDay(act.actual_end_date);
 
-                  // B. Duration must always match Planned Start/End exactly, and A.
-                  // Duration must always match Actual Start/End exactly — derive both
-                  // durations from their own date pair rather than trusting a
-                  // separately stored duration number that can drift out of sync with
-                  // the dates (this is what caused Planned/Actual End to visibly
-                  // contradict their own Duration column).
-                  var plannedEndForDur = safeDate(act.actual_end_date);
-                  var bDur = (plannedStart && plannedEndForDur)
-                    ? Math.round((new Date(plannedEndForDur) - new Date(plannedStart)) / 86400000) + 1
-                    : act.old_duration;
-                  var aEndForCells = aEndComputed || act.actual_end_date;
-                  var aStartForCells = aStart || act.actual_start_date;
-                  var aDurFinal = (safeDate(aStartForCells) && safeDate(aEndForCells))
-                    ? Math.round((new Date(aEndForCells) - new Date(aStartForCells)) / 86400000) + 1
-                    : (actDur !== '' ? actDur : act.old_duration);
-
                   var _ti = new JSGantt.TaskItem(
                     pId, act.name,
                     barStart, barEnd,
-                    pClass, '', 0, aDurFinal, 0, 0,
+                    pClass, '', 0, actDur, 0, 0,
                     parentId, 1,
                     act.depends || null,
                     '', '', g, null,
@@ -814,9 +781,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     dur:    bDur,
                     start:  act.actual_start_date,
                     end:    act.actual_end_date,
-                    actdur: aDurFinal,
-                    astart: aStartForCells,
-                    aend:   aEndForCells,
+                    actdur: actDur,
+                    astart: aStart || act.actual_start_date,
+                    aend:   aEndComputed || act.actual_end_date,
                     rawId:  act.id,
                     wanId:  act.wan_id
                   };
