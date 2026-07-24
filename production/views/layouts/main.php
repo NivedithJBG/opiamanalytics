@@ -4750,6 +4750,32 @@ $(function(){
     _lastOpenedId = id;
   };
 
+  /* General-purpose cascade for sub-popups launched from inside a main
+     popup (e.g. Resource Library's "+ Resource Type"/"+ Resource Group"
+     buttons, Activity Relationships' "Add"/"List" buttons). `group` scopes
+     the cascade counter so unrelated popup families don't interfere with
+     each other; pass the element directly since sub-popups aren't in the
+     top-level `floaters` list. */
+  var _subCascade = {};
+  window.cascadeSubWindow = function(el, group, siblingIds){
+    if(!el) return;
+    var st = _subCascade[group] || (_subCascade[group] = { count: 0, last: null });
+    var anyOtherOpen = (siblingIds || []).some(function(sid){
+      if(sid === el.id) return false;
+      var o = document.getElementById(sid);
+      return o && o.offsetParent !== null;
+    });
+    if(!anyOtherOpen){ st.count = 0; st.last = el.id; return; }
+    if(st.last === el.id) return;
+    st.count = (st.count % 6) + 1;
+    var dx = 32 * st.count, dy = 32 * st.count;
+    var r = el.getBoundingClientRect();
+    el.style.left = Math.max(0, r.left + dx) + 'px';
+    el.style.top  = Math.max(0, r.top  + dy) + 'px';
+    el.style.right = 'auto';
+    st.last = el.id;
+  };
+
   /* Also bring to front (and cascade) on open */
   document.addEventListener('pdoc:open',   function(){ window.popupBringToFront('pdoc-popup'); window.popupCascade('pdoc-popup'); });
   document.addEventListener('pdocv:open',  function(){ window.popupBringToFront('pdoc-viewer-popup'); window.popupCascade('pdoc-viewer-popup'); });

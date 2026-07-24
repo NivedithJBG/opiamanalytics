@@ -410,7 +410,11 @@
   /* ═══════════════════════════════════════════════════════════════
      Sub-popup open helpers
   ═══════════════════════════════════════════════════════════════ */
-  function openSub(id){ var el=document.getElementById(id); el.classList.add('rl2-sw-open'); _bringToFront(el); }
+  var _rel2SubIds = ['rel-add-popup','rel-list-popup'];
+  function openSub(id){
+    var el=document.getElementById(id); el.classList.add('rl2-sw-open'); _bringToFront(el);
+    if(typeof window.cascadeSubWindow === 'function') window.cascadeSubWindow(el, 'rel', _rel2SubIds);
+  }
   function closeSub(id){ document.getElementById(id).classList.remove('rl2-sw-open'); }
 
   ['rel-add-popup','rel-list-popup'].forEach(function(id){

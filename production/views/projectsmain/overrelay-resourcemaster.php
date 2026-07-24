@@ -450,11 +450,13 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
   ═══════════════════════════════════════════════════════════════ */
   var _swZ = 200000;
 
+  var _rlSubIds = ['rlResTypePopup','rlResGroupPopup','rlResourcePopup'];
   function rlSwOpen(id, onOpen){
     var el = document.getElementById(id);
     if(!el) return;
     el.classList.add('rl-sw-open');
     el.style.zIndex = ++_swZ; /* bring to front among sub-popups */
+    if(typeof window.cascadeSubWindow === 'function') window.cascadeSubWindow(el, 'reslib', _rlSubIds);
     if(typeof onOpen === 'function') onOpen();
   }
   function rlSwClose(id, onClose){
