@@ -4642,40 +4642,71 @@ $(function(){
 /* Ensure all floating popups are direct children of <body> so they
    are never trapped inside a parent stacking context */
 (function(){
-  var ids = ['pdoc-popup','pdoc-viewer-popup','gpm-overlay','gantt-win','qe-modal','qe-map-bk','cb-win','cb-btn','reslib-win'];
+  var ids = ['pdoc-popup','pdoc-viewer-popup','gpm-overlay','gantt-win','qe-modal','qe-map-bk','cb-win','cb-btn','reslib-win','rel-win','menu4-popup-cntnr'];
   ids.forEach(function(id){
-    var el = document.getElementById(id);
+    var el = document.getElementById(id) || document.querySelector('.' + id);
     if(el && el.parentNode !== document.body) document.body.appendChild(el);
   });
 })();
 </script>
 
 <script>
-/* ── Popup focus manager: clicking any floating window brings it to front ── */
+/* ── Popup focus manager: clicking any floating window brings it to front,
+   and each newly-opened window cascades diagonally off the last one that
+   was opened, so opening several in a row visibly staggers them instead of
+   stacking them exactly on top of each other. ── */
 (function(){
   var _z = 100200; /* base — all floaters start here and increment up */
-  var floaters = ['pdoc-popup','pdoc-viewer-popup','gantt-win','qe-modal','cb-win','reslib-win'];
+  var floaters = ['pdoc-popup','pdoc-viewer-popup','gantt-win','qe-modal','cb-win','reslib-win','rel-win','menu4-popup-cntnr'];
 
   window.popupBringToFront = function(id){
-    var el = document.getElementById(id);
+    var el = document.getElementById(id) || document.querySelector('.' + id);
     if(el) el.style.zIndex = ++_z;
   };
 
   floaters.forEach(function(id){
-    var el = document.getElementById(id);
+    var el = document.getElementById(id) || document.querySelector('.' + id);
     if(!el) return;
     el.addEventListener('mousedown', function(){ window.popupBringToFront(id); }, true);
   });
 
-  /* Also bring to front on open */
-  var _orig_pdocShow = window.pdocShow;
-  /* patch pdocShow — it lives inside a closure so we hook via open event instead */
-  document.addEventListener('pdoc:open',   function(){ window.popupBringToFront('pdoc-popup'); });
-  document.addEventListener('pdocv:open',  function(){ window.popupBringToFront('pdoc-viewer-popup'); });
-  document.addEventListener('gantt:open',  function(){ window.popupBringToFront('gantt-win'); });
-  document.addEventListener('wbs:open',    function(){ window.popupBringToFront('qe-modal'); });
-  document.addEventListener('chat:open',   function(){ window.popupBringToFront('cb-win'); });
-  document.addEventListener('reslib:open', function(){ window.popupBringToFront('reslib-win'); });
+  /* ── Cascade positioning ── */
+  var CASCADE_STEP = 32, CASCADE_MAX = 6;
+  var _cascadeCount = 0;
+  var _lastOpenedId = null;
+
+  /* Called by each popup right after it becomes visible, before the user
+     drags it. Skips the offset if this is the only open floater, or if the
+     popup has already been moved/resized by the user in this session
+     (tracked via a data attribute the first time we touch it). */
+  window.popupCascade = function(id){
+    var el = document.getElementById(id) || document.querySelector('.' + id);
+    if(!el) return;
+    var anyOtherOpen = floaters.some(function(fid){
+      if(fid === id) return false;
+      var o = document.getElementById(fid) || document.querySelector('.' + fid);
+      return o && o.offsetParent !== null;
+    });
+    if(!anyOtherOpen){ _cascadeCount = 0; _lastOpenedId = id; return; }
+    if(_lastOpenedId === id) return; /* re-opening the same popup — leave it where the user left it */
+    _cascadeCount = (_cascadeCount % CASCADE_MAX) + 1;
+    var dx = CASCADE_STEP * _cascadeCount, dy = CASCADE_STEP * _cascadeCount;
+    var r = el.getBoundingClientRect();
+    el.style.left = Math.max(0, r.left + dx) + 'px';
+    el.style.top  = Math.max(0, r.top  + dy) + 'px';
+    el.style.right = 'auto'; /* some floaters position via right: override to left-based once moved */
+    _lastOpenedId = id;
+  };
+
+  /* Also bring to front (and cascade) on open */
+  document.addEventListener('pdoc:open',   function(){ window.popupBringToFront('pdoc-popup'); window.popupCascade('pdoc-popup'); });
+  document.addEventListener('pdocv:open',  function(){ window.popupBringToFront('pdoc-viewer-popup'); window.popupCascade('pdoc-viewer-popup'); });
+  document.addEventListener('gantt:open',  function(){ window.popupBringToFront('gantt-win'); window.popupCascade('gantt-win'); });
+  document.addEventListener('wbs:open',    function(){ window.popupBringToFront('qe-modal'); window.popupCascade('qe-modal'); });
+  document.addEventListener('chat:open',   function(){ window.popupBringToFront('cb-win'); window.popupCascade('cb-win'); });
+  document.addEventListener('reslib:open', function(){ window.popupBringToFront('reslib-win'); window.popupCascade('reslib-win'); });
+  document.addEventListener('rel:open',    function(){ window.popupBringToFront('rel-win'); window.popupCascade('rel-win'); });
+  document.addEventListener('actlib:open', function(){ window.popupBringToFront('menu4-popup-cntnr'); window.popupCascade('menu4-popup-cntnr'); });
 })();
 </script>
 

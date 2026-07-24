@@ -31,6 +31,7 @@ $(function(){
 			$('#procurement-title-head').html('Activity Library');
 			$('.menu4-popup-cntnr').addClass('active');
 			$('body').css('overflow-y','hidden');
+			document.dispatchEvent(new Event('actlib:open'));
 		}else{
 			$('#prjct_head').html('Operations');
 			$('#project-title-head').html('Projects');

@@ -389,6 +389,7 @@
     if(relWin.classList.contains('rl2-open')){ relWin.classList.remove('rl2-open'); return; }
     relWin.classList.add('rl2-open');
     _bringToFront(relWin);
+    document.dispatchEvent(new Event('rel:open'));
     loadGanttActivities();
   });
   document.getElementById('rel-win-close').addEventListener('click', function(){

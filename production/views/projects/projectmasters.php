@@ -7,6 +7,7 @@ $(function(){
         $('body').css('overflow-y','hidden');
         $('#project-title-head, #prjct_head, #procurement-title-head').html('Activity Library');
         $('.overNow4').addClass('active');
+        document.dispatchEvent(new Event('actlib:open'));
     }
 });
 </script>
