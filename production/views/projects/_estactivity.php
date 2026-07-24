@@ -522,6 +522,68 @@ use app\models\Resources;
 /* Move modals to <body> so accordion overflow/z-index doesn't trap them */
 $('#alAddActivityPopup, #alProjTypePopup, #alIowGroupPopup, #alIowPopup, #alActTypePopup').appendTo('body');
 
+/* These are plain Bootstrap-markup modals with no drag support at all —
+   Bootstrap's own modal() JS plugin isn't active on this page (confirmed:
+   $.fn.modal is undefined here), so there's no shown.bs.modal to hook.
+   Make the header draggable directly: switch the centered .modal-dialog to
+   an absolutely-positioned box at its current screen spot the first time
+   it's dragged, then move it with the mouse/touch. */
+['alAddActivityPopup','alProjTypePopup','alIowGroupPopup','alIowPopup','alActTypePopup'].forEach(function(id){
+  var modal = document.getElementById(id);
+  if(!modal) return;
+  var dialog = modal.querySelector('.modal-dialog');
+  var hdr = modal.querySelector('.modal-header');
+  if(!dialog || !hdr) return;
+  hdr.style.cursor = 'move';
+  var dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+
+  function anchor(){
+    var r = dialog.getBoundingClientRect();
+    dialog.style.position = 'fixed';
+    dialog.style.margin = '0';
+    dialog.style.left = r.left + 'px';
+    dialog.style.top  = r.top  + 'px';
+    return r;
+  }
+  function start(e){
+    if(e.target.closest('.close')) return;
+    var r = anchor();
+    dragging = true; sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
+    e.preventDefault();
+  }
+  function move(e){
+    if(!dragging) return;
+    e.preventDefault();
+    var dx = e.clientX - sx, dy = e.clientY - sy;
+    dialog.style.left = Math.max(0, ox + dx) + 'px';
+    dialog.style.top  = Math.max(0, oy + dy) + 'px';
+  }
+  function end(){ dragging = false; }
+
+  if(typeof window.bindDragTouch === 'function'){
+    window.bindDragTouch(hdr, 'mousedown', start);
+    window.bindDragTouch(document, 'mousemove', move, { passive: false });
+    window.bindDragTouch(document, 'mouseup', end);
+  } else {
+    hdr.addEventListener('mousedown', start);
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', end);
+  }
+
+  /* Re-center on each open (position reset when the modal is shown again).
+     Bootstrap's own show.bs.modal covers the normal case; the plain click
+     listener is a fallback in case that plugin event doesn't fire for any
+     reason, so dragging still resets correctly either way. */
+  function reCenter(){
+    dialog.style.position = '';
+    dialog.style.margin = '';
+    dialog.style.left = '';
+    dialog.style.top  = '';
+  }
+  $(modal).on('show.bs.modal', reCenter);
+  $(document).on('click', '[data-target="#' + id + '"]', reCenter);
+});
+
 /* Restore action bar whenever Add Activity modal closes (estactivity.js hides it on #addestactivity click) */
 $('#alAddActivityPopup').on('hidden.bs.modal', function(){
     $('.search-and-actions-wrpr').css('display','flex');
