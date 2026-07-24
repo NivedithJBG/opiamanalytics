@@ -777,10 +777,26 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                   var barStart = aStart       || act.actual_start_date;
                   var barEnd   = aEndComputed ? addOneDay(aEndComputed) : addOneDay(act.actual_end_date);
 
+                  // B. Duration must always match Planned Start/End exactly, and A.
+                  // Duration must always match Actual Start/End exactly — derive both
+                  // durations from their own date pair rather than trusting a
+                  // separately stored duration number that can drift out of sync with
+                  // the dates (this is what caused Planned/Actual End to visibly
+                  // contradict their own Duration column).
+                  var plannedEndForDur = safeDate(act.actual_end_date);
+                  var bDur = (plannedStart && plannedEndForDur)
+                    ? Math.round((new Date(plannedEndForDur) - new Date(plannedStart)) / 86400000) + 1
+                    : act.old_duration;
+                  var aEndForCells = aEndComputed || act.actual_end_date;
+                  var aStartForCells = aStart || act.actual_start_date;
+                  var aDurFinal = (safeDate(aStartForCells) && safeDate(aEndForCells))
+                    ? Math.round((new Date(aEndForCells) - new Date(aStartForCells)) / 86400000) + 1
+                    : (actDur !== '' ? actDur : act.old_duration);
+
                   var _ti = new JSGantt.TaskItem(
                     pId, act.name,
                     barStart, barEnd,
-                    pClass, '', 0, actDur, 0, 0,
+                    pClass, '', 0, aDurFinal, 0, 0,
                     parentId, 1,
                     act.depends || null,
                     '', '', g, null,
@@ -795,12 +811,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                   };
                   // B. columns show schedule values; A. columns fall back to B. when no progress
                   _actCells[_ti.getID()] = {
-                    dur:    act.old_duration,
+                    dur:    bDur,
                     start:  act.actual_start_date,
                     end:    act.actual_end_date,
-                    actdur: actDur !== '' ? actDur : act.old_duration,
-                    astart: aStart || act.actual_start_date,
-                    aend:   aEndComputed || act.actual_end_date,
+                    actdur: aDurFinal,
+                    astart: aStartForCells,
+                    aend:   aEndForCells,
                     rawId:  act.id,
                     wanId:  act.wan_id
                   };
