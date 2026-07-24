@@ -20050,69 +20050,6 @@ public function actionActivitymusterprocess()
         echo "success";
     }
 
-    public function actionUpdatescheduletask()
-    {
-        $schtasks=ScheduleTask::model()->findAll();
-        foreach($schtasks AS $schtask):
-            $actname=WorkgroupActivities::model()->findByPk($schtask['wbs_activity_Id'])->activity_Name;
-            if($schtask['process_Id']==2):
-                $activity=ProjectSetup::model()->findByPk($schtask['activity_Id']);
-                $name=$activity->PS_Name;
-            elseif($schtask['process_Id']==3):
-                $activity=Products::model()->findByPk($schtask['activity_Id']);
-                $name=$activity->Name;
-            elseif($schtask['process_Id']==4):
-                $activity=Logistics::model()->findByPk($schtask['activity_Id']);
-                $name=$activity->Name;
-            elseif($schtask['process_Id']==5):
-                $activity=Construction::model()->findByPk($schtask['activity_Id']);
-                $name=$activity->CO_Name;
-            elseif($schtask['process_Id']==8):
-                $activity=Overheads::model()->findByPk($schtask['activity_Id']);
-                $name=$activity->Name;
-            endif;
-            if($actname==''):
-                $activityname=$name;
-            else:
-                $activityname=$actname;
-            endif;
-            $schtask->activity_name=$activityname;
-            $schtask->save(false);
-        endforeach;
-        echo "success";
-    }
-    public function actionUpdatescheduleactivity()
-    {
-        $schtasks=ScheduleActivity::model()->findAll();
-        foreach($schtasks AS $schtask):
-            $actname=WorkgroupActivities::model()->findByPk($schtask['wbs_activity_Id'])->activity_Name;
-            if($schtask['process_id']==2):
-                $activity=ProjectSetup::model()->findByPk($schtask['actvity_id']);
-                $name=$activity->PS_Name;
-            elseif($schtask['process_id']==3):
-                $activity=Products::model()->findByPk($schtask['actvity_id']);
-                $name=$activity->Name;
-            elseif($schtask['process_id']==4):
-                $activity=Logistics::model()->findByPk($schtask['actvity_id']);
-                $name=$activity->Name;
-            elseif($schtask['process_id']==5):
-                $activity=Construction::model()->findByPk($schtask['actvity_id']);
-                $name=$activity->CO_Name;
-            elseif($schtask['process_id']==8):
-                $activity=Overheads::model()->findByPk($schtask['actvity_id']);
-                $name=$activity->Name;
-            endif;
-            if($actname==''):
-                $activityname=$name;
-            else:
-                $activityname=$actname;
-            endif;
-            $schtask->activity_name=$activityname;
-            $schtask->save(false);
-        endforeach;
-        echo "success";
-    }
-
     public function actionIowestimate()
     {
         if (isset($_POST['itemid'])) {
