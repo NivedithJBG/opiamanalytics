@@ -3537,11 +3537,20 @@ function _resetModal(){
   _activityItems = [];
   if(window._actListClose) _actListClose();
 
-  /* Section 2 — IOW Group, IOW & Activity */
+  /* Section 2 — IOW Group & IOW */
   var iowGrpSel = document.getElementById('qe-iow-group');
   if(iowGrpSel){ iowGrpSel.selectedIndex = 0; iowGrpSel.classList.add('qe-needs-data'); }
   var iowEl = document.getElementById('qe-iow');
   if(iowEl){ iowEl.value = ''; iowEl.classList.add('qe-needs-data'); }
+
+  _resetModalActivityOnward();
+}
+
+/* Clears Activity, Estimate, Schedule, Tasks & Resources — leaves
+   Project Type, Activity Type, IOW Group and IOW untouched. Used after a
+   successful "Add to Gantt" so the user can keep adding activities under
+   the same WBS context without reselecting it each time. */
+function _resetModalActivityOnward(){
   var actTxt = document.getElementById('qe-activity-text');
   if(actTxt){ actTxt.value = ''; actTxt.classList.add('qe-needs-data'); }
   document.getElementById('qe-activity-id').value = '';
@@ -4373,7 +4382,11 @@ $(function(){
         btn.disabled = false; btn.textContent = '+ Add to Gantt';
         if(d.error && d.error !== 'No'){ alert(d.error); return; }
         if(typeof window.reloadGantt === 'function') window.reloadGantt();
-        closeModal();
+        /* Keep the modal open with Project Type / Activity Type / IOW Group / IOW
+           intact so the user can add another activity under the same WBS context;
+           only Close (or the × button) fully resets and closes the window. */
+        _wbsMode = 'new'; _wbsWanId = 0; _wbsSaId = 0;
+        _resetModalActivityOnward();
       },
       error: function(x){ btn.disabled = false; btn.textContent = '+ Add to Gantt'; alert('Failed: ' + x.status); }
     });
