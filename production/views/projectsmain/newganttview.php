@@ -752,12 +752,25 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                         actDur = extendedDur;
                       }
                     }
-                  } else if (startDelayDays > 0 && aEndComputed) {
-                    // Progress has been reported: add the start delay on top of the
-                    // productivity-projected duration, so a late start is never lost
-                    // just because reporting has since begun.
-                    actDur = Number(act.actual_duration) + startDelayDays;
-                    aEndComputed = addDays(aEndComputed, startDelayDays);
+                  } else {
+                    if (startDelayDays > 0 && aEndComputed) {
+                      // Progress has been reported: add the start delay on top of the
+                      // productivity-projected duration, so a late start is never lost
+                      // just because reporting has since begun.
+                      actDur = Number(act.actual_duration) + startDelayDays;
+                      aEndComputed = addDays(aEndComputed, startDelayDays);
+                    }
+                    // The projection is a rounded rate estimate (elapsed ÷ qty done ×
+                    // total qty) and can round down below what has actually already
+                    // been reported. Floor it at the last report date — real reported
+                    // progress can't be undone by a projection.
+                    var lastReportDate = safeDate(act.spr_end_date);
+                    if (lastReportDate && aEndComputed && lastReportDate > aEndComputed) {
+                      aEndComputed = lastReportDate;
+                      if (aStart) {
+                        actDur = Math.round((new Date(aEndComputed) - new Date(aStart)) / 86400000) + 1;
+                      }
+                    }
                   }
 
                   // Bar position uses A. dates when available, falls back to B. dates
