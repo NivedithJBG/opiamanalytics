@@ -728,17 +728,36 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                   // A. End: A. Start + A. Duration - 1 (not the last report date)
                   var aEndComputed = (aStart && act.actual_duration) ? addDays(aStart, act.actual_duration - 1) : null;
 
-                  // No progress logged yet but the planned start has already passed: push
-                  // the end date out by the days late, same "start delay" the dashboard's
-                  // Upcoming bucket already shows, so the Gantt bar/overlay reflect it too.
+                  // Start delay: days between the PLANNED start (act.actual_start_date —
+                  // see the codebase-wide B./A. naming convention) and the real reported
+                  // start (aStart). This delay is a fact of the activity's history and
+                  // must count toward the total actual duration regardless of whether
+                  // progress has since been reported — the productivity projection below
+                  // only measures pace FROM aStart onward, so on its own it silently
+                  // drops any time already lost before the activity started.
+                  var plannedStart = safeDate(act.actual_start_date);
+                  var startDelayDays = (plannedStart && aStart && aStart > plannedStart)
+                    ? Math.round((new Date(aStart) - new Date(plannedStart)) / 86400000) : 0;
+
                   var noProgress = (act.actual_duration === null || act.actual_duration === undefined);
-                  if (noProgress && aStart && aStart < todayStr) {
-                    var startDelayDays = Math.round((new Date(todayStr) - new Date(aStart)) / 86400000);
-                    if (startDelayDays > 0) {
-                      var extendedDur = (parseFloat(act.old_duration) || 1) + startDelayDays;
-                      aEndComputed = addDays(aStart, extendedDur - 1);
-                      actDur = extendedDur;
+                  if (noProgress) {
+                    // No progress logged yet: if the planned start has already passed,
+                    // push the end date out by the days late, same "start delay" the
+                    // dashboard's Upcoming bucket already shows.
+                    if (aStart && aStart < todayStr) {
+                      var noProgDelayDays = Math.round((new Date(todayStr) - new Date(aStart)) / 86400000);
+                      if (noProgDelayDays > 0) {
+                        var extendedDur = (parseFloat(act.old_duration) || 1) + noProgDelayDays;
+                        aEndComputed = addDays(aStart, extendedDur - 1);
+                        actDur = extendedDur;
+                      }
                     }
+                  } else if (startDelayDays > 0 && aEndComputed) {
+                    // Progress has been reported: add the start delay on top of the
+                    // productivity-projected duration, so a late start is never lost
+                    // just because reporting has since begun.
+                    actDur = Number(act.actual_duration) + startDelayDays;
+                    aEndComputed = addDays(aEndComputed, startDelayDays);
                   }
 
                   // Bar position uses A. dates when available, falls back to B. dates
