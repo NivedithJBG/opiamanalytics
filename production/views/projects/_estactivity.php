@@ -522,6 +522,30 @@ use app\models\Resources;
 /* Move modals to <body> so accordion overflow/z-index doesn't trap them */
 $('#alAddActivityPopup, #alProjTypePopup, #alIowGroupPopup, #alIowPopup, #alActTypePopup').appendTo('body');
 
+/* These modals have a fixed z-index (10100) in CSS, but Activity Library's
+   own window (.menu4-popup-cntnr) rises above that via the shared popup
+   focus-manager every time it's opened or clicked, permanently burying
+   them. Re-anchor above the current floater ceiling whenever one of these
+   opens, and re-raise them whenever Activity Library is brought to front. */
+var _alSubIds = ['alAddActivityPopup','alProjTypePopup','alIowGroupPopup','alIowPopup','alActTypePopup'];
+var _alSwZ = 10100;
+function _alNextSwZ(){
+    var base = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 10100;
+    if (base >= _alSwZ) _alSwZ = base;
+    return ++_alSwZ;
+}
+$(_alSubIds.join(',')).on('shown.bs.modal', function(){
+    $(this).css('z-index', _alNextSwZ());
+});
+if (typeof window.registerSubPopupReraise === 'function') {
+    window.registerSubPopupReraise('menu4-popup-cntnr', function(){
+        _alSubIds.forEach(function(id){
+            var $el = $('#' + id);
+            if ($el.hasClass('in') || $el.is(':visible')) $el.css('z-index', _alNextSwZ());
+        });
+    });
+}
+
 /* Restore action bar whenever Add Activity modal closes (estactivity.js hides it on #addestactivity click) */
 $('#alAddActivityPopup').on('hidden.bs.modal', function(){
     $('.search-and-actions-wrpr').css('display','flex');
