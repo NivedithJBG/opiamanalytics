@@ -739,7 +739,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     var startDelayDays = (plannedStart && plannedStart < todayStr)
                       ? Math.round((new Date(todayStr) - new Date(plannedStart)) / 86400000) : 0;
                     aEndComputed = (plannedEnd && startDelayDays > 0) ? addDays(plannedEnd, startDelayDays) : plannedEnd;
-                    actDur = bDur;
+                    actDur = bDur + startDelayDays;
                   } else {
                     // Progress has been reported: A. Start is the real reported start,
                     // A. Duration/End follow the productivity projection (elapsed ÷ qty
