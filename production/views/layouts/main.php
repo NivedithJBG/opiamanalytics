@@ -4593,6 +4593,14 @@ $(function(){
     win.classList.remove('gw-open');
   });
 
+  // WBS Entry shortcut inside Gantt header — bound here (not inside the
+  // AJAX-loaded Gantt content) so it works immediately, even before/while
+  // the Gantt chart itself is still loading.
+  document.getElementById('btn-quick-entry').addEventListener('click', function(e){
+    e.preventDefault();
+    if(typeof window.openQeModal === 'function') window.openQeModal();
+  });
+
   // Relationships shortcut inside Gantt header
   document.getElementById('btn-gantt-relations-inline').addEventListener('click', function(e){
     e.preventDefault();
