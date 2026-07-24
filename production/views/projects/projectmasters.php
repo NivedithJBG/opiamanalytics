@@ -75,7 +75,7 @@ $(function(){
   });
 
   // Drag
-  hdr.addEventListener('mousedown', function(e){
+  bindDragTouch(hdr, 'mousedown', function(e){
     if(e.target.closest('.menu4-win-hdr-btns')) return;
     var r=_anchor(); _action='drag';
     _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault();
@@ -83,15 +83,16 @@ $(function(){
 
   // Resize
   document.querySelectorAll('.m4-rs').forEach(function(el){
-    el.addEventListener('mousedown', function(e){
+    bindDragTouch(el, 'mousedown', function(e){
       var r=_anchor(); _action=el.getAttribute('data-dir');
       _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height;
       e.preventDefault(); e.stopPropagation();
     });
   });
 
-  document.addEventListener('mousemove', function(e){
+  bindDragTouch(document, 'mousemove', function(e){
     if(!_action) return;
+    e.preventDefault();
     var dx=e.clientX-_sx, dy=e.clientY-_sy;
     if(_action==='drag'){
       win.style.left=Math.max(0,_ox+dx)+'px'; win.style.top=Math.max(0,_oy+dy)+'px';
@@ -104,8 +105,8 @@ $(function(){
       win.style.left=l+'px'; win.style.top=t+'px';
       win.style.width=w+'px'; win.style.height=h+'px';
     }
-  });
-  document.addEventListener('mouseup', function(){ _action=null; });
+  }, { passive: false });
+  bindDragTouch(document, 'mouseup', function(){ _action=null; });
 
   // Move Activity Library modals to <body> so they aren't clipped by overflow:hidden on the container
   $(function(){

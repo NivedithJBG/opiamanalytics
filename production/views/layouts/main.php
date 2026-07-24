@@ -2955,6 +2955,34 @@ if($action=='login')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/_performancedashboard.js?v=<?php echo time();?>"></script>
 
+<script>
+/* ── Shared touch adapter for draggable/resizable popup windows ──
+   Every floating popup (WBS Entry, Gantt, Resource Library, Activity
+   Relationships, Activity Library) implements its own drag/resize using
+   raw mousedown/mousemove/mouseup, which never fire on touch devices
+   (iPad, tablets). Rather than rewrite each one, this registers the touch
+   equivalent alongside every such listener and normalizes the touch event
+   to look like a mouse event (clientX/clientY) before calling the same
+   handler, so none of the existing drag logic needs to change. */
+(function(){
+  function _touchToMouseLike(te){
+    var t = te.touches[0] || te.changedTouches[0];
+    return { clientX: t ? t.clientX : 0, clientY: t ? t.clientY : 0,
+             target: te.target, preventDefault: function(){ te.preventDefault(); },
+             stopPropagation: function(){ te.stopPropagation(); } };
+  }
+  window.bindDragTouch = function(el, mouseType, handler, opts){
+    var touchType = mouseType === 'mousedown' ? 'touchstart'
+                  : mouseType === 'mousemove' ? 'touchmove' : 'touchend';
+    el.addEventListener(mouseType, handler, opts);
+    el.addEventListener(touchType, function(te){
+      if(te.touches && te.touches.length > 1) return; /* let pinch-zoom etc. through */
+      handler(_touchToMouseLike(te));
+    }, Object.assign({ passive: false }, opts || {}));
+  };
+})();
+</script>
+
 <!-- ══════════════════════════════════════════════════════════════════════
      WBS / IOW ENTRY MODAL
 ════════════════════════════════════════════════════════════════════════ -->
@@ -4186,7 +4214,7 @@ $(function(){
     }
 
     /* drag */
-    hdr.addEventListener('mousedown', function(e){
+    bindDragTouch(hdr, 'mousedown', function(e){
       if(e.target.id==='qe-close') return;
       var r = _anchorLeft();
       _action='drag'; _sx=e.clientX; _sy=e.clientY;
@@ -4196,7 +4224,7 @@ $(function(){
 
     /* resize handles */
     document.querySelectorAll('.qe-rs').forEach(function(el){
-      el.addEventListener('mousedown', function(e){
+      bindDragTouch(el, 'mousedown', function(e){
         var r = _anchorLeft();
         _action = el.getAttribute('data-dir');
         _sx=e.clientX; _sy=e.clientY;
@@ -4205,8 +4233,9 @@ $(function(){
       });
     });
 
-    document.addEventListener('mousemove', function(e){
+    bindDragTouch(document, 'mousemove', function(e){
       if(!_action) return;
+      e.preventDefault();
       var dx=e.clientX-_sx, dy=e.clientY-_sy;
       if(_action==='drag'){
         var x=Math.max(0,Math.min(_ox+dx, window.innerWidth -modal.offsetWidth));
@@ -4221,8 +4250,8 @@ $(function(){
         modal.style.left=l+'px'; modal.style.top=t+'px';
         modal.style.width=w+'px'; modal.style.height=h+'px';
       }
-    });
-    document.addEventListener('mouseup', function(){ _action=null; });
+    }, { passive: false });
+    bindDragTouch(document, 'mouseup', function(){ _action=null; });
   })();
 
   /* task map popup */
@@ -4602,7 +4631,7 @@ $(function(){
   });
 
   // Drag
-  hdr.addEventListener('mousedown', function(e){
+  bindDragTouch(hdr, 'mousedown', function(e){
     if(e.target.closest('#gantt-win-hdr-btns')) return;
     var r=_anchor(); _action='drag';
     _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault();
@@ -4610,15 +4639,16 @@ $(function(){
 
   // Resize
   document.querySelectorAll('.gw-rs').forEach(function(el){
-    el.addEventListener('mousedown', function(e){
+    bindDragTouch(el, 'mousedown', function(e){
       var r=_anchor(); _action=el.getAttribute('data-dir');
       _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height;
       e.preventDefault(); e.stopPropagation();
     });
   });
 
-  document.addEventListener('mousemove', function(e){
+  bindDragTouch(document, 'mousemove', function(e){
     if(!_action) return;
+    e.preventDefault();
     var dx=e.clientX-_sx, dy=e.clientY-_sy;
     if(_action==='drag'){
       var x=Math.max(0,Math.min(_ox+dx,window.innerWidth-win.offsetWidth));
@@ -4634,7 +4664,7 @@ $(function(){
       win.style.width=w+'px'; win.style.height=h+'px';
     }
   });
-  document.addEventListener('mouseup', function(){ _action=null; });
+  bindDragTouch(document, 'mouseup', function(){ _action=null; });
 })();
 </script>
 
@@ -4667,7 +4697,7 @@ $(function(){
   floaters.forEach(function(id){
     var el = document.getElementById(id) || document.querySelector('.' + id);
     if(!el) return;
-    el.addEventListener('mousedown', function(){ window.popupBringToFront(id); }, true);
+    bindDragTouch(el, 'mousedown', function(){ window.popupBringToFront(id); }, true);
   });
 
   /* ── Cascade positioning ── */

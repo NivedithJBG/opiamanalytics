@@ -340,7 +340,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     var hdr = win.querySelector(hdrSel);
 
     /* drag via header */
-    hdr.addEventListener('mousedown', function(e){
+    bindDragTouch(hdr, 'mousedown', function(e){
       if(e.target.closest('.rl-sw-hdr-btns, #reslib-win-hdr-btns')) return;
       var r = rlAnchor(win);
       _drag = { win:win, action:'drag', sx:e.clientX, sy:e.clientY, ox:r.left, oy:r.top, ow:r.width, oh:r.height, mw:minW, mh:minH };
@@ -349,7 +349,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 
     /* resize via handles */
     win.querySelectorAll('.rl-rs').forEach(function(el){
-      el.addEventListener('mousedown', function(e){
+      bindDragTouch(el, 'mousedown', function(e){
         var r = rlAnchor(win);
         _drag = { win:win, action:el.dataset.dir, sx:e.clientX, sy:e.clientY, ox:r.left, oy:r.top, ow:r.width, oh:r.height, mw:minW, mh:minH };
         e.preventDefault(); e.stopPropagation();
@@ -357,8 +357,9 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     });
   }
 
-  document.addEventListener('mousemove', function(e){
+  bindDragTouch(document, 'mousemove', function(e){
     if(!_drag) return;
+    e.preventDefault();
     var d = _drag, dx = e.clientX - d.sx, dy = e.clientY - d.sy;
     var l = d.ox, t = d.oy, w = d.ow, h = d.oh;
     if(d.action === 'drag'){
@@ -372,8 +373,8 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     }
     d.win.style.left = l + 'px'; d.win.style.top  = t + 'px';
     d.win.style.width = w + 'px'; d.win.style.height = h + 'px';
-  });
-  document.addEventListener('mouseup', function(){ _drag = null; });
+  }, { passive: false });
+  bindDragTouch(document, 'mouseup', function(){ _drag = null; });
 
 
   /* ═══════════════════════════════════════════════════════════════
@@ -455,7 +456,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
   /* bring sub-popup to front on click */
   ['rlResTypePopup','rlResGroupPopup','rlResourcePopup'].forEach(function(id){
     var el = document.getElementById(id);
-    if(el) el.addEventListener('mousedown', function(){ el.style.zIndex = ++_swZ; }, true);
+    if(el) bindDragTouch(el, 'mousedown', function(){ el.style.zIndex = ++_swZ; }, true);
   });
 
   /* open buttons */
