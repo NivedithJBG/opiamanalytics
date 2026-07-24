@@ -4347,6 +4347,20 @@ $(function(){
     var actText = document.getElementById('qe-activity-text').value.trim();
     if(!actText){ alert('Please enter or select an Activity.'); return; }
 
+    if(recalcDuration() <= 0){
+      var schQty = parseFloat(document.getElementById('qe-sch-qty').value) || 0;
+      var missing = [];
+      if(schQty <= 0) missing.push('Sch. Qty');
+      var hasTaskInputs = false;
+      document.querySelectorAll('#qe-task-body tr').forEach(function(tr){
+        var prod     = parseFloat(tr.querySelector('.qe-task-prod')     ? tr.querySelector('.qe-task-prod').value     : 0) || 0;
+        var resUnits = parseFloat(tr.querySelector('.qe-task-resunits') ? tr.querySelector('.qe-task-resunits').value : 0) || 0;
+        if(prod > 0 && resUnits > 0) hasTaskInputs = true;
+      });
+      if(!hasTaskInputs) missing.push('Productivity / Day (and Resource Units) for at least one task');
+      alert('Duration could not be calculated — missing: ' + missing.join(', ') + '.\n\nThe activity will be added with a placeholder 1-day duration; fill these in and re-save to get the correct duration.');
+    }
+
     var btn = document.getElementById('qe-btn-add');
     btn.disabled = true; btn.textContent = 'Adding…';
 
