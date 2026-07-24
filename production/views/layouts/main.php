@@ -3442,6 +3442,18 @@ function openModal(saId, wanId){
 }
 
 function _prefillModal(d){
+  /* Activity name — always shown from the saved record, independent of
+     whether Project Type/Group are set on it (older/incomplete rows may
+     have no project type, which must not hide the activity itself). */
+  var actTxt = document.getElementById('qe-activity-text');
+  if(actTxt && d.act_name){
+    actTxt.value = d.act_name;
+    actTxt.classList.remove('qe-needs-data');
+  }
+  if(d.iow_act_id){
+    document.getElementById('qe-activity-id').value = d.iow_act_id;
+  }
+
   /* Project Type — cascade: type → groups → activities, then set all values */
   var ptSel = document.getElementById('qe-proj-type');
   loadProjTypes(function(){
