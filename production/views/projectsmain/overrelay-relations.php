@@ -279,6 +279,16 @@
 
 <script>
 (function(){
+  /* Fallback in case this script ever runs before main.php's shared
+     bindDragTouch is defined — without this, a ReferenceError here would
+     silently abort every click handler bound later in this file (Activity
+     Relationships nav icon, sub-popup open buttons, etc). */
+  if(typeof window.bindDragTouch !== 'function'){
+    window.bindDragTouch = function(el, mouseType, handler, opts){
+      if(el) el.addEventListener(mouseType, handler, opts);
+    };
+  }
+
   /* ═══════════════════════════════════════════════════════════════
      Shared drag+resize engine (same pattern as resource library)
   ═══════════════════════════════════════════════════════════════ */

@@ -2972,6 +2972,7 @@ if($action=='login')
              stopPropagation: function(){ te.stopPropagation(); } };
   }
   window.bindDragTouch = function(el, mouseType, handler, opts){
+    if(!el) return; /* guard against a null element so callers never throw */
     var touchType = mouseType === 'mousedown' ? 'touchstart'
                   : mouseType === 'mousemove' ? 'touchmove' : 'touchend';
     el.addEventListener(mouseType, handler, opts);
