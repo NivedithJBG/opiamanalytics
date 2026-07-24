@@ -92,6 +92,14 @@ class RelationController extends Controller
                 'sortorder'              => 0,
             ])->execute();
             $inserted++;
+
+            /* The CPM engine (HelperComponent::GetRelationcorrect) reads lag
+               from scheduleactivities.lag on the dependent activity, not from
+               activity_relations — keep it in sync so the lag entered here
+               actually shifts the calculated schedule dates. */
+            if ($lagDays > 0) {
+                $db->createCommand()->update('scheduleactivities', ['lag' => $lagDays], ['id' => $depAct])->execute();
+            }
         }
 
         return json_encode(['error' => 'No', 'inserted' => $inserted]);
