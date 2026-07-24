@@ -286,9 +286,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 /* Widen the activity name column */
 #gantt-container .gtaskname,
 #gantt-container .gspanning.gtaskname {
-  min-width: 260px !important;
-  width: 260px !important;
-  max-width: 260px !important;
+  min-width: 220px !important;
+  width: 220px !important;
+  max-width: 220px !important;
 }
 /* Dedicated status-indicator column (sits just before the activity name column) */
 #gantt-container .gtasklist {
