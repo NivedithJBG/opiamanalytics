@@ -449,14 +449,13 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
      Sub-popup open / close
   ═══════════════════════════════════════════════════════════════ */
   var _swZ = 200000;
-  /* Sub-popups must always sit above their own parent (#reslib-win), whose
-     z-index rises over time via the shared popup focus-manager — re-anchor
-     _swZ above whatever that currently is before using it, so a heavily
-     clicked-on parent can never end up on top of its own children. */
+  /* Sub-popups must always sit above the CURRENT top-level floater ceiling
+     (window.popupSubZBase, from the shared focus-manager), not a fixed
+     number — the parent window's own z-index keeps rising every time it's
+     clicked/dragged, so a static base gets overtaken eventually. */
   function _rlNextSwZ(){
-    var parent = document.getElementById('reslib-win');
-    var parentZ = parent ? (parseInt(parent.style.zIndex, 10) || 0) : 0;
-    if (parentZ >= _swZ) _swZ = parentZ + 100;
+    var base = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 200000;
+    if (base >= _swZ) _swZ = base;
     return ++_swZ;
   }
 
@@ -473,6 +472,17 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     var el = document.getElementById(id);
     if(el) el.classList.remove('rl-sw-open');
     if(typeof onClose === 'function') onClose();
+  }
+
+  /* Whenever #reslib-win itself is brought to front, re-raise any of its
+     sub-popups that are still open so they stay above it. */
+  if(typeof window.registerSubPopupReraise === 'function'){
+    window.registerSubPopupReraise('reslib-win', function(){
+      _rlSubIds.forEach(function(id){
+        var el = document.getElementById(id);
+        if(el && el.classList.contains('rl-sw-open')) el.style.zIndex = _rlNextSwZ();
+      });
+    });
   }
 
   /* bring sub-popup to front on click */

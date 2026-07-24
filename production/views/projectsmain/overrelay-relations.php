@@ -344,14 +344,13 @@
   var _staged= [];   /* pending rows not yet saved to DB */
   var _swZ   = 200100;
 
-  /* Sub-popups must always sit above #rel-win, whose z-index rises over
-     time via the shared popup focus-manager — re-anchor _swZ above
-     whatever that currently is so a heavily clicked-on parent can never
-     end up on top of its own children. */
+  /* Sub-popups must always sit above the CURRENT top-level floater ceiling
+     (window.popupSubZBase, from the shared focus-manager), not a fixed
+     number — the parent window's own z-index keeps rising every time it's
+     clicked/dragged, so a static base gets overtaken eventually. */
   function _bringToFront(el){
-    var parent = document.getElementById('rel-win');
-    var parentZ = parent ? (parseInt(parent.style.zIndex, 10) || 0) : 0;
-    if (parentZ >= _swZ) _swZ = parentZ + 100;
+    var base = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 200100;
+    if (base >= _swZ) _swZ = base;
     el.style.zIndex = ++_swZ;
   }
 
@@ -420,6 +419,14 @@
      Sub-popup open helpers
   ═══════════════════════════════════════════════════════════════ */
   var _rel2SubIds = ['rel-add-popup','rel-list-popup'];
+  if(typeof window.registerSubPopupReraise === 'function'){
+    window.registerSubPopupReraise('rel-win', function(){
+      _rel2SubIds.forEach(function(id){
+        var el = document.getElementById(id);
+        if(el && el.classList.contains('rl2-sw-open')) _bringToFront(el);
+      });
+    });
+  }
   function openSub(id){
     var el=document.getElementById(id); el.classList.add('rl2-sw-open'); _bringToFront(el);
     if(typeof window.cascadeSubWindow === 'function') window.cascadeSubWindow(el, 'rel', _rel2SubIds);

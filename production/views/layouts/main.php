@@ -4709,12 +4709,29 @@ $(function(){
    stacking them exactly on top of each other. ── */
 (function(){
   var _z = 100200; /* base — all floaters start here and increment up */
+  var SUB_POPUP_GAP = 5000; /* sub-popups (Resource Library / Relationships
+    "+add"-type popups) always sit at parent-floater-ceiling + this gap, so
+    they can never end up under a repeatedly-clicked parent window. */
   var floaters = ['pdoc-popup','pdoc-viewer-popup','gantt-win','qe-modal','cb-win','reslib-win','rel-win','menu4-popup-cntnr'];
 
   window.popupBringToFront = function(id){
     var el = document.getElementById(id) || document.querySelector('.' + id);
     if(el) el.style.zIndex = ++_z;
+    /* Re-raise any currently-open sub-popups registered against this
+       floater, so this floater's own rise never overtakes its children. */
+    var cb = _reraiseSubs[id];
+    if(typeof cb === 'function') cb();
   };
+
+  /* Sub-popup owners (Resource Library, Relationships) register a callback
+     here that re-raises their own open sub-popups whenever this floater
+     is brought to front, keeping them permanently above it. */
+  var _reraiseSubs = {};
+  window.registerSubPopupReraise = function(parentId, cb){ _reraiseSubs[parentId] = cb; };
+
+  /* Current top-level floater z-index ceiling, for sub-popups to build on */
+  window.popupZCeiling = function(){ return _z; };
+  window.popupSubZBase = function(){ return _z + SUB_POPUP_GAP; };
 
   floaters.forEach(function(id){
     var el = document.getElementById(id) || document.querySelector('.' + id);
