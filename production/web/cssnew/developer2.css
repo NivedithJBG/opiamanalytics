@@ -243,12 +243,16 @@ color:red !important;
     flex-direction: column;
     overflow: hidden;
 }
-/* Activity Library modals float above the panel — no backdrop, high z-index */
+/* Activity Library modals float above the panel — no backdrop, high z-index.
+   Fixed well above the shared popup focus-manager's dynamic range (which
+   starts at 100200 and keeps rising every time any floating window is
+   clicked), so these can never end up buried behind Activity Library
+   itself after enough clicks in a session. */
 #alAddActivityPopup,
 #alProjTypePopup,
 #alIowGroupPopup,
 #alIowPopup,
-#alActTypePopup { z-index: 10100 !important; }
+#alActTypePopup { z-index: 999999 !important; }
 #alAddActivityPopup .modal-content,
 #alProjTypePopup .modal-content,
 #alIowGroupPopup .modal-content,
