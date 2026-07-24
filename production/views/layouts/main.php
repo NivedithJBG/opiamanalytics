@@ -3455,6 +3455,9 @@ function _prefillModal(d){
   schQtyEl.value  = (d.sch_qty != null && d.sch_qty !== '') ? d.sch_qty : '';
   if(schUnitEl.value) schUnitEl.classList.remove('qe-needs-data');
   if(schQtyEl.value)  schQtyEl.classList.remove('qe-needs-data');
+  /* real saved values — don't let the estimate→schedule mirror overwrite them */
+  _schUnitTouched = !!schUnitEl.value;
+  _schQtyTouched  = !!schQtyEl.value;
 
   /* Tasks and Resources — fetch from getactivityresources directly */
   if(d.iow_act_id){
@@ -3478,6 +3481,7 @@ function _prefillModal(d){
         var taskBody = document.getElementById('qe-task-body');
         taskBody.innerHTML = '';
         if(data.tasks && data.tasks.length){
+          _task1NameTouched = true; _task1UnitTouched = true;
           data.tasks.forEach(function(task){
             var tr = document.createElement('tr');
             tr.innerHTML =
@@ -3562,6 +3566,7 @@ function _resetModalActivityOnward(){
     el.value = '';
     if(el.classList.contains('qe-needs-data') !== undefined){ el.classList.add('qe-needs-data'); }
   });
+  _schUnitTouched = false; _schQtyTouched = false;
 
   /* Section 4 & 5 — Tasks & Resources */
   document.getElementById('qe-task-body').innerHTML = '';
@@ -3781,12 +3786,13 @@ function loadResTypes(cb){
 /* ── Task rows ── */
 function addTaskRow(){
   var tbody = document.getElementById('qe-task-body');
+  var isFirstRow = tbody.children.length === 0;
   var tr = document.createElement('tr');
   tr.innerHTML =
     '<td><input type="text" class="qe-task-name" placeholder="Task name"></td>'+
     '<td><input type="text" class="qe-task-unit" placeholder="Unit"></td>'+
     '<td><input type="number" class="qe-task-prod" placeholder="0.00" step="0.01" min="0"></td>'+
-    '<td><input type="number" class="qe-task-resunits" placeholder="1" step="1" min="1"></td>'+
+    '<td><input type="number" class="qe-task-resunits" value="1" placeholder="1" step="1" min="1"></td>'+
     '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
   tbody.appendChild(tr);
   _bindAlphaField(tr.querySelector('.qe-task-unit'));
@@ -3797,6 +3803,12 @@ function addTaskRow(){
   tr.querySelector('.qe-task-del').addEventListener('click', function(){
     if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
   });
+  if(isFirstRow){
+    _task1NameTouched = false; _task1UnitTouched = false;
+    tr.querySelector('.qe-task-name').addEventListener('input', function(){ _task1NameTouched = true; });
+    tr.querySelector('.qe-task-unit').addEventListener('input', function(){ _task1UnitTouched = true; });
+    mirrorActivityToFirstTask();
+  }
 }
 
 /* ── Resource rows ── */
@@ -3980,21 +3992,8 @@ function addResRow(prefill){
 
 /* ── clear activity fields (keeps Project Type, Activity Type and IOW) ── */
 function clearActivityFields(){
-  document.getElementById('qe-activity-text').value = '';
-  document.getElementById('qe-activity-id').value   = '';
-  document.getElementById('qe-unit').value          = '';
-  document.getElementById('qe-qty').value           = '';
-  document.getElementById('qe-rate').value          = '';
-  document.getElementById('qe-amount').value        = '';
-  document.getElementById('qe-sch-unit').value      = '';
-  document.getElementById('qe-sch-qty').value       = '';
-  document.getElementById('qe-task-body').innerHTML = '';
-  document.getElementById('qe-res-body').innerHTML  = '';
   _wbsWanId = 0;
-  document.getElementById('qe-save-msg').textContent = '';
-  addTaskRow();
-  loadResTypes(function(){ addResRow(); });
-  recalcDuration();
+  _resetModalActivityOnward();
 }
 
 /* ── collect form payload ── */
@@ -4072,6 +4071,36 @@ function recalcEstRate(){
   });
   document.getElementById('qe-rate').value = total.toFixed(2);
   calcActivityAmount();
+}
+
+/* ── Default Sch. Unit/Qty from Estimate Unit/Qty, and the first Task's
+   Name/Unit from Activity/Estimate Unit — only while the target field
+   hasn't been manually edited by the user, so it acts as a starting
+   default that's always freely overridable. ── */
+var _schUnitTouched = false, _schQtyTouched = false;
+var _task1NameTouched = false, _task1UnitTouched = false;
+
+function mirrorEstimateToSchedule(){
+  var schUnitEl = document.getElementById('qe-sch-unit');
+  var schQtyEl  = document.getElementById('qe-sch-qty');
+  if(schUnitEl && !_schUnitTouched){
+    schUnitEl.value = document.getElementById('qe-unit').value;
+    schUnitEl.classList.toggle('qe-needs-data', !schUnitEl.value.trim());
+  }
+  if(schQtyEl && !_schQtyTouched){
+    schQtyEl.value = document.getElementById('qe-qty').value;
+    schQtyEl.classList.toggle('qe-needs-data', !schQtyEl.value.trim());
+    recalcDuration();
+  }
+}
+
+function mirrorActivityToFirstTask(){
+  var firstRow = document.querySelector('#qe-task-body tr');
+  if(!firstRow) return;
+  var nameEl = firstRow.querySelector('.qe-task-name');
+  var unitEl = firstRow.querySelector('.qe-task-unit');
+  if(nameEl && !_task1NameTouched) nameEl.value = document.getElementById('qe-activity-text').value;
+  if(unitEl && !_task1UnitTouched) unitEl.value = document.getElementById('qe-unit').value;
 }
 
 /* ── Input validation helpers ── */
@@ -4252,15 +4281,18 @@ $(function(){
         if(data.sch_unit){
           document.getElementById('qe-sch-unit').value = data.sch_unit;
           document.getElementById('qe-sch-unit').classList.remove('qe-needs-data');
+          _schUnitTouched = true;
         }
         if(data.sch_qty){
           document.getElementById('qe-sch-qty').value = data.sch_qty;
           document.getElementById('qe-sch-qty').classList.remove('qe-needs-data');
+          _schQtyTouched = true;
         }
 
         var taskBody = document.getElementById('qe-task-body');
         taskBody.innerHTML = '';
         if(data.tasks && data.tasks.length){
+          _task1NameTouched = true; _task1UnitTouched = true;
           data.tasks.forEach(function(task){
             var tr = document.createElement('tr');
             tr.innerHTML =
@@ -4307,6 +4339,13 @@ $(function(){
 
   document.getElementById('qe-qty').addEventListener('input', calcActivityAmount);
   document.getElementById('qe-sch-qty').addEventListener('input', recalcDuration);
+
+  /* mirror Estimate → Schedule, and Activity/Estimate → first Task, until user edits the target */
+  document.getElementById('qe-unit').addEventListener('input', function(){ mirrorEstimateToSchedule(); mirrorActivityToFirstTask(); });
+  document.getElementById('qe-qty').addEventListener('input', mirrorEstimateToSchedule);
+  document.getElementById('qe-activity-text').addEventListener('input', mirrorActivityToFirstTask);
+  document.getElementById('qe-sch-unit').addEventListener('input', function(){ _schUnitTouched = true; });
+  document.getElementById('qe-sch-qty').addEventListener('input', function(){ _schQtyTouched = true; });
 
   /* add task row */
   document.getElementById('qe-task-add').addEventListener('click', addTaskRow);
@@ -4385,8 +4424,8 @@ $(function(){
         /* Keep the modal open with Project Type / Activity Type / IOW Group / IOW
            intact so the user can add another activity under the same WBS context;
            only Close (or the × button) fully resets and closes the window. */
-        _wbsMode = 'new'; _wbsWanId = 0; _wbsSaId = 0;
-        _resetModalActivityOnward();
+        _wbsMode = 'new'; _wbsSaId = 0;
+        clearActivityFields();
       },
       error: function(x){ btn.disabled = false; btn.textContent = '+ Add to Gantt'; alert('Failed: ' + x.status); }
     });
