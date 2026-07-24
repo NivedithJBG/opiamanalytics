@@ -534,14 +534,20 @@ function _alNextSwZ(){
     if (base >= _alSwZ) _alSwZ = base;
     return ++_alSwZ;
 }
+/* .css('z-index', n) sets an inline style, but these popups have
+   z-index:10100 !important in CSS, which always beats a plain inline
+   style — must use setProperty(..., 'important') to actually override it. */
+function _alRaise(el){
+    if (el) el.style.setProperty('z-index', _alNextSwZ(), 'important');
+}
 $(_alSubIds.join(',')).on('shown.bs.modal', function(){
-    $(this).css('z-index', _alNextSwZ());
+    _alRaise(this);
 });
 if (typeof window.registerSubPopupReraise === 'function') {
     window.registerSubPopupReraise('menu4-popup-cntnr', function(){
         _alSubIds.forEach(function(id){
             var $el = $('#' + id);
-            if ($el.hasClass('in') || $el.is(':visible')) $el.css('z-index', _alNextSwZ());
+            if ($el.hasClass('in') || $el.is(':visible')) _alRaise($el.get(0));
         });
     });
 }
