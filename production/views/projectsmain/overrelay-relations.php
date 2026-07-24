@@ -344,7 +344,16 @@
   var _staged= [];   /* pending rows not yet saved to DB */
   var _swZ   = 200100;
 
-  function _bringToFront(el){ el.style.zIndex = ++_swZ; }
+  /* Sub-popups must always sit above #rel-win, whose z-index rises over
+     time via the shared popup focus-manager — re-anchor _swZ above
+     whatever that currently is so a heavily clicked-on parent can never
+     end up on top of its own children. */
+  function _bringToFront(el){
+    var parent = document.getElementById('rel-win');
+    var parentZ = parent ? (parseInt(parent.style.zIndex, 10) || 0) : 0;
+    if (parentZ >= _swZ) _swZ = parentZ + 100;
+    el.style.zIndex = ++_swZ;
+  }
 
   /* ═══════════════════════════════════════════════════════════════
      Get project id from the gantt open button (set at runtime)
@@ -399,7 +408,7 @@
   document.getElementById('btn-gantt-relations').addEventListener('click', function(){
     if(relWin.classList.contains('rl2-open')){ relWin.classList.remove('rl2-open'); return; }
     relWin.classList.add('rl2-open');
-    _bringToFront(relWin);
+    if(typeof window.popupBringToFront === 'function') window.popupBringToFront('rel-win');
     document.dispatchEvent(new Event('rel:open'));
     loadGanttActivities();
   });
