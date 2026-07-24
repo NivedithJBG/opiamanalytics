@@ -2990,7 +2990,7 @@ if($action=='login')
 #qe-bk{display:none}
 #qe-modal{
   display:none;position:fixed;top:60px;right:20px;
-  width:560px;height:92vh;
+  width:760px;height:92vh;
   min-width:380px;min-height:280px;
   z-index:100100;border-radius:6px;overflow:hidden;
   background:#fff;box-shadow:0 8px 32px rgba(0,0,0,.45);
