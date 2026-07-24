@@ -3470,20 +3470,28 @@ function _prefillModal(d){
   iowEl.value = d.iow_name || d.iow_group_name || '';
   if(iowEl.value) iowEl.classList.remove('qe-needs-data');
 
-  /* Estimate fields — Quantity is intentionally NOT prefilled; it's saved
-     to the DB (pricing_estimate_new) but always re-entered fresh each time
-     this activity is opened, since a saved quantity from a past use isn't
-     necessarily right for this occurrence. */
+  /* Estimate fields — this is the "click an existing bar to edit" path
+     (see _wbsMode='edit' above), so prefill Quantity with the real saved
+     value. New-activity entry (WBS icon / typeahead-select while adding
+     more activities) intentionally leaves Quantity blank — see
+     mirrorEstimateToSchedule() and the typeahead 'change' handler below. */
   document.getElementById('qe-unit').value   = d.est_unit  || '';
+  document.getElementById('qe-qty').value    = d.est_qty   || '';
   document.getElementById('qe-rate').value   = d.est_rate  || '';
   document.getElementById('qe-amount').value = d.est_amt   || '';
+  if(d.est_qty) document.getElementById('qe-qty').classList.remove('qe-needs-data');
 
-  /* Schedule fields — Sch. Unit prefills as before; Sch. Qty is
-     intentionally NOT prefilled for the same reason as Estimate Qty. */
+  /* Schedule fields — Sch. Unit and Sch. Qty both prefill here for the
+     same edit-existing-bar reason as Estimate Qty above. */
   var schUnitEl = document.getElementById('qe-sch-unit');
+  var schQtyEl  = document.getElementById('qe-sch-qty');
   schUnitEl.value = d.sch_unit || '';
+  schQtyEl.value  = (d.sch_qty != null && d.sch_qty !== '') ? d.sch_qty : '';
   if(schUnitEl.value) schUnitEl.classList.remove('qe-needs-data');
+  if(schQtyEl.value)  schQtyEl.classList.remove('qe-needs-data');
+  /* real saved values — don't let the estimate→schedule mirror overwrite them */
   _schUnitTouched = !!schUnitEl.value;
+  _schQtyTouched  = !!schQtyEl.value;
 
   /* Tasks and Resources — fetch from getactivityresources directly */
   if(d.iow_act_id){
@@ -3493,11 +3501,14 @@ function _prefillModal(d){
       success: function(data){
         if(data.unit && !document.getElementById('qe-unit').value)
           document.getElementById('qe-unit').value = data.unit;
-        /* Schedule unit — only fill if not already set from wbsget. Sch.
-           Qty is intentionally not prefilled here either. */
+        /* Schedule unit/qty — only fill if not already set from wbsget */
         if(data.sch_unit && !document.getElementById('qe-sch-unit').value){
           document.getElementById('qe-sch-unit').value = data.sch_unit;
           document.getElementById('qe-sch-unit').classList.remove('qe-needs-data');
+        }
+        if(data.sch_qty && !document.getElementById('qe-sch-qty').value){
+          document.getElementById('qe-sch-qty').value = data.sch_qty;
+          document.getElementById('qe-sch-qty').classList.remove('qe-needs-data');
         }
 
         /* Tasks */
