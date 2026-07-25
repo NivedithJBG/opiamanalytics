@@ -449,7 +449,7 @@
     <div class="procu-piano-tab">Order Management</div>
 
     <div class="procu-tab-row">
-        <a href="javascript:;" class="procu-tab-btn active" data-tab="PO">
+        <a href="javascript:;" class="procu-tab-btn" data-tab="PO">
             <span class="procu-tab-icon"><span class="icon-cart"></span></span>
             Purchase Orders
         </a>
@@ -2339,6 +2339,8 @@
 
         hdr.querySelector('.procu-tw-close').addEventListener('click', function(){
             win.classList.remove('pw2-open');
+            var btn = document.querySelector('.procu-tab-btn[data-tab="' + tab + '"]');
+            if(btn) btn.classList.remove('active');
         });
         var _saved = null;
         hdr.querySelector('.procu-tw-expand').addEventListener('click', function(){
@@ -2379,6 +2381,8 @@
         }
         win.classList.add('pw2-open');
         win.__raise();
+        var btn = document.querySelector('.procu-tab-btn[data-tab="' + tab + '"]');
+        if(btn) btn.classList.add('active');
 
         if(!_procuTabLoaded[tab]){
             _procuTabLoaded[tab] = true;
