@@ -596,6 +596,14 @@
     function loadReportProgress() {
         $('#sk-reportprogress-loader').show();
         $('#sk-reportprogress-body').html('');
+        // The main screen's "Reporting" piano tab (if present on the host page)
+        // uses the exact same element IDs as this fragment. Rename its copies
+        // first so jQuery ID selectors inside the injected fragment resolve to
+        // OUR elements instead of accidentally hitting the hidden host-page ones.
+        ['activity_pr_main','select_report_date','schedule_report_activityitems','activitycompletehist','pgrsrpt'].forEach(function(id){
+            var el = document.getElementById(id);
+            if (el) el.id = id + '-host-shadowed';
+        });
         $.ajax({
             url: _reportProgressUrl,
             success: function(html) {
