@@ -23,6 +23,7 @@
     background: #f8fafc;
     display: flex;
     flex-wrap: nowrap;
+    align-items: center;
     justify-content: center;
     overflow-x: auto;
 }
