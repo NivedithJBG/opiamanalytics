@@ -446,7 +446,7 @@ use app\models\Resources;
 </div>
 
 <!-- ── IOW MODAL ────────────────────────────────────────────────────── -->
-<div class="modal fade" id="alIowPopup">
+<div class="modal fade" id="alIowPopup" data-backdrop="false">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -591,6 +591,15 @@ _alIds.forEach(function(id){
     var left = Math.min(window.innerWidth - 720, Math.max(10, base.left + 40 + step));
     dialog.style.top  = top + 'px';
     dialog.style.left = left + 'px';
+    /* .modal itself is a full-viewport position:fixed layer (Bootstrap's
+       own CSS) that intercepts clicks everywhere, even outside the visible
+       dialog box — with these on top (z-index 999999) that silently
+       swallows clicks meant for Activity Library's own toolbar buttons
+       (e.g. "+ IOW Group") once one popup is open. Only the dialog itself
+       should be clickable; the rest of the modal layer should pass clicks
+       through to whatever's underneath. */
+    modal.style.pointerEvents = 'none';
+    dialog.style.pointerEvents = 'auto';
   }
   $(modal).on('show.bs.modal', reCenter);
   $(document).on('click', '[data-target="#' + id + '"]', reCenter);
