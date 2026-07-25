@@ -63,7 +63,7 @@
     border-radius: 50px;
     padding: 6px 28px 6px 12px;
     margin: 0 6px;
-    background: #fff;
+    background: #e8eaed;
     color: #465365;
     font-size: 12px;
     font-weight: 500;
@@ -74,7 +74,7 @@
     text-decoration: none;
 }
 .procu-tab-btn:hover {
-    background: #f0f2f5;
+    background: #dadde1;
     text-decoration: none;
     color: #465365;
 }
