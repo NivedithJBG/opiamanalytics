@@ -36,6 +36,7 @@
     font-weight: 500;
     letter-spacing: 0.4px;
     min-width: 180px;
+    white-space: nowrap;
     cursor: pointer;
     transition: background 0.2s, color 0.2s, border-color 0.2s;
     text-decoration: none;
