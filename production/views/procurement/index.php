@@ -8,6 +8,39 @@
     min-height: 400px;
     overflow: hidden;
 }
+/* ── Draggable/resizable window for each order-type tab (Purchase/Work/Lease
+   Orders), opened from the tab buttons instead of switching in place ── */
+.procu-tab-win {
+    display: none; position: fixed;
+    width: 980px; height: calc(100vh - 160px);
+    min-width: 480px; min-height: 320px;
+    background: #fff; border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.4);
+    flex-direction: column; overflow: hidden;
+}
+.procu-tab-win.pw2-open { display: flex; }
+.procu-tab-win-hdr {
+    background: #072c47; color: #fff; padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: move; user-select: none; flex-shrink: 0;
+}
+.procu-tab-win-hdr span.procu-tab-win-title { font-size: 15px; font-weight: 700; letter-spacing: .5px; }
+.procu-tab-win-hdr-btns { display: flex; align-items: center; gap: 6px; }
+.procu-tab-win-hdr-btns button {
+    background: none; border: none; color: #fff;
+    font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px; opacity: .8;
+}
+.procu-tab-win-hdr-btns button:hover { opacity: 1; }
+.procu-tab-win-body { flex: 1; min-height: 0; overflow-y: auto; }
+.procu-tw-rs { position: absolute; z-index: 10; background: transparent; }
+.procu-tw-rs-e  { right:0;  top:6px;    bottom:6px; width:6px;  cursor:e-resize; }
+.procu-tw-rs-w  { left:0;   top:6px;    bottom:6px; width:6px;  cursor:w-resize; }
+.procu-tw-rs-s  { bottom:0; left:6px;   right:6px;  height:6px; cursor:s-resize; }
+.procu-tw-rs-n  { top:0;    left:6px;   right:6px;  height:6px; cursor:n-resize; }
+.procu-tw-rs-se { right:0;  bottom:0; width:14px; height:14px; cursor:se-resize; }
+.procu-tw-rs-sw { left:0;   bottom:0; width:14px; height:14px; cursor:sw-resize; }
+.procu-tw-rs-ne { right:0;  top:0;    width:14px; height:14px; cursor:ne-resize; }
+.procu-tw-rs-nw { left:0;   top:0;    width:14px; height:14px; cursor:nw-resize; }
 .procu-piano-tab {
     background: #072c47;
     padding: 6px 28px;
@@ -2195,26 +2228,172 @@
     // ── End Work Orders Tab ───────────────────────────────────────────────────
 
 
-    document.querySelectorAll('.procu-tab-btn').forEach(function(btn){
-        btn.addEventListener('click', function(){
-            var tab = btn.getAttribute('data-tab');
-            if (!tab) return; // not a tab button (e.g. Resource Library)
-            document.querySelectorAll('.procu-tab-btn').forEach(function(b){ b.classList.remove('active'); });
-            document.querySelectorAll('.procu-tab-content').forEach(function(c){ c.classList.remove('active'); });
-            btn.classList.add('active');
-            document.getElementById('procu-tab-' + tab).classList.add('active');
-            if (tab === 'WO') loadWorkOrders();
-            else if (tab === 'PO') loadPurchaseOrders();
+    /* ═══════════════════════════════════════════════════════════════
+       Each order-type tab (PO/WO/LO) opens as its own draggable,
+       resizable, cascading window instead of switching in place —
+       same pattern as Activity Library's "+ IOW Group"/"+ Activity
+       Type" popups. The tab's existing content div (with all its
+       filters/tables/nested popups untouched) is moved into the
+       window body the first time it's opened.
+       ═══════════════════════════════════════════════════════════════ */
+    var _procuTabTitles = { PO: 'Purchase Orders', WO: 'Work Orders', LO: 'Lease Orders' };
+    var _procuTabWins = {};   // tab -> window element
+    var _procuTabLoaded = {}; // tab -> bool, has its data-load fired yet
+    var _procuTabIds = ['PO', 'WO', 'LO'];
+    var _procuWinZ = 999999;
+    var _procuSeqState = { n: 0 };
+
+    function _procuNextZ(){
+        var base = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 999999;
+        if (base >= _procuWinZ) _procuWinZ = base;
+        return ++_procuWinZ;
+    }
+    function _procuOpenSeq(){
+        var anyOpen = _procuTabIds.some(function(t){
+            var w = _procuTabWins[t];
+            return w && w.classList.contains('pw2-open');
         });
-    });
+        if(!anyOpen){ _procuSeqState.n = 0; return 0; }
+        _procuSeqState.n = (_procuSeqState.n % 6) + 1;
+        return _procuSeqState.n;
+    }
 
+    function _procuBuildWin(tab){
+        var content = document.getElementById('procu-tab-' + tab);
+        if(!content) return null;
+        content.classList.remove('procu-tab-content'); /* drop the old in-place-tab display:none rules */
+        content.classList.add('active');
+        content.style.display = 'block';
 
-    // Auto-load Purchase Orders on page ready
-    $(document).ready(function(){ loadPurchaseOrders(); });
+        var win = document.createElement('div');
+        win.className = 'procu-tab-win';
+        win.id = 'procu-win-' + tab;
 
-    // Reload PO data if page is restored from browser bfcache (back/forward navigation)
-    window.addEventListener('pageshow', function(e) {
-        if (e.persisted) loadPurchaseOrders();
+        var hdr = document.createElement('div');
+        hdr.className = 'procu-tab-win-hdr';
+        hdr.innerHTML =
+            '<span class="procu-tab-win-title">' + _procuTabTitles[tab] + '</span>' +
+            '<div class="procu-tab-win-hdr-btns">' +
+                '<button type="button" class="procu-tw-expand" title="Fullscreen">&#x26F6;</button>' +
+                '<button type="button" class="procu-tw-close" title="Close">&times;</button>' +
+            '</div>';
+
+        var body = document.createElement('div');
+        body.className = 'procu-tab-win-body';
+        body.appendChild(content);
+
+        ['n','s','e','w','ne','nw','se','sw'].forEach(function(dir){
+            var rs = document.createElement('div');
+            rs.className = 'procu-tw-rs procu-tw-rs-' + dir;
+            rs.setAttribute('data-dir', dir);
+            win.appendChild(rs);
+        });
+        win.appendChild(hdr);
+        win.appendChild(body);
+        document.body.appendChild(win);
+
+        /* drag + resize (same shared touch adapter used app-wide) */
+        var MIN_W = 480, MIN_H = 320, _action = null, _sx=0,_sy=0,_ox=0,_oy=0,_ow=0,_oh=0;
+        function anchor(){
+            var r = win.getBoundingClientRect();
+            win.style.left = r.left + 'px'; win.style.top = r.top + 'px';
+            win.style.width = r.width + 'px'; win.style.height = r.height + 'px';
+            return r;
+        }
+        var bdt = (typeof window.bindDragTouch === 'function') ? window.bindDragTouch : function(el, ev, fn, opts){ el.addEventListener(ev, fn, opts); };
+        bdt(hdr, 'mousedown', function(e){
+            if(e.target.closest('.procu-tab-win-hdr-btns')) return;
+            var r = anchor(); _action = 'drag';
+            _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top;
+            e.preventDefault();
+        });
+        win.querySelectorAll('.procu-tw-rs').forEach(function(el){
+            bdt(el, 'mousedown', function(e){
+                var r = anchor(); _action = el.getAttribute('data-dir');
+                _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height;
+                e.preventDefault(); e.stopPropagation();
+            });
+        });
+        bdt(document, 'mousemove', function(e){
+            if(_action == null || !_procuTabWins[tab]) return;
+            if(getComputedStyle(win).display === 'none') return;
+            e.preventDefault();
+            var dx=e.clientX-_sx, dy=e.clientY-_sy;
+            if(_action === 'drag'){
+                win.style.left = Math.max(0, _ox+dx) + 'px';
+                win.style.top  = Math.max(0, _oy+dy) + 'px';
+            } else {
+                var l=_ox,t=_oy,w=_ow,h=_oh;
+                if(_action.indexOf('e')>-1){ w=Math.max(MIN_W,_ow+dx); }
+                if(_action.indexOf('s')>-1){ h=Math.max(MIN_H,_oh+dy); }
+                if(_action.indexOf('w')>-1){ var nw=Math.max(MIN_W,_ow-dx); l=_ox+(_ow-nw); w=nw; }
+                if(_action.indexOf('n')>-1){ var nh=Math.max(MIN_H,_oh-dy); t=_oy+(_oh-nh); h=nh; }
+                win.style.left=l+'px'; win.style.top=t+'px';
+                win.style.width=w+'px'; win.style.height=h+'px';
+            }
+        }, { passive: false });
+        bdt(document, 'mouseup', function(){ _action = null; });
+
+        function raise(){ win.style.setProperty('z-index', _procuNextZ(), 'important'); }
+        bdt(win, 'mousedown', raise, true);
+
+        hdr.querySelector('.procu-tw-close').addEventListener('click', function(){
+            win.classList.remove('pw2-open');
+        });
+        var _saved = null;
+        hdr.querySelector('.procu-tw-expand').addEventListener('click', function(){
+            if(_saved){
+                win.style.left=_saved.left; win.style.top=_saved.top;
+                win.style.width=_saved.width; win.style.height=_saved.height;
+                _saved = null; this.innerHTML = '&#x26F6;'; this.title = 'Fullscreen';
+            } else {
+                anchor();
+                _saved = { left: win.style.left, top: win.style.top, width: win.style.width, height: win.style.height };
+                win.style.left = '0'; win.style.top = '0';
+                win.style.width = '100vw'; win.style.height = '100vh';
+                this.innerHTML = '&#x2716;'; this.title = 'Restore';
+            }
+        });
+
+        win.__raise = raise;
+        win.__anchor = anchor;
+        return win;
+    }
+
+    function _procuOpenTabWin(tab){
+        var win = _procuTabWins[tab] || (_procuTabWins[tab] = _procuBuildWin(tab));
+        if(!win) return;
+
+        if(!win.classList.contains('pw2-open')){
+            /* position: first open centers under the parent Procurement
+               window; subsequent opens (while another tab window is still
+               open) cascade diagonally, same step pattern as Activity
+               Library's sub-popups. */
+            var parentWin = document.getElementById('procurement-win');
+            var base = parentWin ? parentWin.getBoundingClientRect() : { top: 90, left: (window.innerWidth - 980) / 2 };
+            var step = _procuOpenSeq() * 30;
+            var top  = Math.min(window.innerHeight - 160, base.top + 40 + step);
+            var left = Math.min(window.innerWidth  - 500, Math.max(10, base.left + 30 + step));
+            win.style.left = left + 'px';
+            win.style.top  = top + 'px';
+        }
+        win.classList.add('pw2-open');
+        win.__raise();
+
+        if(!_procuTabLoaded[tab]){
+            _procuTabLoaded[tab] = true;
+            if(tab === 'PO') loadPurchaseOrders();
+            else if(tab === 'WO') loadWorkOrders();
+        }
+    }
+
+    document.querySelectorAll('.procu-tab-btn').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+            e.preventDefault();
+            var tab = btn.getAttribute('data-tab');
+            if (!tab) return; // not a tab button
+            _procuOpenTabWin(tab);
+        });
     });
 })();
 </script>
