@@ -3326,9 +3326,10 @@ if($action=='login')
         <table class="qe-repeat-tbl" id="qe-task-tbl">
           <thead>
             <tr>
-              <th style="width:36%">Task Name</th>
-              <th style="width:14%">Unit</th>
-              <th style="width:18%">Productivity / Day</th>
+              <th style="width:28%">Task Name</th>
+              <th style="width:12%">Unit</th>
+              <th style="width:12%">Qty</th>
+              <th style="width:16%">Productivity / Day</th>
               <th style="width:16%">Resource Units</th>
               <th style="width:16%;text-align:right">
                 <button class="qe-add-btn" id="qe-task-add" title="Add task row">+</button>
@@ -3549,6 +3550,7 @@ function _prefillModal(d){
             tr.innerHTML =
               '<td><input type="text" class="qe-task-name" value="'+(task.task_name||task.name||'').replace(/"/g,'&quot;')+'" placeholder="Task name"></td>'+
               '<td><input type="text" class="qe-task-unit" value="'+(task.task_unit||task.unit||'').replace(/"/g,'&quot;')+'" placeholder="Unit"></td>'+
+              '<td><input type="number" class="qe-task-qty" value="'+parseFloat(task.task_qty||task.qty||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
               '<td><input type="number" class="qe-task-prod" value="'+parseFloat(task.productivity||task.prod||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
               '<td><input type="number" class="qe-task-resunits" value="'+(task.resunits||1)+'" placeholder="1" step="1" min="1"></td>'+
               '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
@@ -3855,11 +3857,13 @@ function addTaskRow(){
   tr.innerHTML =
     '<td><input type="text" class="qe-task-name" placeholder="Task name"></td>'+
     '<td><input type="text" class="qe-task-unit" placeholder="Unit"></td>'+
+    '<td><input type="number" class="qe-task-qty" placeholder="0.00" step="0.01" min="0"></td>'+
     '<td><input type="number" class="qe-task-prod" placeholder="0.00" step="0.01" min="0"></td>'+
     '<td><input type="number" class="qe-task-resunits" value="1" placeholder="1" step="1" min="1"></td>'+
     '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
   tbody.appendChild(tr);
   _bindAlphaField(tr.querySelector('.qe-task-unit'));
+  _bindNumField(tr.querySelector('.qe-task-qty'));
   _bindNumField(tr.querySelector('.qe-task-prod'));
   _bindNumField(tr.querySelector('.qe-task-resunits'));
   tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
@@ -4069,6 +4073,7 @@ function collectPayload(){
     tasks.push({
       name:     name,
       unit:     tr.querySelector('.qe-task-unit').value.trim(),
+      qty:      parseFloat(tr.querySelector('.qe-task-qty').value)      || 0,
       prod:     parseFloat(tr.querySelector('.qe-task-prod').value)     || 0,
       resunits: parseFloat(tr.querySelector('.qe-task-resunits').value) || 1
     });
@@ -4361,6 +4366,7 @@ $(function(){
             tr.innerHTML =
               '<td><input type="text" class="qe-task-name" value="'+(task.task_name||'').replace(/"/g,'&quot;')+'" placeholder="Task name"></td>'+
               '<td><input type="text" class="qe-task-unit" value="'+(task.task_unit||'').replace(/"/g,'&quot;')+'" placeholder="Unit"></td>'+
+              '<td><input type="number" class="qe-task-qty" value="'+parseFloat(task.task_qty||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
               '<td><input type="number" class="qe-task-prod" value="'+parseFloat(task.productivity||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
               '<td><input type="number" class="qe-task-resunits" value="1" placeholder="1" step="1" min="1"></td>'+
               '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';

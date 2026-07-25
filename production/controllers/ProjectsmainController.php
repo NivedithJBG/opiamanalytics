@@ -237,7 +237,7 @@ class ProjectsmainController extends Controller
         )->bindValue(':aid', $activityId)->queryAll();
 
         $tasks = $db->createCommand(
-            "SELECT task_name, task_unit, productivity FROM activity_tasks WHERE activity_id = :aid ORDER BY sort_order ASC, id ASC"
+            "SELECT task_name, task_unit, task_qty, productivity FROM activity_tasks WHERE activity_id = :aid ORDER BY sort_order ASC, id ASC"
         )->bindValue(':aid', $activityId)->queryAll();
 
         // estimate qty + schedule unit/qty for this project
@@ -607,10 +607,11 @@ class ProjectsmainController extends Controller
                 $tname = trim($task['name'] ?? '');
                 if (!$tname) continue;
                 $db->createCommand(
-                    "INSERT INTO activity_tasks (activity_id, task_name, task_unit, productivity, sort_order)
-                     VALUES (:a, :n, :u, :p, :s)",
+                    "INSERT INTO activity_tasks (activity_id, task_name, task_unit, task_qty, productivity, sort_order)
+                     VALUES (:a, :n, :u, :q, :p, :s)",
                     [':a' => $iowActId, ':n' => $tname,
                      ':u' => trim($task['unit'] ?? ''),
+                     ':q' => (float)($task['qty'] ?? 0),
                      ':p' => (float)($task['prod'] ?? 0),
                      ':s' => $sort++]
                 )->execute();
@@ -839,9 +840,10 @@ class ProjectsmainController extends Controller
                     $tname = trim($task['name'] ?? '');
                     if (!$tname) continue;
                     $db->createCommand(
-                        "INSERT INTO activity_tasks (activity_id, task_name, task_unit, productivity, sort_order)
-                         VALUES (:a, :n, :u, :p, :s)",
+                        "INSERT INTO activity_tasks (activity_id, task_name, task_unit, task_qty, productivity, sort_order)
+                         VALUES (:a, :n, :u, :q, :p, :s)",
                         [':a' => $iowActId, ':n' => $tname, ':u' => trim($task['unit'] ?? ''),
+                         ':q' => (float)($task['qty'] ?? 0),
                          ':p' => (float)($task['prod'] ?? 0), ':s' => $sort++]
                     )->execute();
                 }
@@ -1015,6 +1017,34 @@ class ProjectsmainController extends Controller
             }
         }
 
+        // Mirror this activity's tasks into schedule_task_new, keyed by the
+        // scheduleactivities row just created (matches how Storekeeper/
+        // Procurement already read task_Id → activity_tasks.id elsewhere).
+        $wanTasks = $db->createCommand(
+            "SELECT id, task_name, task_qty, productivity FROM activity_tasks WHERE activity_id=:id",
+            [':id' => $iowActId]
+        )->queryAll();
+        foreach ($wanTasks as $wt) {
+            $tQty  = (float)$wt['task_qty'];
+            $tProd = (float)$wt['productivity'];
+            $budgetedDuration = ($tQty > 0 && $tProd > 0) ? round($tQty / $tProd, 4) : 0;
+            $db->createCommand()->insert('schedule_task_new', [
+                'wbs_id'           => 0,
+                'activity_Id'      => $saId,
+                'process_Id'       => 0,
+                'task_Id'          => (int)$wt['id'],
+                'Budgeted_Duration'=> $budgetedDuration,
+                'End_Duration'     => 0,
+                'status'           => 0,
+                'wbs_activity_Id'  => 0,
+                'activity_name'    => $savedName,
+                'primavera_id'     => 0,
+                'task_qty'         => $tQty,
+                'task_productivity'=> $tProd,
+                'task_resource_units' => 1,
+            ])->execute();
+        }
+
         $db->createCommand(
             "UPDATE activity_relations ar
              JOIN scheduleactivities sa_pre ON sa_pre.id = ar.precedent_activity AND sa_pre.projectId = :p AND sa_pre.status = 0
@@ -1093,12 +1123,11 @@ class ProjectsmainController extends Controller
         $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
         $pid      = $projuser ? (int)$projuser->projectid : 0;
 
-        // tasks — from iowschmethedology linked to the activity
-        $tasksRow = $db->createCommand(
-            "SELECT methedologies FROM iowschmethedology WHERE IOW_Id = :id AND pro_estimate_id = 0 LIMIT 1",
+        // tasks — from activity_tasks, the table actionWbssave/actionWbsadd actually write to
+        $tasks = $db->createCommand(
+            "SELECT task_name, task_unit, task_qty, productivity FROM activity_tasks WHERE activity_id = :id ORDER BY sort_order ASC, id ASC",
             [':id' => $iowActId]
-        )->queryOne();
-        $tasks = ($tasksRow && $tasksRow['methedologies']) ? json_decode($tasksRow['methedologies'], true) : [];
+        )->queryAll();
 
         // resources — from estactivity_resources (the real allocation table)
         $resources = [];
