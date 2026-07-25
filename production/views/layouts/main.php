@@ -4712,7 +4712,7 @@ $(function(){
 }
 #procurement-win.pw-open { display:flex; }
 #procurement-win-hdr {
-  background:#1a7a7a; color:#fff; padding:18px 15px;
+  background:#1a7a7a; color:#fff; padding:7px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   font-family:'Nunito',sans-serif;
@@ -4720,7 +4720,7 @@ $(function(){
 }
 #procurement-win-hdr-btns { display:flex; align-items:center; gap:8px; }
 #procurement-win-hdr-btns button {
-  background:none; border:none; color:#fff; font-size:20px;
+  background:none; border:none; color:#fff; font-size:16px;
   cursor:pointer; line-height:1; padding:0 4px; opacity:.85;
 }
 #procurement-win-hdr-btns button:hover { opacity:1; }
@@ -4748,7 +4748,7 @@ $(function(){
   <div class="pw-rs pw-rs-sw" data-dir="sw"></div>
   <div id="procurement-win-hdr">
     <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:nowrap;">
-      <span style="font-size:20px;font-weight:700;color:#fff;">Order Management</span>
+      <span style="font-size:14px;font-weight:600;color:#fff;letter-spacing:0.5px;">Order Management</span>
     </div>
     <div id="procurement-win-hdr-btns">
       <button id="procurement-win-expand" title="Fullscreen">&#x26F6;</button>
