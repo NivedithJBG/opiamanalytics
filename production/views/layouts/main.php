@@ -4712,11 +4712,11 @@ $(function(){
 }
 #procurement-win.pw-open { display:flex; }
 #procurement-win-hdr {
-  background:#2ca0a0; color:#fff; padding:7px 15px;
+  background:#5b9bd5; color:#fff; padding:7px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   font-family:'Nunito',sans-serif;
-  border-bottom:1px solid #238d8d;
+  border-bottom:1px solid #4a86c0;
 }
 #procurement-win-hdr-btns { display:flex; align-items:center; gap:8px; }
 #procurement-win-hdr-btns button {
