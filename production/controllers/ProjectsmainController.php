@@ -983,6 +983,38 @@ class ProjectsmainController extends Controller
         )->execute();
         $saId = (int)$db->lastInsertID;
 
+        // Save this activity's resource allocation into pricing_estimate_resources_new
+        // (the per-project table Storekeeper/Procurement read) — only on the first
+        // time this activity is added to the Gantt; the $existingSa check above
+        // already guarantees this code path only runs once per activity.
+        if (!empty($resources)) {
+            foreach ($resources as $res) {
+                $resId  = (int)($res['resource_id'] ?? 0);
+                $typeId = (int)($res['type_id']     ?? 0);
+                $resQty = (float)($res['qty']  ?? 0);
+                $resRate= (float)($res['rate'] ?? 0);
+                if (!$resId) continue;
+                $exists = $db->createCommand(
+                    "SELECT 1 FROM pricing_estimate_resources_new
+                     WHERE project_id=:p AND activity_id=:a AND resource_Id=:r LIMIT 1",
+                    [':p' => $pid, ':a' => $wanId, ':r' => $resId]
+                )->queryScalar();
+                if ($exists) continue;
+                $db->createCommand()->insert('pricing_estimate_resources_new', [
+                    'activity_id'       => $wanId,
+                    'resource_Id'       => $resId,
+                    'resourcetype_Id'   => $typeId,
+                    'quantity'          => $resQty,
+                    'rate'              => $resRate,
+                    'project_id'        => $pid,
+                    'est_activity_Id'   => $iowActId,
+                    'process_Id'        => 0,
+                    'pricing_status'    => 0,
+                    'operations_status' => 0,
+                ])->execute();
+            }
+        }
+
         $db->createCommand(
             "UPDATE activity_relations ar
              JOIN scheduleactivities sa_pre ON sa_pre.id = ar.precedent_activity AND sa_pre.projectId = :p AND sa_pre.status = 0
@@ -8172,135 +8204,6 @@ class ProjectsmainController extends Controller
     }
 
 	
-    public function actionPricingestimate()
-    {
-        //Resource allocation tab checking
-        /*for($i=0; $i<count($_POST['itemid']); $i++)
-        {
-            if($_POST['rate'][$i]!='0')
-            {
-                $activity_id = $_POST['itemid'][$i];
-                $sql_1 = "SELECT * FROM pricing_estimate_resources_new where activity_id='".$activity_id."' ";
-                $estimatecount = 0;
-                $connection = \Yii::$app->db;
-                $command=$connection->createCommand($sql_1);
-                $dataReader=$command->query();
-                $estimates=$dataReader->readAll();
-                $estimatecount = count($estimates);
-                if($estimatecount==0)
-                {
-                    $sql_2 = "SELECT * FROM scheduleactivities where activity_id='".$activity_id."' ";
-                    $connection = \Yii::$app->db;
-                    $command=$connection->createCommand($sql_2);
-                    $dataReader=$command->query();
-                    if($scheduleactivities=$dataReader->readAll()){
-                        $arr=array('result'=>$scheduleactivities[0]['name'],'error'=>'yes');
-                        return json_encode($arr);
-                    }
-                }
-            }
-        }*/
-        //Resource allocation tab checking ending
-       // echo 'hai'; exit;
-        $uid = Yii::$app->user->Id; 
-        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
-        $_POST['Project_Id'] = $projuser->projectid;
-        if (isset($_POST['itemid'])) {
-            $project = Projects::findOne($_POST['Project_Id']);
-            $a = str_replace(',', '', $_POST['projectvalue']);
-            $project->project_value = $a;
-            $project->save(false);
-            $connection = \Yii::$app->db;
-            $estimatecount=PricingEstimateNew::find()->where(['project_Id'=>$_POST['Project_Id']])->count();
-            //echo $estimatecount;exit;
-           
-            if($estimatecount > 0):
-                for ($i = 0; $i < count($_POST['itemid']); $i++) {
-                    $itemid = $_POST['itemid'][$i];
-                    $activityid = $_POST['activityid'][$i];
-                    $processid = $_POST['processid'][$i];
-
-                    $estimateactdat = PricingEstimateNew::find()->where(['project_Id'=>$_POST['Project_Id']])->andWhere(['activity_Id'=>$itemid])->andWhere(['pricing_status'=>0])->one();
-
-                    if($estimateactdat):
-                        $sql="UPDATE pricing_estimate_new SET activity_qty='".$_POST['quantity'][$i]."',est_activity_Id='".$activityid."' WHERE activity_Id='".$itemid."' ";
-                        $command = $connection->createCommand($sql);
-                        $dataReader = $command->query();
-
-                        
-                        $estrescount = PricingEstimateResourcesNew::find()->where(['project_id' => $_POST['Project_Id']])->andWhere(['activity_id' => $itemid])->count();
-                        if($estrescount==0):
-                            $sqltemvals="SELECT a.Resource_Id,a.Name AS resource,a.Unit,a.ResourceType_Id,b.est_resource_quantity AS Quantity,b.est_resource_amount AS Price,b.est_resource_rate AS actual_price FROM resources AS a
-                                INNER JOIN estactivity_resources AS b ON  a.Resource_Id=b.est_resource_id
-                                WHERE b.estactivity_id='".$activityid."' ORDER BY a.Resource_Id";
-                            $command=$connection->createCommand($sqltemvals);
-                            $dataReader=$command->query();
-                            $resourcesadded=$dataReader->readAll();
-                            
-                            foreach($resourcesadded AS $resource):
-                                $sql = "INSERT INTO pricing_estimate_resources_new (activity_id,resource_Id,resourcetype_Id,quantity,rate,project_id,est_activity_Id,process_Id) VALUES('" . $itemid . "','" . $resource['Resource_Id'] . "','".$resource['ResourceType_Id']."','" . $resource['Quantity'] . "','" . $resource['actual_price'] . "','" . $_POST['Project_Id'] . "','".$activityid."','".$processid."')";
-                                //echo $sql;exit;
-                                $command = $connection->createCommand($sql);
-                                $dataReader = $command->query();
-                            endforeach;
-                        endif;
-
-                    else:
-                        $sql="INSERT INTO pricing_estimate_new (project_Id,activity_Id,activity_qty,process_Id,est_activity_Id) VALUES ('".$_POST['Project_Id']."','".$itemid."','".$_POST['quantity'][$i]."','".$processid."','".$activityid."')";
-                        $command = $connection->createCommand($sql);
-                        $dataReader = $command->query();
-                        $sqltemvals="SELECT a.Resource_Id,a.Name AS resource,a.Unit,a.ResourceType_Id,b.est_resource_quantity AS Quantity,b.est_resource_amount AS Price,b.est_resource_rate AS actual_price FROM resources AS a
-                                INNER JOIN estactivity_resources AS b ON  a.Resource_Id=b.est_resource_id
-                                WHERE b.estactivity_id='".$activityid."' ORDER BY a.Resource_Id";
-                        $command=$connection->createCommand($sqltemvals);
-                        $dataReader=$command->query();
-                        $resourcesadded=$dataReader->readAll();
-                        $estrescount=PricingEstimateResourcesNew::find()->where(['project_id'=>$_POST['Project_Id']])->andWhere(['activity_id'=>$itemid])->count();
-                        if($estrescount==0):
-                            foreach($resourcesadded AS $resource):
-                                $sql = "INSERT INTO pricing_estimate_resources_new (activity_id,resource_Id,resourcetype_Id,quantity,rate,project_id,est_activity_Id,process_Id) VALUES('" . $itemid . "','" . $resource['Resource_Id'] . "','".$resource['ResourceType_Id']."','" . $resource['Quantity'] . "','" . $resource['actual_price'] . "','" . $_POST['Project_Id'] . "','".$activityid."','".$processid."')";
-                                //echo $sql;exit;
-                                $command = $connection->createCommand($sql);
-                                $dataReader = $command->query();
-                            endforeach;
-                        endif;
-                    endif;
-                }
-            else:
-                for ($i = 0; $i < count($_POST['itemid']); $i++) {
-                    $itemid = $_POST['itemid'][$i];
-                    $activityid = $_POST['activityid'][$i];
-                    $processid = $_POST['processid'][$i];
-                    //$rate = $_POST['quantity'][$i] * $_POST['specrate'][$i];
-                    //echo $rate;exit;
-                    $sql="INSERT INTO pricing_estimate_new (project_Id,activity_Id,activity_qty,process_Id,est_activity_Id) VALUES ('".$_POST['Project_Id']."','".$itemid."','".$_POST['quantity'][$i]."','".$processid."','".$activityid."')";
-                    //echo $sql;
-                    $command = $connection->createCommand($sql);
-                    $dataReader = $command->query();
-                    $sqltemvals="SELECT a.Resource_Id,a.Name AS resource,a.Unit,a.ResourceType_Id,b.est_resource_quantity AS Quantity,b.est_resource_amount AS Price,b.est_resource_rate AS actual_price FROM resources AS a
-                                INNER JOIN estactivity_resources AS b ON  a.Resource_Id=b.est_resource_id
-                                WHERE b.estactivity_id='".$activityid."' ORDER BY a.Resource_Id";
-                    $command=$connection->createCommand($sqltemvals);
-                    $dataReader=$command->query();
-                    $resourcesadded=$dataReader->readAll();
-                    $estrescount=PricingEstimateResourcesNew::find()->where(['project_id'=>$_POST['Project_Id']])->andWhere(['activity_id'=>$itemid])->count();
-                    if($estrescount==0):
-                        foreach($resourcesadded AS $resource):
-                            $sql = "INSERT INTO pricing_estimate_resources_new (activity_id,resource_Id,resourcetype_Id,quantity,rate,project_id,est_activity_Id,process_Id) VALUES('" . $itemid . "','" . $resource['Resource_Id'] . "','".$resource['ResourceType_Id']."','" . $resource['Quantity'] . "','" . $resource['actual_price'] . "','" . $_POST['Project_Id'] . "','".$activityid."','".$processid."')";
-                            //echo $sql;exit;
-                            $command = $connection->createCommand($sql);
-                            $dataReader = $command->query();
-                        endforeach;
-                    endif;
-                }
-            
-            endif;
-            //$this->redirect(array('projects/index'));
-            $arr=array('result'=>$_POST['Project_Id'],'error'=>'No');
-            return json_encode($arr);
-        }
-    }
-
     public function actionCheckremoveitem()
     {
         $pricingres=PricingEstimateResourcesNew::find()->where(['activity_id'=>$_POST['actid']])->andWhere(['pricing_status'=>0])->one();
