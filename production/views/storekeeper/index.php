@@ -46,8 +46,8 @@
     color: #465365;
 }
 .sk-tab-btn.active {
-    background: #1a2f57;
-    border-color: #1a2f57;
+    background: #2c4a4a;
+    border-color: #2c4a4a;
     color: #fff;
 }
 .sk-tab-icon {
@@ -57,7 +57,7 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: rgba(26,47,87,0.14);
+    background: rgba(44,74,74,0.16);
     font-size: 12px;
     flex-shrink: 0;
 }
@@ -158,7 +158,7 @@
 }
 .sk-tab-win.pw2-open { display: flex; }
 .sk-tab-win-hdr {
-    background: #1a2f57; color: #fff; padding: 10px 16px;
+    background: #2c4a4a; color: #fff; padding: 10px 16px;
     display: flex; align-items: center; justify-content: space-between;
     cursor: move; user-select: none; flex-shrink: 0;
 }

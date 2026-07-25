@@ -156,7 +156,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-tools.overNow4    { background-color: #CC0000 !important; }
         .round-icons .icon-wrench.reslib-btn { background-color: #555555 !important; }
         .round-icons .icon-cart.procurementlib-btn { background-color: #00695C !important; }
-        .round-icons .icon-office.storeofficelib-btn { background-color: #1a2f57 !important; }
+        .round-icons .icon-office.storeofficelib-btn { background-color: #2c4a4a !important; }
         .round-icons .perf-dashboard-btn     { background-color: #2e7d32 !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
         .round-icons .cost-dashboard-btn     { background-color: #7b1fa2 !important; height: 26px !important; width: 26px !important; font-size: 9px !important; padding: 0 !important; box-sizing: content-box !important; }
         .round-icons .qe-btn                 { background-color: #00838f !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
@@ -168,7 +168,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-tools.overNow4:hover,    .round-icons .icon-tools.overNow4:focus    { background: #990000 !important; }
         .round-icons .icon-wrench.reslib-btn:hover, .round-icons .icon-wrench.reslib-btn:focus { background: #333333 !important; }
         .round-icons .icon-cart.procurementlib-btn:hover, .round-icons .icon-cart.procurementlib-btn:focus { background: #004D40 !important; }
-        .round-icons .icon-office.storeofficelib-btn:hover, .round-icons .icon-office.storeofficelib-btn:focus { background: #0f1d38 !important; }
+        .round-icons .icon-office.storeofficelib-btn:hover, .round-icons .icon-office.storeofficelib-btn:focus { background: #1c3232 !important; }
         .round-icons .perf-dashboard-btn:hover,     .round-icons .perf-dashboard-btn:focus     { background: #1b5e20 !important; }
         .round-icons .cost-dashboard-btn:hover,     .round-icons .cost-dashboard-btn:focus     { background: #4a148c !important; }
         .round-icons .qe-btn:hover,                 .round-icons .qe-btn:focus                 { background: #005f6b !important; }
@@ -4885,11 +4885,11 @@ $(function(){
 }
 #storeoffice-win.pw-open { display:flex; }
 #storeoffice-win-hdr {
-  background:#1a2f57; color:#fff; padding:7px 15px;
+  background:#2c4a4a; color:#fff; padding:7px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   font-family:'Nunito',sans-serif;
-  border-bottom:1px solid #0f1d38;
+  border-bottom:1px solid #1c3232;
 }
 #storeoffice-win-hdr-btns { display:flex; align-items:center; gap:8px; }
 #storeoffice-win-hdr-btns button {
