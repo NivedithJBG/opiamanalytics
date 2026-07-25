@@ -101,15 +101,44 @@ $(document).on('focus','.datepicker',function(){
 
 (function(){
     var scriptUrl = '<?php echo Yii::$app->request->baseUrl; ?>/jsnew/operations/progressreport.js';
+
+    function loadActivityList(){
+        $.ajax({
+            type: 'POST',
+            url: '../report/scheduleprogressactivities',
+            beforeSend: function(){ $('.preloader').show(); },
+            dataType: 'json',
+            data: { dateselect: $('#select_report_date').val() },
+            success: function(data){
+                if (data.error == 'No') {
+                    $('#schedule_report_activityitems').show();
+                    $('#activitycompletehist').hide();
+                    $('#schedule_report_activityitems').html(data.result);
+                    $('#pgrsrpt').css('display', 'block');
+                    $('.activity_history_btn').show();
+                    $('.activity_back_btn').hide();
+                }
+                $('.preloader').hide();
+            }
+        });
+    }
+
+    // Rebind #activity_pr_main's click handler to THIS element/function so that
+    // .trigger('click') calls elsewhere in progressreport.js (e.g. after saving
+    // a report, clicking "Back", changing the report date) refresh OUR list,
+    // not a stale handler left over from a host page that loaded the script earlier.
+    $('#activity_pr_main').off('click').on('click', loadActivityList);
+
     var alreadyLoaded = false;
     document.querySelectorAll('script[src]').forEach(function(s){
         if (s.getAttribute('src').indexOf('/jsnew/operations/progressreport.js') !== -1) alreadyLoaded = true;
     });
     if (alreadyLoaded) {
-        $('#activity_pr_main').trigger('click');
+        loadActivityList();
     } else {
         $.getScript(scriptUrl, function(){
-            $('#activity_pr_main').trigger('click');
+            $('#activity_pr_main').off('click').on('click', loadActivityList);
+            loadActivityList();
         });
     }
 })();
