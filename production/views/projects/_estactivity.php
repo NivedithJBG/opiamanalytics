@@ -529,7 +529,6 @@ $('#alAddActivityPopup, #alProjTypePopup, #alIowGroupPopup, #alIowPopup, #alActT
    an absolutely-positioned box at its current screen spot the first time
    it's dragged, then move it with the mouse/touch. */
 var _alIds = ['alAddActivityPopup','alProjTypePopup','alIowGroupPopup','alIowPopup','alActTypePopup'];
-var _alDialogIds = _alIds.map(function(id){ return id + '-dialog'; });
 _alIds.forEach(function(id){
   var modal = document.getElementById(id);
   if(!modal) return;
@@ -573,40 +572,43 @@ _alIds.forEach(function(id){
     document.addEventListener('mouseup', end);
   }
 
-  /* Re-center on each open, then cascade off any other of these 4 popups
-     that's already open, so opening several in a row visibly staggers them
-     instead of always landing in the same centered spot. Bootstrap's own
-     show.bs.modal covers the normal case; the plain click listener is a
-     fallback in case that plugin event doesn't fire for any reason, so
-     dragging still resets correctly either way. */
+  /* Position explicitly below Activity Library's own header on open,
+     rather than relying on Bootstrap's centering + a post-hoc offset —
+     that combination could read a not-yet-laid-out rect and misplace the
+     dialog (e.g. pinned near the top of the viewport, oversized width).
+     Each of the 4 popups gets a fixed diagonal step from a shared base
+     position so opening several in a row still staggers them, and it's
+     independent of getBoundingClientRect() timing. */
+  var alWin = document.querySelector('.menu4-popup-cntnr');
   function reCenter(){
-    dialog.style.position = '';
-    dialog.style.margin = '';
-    dialog.style.left = '';
-    dialog.style.top  = '';
-    if(typeof window.cascadeSubWindow === 'function'){
-      setTimeout(function(){
-        var r = dialog.getBoundingClientRect();
-        /* Bootstrap centers the dialog via CSS margin only once it has
-           real layout (display:block + reflow); if this tick runs too
-           early the rect can read as 0x0 at the top-left corner, which
-           would make the cascade offset from a bogus origin. Retry once
-           on the next frame in that case rather than cascading from (0,0). */
-        if(r.width < 10 || r.height < 10){
-          requestAnimationFrame(function(){
-            anchor();
-            window.cascadeSubWindow(dialog, 'al', _alDialogIds);
-          });
-          return;
-        }
-        anchor();
-        window.cascadeSubWindow(dialog, 'al', _alDialogIds);
-      }, 30);
-    }
+    var base = alWin ? alWin.getBoundingClientRect() : { top: 90, left: (window.innerWidth - 700) / 2 };
+    var step = _alOpenSeq() * 30;
+    dialog.style.position = 'fixed';
+    dialog.style.margin = '0';
+    dialog.style.width = '700px';
+    dialog.style.maxWidth = 'calc(100vw - 40px)';
+    var top  = Math.min(window.innerHeight - 120, base.top + 70 + step);
+    var left = Math.min(window.innerWidth - 720, Math.max(10, base.left + 40 + step));
+    dialog.style.top  = top + 'px';
+    dialog.style.left = left + 'px';
   }
   $(modal).on('show.bs.modal', reCenter);
   $(document).on('click', '[data-target="#' + id + '"]', reCenter);
 });
+
+/* Shared open-order counter for the 4 Activity Library sub-popups, so each
+   one that opens while another is already visible steps diagonally from
+   the last, wrapping after a few steps. */
+var _alSeqState = { n: 0 };
+function _alOpenSeq(){
+  var anyOpen = _alIds.some(function(pid){
+    var m = document.getElementById(pid);
+    return m && getComputedStyle(m).display !== 'none';
+  });
+  if(!anyOpen){ _alSeqState.n = 0; return 0; }
+  _alSeqState.n = (_alSeqState.n % 6) + 1;
+  return _alSeqState.n;
+}
 
 /* Restore action bar whenever Add Activity modal closes (estactivity.js hides it on #addestactivity click) */
 $('#alAddActivityPopup').on('hidden.bs.modal', function(){
