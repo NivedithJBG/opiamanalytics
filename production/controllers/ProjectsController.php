@@ -20984,30 +20984,6 @@ public function actionActivitymusterprocess()
     }
     //status active
 
-    public function actionCreateactivitytype()
-    {
-        $connection = $connection = \Yii::$app->db;
-
-        $sql1="SELECT * FROM estimateactivitytypes ORDER BY activitytype_id DESC LIMIT 1 ";
-        $command=$connection->createCommand($sql1);
-        $dataReader=$command->query();
-        $sort=$dataReader->read();
-
-        if($sort){
-            $sortorder = $sort['activitytype_id'] + 1;
-        }
-        else{
-            $sortorder = 0 ;
-        }
-
-        $sql = "INSERT INTO `estimateactivitytypes` (`activitytype_name`, `activitytype_status`, `sortorder`, `schedule_type`) VALUES ('".$_POST['name']."', '0', '".$sortorder."', '".$_POST['schedule_type']."')";
-        //echo $sql;exit;
-        $command=$connection->createCommand($sql);
-        $dataReader=$command->query();
-        $arr=array('error'=>'No');
-        return json_encode($arr);
-    }
-
 //status active
     public function actionListactivitytype()
     {
