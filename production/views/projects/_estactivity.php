@@ -591,19 +591,39 @@ _alIds.forEach(function(id){
     var left = Math.min(window.innerWidth - 720, Math.max(10, base.left + 40 + step));
     dialog.style.top  = top + 'px';
     dialog.style.left = left + 'px';
+    /* All 5 sub-popups share the same static CSS z-index (999999), so
+       without this the most-recently-opened one doesn't necessarily paint
+       above ones already open — bring it to front explicitly on every
+       open/click, same as every other custom popup in the app. */
+    modal.style.setProperty('z-index', _alNextZ(), 'important');
     /* .modal itself is a full-viewport position:fixed layer (Bootstrap's
        own CSS) that intercepts clicks everywhere, even outside the visible
-       dialog box — with these on top (z-index 999999) that silently
-       swallows clicks meant for Activity Library's own toolbar buttons
-       (e.g. "+ IOW Group") once one popup is open. Only the dialog itself
-       should be clickable; the rest of the modal layer should pass clicks
-       through to whatever's underneath. */
+       dialog box — with these on top that silently swallows clicks meant
+       for Activity Library's own toolbar buttons (e.g. "+ IOW Group") once
+       one popup is open. Only the dialog itself should be clickable;
+       clicks everywhere else should pass through to what's underneath. */
     modal.style.pointerEvents = 'none';
     dialog.style.pointerEvents = 'auto';
+  }
+  var raiseOnClick = function(){ modal.style.setProperty('z-index', _alNextZ(), 'important'); };
+  if(typeof window.bindDragTouch === 'function'){
+    window.bindDragTouch(dialog, 'mousedown', raiseOnClick, true);
+  } else {
+    dialog.addEventListener('mousedown', raiseOnClick, true);
   }
   $(modal).on('show.bs.modal', reCenter);
   $(document).on('click', '[data-target="#' + id + '"]', reCenter);
 });
+
+/* Shared z-index counter so whichever of these 5 popups was opened/clicked
+   most recently always paints above the others, anchored above Activity
+   Library's own current ceiling so it can't be buried by that either. */
+var _alZ = 999999;
+function _alNextZ(){
+  var base = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 999999;
+  if (base >= _alZ) _alZ = base;
+  return ++_alZ;
+}
 
 /* Shared open-order counter for the 4 Activity Library sub-popups, so each
    one that opens while another is already visible steps diagonally from
