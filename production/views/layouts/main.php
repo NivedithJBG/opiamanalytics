@@ -140,6 +140,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-copy.duplicateProject,
         .round-icons .icon-tools.overNow4,
         .round-icons .icon-wrench.reslib-btn,
+        .round-icons .icon-cart.procurementlib-btn,
         .round-icons .rel-nav-btn,
         .round-icons .pdoc-btn,
 
@@ -153,6 +154,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-copy.duplicateProject { background-color: #E65C00 !important; }
         .round-icons .icon-tools.overNow4    { background-color: #CC0000 !important; }
         .round-icons .icon-wrench.reslib-btn { background-color: #555555 !important; }
+        .round-icons .icon-cart.procurementlib-btn { background-color: #00695C !important; }
         .round-icons .perf-dashboard-btn     { background-color: #2e7d32 !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
         .round-icons .cost-dashboard-btn     { background-color: #7b1fa2 !important; height: 26px !important; width: 26px !important; font-size: 9px !important; padding: 0 !important; box-sizing: content-box !important; }
         .round-icons .qe-btn                 { background-color: #00838f !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
@@ -163,6 +165,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-copy.duplicateProject:hover, .round-icons .icon-copy.duplicateProject:focus { background: #b84400 !important; }
         .round-icons .icon-tools.overNow4:hover,    .round-icons .icon-tools.overNow4:focus    { background: #990000 !important; }
         .round-icons .icon-wrench.reslib-btn:hover, .round-icons .icon-wrench.reslib-btn:focus { background: #333333 !important; }
+        .round-icons .icon-cart.procurementlib-btn:hover, .round-icons .icon-cart.procurementlib-btn:focus { background: #004D40 !important; }
         .round-icons .perf-dashboard-btn:hover,     .round-icons .perf-dashboard-btn:focus     { background: #1b5e20 !important; }
         .round-icons .cost-dashboard-btn:hover,     .round-icons .cost-dashboard-btn:focus     { background: #4a148c !important; }
         .round-icons .qe-btn:hover,                 .round-icons .qe-btn:focus                 { background: #005f6b !important; }
@@ -505,6 +508,7 @@ if($action=='login')
                                     </a>
                                 </li>
                                 <li><a class="icon-wrench reslib-btn" title="Resource Library" href="#"> </a></li>
+                                <li><a class="icon-cart procurementlib-btn" title="Procurement" href="#"> </a></li>
                                             <li style="'.$dashboard.'"><a class="icon-dashboard prjcet-dashboard" title="Dashboard" href="'.Yii::$app->urlManager->createUrl("projectsmain/dashboard").'">
                                     </a>
                                 </li>';
@@ -520,6 +524,7 @@ if($action=='login')
                         </a>
                     </li>
                     <li><a class="icon-wrench reslib-btn" title="Resource Library" href="#"> </a></li>
+                                <li><a class="icon-cart procurementlib-btn" title="Procurement" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
@@ -535,6 +540,7 @@ if($action=='login')
                         </a>
                     </li>
                     <li><a class="icon-wrench reslib-btn" title="Resource Library" href="#"> </a></li>
+                                <li><a class="icon-cart procurementlib-btn" title="Procurement" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
@@ -607,6 +613,7 @@ if($action=='login')
                         </a>
                     </li>
                     <li><a class="icon-wrench reslib-btn" title="Resource Library" href="#"> </a></li>
+                                <li><a class="icon-cart procurementlib-btn" title="Procurement" href="#"> </a></li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
@@ -4690,11 +4697,176 @@ $(function(){
 })();
 </script>
 
+<!-- ══════════════════════════════════════════════════════════════════════
+     PROCUREMENT FLOATING WINDOW
+════════════════════════════════════════════════════════════════════════ -->
+<style>
+#procurement-win {
+  display:none; position:fixed; top:80px; left:20px;
+  width:1040px; height:calc(100vh - 110px);
+  min-width:420px; min-height:300px;
+  z-index:100000; background:#fff; border-radius:6px;
+  border:1px solid #d0d0d0;
+  box-shadow:0 4px 16px rgba(0,0,0,.15);
+  flex-direction:column; overflow:hidden;
+}
+#procurement-win.pw-open { display:flex; }
+#procurement-win-hdr {
+  background:#fff; color:#333; padding:18px 15px;
+  display:flex; align-items:center; justify-content:space-between;
+  cursor:move; user-select:none; flex-shrink:0;
+  font-family:'Nunito',sans-serif;
+  border-bottom:1px solid #e0e0e0;
+}
+#procurement-win-hdr-btns { display:flex; align-items:center; gap:8px; }
+#procurement-win-hdr-btns button {
+  background:none; border:none; color:#333; font-size:20px;
+  cursor:pointer; line-height:1; padding:0 4px;
+}
+#procurement-win-body { flex:1; min-height:0; overflow:auto; }
+#procurement-win-loading { padding:50px; text-align:center; color:#666; font-size:14px; }
+.pw-rs { position:absolute; z-index:10; background:transparent; }
+.pw-rs-e  { right:0;  top:6px;    bottom:6px; width:6px;  cursor:e-resize; }
+.pw-rs-w  { left:0;   top:6px;    bottom:6px; width:6px;  cursor:w-resize; }
+.pw-rs-s  { bottom:0; left:6px;   right:6px;  height:6px; cursor:s-resize; }
+.pw-rs-n  { top:0;    left:6px;   right:6px;  height:6px; cursor:n-resize; }
+.pw-rs-se { right:0;  bottom:0; width:14px; height:14px; cursor:se-resize; }
+.pw-rs-sw { left:0;   bottom:0; width:14px; height:14px; cursor:sw-resize; }
+.pw-rs-ne { right:0;  top:0;    width:14px; height:14px; cursor:ne-resize; }
+.pw-rs-nw { left:0;   top:0;    width:14px; height:14px; cursor:nw-resize; }
+</style>
+
+<div id="procurement-win">
+  <div class="pw-rs pw-rs-n" data-dir="n"></div>
+  <div class="pw-rs pw-rs-s" data-dir="s"></div>
+  <div class="pw-rs pw-rs-e" data-dir="e"></div>
+  <div class="pw-rs pw-rs-w" data-dir="w"></div>
+  <div class="pw-rs pw-rs-ne" data-dir="ne"></div>
+  <div class="pw-rs pw-rs-nw" data-dir="nw"></div>
+  <div class="pw-rs pw-rs-se" data-dir="se"></div>
+  <div class="pw-rs pw-rs-sw" data-dir="sw"></div>
+  <div id="procurement-win-hdr">
+    <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:nowrap;">
+      <span style="font-size:20px;font-weight:700;color:#333;">Procurement</span>
+    </div>
+    <div id="procurement-win-hdr-btns">
+      <button id="procurement-win-expand" title="Fullscreen">&#x26F6;</button>
+      <button id="procurement-win-close" title="Close">&times;</button>
+    </div>
+  </div>
+  <div id="procurement-win-body">
+    <div id="procurement-win-loading">Loading Procurement&hellip;</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var win = document.getElementById('procurement-win');
+  var hdr = document.getElementById('procurement-win-hdr');
+  var MIN_W=500, MIN_H=300, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0, _saved=null;
+  var _loaded = false;
+
+  function _anchor(){
+    var r=win.getBoundingClientRect();
+    win.style.right='auto'; win.style.left=r.left+'px';
+    win.style.top=r.top+'px'; win.style.width=r.width+'px';
+    win.style.height=r.height+'px'; return r;
+  }
+
+  var _procurementUrl = '<?php echo Yii::$app->urlManager->createUrl("procurement/index")?>' + '?layout=false';
+
+  function _loadProcurementWin() {
+    $('#procurement-win-body').html('<div id="procurement-win-loading">Loading Procurement&hellip;</div>');
+    $.ajax({ url: _procurementUrl, success: function(html){
+      $('#procurement-win-body').html(html);
+    }, error: function(){
+      $('#procurement-win-body').html('<div style="padding:30px;color:red;">Failed to load Procurement.</div>');
+    }});
+  }
+
+  window.reloadProcurement = function() {
+    if(win.classList.contains('pw-open')){
+      _loaded = true;
+      _loadProcurementWin();
+    }
+  };
+
+  // Open
+  document.addEventListener('click', function(e){
+    if(!e.target.closest('.procurementlib-btn')) return;
+    e.preventDefault();
+    win.classList.add('pw-open');
+    if(typeof window.popupBringToFront === 'function') window.popupBringToFront('procurement-win');
+    if(typeof window.popupCascade === 'function') window.popupCascade('procurement-win');
+    if(!_loaded){
+      _loaded = true;
+      _loadProcurementWin();
+    }
+  });
+
+  // Close
+  document.getElementById('procurement-win-close').addEventListener('click', function(){
+    win.classList.remove('pw-open');
+  });
+
+  // Expand / restore
+  document.getElementById('procurement-win-expand').addEventListener('click', function(){
+    if(_saved){
+      win.style.left=_saved.left; win.style.top=_saved.top;
+      win.style.width=_saved.width; win.style.height=_saved.height;
+      _saved=null; this.innerHTML='&#x26F6;'; this.title='Fullscreen';
+    } else {
+      var r=win.getBoundingClientRect();
+      _saved={left:win.style.left,top:win.style.top,width:win.style.width,height:win.style.height};
+      win.style.left='0'; win.style.top='0';
+      win.style.width='100vw'; win.style.height='100vh';
+      this.innerHTML='&#x2716;'; this.title='Restore';
+    }
+  });
+
+  // Drag
+  bindDragTouch(hdr, 'mousedown', function(e){
+    if(e.target.closest('#procurement-win-hdr-btns')) return;
+    var r=_anchor(); _action='drag';
+    _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault();
+  });
+
+  // Resize
+  document.querySelectorAll('.pw-rs').forEach(function(el){
+    bindDragTouch(el, 'mousedown', function(e){
+      var r=_anchor(); _action=el.getAttribute('data-dir');
+      _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height;
+      e.preventDefault(); e.stopPropagation();
+    });
+  });
+
+  bindDragTouch(document, 'mousemove', function(e){
+    if(!_action) return;
+    e.preventDefault();
+    var dx=e.clientX-_sx, dy=e.clientY-_sy;
+    if(_action==='drag'){
+      var x=Math.max(0,Math.min(_ox+dx,window.innerWidth-win.offsetWidth));
+      var y=Math.max(0,Math.min(_oy+dy,window.innerHeight-win.offsetHeight));
+      win.style.left=x+'px'; win.style.top=y+'px';
+    } else {
+      var l=_ox,t=_oy,w=_ow,h=_oh;
+      if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);}
+      if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);}
+      if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;}
+      if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;}
+      win.style.left=l+'px'; win.style.top=t+'px';
+      win.style.width=w+'px'; win.style.height=h+'px';
+    }
+  });
+  bindDragTouch(document, 'mouseup', function(){ _action=null; });
+})();
+</script>
+
 <script>
 /* Ensure all floating popups are direct children of <body> so they
    are never trapped inside a parent stacking context */
 (function(){
-  var ids = ['pdoc-popup','pdoc-viewer-popup','gpm-overlay','gantt-win','qe-modal','qe-map-bk','cb-win','cb-btn','reslib-win','rel-win','menu4-popup-cntnr'];
+  var ids = ['pdoc-popup','pdoc-viewer-popup','gpm-overlay','gantt-win','qe-modal','qe-map-bk','cb-win','cb-btn','reslib-win','rel-win','menu4-popup-cntnr','procurement-win'];
   ids.forEach(function(id){
     var el = document.getElementById(id) || document.querySelector('.' + id);
     if(el && el.parentNode !== document.body) document.body.appendChild(el);
@@ -4712,7 +4884,7 @@ $(function(){
   var SUB_POPUP_GAP = 5000; /* sub-popups (Resource Library / Relationships
     "+add"-type popups) always sit at parent-floater-ceiling + this gap, so
     they can never end up under a repeatedly-clicked parent window. */
-  var floaters = ['pdoc-popup','pdoc-viewer-popup','gantt-win','qe-modal','cb-win','reslib-win','rel-win','menu4-popup-cntnr'];
+  var floaters = ['pdoc-popup','pdoc-viewer-popup','gantt-win','qe-modal','cb-win','reslib-win','rel-win','menu4-popup-cntnr','procurement-win'];
 
   window.popupBringToFront = function(id){
     var el = document.getElementById(id) || document.querySelector('.' + id);

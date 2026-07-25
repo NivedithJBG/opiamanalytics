@@ -14,8 +14,11 @@ class ProcurementController extends Controller
         return parent::beforeAction($action);
     }
 
-    public function actionIndex()
+    public function actionIndex($layout = 'true')
     {
+        if ($layout === 'false') {
+            $this->layout = false;
+        }
         return $this->render('index');
     }
 
