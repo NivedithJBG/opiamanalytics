@@ -21,6 +21,10 @@
     text-align: center;
     border-bottom: 1px solid #e8e8e8;
     background: #f8fafc;
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    overflow-x: auto;
 }
 .sk-tab-btn {
     display: inline-flex;
@@ -35,8 +39,9 @@
     font-size: 12px;
     font-weight: 500;
     letter-spacing: 0.4px;
-    min-width: 180px;
+    min-width: 150px;
     white-space: nowrap;
+    flex-shrink: 0;
     cursor: pointer;
     transition: background 0.2s, color 0.2s, border-color 0.2s;
     text-decoration: none;
