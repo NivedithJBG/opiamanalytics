@@ -4761,8 +4761,10 @@ $(function(){
     _cascadeCount = (_cascadeCount % CASCADE_MAX) + 1;
     var dx = CASCADE_STEP * _cascadeCount, dy = CASCADE_STEP * _cascadeCount;
     var r = el.getBoundingClientRect();
-    el.style.left = Math.max(0, r.left + dx) + 'px';
-    el.style.top  = Math.max(0, r.top  + dy) + 'px';
+    var maxLeft = Math.max(0, window.innerWidth  - r.width  - 10);
+    var maxTop  = Math.max(0, window.innerHeight - r.height - 10);
+    el.style.left = Math.min(maxLeft, Math.max(0, r.left + dx)) + 'px';
+    el.style.top  = Math.min(maxTop,  Math.max(0, r.top  + dy)) + 'px';
     el.style.right = 'auto'; /* some floaters position via right: override to left-based once moved */
     _lastOpenedId = id;
   };
@@ -4787,8 +4789,10 @@ $(function(){
     st.count = (st.count % 6) + 1;
     var dx = 32 * st.count, dy = 32 * st.count;
     var r = el.getBoundingClientRect();
-    el.style.left = Math.max(0, r.left + dx) + 'px';
-    el.style.top  = Math.max(0, r.top  + dy) + 'px';
+    var maxLeft = Math.max(0, window.innerWidth  - r.width  - 10);
+    var maxTop  = Math.max(0, window.innerHeight - r.height - 10);
+    el.style.left = Math.min(maxLeft, Math.max(0, r.left + dx)) + 'px';
+    el.style.top  = Math.min(maxTop,  Math.max(0, r.top  + dy)) + 'px';
     el.style.right = 'auto';
     st.last = el.id;
   };
