@@ -1,5 +1,3 @@
-<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/operations/progressreport.js" type="text/javascript"></script>
-
 <style type="text/css">
     .form-control{
         padding: 6px 8px !important;
@@ -101,5 +99,18 @@ $(document).on('focus','.datepicker',function(){
     });
 });
 
-$('#activity_pr_main').trigger('click');
+(function(){
+    var scriptUrl = '<?php echo Yii::$app->request->baseUrl; ?>/jsnew/operations/progressreport.js';
+    var alreadyLoaded = false;
+    document.querySelectorAll('script[src]').forEach(function(s){
+        if (s.getAttribute('src').indexOf('/jsnew/operations/progressreport.js') !== -1) alreadyLoaded = true;
+    });
+    if (alreadyLoaded) {
+        $('#activity_pr_main').trigger('click');
+    } else {
+        $.getScript(scriptUrl, function(){
+            $('#activity_pr_main').trigger('click');
+        });
+    }
+})();
 </script>
