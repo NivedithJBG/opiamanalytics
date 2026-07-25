@@ -30,8 +30,8 @@
     border-radius: 50px;
     padding: 6px 28px 6px 12px;
     margin: 0 6px;
-    background: #fff;
-    color: #465365;
+    background: #c8ccd2;
+    color: #333d4d;
     font-size: 12px;
     font-weight: 500;
     letter-spacing: 0.4px;
@@ -41,13 +41,13 @@
     text-decoration: none;
 }
 .sk-tab-btn:hover {
-    background: #f0f2f5;
+    background: #b6bcc4;
     text-decoration: none;
     color: #465365;
 }
 .sk-tab-btn.active {
-    background: #072c47;
-    border-color: #072c47;
+    background: #1a2f57;
+    border-color: #1a2f57;
     color: #fff;
 }
 .sk-tab-icon {
@@ -57,7 +57,7 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: rgba(7,44,71,0.10);
+    background: rgba(26,47,87,0.14);
     font-size: 12px;
     flex-shrink: 0;
 }
@@ -144,14 +144,49 @@
     font-size: 13px;
     padding: 40px 0;
 }
+.sk-tab-win {
+    display: none;
+    position: fixed;
+    top: 90px; left: 60px;
+    width: 980px; height: calc(100vh - 140px);
+    min-width: 480px; min-height: 320px;
+    background: #fff; border-radius: 6px;
+    border: 1px solid #d0d0d0;
+    box-shadow: 0 4px 16px rgba(0,0,0,.18);
+    flex-direction: column; overflow: hidden;
+    z-index: 999999;
+}
+.sk-tab-win.pw2-open { display: flex; }
+.sk-tab-win-hdr {
+    background: #1a2f57; color: #fff; padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: move; user-select: none; flex-shrink: 0;
+}
+.sk-tab-win-title { font-size: 14px; font-weight: 600; letter-spacing: 0.5px; }
+.sk-tab-win-hdr-btns { display: flex; align-items: center; gap: 8px; }
+.sk-tab-win-hdr-btns button {
+    background: none; border: none; color: #fff; font-size: 16px;
+    cursor: pointer; line-height: 1; padding: 0 4px; opacity: .85;
+}
+.sk-tab-win-hdr-btns button:hover { opacity: 1; }
+.sk-tab-win-body { flex: 1; min-height: 0; overflow: auto; }
+.sk-tw-rs { position: absolute; z-index: 10; background: transparent; }
+.sk-tw-rs-e  { right:0;  top:6px;  bottom:6px; width:6px;  cursor:e-resize; }
+.sk-tw-rs-w  { left:0;   top:6px;  bottom:6px; width:6px;  cursor:w-resize; }
+.sk-tw-rs-s  { bottom:0; left:6px; right:6px;  height:6px; cursor:s-resize; }
+.sk-tw-rs-n  { top:0;    left:6px; right:6px;  height:6px; cursor:n-resize; }
+.sk-tw-rs-se { right:0;  bottom:0; width:14px; height:14px; cursor:se-resize; }
+.sk-tw-rs-sw { left:0;   bottom:0; width:14px; height:14px; cursor:sw-resize; }
+.sk-tw-rs-ne { right:0;  top:0;    width:14px; height:14px; cursor:ne-resize; }
+.sk-tw-rs-nw { left:0;   top:0;    width:14px; height:14px; cursor:nw-resize; }
 </style>
 
 <div class="sk-page-wrap">
 
-    <div id="sk-page-header" class="sk-header">Indents</div>
+    <div id="sk-page-header" class="sk-header" style="display:none;">Indents</div>
 
     <div class="sk-tab-row">
-        <a href="javascript:;" class="sk-tab-btn active" data-tab="indents">
+        <a href="javascript:;" class="sk-tab-btn" data-tab="indents">
             <span class="sk-tab-icon"><span class="icon-list"></span></span>
             Indents
         </a>
@@ -1836,22 +1871,166 @@
         $(this).closest('tr').toggleClass('sk-row-selected', $(this).is(':checked'));
     });
 
+    var _skTabTitles = { indents: 'Indents', issued: 'Goods Received Notes', mbwo: 'Measurement Book' };
+    var _skTabWins = {};
+    var _skTabLoaded = {};
+    var _skTabIds = ['indents', 'issued', 'mbwo'];
+    var _skWinZ = 999999;
+    var _skSeqState = { n: 0 };
+
+    function _skNextZ(){
+        var base = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 999999;
+        if (base >= _skWinZ) _skWinZ = base;
+        return ++_skWinZ;
+    }
+    function _skOpenSeq(){
+        var anyOpen = _skTabIds.some(function(t){
+            var w = _skTabWins[t];
+            return w && w.classList.contains('pw2-open');
+        });
+        if(!anyOpen){ _skSeqState.n = 0; return 0; }
+        _skSeqState.n = (_skSeqState.n % 6) + 1;
+        return _skSeqState.n;
+    }
+
+    function _skBuildWin(tab){
+        var content = document.getElementById('sk-tab-' + tab);
+        if(!content) return null;
+        content.classList.remove('sk-tab-content');
+        content.classList.add('active');
+        content.style.display = 'block';
+
+        var win = document.createElement('div');
+        win.className = 'sk-tab-win';
+        win.id = 'sk-win-' + tab;
+
+        var hdr = document.createElement('div');
+        hdr.className = 'sk-tab-win-hdr';
+        hdr.innerHTML =
+            '<span class="sk-tab-win-title">' + _skTabTitles[tab] + '</span>' +
+            '<div class="sk-tab-win-hdr-btns">' +
+                '<button type="button" class="sk-tw-expand" title="Fullscreen">&#x26F6;</button>' +
+                '<button type="button" class="sk-tw-close" title="Close">&times;</button>' +
+            '</div>';
+
+        var body = document.createElement('div');
+        body.className = 'sk-tab-win-body';
+        body.appendChild(content);
+
+        ['n','s','e','w','ne','nw','se','sw'].forEach(function(dir){
+            var rs = document.createElement('div');
+            rs.className = 'sk-tw-rs sk-tw-rs-' + dir;
+            rs.setAttribute('data-dir', dir);
+            win.appendChild(rs);
+        });
+        win.appendChild(hdr);
+        win.appendChild(body);
+        document.body.appendChild(win);
+
+        var MIN_W = 480, MIN_H = 320, _action = null, _sx=0,_sy=0,_ox=0,_oy=0,_ow=0,_oh=0;
+        function anchor(){
+            var r = win.getBoundingClientRect();
+            win.style.left = r.left + 'px'; win.style.top = r.top + 'px';
+            win.style.width = r.width + 'px'; win.style.height = r.height + 'px';
+            return r;
+        }
+        var bdt = (typeof window.bindDragTouch === 'function') ? window.bindDragTouch : function(el, ev, fn, opts){ el.addEventListener(ev, fn, opts); };
+        bdt(hdr, 'mousedown', function(e){
+            if(e.target.closest('.sk-tab-win-hdr-btns')) return;
+            var r = anchor(); _action = 'drag';
+            _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top;
+            e.preventDefault();
+        });
+        win.querySelectorAll('.sk-tw-rs').forEach(function(el){
+            bdt(el, 'mousedown', function(e){
+                var r = anchor(); _action = el.getAttribute('data-dir');
+                _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height;
+                e.preventDefault(); e.stopPropagation();
+            });
+        });
+        bdt(document, 'mousemove', function(e){
+            if(_action == null || !_skTabWins[tab]) return;
+            if(getComputedStyle(win).display === 'none') return;
+            e.preventDefault();
+            var dx=e.clientX-_sx, dy=e.clientY-_sy;
+            if(_action === 'drag'){
+                win.style.left = Math.max(0, _ox+dx) + 'px';
+                win.style.top  = Math.max(0, _oy+dy) + 'px';
+            } else {
+                var l=_ox,t=_oy,w=_ow,h=_oh;
+                if(_action.indexOf('e')>-1){ w=Math.max(MIN_W,_ow+dx); }
+                if(_action.indexOf('s')>-1){ h=Math.max(MIN_H,_oh+dy); }
+                if(_action.indexOf('w')>-1){ var nw=Math.max(MIN_W,_ow-dx); l=_ox+(_ow-nw); w=nw; }
+                if(_action.indexOf('n')>-1){ var nh=Math.max(MIN_H,_oh-dy); t=_oy+(_oh-nh); h=nh; }
+                win.style.left=l+'px'; win.style.top=t+'px';
+                win.style.width=w+'px'; win.style.height=h+'px';
+            }
+        }, { passive: false });
+        bdt(document, 'mouseup', function(){ _action = null; });
+
+        function raise(){ win.style.setProperty('z-index', _skNextZ(), 'important'); }
+        bdt(win, 'mousedown', raise, true);
+
+        hdr.querySelector('.sk-tw-close').addEventListener('click', function(){
+            win.classList.remove('pw2-open');
+            var btn = document.querySelector('.sk-tab-btn[data-tab="' + tab + '"]');
+            if(btn) btn.classList.remove('active');
+        });
+        var _saved = null;
+        hdr.querySelector('.sk-tw-expand').addEventListener('click', function(){
+            if(_saved){
+                win.style.left=_saved.left; win.style.top=_saved.top;
+                win.style.width=_saved.width; win.style.height=_saved.height;
+                _saved = null; this.innerHTML = '&#x26F6;'; this.title = 'Fullscreen';
+            } else {
+                anchor();
+                _saved = { left: win.style.left, top: win.style.top, width: win.style.width, height: win.style.height };
+                win.style.left = '0'; win.style.top = '0';
+                win.style.width = '100vw'; win.style.height = '100vh';
+                this.innerHTML = '&#x2716;'; this.title = 'Restore';
+            }
+        });
+
+        win.__raise = raise;
+        win.__anchor = anchor;
+        return win;
+    }
+
+    function _skOpenTabWin(tab){
+        var win = _skTabWins[tab] || (_skTabWins[tab] = _skBuildWin(tab));
+        if(!win) return;
+
+        if(!win.classList.contains('pw2-open')){
+            var parentWin = document.getElementById('storeoffice-win');
+            var base = parentWin ? parentWin.getBoundingClientRect() : { top: 90, left: (window.innerWidth - 980) / 2 };
+            var step = _skOpenSeq() * 30;
+            var top  = Math.min(window.innerHeight - 160, base.top + 40 + step);
+            var left = Math.min(window.innerWidth  - 500, Math.max(10, base.left + 30 + step));
+            win.style.left = left + 'px';
+            win.style.top  = top + 'px';
+        }
+        win.classList.add('pw2-open');
+        win.__raise();
+        var btn = document.querySelector('.sk-tab-btn[data-tab="' + tab + '"]');
+        if(btn) btn.classList.add('active');
+        document.getElementById('sk-page-header').textContent = _skTabTitles[tab] || '';
+
+        if(!_skTabLoaded[tab]){
+            _skTabLoaded[tab] = true;
+            if(tab === 'indents') { $('#sk-filter-bar').show(); loadIndents(); }
+            else if(tab === 'issued') loadIssued();
+            else if(tab === 'mbwo') { $('#sk-mbwo-filter-vendor').closest('div').show(); loadMbWo(); }
+        }
+    }
+
     document.querySelectorAll('.sk-tab-btn').forEach(function(btn){
-        btn.addEventListener('click', function(){
-            document.querySelectorAll('.sk-tab-btn').forEach(function(b){ b.classList.remove('active'); });
-            document.querySelectorAll('.sk-tab-content').forEach(function(c){ c.classList.remove('active'); });
-            btn.classList.add('active');
+        btn.addEventListener('click', function(e){
+            e.preventDefault();
             var tab = btn.getAttribute('data-tab');
-            document.getElementById('sk-tab-' + tab).classList.add('active');
-            var labels = { indents: 'Indents', issued: 'Goods Received Notes', mbwo: 'Measurement Book' };
-            document.getElementById('sk-page-header').textContent = labels[tab] || '';
-            if (tab === 'indents') { $('#sk-filter-bar').show(); loadIndents(); }
-            else if (tab === 'issued') loadIssued();
-            else if (tab === 'mbwo') { $('#sk-mbwo-filter-vendor').closest('div').show(); loadMbWo(); }
+            if (!tab) return;
+            _skOpenTabWin(tab);
         });
     });
-
-    $(document).ready(function(){ loadIndents(); });
 })();
 </script>
 
