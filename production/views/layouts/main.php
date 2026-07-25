@@ -4758,9 +4758,10 @@ $(function(){
     });
     if(!anyOtherOpen){ _cascadeCount = 0; _lastOpenedId = id; return; }
     if(_lastOpenedId === id) return; /* re-opening the same popup — leave it where the user left it */
+    var r = el.getBoundingClientRect();
+    if(r.width < 10 || r.height < 10) return; /* not laid out yet — bogus rect, skip rather than offset from (0,0) */
     _cascadeCount = (_cascadeCount % CASCADE_MAX) + 1;
     var dx = CASCADE_STEP * _cascadeCount, dy = CASCADE_STEP * _cascadeCount;
-    var r = el.getBoundingClientRect();
     var maxLeft = Math.max(0, window.innerWidth  - r.width  - 10);
     var maxTop  = Math.max(0, window.innerHeight - r.height - 10);
     el.style.left = Math.min(maxLeft, Math.max(0, r.left + dx)) + 'px';
@@ -4786,9 +4787,10 @@ $(function(){
     });
     if(!anyOtherOpen){ st.count = 0; st.last = el.id; return; }
     if(st.last === el.id) return;
+    var r = el.getBoundingClientRect();
+    if(r.width < 10 || r.height < 10) return; /* not laid out yet — bogus rect, skip rather than offset from (0,0) */
     st.count = (st.count % 6) + 1;
     var dx = 32 * st.count, dy = 32 * st.count;
-    var r = el.getBoundingClientRect();
     var maxLeft = Math.max(0, window.innerWidth  - r.width  - 10);
     var maxTop  = Math.max(0, window.innerHeight - r.height - 10);
     el.style.left = Math.min(maxLeft, Math.max(0, r.left + dx)) + 'px';

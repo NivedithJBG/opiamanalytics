@@ -586,9 +586,22 @@ _alIds.forEach(function(id){
     dialog.style.top  = '';
     if(typeof window.cascadeSubWindow === 'function'){
       setTimeout(function(){
+        var r = dialog.getBoundingClientRect();
+        /* Bootstrap centers the dialog via CSS margin only once it has
+           real layout (display:block + reflow); if this tick runs too
+           early the rect can read as 0x0 at the top-left corner, which
+           would make the cascade offset from a bogus origin. Retry once
+           on the next frame in that case rather than cascading from (0,0). */
+        if(r.width < 10 || r.height < 10){
+          requestAnimationFrame(function(){
+            anchor();
+            window.cascadeSubWindow(dialog, 'al', _alDialogIds);
+          });
+          return;
+        }
         anchor();
         window.cascadeSubWindow(dialog, 'al', _alDialogIds);
-      }, 0);
+      }, 30);
     }
   }
   $(modal).on('show.bs.modal', reCenter);
