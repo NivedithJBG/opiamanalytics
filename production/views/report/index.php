@@ -100,4 +100,6 @@ $(document).on('focus','.datepicker',function(){
         maxDate: new Date()
     });
 });
+
+$('#activity_pr_main').trigger('click');
 </script>
