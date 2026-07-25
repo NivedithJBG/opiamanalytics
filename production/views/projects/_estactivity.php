@@ -528,12 +528,15 @@ $('#alAddActivityPopup, #alProjTypePopup, #alIowGroupPopup, #alIowPopup, #alActT
    Make the header draggable directly: switch the centered .modal-dialog to
    an absolutely-positioned box at its current screen spot the first time
    it's dragged, then move it with the mouse/touch. */
-['alAddActivityPopup','alProjTypePopup','alIowGroupPopup','alIowPopup','alActTypePopup'].forEach(function(id){
+var _alIds = ['alAddActivityPopup','alProjTypePopup','alIowGroupPopup','alIowPopup','alActTypePopup'];
+var _alDialogIds = _alIds.map(function(id){ return id + '-dialog'; });
+_alIds.forEach(function(id){
   var modal = document.getElementById(id);
   if(!modal) return;
   var dialog = modal.querySelector('.modal-dialog');
   var hdr = modal.querySelector('.modal-header');
   if(!dialog || !hdr) return;
+  dialog.id = id + '-dialog';
   hdr.style.cursor = 'move';
   var dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
 
@@ -570,15 +573,23 @@ $('#alAddActivityPopup, #alProjTypePopup, #alIowGroupPopup, #alIowPopup, #alActT
     document.addEventListener('mouseup', end);
   }
 
-  /* Re-center on each open (position reset when the modal is shown again).
-     Bootstrap's own show.bs.modal covers the normal case; the plain click
-     listener is a fallback in case that plugin event doesn't fire for any
-     reason, so dragging still resets correctly either way. */
+  /* Re-center on each open, then cascade off any other of these 4 popups
+     that's already open, so opening several in a row visibly staggers them
+     instead of always landing in the same centered spot. Bootstrap's own
+     show.bs.modal covers the normal case; the plain click listener is a
+     fallback in case that plugin event doesn't fire for any reason, so
+     dragging still resets correctly either way. */
   function reCenter(){
     dialog.style.position = '';
     dialog.style.margin = '';
     dialog.style.left = '';
     dialog.style.top  = '';
+    if(typeof window.cascadeSubWindow === 'function'){
+      setTimeout(function(){
+        anchor();
+        window.cascadeSubWindow(dialog, 'al', _alDialogIds);
+      }, 0);
+    }
   }
   $(modal).on('show.bs.modal', reCenter);
   $(document).on('click', '[data-target="#' + id + '"]', reCenter);
