@@ -20,7 +20,7 @@
 }
 .procu-tab-win.pw2-open { display: flex; }
 .procu-tab-win-hdr {
-    background: #333333; color: #fff; padding: 10px 16px;
+    background: #b7541e; color: #fff; padding: 10px 16px;
     display: flex; align-items: center; justify-content: space-between;
     cursor: move; user-select: none; flex-shrink: 0;
 }
@@ -79,8 +79,8 @@
     color: #465365;
 }
 .procu-tab-btn.active {
-    background: #4a5568;
-    border-color: #4a5568;
+    background: #b7541e;
+    border-color: #b7541e;
     color: #fff;
 }
 .procu-tab-icon {
@@ -90,7 +90,7 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: rgba(74,85,104,0.12);
+    background: rgba(183,84,30,0.12);
     font-size: 12px;
     flex-shrink: 0;
 }
