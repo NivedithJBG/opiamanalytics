@@ -63,8 +63,8 @@
     border-radius: 50px;
     padding: 6px 28px 6px 12px;
     margin: 0 6px;
-    background: #e8eaed;
-    color: #465365;
+    background: #c8ccd2;
+    color: #333d4d;
     font-size: 12px;
     font-weight: 500;
     letter-spacing: 0.4px;
@@ -74,7 +74,7 @@
     text-decoration: none;
 }
 .procu-tab-btn:hover {
-    background: #dadde1;
+    background: #b6bcc4;
     text-decoration: none;
     color: #465365;
 }
@@ -445,8 +445,6 @@
 </div>
 
 <div class="procu-page-wrap">
-
-    <div class="procu-piano-tab">Order Management</div>
 
     <div class="procu-tab-row">
         <a href="javascript:;" class="procu-tab-btn" data-tab="PO">
