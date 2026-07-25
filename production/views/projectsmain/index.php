@@ -39,9 +39,6 @@ $functiontabs=DepartmentTab::find()->all();
   if($user->account_type != 'perfm_pad_reporting_only'){ 
     //echo $this->render('dashboard');
     //echo $this->render('_boq');
-    echo $this->render('_workgroup');
-    // _activity is already rendered inside _workgroup.php — do not render again here
-    //echo $this->render('_activity');
     echo $this->render('_estimate');
   }
   echo $this->render('_schedulelisting');

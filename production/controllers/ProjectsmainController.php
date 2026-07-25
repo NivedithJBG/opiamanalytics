@@ -493,6 +493,7 @@ class ProjectsmainController extends Controller
         $iowGroupName = trim($p['iow_group_name'] ?? ($p['iow_group'] ?? ''));
         $iowName      = trim($p['iow_name']       ?? ($p['iow_group'] ?? ''));
         $iowActId     = (int)($p['iow_act_id']    ?? 0);
+        $wgIdInput    = (int)($p['wg_id']          ?? 0);
         $actNameInput = trim($p['act_name']        ?? '');
         $unit         = trim($p['unit']            ?? '');
         $schUnit      = trim($p['sch_unit']        ?? '');
@@ -527,9 +528,23 @@ class ProjectsmainController extends Controller
 
         $now = date('Y-m-d H:i:s');
 
-        // 1. Find or create workgroups_new row (IOW) for this IOW group + IOW name in this project
+        // 1. Editing an existing WBS item (wg_id supplied): rename/re-group it in place.
+        //    Otherwise, find-or-create a workgroups_new row for this IOW group + IOW name.
         $wgId = 0;
-        if ($iowGroupId) {
+        if ($wgIdInput) {
+            $wgExists = $db->createCommand(
+                "SELECT Workgroup_Id FROM workgroups_new WHERE Workgroup_Id=:id AND Project_Id=:p AND Status=0 LIMIT 1",
+                [':id' => $wgIdInput, ':p' => $pid]
+            )->queryScalar();
+            if ($wgExists) {
+                $wgId = (int)$wgExists;
+                $db->createCommand(
+                    "UPDATE workgroups_new SET Name=:n, iowGroupid=:g, Updated_On=:t WHERE Workgroup_Id=:id",
+                    [':n' => $iowName, ':g' => $iowGroupId ?: null, ':t' => $now, ':id' => $wgId]
+                )->execute();
+            }
+        }
+        if (!$wgId && $iowGroupId) {
             $wgRow = $db->createCommand(
                 "SELECT Workgroup_Id FROM workgroups_new WHERE Project_Id=:p AND iowGroupid=:g AND Name=:n AND Status=0 LIMIT 1",
                 [':p' => $pid, ':g' => $iowGroupId, ':n' => $iowName]
@@ -721,6 +736,7 @@ class ProjectsmainController extends Controller
         $iowGroupName = trim($p['iow_group_name']  ?? ($p['iow_group'] ?? ''));
         $iowName      = trim($p['iow_name']        ?? ($p['iow_group'] ?? ''));
         $iowActId     = (int)($p['iow_act_id']     ?? 0);
+        $wgIdInput    = (int)($p['wg_id']           ?? 0);
         $actNameInput = trim($p['act_name']         ?? '');
         $unit         = trim($p['unit']             ?? '');
         $schUnit      = trim($p['sch_unit']         ?? '');
@@ -755,7 +771,20 @@ class ProjectsmainController extends Controller
 
             $now = date('Y-m-d H:i:s');
             $wgId = 0;
-            if ($iowGroupId) {
+            if ($wgIdInput) {
+                $wgExists = $db->createCommand(
+                    "SELECT Workgroup_Id FROM workgroups_new WHERE Workgroup_Id=:id AND Project_Id=:p AND Status=0 LIMIT 1",
+                    [':id' => $wgIdInput, ':p' => $pid]
+                )->queryScalar();
+                if ($wgExists) {
+                    $wgId = (int)$wgExists;
+                    $db->createCommand(
+                        "UPDATE workgroups_new SET Name=:n, iowGroupid=:g, Updated_On=:t WHERE Workgroup_Id=:id",
+                        [':n' => $iowName, ':g' => $iowGroupId ?: null, ':t' => $now, ':id' => $wgId]
+                    )->execute();
+                }
+            }
+            if (!$wgId && $iowGroupId) {
                 $wgRow = $db->createCommand(
                     "SELECT Workgroup_Id FROM workgroups_new WHERE Project_Id=:p AND iowGroupid=:g AND Name=:n AND Status=0 LIMIT 1",
                     [':p' => $pid, ':g' => $iowGroupId, ':n' => $iowName]
@@ -1133,9 +1162,29 @@ class ProjectsmainController extends Controller
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $saId = (int)\Yii::$app->request->post('sa_id', 0);
-        if (!$saId) return ['error' => 'No activity id'];
+        $wgId = (int)\Yii::$app->request->post('wg_id', 0);
+        if (!$saId && !$wgId) return ['error' => 'No activity id'];
 
         $db = \Yii::$app->db;
+
+        // WBS item was only "Saved" (never "Added to Gantt"), so it has no
+        // scheduleactivities row to key off — soft-delete the workgroups_new
+        // row directly instead of going through the schedule-bar cascade below.
+        if (!$saId && $wgId) {
+            $uid      = Yii::$app->user->Id;
+            $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+            $pid      = $projuser ? (int)$projuser->projectid : 0;
+            $owned = $db->createCommand(
+                "SELECT Workgroup_Id FROM workgroups_new WHERE Workgroup_Id=:id AND Project_Id=:p AND Status=0 LIMIT 1",
+                [':id' => $wgId, ':p' => $pid]
+            )->queryScalar();
+            if (!$owned) return ['error' => 'WBS item not found'];
+            $db->createCommand(
+                "UPDATE workgroups_new SET Status = 1 WHERE Workgroup_Id = :id",
+                [':id' => $wgId]
+            )->execute();
+            return ['ok' => true];
+        }
 
         // Check for any active relationships (as predecessor or successor)
         $relCount = (int)$db->createCommand(
@@ -1148,11 +1197,66 @@ class ProjectsmainController extends Controller
             return ['error' => 'Please remove the relation before deleting this activity'];
         }
 
-        // Get parent wbsscheduleitems id before deleting
+        // Get parent wbsscheduleitems id (and the linked workgroup_activities_new
+        // id) before deleting
         $sa = $db->createCommand(
-            "SELECT scheduleitem_id FROM scheduleactivities WHERE id = :id",
+            "SELECT scheduleitem_id, activity_id FROM scheduleactivities WHERE id = :id",
             [':id' => $saId]
         )->queryOne();
+
+        // Cascade: remove any procurement/indent/work-order data raised against
+        // this activity, mirroring the old activity1/deleteiowactivity cleanup.
+        if ($sa) {
+            $wanIdForCascade = (int)$sa['activity_id'];
+
+            $pricingIds = $db->createCommand(
+                "SELECT pricing_resourceid FROM pricing_estimate_resources_new WHERE activity_id=:aid",
+                [':aid' => $wanIdForCascade]
+            )->queryColumn();
+            if (!empty($pricingIds)) {
+                $db->createCommand()->delete('store_indents', ['pricing_resourceid' => $pricingIds])->execute();
+            }
+
+            $db->createCommand()->delete('wo_task_rates',   ['activity_id' => $wanIdForCascade])->execute();
+            $db->createCommand()->delete('wo_sc_rates',     ['activity_id' => $wanIdForCascade])->execute();
+            $db->createCommand()->delete('wo_activity_qty', ['activity_id' => $wanIdForCascade])->execute();
+
+            $woNums = $db->createCommand(
+                "SELECT WO_Number FROM work_order
+                 WHERE JSON_SEARCH(WO_Subject, 'one', :aid, NULL, '\$[*].activity_id') IS NOT NULL",
+                [':aid' => (string)$wanIdForCascade]
+            )->queryColumn();
+            if (!empty($woNums)) {
+                $db->createCommand()->delete('wo_measurement_book', ['wo_number' => $woNums])->execute();
+                $db->createCommand()->delete('work_order', ['WO_Number' => $woNums])->execute();
+            }
+
+            $poIds = $db->createCommand(
+                "SELECT DISTINCT order_id FROM purchase_order_activities WHERE activity_id=:sid",
+                [':sid' => $saId]
+            )->queryColumn();
+            if (!empty($poIds)) {
+                $db->createCommand()->delete('goods_received_note',      ['GRN_Purchase_Order' => $poIds])->execute();
+                $db->createCommand()->delete('purchase_order_resources',  ['order_id' => $poIds])->execute();
+                $db->createCommand()->delete('purchase_order_activities', ['order_id' => $poIds])->execute();
+                $db->createCommand()->delete('purchase_orders',           ['order_id' => $poIds])->execute();
+            }
+
+            // Soft-delete the activity and its resource allocation (pricing_status
+            // is the active-row flag these tables are read by everywhere else).
+            $db->createCommand(
+                "UPDATE workgroup_activities_new SET pricing_status = 1 WHERE id = :id",
+                [':id' => $wanIdForCascade]
+            )->execute();
+            $db->createCommand(
+                "UPDATE pricing_estimate_new SET pricing_status = 1 WHERE activity_Id = :id",
+                [':id' => $wanIdForCascade]
+            )->execute();
+            $db->createCommand(
+                "UPDATE pricing_estimate_resources_new SET pricing_status = 1 WHERE activity_id = :id",
+                [':id' => $wanIdForCascade]
+            )->execute();
+        }
 
         // Soft-delete the scheduleactivities row
         $db->createCommand(

@@ -3268,6 +3268,7 @@ if($action=='login')
           <div class="qe-field wide">
             <span class="qe-label">IOW</span>
             <input type="text" id="qe-iow" class="qe-input qe-needs-data" placeholder="Enter IOW name">
+            <input type="hidden" id="qe-wg-id" value="">
           </div>
         </div>
         <div class="qe-row">
@@ -3495,6 +3496,7 @@ function _prefillModal(d){
   var iowEl = document.getElementById('qe-iow');
   iowEl.value = d.iow_name || d.iow_group_name || '';
   if(iowEl.value) iowEl.classList.remove('qe-needs-data');
+  document.getElementById('qe-wg-id').value = d.wbs_id || '';
 
   /* Estimate fields — this is the "click an existing bar to edit" path
      (see _wbsMode='edit' above), so prefill Quantity with the real saved
@@ -3606,6 +3608,8 @@ function _resetModal(){
   if(iowGrpSel){ iowGrpSel.selectedIndex = 0; iowGrpSel.classList.add('qe-needs-data'); }
   var iowEl = document.getElementById('qe-iow');
   if(iowEl){ iowEl.value = ''; iowEl.classList.add('qe-needs-data'); }
+  var wgIdEl = document.getElementById('qe-wg-id');
+  if(wgIdEl){ wgIdEl.value = ''; }
 
   _resetModalActivityOnward();
 }
@@ -4106,6 +4110,7 @@ function collectPayload(){
     iow_act_id:      act.id,
     act_name:        act.name,
     wan_id:       _wbsWanId,
+    wg_id:        document.getElementById('qe-wg-id').value || '',
     unit:         document.getElementById('qe-unit').value.trim(),
     qty:          parseFloat(document.getElementById('qe-qty').value)     || 0,
     rate:         parseFloat(document.getElementById('qe-rate').value)    || 0,
@@ -4206,15 +4211,16 @@ $(function(){
   document.getElementById('qe-close').addEventListener('click', closeModal);
   document.getElementById('qe-close-btn').addEventListener('click', closeModal);
 
-  /* delete activity from gantt */
+  /* delete activity (from Gantt if scheduled, or the saved WBS item otherwise) */
   document.getElementById('qe-btn-delete').addEventListener('click', function(){
-    if(!_wbsSaId){ alert('No activity to delete.'); return; }
-    if(!confirm('Delete this activity from the Gantt chart?')) return;
+    var wgId = document.getElementById('qe-wg-id').value || '';
+    if(!_wbsSaId && !wgId){ alert('No activity to delete.'); return; }
+    if(!confirm('Delete this activity?')) return;
     var btn = this;
     btn.disabled = true;
     $.ajax({
       type:'POST', url:'../projectsmain/wbsdelete', dataType:'json',
-      data:{ sa_id: _wbsSaId },
+      data:{ sa_id: _wbsSaId || '', wg_id: wgId },
       success: function(d){
         btn.disabled = false;
         if(d.error){
