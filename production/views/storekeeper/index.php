@@ -198,6 +198,10 @@
             <span class="sk-tab-icon"><span class="icon-book"></span></span>
             Measurement Book
         </a>
+        <a href="javascript:;" class="sk-tab-btn" data-tab="reportprogress">
+            <span class="sk-tab-icon"><span class="icon-chart3"></span></span>
+            Report Progress
+        </a>
     </div>
 
     <div id="sk-tab-indents" class="sk-tab-content active">
@@ -273,6 +277,10 @@
         </div>
         <div id="sk-mbwo-loader" class="sk-loader" style="display:none;">Loading...</div>
         <div id="sk-mbwo-body" style="padding:14px 20px 20px;"></div>
+    </div>
+    <div id="sk-tab-reportprogress" class="sk-tab-content">
+        <div id="sk-reportprogress-loader" class="sk-loader">Loading...</div>
+        <div id="sk-reportprogress-body"></div>
     </div>
 
 </div>
@@ -572,6 +580,24 @@
             error: function() {
                 $('#sk-issued-loader').hide();
                 $('#sk-issued-body').html('<p class="sk-empty">Failed to load data. Please try again.</p>');
+            }
+        });
+    }
+
+    var _reportProgressUrl = '<?php echo Yii::$app->urlManager->createUrl("report/index"); ?>' + '?layout=false';
+
+    function loadReportProgress() {
+        $('#sk-reportprogress-loader').show();
+        $('#sk-reportprogress-body').html('');
+        $.ajax({
+            url: _reportProgressUrl,
+            success: function(html) {
+                $('#sk-reportprogress-loader').hide();
+                $('#sk-reportprogress-body').html(html);
+            },
+            error: function() {
+                $('#sk-reportprogress-loader').hide();
+                $('#sk-reportprogress-body').html('<p class="sk-empty">Failed to load Report Progress.</p>');
             }
         });
     }
@@ -1871,10 +1897,10 @@
         $(this).closest('tr').toggleClass('sk-row-selected', $(this).is(':checked'));
     });
 
-    var _skTabTitles = { indents: 'Indents', issued: 'Goods Received Notes', mbwo: 'Measurement Book' };
+    var _skTabTitles = { indents: 'Indents', issued: 'Goods Received Notes', mbwo: 'Measurement Book', reportprogress: 'Report Progress' };
     var _skTabWins = {};
     var _skTabLoaded = {};
-    var _skTabIds = ['indents', 'issued', 'mbwo'];
+    var _skTabIds = ['indents', 'issued', 'mbwo', 'reportprogress'];
     var _skWinZ = 999999;
     var _skSeqState = { n: 0 };
 
@@ -2020,6 +2046,7 @@
             if(tab === 'indents') { $('#sk-filter-bar').show(); loadIndents(); }
             else if(tab === 'issued') loadIssued();
             else if(tab === 'mbwo') { $('#sk-mbwo-filter-vendor').closest('div').show(); loadMbWo(); }
+            else if(tab === 'reportprogress') loadReportProgress();
         }
     }
 

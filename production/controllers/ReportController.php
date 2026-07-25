@@ -61,6 +61,14 @@ class ReportController extends Controller
 
     // ─── Mobile progress reporting page ─────────────────────────────────────
 
+    public function actionIndex($layout = 'true')
+    {
+        if ($layout === 'false') {
+            $this->layout = false;
+        }
+        return $this->render('index');
+    }
+
     public function actionMobile()
     {
         $this->layout = '@app/views/layouts/mobile';
