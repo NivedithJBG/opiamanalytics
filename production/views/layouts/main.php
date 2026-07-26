@@ -4565,7 +4565,7 @@ $(function(){
 }
 #gantt-win.gw-open { display:flex; }
 #gantt-win-hdr {
-  background:#3a3a3a; color:#fff; padding:18px 15px;
+  background:#4a5a6a; color:#fff; padding:18px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   font-family:'Nunito',sans-serif;
