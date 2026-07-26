@@ -3048,7 +3048,7 @@ if($action=='login')
 .qe-field.med{flex:1 1 120px}
 .qe-field.sm{flex:0 0 100px}
 .qe-field.xs{flex:0 0 80px}
-.qe-label{font-size:13px;font-weight:900 !important;color:#000000 !important;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.qe-label{font-size:11px;font-weight:900 !important;color:#000000 !important;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
 .qe-input,.qe-select{
   width:100%;padding:5px 10px;font-size:13px;color:#b0b0b0 !important;
   border:1px solid #999999;border-radius:0;background:#fff;
