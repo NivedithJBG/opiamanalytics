@@ -3238,9 +3238,9 @@ if($action=='login')
               <option value="">— Select Project Type —</option>
             </select>
           </div>
-          <div class="qe-field wide">
+          <div class="qe-field" style="flex:0 0 140px;">
             <span class="qe-label">Activity Type</span>
-            <select id="qe-group" class="qe-select qe-needs-data">
+            <select id="qe-group" class="qe-select qe-needs-data" style="height:38px;">
               <option value="">— Select Group —</option>
             </select>
           </div>
@@ -3254,23 +3254,23 @@ if($action=='login')
       <div class="qe-sec-body">
         <div style="border-top:2px solid #2d3748;margin-bottom:10px;"></div>
         <div class="qe-row">
-          <div class="qe-field wide">
+          <div class="qe-field" style="flex:0 0 140px;">
             <span class="qe-label">IOW Group</span>
-            <select id="qe-iow-group" class="qe-select qe-needs-data">
+            <select id="qe-iow-group" class="qe-select qe-needs-data" style="height:38px;">
               <option value="">— Select IOW Group —</option>
             </select>
           </div>
-          <div class="qe-field wide">
+          <div class="qe-field" style="flex:0 0 140px;">
             <span class="qe-label">IOW</span>
-            <input type="text" id="qe-iow" class="qe-input qe-needs-data" placeholder="Enter IOW name">
+            <input type="text" id="qe-iow" class="qe-input qe-needs-data" placeholder="Enter IOW name" style="height:38px;">
             <input type="hidden" id="qe-wg-id" value="">
           </div>
         </div>
         <div class="qe-row">
-          <div class="qe-field wide">
+          <div class="qe-field" style="flex:0 0 140px;">
             <span class="qe-label">Activity</span>
-            <div class="qe-act-wrap">
-              <input type="text" id="qe-activity-text" class="qe-input qe-needs-data" placeholder="Select or type activity" autocomplete="off">
+            <div class="qe-act-wrap" style="height:38px;">
+              <input type="text" id="qe-activity-text" class="qe-input qe-needs-data" placeholder="Select or type activity" autocomplete="off" style="height:38px;">
               <button type="button" class="qe-act-drop-btn" id="qe-act-drop-btn" tabindex="-1">&#9660;</button>
               <ul class="qe-act-list" id="qe-act-list"></ul>
             </div>
