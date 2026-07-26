@@ -4011,6 +4011,14 @@ function openMapPopup(resTr){
     });
   }
 
+  /* qe-modal's own z-index rises every time it's clicked/dragged (shared
+     floater focus manager), so a static CSS z-index here eventually gets
+     overtaken and the map popup renders behind the WBS form. Always sit
+     above the current floater ceiling when opening. */
+  var mapZ = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 100200;
+  document.getElementById('qe-map-bk').style.zIndex = mapZ;
+  document.getElementById('qe-map-popup').style.zIndex = mapZ + 1;
+
   document.getElementById('qe-map-bk').classList.add('open');
   document.getElementById('qe-map-popup').classList.add('open');
 }
