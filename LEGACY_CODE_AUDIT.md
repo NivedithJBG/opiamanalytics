@@ -26,13 +26,15 @@ deleted, following the pattern established throughout this session's tab removal
 ## 🔴 LIVE BUGS — not yet fixed, lower urgency than Asset Register/Issue Slips (already fixed) because these are gated behind currently-dormant tabs, but will break the moment a role is ever assigned to them
 
 1. **`ProjectsmainController::actionBoqsearch` (line ~3448)** hardcodes an "Export"
-   button link to `ProjectPricing/Export/<id>` — **`actionExport` does not exist
-   anywhere in `ProjectPricingController.php`**. Gated behind the dormant `_boq`
-   tab (`department_tab.tab_id=2`, unassigned in `user_tabs`). Verified
-   independently: `_boq.js:75` really does call `projectsmain/boqsearch`, which
-   really does emit this broken link.
-   **Fix options:** add `actionExport` to `ProjectPricingController`, or remove
-   the Export button from the generated HTML.
+   button link to `ProjectPricing/Export/<id>`. **`ProjectPricingController.php`
+   itself has since been deleted (2026-07, confirmed 100% dead)**, so this link
+   now points at a nonexistent controller entirely, not just a missing action —
+   same broken outcome as before (404), just one level higher. Still gated behind
+   the dormant `_boq` tab (`department_tab.tab_id=2`, unassigned in `user_tabs`),
+   so still not user-facing today.
+   **Fix options:** remove the Export button from the generated HTML (recommended,
+   since the controller it pointed to is gone), or build a real export endpoint
+   elsewhere if this feature is still wanted.
 
 2. **`_jobcard` tab (`department_tab.tab_id=21`) has no backing view file at all**
    — `views/projectsmain/_jobcard.php` (or wherever it would live) does not
@@ -48,24 +50,38 @@ deleted, following the pattern established throughout this session's tab removal
 
 ---
 
-## Controllers confirmed FULLY DEAD (safe to delete wholesale, pending one more reachability re-check at delete time)
+## ✅ Controllers confirmed FULLY DEAD — DELETED (2026-07)
+
+All 7 re-verified for reachability immediately before deletion (fresh grep across
+`views/**/*.php` and `web/jsnew/**/*.js`), then deleted along with their orphaned
+view files. Full dangling-reference sweep done afterward — every remaining hit on
+these names traced to either (a) an unrelated model class with the same/similar
+name that was correctly left untouched, (b) a commented-out/inert reference, or
+(c) another already-dead file referencing this one (no regression, both sides
+were already unreachable). All remaining controllers lint clean.
 
 | Controller | Lines | Evidence |
 |---|---|---|
-| `JobcardController.php` | 1,433 | 25/25 actions dead. Only callers are 3 orphaned JS files (`web/jsnew/operations/jobcard.js`, `web/jsnew/jobcard.js`, `web/jsnew/muster.js`), none loaded by any view. Its own dormant tab (`_jobcard`, tab_id=21) has no view file to even reach it. |
-| `EstimateprojectmainController.php` | 1,122 | 9/9 actions dead. |
-| `ProjectPricingController.php` | 410 | 5/5 actions dead (includes the missing `actionExport` gap above — i.e. even the actions that exist here aren't reachable). |
-| `TermscondtnsController.php` | 854 | 12/12 actions dead. Zero references to `termscondtns/*` anywhere. |
-| `ChatbotPageController.php` | 22 | 1/1 action dead — superseded by the embedded chatbot widget in `main.php` (backed by the confirmed-live `ChatbotController.php`, keep that one). Also orphans `views/chatbot/index.php`. |
-| `SiteOfficeController.php` | 44 | 1/1 action dead. Superseded by `StorekeeperController`'s `#storeoffice-win` popup (confirmed live). |
-| `SiteofficemobileController.php` | 44 | 1/1 action dead, and its own `render()` target is missing too (`views/siteofficemobile/` doesn't exist) — moot since unreachable, but a landmine either way. |
+| `JobcardController.php` | 1,433 | 25/25 actions dead. Only callers were 3 orphaned JS files (`web/jsnew/operations/jobcard.js`, `web/jsnew/jobcard.js`, `web/jsnew/muster.js` — the latter left in place, it's part of the separate still-flagged muster cluster in `ProjectsController.php`), none loaded by any view. Its own dormant tab (`_jobcard`, tab_id=21) has no view file to even reach it. The `Jobcard`/`OrderedResource` **models** are unrelated and were correctly left in place (still used by dead-but-present code in `ProjectsController.php`/`ProjectsmainController.php`). |
+| `EstimateprojectmainController.php` | 1,122 | 9/9 actions dead. `web/jsnew/projects/allocation.js` still calls `estimateprojectmain/*` extensively, but its only loader (`views/projectsmain/_estimateallocation.php`) is itself genuinely dead (commented-out render call, not registered in `department_tab`) — two dead things pointing at each other, not a live break. |
+| `ProjectPricingController.php` | 410 | 5/5 actions dead. 8 JS files referenced `projectpricing/*` routes but all 8 were themselves confirmed orphaned. `ProjectsmainController::actionBoqsearch`'s broken Export-button link (Live Bug #1 above) now points at a nonexistent controller instead of a missing action — same broken/dormant outcome either way. |
+| `TermscondtnsController.php` | 854 | 12/12 actions dead. Zero references to `termscondtns/*` anywhere. Its own `views/termscondtns/` directory (4 files) deleted alongside it. The `TermsCondtns`/`TermsCondtnsContent` **models** are unrelated and correctly left in place (still used by `ProjectsController.php`). |
+| `ChatbotPageController.php` | 22 | 1/1 action dead — superseded by the embedded chatbot widget in `main.php` (backed by the confirmed-live `ChatbotController.php`, kept). `views/chatbot/index.php` deleted alongside it (its only referencer). |
+| `SiteOfficeController.php` | 44 | 1/1 action dead. Superseded by `StorekeeperController`'s `#storeoffice-win` popup (confirmed live, routes through `storekeeper/index`, not this controller). |
+| `SiteofficemobileController.php` | 44 | 1/1 action dead, and its own `render()` target was missing too (`views/siteofficemobile/` never existed). |
 
-Also orphaned, non-controller files tied to the above:
-- `views/siteoffice/mobile.php`, `views/site-office/mobile.php` (two variants, both orphaned — tied to the dead SiteOffice*/Siteofficemobile* controllers)
+Also deleted, orphaned non-controller files tied to the above:
+- `views/siteoffice/mobile.php`, `views/site-office/mobile.php` (two variants, both orphaned)
+- `views/termscondtns/` (create.php, index.php, update.php, view.php, _form.php)
+- `views/chatbot/index.php`
+
+**Not yet deleted — still flagged, out of scope for this pass:**
 - `views/financerequests/overrelay-financemaster.php` (49KB, fully orphaned — superseded by `views/projects/_accounttypes.php` + `_accountgroups.php` + `_accountsubgroups.php` + `_accounts.php` via `costing.php`). **Flagged for human diff-check before deletion** — large file, worth a quick comparison against the live versions in case it has logic the replacement is missing.
 - `web/jsnew/voucher.js` (1,182 lines) — orphaned, and its own target actions (`ResourcesearchVoucher`, `Projectaccount`) don't even exist in the current `VoucherController.php` — a relic of an earlier controller shape.
 - `web/jsnew/accountschedule.js` — orphaned, only caller (`views/accountschedule/update.php`) is itself unreachable.
 - `views/financerequests/_financeverifications - Copy.php` — stray untracked backup file (note the literal space in the filename).
+- `web/jsnew/muster.js`, `web/jsnew/leaseorders.js`, `web/jsnew/operations/workorders.js` — all orphaned, all had inert/commented-out references to the now-deleted Jobcard controller; still tied to the separate still-flagged `ProjectsController.php` muster/purchase-order clusters, not deleted in this pass.
+- `web/jsnew/projects/allocation.js` + `views/projectsmain/_estimateallocation.php` — both dead, pointing at the now-deleted `EstimateprojectmainController`; left as-is since neither was on the approved delete list for this pass.
 
 ---
 
@@ -124,6 +140,7 @@ Also dead, tied to this controller: `views/workgroups/index.php` (orphaned Yii1-
 - IOW Group activity filter, task-qty default from schedule qty — fixed.
 - Dead duplicate duration-formula actions (`actionScheduleactivityupdate`, `actionSavescheduleqty`) — removed from `ProjectsmainController.php`.
 - Earlier tab removals: Project, Reporting, Project Estimate, Project Schedule piano-tabs — view/JS files kept on disk (dormant-but-registered), `render()` calls removed, ~44 confirmed-dead controller actions removed from `ProjectsmainController.php` across two passes.
+- 7 fully-dead controllers deleted wholesale: `JobcardController`, `EstimateprojectmainController`, `ProjectPricingController`, `TermscondtnsController`, `ChatbotPageController`, `SiteOfficeController`, `SiteofficemobileController` — see the DELETED table above for full evidence per controller.
 
 ---
 
