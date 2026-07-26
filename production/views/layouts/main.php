@@ -3048,7 +3048,7 @@ if($action=='login')
 .qe-field.med{flex:1 1 120px}
 .qe-field.sm{flex:0 0 100px}
 .qe-field.xs{flex:0 0 80px}
-.qe-label{font-size:9px;font-weight:900 !important;color:#000000 !important;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.qe-label{font-size:11px;font-weight:900 !important;color:#000000 !important;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
 .qe-input,.qe-select{
   width:100%;padding:5px 10px;font-size:13px;color:#b0b0b0 !important;
   border:1px solid #999999;border-radius:0;background:#fff;
@@ -3057,7 +3057,7 @@ if($action=='login')
 }
 .qe-input:focus,.qe-select:focus{border-color:#4a5568;background:#fff}
 .qe-input[readonly]{background:#f5f5f5;color:#555;cursor:default}
-.qe-needs-data{border-color:#e53e3e !important;}
+.qe-needs-data{border-color:#999999 !important;}
 .qe-act-wrap{position:relative;display:flex;align-items:stretch;}
 .qe-act-wrap .qe-input{flex:1;border-radius:4px 0 0 4px;border-right:none;}
 .qe-act-drop-btn{width:26px;flex-shrink:0;border:1px solid #999999;border-left:none;border-radius:0 4px 4px 0;background:#f0f3fa;color:#4a5568;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;}
@@ -3232,25 +3232,25 @@ if($action=='login')
       <div class="qe-sec-hdr">Project Type &amp; Group <span style="font-weight:400;opacity:.7">&mdash; stays selected until you change it</span></div>
       <div class="qe-sec-body">
         <div class="qe-row" style="flex-wrap:nowrap;">
-          <div class="qe-field" style="flex:0 0 125px;">
+          <div class="qe-field" style="flex:0 0 150px;">
             <span class="qe-label">Project Type</span>
             <select id="qe-proj-type" class="qe-select qe-needs-data" style="height:38px;">
               <option value="">— Select Project Type —</option>
             </select>
           </div>
-          <div class="qe-field" style="flex:0 0 125px;">
+          <div class="qe-field" style="flex:0 0 150px;">
             <span class="qe-label">Activity Type</span>
             <select id="qe-group" class="qe-select qe-needs-data" style="height:38px;">
               <option value="">— Select Group —</option>
             </select>
           </div>
-          <div class="qe-field" style="flex:0 0 160px;">
+          <div class="qe-field" style="flex:0 0 150px;">
             <span class="qe-label">IOW Group</span>
             <select id="qe-iow-group" class="qe-select qe-needs-data" style="height:38px;">
               <option value="">— Select IOW Group —</option>
             </select>
           </div>
-          <div class="qe-field" style="flex:0 0 160px;">
+          <div class="qe-field" style="flex:0 0 150px;">
             <span class="qe-label">IOW</span>
             <input type="text" id="qe-iow" class="qe-input qe-needs-data" placeholder="Enter IOW name" style="height:38px;">
             <input type="hidden" id="qe-wg-id" value="">
