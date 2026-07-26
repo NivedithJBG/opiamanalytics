@@ -45,8 +45,6 @@ use app\models\UserTabs;
 
  
       
-        <?php echo $this->render('_issueslips'); ?>
-
         <?php echo $this->render('_logbook'); ?>
 
         <?php

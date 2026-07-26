@@ -4,7 +4,6 @@ use app\models\Vendors; ?>
 
 <div class="panel panel-default receive-materials-tab tab tab-wrapper acco-four">
 <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/operations/operationorders.js" type="text/javascript"></script>
-<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/operations/issueslips.js" type="text/javascript"></script>
 <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/operations/fuelslip.js" type="text/javascript"></script>
 
 <script type="text/javascript">
