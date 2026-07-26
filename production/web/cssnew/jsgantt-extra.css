@@ -405,27 +405,3 @@ div.gtaskbarcontainer.gplan{
 .gcharttableh {
   border-collapse: collapse !important;
 }
-
-/* ── Header background: dark navy blue ──────────────────────────────────
-   Covers the task-list column headers (Name/Resource/Duration/etc.) and
-   the date-strip header (day/week/month labels) on the chart side. */
-.gtasktable tr:first-child,
-.gcharttable tr:first-child,
-.gtaskheading,
-.gmajorheading,
-.gminorheading {
-  background: #0a1f44 !important;
-}
-
-.gtasktable tr:first-child td,
-.gcharttable tr:first-child td,
-.gtasktable tr:first-child span,
-.gcharttable tr:first-child span,
-.gtaskheading,
-.gtaskheading div,
-.gmajorheading,
-.gmajorheading div,
-.gminorheading,
-.gminorheading div {
-  color: #ffffff !important;
-}

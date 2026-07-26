@@ -4565,7 +4565,7 @@ $(function(){
 }
 #gantt-win.gw-open { display:flex; }
 #gantt-win-hdr {
-  background:#fff; color:#333; padding:18px 15px;
+  background:#0a1f44; color:#fff; padding:18px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   font-family:'Nunito',sans-serif;
@@ -4573,7 +4573,7 @@ $(function(){
 }
 #gantt-win-hdr-btns { display:flex; align-items:center; gap:8px; }
 #gantt-win-hdr-btns button {
-  background:none; border:none; color:#333; font-size:20px;
+  background:none; border:none; color:#fff; font-size:20px;
   cursor:pointer; line-height:1; padding:0 4px;
 }
 #gantt-win-body { flex:1; min-height:0; overflow:auto; }
@@ -4600,9 +4600,9 @@ $(function(){
   <div class="gw-rs gw-rs-sw" data-dir="sw"></div>
   <div id="gantt-win-hdr">
     <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:nowrap;">
-      <span style="font-size:20px;font-weight:700;color:#333;">Schedule</span>
-      <span style="font-size:18px;font-weight:700;color:#333;">Gantt Chart</span>
-      <span style="font-size:16px;font-weight:500;color:#888;" id="gantt-win-proj-name"><?php echo htmlspecialchars($ProjectName); ?></span>
+      <span style="font-size:20px;font-weight:700;color:#fff;">Schedule</span>
+      <span style="font-size:18px;font-weight:700;color:#fff;">Gantt Chart</span>
+      <span style="font-size:16px;font-weight:500;color:#cbd5e6;" id="gantt-win-proj-name"><?php echo htmlspecialchars($ProjectName); ?></span>
     </div>
     <div id="gantt-win-hdr-btns">
       <a class="icon-pencil" id="btn-quick-entry" title="WBS" href="#" style="width:24px;height:24px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#3a7d3a;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.25);"> </a>
