@@ -109,10 +109,6 @@ $user=User::find()->where(['id'=>Yii::$app->user->id])->one();
 
 				<!-- Third listing End -->
 
-                  <?php echo \Yii::$app->view->renderFile(Yii::getAlias('@app') . '/views/projectsmain/_tasklistingg.php'); ?>
-
-
-
 			</div>
 		</div>
 	</div>
