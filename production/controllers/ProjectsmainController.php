@@ -277,14 +277,16 @@ class ProjectsmainController extends Controller
     public function actionGetactivitiesbytypeandgroup()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $typeId  = (int)\Yii::$app->request->post('typeId');
-        $groupId = (int)\Yii::$app->request->post('groupId');
-        if (!$typeId && !$groupId) return ['items' => []];
+        $typeId    = (int)\Yii::$app->request->post('typeId');
+        $groupId   = (int)\Yii::$app->request->post('groupId');
+        $iowGroupId = (int)\Yii::$app->request->post('iowGroupId');
+        if (!$typeId && !$groupId && !$iowGroupId) return ['items' => []];
         $sql  = "SELECT ea.activity_id AS id, ea.activity_name AS name
                  FROM estimateactivities ea
                  WHERE ea.activity_status = 0";
-        if ($typeId)  $sql .= " AND ea.work_type = " . $typeId;
-        if ($groupId) $sql .= " AND ea.activity_type = " . $groupId;
+        if ($typeId)     $sql .= " AND ea.work_type = " . $typeId;
+        if ($groupId)    $sql .= " AND ea.activity_type = " . $groupId;
+        if ($iowGroupId) $sql .= " AND ea.iow_group_id = " . $iowGroupId;
         $sql .= " ORDER BY ea.activity_name ASC";
         $rows = \Yii::$app->db->createCommand($sql)->queryAll();
         return ['items' => $rows];
@@ -5357,128 +5359,6 @@ class ProjectsmainController extends Controller
 
     }
 	
-	public function actionScheduleactivityupdate()
-    {
-        // var_dump($_POST['id']);exit;
-        $activity1=Scheduleactivities::findOne($_POST['id']);
-        $activity1->name=$_POST['name'];
-        $activity1->unit=$_POST['unit'];
-        $activity1->quantity=$_POST['quantity'];
-        $activity1->resource_units = isset($_POST['resourceunits']) && $_POST['resourceunits'] != '' ? (float)$_POST['resourceunits'] : 1;
-      /*  if($_POST['lag']!=''){
-            $activity1->previous_lag=$_POST['lag'];
-            $activity1->lag=$_POST['lag'];
-        }
-        else{
-            $activity1->previous_lag=0;
-            $activity1->lag=0;
-        }*/
-        
-        $activity1->actual_start_date= $_POST['startdate'];
-        $activity1->actual_end_date= $_POST['enddate'];
-        //$activity1->duration=$_POST['duration'];
-        $activity1->old_duration=$_POST['duration'];
-
-        // Check predecessors BEFORE saving so we can set the CPM anchor correctly.
-        // GetRelationcorrect() uses act_start_date as the immutable anchor for activities
-        // without predecessors, then runs: actual_start_date = start_date via a mass UPDATE.
-        // If act_start_date still holds the old baseline, the mass UPDATE resets our new date.
-        $hasPredecessors = ActivityRelations::find()
-            ->where(['status' => 0])
-            ->andWhere(['dependent_activity' => $activity1->id])
-            ->exists();
-
-        if (!$hasPredecessors) {
-            // Anchor the CPM to the new date so GetRelationcorrect() preserves it.
-            $activity1->start_date     = $activity1->actual_start_date;
-            $activity1->act_start_date = $activity1->actual_start_date;
-        }
-
-        if($activity1->save(false)):
-        $availableActivites = Scheduleactivities::find()->where(['scheduleitem_id'=> $activity1['scheduleitem_id']])->andWhere(['status'=> 0])->orderBy(['scheduleitem_id' => SORT_ASC])->all();
-        Yii::$app->helper->GetRelationcorrect($activity1['projectId']);
-        endif;
-
-        // For no-predecessor, no-task activities: recalculate end_date from new start + duration.
-        // (Task-based activities: cycleTime block below handles end_date.)
-        if (!$hasPredecessors) {
-            $taskCheck = \Yii::$app->db->createCommand(
-                "SELECT COALESCE(SUM(Budgeted_Duration), 0) AS total FROM schedule_task_new WHERE activity_Id = :id AND status = 0",
-                [':id' => (int)$activity1->id]
-            )->queryOne();
-            if (!$taskCheck || (float)$taskCheck['total'] == 0) {
-                $newEnd = Yii::$app->helper->getDateAfterHoliday(
-                    $activity1->actual_start_date,
-                    $activity1->projectId,
-                    max(0, (int)$activity1->old_duration - 1)
-                );
-                $activity1->actual_end_date = date('Y-m-d', strtotime($newEnd));
-                $activity1->end_date = $activity1->actual_end_date;
-                $activity1->save(false);
-            }
-        }
-
-        // Recalculate duration when tasks exist (cycle time stored in schedule_task_new)
-        $cycleRow = \Yii::$app->db->createCommand(
-            "SELECT COALESCE(SUM(Budgeted_Duration), 0) AS total FROM schedule_task_new WHERE activity_Id = :id AND status = 0",
-            [':id' => (int)$activity1->id]
-        )->queryOne();
-        $cycleTime = $cycleRow ? round((float)$cycleRow['total'], 4) : 0;
-
-        if ($cycleTime > 0) {
-            $actQty   = (float)$activity1->quantity > 0 ? (float)$activity1->quantity : 1;
-            $activity1->old_duration = (int)ceil(round($cycleTime * $actQty, 6));
-            $startDate  = $activity1->actual_start_date ?: date('Y-m-d');
-            $endDateRaw = Yii::$app->helper->getDateAfterHoliday($startDate, $activity1->projectId, max(0, (int)$activity1->old_duration - 1));
-            $activity1->actual_end_date = date('Y-m-d', strtotime($endDateRaw));
-            $activity1->save(false);
-            Yii::$app->helper->GetRelationcorrect($activity1->projectId);
-        }
-
-        $arr = array('Id' => $_POST['id'],'Name'=>$_POST['name'],'Unit'=>$_POST['unit'],'Duration'=>$activity1->old_duration,'Startdate'=>date("d-m-Y", strtotime($activity1->actual_start_date)),'Enddate'=>date("d-m-Y", strtotime($activity1->actual_end_date)),'Editstartdate'=>date("Y-m-d", strtotime($activity1->actual_start_date)),'Editenddate'=>date("Y-m-d", strtotime($activity1->actual_end_date)),'Quantity'=>$_POST['quantity'],'Resourceunits'=>$activity1->resource_units,'Lag'=>$_POST['lag'],'error'=>'No');
-        return json_encode($arr);
-	}
-
-    public function actionSavescheduleqty()
-    {
-        $uid = Yii::$app->user->Id;
-        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
-        $projectId = $projuser->projectid;
-
-        $ids        = isset($_POST['ids'])        ? $_POST['ids']        : [];
-        $quantities = isset($_POST['quantities']) ? $_POST['quantities'] : [];
-
-        for ($i = 0; $i < count($ids); $i++) {
-            $schedActivity = Scheduleactivities::findOne((int)$ids[$i]);
-            if (!$schedActivity || $schedActivity->projectId != $projectId) continue;
-
-            $schedActivity->quantity = (float)$quantities[$i];
-            $schedActivity->save(false);
-
-            // Recalculate duration when tasks with cycle time exist (duration = cycleTime × qty)
-            $cycleRow = \Yii::$app->db->createCommand(
-                "SELECT COALESCE(SUM(Budgeted_Duration), 0) AS total FROM schedule_task_new WHERE activity_Id = :id AND status = 0",
-                [':id' => (int)$schedActivity->id]
-            )->queryOne();
-            $cycleTime = $cycleRow ? round((float)$cycleRow['total'], 4) : 0;
-
-            if ($cycleTime > 0) {
-                $actQty = (float)$schedActivity->quantity > 0 ? (float)$schedActivity->quantity : 1;
-                $newDuration = (int)ceil(round($cycleTime * $actQty, 6));
-                $schedActivity->old_duration = $newDuration;
-                $startDate = $schedActivity->actual_start_date ?: date('Y-m-d');
-                $endDateRaw = Yii::$app->helper->getDateAfterHoliday($startDate, $schedActivity->projectId, max(0, $newDuration - 1));
-                $schedActivity->actual_end_date = date('Y-m-d', strtotime($endDateRaw));
-                $schedActivity->end_date = $schedActivity->actual_end_date;
-                $schedActivity->save(false);
-                Yii::$app->helper->GetRelationcorrect($schedActivity->projectId);
-            }
-        }
-
-        return json_encode(['error' => 'No', 'message' => 'Saved']);
-    }
-
-
 	//functions
 
 	public function GetRelationcorrect($projectid)

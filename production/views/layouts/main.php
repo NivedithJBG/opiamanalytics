@@ -3555,11 +3555,16 @@ function _prefillModal(d){
               '<td><input type="number" class="qe-task-resunits" value="'+(task.resunits||1)+'" placeholder="1" step="1" min="1"></td>'+
               '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
             taskBody.appendChild(tr);
+            _bindNumField(tr.querySelector('.qe-task-qty'));
             tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
             tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
             tr.querySelector('.qe-task-del').addEventListener('click', function(){
               if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
             });
+            /* Loaded with a real saved qty — not the sch_qty default, so mark
+               touched to keep mirrorScheduleToTasks() from overwriting it. */
+            tr._taskQtyTouched = true;
+            tr.querySelector('.qe-task-qty').addEventListener('input', function(){ tr._taskQtyTouched = true; });
           });
         } else { addTaskRow(); }
 
@@ -3703,13 +3708,18 @@ function loadGroups(typeId, cb){
 /* activity items cache for the current type/group combo */
 var _activityItems = [];
 
-function loadActivities(typeId, groupId, cb){
+function loadActivities(typeId, groupId, iowGroupId, cb){
+  if(typeof iowGroupId === 'function'){ cb = iowGroupId; iowGroupId = null; }
+  if(iowGroupId == null){
+    var iowGroupEl = document.getElementById('qe-iow-group');
+    iowGroupId = iowGroupEl ? iowGroupEl.value : '';
+  }
   _activityItems = [];
   _actListClose();
-  if(!typeId && !groupId){ if(cb) cb(); return; }
+  if(!typeId && !groupId && !iowGroupId){ if(cb) cb(); return; }
   $.ajax({
     type:'POST', url:'../projectsmain/getactivitiesbytypeandgroup', dataType:'json',
-    data:{typeId: typeId, groupId: groupId},
+    data:{typeId: typeId, groupId: groupId, iowGroupId: iowGroupId},
     success: function(d){
       _activityItems = d.items || [];
       if(cb) cb();
@@ -3877,6 +3887,9 @@ function addTaskRow(){
     tr.querySelector('.qe-task-unit').addEventListener('input', function(){ _task1UnitTouched = true; });
     mirrorActivityToFirstTask();
   }
+  tr._taskQtyTouched = false;
+  tr.querySelector('.qe-task-qty').addEventListener('input', function(){ tr._taskQtyTouched = true; });
+  tr.querySelector('.qe-task-qty').value = document.getElementById('qe-sch-qty').value;
 }
 
 /* ── Resource rows ── */
@@ -4181,6 +4194,17 @@ function mirrorActivityToFirstTask(){
   if(unitEl && !_task1UnitTouched) unitEl.value = document.getElementById('qe-unit').value;
 }
 
+/* Sch. Qty → each task row's Qty, until that row's qty is manually edited.
+   Mirrors the same touched-flag pattern as mirrorEstimateToSchedule/
+   mirrorActivityToFirstTask above — a starting default, freely overridable. */
+function mirrorScheduleToTasks(){
+  var schQty = document.getElementById('qe-sch-qty').value;
+  document.querySelectorAll('#qe-task-body tr').forEach(function(tr){
+    var qtyEl = tr.querySelector('.qe-task-qty');
+    if(qtyEl && !tr._taskQtyTouched) qtyEl.value = schQty;
+  });
+}
+
 /* ── Input validation helpers ── */
 /* Blocks digits in alpha-only fields; blocks letters in number fields */
 function _bindAlphaField(el){
@@ -4346,6 +4370,13 @@ $(function(){
     loadActivities(document.getElementById('qe-proj-type').value, this.value);
   });
 
+  /* cascade: IOW Group → Activities */
+  document.getElementById('qe-iow-group').addEventListener('change', function(){
+    document.getElementById('qe-activity-text').value = '';
+    document.getElementById('qe-activity-id').value   = '';
+    loadActivities(document.getElementById('qe-proj-type').value, document.getElementById('qe-group').value, this.value);
+  });
+
   /* activity typeahead — prefill when user selects an existing activity */
   document.getElementById('qe-activity-text').addEventListener('change', function(){
     var text = this.value.trim();
@@ -4379,11 +4410,16 @@ $(function(){
               '<td><input type="number" class="qe-task-resunits" value="1" placeholder="1" step="1" min="1"></td>'+
               '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
             taskBody.appendChild(tr);
+            _bindNumField(tr.querySelector('.qe-task-qty'));
             tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
             tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
             tr.querySelector('.qe-task-del').addEventListener('click', function(){
               if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
             });
+            /* Loaded with a real saved qty — not the sch_qty default, so mark
+               touched to keep mirrorScheduleToTasks() from overwriting it. */
+            tr._taskQtyTouched = true;
+            tr.querySelector('.qe-task-qty').addEventListener('input', function(){ tr._taskQtyTouched = true; });
           });
         } else { addTaskRow(); }
         recalcDuration();
@@ -4416,6 +4452,7 @@ $(function(){
 
   document.getElementById('qe-qty').addEventListener('input', calcActivityAmount);
   document.getElementById('qe-sch-qty').addEventListener('input', recalcDuration);
+  document.getElementById('qe-sch-qty').addEventListener('input', mirrorScheduleToTasks);
 
   /* mirror Estimate → Schedule, and Activity/Estimate → first Task, until user edits the target */
   document.getElementById('qe-unit').addEventListener('input', function(){ mirrorEstimateToSchedule(); mirrorActivityToFirstTask(); });
