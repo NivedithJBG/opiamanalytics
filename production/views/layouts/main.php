@@ -681,18 +681,13 @@ if($action=='login')
                 <?php  } } } ?>
 
 
-                <?php 
-                if(Yii::$app->controller->id == 'projects' ){
-                if($projuser->projectid == 12){//Office_coperate 
-                ?>    
-                    <!-- <li><a class="icon-flickr overNow5" title="Operation Reports" href="<?php //echo Yii::$app->urlManager->createUrl('projects/operation_report')?>"></a>
-                    </li> 
-                    <li><a class="icon-moneybag overNow5" title="Asset Register" href="<?php //echo Yii::$app->urlManager->createUrl('projects/operation_report')?>">  </a> </li>-->
-                    <li><a class="icon-moneybag" title="Asset Library" href="<?php echo Yii::$app->urlManager->createUrl('projects/assetlibrary')?>"> </a></li>
-                <?php } else{ ?>
-                    <!-- <li><a class="icon-moneybag overNow7" title="Asset Library" href="javascript:;"> </a></li> -->
-                    <li><a class="icon-moneybag" title="Asset Register" href="<?php echo Yii::$app->urlManager->createUrl('projects/assetregister')?>"> </a></li>
-                <?php }  } ?>
+                <?php
+                /* Asset Register / Asset Library icons removed — their target
+                   views (_assetregister_new.php, _assetlibrary_new.php) don't
+                   exist on disk, so clicking either one threw a fatal error.
+                   actionAssetregister()/actionAssetlibrary() are left in place
+                   in ProjectsController.php in case these screens get rebuilt. */
+                ?>
 
 
 
