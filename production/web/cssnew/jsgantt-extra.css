@@ -358,3 +358,50 @@ div.gtaskbarcontainer.gplan{
 .criticalPathArwRight{
   border-right: 4px solid #00838f;
 }
+
+/* ── Explicit row/column gridlines ──────────────────────────────────────
+   Forced visible regardless of whatever was suppressing the base
+   jsgantt.css borders — covers both the task-list (left) and the
+   date/bar chart (right) sides of the Gantt. */
+
+/* Chart side: every day/week column cell, including weekend and
+   current-day variants (JSGantt swaps the class name entirely for those,
+   dropping .gtaskcell, so each must be targeted explicitly). */
+.gtaskcell,
+.gtaskcellcols,
+.gtaskcellwkend,
+.gtaskcellcurrent,
+.gtaskcellbar,
+.gtaskcellmile,
+.gtaskcellcolorbar {
+  border-right: 1px solid #d0d0d0 !important;
+  border-bottom: 1px solid #d0d0d0 !important;
+}
+
+/* Chart side: date header row cells (day/week/month labels) */
+.gtaskheading {
+  border-right: 1px solid #d0d0d0 !important;
+  border-bottom: 1px solid #d0d0d0 !important;
+}
+
+/* Task-list side: row cells (name, resource, duration, etc.) */
+.gtaskname,
+.gres,
+.gdur,
+.gcomp,
+.gcost,
+.gstartdate,
+.genddate,
+.gplanstartdate,
+.gplanenddate {
+  border-right: 1px solid #d0d0d0 !important;
+  border-bottom: 1px solid #d0d0d0 !important;
+}
+
+/* Ensure the underlying tables don't collapse the borders away */
+.gtasktable,
+.gcharttable,
+.gtasktableh,
+.gcharttableh {
+  border-collapse: collapse !important;
+}
