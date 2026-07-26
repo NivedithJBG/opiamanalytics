@@ -2829,7 +2829,7 @@ if($action=='login')
 
 <!-- Performance Dashboard Modal -->
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@300;400;500;600;700;800;900&display=swap');
 /* ── Modal shell ──────────────────────────────────────────────────────────── */
 #pd-bk{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100000}
 #pd-bk.pd-open{display:block}
@@ -3048,10 +3048,10 @@ if($action=='login')
 .qe-field.med{flex:1 1 120px}
 .qe-field.sm{flex:0 0 100px}
 .qe-field.xs{flex:0 0 80px}
-.qe-label{font-size:11px;font-weight:900 !important;color:#000 !important;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.qe-label{font-size:13px;font-weight:900 !important;color:#000000 !important;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
 .qe-input,.qe-select{
   width:100%;padding:5px 10px;font-size:13px;color:#b0b0b0 !important;
-  border:1px solid #a0aab8;border-radius:0;background:#fff;
+  border:1px solid #999999;border-radius:0;background:#fff;
   outline:none;box-sizing:border-box;font-family:'Barlow',sans-serif;
   transition:border-color .15s;height:28px;font-weight:600;
 }
@@ -3060,7 +3060,7 @@ if($action=='login')
 .qe-needs-data{border-color:#e53e3e !important;}
 .qe-act-wrap{position:relative;display:flex;align-items:stretch;}
 .qe-act-wrap .qe-input{flex:1;border-radius:4px 0 0 4px;border-right:none;}
-.qe-act-drop-btn{width:26px;flex-shrink:0;border:1px solid #a0aab8;border-left:none;border-radius:0 4px 4px 0;background:#f0f3fa;color:#4a5568;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;}
+.qe-act-drop-btn{width:26px;flex-shrink:0;border:1px solid #999999;border-left:none;border-radius:0 4px 4px 0;background:#f0f3fa;color:#4a5568;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;}
 .qe-act-drop-btn:hover{background:#dde3ef;}
 .qe-act-list{display:none;position:absolute;top:100%;left:0;right:0;z-index:99999;background:#fff;border:1px solid #a0aab8;border-top:none;border-radius:0 0 4px 4px;max-height:220px;overflow-y:auto;margin:0;padding:0;list-style:none;box-shadow:0 4px 14px rgba(0,0,0,.18);}
 .qe-act-list.open{display:block;}
