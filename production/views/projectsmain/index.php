@@ -35,12 +35,7 @@ $functiontabs=DepartmentTab::find()->all();
 
 
   echo $this->render('_projects');
-  
-  if($user->account_type != 'perfm_pad_reporting_only'){ 
-    //echo $this->render('dashboard');
-    //echo $this->render('_boq');
-    echo $this->render('_estimate');
-  }
+
   echo $this->render('_schedulelisting');
   //echo $this->render('_scheduleactivity');
   //echo $this->render('_schedulerelations');
