@@ -3057,6 +3057,10 @@ if($action=='login')
 }
 .qe-input:focus,.qe-select:focus{border-color:#4a5568;background:#fff}
 .qe-input[readonly]{background:#f5f5f5;color:#555;cursor:default}
+.qe-input::placeholder{color:#b0b0b0;opacity:1;}
+.qe-input::-webkit-input-placeholder{color:#b0b0b0;}
+.qe-input::-moz-placeholder{color:#b0b0b0;opacity:1;}
+.qe-task-name::placeholder,.qe-task-unit::placeholder{color:#b0b0b0;opacity:1;}
 .qe-needs-data{border-color:#999999 !important;}
 .qe-act-wrap{position:relative;display:flex;align-items:stretch;}
 .qe-act-wrap .qe-input{flex:1;border-radius:4px 0 0 4px;border-right:none;}
@@ -3283,7 +3287,6 @@ if($action=='login')
       <div class="qe-sec-hdr">Activity Details</div>
       <div class="qe-sec-body">
         <div class="qe-row">
-          <div style="font-size:9px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:.5px;width:100%;margin-bottom:2px;">Estimate</div>
           <div class="qe-field sm">
             <span class="qe-label">Unit</span>
             <input id="qe-unit" type="text" class="qe-input" placeholder="e.g. m³" data-alpha="1">
