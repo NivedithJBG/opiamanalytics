@@ -3244,16 +3244,6 @@ if($action=='login')
               <option value="">— Select Group —</option>
             </select>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── SECTION 2 : IOW Group + IOW + Activity ───────────────────── -->
-    <div class="qe-section">
-      <div class="qe-sec-hdr">IOW Group, IOW &amp; Activity</div>
-      <div class="qe-sec-body">
-        <div style="border-top:2px solid #2d3748;margin-bottom:10px;"></div>
-        <div class="qe-row">
           <div class="qe-field" style="flex:0 0 140px;">
             <span class="qe-label">IOW Group</span>
             <select id="qe-iow-group" class="qe-select qe-needs-data" style="height:38px;">
@@ -3266,6 +3256,14 @@ if($action=='login')
             <input type="hidden" id="qe-wg-id" value="">
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ── SECTION 2 : Activity ───────────────────────────────────────── -->
+    <div class="qe-section">
+      <div class="qe-sec-hdr">IOW Group, IOW &amp; Activity</div>
+      <div class="qe-sec-body">
+        <div style="border-top:2px solid #2d3748;margin-bottom:10px;"></div>
         <div class="qe-row">
           <div class="qe-field" style="flex:0 0 140px;">
             <span class="qe-label">Activity</span>
