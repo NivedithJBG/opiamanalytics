@@ -50,7 +50,10 @@ class RelationController extends Controller
         return json_encode(['error' => 'No', 'groups' => $groups, 'activities' => $activities]);
     }
 
-    /* Batch-insert relationships */
+    /* Batch-insert relationships.
+       Ported from ProjectsmainController::actionSaverelation() — same seed-date
+       logic before GetRelationcorrect(), because the CPM engine anchors off
+       act_start_date/start_date and silently skips activities that have neither. */
     public function actionSave()
     {
         $projectId = (int)$_POST['projectid'];
@@ -78,6 +81,39 @@ class RelationController extends Controller
             ", [':pa'=>$precAct,':da'=>$depAct,':rt'=>$relType,':pid'=>$projectId])->queryScalar();
             if ($exists) continue;
 
+            $precedentAct = \app\models\Scheduleactivities::findOne($precAct);
+            $dependentAct = \app\models\Scheduleactivities::findOne($depAct);
+            if (!$precedentAct || !$dependentAct) continue;
+
+            /* Seed the precedent's dates if it has none yet — otherwise the CPM
+               engine has no anchor and drops it from the network. */
+            if ($precedentAct->start_date == '' && $precedentAct->end_date == '') {
+                $afterHoliday = Yii::$app->helper->getDateAfterHoliday(date('d-m-Y'), $projectId);
+                $today = date('Y-m-d', strtotime($afterHoliday));
+                $precedentAct->start_date        = $today;
+                $precedentAct->end_date          = $today;
+                $precedentAct->actual_start_date = $today;
+                $precedentAct->actual_end_date   = $today;
+                $precedentAct->duration          = 1;
+                $precedentAct->save(false);
+            }
+
+            /* Preserve original baseline before the relation shifts the start date */
+            if (!$dependentAct->act_start_date || $dependentAct->act_start_date == '0000-00-00') {
+                $dependentAct->act_start_date = $dependentAct->start_date ?: date('Y-m-d');
+            }
+
+            $dependentAct->start_date = date('Y-m-d', strtotime(
+                Yii::$app->helper->getDateAfterHoliday($precedentAct->start_date, $projectId, $lagDays)
+            ));
+            $dependentAct->end_date = date('Y-m-d', strtotime(
+                Yii::$app->helper->getDateAfterHoliday($precedentAct->start_date, $projectId, ($dependentAct->duration + $lagDays))
+            ));
+            $dependentAct->lag = $lagDays;
+            $dependentAct->save(false);
+
+            if ($precedentAct->start_date == '' || $precedentAct->end_date == '') continue;
+
             $db->createCommand()->insert('activity_relations', [
                 'precedent_activity'     => $precAct,
                 'dependent_activity'     => $depAct,
@@ -92,14 +128,12 @@ class RelationController extends Controller
                 'sortorder'              => 0,
             ])->execute();
             $inserted++;
+        }
 
-            /* The CPM engine (HelperComponent::GetRelationcorrect) reads lag
-               from scheduleactivities.lag on the dependent activity, not from
-               activity_relations — keep it in sync so the lag entered here
-               actually shifts the calculated schedule dates. */
-            if ($lagDays > 0) {
-                $db->createCommand()->update('scheduleactivities', ['lag' => $lagDays], ['id' => $depAct])->execute();
-            }
+        /* Recalculate the full CPM network once after all rows are saved,
+           same engine the legacy Project Schedule tab uses. */
+        if ($inserted > 0) {
+            Yii::$app->helper->GetRelationcorrect($projectId);
         }
 
         return json_encode(['error' => 'No', 'inserted' => $inserted]);
@@ -130,17 +164,37 @@ class RelationController extends Controller
         return json_encode(['error' => 'No', 'rows' => $rows]);
     }
 
-    /* Soft-delete a relationship */
+    /* Soft-delete a relationship.
+       Ported from ProjectsmainController::actionDeleterelation() — same
+       critical-flag reset + lag reset before recalculating. */
     public function actionDelete()
     {
         $id        = (int)$_POST['id'];
         $projectId = (int)$_POST['projectid'];
         if (!$id) return json_encode(['error' => 'Yes', 'errortext' => 'No id.']);
 
-        \Yii::$app->db->createCommand()->update('activity_relations',
-            ['status' => 1],
-            ['id' => $id, 'projectId' => $projectId]
-        )->execute();
+        $model = \app\models\ActivityRelations::findOne($id);
+        if (!$model) return json_encode(['error' => 'Yes', 'errortext' => 'Not found.']);
+
+        $model->status = 1;
+        if (!$model->save(false)) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Some error occurred while saving.']);
+        }
+
+        $precedentAct = \app\models\Scheduleactivities::findOne($model->precedent_activity);
+        if ($precedentAct) {
+            $precedentAct->critical_start = '0000-00-00';
+            $precedentAct->critical_end   = '0000-00-00';
+            $precedentAct->save(false);
+        }
+
+        $dependentAct = \app\models\Scheduleactivities::findOne($model->dependent_activity);
+        if ($dependentAct) {
+            $dependentAct->lag = 0;
+            $dependentAct->save(false);
+        }
+
+        Yii::$app->helper->GetRelationcorrect($model->projectId);
 
         return json_encode(['error' => 'No']);
     }

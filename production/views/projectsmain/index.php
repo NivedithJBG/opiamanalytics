@@ -36,7 +36,7 @@ $functiontabs=DepartmentTab::find()->all();
 
   echo $this->render('_projects');
 
-  echo $this->render('_schedulelisting');
+  //echo $this->render('_schedulelisting');
   //echo $this->render('_scheduleactivity');
   //echo $this->render('_schedulerelations');
   //echo $this->render('_resources');
