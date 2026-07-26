@@ -3232,9 +3232,9 @@ if($action=='login')
       <div class="qe-sec-hdr">Project Type &amp; Group <span style="font-weight:400;opacity:.7">&mdash; stays selected until you change it</span></div>
       <div class="qe-sec-body">
         <div class="qe-row">
-          <div class="qe-field wide">
+          <div class="qe-field" style="flex:0 0 140px;">
             <span class="qe-label">Project Type</span>
-            <select id="qe-proj-type" class="qe-select qe-needs-data">
+            <select id="qe-proj-type" class="qe-select qe-needs-data" style="height:38px;">
               <option value="">— Select Project Type —</option>
             </select>
           </div>
