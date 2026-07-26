@@ -374,14 +374,14 @@ div.gtaskbarcontainer.gplan{
 .gtaskcellbar,
 .gtaskcellmile,
 .gtaskcellcolorbar {
-  border-right: 1px solid #d0d0d0 !important;
-  border-bottom: 1px solid #d0d0d0 !important;
+  border-right: 1px solid #999999 !important;
+  border-bottom: 1px solid #999999 !important;
 }
 
 /* Chart side: date header row cells (day/week/month labels) */
 .gtaskheading {
-  border-right: 1px solid #d0d0d0 !important;
-  border-bottom: 1px solid #d0d0d0 !important;
+  border-right: 1px solid #999999 !important;
+  border-bottom: 1px solid #999999 !important;
 }
 
 /* Task-list side: row cells (name, resource, duration, etc.) */
@@ -394,8 +394,8 @@ div.gtaskbarcontainer.gplan{
 .genddate,
 .gplanstartdate,
 .gplanenddate {
-  border-right: 1px solid #d0d0d0 !important;
-  border-bottom: 1px solid #d0d0d0 !important;
+  border-right: 1px solid #999999 !important;
+  border-bottom: 1px solid #999999 !important;
 }
 
 /* Ensure the underlying tables don't collapse the borders away */
