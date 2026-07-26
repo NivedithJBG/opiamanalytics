@@ -3050,7 +3050,7 @@ if($action=='login')
 .qe-field.xs{flex:0 0 80px}
 .qe-label{font-size:11px;font-weight:900 !important;color:#000 !important;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
 .qe-input,.qe-select{
-  width:100%;padding:5px 10px;font-size:13px;color:#718096 !important;
+  width:100%;padding:5px 10px;font-size:13px;color:#b0b0b0 !important;
   border:1px solid #a0aab8;border-radius:0;background:#fff;
   outline:none;box-sizing:border-box;font-family:'Barlow',sans-serif;
   transition:border-color .15s;height:28px;font-weight:600;
@@ -3244,13 +3244,13 @@ if($action=='login')
               <option value="">— Select Group —</option>
             </select>
           </div>
-          <div class="qe-field" style="flex:0 0 140px;">
+          <div class="qe-field" style="flex:0 0 180px;">
             <span class="qe-label">IOW Group</span>
             <select id="qe-iow-group" class="qe-select qe-needs-data" style="height:38px;">
               <option value="">— Select IOW Group —</option>
             </select>
           </div>
-          <div class="qe-field" style="flex:0 0 140px;">
+          <div class="qe-field" style="flex:0 0 180px;">
             <span class="qe-label">IOW</span>
             <input type="text" id="qe-iow" class="qe-input qe-needs-data" placeholder="Enter IOW name" style="height:38px;">
             <input type="hidden" id="qe-wg-id" value="">
@@ -3265,7 +3265,7 @@ if($action=='login')
       <div class="qe-sec-body">
         <div style="border-top:2px solid #2d3748;margin-bottom:10px;"></div>
         <div class="qe-row">
-          <div class="qe-field" style="flex:0 0 140px;">
+          <div class="qe-field" style="flex:0 0 480px;">
             <span class="qe-label">Activity</span>
             <div class="qe-act-wrap" style="height:38px;">
               <input type="text" id="qe-activity-text" class="qe-input qe-needs-data" placeholder="Select or type activity" autocomplete="off" style="height:38px;">
