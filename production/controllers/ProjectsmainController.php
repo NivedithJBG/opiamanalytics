@@ -468,22 +468,13 @@ class ProjectsmainController extends Controller
             }
         }
 
-        // 5. Save estimate qty and calculated rate to pricing_estimate_new
+        // 5. Find or update workgroup_activities_new row (schedule data) — resolved
+        //    BEFORE pricing_estimate_new/pricing_estimate_resources_new below, since
+        //    those tables key off wan_id (the project-specific activity instance),
+        //    not iowActId (the library-level estimateactivities id).
         $calcRate = 0.0;
         foreach ($resources as $res) { $calcRate += (float)($res['rate'] ?? 0) * (float)($res['qty'] ?? 0); }
-        $db->createCommand(
-            "INSERT INTO pricing_estimate_new
-             (project_Id, activity_Id, activity_qty, specific_rate, est_activity_Id,
-              pricing_status, operations_status, primavera_id)
-             VALUES (:p, :a, :qty, :rate, :ea, 0, 0, 0)
-             ON DUPLICATE KEY UPDATE
-               activity_qty  = VALUES(activity_qty),
-               specific_rate = VALUES(specific_rate)",
-            [':p' => $pid, ':a' => $iowActId, ':qty' => $qty,
-             ':rate' => round($calcRate, 2), ':ea' => $iowActId]
-        )->execute();
 
-        // 6. Find or update workgroup_activities_new row (schedule data)
         $wanId = 0;
         if ($iowActId && $wgId) {
             $wanRow = $db->createCommand(
@@ -519,6 +510,101 @@ class ProjectsmainController extends Controller
                      ':d' => $duration, ':cu' => $schUnit, ':cq' => $schQty]
                 )->execute();
                 $wanId = (int)$db->lastInsertID;
+            }
+        }
+
+        // 6. Save estimate qty and calculated rate to pricing_estimate_new.
+        //    activity_Id = wan_id (project-instance), est_activity_Id = iowActId
+        //    (library activity) — same two-column convention as
+        //    pricing_estimate_resources_new below. No unique key exists on this
+        //    table to use ON DUPLICATE KEY UPDATE, so check-then-write explicitly.
+        $peKey = $wanId ?: $iowActId;
+        $peExists = $db->createCommand(
+            "SELECT pricing_estimate_Id FROM pricing_estimate_new WHERE project_Id=:p AND activity_Id=:a LIMIT 1",
+            [':p' => $pid, ':a' => $peKey]
+        )->queryScalar();
+        if ($peExists) {
+            $db->createCommand(
+                "UPDATE pricing_estimate_new SET activity_qty=:qty, specific_rate=:rate, est_activity_Id=:ea WHERE pricing_estimate_Id=:id",
+                [':qty' => $qty, ':rate' => round($calcRate, 2), ':ea' => $iowActId, ':id' => $peExists]
+            )->execute();
+        } else {
+            $db->createCommand(
+                "INSERT INTO pricing_estimate_new
+                 (project_Id, activity_Id, activity_qty, specific_rate, est_activity_Id,
+                  pricing_status, operations_status, primavera_id)
+                 VALUES (:p, :a, :qty, :rate, :ea, 0, 0, 0)",
+                [':p' => $pid, ':a' => $peKey, ':qty' => $qty,
+                 ':rate' => round($calcRate, 2), ':ea' => $iowActId]
+            )->execute();
+        }
+
+        // 7. Sync resource allocation to pricing_estimate_resources_new — the table
+        //    Procurement/Storekeeper read to know what's allocated to this activity.
+        //    Always upserts (unlike wbsadd's insert-once-on-first-Gantt-add), so
+        //    edits to an activity's resources after it's already scheduled still
+        //    reach Procurement. task_ids comes from the Map-to-Task selection
+        //    already collected client-side (resources[].task_map). No unique key
+        //    exists on this table either, so check-then-write explicitly.
+        if ($wanId && !empty($resources)) {
+            $keptResIds = [];
+            foreach ($resources as $res) {
+                $resId  = (int)($res['resource_id'] ?? 0);
+                $typeId = (int)($res['type_id']     ?? 0);
+                $resQty = (float)($res['qty']  ?? 0);
+                $resRate= (float)($res['rate'] ?? 0);
+                if (!$resId) continue;
+                $keptResIds[] = $resId;
+                $taskMap = $res['task_map'] ?? [];
+                $taskIds = is_array($taskMap)
+                    ? implode(',', array_map('intval', array_filter($taskMap, fn($t) => (int)$t > 0)))
+                    : '';
+                $perExists = $db->createCommand(
+                    "SELECT pricing_resourceid FROM pricing_estimate_resources_new
+                     WHERE activity_id=:a AND project_id=:p AND resource_Id=:r LIMIT 1",
+                    [':a' => $wanId, ':p' => $pid, ':r' => $resId]
+                )->queryScalar();
+                if ($perExists) {
+                    $db->createCommand(
+                        "UPDATE pricing_estimate_resources_new
+                         SET quantity=:q, rate=:rt, resourcetype_Id=:t, task_ids=:tids,
+                             est_activity_Id=:ea, pricing_status=0
+                         WHERE pricing_resourceid=:id",
+                        [':q' => $resQty, ':rt' => $resRate, ':t' => $typeId, ':tids' => $taskIds,
+                         ':ea' => $iowActId, ':id' => $perExists]
+                    )->execute();
+                } else {
+                    $db->createCommand()->insert('pricing_estimate_resources_new', [
+                        'activity_id'       => $wanId,
+                        'resource_Id'       => $resId,
+                        'resourcetype_Id'   => $typeId,
+                        'quantity'          => $resQty,
+                        'rate'              => $resRate,
+                        'project_id'        => $pid,
+                        'est_activity_Id'   => $iowActId,
+                        'process_Id'        => 0,
+                        'pricing_status'    => 0,
+                        'operations_status' => 0,
+                        'task_ids'          => $taskIds,
+                    ])->execute();
+                }
+            }
+            // Soft-remove allocations for resources no longer in the payload
+            // (mirrors the estactivity_resources handling above).
+            if (!empty($keptResIds)) {
+                $params = [':a' => $wanId, ':p' => $pid];
+                $placeholders = [];
+                foreach (array_values($keptResIds) as $i => $rid) {
+                    $key = ":r$i";
+                    $placeholders[] = $key;
+                    $params[$key] = $rid;
+                }
+                $db->createCommand(
+                    "UPDATE pricing_estimate_resources_new
+                     SET pricing_status = 1
+                     WHERE activity_id = :a AND project_id = :p AND resource_Id NOT IN (" . implode(',', $placeholders) . ")",
+                    $params
+                )->execute();
             }
         }
 
@@ -697,13 +783,10 @@ class ProjectsmainController extends Controller
                 }
             }
 
-            $db->createCommand(
-                "INSERT INTO pricing_estimate_new
-                 (project_Id, activity_Id, activity_qty, specific_rate, est_activity_Id, pricing_status, operations_status, primavera_id)
-                 VALUES (:p, :a, :qty, :rate, :ea, 0, 0, 0)
-                 ON DUPLICATE KEY UPDATE activity_qty=VALUES(activity_qty), specific_rate=VALUES(specific_rate)",
-                [':p' => $pid, ':a' => $iowActId, ':qty' => $qty, ':rate' => round($calcRate, 2), ':ea' => $iowActId]
-            )->execute();
+            // pricing_estimate_new is written AFTER wan_id is resolved below (its
+            // activity_Id column must hold wan_id, not iowActId — see the note on
+            // the equivalent write in actionWbssave). Defer this insert/update
+            // until $wanId is known.
 
             if ($iowActId && $wgId) {
                 $wanRow2 = $db->createCommand(
@@ -738,6 +821,27 @@ class ProjectsmainController extends Controller
             }
 
             if (!$wanId) return ['error' => 'Could not save activity — check IOW group and activity name'];
+
+            // pricing_estimate_new: activity_Id = wan_id (project-instance),
+            // est_activity_Id = iowActId (library activity). No unique key on
+            // this table, so check-then-write explicitly.
+            $peExists = $db->createCommand(
+                "SELECT pricing_estimate_Id FROM pricing_estimate_new WHERE project_Id=:p AND activity_Id=:a LIMIT 1",
+                [':p' => $pid, ':a' => $wanId]
+            )->queryScalar();
+            if ($peExists) {
+                $db->createCommand(
+                    "UPDATE pricing_estimate_new SET activity_qty=:qty, specific_rate=:rate, est_activity_Id=:ea WHERE pricing_estimate_Id=:id",
+                    [':qty' => $qty, ':rate' => round($calcRate, 2), ':ea' => $iowActId, ':id' => $peExists]
+                )->execute();
+            } else {
+                $db->createCommand(
+                    "INSERT INTO pricing_estimate_new
+                     (project_Id, activity_Id, activity_qty, specific_rate, est_activity_Id, pricing_status, operations_status, primavera_id)
+                     VALUES (:p, :a, :qty, :rate, :ea, 0, 0, 0)",
+                    [':p' => $pid, ':a' => $wanId, ':qty' => $qty, ':rate' => round($calcRate, 2), ':ea' => $iowActId]
+                )->execute();
+            }
         }
 
         // ── Now fetch the wan row and create the scheduleactivities bar ───────
@@ -808,9 +912,11 @@ class ProjectsmainController extends Controller
         $saId = (int)$db->lastInsertID;
 
         // Save this activity's resource allocation into pricing_estimate_resources_new
-        // (the per-project table Storekeeper/Procurement read) — only on the first
-        // time this activity is added to the Gantt; the $existingSa check above
-        // already guarantees this code path only runs once per activity.
+        // (the per-project table Storekeeper/Procurement read). This only runs on
+        // first creation of the Gantt bar (the $existingSa check above returns
+        // early on subsequent calls) — later resource edits are synced by
+        // actionWbssave's own upsert instead, which runs on every save regardless
+        // of Gantt state.
         if (!empty($resources)) {
             foreach ($resources as $res) {
                 $resId  = (int)($res['resource_id'] ?? 0);
@@ -818,6 +924,10 @@ class ProjectsmainController extends Controller
                 $resQty = (float)($res['qty']  ?? 0);
                 $resRate= (float)($res['rate'] ?? 0);
                 if (!$resId) continue;
+                $taskMap = $res['task_map'] ?? [];
+                $taskIds = is_array($taskMap)
+                    ? implode(',', array_map('intval', array_filter($taskMap, fn($t) => (int)$t > 0)))
+                    : '';
                 $exists = $db->createCommand(
                     "SELECT 1 FROM pricing_estimate_resources_new
                      WHERE project_id=:p AND activity_id=:a AND resource_Id=:r LIMIT 1",
@@ -835,6 +945,7 @@ class ProjectsmainController extends Controller
                     'process_Id'        => 0,
                     'pricing_status'    => 0,
                     'operations_status' => 0,
+                    'task_ids'          => $taskIds,
                 ])->execute();
             }
         }
