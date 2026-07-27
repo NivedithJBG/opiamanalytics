@@ -312,6 +312,25 @@ class ProjectsmainController extends Controller
         return ['activities' => $rows, 'iow_groups' => $iow, 'work_types' => $worktypes, 'activity_types' => $acttypes];
     }
 
+    /* TEMP diagnostic — reproduces actionGetactivitiesbytypeandgroup exactly,
+       via GET so it can be hit directly in a browser for comparison. */
+    public function actionDebugactfilter2()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $typeId     = (int)\Yii::$app->request->get('typeId');
+        $groupId    = (int)\Yii::$app->request->get('groupId');
+        $iowGroupId = (int)\Yii::$app->request->get('iowGroupId');
+        $sql  = "SELECT ea.activity_id AS id, ea.activity_name AS name
+                 FROM estimateactivities ea
+                 WHERE ea.activity_status = 0";
+        if ($typeId)     $sql .= " AND ea.work_type = " . $typeId;
+        if ($groupId)    $sql .= " AND ea.activity_type = " . $groupId;
+        if ($iowGroupId) $sql .= " AND ea.iow_group_id = " . $iowGroupId;
+        $sql .= " ORDER BY ea.activity_name ASC";
+        $rows = \Yii::$app->db->createCommand($sql)->queryAll();
+        return ['sql' => $sql, 'typeId' => $typeId, 'groupId' => $groupId, 'iowGroupId' => $iowGroupId, 'items' => $rows];
+    }
+
 
 
 
