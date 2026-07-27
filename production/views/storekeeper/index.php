@@ -237,22 +237,30 @@
 
     <!-- Indent Task Selection Modal -->
     <div id="sk-indent-task-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;overflow-y:auto;">
-        <div style="background:#fff;margin:60px auto;max-width:600px;border-radius:6px;padding:26px 30px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
-            <button id="sk-indent-task-modal-close" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;color:#888;cursor:pointer;line-height:1;" title="Close">&times;</button>
-            <h4 id="sk-indent-task-modal-title" style="margin:0 0 18px;font-size:15px;font-weight:700;color:#333;padding-right:30px;"></h4>
-            <div id="sk-indent-task-modal-body"></div>
+        <div style="background:#fff;margin:60px auto;max-width:600px;border-radius:6px;overflow:hidden;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+            <div style="background:#2c4a4a;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;">
+                <h4 id="sk-indent-task-modal-title" style="margin:0;font-size:14px;font-weight:600;letter-spacing:0.5px;color:#fff;"></h4>
+                <span id="sk-indent-task-modal-close" style="cursor:pointer;font-size:20px;line-height:1;opacity:0.85;" title="Close">&times;</span>
+            </div>
+            <div style="padding:26px 30px;">
+                <div id="sk-indent-task-modal-body"></div>
+            </div>
         </div>
     </div>
 
     <!-- Raise Indent Popup -->
     <div id="sk-raise-popup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;overflow-y:auto;">
-        <div style="background:#fff;margin:50px auto;max-width:820px;border-radius:6px;padding:26px 30px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
-            <button id="sk-raise-popup-close" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;color:#888;cursor:pointer;">&times;</button>
-            <h4 style="margin:0 0 18px;font-size:15px;font-weight:700;color:#333;">Raise Indent</h4>
-            <div id="sk-raise-popup-body"></div>
-            <div style="text-align:right;margin-top:16px;">
-                <button type="button" id="sk-raise-popup-cancel" style="background:#888;color:#fff;border:none;border-radius:20px;padding:6px 22px;font-size:13px;font-weight:600;cursor:pointer;margin-right:10px;">Cancel</button>
-                <button type="button" id="sk-raise-popup-submit" style="background:#072c47;color:#fff;border:none;border-radius:20px;padding:6px 26px;font-size:13px;font-weight:600;cursor:pointer;">Submit</button>
+        <div style="background:#fff;margin:50px auto;max-width:820px;border-radius:6px;overflow:hidden;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+            <div style="background:#2c4a4a;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;">
+                <h4 style="margin:0;font-size:14px;font-weight:600;letter-spacing:0.5px;color:#fff;">Raise Indent</h4>
+                <span id="sk-raise-popup-close" style="cursor:pointer;font-size:20px;line-height:1;opacity:0.85;" title="Close">&times;</span>
+            </div>
+            <div style="padding:26px 30px;">
+                <div id="sk-raise-popup-body"></div>
+                <div style="text-align:right;margin-top:16px;">
+                    <button type="button" id="sk-raise-popup-cancel" style="background:#888;color:#fff;border:none;border-radius:20px;padding:6px 22px;font-size:13px;font-weight:600;cursor:pointer;margin-right:10px;">Cancel</button>
+                    <button type="button" id="sk-raise-popup-submit" style="background:#072c47;color:#fff;border:none;border-radius:20px;padding:6px 26px;font-size:13px;font-weight:600;cursor:pointer;">Submit</button>
+                </div>
             </div>
         </div>
     </div>
