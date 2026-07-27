@@ -275,8 +275,6 @@ $(document).on('click', '.al-edit-activity-btn', function(){
         success: function(data){
             if(data.error !== 'No') return;
             var act = data.activity;
-            /* TEMP debug — remove once the edit-mode IOW Group gap is root-caused. */
-            alert('DEBUG getactivityforedit response:\nidval sent=' + idval + '\nact.activity_id=' + act.activity_id + '\nact.iow_group_id=' + act.iow_group_id + ' (typeof ' + (typeof act.iow_group_id) + ')\nfull activity=' + JSON.stringify(act));
             /* show modal first, then prefill after Bootstrap resets have run */
             window._alEditMode = true;
             $('#alAddActivityPopup').css('display','block').addClass('in');
@@ -292,6 +290,8 @@ $(document).on('click', '.al-edit-activity-btn', function(){
                 $('#saveestactivity').html('<span class="icon-check"></span> Update Activity');
                 $('#alAddActivityTitle').text('Edit Activity');
                 /* load IOW group options then select the saved value */
+                /* TEMP debug — remove once the edit-mode IOW Group gap is root-caused. */
+                alert('DEBUG about to call alRefreshActIowGroupDropdown; act.iow_group_id=' + act.iow_group_id + '; function exists=' + (typeof alRefreshActIowGroupDropdown === 'function'));
                 if(typeof alRefreshActIowGroupDropdown === 'function'){
                     alRefreshActIowGroupDropdown(act.iow_group_id || '');
                 }

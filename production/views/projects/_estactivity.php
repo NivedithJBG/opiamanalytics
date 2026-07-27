@@ -795,9 +795,14 @@ $(document).on('click', '#addestactivity', function(){
 
 function alRefreshActIowGroupDropdown(selectVal){
     var cur = (selectVal !== undefined) ? selectVal : $('#actIowGroupId').val();
+    /* TEMP debug — remove once the edit-mode IOW Group gap is root-caused. */
+    if (selectVal) alert('DEBUG alRefreshActIowGroupDropdown CALLED with selectVal=' + selectVal);
     $.ajax({
         url: '<?php echo \yii\helpers\Url::to(["/projects/getiowgrouplist"]); ?>',
         dataType: 'json',
+        error: function(xhr, status, err){
+            if (selectVal) alert('DEBUG alRefreshActIowGroupDropdown AJAX ERROR:\nstatus=' + status + '\nerr=' + err + '\nhttpStatus=' + xhr.status);
+        },
         success: function(data){
             var sel = $('#actIowGroupId');
             sel.html('<option value="">Select IOW Group</option>');
