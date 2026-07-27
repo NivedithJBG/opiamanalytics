@@ -147,7 +147,8 @@ $subDomain = array_shift(($HTTP_HOST));
 
         .round-icons .perf-dashboard-btn,
         .round-icons .cost-dashboard-btn,
-        .round-icons .qe-btn { color: #fff !important; }
+        .round-icons .qe-btn,
+        .round-icons #add-project-nav-btn { color: #fff !important; }
 
         .round-icons .icon-chart3            { background-color: #003580 !important; }
         .round-icons .rel-nav-btn            { background-color: #5c3d8f !important; }
@@ -174,6 +175,8 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .qe-btn:hover,                 .round-icons .qe-btn:focus                 { background: #005f6b !important; }
         .round-icons .pdoc-btn                      { background-color: #1565C0 !important; }
         .round-icons .pdoc-btn:hover,               .round-icons .pdoc-btn:focus               { background: #0d47a1 !important; }
+        .round-icons #add-project-nav-btn           { background-color: #0277BD !important; }
+        .round-icons #add-project-nav-btn:hover,    .round-icons #add-project-nav-btn:focus    { background: #01579B !important; }
 
         /* ── Project Documents Floating Popup ── */
         #pdoc-popup {
