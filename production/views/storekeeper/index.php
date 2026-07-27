@@ -435,7 +435,7 @@
                 + '<td class="num" style="background:#e6e6e6;color:#333;">' + purchasedQty.toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
                 + '<td class="num" style="background:#e6e6e6;color:#333;">' + consumedQty.toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
                 + '<td style="text-align:center;padding:4px 6px;">'
-                + '<button type="button" class="sk-indent-task-btn" data-id="' + r.resource_id + '" data-resource-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-task-id="" data-task-name="" data-activity-name="" style="background:#072c47;color:#fff;border:none;border-radius:12px;padding:5px 12px;font-size:12px;font-weight:400;cursor:pointer;min-width:80px;">Tasks</button>'
+                + '<button type="button" class="sk-indent-task-btn" data-id="' + r.resource_id + '" data-resource-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-task-id="" data-task-name="" data-activity-name="" style="background:#2c4a4a;color:#fff;border:none;border-radius:12px;padding:5px 12px;font-size:12px;font-weight:400;cursor:pointer;min-width:80px;">Tasks</button>'
                 + '</td>'
                 + '<td style="text-align:center;padding:4px 8px;">'
                 + (r.estimate_reached == 1
