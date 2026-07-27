@@ -289,52 +289,8 @@ class ProjectsmainController extends Controller
         if ($iowGroupId) $sql .= " AND ea.iow_group_id = " . $iowGroupId;
         $sql .= " ORDER BY ea.activity_name ASC";
         $rows = \Yii::$app->db->createCommand($sql)->queryAll();
-        /* TEMP: echo back what was actually received, to compare against what
-           the dropdowns are supposed to be sending — remove once root-caused. */
-        return ['items' => $rows, '_debug_received' => ['typeId' => $typeId, 'groupId' => $groupId, 'iowGroupId' => $iowGroupId, 'raw_post' => $_POST]];
+        return ['items' => $rows];
     }
-
-    /* TEMP diagnostic — remove once the "no activities listed" gap is root-caused. */
-    public function actionDebugactfilter()
-    {
-        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $db = \Yii::$app->db;
-        $typeId  = (int)\Yii::$app->request->get('typeId');
-        $groupId = (int)\Yii::$app->request->get('groupId');
-        $rows = $db->createCommand(
-            "SELECT activity_id, activity_name, work_type, activity_type, iow_group_id, activity_status
-             FROM estimateactivities
-             WHERE activity_status = 0" .
-            ($typeId ? " AND work_type = $typeId" : "") .
-            ($groupId ? " AND activity_type = $groupId" : "")
-        )->queryAll();
-        $iow = $db->createCommand("SELECT id, name, status FROM iow_groups ORDER BY name ASC")->queryAll();
-        $worktypes = $db->createCommand("SELECT estworktype_id, estworktype_name FROM estimateworktypes ORDER BY estworktype_id ASC")->queryAll();
-        $acttypes  = $db->createCommand("SELECT activitytype_id, activitytype_name FROM estimateactivitytypes ORDER BY activitytype_id ASC")->queryAll();
-        return ['activities' => $rows, 'iow_groups' => $iow, 'work_types' => $worktypes, 'activity_types' => $acttypes];
-    }
-
-    /* TEMP diagnostic — reproduces actionGetactivitiesbytypeandgroup exactly,
-       via GET so it can be hit directly in a browser for comparison. */
-    public function actionDebugactfilter2()
-    {
-        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $typeId     = (int)\Yii::$app->request->get('typeId');
-        $groupId    = (int)\Yii::$app->request->get('groupId');
-        $iowGroupId = (int)\Yii::$app->request->get('iowGroupId');
-        $sql  = "SELECT ea.activity_id AS id, ea.activity_name AS name
-                 FROM estimateactivities ea
-                 WHERE ea.activity_status = 0";
-        if ($typeId)     $sql .= " AND ea.work_type = " . $typeId;
-        if ($groupId)    $sql .= " AND ea.activity_type = " . $groupId;
-        if ($iowGroupId) $sql .= " AND ea.iow_group_id = " . $iowGroupId;
-        $sql .= " ORDER BY ea.activity_name ASC";
-        $rows = \Yii::$app->db->createCommand($sql)->queryAll();
-        return ['sql' => $sql, 'typeId' => $typeId, 'groupId' => $groupId, 'iowGroupId' => $iowGroupId, 'items' => $rows];
-    }
-
-
-
 
     /**
      * actionWbssave — saves all WBS data to DB (does NOT create Gantt bar).
