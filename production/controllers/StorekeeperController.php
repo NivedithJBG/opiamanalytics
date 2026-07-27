@@ -21,6 +21,46 @@ class StorekeeperController extends Controller
         return $this->render('index');
     }
 
+    /* TEMP diagnostic — remove once the Indent-listing gap is root-caused.
+       Dumps the raw pricing_estimate_resources_new rows for the current
+       user's project with every join outcome broken out, so we can see
+       exactly which condition drops a resource that shows fine in PO. */
+    public function actionDebugindent()
+    {
+        $uid      = Yii::$app->user->id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'No project selected.']);
+        }
+        $projectid = $projuser->projectid;
+        $db = Yii::$app->db;
+
+        $sql = "
+            SELECT
+                p.pricing_resourceid,
+                p.project_id,
+                p.activity_id,
+                p.resource_Id,
+                p.resourcetype_Id,
+                p.pricing_status,
+                pe.project_Id  AS pe_project_id,
+                pe.activity_Id AS pe_activity_id,
+                r.Resource_Id  AS r_resource_id,
+                r.Name         AS r_name,
+                r.Status       AS r_status,
+                rt.ResourceType_Id AS rt_id,
+                rt.Name            AS rt_name
+            FROM pricing_estimate_resources_new p
+            LEFT JOIN pricing_estimate_new pe ON p.activity_id = pe.activity_Id AND pe.project_Id = p.project_id
+            LEFT JOIN resources r             ON p.resource_Id = r.Resource_Id
+            LEFT JOIN resourcetype rt         ON p.resourcetype_Id = rt.ResourceType_Id
+            WHERE p.project_id = :pid
+        ";
+        $rows = $db->createCommand($sql, [':pid' => $projectid])->queryAll();
+
+        return json_encode(['error' => 'No', 'projectid' => $projectid, 'rows' => $rows]);
+    }
+
     public function actionIndents()
     {
         $uid      = Yii::$app->user->id;
