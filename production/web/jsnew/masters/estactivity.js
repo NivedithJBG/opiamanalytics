@@ -290,8 +290,6 @@ $(document).on('click', '.al-edit-activity-btn', function(){
                 $('#saveestactivity').html('<span class="icon-check"></span> Update Activity');
                 $('#alAddActivityTitle').text('Edit Activity');
                 /* load IOW group options then select the saved value */
-                /* TEMP debug — remove once the edit-mode IOW Group gap is root-caused. */
-                alert('DEBUG about to call alRefreshActIowGroupDropdown; act.iow_group_id=' + act.iow_group_id + '; function exists=' + (typeof alRefreshActIowGroupDropdown === 'function'));
                 if(typeof alRefreshActIowGroupDropdown === 'function'){
                     alRefreshActIowGroupDropdown(act.iow_group_id || '');
                 }

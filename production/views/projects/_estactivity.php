@@ -793,16 +793,18 @@ $(document).on('click', '#addestactivity', function(){
     setTimeout(function(){ alRefreshActIowGroupDropdown(); }, 400);
 });
 
-function alRefreshActIowGroupDropdown(selectVal){
+/* Exposed on window: this whole script block is wrapped in an IIFE (see the
+   `(function(){` this file opens with), so a plain function declaration here
+   is only visible inside that closure. estactivity.js — a separate script
+   running in the global scope — calls this function from its Edit-activity
+   handler to prefill the saved IOW Group once the dropdown is loaded; without
+   attaching it to window, that call always found it undefined and silently
+   skipped, leaving the IOW Group field blank on every edit. */
+window.alRefreshActIowGroupDropdown = function(selectVal){
     var cur = (selectVal !== undefined) ? selectVal : $('#actIowGroupId').val();
-    /* TEMP debug — remove once the edit-mode IOW Group gap is root-caused. */
-    if (selectVal) alert('DEBUG alRefreshActIowGroupDropdown CALLED with selectVal=' + selectVal);
     $.ajax({
         url: '<?php echo \yii\helpers\Url::to(["/projects/getiowgrouplist"]); ?>',
         dataType: 'json',
-        error: function(xhr, status, err){
-            if (selectVal) alert('DEBUG alRefreshActIowGroupDropdown AJAX ERROR:\nstatus=' + status + '\nerr=' + err + '\nhttpStatus=' + xhr.status);
-        },
         success: function(data){
             var sel = $('#actIowGroupId');
             sel.html('<option value="">Select IOW Group</option>');
@@ -810,17 +812,9 @@ function alRefreshActIowGroupDropdown(selectVal){
                 sel.append('<option value="'+g.id+'">'+g.name+'</option>');
             });
             if(cur) sel.val(cur);
-            /* TEMP debug — remove once the edit-mode IOW Group gap is root-caused.
-               Only fires when a saved value was actually passed in (edit mode). */
-            if (selectVal) {
-                alert('DEBUG alRefreshActIowGroupDropdown:\nselectVal param=' + selectVal + '\ncur used=' + cur +
-                      '\noptions loaded=' + (data.items||[]).length +
-                      '\nselect value right after set=' + sel.val());
-                setTimeout(function(){ alert('select value 500ms later=' + $('#actIowGroupId').val()); }, 500);
-            }
         }
     });
-}
+};
 
 /* Edit handler is in estactivity.js alongside the delete handler */;
 
