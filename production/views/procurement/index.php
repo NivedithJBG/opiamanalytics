@@ -655,6 +655,25 @@
 (function(){
     var _poAllRows = [];
 
+    /* Sub-popups (Parameters / Raise Purchase Order / Raise Purchase Orders
+       bulk) are opened from inside the PO tab's own cascading window
+       (#procu-win-PO), whose z-index rises independently of the outer
+       Procurement floater (it's not in main.php's shared `floaters` list —
+       see _procuNextZ() below). window.popupSubZBase() only tracks the
+       outer floater's ceiling, so once #procu-win-PO has been clicked/
+       dragged even once, its z-index overtakes popupSubZBase() and these
+       popups render behind it. Always build on whichever ceiling is
+       actually highest right now. */
+    function _procuPopupZ(){
+        var base = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 9998;
+        var tabWin = document.getElementById('procu-win-PO');
+        if (tabWin) {
+            var tabZ = parseInt(getComputedStyle(tabWin).zIndex, 10) || 0;
+            if (tabZ + 2 > base) base = tabZ + 2;
+        }
+        return base;
+    }
+
     function loadPurchaseOrders() {
         $('#po-loader').show();
         $('#po-body').html('');
@@ -856,7 +875,7 @@
         // See openParamsPopup() above — the Procurement window's z-index
         // rises on every click/drag, so this sub-popup must sit above the
         // current floater ceiling rather than rely on its static CSS z-index.
-        var raiseZ = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 9998;
+        var raiseZ = _procuPopupZ();
         $('#po-raisepo-overlay').css('z-index', raiseZ).show();
         $('#po-raisepo-popup').css('z-index', raiseZ + 1).show();
 
@@ -978,7 +997,7 @@
         // See openParamsPopup() above — the Procurement window's z-index
         // rises on every click/drag, so this sub-popup must sit above the
         // current floater ceiling rather than rely on its static CSS z-index.
-        var bulkZ = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 9998;
+        var bulkZ = _procuPopupZ();
         $('#po-bulk-overlay').css('z-index', bulkZ).show();
         $('#po-bulk-popup').css('z-index', bulkZ + 1).show();
     });
@@ -1252,7 +1271,7 @@
         // dragged (shared floater focus manager), so the static CSS z-index
         // here eventually gets overtaken and this popup renders behind it —
         // always sit above the current floater ceiling when opening.
-        var paramZ = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 9998;
+        var paramZ = _procuPopupZ();
         $('#po-param-overlay').css('z-index', paramZ);
         $('#po-param-popup').css({ top: top, left: left, zIndex: paramZ + 1 }).show();
         $('#po-param-overlay').show();
