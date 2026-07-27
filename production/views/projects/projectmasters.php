@@ -41,9 +41,10 @@ $(function(){
 </div>
 
 <script>
-(function(){
+$(function(){
   var win = document.querySelector('.menu4-popup-cntnr');
   var hdr = document.querySelector('.menu4-win-hdr');
+  if(!win || !hdr) return;
   var MIN_W=400, MIN_H=300, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0, _saved=null;
 
   function _anchor(){
@@ -53,10 +54,12 @@ $(function(){
   }
 
   // Close
-  document.querySelector('.menu4-win-close').addEventListener('click', function(){
-    win.classList.remove('active');
-    document.querySelector('.overNow4') && document.querySelector('.overNow4').classList.remove('active');
-    document.body.style.overflowY = 'auto';
+  document.querySelectorAll('.menu4-win-close').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      win.classList.remove('active');
+      document.querySelector('.overNow4') && document.querySelector('.overNow4').classList.remove('active');
+      document.body.style.overflowY = 'auto';
+    });
   });
 
   // Expand
@@ -109,11 +112,9 @@ $(function(){
   bindDragTouch(document, 'mouseup', function(){ _action=null; });
 
   // Move Activity Library modals to <body> so they aren't clipped by overflow:hidden on the container
-  $(function(){
-    ['alAddActivityPopup','alProjTypePopup','alIowGroupPopup','alIowPopup','alActTypePopup'].forEach(function(id){
-      var el = document.getElementById(id);
-      if(el && el.parentNode !== document.body) document.body.appendChild(el);
-    });
+  ['alAddActivityPopup','alProjTypePopup','alIowGroupPopup','alIowPopup','alActTypePopup'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el && el.parentNode !== document.body) document.body.appendChild(el);
   });
-})();
+});
 </script>
