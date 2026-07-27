@@ -21126,7 +21126,10 @@ public function actionActivitymusterprocess()
         $connection = \Yii::$app->db;
         $activityid = (int) $_POST['activityid'];
 
-        $allocated = WorkgroupActivitiesNew::find()->where(['activity_Id' => $activityid])->exists();
+        $allocated = WorkgroupActivitiesNew::find()
+            ->where(['activity_Id' => $activityid])
+            ->andWhere(['pricing_status' => 0])
+            ->exists();
         if ($allocated) {
             $activity = $connection->createCommand(
                 "SELECT activity_name FROM estimateactivities WHERE activity_id = :id",
@@ -21138,7 +21141,8 @@ public function actionActivitymusterprocess()
                 "SELECT DISTINCT p.Name
                  FROM workgroup_activities_new w
                  JOIN projects p ON p.Project_Id = w.project_Id
-                 WHERE w.activity_Id = :id",
+                 WHERE w.activity_Id = :id
+                   AND w.pricing_status = 0",
                 [':id' => $activityid]
             )->queryColumn();
             $projectList = implode(', ', array_filter($projectNames));
