@@ -21142,6 +21142,22 @@ public function actionActivitymusterprocess()
             return json_encode(['error' => 'No', 'wbs' => $wbs]);
         }
 
+        if (!empty($_GET['ganttcheck'])) {
+            $wbsid = (int) $_GET['ganttcheck'];
+            $items = $db->createCommand(
+                "SELECT * FROM wbsscheduleitems WHERE wbsid = :w",
+                [':w' => $wbsid]
+            )->queryAll();
+            $sched = $db->createCommand(
+                "SELECT sa.id, sa.scheduleitem_id, sa.status, sa.actual_start_date, sa.actual_end_date, sa.activity_id
+                 FROM wbsscheduleitems a
+                 JOIN scheduleactivities sa ON sa.scheduleitem_id = a.scheduleitem_id
+                 WHERE a.wbsid = :w",
+                [':w' => $wbsid]
+            )->queryAll();
+            return json_encode(['error' => 'No', 'wbsid' => $wbsid, 'wbsscheduleitems' => $items, 'scheduleactivities' => $sched]);
+        }
+
         $activityid = (int) $_GET['activityid'];
         $rows = $db->createCommand(
             "SELECT w.id, w.project_Id, p.Name AS project_name, w.activity_Id,
