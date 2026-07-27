@@ -21142,6 +21142,22 @@ public function actionActivitymusterprocess()
             return json_encode(['error' => 'No', 'wbs' => $wbs]);
         }
 
+        if (!empty($_GET['statuscounts'])) {
+            $projectId = (int) $_GET['statuscounts'];
+            $wsi = $db->createCommand(
+                "SELECT status, COUNT(*) AS cnt FROM wbsscheduleitems WHERE projectId = :pid GROUP BY status",
+                [':pid' => $projectId]
+            )->queryAll();
+            $sa = $db->createCommand(
+                "SELECT sa.status, COUNT(*) AS cnt
+                 FROM scheduleactivities sa
+                 JOIN wbsscheduleitems a ON a.scheduleitem_id = sa.scheduleitem_id
+                 WHERE a.projectId = :pid GROUP BY sa.status",
+                [':pid' => $projectId]
+            )->queryAll();
+            return json_encode(['error' => 'No', 'projectId' => $projectId, 'wbsscheduleitems_by_status' => $wsi, 'scheduleactivities_by_status' => $sa]);
+        }
+
         if (!empty($_GET['ganttitemscheck'])) {
             $projectId = (int) $_GET['ganttitemscheck'];
             $rows = $db->createCommand("
