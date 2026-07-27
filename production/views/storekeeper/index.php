@@ -299,6 +299,42 @@
     var _allMbRows          = [];
     var _allIssuedIndentRows = [];
 
+    /* This whole view is loaded via $('#storeoffice-win-body').html(html)
+       (see main.php's #storeoffice-win), so sk-indent-task-modal and
+       sk-raise-popup are declared as static markup nested inside
+       #storeoffice-win. That element is position:fixed with an explicit
+       z-index, making it a CSS stacking context — no z-index set on a
+       descendant popup can ever paint above a body-level sibling like
+       #sk-win-indents (the Indents tab's own cascading window), same root
+       cause fixed for Procurement's po-bulk-popup/po-param-popup. Move
+       these popups to <body> immediately, and always build their z-index
+       on top of whichever ceiling (outer floater or #sk-win-indents) is
+       actually highest right now. */
+    ['sk-indent-task-modal','sk-raise-popup'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el && el.parentNode !== document.body) document.body.appendChild(el);
+    });
+    function _skPopupZ(){
+        var base = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 9998;
+        var tabWin = document.getElementById('sk-win-indents');
+        if (tabWin) {
+            var tabZ = parseInt(getComputedStyle(tabWin).zIndex, 10) || 0;
+            if (tabZ + 2 > base) base = tabZ + 2;
+        }
+        return base;
+    }
+    /* Called by #sk-win-indents's own raise() (see _skBuildWin below) every
+       time that window is clicked/dragged, so whichever of these sub-popups
+       is currently open gets pushed back above it. */
+    window._skReraiseOpenSubPopups = function(){
+        ['sk-indent-task-modal','sk-raise-popup'].forEach(function(id){
+            var popup = document.getElementById(id);
+            if (popup && getComputedStyle(popup).display !== 'none') {
+                popup.style.zIndex = _skPopupZ();
+            }
+        });
+    };
+
     function loadIndents() {
         $('#sk-loader').show();
         $('#sk-body').html('');
@@ -1730,7 +1766,7 @@
         $('#sk-indent-task-modal-title').text(name);
         $('#sk-indent-task-modal').data('btn', $btn);
         $('#sk-indent-task-modal-body').html('<p style="text-align:center;padding:30px;color:#888;">Loading...</p>');
-        $('#sk-indent-task-modal').show();
+        $('#sk-indent-task-modal').css('z-index', _skPopupZ()).show();
 
         $.ajax({
             type: 'POST', url: '../storekeeper/getresourcetasks',
@@ -1860,7 +1896,7 @@
                 });
                 html += '</tbody></table>';
                 $('#sk-raise-popup-body').html(html);
-                $('#sk-raise-popup').show();
+                $('#sk-raise-popup').css('z-index', _skPopupZ()).show();
             },
             error: function() { $raiseBtn.prop('disabled', false); alert('Failed to check progress. Please try again.'); }
         });
@@ -2009,7 +2045,17 @@
         }, { passive: false });
         bdt(document, 'mouseup', function(){ _action = null; });
 
-        function raise(){ win.style.setProperty('z-index', _skNextZ(), 'important'); }
+        function raise(){
+            win.style.setProperty('z-index', _skNextZ(), 'important');
+            /* This window's own mousedown-raise fires on every click inside
+               it, including the click that opens a sub-popup, so if the
+               popup is already open and the user clicks the window again
+               this would otherwise bury it — re-raise any open sub-popup
+               above it, mirroring Procurement's same fix. */
+            if (tab === 'indents' && typeof window._skReraiseOpenSubPopups === 'function') {
+                window._skReraiseOpenSubPopups();
+            }
+        }
         bdt(win, 'mousedown', raise, true);
 
         hdr.querySelector('.sk-tw-close').addEventListener('click', function(){
