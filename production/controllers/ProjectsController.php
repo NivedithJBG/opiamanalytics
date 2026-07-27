@@ -21121,6 +21121,22 @@ public function actionActivitymusterprocess()
         return json_encode(['error' => 'No']);
     }
 
+    /* TEMP diagnostic — remove once the stale-allocation gap is root-caused. */
+    public function actionDebugactivityalloc()
+    {
+        $activityid = (int) $_GET['activityid'];
+        $db = \Yii::$app->db;
+        $rows = $db->createCommand(
+            "SELECT w.id, w.project_Id, p.Name AS project_name, w.activity_Id,
+                    w.pricing_status, w.operations_status, w.pr_status, w.wbs_id
+             FROM workgroup_activities_new w
+             LEFT JOIN projects p ON p.Project_Id = w.project_Id
+             WHERE w.activity_Id = :id",
+            [':id' => $activityid]
+        )->queryAll();
+        return json_encode(['error' => 'No', 'activityid' => $activityid, 'rows' => $rows]);
+    }
+
     public function actionDeleteactivity()
     {
         $connection = \Yii::$app->db;
