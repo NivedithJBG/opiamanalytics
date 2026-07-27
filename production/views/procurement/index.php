@@ -853,8 +853,12 @@
         $('#po-raisepo-shipto').val('');
         $('#po-raisepo-vendor').val('');
         $('#po-raisepo-terms-list').html(buildTermsRows('[]'));
-        $('#po-raisepo-overlay').show();
-        $('#po-raisepo-popup').show();
+        // See openParamsPopup() above — the Procurement window's z-index
+        // rises on every click/drag, so this sub-popup must sit above the
+        // current floater ceiling rather than rely on its static CSS z-index.
+        var raiseZ = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 9998;
+        $('#po-raisepo-overlay').css('z-index', raiseZ).show();
+        $('#po-raisepo-popup').css('z-index', raiseZ + 1).show();
 
         $('#po-raisepo-vendor').html('<option value="">Loading...</option>');
 
@@ -971,8 +975,12 @@
                 }
             }
         });
-        $('#po-bulk-overlay').show();
-        $('#po-bulk-popup').show();
+        // See openParamsPopup() above — the Procurement window's z-index
+        // rises on every click/drag, so this sub-popup must sit above the
+        // current floater ceiling rather than rely on its static CSS z-index.
+        var bulkZ = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 9998;
+        $('#po-bulk-overlay').css('z-index', bulkZ).show();
+        $('#po-bulk-popup').css('z-index', bulkZ + 1).show();
     });
 
     $(document).on('click', '#po-bulk-close, #po-bulk-cancel, #po-bulk-overlay', function(){
@@ -1240,7 +1248,13 @@
         if (left < 8) left = offset.left + $(btn).outerWidth() + 8;
         var top  = offset.top - 10;
         if (top + 240 > $(window).height()) top = $(window).height() - 250;
-        $('#po-param-popup').css({ top: top, left: left }).show();
+        // Procurement window's own z-index rises every time it's clicked/
+        // dragged (shared floater focus manager), so the static CSS z-index
+        // here eventually gets overtaken and this popup renders behind it —
+        // always sit above the current floater ceiling when opening.
+        var paramZ = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 9998;
+        $('#po-param-overlay').css('z-index', paramZ);
+        $('#po-param-popup').css({ top: top, left: left, zIndex: paramZ + 1 }).show();
         $('#po-param-overlay').show();
 
         // Load existing values
