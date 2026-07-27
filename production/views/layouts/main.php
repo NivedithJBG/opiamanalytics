@@ -3063,7 +3063,7 @@ if($action=='login')
 .qe-input::placeholder{color:#595959;opacity:1;}
 .qe-input::-webkit-input-placeholder{color:#595959;}
 .qe-input::-moz-placeholder{color:#595959;opacity:1;}
-.qe-task-name::placeholder,.qe-task-unit::placeholder{color:#595959;opacity:1;}
+.qe-task-name::placeholder{color:#595959;opacity:1;}
 .qe-needs-data{border-color:#999999 !important;}
 .qe-act-wrap{position:relative;display:flex;align-items:stretch;}
 .qe-act-wrap .qe-input{flex:1;border-radius:4px 0 0 4px;border-right:none;}
@@ -3328,10 +3328,9 @@ if($action=='login')
         <table class="qe-repeat-tbl" id="qe-task-tbl">
           <thead>
             <tr>
-              <th style="width:28%">Task Name</th>
-              <th style="width:12%">Unit</th>
-              <th style="width:12%">Qty</th>
-              <th style="width:16%">Productivity / Day</th>
+              <th style="width:34%">Task Name</th>
+              <th style="width:16%">Qty/Sch Unit</th>
+              <th style="width:18%">Productivity / Day</th>
               <th style="width:16%">Resource Units</th>
               <th style="width:16%;text-align:right">
                 <button class="qe-add-btn" id="qe-task-add" title="Add task row">+</button>
@@ -3534,12 +3533,11 @@ function _prefillModal(d){
   var taskBody = document.getElementById('qe-task-body');
   taskBody.innerHTML = '';
   if(d.tasks && d.tasks.length){
-    _task1NameTouched = true; _task1UnitTouched = true;
+    _task1NameTouched = true;
     d.tasks.forEach(function(task){
       var tr = document.createElement('tr');
       tr.innerHTML =
         '<td><input type="text" class="qe-task-name" value="'+(task.task_name||task.name||'').replace(/"/g,'&quot;')+'" placeholder="Task name"></td>'+
-        '<td><input type="text" class="qe-task-unit" value="'+(task.task_unit||task.unit||'').replace(/"/g,'&quot;')+'" placeholder="Unit"></td>'+
         '<td><input type="number" class="qe-task-qty" value="'+parseFloat(task.task_qty||task.qty||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
         '<td><input type="number" class="qe-task-prod" value="'+parseFloat(task.productivity||task.prod||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
         '<td><input type="number" class="qe-task-resunits" value="'+(task.resunits||1)+'" placeholder="1" step="1" min="1"></td>'+
@@ -3850,13 +3848,11 @@ function addTaskRow(){
   var tr = document.createElement('tr');
   tr.innerHTML =
     '<td><input type="text" class="qe-task-name" placeholder="Task name"></td>'+
-    '<td><input type="text" class="qe-task-unit" placeholder="Unit"></td>'+
     '<td><input type="number" class="qe-task-qty" placeholder="0.00" step="0.01" min="0"></td>'+
     '<td><input type="number" class="qe-task-prod" placeholder="0.00" step="0.01" min="0"></td>'+
     '<td><input type="number" class="qe-task-resunits" value="1" placeholder="1" step="1" min="1"></td>'+
     '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
   tbody.appendChild(tr);
-  _bindAlphaField(tr.querySelector('.qe-task-unit'));
   _bindNumField(tr.querySelector('.qe-task-qty'));
   _bindNumField(tr.querySelector('.qe-task-prod'));
   _bindNumField(tr.querySelector('.qe-task-resunits'));
@@ -3866,9 +3862,8 @@ function addTaskRow(){
     if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
   });
   if(isFirstRow){
-    _task1NameTouched = false; _task1UnitTouched = false;
+    _task1NameTouched = false;
     tr.querySelector('.qe-task-name').addEventListener('input', function(){ _task1NameTouched = true; });
-    tr.querySelector('.qe-task-unit').addEventListener('input', function(){ _task1UnitTouched = true; });
     mirrorActivityToFirstTask();
   }
   tr._taskQtyTouched = false;
@@ -3992,9 +3987,9 @@ function openMapPopup(resTr){
   } else {
     noTasks.style.display = 'none'; list.style.display = 'block';
     var prev = resTr._taskMap || [];
+    var tunit = (document.getElementById('qe-sch-unit') || {}).value || '';
     taskRows.forEach(function(ttr, idx){
       var tname = (ttr.querySelector('.qe-task-name')||{}).value.trim();
-      var tunit = (ttr.querySelector('.qe-task-unit')||{}).value || '';
       var sel = prev.indexOf(idx) !== -1;
       var item = document.createElement('div');
       item.className = 'qe-map-item' + (sel ? ' selected' : '');
@@ -4079,12 +4074,16 @@ function clearActivityFields(){
 /* ── collect form payload ── */
 function collectPayload(){
   var tasks = [];
+  /* Tasks no longer have their own Unit field — a task's quantity is always
+     expressed in the activity's own Sch. Unit, so every task row sends that
+     value as its unit rather than a separately-entered one. */
+  var schUnit = (document.getElementById('qe-sch-unit') || {}).value || '';
   document.querySelectorAll('#qe-task-body tr').forEach(function(tr){
     var name = tr.querySelector('.qe-task-name') ? tr.querySelector('.qe-task-name').value.trim() : '';
     if(!name) return;
     tasks.push({
       name:     name,
-      unit:     tr.querySelector('.qe-task-unit').value.trim(),
+      unit:     schUnit,
       qty:      parseFloat(tr.querySelector('.qe-task-qty').value)      || 0,
       prod:     parseFloat(tr.querySelector('.qe-task-prod').value)     || 0,
       resunits: parseFloat(tr.querySelector('.qe-task-resunits').value) || 1
@@ -4160,7 +4159,7 @@ function recalcEstRate(){
    hasn't been manually edited by the user, so it acts as a starting
    default that's always freely overridable. ── */
 var _schUnitTouched = false, _schQtyTouched = false;
-var _task1NameTouched = false, _task1UnitTouched = false;
+var _task1NameTouched = false;
 
 function mirrorEstimateToSchedule(){
   var schUnitEl = document.getElementById('qe-sch-unit');
@@ -4180,9 +4179,7 @@ function mirrorActivityToFirstTask(){
   var firstRow = document.querySelector('#qe-task-body tr');
   if(!firstRow) return;
   var nameEl = firstRow.querySelector('.qe-task-name');
-  var unitEl = firstRow.querySelector('.qe-task-unit');
   if(nameEl && !_task1NameTouched) nameEl.value = document.getElementById('qe-activity-text').value;
-  if(unitEl && !_task1UnitTouched) unitEl.value = document.getElementById('qe-unit').value;
 }
 
 /* Sch. Qty → each task row's Qty, until that row's qty is manually edited.
@@ -4390,12 +4387,11 @@ $(function(){
         var taskBody = document.getElementById('qe-task-body');
         taskBody.innerHTML = '';
         if(data.tasks && data.tasks.length){
-          _task1NameTouched = true; _task1UnitTouched = true;
+          _task1NameTouched = true;
           data.tasks.forEach(function(task){
             var tr = document.createElement('tr');
             tr.innerHTML =
               '<td><input type="text" class="qe-task-name" value="'+(task.task_name||'').replace(/"/g,'&quot;')+'" placeholder="Task name"></td>'+
-              '<td><input type="text" class="qe-task-unit" value="'+(task.task_unit||'').replace(/"/g,'&quot;')+'" placeholder="Unit"></td>'+
               '<td><input type="number" class="qe-task-qty" value="'+parseFloat(task.task_qty||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
               '<td><input type="number" class="qe-task-prod" value="'+parseFloat(task.productivity||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
               '<td><input type="number" class="qe-task-resunits" value="1" placeholder="1" step="1" min="1"></td>'+
