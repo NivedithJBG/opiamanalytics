@@ -204,7 +204,7 @@ class ProjectsmainController extends Controller
         )->bindValue(':aid', $activityId)->queryAll();
 
         $tasks = $db->createCommand(
-            "SELECT task_name, task_unit, task_qty, productivity FROM activity_tasks WHERE activity_id = :aid ORDER BY sort_order ASC, id ASC"
+            "SELECT id, task_name, task_unit, task_qty, productivity FROM activity_tasks WHERE activity_id = :aid ORDER BY sort_order ASC, id ASC"
         )->bindValue(':aid', $activityId)->queryAll();
 
         // estimate qty + schedule unit/qty for this project
@@ -421,6 +421,14 @@ class ProjectsmainController extends Controller
         }
 
         // 3. Save tasks to activity_tasks
+        //    $taskOrdinalToId maps the 0-based ordinal of each saved task
+        //    (skipping blank names, same filtering the frontend applies in
+        //    collectPayload()/openMapPopup()) to its freshly-inserted real
+        //    id — tasks are DELETE+re-INSERTed every save so old ids are
+        //    invalid, and this is the only place the new ids are known.
+        //    resources[].task_map below is by this same ordinal, so it's
+        //    translated through this map before being written as task_ids.
+        $taskOrdinalToId = [];
         if (!empty($tasks)) {
             $db->createCommand(
                 "DELETE FROM activity_tasks WHERE activity_id=:id",
@@ -437,8 +445,10 @@ class ProjectsmainController extends Controller
                      ':u' => trim($task['unit'] ?? ''),
                      ':q' => (float)($task['qty'] ?? 0),
                      ':p' => (float)($task['prod'] ?? 0),
-                     ':s' => $sort++]
+                     ':s' => $sort]
                 )->execute();
+                $taskOrdinalToId[$sort] = (int)$db->lastInsertID;
+                $sort++;
             }
         }
 
@@ -557,10 +567,20 @@ class ProjectsmainController extends Controller
                 $resRate= (float)($res['rate'] ?? 0);
                 if (!$resId) continue;
                 $keptResIds[] = $resId;
+                // task_map entries are ordinals into the tasks list (see
+                // $taskOrdinalToId above), NOT real activity_tasks ids —
+                // translate, and don't drop ordinal/id 0 (array_filter's
+                // default truthiness check would wrongly erase a mapping
+                // to the very first task).
                 $taskMap = $res['task_map'] ?? [];
-                $taskIds = is_array($taskMap)
-                    ? implode(',', array_map('intval', array_filter($taskMap, fn($t) => (int)$t > 0)))
-                    : '';
+                $resolvedTaskIds = [];
+                if (is_array($taskMap)) {
+                    foreach ($taskMap as $ord) {
+                        $ord = (int)$ord;
+                        if (isset($taskOrdinalToId[$ord])) $resolvedTaskIds[] = $taskOrdinalToId[$ord];
+                    }
+                }
+                $taskIds = implode(',', $resolvedTaskIds);
                 $perExists = $db->createCommand(
                     "SELECT pricing_resourceid FROM pricing_estimate_resources_new
                      WHERE activity_id=:a AND project_id=:p AND resource_Id=:r LIMIT 1",
@@ -743,6 +763,11 @@ class ProjectsmainController extends Controller
                 )->execute();
             }
 
+            // $taskOrdinalToId maps each saved task's 0-based ordinal (skipping
+            // blank names, same filtering the frontend applies) to its
+            // freshly-inserted real id — see the matching comment in
+            // actionWbssave() for why this indirection is needed.
+            $taskOrdinalToId = [];
             if (!empty($tasks)) {
                 $db->createCommand("DELETE FROM activity_tasks WHERE activity_id=:id", [':id' => $iowActId])->execute();
                 $sort = 0;
@@ -754,8 +779,10 @@ class ProjectsmainController extends Controller
                          VALUES (:a, :n, :u, :q, :p, :s)",
                         [':a' => $iowActId, ':n' => $tname, ':u' => trim($task['unit'] ?? ''),
                          ':q' => (float)($task['qty'] ?? 0),
-                         ':p' => (float)($task['prod'] ?? 0), ':s' => $sort++]
+                         ':p' => (float)($task['prod'] ?? 0), ':s' => $sort]
                     )->execute();
+                    $taskOrdinalToId[$sort] = (int)$db->lastInsertID;
+                    $sort++;
                 }
             }
 
@@ -919,6 +946,11 @@ class ProjectsmainController extends Controller
         // early on subsequent calls) — later resource edits are synced by
         // actionWbssave's own upsert instead, which runs on every save regardless
         // of Gantt state.
+        // $taskOrdinalToId is only populated when $wanId was resolved above
+        // (the !$wanId branch); if a wan_id was passed in directly and had no
+        // existing schedule bar, tasks were never touched in this request and
+        // there is nothing to translate against.
+        if (!isset($taskOrdinalToId)) $taskOrdinalToId = [];
         if (!empty($resources)) {
             foreach ($resources as $res) {
                 $resId  = (int)($res['resource_id'] ?? 0);
@@ -926,10 +958,17 @@ class ProjectsmainController extends Controller
                 $resQty = (float)($res['qty']  ?? 0);
                 $resRate= (float)($res['rate'] ?? 0);
                 if (!$resId) continue;
+                // task_map entries are ordinals into the tasks list, translated
+                // via $taskOrdinalToId — see actionWbssave() for full rationale.
                 $taskMap = $res['task_map'] ?? [];
-                $taskIds = is_array($taskMap)
-                    ? implode(',', array_map('intval', array_filter($taskMap, fn($t) => (int)$t > 0)))
-                    : '';
+                $resolvedTaskIds = [];
+                if (is_array($taskMap)) {
+                    foreach ($taskMap as $ord) {
+                        $ord = (int)$ord;
+                        if (isset($taskOrdinalToId[$ord])) $resolvedTaskIds[] = $taskOrdinalToId[$ord];
+                    }
+                }
+                $taskIds = implode(',', $resolvedTaskIds);
                 $exists = $db->createCommand(
                     "SELECT 1 FROM pricing_estimate_resources_new
                      WHERE project_id=:p AND activity_id=:a AND resource_Id=:r LIMIT 1",
@@ -1060,7 +1099,7 @@ class ProjectsmainController extends Controller
 
         // tasks — from activity_tasks, the table actionWbssave/actionWbsadd actually write to
         $tasks = $db->createCommand(
-            "SELECT task_name, task_unit, task_qty, productivity FROM activity_tasks WHERE activity_id = :id ORDER BY sort_order ASC, id ASC",
+            "SELECT id, task_name, task_unit, task_qty, productivity FROM activity_tasks WHERE activity_id = :id ORDER BY sort_order ASC, id ASC",
             [':id' => $iowActId]
         )->queryAll();
 
@@ -1079,16 +1118,51 @@ class ProjectsmainController extends Controller
                  ORDER BY er.estactres_id ASC",
                 [':id' => $iowActId]
             )->queryAll();
+
+            // task_ids per resource — from pricing_estimate_resources_new, the
+            // project-instance table Procurement reads. Only meaningful once
+            // wan_id is known (this activity has actually been added to a WBS/
+            // Gantt); keyed by resource_Id so it can be matched to the rows
+            // above even though the two tables use different id spaces.
+            $wanIdForTasks = (int)($sa['wan_id'] ?? 0) ?: $wanId;
+            $taskIdsByResource = [];
+            if ($wanIdForTasks) {
+                $perRows = $db->createCommand(
+                    "SELECT resource_Id, task_ids FROM pricing_estimate_resources_new
+                     WHERE activity_id = :a AND pricing_status = 0",
+                    [':a' => $wanIdForTasks]
+                )->queryAll();
+                foreach ($perRows as $pr) {
+                    $taskIdsByResource[(int)$pr['resource_Id']] = $pr['task_ids'] ?? '';
+                }
+            }
+
+            // ordinal position of each task's real id, in the same order the
+            // tasks array above is returned — task_map sent to the frontend
+            // is by ordinal (matching collectPayload()'s filtered tasks list),
+            // not by raw activity_tasks.id, so translate here.
+            $taskOrdinalById = [];
+            foreach ($tasks as $ord => $t) { $taskOrdinalById[(int)$t['id']] = $ord; }
+
             foreach ($resRows as $r) {
+                $resId = (int)$r['resource_id'];
+                $taskMap = [];
+                if (isset($taskIdsByResource[$resId]) && $taskIdsByResource[$resId] !== '') {
+                    foreach (explode(',', $taskIdsByResource[$resId]) as $tid) {
+                        $tid = (int)$tid;
+                        if (isset($taskOrdinalById[$tid])) $taskMap[] = $taskOrdinalById[$tid];
+                    }
+                }
                 $resources[] = [
                     'estactres_id' => (int)$r['estactres_id'],
-                    'resource_id'  => (int)$r['resource_id'],
+                    'resource_id'  => $resId,
                     'type_id'      => (int)$r['type_id'],
                     'group_id'     => (int)$r['group_id'],
                     'unit'         => $r['resource_unit'] ?? '',
                     'rate'         => (float)$r['rate'],
                     'qty'          => (float)$r['qty'],
                     'amount'       => (float)$r['amount'],
+                    'task_map'     => $taskMap,
                 ];
             }
         }

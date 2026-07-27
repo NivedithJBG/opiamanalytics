@@ -3524,76 +3524,58 @@ function _prefillModal(d){
   _schUnitTouched = !!schUnitEl.value;
   _schQtyTouched  = !!schQtyEl.value;
 
-  /* Tasks and Resources — fetch from getactivityresources directly */
-  if(d.iow_act_id){
-    $.ajax({
-      type:'POST', url:'../projectsmain/getactivityresources', dataType:'json',
-      data:{ activity_id: d.iow_act_id },
-      success: function(data){
-        if(data.unit && !document.getElementById('qe-unit').value)
-          document.getElementById('qe-unit').value = data.unit;
-        /* Schedule unit/qty — only fill if not already set from wbsget */
-        if(data.sch_unit && !document.getElementById('qe-sch-unit').value){
-          document.getElementById('qe-sch-unit').value = data.sch_unit;
-          document.getElementById('qe-sch-unit').classList.remove('qe-needs-data');
-        }
-        if(data.sch_qty && !document.getElementById('qe-sch-qty').value){
-          document.getElementById('qe-sch-qty').value = data.sch_qty;
-          document.getElementById('qe-sch-qty').classList.remove('qe-needs-data');
-        }
-
-        /* Tasks */
-        var taskBody = document.getElementById('qe-task-body');
-        taskBody.innerHTML = '';
-        if(data.tasks && data.tasks.length){
-          _task1NameTouched = true; _task1UnitTouched = true;
-          data.tasks.forEach(function(task){
-            var tr = document.createElement('tr');
-            tr.innerHTML =
-              '<td><input type="text" class="qe-task-name" value="'+(task.task_name||task.name||'').replace(/"/g,'&quot;')+'" placeholder="Task name"></td>'+
-              '<td><input type="text" class="qe-task-unit" value="'+(task.task_unit||task.unit||'').replace(/"/g,'&quot;')+'" placeholder="Unit"></td>'+
-              '<td><input type="number" class="qe-task-qty" value="'+parseFloat(task.task_qty||task.qty||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
-              '<td><input type="number" class="qe-task-prod" value="'+parseFloat(task.productivity||task.prod||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
-              '<td><input type="number" class="qe-task-resunits" value="'+(task.resunits||1)+'" placeholder="1" step="1" min="1"></td>'+
-              '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
-            taskBody.appendChild(tr);
-            _bindNumField(tr.querySelector('.qe-task-qty'));
-            tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
-            tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
-            tr.querySelector('.qe-task-del').addEventListener('click', function(){
-              if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
-            });
-            /* Loaded with a real saved qty — not the sch_qty default, so mark
-               touched to keep mirrorScheduleToTasks() from overwriting it. */
-            tr._taskQtyTouched = true;
-            tr.querySelector('.qe-task-qty').addEventListener('input', function(){ tr._taskQtyTouched = true; });
-          });
-        } else { addTaskRow(); }
-
-        /* Resources */
-        document.getElementById('qe-res-body').innerHTML = '';
-        if(data.items && data.items.length){
-          loadResTypes(function(){
-            data.items.forEach(function(res){
-              addResRow({
-                type_id:     res.type_id,
-                group_id:    res.group_id,
-                resource_id: res.est_resource_id || res.resource_id,
-                unit:        res.resource_unit || res.unit || '',
-                qty:         res.est_resource_quantity || res.qty,
-                rate:        res.est_resource_rate || res.rate
-              });
-            });
-          });
-        } else { loadResTypes(function(){ addResRow(); }); }
-        recalcDuration();
-      }
+  /* Tasks and Resources — use wbsget's own d.tasks/d.resources directly.
+     (Previously this fired a second AJAX call to getactivityresources,
+     which reads library-level defaults from estactivity_resources and has
+     no concept of this project instance's saved task_ids — that's why a
+     resource already mapped to a task via Map-to-Task never showed as
+     mapped again on re-edit. d.resources comes from wbsget's own
+     pricing_estimate_resources_new-backed query, task_map included.) */
+  var taskBody = document.getElementById('qe-task-body');
+  taskBody.innerHTML = '';
+  if(d.tasks && d.tasks.length){
+    _task1NameTouched = true; _task1UnitTouched = true;
+    d.tasks.forEach(function(task){
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td><input type="text" class="qe-task-name" value="'+(task.task_name||task.name||'').replace(/"/g,'&quot;')+'" placeholder="Task name"></td>'+
+        '<td><input type="text" class="qe-task-unit" value="'+(task.task_unit||task.unit||'').replace(/"/g,'&quot;')+'" placeholder="Unit"></td>'+
+        '<td><input type="number" class="qe-task-qty" value="'+parseFloat(task.task_qty||task.qty||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
+        '<td><input type="number" class="qe-task-prod" value="'+parseFloat(task.productivity||task.prod||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
+        '<td><input type="number" class="qe-task-resunits" value="'+(task.resunits||1)+'" placeholder="1" step="1" min="1"></td>'+
+        '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
+      taskBody.appendChild(tr);
+      _bindNumField(tr.querySelector('.qe-task-qty'));
+      tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
+      tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
+      tr.querySelector('.qe-task-del').addEventListener('click', function(){
+        if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
+      });
+      /* Loaded with a real saved qty — not the sch_qty default, so mark
+         touched to keep mirrorScheduleToTasks() from overwriting it. */
+      tr._taskQtyTouched = true;
+      tr.querySelector('.qe-task-qty').addEventListener('input', function(){ tr._taskQtyTouched = true; });
     });
-  } else {
-    addTaskRow();
-    loadResTypes(function(){ addResRow(); });
-    recalcDuration();
-  }
+  } else { addTaskRow(); }
+
+  /* Resources */
+  document.getElementById('qe-res-body').innerHTML = '';
+  if(d.resources && d.resources.length){
+    loadResTypes(function(){
+      d.resources.forEach(function(res){
+        addResRow({
+          type_id:     res.type_id,
+          group_id:    res.group_id,
+          resource_id: res.resource_id,
+          unit:        res.unit || '',
+          qty:         res.qty,
+          rate:        res.rate,
+          task_map:    res.task_map || []
+        });
+      });
+    });
+  } else { loadResTypes(function(){ addResRow(); }); }
+  recalcDuration();
 }
 
 window.openQeModal    = openModal;
@@ -3995,7 +3977,15 @@ function openMapPopup(resTr){
   var list = document.getElementById('qe-map-list');
   var noTasks = document.getElementById('qe-map-no-tasks');
   list.innerHTML = '';
-  var taskRows = document.querySelectorAll('#qe-task-body tr');
+  /* Named rows only, in the same order collectPayload() sends them — task_map
+     values are ordinals into THAT filtered list (they become the ordinal
+     position of the freshly-inserted activity_tasks row server-side), so a
+     blank/unnamed row here (which collectPayload() drops) must be skipped
+     too or every ordinal after it would be off-by-one against the backend. */
+  var taskRows = Array.prototype.filter.call(
+    document.querySelectorAll('#qe-task-body tr'),
+    function(ttr){ return ((ttr.querySelector('.qe-task-name')||{}).value || '').trim() !== ''; }
+  );
 
   if(!taskRows.length){
     noTasks.style.display = 'block'; list.style.display = 'none';
@@ -4003,8 +3993,7 @@ function openMapPopup(resTr){
     noTasks.style.display = 'none'; list.style.display = 'block';
     var prev = resTr._taskMap || [];
     taskRows.forEach(function(ttr, idx){
-      var tname = (ttr.querySelector('.qe-task-name')||{}).value || '';
-      tname = tname.trim() || ('Task '+(idx+1));
+      var tname = (ttr.querySelector('.qe-task-name')||{}).value.trim();
       var tunit = (ttr.querySelector('.qe-task-unit')||{}).value || '';
       var sel = prev.indexOf(idx) !== -1;
       var item = document.createElement('div');

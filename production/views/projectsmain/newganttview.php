@@ -2394,7 +2394,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     }
 
     // Bar hover — KPI popup (disabled: now click-only)
-    $(document).on('mouseover', '#gantt-container .gtaskbarcontainer:not(.gplan)', function(e) {
+    $(document).off('mouseover.gkpihover').on('mouseover.gkpihover', '#gantt-container .gtaskbarcontainer:not(.gplan)', function(e) {
       return; // click on KPI icon opens the panel instead
       var actId = _getActIdFromBarDiv(this);
       if (!actId) return;
@@ -2406,10 +2406,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     });
 
 
-    $('#gkp-close').on('click', function() { _hidePopup(); });
+    $('#gkp-close').off('click').on('click', function() { _hidePopup(); });
 
     // KPI icon click — inside this IIFE so _showKpiForAct is in scope
-    $(document).on('click', '#gantt-container .gcol-kpi span[data-kpiactid]', function(e) {
+    $(document).off('click.gkpiicon').on('click.gkpiicon', '#gantt-container .gcol-kpi span[data-kpiactid]', function(e) {
       e.stopPropagation();
       var actId = $(this).data('kpiactid');
       if (!actId) return;
@@ -2429,7 +2429,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     })();
 
     // Bar click — open WBS Quick Entry prefilled with saved data
-    $(document).on('click', '.gtaskbarcontainer:not(.gplan)', function() {
+    // Unbind any handler registered by a previous load of this page (this
+    // whole script is re-executed via reloadGantt() -> $.html() on every
+    // WBS save/add, and a plain un-namespaced $(document).on() here would
+    // otherwise stack a new copy each time, firing openQeModal() multiple
+    // times per click and duplicating the resource rows it re-fetches).
+    $(document).off('click.qebar').on('click.qebar', '.gtaskbarcontainer:not(.gplan)', function() {
       var idAttr = this.id || '';
       var pfx = 'gantt-containerbardiv_';
       var rawId = null, wanId = null;
