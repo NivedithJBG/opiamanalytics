@@ -51,7 +51,6 @@ class StorekeeperController extends Controller
             JOIN pricing_estimate_new pe ON p.activity_id  = pe.activity_Id
                                         AND pe.project_Id  = p.project_id
             JOIN resources r             ON p.resource_Id  = r.Resource_Id
-                                        AND r.Status       = 0
             JOIN resourcetype rt         ON p.resourcetype_Id = rt.ResourceType_Id
             LEFT JOIN resource_parameters rp ON rp.resource_id = r.Resource_Id
                                              AND rp.project_id = :pid1
