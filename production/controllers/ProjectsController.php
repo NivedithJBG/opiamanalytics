@@ -21121,115 +21121,35 @@ public function actionActivitymusterprocess()
         return json_encode(['error' => 'No']);
     }
 
-    /* TEMP diagnostic — remove once the stale-allocation gap is root-caused. */
-    public function actionDebugactivityalloc()
-    {
-        $db = \Yii::$app->db;
-
-        if (!empty($_GET['name'])) {
-            $activities = $db->createCommand(
-                "SELECT activity_id, activity_name, activity_status FROM estimateactivities WHERE activity_name LIKE :n",
-                [':n' => '%' . $_GET['name'] . '%']
-            )->queryAll();
-            return json_encode(['error' => 'No', 'activities' => $activities]);
-        }
-
-        if (!empty($_GET['wbsids'])) {
-            $ids = array_map('intval', explode(',', $_GET['wbsids']));
-            $wbs = $db->createCommand(
-                "SELECT Workgroup_Id, Project_Id, Name, Status, parent, sortorder, Added_On FROM workgroups_new WHERE Workgroup_Id IN (" . implode(',', $ids) . ")"
-            )->queryAll();
-            return json_encode(['error' => 'No', 'wbs' => $wbs]);
-        }
-
-        if (!empty($_GET['statuscounts'])) {
-            $projectId = (int) $_GET['statuscounts'];
-            $wsi = $db->createCommand(
-                "SELECT status, COUNT(*) AS cnt FROM wbsscheduleitems WHERE projectId = :pid GROUP BY status",
-                [':pid' => $projectId]
-            )->queryAll();
-            $sa = $db->createCommand(
-                "SELECT sa.status, COUNT(*) AS cnt
-                 FROM scheduleactivities sa
-                 JOIN wbsscheduleitems a ON a.scheduleitem_id = sa.scheduleitem_id
-                 WHERE a.projectId = :pid GROUP BY sa.status",
-                [':pid' => $projectId]
-            )->queryAll();
-            return json_encode(['error' => 'No', 'projectId' => $projectId, 'wbsscheduleitems_by_status' => $wsi, 'scheduleactivities_by_status' => $sa]);
-        }
-
-        if (!empty($_GET['ganttitemscheck'])) {
-            $projectId = (int) $_GET['ganttitemscheck'];
-            $rows = $db->createCommand("
-                SELECT a.scheduleitem_id, a.name, a.wbsid, a.status AS wbsitem_status,
-                       b.Workgroup_Id, b.Name AS wg_name, b.Status AS wg_status
-                FROM wbsscheduleitems AS a
-                LEFT JOIN workgroups_new AS b ON a.wbsid = b.Workgroup_Id
-                JOIN scheduleactivities AS s
-                     ON s.scheduleitem_id = a.scheduleitem_id
-                     AND s.status = 0
-                     AND s.actual_start_date IS NOT NULL
-                     AND s.actual_start_date != '0000-00-00'
-                WHERE a.projectId = :pid AND a.status = 0
-                GROUP BY a.scheduleitem_id
-            ", [':pid' => $projectId])->queryAll();
-            return json_encode(['error' => 'No', 'projectId' => $projectId, 'rows' => $rows]);
-        }
-
-        if (!empty($_GET['ganttcheck'])) {
-            $wbsid = (int) $_GET['ganttcheck'];
-            $items = $db->createCommand(
-                "SELECT * FROM wbsscheduleitems WHERE wbsid = :w",
-                [':w' => $wbsid]
-            )->queryAll();
-            $sched = $db->createCommand(
-                "SELECT sa.id, sa.scheduleitem_id, sa.status, sa.actual_start_date, sa.actual_end_date, sa.activity_id
-                 FROM wbsscheduleitems a
-                 JOIN scheduleactivities sa ON sa.scheduleitem_id = a.scheduleitem_id
-                 WHERE a.wbsid = :w",
-                [':w' => $wbsid]
-            )->queryAll();
-            return json_encode(['error' => 'No', 'wbsid' => $wbsid, 'wbsscheduleitems' => $items, 'scheduleactivities' => $sched]);
-        }
-
-        $activityid = (int) $_GET['activityid'];
-        $rows = $db->createCommand(
-            "SELECT w.id, w.project_Id, p.Name AS project_name, w.activity_Id,
-                    w.pricing_status, w.operations_status, w.pr_status, w.wbs_id,
-                    wg.Name AS wbs_name, wg.Status AS wbs_status
-             FROM workgroup_activities_new w
-             LEFT JOIN projects p ON p.Project_Id = w.project_Id
-             LEFT JOIN workgroups_new wg ON wg.Workgroup_Id = w.wbs_id
-             WHERE w.activity_Id = :id",
-            [':id' => $activityid]
-        )->queryAll();
-        return json_encode(['error' => 'No', 'activityid' => $activityid, 'rows' => $rows]);
-    }
-
     public function actionDeleteactivity()
     {
         $connection = \Yii::$app->db;
         $activityid = (int) $_POST['activityid'];
 
-        $allocated = WorkgroupActivitiesNew::find()
-            ->where(['activity_Id' => $activityid])
-            ->andWhere(['pricing_status' => 0])
-            ->exists();
-        if ($allocated) {
+        /* "Allocated" means visible in a project's Gantt chart, full stop —
+           a workgroup_activities_new row can be pricing_status=0 ("active")
+           while every wbsscheduleitems/scheduleactivities row under it was
+           already soft-deleted (status=1) via the Gantt/WBS delete flow,
+           leaving an orphaned allocation that no longer shows anywhere.
+           Only count it as allocated if it still has a live schedule row —
+           i.e. an actual Gantt bar — same status=0 convention actionGanttitems()
+           requires to render one. */
+        $projectNames = $connection->createCommand(
+            "SELECT DISTINCT p.Name
+             FROM workgroup_activities_new w
+             JOIN projects p ON p.Project_Id = w.project_Id
+             JOIN scheduleactivities sa ON sa.activity_id = w.id AND sa.status = 0
+             WHERE w.activity_Id = :id
+               AND w.pricing_status = 0",
+            [':id' => $activityid]
+        )->queryColumn();
+
+        if (!empty($projectNames)) {
             $activity = $connection->createCommand(
                 "SELECT activity_name FROM estimateactivities WHERE activity_id = :id",
                 [':id' => $activityid]
             )->queryOne();
             $activityname = $activity ? $activity['activity_name'] : '';
-
-            $projectNames = $connection->createCommand(
-                "SELECT DISTINCT p.Name
-                 FROM workgroup_activities_new w
-                 JOIN projects p ON p.Project_Id = w.project_Id
-                 WHERE w.activity_Id = :id
-                   AND w.pricing_status = 0",
-                [':id' => $activityid]
-            )->queryColumn();
             $projectList = implode(', ', array_filter($projectNames));
 
             return json_encode([
