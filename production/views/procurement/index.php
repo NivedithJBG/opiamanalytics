@@ -655,6 +655,22 @@
 (function(){
     var _poAllRows = [];
 
+    /* This whole view is loaded via $('#procurement-win-body').html(html)
+       (see main.php's #procurement-win), so every popup declared as static
+       markup below — po-bulk-popup, po-raisepo-popup, po-param-popup and
+       their overlays — is a DOM descendant of #procurement-win, not of
+       <body>. #procurement-win is position:fixed with an explicit z-index,
+       which makes it a stacking context: no z-index we set on a popup
+       trapped inside it can ever paint above a body-level sibling like
+       #procu-win-PO, no matter how high the number is. Move them out to
+       <body> immediately (same escape main.php already does for the other
+       floaters at its "Ensure all floating popups are direct children of
+       body" script), so their z-index is compared globally instead.       */
+    ['po-bulk-overlay','po-bulk-popup','po-raisepo-overlay','po-raisepo-popup','po-param-overlay','po-param-popup'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el && el.parentNode !== document.body) document.body.appendChild(el);
+    });
+
     /* Sub-popups (Parameters / Raise Purchase Order / Raise Purchase Orders
        bulk) are opened from inside the PO tab's own cascading window
        (#procu-win-PO), whose z-index rises independently of the outer
