@@ -21121,6 +21121,24 @@ public function actionActivitymusterprocess()
         return json_encode(['error' => 'No']);
     }
 
+    /* TEMP diagnostic — remove once the Planned Duration mismatch is root-caused. */
+    public function actionDebugactdur()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $db = \Yii::$app->db;
+        $name = \Yii::$app->request->get('name');
+        $rows = $db->createCommand(
+            "SELECT sa.id, sa.name, sa.activity_id AS wan_id, sa.start_date, sa.end_date,
+                    sa.actual_start_date, sa.actual_end_date, sa.duration, sa.old_duration,
+                    sa.quantity, sa.status, w.duration AS wan_duration
+             FROM scheduleactivities sa
+             LEFT JOIN workgroup_activities_new w ON w.id = sa.activity_id
+             WHERE sa.name LIKE :n",
+            [':n' => '%' . $name . '%']
+        )->queryAll();
+        return ['rows' => $rows];
+    }
+
     public function actionDeleteactivity()
     {
         $connection = \Yii::$app->db;
