@@ -805,6 +805,14 @@ function alRefreshActIowGroupDropdown(selectVal){
                 sel.append('<option value="'+g.id+'">'+g.name+'</option>');
             });
             if(cur) sel.val(cur);
+            /* TEMP debug — remove once the edit-mode IOW Group gap is root-caused.
+               Only fires when a saved value was actually passed in (edit mode). */
+            if (selectVal) {
+                alert('DEBUG alRefreshActIowGroupDropdown:\nselectVal param=' + selectVal + '\ncur used=' + cur +
+                      '\noptions loaded=' + (data.items||[]).length +
+                      '\nselect value right after set=' + sel.val());
+                setTimeout(function(){ alert('select value 500ms later=' + $('#actIowGroupId').val()); }, 500);
+            }
         }
     });
 }
