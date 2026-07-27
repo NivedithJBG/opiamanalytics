@@ -21128,7 +21128,16 @@ public function actionActivitymusterprocess()
 
         $allocated = WorkgroupActivitiesNew::find()->where(['activity_Id' => $activityid])->exists();
         if ($allocated) {
-            return json_encode(['error' => 'Yes', 'errortext' => 'This activity is already allocated to a project and cannot be deleted.', 'Id' => $activityid]);
+            $activity = $connection->createCommand(
+                "SELECT activity_name FROM estimateactivities WHERE activity_id = :id",
+                [':id' => $activityid]
+            )->queryOne();
+            $activityname = $activity ? $activity['activity_name'] : '';
+            return json_encode([
+                'error'     => 'Yes',
+                'errortext' => 'Activity "' . $activityname . '" is already allocated to a project and cannot be deleted.',
+                'Id'        => $activityid,
+            ]);
         }
 
         $sql = "UPDATE `estimateactivities` SET `activity_status`=1 WHERE `activity_id`=" . $activityid . " ";
