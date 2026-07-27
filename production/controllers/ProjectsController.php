@@ -21130,13 +21130,21 @@ public function actionActivitymusterprocess()
         $rows = $db->createCommand(
             "SELECT sa.id, sa.name, sa.activity_id AS wan_id, sa.start_date, sa.end_date,
                     sa.actual_start_date, sa.actual_end_date, sa.duration, sa.old_duration,
-                    sa.quantity, sa.status, w.duration AS wan_duration
+                    sa.quantity, sa.status, sa.projectId, w.duration AS wan_duration
              FROM scheduleactivities sa
              LEFT JOIN workgroup_activities_new w ON w.id = sa.activity_id
              WHERE sa.name LIKE :n",
             [':n' => '%' . $name . '%']
         )->queryAll();
-        return ['rows' => $rows];
+        $holidays = [];
+        foreach ($rows as $r) {
+            $pid = $r['projectId'];
+            if (!isset($holidays[$pid])) {
+                $h = $db->createCommand("SELECT dates, weeks FROM holidays WHERE project_id = :p", [':p' => $pid])->queryOne();
+                $holidays[$pid] = $h ?: ['dates' => '', 'weeks' => ''];
+            }
+        }
+        return ['rows' => $rows, 'holidays' => $holidays];
     }
 
     public function actionDeleteactivity()
