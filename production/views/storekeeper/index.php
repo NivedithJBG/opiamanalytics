@@ -116,8 +116,8 @@
 .sk-search-bar input[type="text"] { min-width: 200px; }
 .sk-even { background: #f9f9f9; }
 .sk-table td.num { text-align: right; }
-.sk-table thead tr { background: #072c47; color: #fff; }
-.sk-table thead th { border-color: #05233a; white-space: nowrap; }
+.sk-table thead tr { background: #2c4a4a; color: #fff; }
+.sk-table thead th { border-color: #1e3535; white-space: nowrap; }
 .sk-table td, .sk-table th { border-color: #b8b8b8 !important; }
 .procu-even { background: #f9f9f9; }
 .procu-table td.num { text-align: right; }
