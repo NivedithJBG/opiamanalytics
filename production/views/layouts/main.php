@@ -3328,10 +3328,11 @@ if($action=='login')
         <table class="qe-repeat-tbl" id="qe-task-tbl">
           <thead>
             <tr>
-              <th style="width:34%">Task Name</th>
-              <th style="width:16%">Qty/Sch Unit</th>
-              <th style="width:18%">Productivity / Day</th>
-              <th style="width:16%">Resource Units</th>
+              <th style="width:26%">Task Name</th>
+              <th style="width:14%">Qty/Sch Unit</th>
+              <th style="width:16%">Productivity / Day</th>
+              <th style="width:14%">Duration/Unit</th>
+              <th style="width:14%">Resource Units</th>
               <th style="width:16%;text-align:right">
                 <button class="qe-add-btn" id="qe-task-add" title="Add task row">+</button>
               </th>
@@ -3540,19 +3541,17 @@ function _prefillModal(d){
         '<td><input type="text" class="qe-task-name" value="'+(task.task_name||task.name||'').replace(/"/g,'&quot;')+'" placeholder="Task name"></td>'+
         '<td><input type="number" class="qe-task-qty" value="'+parseFloat(task.task_qty||task.qty||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
         '<td><input type="number" class="qe-task-prod" value="'+parseFloat(task.productivity||task.prod||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
+        '<td><input type="text" class="qe-task-durunit" placeholder="—" readonly></td>'+
         '<td><input type="number" class="qe-task-resunits" value="'+(task.resunits||1)+'" placeholder="1" step="1" min="1"></td>'+
         '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
       taskBody.appendChild(tr);
       _bindNumField(tr.querySelector('.qe-task-qty'));
+      tr.querySelector('.qe-task-qty').addEventListener('input', recalcDuration);
       tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
-      tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
       tr.querySelector('.qe-task-del').addEventListener('click', function(){
         if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
       });
-      /* Loaded with a real saved qty — not the sch_qty default, so mark
-         touched to keep mirrorScheduleToTasks() from overwriting it. */
-      tr._taskQtyTouched = true;
-      tr.querySelector('.qe-task-qty').addEventListener('input', function(){ tr._taskQtyTouched = true; });
+      recalcTaskDurationPerUnit(tr);
     });
   } else { addTaskRow(); }
 
@@ -3781,22 +3780,28 @@ function _resolveActivityId(){
 }
 
 /* ── duration calculation ──
-   Duration = ceil(SCH QTY / (Productivity/Day × Resource Units))
-   For multiple tasks, the one that takes longest controls the duration. */
+   Per task:  Duration/Unit = Qty/Sch Unit ÷ Productivity/Day
+              (days needed for this task per single unit of the activity's Sch Qty)
+   Activity:  Duration = Sch Qty × SUM(Duration/Unit across all tasks)
+              (tasks run sequentially — each task's own per-unit rate adds to the total). */
+function recalcTaskDurationPerUnit(tr){
+  var qty  = parseFloat(tr.querySelector('.qe-task-qty')  ? tr.querySelector('.qe-task-qty').value  : 0) || 0;
+  var prod = parseFloat(tr.querySelector('.qe-task-prod') ? tr.querySelector('.qe-task-prod').value : 0) || 0;
+  var durPerUnit = prod > 0 ? (qty / prod) : 0;
+  var durEl = tr.querySelector('.qe-task-durunit');
+  if(durEl) durEl.value = durPerUnit > 0 ? durPerUnit.toFixed(4) : '';
+  return durPerUnit;
+}
+
 function recalcDuration(){
   var schQty = parseFloat(document.getElementById('qe-sch-qty').value) || 0;
 
-  var maxDays = 0;
+  var sumDurPerUnit = 0;
   document.querySelectorAll('#qe-task-body tr').forEach(function(tr){
-    var prod     = parseFloat(tr.querySelector('.qe-task-prod')     ? tr.querySelector('.qe-task-prod').value     : 0) || 0;
-    var resUnits = parseFloat(tr.querySelector('.qe-task-resunits') ? tr.querySelector('.qe-task-resunits').value : 0) || 0;
-    if(prod > 0 && resUnits > 0 && schQty > 0){
-      var days = schQty / (prod * resUnits);
-      if(days > maxDays) maxDays = days;
-    }
+    sumDurPerUnit += recalcTaskDurationPerUnit(tr);
   });
 
-  var duration = maxDays > 0 ? Math.ceil(maxDays) : 0;
+  var duration = (schQty > 0 && sumDurPerUnit > 0) ? Math.ceil(schQty * sumDurPerUnit) : 0;
   var durEl = document.getElementById('qe-dur-val'); if(durEl) durEl.textContent = duration > 0 ? duration : '—';
   return duration;
 }
@@ -3848,16 +3853,17 @@ function addTaskRow(){
   var tr = document.createElement('tr');
   tr.innerHTML =
     '<td><input type="text" class="qe-task-name" placeholder="Task name"></td>'+
-    '<td><input type="number" class="qe-task-qty" placeholder="0.00" step="0.01" min="0"></td>'+
+    '<td><input type="number" class="qe-task-qty" value="1" placeholder="0.00" step="0.01" min="0"></td>'+
     '<td><input type="number" class="qe-task-prod" placeholder="0.00" step="0.01" min="0"></td>'+
+    '<td><input type="text" class="qe-task-durunit" placeholder="—" readonly></td>'+
     '<td><input type="number" class="qe-task-resunits" value="1" placeholder="1" step="1" min="1"></td>'+
     '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
   tbody.appendChild(tr);
   _bindNumField(tr.querySelector('.qe-task-qty'));
   _bindNumField(tr.querySelector('.qe-task-prod'));
   _bindNumField(tr.querySelector('.qe-task-resunits'));
+  tr.querySelector('.qe-task-qty').addEventListener('input', recalcDuration);
   tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
-  tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
   tr.querySelector('.qe-task-del').addEventListener('click', function(){
     if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
   });
@@ -3866,9 +3872,7 @@ function addTaskRow(){
     tr.querySelector('.qe-task-name').addEventListener('input', function(){ _task1NameTouched = true; });
     mirrorActivityToFirstTask();
   }
-  tr._taskQtyTouched = false;
-  tr.querySelector('.qe-task-qty').addEventListener('input', function(){ tr._taskQtyTouched = true; });
-  tr.querySelector('.qe-task-qty').value = document.getElementById('qe-sch-qty').value;
+  recalcTaskDurationPerUnit(tr);
 }
 
 /* ── Resource rows ── */
@@ -4182,17 +4186,6 @@ function mirrorActivityToFirstTask(){
   if(nameEl && !_task1NameTouched) nameEl.value = document.getElementById('qe-activity-text').value;
 }
 
-/* Sch. Qty → each task row's Qty, until that row's qty is manually edited.
-   Mirrors the same touched-flag pattern as mirrorEstimateToSchedule/
-   mirrorActivityToFirstTask above — a starting default, freely overridable. */
-function mirrorScheduleToTasks(){
-  var schQty = document.getElementById('qe-sch-qty').value;
-  document.querySelectorAll('#qe-task-body tr').forEach(function(tr){
-    var qtyEl = tr.querySelector('.qe-task-qty');
-    if(qtyEl && !tr._taskQtyTouched) qtyEl.value = schQty;
-  });
-}
-
 /* ── Input validation helpers ── */
 /* Blocks digits in alpha-only fields; blocks letters in number fields */
 function _bindAlphaField(el){
@@ -4394,19 +4387,17 @@ $(function(){
               '<td><input type="text" class="qe-task-name" value="'+(task.task_name||'').replace(/"/g,'&quot;')+'" placeholder="Task name"></td>'+
               '<td><input type="number" class="qe-task-qty" value="'+parseFloat(task.task_qty||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
               '<td><input type="number" class="qe-task-prod" value="'+parseFloat(task.productivity||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
+              '<td><input type="text" class="qe-task-durunit" placeholder="—" readonly></td>'+
               '<td><input type="number" class="qe-task-resunits" value="1" placeholder="1" step="1" min="1"></td>'+
               '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
             taskBody.appendChild(tr);
             _bindNumField(tr.querySelector('.qe-task-qty'));
+            tr.querySelector('.qe-task-qty').addEventListener('input', recalcDuration);
             tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
-            tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
             tr.querySelector('.qe-task-del').addEventListener('click', function(){
               if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
             });
-            /* Loaded with a real saved qty — not the sch_qty default, so mark
-               touched to keep mirrorScheduleToTasks() from overwriting it. */
-            tr._taskQtyTouched = true;
-            tr.querySelector('.qe-task-qty').addEventListener('input', function(){ tr._taskQtyTouched = true; });
+            recalcTaskDurationPerUnit(tr);
           });
         } else { addTaskRow(); }
         recalcDuration();
@@ -4439,7 +4430,6 @@ $(function(){
 
   document.getElementById('qe-qty').addEventListener('input', calcActivityAmount);
   document.getElementById('qe-sch-qty').addEventListener('input', recalcDuration);
-  document.getElementById('qe-sch-qty').addEventListener('input', mirrorScheduleToTasks);
 
   /* mirror Estimate → Schedule, and Activity/Estimate → first Task, until user edits the target */
   document.getElementById('qe-unit').addEventListener('input', function(){ mirrorEstimateToSchedule(); mirrorActivityToFirstTask(); });
@@ -4502,11 +4492,11 @@ $(function(){
       if(schQty <= 0) missing.push('Sch. Qty');
       var hasTaskInputs = false;
       document.querySelectorAll('#qe-task-body tr').forEach(function(tr){
-        var prod     = parseFloat(tr.querySelector('.qe-task-prod')     ? tr.querySelector('.qe-task-prod').value     : 0) || 0;
-        var resUnits = parseFloat(tr.querySelector('.qe-task-resunits') ? tr.querySelector('.qe-task-resunits').value : 0) || 0;
-        if(prod > 0 && resUnits > 0) hasTaskInputs = true;
+        var qty  = parseFloat(tr.querySelector('.qe-task-qty')  ? tr.querySelector('.qe-task-qty').value  : 0) || 0;
+        var prod = parseFloat(tr.querySelector('.qe-task-prod') ? tr.querySelector('.qe-task-prod').value : 0) || 0;
+        if(qty > 0 && prod > 0) hasTaskInputs = true;
       });
-      if(!hasTaskInputs) missing.push('Productivity / Day (and Resource Units) for at least one task');
+      if(!hasTaskInputs) missing.push('Qty/Sch Unit and Productivity / Day for at least one task');
       alert('Duration could not be calculated — missing: ' + missing.join(', ') + '.\n\nThe activity will be added with a placeholder 1-day duration; fill these in and re-save to get the correct duration.');
     }
 
