@@ -21134,6 +21134,14 @@ public function actionActivitymusterprocess()
             return json_encode(['error' => 'No', 'activities' => $activities]);
         }
 
+        if (!empty($_GET['wbsids'])) {
+            $ids = array_map('intval', explode(',', $_GET['wbsids']));
+            $wbs = $db->createCommand(
+                "SELECT Workgroup_Id, Project_Id, Name, Status, parent, sortorder, Added_On FROM workgroups_new WHERE Workgroup_Id IN (" . implode(',', $ids) . ")"
+            )->queryAll();
+            return json_encode(['error' => 'No', 'wbs' => $wbs]);
+        }
+
         $activityid = (int) $_GET['activityid'];
         $rows = $db->createCommand(
             "SELECT w.id, w.project_Id, p.Name AS project_name, w.activity_Id,
