@@ -21124,8 +21124,17 @@ public function actionActivitymusterprocess()
     /* TEMP diagnostic — remove once the stale-allocation gap is root-caused. */
     public function actionDebugactivityalloc()
     {
-        $activityid = (int) $_GET['activityid'];
         $db = \Yii::$app->db;
+
+        if (!empty($_GET['name'])) {
+            $activities = $db->createCommand(
+                "SELECT activity_id, activity_name, activity_status FROM estimateactivities WHERE activity_name LIKE :n",
+                [':n' => '%' . $_GET['name'] . '%']
+            )->queryAll();
+            return json_encode(['error' => 'No', 'activities' => $activities]);
+        }
+
+        $activityid = (int) $_GET['activityid'];
         $rows = $db->createCommand(
             "SELECT w.id, w.project_Id, p.Name AS project_name, w.activity_Id,
                     w.pricing_status, w.operations_status, w.pr_status, w.wbs_id
