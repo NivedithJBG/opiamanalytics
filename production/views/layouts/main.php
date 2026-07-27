@@ -3703,6 +3703,12 @@ function loadActivities(typeId, groupId, iowGroupId, cb){
     data:{typeId: typeId, groupId: groupId, iowGroupId: iowGroupId},
     success: function(d){
       _activityItems = d.items || [];
+      /* TEMP debug — remove once the "no activities listed" gap is root-caused. */
+      if (!d.items || !d.items.length) {
+        alert('DEBUG loadActivities:\nsent: typeId=' + typeId + ' groupId=' + groupId + ' iowGroupId=' + iowGroupId +
+              '\nserver saw: ' + JSON.stringify(d._debug_received || {}) +
+              '\nitems returned: ' + (d.items ? d.items.length : 'none'));
+      }
       if(cb) cb();
     }
   });
