@@ -671,6 +671,7 @@
             var tabZ = parseInt(getComputedStyle(tabWin).zIndex, 10) || 0;
             if (tabZ + 2 > base) base = tabZ + 2;
         }
+        if (window.__procuDebug) console.log('[procu-z] _procuPopupZ ->', base, 'tabWinZ=', tabWin && getComputedStyle(tabWin).zIndex, 'subZBase=', (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : null);
         return base;
     }
 
@@ -2387,6 +2388,7 @@
 
         function raise(){
             win.style.setProperty('z-index', _procuNextZ(), 'important');
+            if (window.__procuDebug) console.log('[procu-z] raise() tab=', tab, 'newZ=', win.style.zIndex);
             /* This window's own mousedown-raise (below) fires on every click
                inside it — including the click that opens a sub-popup like
                Parameters/Raise PO — so if the sub-popup is already open and
