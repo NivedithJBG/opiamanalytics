@@ -307,7 +307,9 @@ class ProjectsmainController extends Controller
             ($groupId ? " AND activity_type = $groupId" : "")
         )->queryAll();
         $iow = $db->createCommand("SELECT id, name, status FROM iow_groups ORDER BY name ASC")->queryAll();
-        return ['activities' => $rows, 'iow_groups' => $iow];
+        $worktypes = $db->createCommand("SELECT estworktype_id, estworktype_name FROM estimateworktypes ORDER BY estworktype_id ASC")->queryAll();
+        $acttypes  = $db->createCommand("SELECT activitytype_id, activitytype_name FROM estimateactivitytypes ORDER BY activitytype_id ASC")->queryAll();
+        return ['activities' => $rows, 'iow_groups' => $iow, 'work_types' => $worktypes, 'activity_types' => $acttypes];
     }
 
 
