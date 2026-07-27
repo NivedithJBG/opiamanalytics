@@ -21137,9 +21137,11 @@ public function actionActivitymusterprocess()
         $activityid = (int) $_GET['activityid'];
         $rows = $db->createCommand(
             "SELECT w.id, w.project_Id, p.Name AS project_name, w.activity_Id,
-                    w.pricing_status, w.operations_status, w.pr_status, w.wbs_id
+                    w.pricing_status, w.operations_status, w.pr_status, w.wbs_id,
+                    wg.Name AS wbs_name, wg.Status AS wbs_status
              FROM workgroup_activities_new w
              LEFT JOIN projects p ON p.Project_Id = w.project_Id
+             LEFT JOIN workgroups_new wg ON wg.Workgroup_Id = w.wbs_id
              WHERE w.activity_Id = :id",
             [':id' => $activityid]
         )->queryAll();
