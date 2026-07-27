@@ -289,7 +289,9 @@ class ProjectsmainController extends Controller
         if ($iowGroupId) $sql .= " AND ea.iow_group_id = " . $iowGroupId;
         $sql .= " ORDER BY ea.activity_name ASC";
         $rows = \Yii::$app->db->createCommand($sql)->queryAll();
-        return ['items' => $rows];
+        /* TEMP: echo back what was actually received, to compare against what
+           the dropdowns are supposed to be sending — remove once root-caused. */
+        return ['items' => $rows, '_debug_received' => ['typeId' => $typeId, 'groupId' => $groupId, 'iowGroupId' => $iowGroupId, 'raw_post' => $_POST]];
     }
 
     /* TEMP diagnostic — remove once the "no activities listed" gap is root-caused. */
