@@ -21123,23 +21123,19 @@ public function actionActivitymusterprocess()
 
     public function actionDeleteactivity()
     {
-        $connection = $connection = \Yii::$app->db;
-       /*  $activityid=WorkgroupActivitiesNew::find()->where(['activity_Id' => $_POST['activityid']])->andWhere(['pricing_status' => 0])->one();
-        if($activityid){
+        $connection = \Yii::$app->db;
+        $activityid = (int) $_POST['activityid'];
 
-            $arr=array('error'=>'Yes','Id'=>$_POST['activityid']);
-            return json_encode($arr);
-
+        $allocated = WorkgroupActivitiesNew::find()->where(['activity_Id' => $activityid])->exists();
+        if ($allocated) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'This activity is already allocated to a project and cannot be deleted.', 'Id' => $activityid]);
         }
-        else{ */
-            $sql = "UPDATE `estimateactivities` SET `activity_status`=1  WHERE `activity_id`=".$_POST['activityid']." ";
-            //$sql = "DELETE FROM `estimateactivities` WHERE `activity_id`=".$_POST['activityid']." ";
-            //echo $sql;exit;
-            $command=$connection->createCommand($sql);
-            $dataReader=$command->query();
-            $arr=array('error'=>'No','Id'=>$_POST['activityid']);
-            return json_encode($arr);
-        //}
+
+        $sql = "UPDATE `estimateactivities` SET `activity_status`=1 WHERE `activity_id`=" . $activityid . " ";
+        $command = $connection->createCommand($sql);
+        $command->query();
+        $arr = array('error' => 'No', 'Id' => $activityid);
+        return json_encode($arr);
     }
 
     //status active

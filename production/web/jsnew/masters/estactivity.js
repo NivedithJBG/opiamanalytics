@@ -252,9 +252,9 @@ $(document).on( "click", ".deleteestactivitybutton", function(){
                     $('#estactivityrow'+data.Id).remove();
                     //$('#listworktype').trigger('click');
                 }
-               /*  else{
-                    alert("Activity already assigned to project")
-                } */
+                else{
+                    alert(data.errortext || "Activity already assigned to a project");
+                }
                 $('#deleteestactivitybutton'+data.Id).attr("disabled", false);
             }
         });
