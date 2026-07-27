@@ -21133,9 +21133,19 @@ public function actionActivitymusterprocess()
                 [':id' => $activityid]
             )->queryOne();
             $activityname = $activity ? $activity['activity_name'] : '';
+
+            $projectNames = $connection->createCommand(
+                "SELECT DISTINCT p.Name
+                 FROM workgroup_activities_new w
+                 JOIN projects p ON p.Project_Id = w.project_Id
+                 WHERE w.activity_Id = :id",
+                [':id' => $activityid]
+            )->queryColumn();
+            $projectList = implode(', ', array_filter($projectNames));
+
             return json_encode([
                 'error'     => 'Yes',
-                'errortext' => 'Activity "' . $activityname . '" is already allocated to a project and cannot be deleted.',
+                'errortext' => 'Activity "' . $activityname . '" is already allocated to project(s) "' . $projectList . '" and cannot be deleted.',
                 'Id'        => $activityid,
             ]);
         }
