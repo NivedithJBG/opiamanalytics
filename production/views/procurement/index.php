@@ -674,6 +674,26 @@
         return base;
     }
 
+    /* Called by #procu-win-PO's own raise() (see _procuBuildWin below) every
+       time that window is clicked/dragged, so whichever of these sub-popups
+       is currently open gets pushed back above it instead of being buried
+       by the window's own re-raise. */
+    window._procuReraiseOpenSubPopups = function(){
+        var overlayPopupPairs = [
+            ['po-param-overlay', 'po-param-popup'],
+            ['po-bulk-overlay', 'po-bulk-popup'],
+            ['po-raisepo-overlay', 'po-raisepo-popup']
+        ];
+        overlayPopupPairs.forEach(function(pair){
+            var popup = document.getElementById(pair[1]);
+            if (popup && getComputedStyle(popup).display !== 'none') {
+                var z = _procuPopupZ();
+                document.getElementById(pair[0]).style.zIndex = z;
+                popup.style.zIndex = z + 1;
+            }
+        });
+    };
+
     function loadPurchaseOrders() {
         $('#po-loader').show();
         $('#po-body').html('');
@@ -2365,7 +2385,19 @@
         }, { passive: false });
         bdt(document, 'mouseup', function(){ _action = null; });
 
-        function raise(){ win.style.setProperty('z-index', _procuNextZ(), 'important'); }
+        function raise(){
+            win.style.setProperty('z-index', _procuNextZ(), 'important');
+            /* This window's own mousedown-raise (below) fires on every click
+               inside it — including the click that opens a sub-popup like
+               Parameters/Raise PO — so if the sub-popup is already open and
+               the user clicks the window again, this would otherwise push
+               #procu-win-PO back above it. Re-raise any open sub-popup so it
+               always stays on top of this window, same pattern as
+               registerSubPopupReraise() in main.php for the other floaters. */
+            if (tab === 'PO' && typeof window._procuReraiseOpenSubPopups === 'function') {
+                window._procuReraiseOpenSubPopups();
+            }
+        }
         bdt(win, 'mousedown', raise, true);
 
         hdr.querySelector('.procu-tw-close').addEventListener('click', function(){
