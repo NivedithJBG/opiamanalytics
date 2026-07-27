@@ -21142,6 +21142,24 @@ public function actionActivitymusterprocess()
             return json_encode(['error' => 'No', 'wbs' => $wbs]);
         }
 
+        if (!empty($_GET['ganttitemscheck'])) {
+            $projectId = (int) $_GET['ganttitemscheck'];
+            $rows = $db->createCommand("
+                SELECT a.scheduleitem_id, a.name, a.wbsid, a.status AS wbsitem_status,
+                       b.Workgroup_Id, b.Name AS wg_name, b.Status AS wg_status
+                FROM wbsscheduleitems AS a
+                LEFT JOIN workgroups_new AS b ON a.wbsid = b.Workgroup_Id
+                JOIN scheduleactivities AS s
+                     ON s.scheduleitem_id = a.scheduleitem_id
+                     AND s.status = 0
+                     AND s.actual_start_date IS NOT NULL
+                     AND s.actual_start_date != '0000-00-00'
+                WHERE a.projectId = :pid AND a.status = 0
+                GROUP BY a.scheduleitem_id
+            ", [':pid' => $projectId])->queryAll();
+            return json_encode(['error' => 'No', 'projectId' => $projectId, 'rows' => $rows]);
+        }
+
         if (!empty($_GET['ganttcheck'])) {
             $wbsid = (int) $_GET['ganttcheck'];
             $items = $db->createCommand(
