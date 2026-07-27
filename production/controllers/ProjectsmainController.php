@@ -292,6 +292,24 @@ class ProjectsmainController extends Controller
         return ['items' => $rows];
     }
 
+    /* TEMP diagnostic — remove once the "no activities listed" gap is root-caused. */
+    public function actionDebugactfilter()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $db = \Yii::$app->db;
+        $typeId  = (int)\Yii::$app->request->get('typeId');
+        $groupId = (int)\Yii::$app->request->get('groupId');
+        $rows = $db->createCommand(
+            "SELECT activity_id, activity_name, work_type, activity_type, iow_group_id, activity_status
+             FROM estimateactivities
+             WHERE activity_status = 0" .
+            ($typeId ? " AND work_type = $typeId" : "") .
+            ($groupId ? " AND activity_type = $groupId" : "")
+        )->queryAll();
+        $iow = $db->createCommand("SELECT id, name, status FROM iow_groups ORDER BY name ASC")->queryAll();
+        return ['activities' => $rows, 'iow_groups' => $iow];
+    }
+
 
 
 
