@@ -21150,6 +21150,14 @@ public function actionActivitymusterprocess()
              FROM estimateactivities WHERE activity_name LIKE :n",
             [':n' => '%' . $name . '%']
         )->queryAll();
+        foreach ($rows as &$r) {
+            $r['allocated'] = (bool) $db->createCommand(
+                "SELECT 1 FROM workgroup_activities_new w
+                 JOIN scheduleactivities sa ON sa.activity_id = w.id AND sa.status = 0
+                 WHERE w.activity_Id = :id AND w.pricing_status = 0 LIMIT 1",
+                [':id' => $r['activity_id']]
+            )->queryScalar();
+        }
         return ['rows' => $rows];
     }
 
