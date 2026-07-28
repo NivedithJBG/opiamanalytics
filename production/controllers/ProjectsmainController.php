@@ -910,11 +910,6 @@ class ProjectsmainController extends Controller
 
         $today   = date('Y-m-d');
         $endDate = date('Y-m-d', strtotime($today . ' + ' . ($savedDur - 1) . ' days'));
-        /* TEMP diagnostic — remove once the Planned Duration mismatch is root-caused. */
-        $GLOBALS['__wbsadd_debug'] = [
-            'wan_id' => $wanId, 'saved_dur' => $savedDur, 'today' => $today, 'end_date' => $endDate,
-            'payload_duration' => $duration, 'wanrow_duration' => (int)$wanRow['duration'],
-        ];
 
         $lastSchSort = $db->createCommand(
             "SELECT COALESCE(MAX(sortorder),0) AS s FROM scheduleactivities WHERE projectId=:p",
@@ -1036,7 +1031,6 @@ class ProjectsmainController extends Controller
             'scheduleitem_id' => $scheduleItemId,
             'duration'        => $savedDur,
             'act_name'        => $savedName,
-            '_debug'          => $GLOBALS['__wbsadd_debug'] ?? null,
         ];
         } catch (\Exception $e) {
             return ['error' => $e->getMessage()];
