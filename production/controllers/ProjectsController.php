@@ -21161,6 +21161,16 @@ public function actionActivitymusterprocess()
         return ['rows' => $rows];
     }
 
+    /* TEMP one-off cleanup — remove duplicate "Painting" activity (id 57), unallocated. */
+    public function actionCleanupdupepainting()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        \Yii::$app->db->createCommand(
+            "UPDATE estimateactivities SET activity_status = 1 WHERE activity_id = 57"
+        )->execute();
+        return ['error' => 'No'];
+    }
+
     /* TEMP diagnostic — remove once the Planned Duration mismatch is root-caused. */
     public function actionDebugactdur()
     {
