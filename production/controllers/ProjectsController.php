@@ -20935,19 +20935,37 @@ public function actionActivitymusterprocess()
             }
 
             for ($i = 0; $i < count($names); $i++) {
-                $estcount = $connection->createCommand("SELECT COUNT(*) FROM estimateactivities")->queryScalar();
-                $connection->createCommand()->insert('estimateactivities', [
-                    'activity_type'  => $activityType,
-                    'work_type'      => $workType,
-                    'iow_group_id'   => $iowGroupId,
-                    'activity_name'  => $names[$i],
-                    'activity_unit'  => isset($_POST['estactivityunit'][$i]) ? $_POST['estactivityunit'][$i] : '',
-                    'activity_status' => 0,
-                    'sortorder'       => $estcount,
-                    'working_hours'   => $workingHours,
-                    'activity_rate'   => 0,
-                ])->execute();
-                $activityId = $connection->lastInsertID;
+                // Guard against duplicate creation (double-click, retry, etc.) —
+                // same check actionWbsadd/actionWbssave already use before
+                // inserting a new library activity.
+                $existingId = $connection->createCommand(
+                    "SELECT activity_id FROM estimateactivities
+                     WHERE activity_name=:n AND work_type=:wt AND activity_type=:at AND activity_status=0 LIMIT 1",
+                    [':n' => $names[$i], ':wt' => $workType, ':at' => $activityType]
+                )->queryScalar();
+                if ($existingId) {
+                    $activityId = (int)$existingId;
+                    $connection->createCommand()->update('estimateactivities', [
+                        'iow_group_id'   => $iowGroupId,
+                        'activity_unit'  => isset($_POST['estactivityunit'][$i]) ? $_POST['estactivityunit'][$i] : '',
+                        'working_hours'  => $workingHours,
+                    ], ['activity_id' => $activityId])->execute();
+                    $connection->createCommand("DELETE FROM activity_tasks WHERE activity_id = :id", [':id' => $activityId])->execute();
+                } else {
+                    $estcount = $connection->createCommand("SELECT COUNT(*) FROM estimateactivities")->queryScalar();
+                    $connection->createCommand()->insert('estimateactivities', [
+                        'activity_type'  => $activityType,
+                        'work_type'      => $workType,
+                        'iow_group_id'   => $iowGroupId,
+                        'activity_name'  => $names[$i],
+                        'activity_unit'  => isset($_POST['estactivityunit'][$i]) ? $_POST['estactivityunit'][$i] : '',
+                        'activity_status' => 0,
+                        'sortorder'       => $estcount,
+                        'working_hours'   => $workingHours,
+                        'activity_rate'   => 0,
+                    ])->execute();
+                    $activityId = $connection->lastInsertID;
+                }
 
                 if (!empty($_POST['task_name'])) {
                     foreach ($_POST['task_name'] as $j => $taskName) {
