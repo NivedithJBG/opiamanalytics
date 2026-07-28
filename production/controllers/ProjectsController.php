@@ -21139,6 +21139,15 @@ public function actionActivitymusterprocess()
         return json_encode(['error' => 'No']);
     }
 
+    /* TEMP diagnostic — check for DB triggers on scheduleactivities. */
+    public function actionDebugtriggers()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $db = \Yii::$app->db;
+        $triggers = $db->createCommand("SHOW TRIGGERS WHERE `Table` = 'scheduleactivities'")->queryAll();
+        return ['triggers' => $triggers];
+    }
+
     /* TEMP diagnostic — remove once the Planned Duration display mismatch is root-caused. */
     public function actionDebugactdur2()
     {
