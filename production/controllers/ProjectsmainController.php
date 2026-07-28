@@ -919,9 +919,10 @@ class ProjectsmainController extends Controller
 
         $db->createCommand(
             "INSERT INTO scheduleactivities
-             (name, activity_id, unit, quantity, start_date, end_date, duration, old_duration,
+             (name, activity_id, unit, quantity, start_date, end_date,
+              actual_start_date, actual_end_date, duration, old_duration,
               scheduleitem_id, projectId, status, sortorder, resource_units)
-             VALUES (:n, :aid, :u, :q, :sd, :ed, :dur, :dur, :si, :p, 0, :so, 1)",
+             VALUES (:n, :aid, :u, :q, :sd, :ed, :sd, :ed, :dur, :dur, :si, :p, 0, :so, 1)",
             [
                 ':n'   => $savedName,
                 ':aid' => $wanId,
