@@ -21146,8 +21146,8 @@ public function actionActivitymusterprocess()
         $db = \Yii::$app->db;
         $name = \Yii::$app->request->get('name');
         $rows = $db->createCommand(
-            "SELECT id, name, start_date, end_date, actual_start_date, actual_end_date,
-                    duration, old_duration, status
+            "SELECT id, name, activity_id AS wan_id, start_date, end_date, actual_start_date, actual_end_date,
+                    duration, old_duration, status, scheduleitem_id
              FROM scheduleactivities WHERE name LIKE :n ORDER BY id DESC",
             [':n' => '%' . $name . '%']
         )->queryAll();
