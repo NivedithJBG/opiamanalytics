@@ -21121,6 +21121,20 @@ public function actionActivitymusterprocess()
         return json_encode(['error' => 'No']);
     }
 
+    /* TEMP diagnostic — remove once the duplicate-activity-in-dropdown gap is root-caused. */
+    public function actionDebugactrows()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $db = \Yii::$app->db;
+        $name = \Yii::$app->request->get('name');
+        $rows = $db->createCommand(
+            "SELECT activity_id, activity_name, activity_status, work_type, activity_type, iow_group_id
+             FROM estimateactivities WHERE activity_name LIKE :n",
+            [':n' => '%' . $name . '%']
+        )->queryAll();
+        return ['rows' => $rows];
+    }
+
     /* TEMP diagnostic — remove once the Planned Duration mismatch is root-caused. */
     public function actionDebugactdur()
     {
