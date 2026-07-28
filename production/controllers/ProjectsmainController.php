@@ -402,18 +402,18 @@ class ProjectsmainController extends Controller
             } else {
                 $db->createCommand(
                     "INSERT INTO estimateactivities
-                     (activity_name, activity_unit, work_type, activity_type, activity_rate, activity_status)
-                     VALUES (:n, :u, :wt, :at, 0, 0)",
-                    [':n' => $actNameInput, ':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId]
+                     (activity_name, activity_unit, work_type, activity_type, iow_group_id, activity_rate, activity_status)
+                     VALUES (:n, :u, :wt, :at, :g, 0, 0)",
+                    [':n' => $actNameInput, ':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId, ':g' => $iowGroupId]
                 )->execute();
                 $iowActId = (int)$db->lastInsertID;
             }
         } else {
             // Update existing activity's unit/type in estimateactivities
             $db->createCommand(
-                "UPDATE estimateactivities SET activity_unit=:u, work_type=:wt, activity_type=:at
+                "UPDATE estimateactivities SET activity_unit=:u, work_type=:wt, activity_type=:at, iow_group_id=:g
                  WHERE activity_id=:id",
-                [':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId, ':id' => $iowActId]
+                [':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId, ':g' => $iowGroupId, ':id' => $iowActId]
             )->execute();
         }
 
@@ -747,16 +747,16 @@ class ProjectsmainController extends Controller
                 } else {
                     $db->createCommand(
                         "INSERT INTO estimateactivities
-                         (activity_name, activity_unit, work_type, activity_type, activity_rate, activity_status)
-                         VALUES (:n, :u, :wt, :at, 0, 0)",
-                        [':n' => $actNameInput, ':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId]
+                         (activity_name, activity_unit, work_type, activity_type, iow_group_id, activity_rate, activity_status)
+                         VALUES (:n, :u, :wt, :at, :g, 0, 0)",
+                        [':n' => $actNameInput, ':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId, ':g' => $iowGroupId]
                     )->execute();
                     $iowActId = (int)$db->lastInsertID;
                 }
             } else {
                 $db->createCommand(
-                    "UPDATE estimateactivities SET activity_unit=:u, work_type=:wt, activity_type=:at WHERE activity_id=:id",
-                    [':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId, ':id' => $iowActId]
+                    "UPDATE estimateactivities SET activity_unit=:u, work_type=:wt, activity_type=:at, iow_group_id=:g WHERE activity_id=:id",
+                    [':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId, ':g' => $iowGroupId, ':id' => $iowActId]
                 )->execute();
             }
 
