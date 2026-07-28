@@ -21139,64 +21139,6 @@ public function actionActivitymusterprocess()
         return json_encode(['error' => 'No']);
     }
 
-    /* TEMP diagnostic — remove once the duplicate-activity-in-dropdown gap is root-caused. */
-    public function actionDebugactrows()
-    {
-        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $db = \Yii::$app->db;
-        $name = \Yii::$app->request->get('name');
-        $rows = $db->createCommand(
-            "SELECT activity_id, activity_name, activity_status, work_type, activity_type, iow_group_id
-             FROM estimateactivities WHERE activity_name LIKE :n",
-            [':n' => '%' . $name . '%']
-        )->queryAll();
-        foreach ($rows as &$r) {
-            $r['allocated'] = (bool) $db->createCommand(
-                "SELECT 1 FROM workgroup_activities_new w
-                 JOIN scheduleactivities sa ON sa.activity_id = w.id AND sa.status = 0
-                 WHERE w.activity_Id = :id AND w.pricing_status = 0 LIMIT 1",
-                [':id' => $r['activity_id']]
-            )->queryScalar();
-        }
-        return ['rows' => $rows];
-    }
-
-    /* TEMP one-off cleanup — remove duplicate "Painting" activity (id 57), unallocated. */
-    public function actionCleanupdupepainting()
-    {
-        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        \Yii::$app->db->createCommand(
-            "UPDATE estimateactivities SET activity_status = 1 WHERE activity_id = 57"
-        )->execute();
-        return ['error' => 'No'];
-    }
-
-    /* TEMP diagnostic — remove once the Planned Duration mismatch is root-caused. */
-    public function actionDebugactdur()
-    {
-        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $db = \Yii::$app->db;
-        $name = \Yii::$app->request->get('name');
-        $rows = $db->createCommand(
-            "SELECT sa.id, sa.name, sa.activity_id AS wan_id, sa.start_date, sa.end_date,
-                    sa.actual_start_date, sa.actual_end_date, sa.duration, sa.old_duration,
-                    sa.quantity, sa.status, sa.projectId, w.duration AS wan_duration
-             FROM scheduleactivities sa
-             LEFT JOIN workgroup_activities_new w ON w.id = sa.activity_id
-             WHERE sa.name LIKE :n",
-            [':n' => '%' . $name . '%']
-        )->queryAll();
-        $holidays = [];
-        foreach ($rows as $r) {
-            $pid = $r['projectId'];
-            if (!isset($holidays[$pid])) {
-                $h = $db->createCommand("SELECT dates, weeks FROM holidays WHERE project_id = :p", [':p' => $pid])->queryOne();
-                $holidays[$pid] = $h ?: ['dates' => '', 'weeks' => ''];
-            }
-        }
-        return ['rows' => $rows, 'holidays' => $holidays];
-    }
-
     public function actionDeleteactivity()
     {
         $connection = \Yii::$app->db;
