@@ -942,6 +942,12 @@ class ProjectsmainController extends Controller
             ]
         )->execute();
         $saId = (int)$db->lastInsertID;
+        /* TEMP diagnostic — read the row straight back to see if it already
+           differs from what was just bound, within the same request. */
+        $GLOBALS['__wbsadd_readback'] = $db->createCommand(
+            "SELECT end_date, actual_end_date, duration FROM scheduleactivities WHERE id = :id",
+            [':id' => $saId]
+        )->queryOne();
 
         // Save this activity's resource allocation into pricing_estimate_resources_new
         // (the per-project table Storekeeper/Procurement read). This only runs on
@@ -1038,6 +1044,7 @@ class ProjectsmainController extends Controller
             'duration'        => $savedDur,
             'act_name'        => $savedName,
             '_debug'          => $GLOBALS['__wbsadd_debug'] ?? null,
+            '_readback'       => $GLOBALS['__wbsadd_readback'] ?? null,
         ];
         } catch (\Exception $e) {
             return ['error' => $e->getMessage()];
