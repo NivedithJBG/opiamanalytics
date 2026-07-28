@@ -4511,8 +4511,6 @@ $(function(){
       success: function(d){
         btn.disabled = false; btn.textContent = '+ Add to Gantt';
         if(d.error && d.error !== 'No'){ alert(d.error); return; }
-        /* TEMP debug — remove once the Planned Duration display mismatch is root-caused. */
-        if (d._debug) alert('DEBUG wbsadd:\n' + JSON.stringify(d._debug, null, 2) + '\n\nreadback:\n' + JSON.stringify(d._readback, null, 2));
         if(typeof window.reloadGantt === 'function') window.reloadGantt();
         /* Keep the modal open with Project Type / Activity Type / IOW Group / IOW
            intact so the user can add another activity under the same WBS context;
