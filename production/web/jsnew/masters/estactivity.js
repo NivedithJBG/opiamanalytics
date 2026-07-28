@@ -275,6 +275,7 @@ $(document).on('click', '.al-edit-activity-btn', function(){
         success: function(data){
             if(data.error !== 'No') return;
             var act = data.activity;
+            $('#estactivityform .error').hide();
             /* show modal first, then prefill after Bootstrap resets have run */
             window._alEditMode = true;
             $('#alAddActivityPopup').css('display','block').addClass('in');

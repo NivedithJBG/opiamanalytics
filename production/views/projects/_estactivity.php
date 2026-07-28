@@ -774,22 +774,22 @@ $(document).on('click', '#alSaveProjType', function(){
     });
 });
 
-/* ── Add Activity modal ── */
-$('#alAddActivityPopup').on('show.bs.modal', function(){
-    /* only reset when opening for a new activity — edit handler sets _editMode before show() */
-    if(!window._alEditMode){
-        $('#editingActivityId').val('');
-        $('#estactivityform')[0].reset();
-        $('#task-rows-container .task-row:not(#task-row-1)').remove();
-        $('#task-row-1 .task-name, #task-row-1 .task-unit, #task-row-1 .task-productivity').val('');
-        $('#alAddActivityTitle').text('Add Activity');
-        $('#saveestactivity').html('<span class="icon-check"></span> Add Activity');
-    }
-    window._alEditMode = false;
-    alRefreshActIowGroupDropdown();
-});
-
+/* ── Add Activity modal ──
+   This used to reset on show.bs.modal, but Bootstrap's modal() plugin isn't
+   active on this page (see the drag-support note above), so that event never
+   fires — the popup's fields, task rows, and any red validation messages
+   from a previous failed save just stayed in the DOM and reappeared on every
+   reopen. Do the reset directly in the click handler that actually opens the
+   popup (#addestactivity) instead. */
 $(document).on('click', '#addestactivity', function(){
+    window._alEditMode = false;
+    $('#editingActivityId').val('');
+    $('#estactivityform')[0].reset();
+    $('#estactivityform .error').hide();
+    $('#task-rows-container .task-row:not(#task-row-1)').remove();
+    $('#task-row-1 .task-name, #task-row-1 .task-unit, #task-row-1 .task-productivity').val('');
+    $('#alAddActivityTitle').text('Add Activity');
+    $('#saveestactivity').html('<span class="icon-check"></span> Add Activity');
     setTimeout(function(){ alRefreshActIowGroupDropdown(); }, 400);
 });
 
