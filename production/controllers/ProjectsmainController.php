@@ -3506,6 +3506,53 @@ class ProjectsmainController extends Controller
     }
 
 
+    /**
+     * Public wrapper around _buildKpi() for callers outside this
+     * controller (e.g. ChatbotController::toolDiagnoseProductivityGap)
+     * that need the exact same per-activity KPI data — same convention
+     * as computeRoiThresholds() being called directly by
+     * ChatbotController rather than re-implemented. Looks the activity
+     * up by id, scoped to the given project, same query shape as
+     * actionKpidebug() above. Returns null if not found.
+     */
+    public function buildKpiForActivity($activityId, $projectId)
+    {
+        $connection = \Yii::$app->db;
+        $actid = (int)$activityId;
+        $pid = (int)$projectId;
+        $act = $connection->createCommand(
+            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status
+             FROM scheduleactivities WHERE id=$actid AND projectId=$pid"
+        )->queryOne();
+        if (!$act) return null;
+        return $this->_buildKpi($act, $pid, $connection);
+    }
+
+    /**
+     * Public wrappers around the Cashflow dashboard's existing private
+     * Cash-to-Cash Cycle / Total Investment / Contribution Margin
+     * helpers, for ChatbotController::toolCheckRoiHealth() — the CCC
+     * driver reuses these AS-IS rather than re-deriving cash-cycle or
+     * investment math from per-bill dates, per explicit instruction to
+     * just use the dashboard's existing actual/target C2C. Same
+     * public-wrapper convention as buildKpiForActivity() /
+     * checkRoiHealthForProject() above.
+     */
+    public function cfActualC2cCycle($pid)
+    {
+        return $this->_cfActualC2cCycle((int)$pid);
+    }
+
+    public function cfNetInvestmentCurrent($pid)
+    {
+        return $this->_cfNetInvestmentAsOf((int)$pid, null);
+    }
+
+    public function cfContributionMarginCurrent($pid)
+    {
+        return $this->_cfContributionMarginValue((int)$pid);
+    }
+
     private function _buildKpi($act, $pid, $connection)
     {
         if (!$act) return null;
@@ -3741,6 +3788,227 @@ class ProjectsmainController extends Controller
             'critical'             => (($act['critical_status'] ?? '') === 'Yes'),
             'project_name'         => $project_name,
         ];
+    }
+
+    // ROI Target Thresholds baseline derivation — see
+    // docs/dashboard-chatbot-roi-health-tool.md section 2 for the full
+    // spec. Computes and upserts one roi_target_thresholds row for
+    // $project_id. Deterministic PHP only — no LLM involvement, per the
+    // spec's "deterministic PHP, never LLM-inferred" principle.
+    //
+    // NOTE: this only builds the BASELINE thresholds row. It does NOT
+    // implement the check_roi_health tool (comparing live values against
+    // these thresholds) — that is explicitly deferred to a future
+    // session per the spec's section 4 / the instruction that created
+    // this function.
+    //
+    // pur_min / cde_min derivation: PUR and CDE are not yet first-class
+    // metrics anywhere else in this codebase (no existing "PUR"/"CDE"
+    // dashboard function to call). Built from the three per-activity
+    // metric families _buildKpi() already computes — Capacity
+    // Utilisation, Cycle Time, and Productivity — per explicit mapping:
+    //   - CDE (Required Capacity ÷ Deployed Capacity) = Capacity
+    //     Utilisation alone = cap_used / cap_max — how effectively the
+    //     available time was used by the resources.
+    //   - PUR (Productive Hours ÷ Available Hours) = an EQUAL-WEIGHT
+    //     (50/50) blend, WITHIN each activity, of:
+    //       - Productivity ratio  = actual_productivity / target_productivity
+    //         (how much they produced per day)
+    //       - Cycle Time ratio    = target_cycle_time / actual_cycle_time
+    //         (how efficiently they worked — how long to produce one
+    //         unit; NOT inverted the other way, since dividing target by
+    //         actual already reads "higher is better", the same
+    //         direction as the other two ratios, without needing any
+    //         sign flip)
+    // Both the per-activity CDE and per-activity PUR are then aggregated
+    // into ONE project-level pur_min/cde_min, weighted by each
+    // activity's ESTIMATED cost (activity_cost) — heavier activities
+    // pull the project-level threshold more than small ones, since they
+    // matter more for ROI. Activities with zero estimated cost, or
+    // missing the inputs a given ratio needs, are excluded from that
+    // ratio's weighted average rather than treated as 0.
+    //
+    // cost_variance_max_adverse_pct derivation: back-calculated from
+    // target_roi_pct against planned revenue (projects.project_value)
+    // and planned cost (SUM of every activity's estimated activity_cost)
+    // — the max adverse cost overrun, as a % of planned cost, that still
+    // leaves target_roi_pct of margin. Planned profit = revenue - cost;
+    // required minimum profit to hit target_roi_pct is
+    // revenue * target_roi_pct/100 — this baseline derivation uses
+    // profit as a % of revenue, NOT the Cashflow Dashboard's live
+    // Contribution Margin / Average Investment ROI formula (see
+    // actionCfroi), because Contribution Margin (Contract Income minus
+    // actual Project Expenditure) is purely ledger-driven and doesn't
+    // exist yet before any site activity — planned revenue/cost from the
+    // estimate is the only data available at baseline. The LIVE
+    // check_roi_health/recommend_corrective_action comparison, once a
+    // project has real ledger activity, DOES use the dashboard's actual
+    // Contribution Margin / Investment formula (see toolCheckRoiHealth's
+    // own projected_roi_pct comment) — only this baseline threshold
+    // stays on the planned-data proxy. The tolerable overrun is: current
+    // planned profit minus that required minimum, expressed as a % of
+    // planned cost.
+    //
+    // critical_float_min_days: a scheduling buffer POLICY, not derived
+    // from ROI math (per spec) — defaults to 5 days here; callers may
+    // override via $criticalFloatMinDays.
+    // $persist: when true (default), upserts the computed values into
+    // roi_target_thresholds as the project's baseline — the normal
+    // "compute the baseline" call. When false, computes and returns the
+    // exact same figures WITHOUT writing to the table — used by
+    // check_roi_health to read live current PUR/CDE/planned-cost figures
+    // for comparison against the ALREADY-STORED baseline, without
+    // silently overwriting that baseline every time someone asks a
+    // health question.
+    public function computeRoiThresholds($projectId, $targetRoiPct = 40.00, $criticalFloatMinDays = 5, $persist = true)
+    {
+        $pid = (int)$projectId;
+        $connection = \Yii::$app->db;
+
+        // Same activity list / cost joins as actionPerformancedashboard's
+        // main query (see lines ~3104-3166), trimmed to just what this
+        // baseline needs: activity id and estimated activity_cost.
+        $activities = $connection->createCommand(
+            "SELECT sa.id, COALESCE(cost.activity_cost, 0) AS activity_cost
+             FROM scheduleactivities sa
+             LEFT JOIN (
+                 SELECT pen.activity_Id,
+                        COALESCE(pen.activity_qty, 0) * COALESCE(SUM(pern.quantity * pern.rate), 0) AS activity_cost
+                 FROM pricing_estimate_new pen
+                 LEFT JOIN pricing_estimate_resources_new pern
+                        ON pern.activity_id = pen.activity_Id AND pern.project_id = pen.project_Id AND pern.pricing_status = 0
+                 WHERE pen.project_Id = $pid AND pen.pricing_status = 0
+                 GROUP BY pen.activity_Id
+             ) cost ON cost.activity_Id = sa.activity_id
+             WHERE sa.projectId=$pid AND sa.status=0"
+        )->queryAll();
+
+        // For each activity, pull the same raw fields _buildKpi() uses to
+        // derive target_productivity/actual_productivity and
+        // cap_max/cap_used, WITHOUT running the full _buildKpi() (which
+        // also builds tasks/resources/cause-of-delay — unneeded overhead
+        // here). We reuse _buildKpi() directly instead: it is already the
+        // single source of truth for these ratios (ChatbotController's
+        // KPI tool is an "exact port" of it), and re-deriving the same
+        // logic separately would risk the two silently drifting apart.
+        $purWeightedSum = 0; $purWeightTotal = 0;
+        $cdeWeightedSum = 0; $cdeWeightTotal = 0;
+        $plannedCostTotal = 0;
+
+        foreach ($activities as $actRow) {
+            $weight = (float)$actRow['activity_cost'];
+            $plannedCostTotal += $weight;
+            if ($weight <= 0) { continue; }
+
+            $act = $connection->createCommand(
+                "SELECT sa.id, sa.name, sa.scheduleitem_id, sa.activity_id, sa.duration, sa.delay,
+                        sa.completed_status, sa.start_date, sa.end_date,
+                        sa.actual_start_date, sa.actual_end_date, sa.unit, sa.resource_units,
+                        sa.quantity, sa.old_duration, sa.critical_status
+                 FROM scheduleactivities sa WHERE sa.id = " . (int)$actRow['id']
+            )->queryOne();
+            if (!$act) { continue; }
+
+            $kpi = $this->_buildKpi($act, $pid, $connection);
+            if (!$kpi) { continue; }
+
+            // PUR: equal-weight (50/50) blend of Productivity ratio and
+            // Cycle Time ratio, WITHIN this activity. Each sub-ratio only
+            // contributes if its own inputs are available; if only one
+            // of the two is available, PUR for this activity falls back
+            // to that one ratio alone rather than being skipped entirely
+            // or averaged against a missing value.
+            $productivityRatio = null;
+            if ((float)$kpi['target_productivity'] > 0 && (float)$kpi['actual_productivity'] > 0) {
+                $productivityRatio = (float)$kpi['actual_productivity'] / (float)$kpi['target_productivity'];
+            }
+            $cycleTimeRatio = null;
+            if ((float)$kpi['actual_cycle_time'] > 0 && (float)$kpi['target_cycle_time'] > 0) {
+                $cycleTimeRatio = (float)$kpi['target_cycle_time'] / (float)$kpi['actual_cycle_time'];
+            }
+            if ($productivityRatio !== null || $cycleTimeRatio !== null) {
+                $parts = array_filter([$productivityRatio, $cycleTimeRatio], function ($v) { return $v !== null; });
+                $pur = array_sum($parts) / count($parts);
+                $purWeightedSum += $pur * $weight;
+                $purWeightTotal += $weight;
+            }
+
+            // CDE: Capacity Utilisation alone — only meaningful once
+            // cap_max is non-zero (activity has started).
+            if ((float)$kpi['cap_max'] > 0) {
+                $cde = (float)$kpi['cap_used'] / (float)$kpi['cap_max'];
+                $cdeWeightedSum += $cde * $weight;
+                $cdeWeightTotal += $weight;
+            }
+        }
+
+        $purMin = $purWeightTotal > 0 ? round($purWeightedSum / $purWeightTotal, 4) : 0.0000;
+        $cdeMin = $cdeWeightTotal > 0 ? round($cdeWeightedSum / $cdeWeightTotal, 4) : 0.0000;
+
+        // Planned revenue = projects.project_value (contract value) —
+        // same field already used elsewhere as the project's revenue
+        // baseline (see FinancerequestsController::actionCfprojectexpenditure,
+        // Project Expenditure panel's 90% target).
+        $projectValue = $connection->createCommand(
+            "SELECT project_value FROM projects WHERE Project_Id=$pid"
+        )->queryScalar();
+        $plannedRevenue = (float)($projectValue ?: 0);
+
+        $costVarianceMaxAdversePct = 0.00;
+        if ($plannedRevenue > 0 && $plannedCostTotal > 0) {
+            $plannedProfit = $plannedRevenue - $plannedCostTotal;
+            $requiredMinProfit = $plannedRevenue * ((float)$targetRoiPct / 100);
+            $tolerableOverrun = $plannedProfit - $requiredMinProfit; // rupees of cost cushion before target ROI is missed
+            $costVarianceMaxAdversePct = round(max(0, $tolerableOverrun) / $plannedCostTotal * 100, 2);
+        }
+
+        // ccc_max_days: NOT back-calculated from target_roi_pct. Per
+        // explicit instruction, this reads the Cashflow dashboard's own
+        // existing user-editable Cash-to-Cash Cycle target — the same
+        // number the user already sets via the pencil icon on the C2C
+        // dial (cf_dashboard_targets, metric_key='c2c_cycle') — rather
+        // than deriving a threshold from ROI math against per-bill data
+        // this app doesn't capture. Falls back to the project's current
+        // actual C2C if no target has been set yet, so a fresh project
+        // reads as "on target" rather than red against a phantom 0-day
+        // threshold.
+        $cccTarget = $connection->createCommand(
+            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=$pid AND metric_key='c2c_cycle'"
+        )->queryScalar();
+        $cccMaxDays = $cccTarget !== false && (float)$cccTarget > 0
+            ? (int)round((float)$cccTarget)
+            : (int)round($this->_cfActualC2cCycle($pid));
+
+        $data = [
+            'project_id' => $pid,
+            'target_roi_pct' => $targetRoiPct,
+            'pur_min' => $purMin,
+            'cde_min' => $cdeMin,
+            'cost_variance_max_adverse_pct' => $costVarianceMaxAdversePct,
+            'critical_float_min_days' => (int)$criticalFloatMinDays,
+            'ccc_max_days' => $cccMaxDays,
+        ];
+
+        if ($persist) {
+            $now = date('Y-m-d H:i:s');
+            $existing = $connection->createCommand(
+                "SELECT id FROM roi_target_thresholds WHERE project_id=$pid"
+            )->queryScalar();
+
+            if ($existing) {
+                $data['last_reviewed_at'] = $now;
+                $connection->createCommand()->update('roi_target_thresholds', $data, ['project_id' => $pid])->execute();
+            } else {
+                $data['baseline_computed_at'] = $now;
+                $connection->createCommand()->insert('roi_target_thresholds', $data)->execute();
+            }
+        }
+
+        return array_merge($data, [
+            'project_id' => $pid,
+            'planned_revenue' => $plannedRevenue,
+            'planned_cost_total' => round($plannedCostTotal, 2),
+        ]);
     }
 
     public function actionCostdashboardbatch()

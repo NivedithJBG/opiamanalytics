@@ -432,6 +432,17 @@ class ProjectsController extends Controller
                     }
                 }
 
+                // Seed an ROI target thresholds baseline immediately so the
+                // weekly roi-health cron (RoiHealthCronHelper) has something
+                // to compare against as soon as this project exists, instead
+                // of silently skipping it forever until someone remembers to
+                // run compute_roi_thresholds manually. This early baseline
+                // will read as all-zero (no BOQ/schedule/estimate yet) —
+                // that's expected; computeRoiThresholds can be re-run later
+                // once real data exists to refresh it with real numbers.
+                $projectsmainCtrl = new \app\controllers\ProjectsmainController('projectsmain', Yii::$app);
+                $projectsmainCtrl->computeRoiThresholds($model->Project_Id);
+
                 $arr = array('Id' => $model->Project_Id, 'Name' => $model->Name, 'error' => 'No');
                 return json_encode($arr);
             else:

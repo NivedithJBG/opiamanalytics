@@ -1832,6 +1832,742 @@ class ChatbotController extends Controller
         ];
     }
 
+    // =======================================================================
+    // check_roi_health — see docs/dashboard-chatbot-roi-health-tool.md
+    // section 3 for the full spec. Sits above get_cost_variance_drivers
+    // and diagnose_productivity_gap: flags which ROI driver(s) are out of
+    // tolerance, does NOT diagnose root cause. All computation below is
+    // deterministic PHP — the LLM's job is limited to narrating the
+    // returned drivers array (see the system prompt's "SHOWING ROI
+    // HEALTH RESULTS" section) and deciding whether to follow up with
+    // get_cost_variance_drivers / diagnose_productivity_gap on a failing
+    // driver. Never invents a projected ROI, root cause, or
+    // recommendation not backed by a tool call.
+    //
+    // Live current values, no caching, per call:
+    //   - PUR / CDE: same cost-weighted, per-activity-blended formula as
+    //     ProjectsmainController::computeRoiThresholds() (this tool calls
+    //     that same method directly, in "current" mode — see
+    //     computeRoiThresholds's own doc comment for the exact PUR/CDE
+    //     derivation). Reused rather than re-implemented so the live
+    //     values and the baseline thresholds can never silently drift
+    //     apart from using two different formulas.
+    //   - cost_variance_adverse_pct: total_variance from
+    //     toolGetCostVarianceDrivers(), expressed as a % of the SAME
+    //     planned-cost basis used to derive cost_variance_max_adverse_pct
+    //     at baseline (so the two are directly comparable).
+    //   - critical_path_float_days: MIN(scheduleactivities.float_duration)
+    //     across activities where critical_status='Yes' for this project
+    //     — the tightest float buffer currently remaining on the
+    //     critical path.
+    // Accepts EITHER project_id (the spec's literal signature,
+    // check_roi_health(project_id: int)) or project_name (fuzzy-matched,
+    // same convention as every other tool here so the LLM can resolve a
+    // project mentioned by name in conversation without a separate
+    // lookup step first).
+    /**
+     * Public wrapper around toolCheckRoiHealth() for callers outside the
+     * chatbot tool-calling flow (e.g. the RoiHealthCronHelper console
+     * command), which need the exact same PHP-computed result without
+     * going through actionChat()/executeTool(). Same convention as
+     * ProjectsmainController::computeRoiThresholds() being called
+     * directly by toolCheckRoiHealth() above.
+     */
+    public function checkRoiHealthForProject($projectId)
+    {
+        $db = Yii::$app->db;
+        return $this->toolCheckRoiHealth($db, ['project_id' => (int)$projectId]);
+    }
+
+    private function toolCheckRoiHealth($db, $input)
+    {
+        $pid = (int)($input['project_id'] ?? 0);
+        if ($pid > 0) {
+            $projRow = $db->createCommand(
+                "SELECT Project_Id, Name FROM projects WHERE Project_Id=:pid AND Status=0",
+                [':pid' => $pid]
+            )->queryOne();
+            if (!$projRow) {
+                return ['status' => 'no_data', 'reason' => "No active project found with project_id {$pid}."];
+            }
+        } else {
+            $projRow = $this->resolveProject($db, $input['project_name'] ?? '');
+            if (isset($projRow['status'])) return $projRow;
+            $pid = (int)$projRow['Project_Id'];
+        }
+
+        // Baseline thresholds row — must already exist (built by
+        // compute_roi_thresholds in a prior session/step). This tool does
+        // NOT create it if missing; check_roi_health only compares
+        // against an existing baseline.
+        $thresholds = $db->createCommand(
+            "SELECT * FROM roi_target_thresholds WHERE project_id=:pid",
+            [':pid' => $pid]
+        )->queryOne();
+        if (!$thresholds) {
+            return ['status' => 'no_data', 'reason' => "No ROI target thresholds have been set for \"{$projRow['Name']}\" yet. Run compute_roi_thresholds for this project first."];
+        }
+
+        // Live current PUR/CDE — same cost-weighted per-activity-blended
+        // formula as the baseline, computed fresh (no caching). Reuses
+        // ProjectsmainController::computeRoiThresholds() in "current"
+        // mode (targetRoiPct/criticalFloatMinDays args are irrelevant to
+        // the PUR/CDE/cost fields we read back out — only pur_min/
+        // cde_min/cost_variance_max_adverse_pct here represent CURRENT
+        // live values, not the stored baseline, because this call does
+        // NOT persist — see the $persist=false param).
+        $projectsmainCtrl = new \app\controllers\ProjectsmainController('projectsmain', Yii::$app);
+        $live = $projectsmainCtrl->computeRoiThresholds($pid, (float)$thresholds['target_roi_pct'], (int)$thresholds['critical_float_min_days'], false);
+
+        $currentPur = (float)$live['pur_min'];
+        $currentCde = (float)$live['cde_min'];
+
+        // Live cost variance % — same total_variance figure
+        // get_cost_variance_drivers already computes, expressed as a %
+        // of the SAME planned-cost basis computeRoiThresholds uses (so
+        // it's directly comparable to cost_variance_max_adverse_pct,
+        // which was derived from that same basis).
+        $varianceResult = $this->toolGetCostVarianceDrivers($db, ['project_name' => $projRow['Name'], 'scope' => 'project']);
+        $totalVariance = isset($varianceResult['total_variance']) ? (float)$varianceResult['total_variance'] : 0.0;
+        $plannedCostTotal = (float)$live['planned_cost_total'];
+        $currentCostVarianceAdversePct = $plannedCostTotal > 0
+            ? round(($totalVariance / $plannedCostTotal) * 100, 2)
+            : 0.0;
+
+        // Live minimum float on critical path activities.
+        $minFloat = $db->createCommand(
+            "SELECT MIN(float_duration) FROM scheduleactivities
+             WHERE projectId=:pid AND status=0 AND critical_status='Yes'",
+            [':pid' => $pid]
+        )->queryScalar();
+        $currentCriticalFloatDays = $minFloat !== null ? (int)$minFloat : 0;
+
+        // Live Cash Conversion Cycle — reuses the Cashflow dashboard's
+        // own already-built C2C average (_cfActualC2cCycle, the same
+        // figure shown on the Cash-to-Cash Cycle dial). Per explicit
+        // instruction: no new per-bill certification/submission/
+        // collection date tracking is used here — just the existing
+        // actual vs target C2C.
+        $currentCccDays = round($projectsmainCtrl->cfActualC2cCycle($pid), 2);
+
+        // Status classification: green = within tolerance, amber =
+        // within 20% of breach, red = breached. "Within tolerance" means
+        // current_value is at or above threshold for PUR/CDE (higher is
+        // better), at or below threshold for cost_variance_adverse_pct
+        // and critical_path_float_days is the OPPOSITE direction from
+        // the other three: LOWER float is worse, so red/amber/green
+        // follow current_value being at/above the threshold, same
+        // "higher is better" polarity as PUR/CDE (a bigger float buffer
+        // is safer).
+        $classify = function ($current, $threshold, $higherIsBetter) {
+            if ($threshold == 0) {
+                // No meaningful tolerance band to breach against.
+                return 'green';
+            }
+            $gap = $higherIsBetter ? ($current - $threshold) : ($threshold - $current);
+            if ($gap >= 0) { return 'green'; }
+            // Breached. Amber if within 20% of the threshold value, else red.
+            $amberBand = abs($threshold) * 0.20;
+            return (abs($gap) <= $amberBand) ? 'amber' : 'red';
+        };
+
+        // ccc_max_days threshold: read from the Cashflow dashboard's own
+        // existing user-editable C2C target (cf_dashboard_targets,
+        // metric_key='c2c_cycle') at the time the baseline was computed
+        // — NOT derived from target_roi_pct math. If the stored
+        // threshold is 0 (no target had been set when the baseline was
+        // computed, or a project created before this column existed),
+        // fall back to the CURRENT actual CCC so this driver reads as
+        // "on target" rather than falsely red against a phantom 0-day
+        // threshold, until a real target is set on the dial.
+        $cccMaxDays = (int)$thresholds['ccc_max_days'];
+        if ($cccMaxDays <= 0) {
+            $cccMaxDays = (int)round($currentCccDays);
+        }
+
+        $purGap = round($currentPur - (float)$thresholds['pur_min'], 4);
+        $cdeGap = round($currentCde - (float)$thresholds['cde_min'], 4);
+        $costGap = round((float)$thresholds['cost_variance_max_adverse_pct'] - $currentCostVarianceAdversePct, 2);
+        $floatGap = $currentCriticalFloatDays - (int)$thresholds['critical_float_min_days'];
+        $cccGap = $cccMaxDays - $currentCccDays;
+
+        $drivers = [
+            [
+                'driver' => 'PUR',
+                'current_value' => round($currentPur, 4),
+                'threshold' => round((float)$thresholds['pur_min'], 4),
+                'status' => $classify($currentPur, (float)$thresholds['pur_min'], true),
+                'gap' => $purGap,
+            ],
+            [
+                'driver' => 'CDE',
+                'current_value' => round($currentCde, 4),
+                'threshold' => round((float)$thresholds['cde_min'], 4),
+                'status' => $classify($currentCde, (float)$thresholds['cde_min'], true),
+                'gap' => $cdeGap,
+            ],
+            [
+                'driver' => 'cost_variance_adverse_pct',
+                'current_value' => $currentCostVarianceAdversePct,
+                'threshold' => round((float)$thresholds['cost_variance_max_adverse_pct'], 2),
+                'status' => $classify($currentCostVarianceAdversePct, (float)$thresholds['cost_variance_max_adverse_pct'], false),
+                'gap' => $costGap,
+            ],
+            [
+                'driver' => 'critical_path_float_days',
+                'current_value' => $currentCriticalFloatDays,
+                'threshold' => (int)$thresholds['critical_float_min_days'],
+                'status' => $classify($currentCriticalFloatDays, (int)$thresholds['critical_float_min_days'], true),
+                'gap' => $floatGap,
+            ],
+            [
+                'driver' => 'cash_conversion_cycle_days',
+                'current_value' => $currentCccDays,
+                'threshold' => $cccMaxDays,
+                'status' => $classify($currentCccDays, $cccMaxDays, false),
+                'gap' => $cccGap,
+            ],
+        ];
+
+        $statusRank = ['green' => 0, 'amber' => 1, 'red' => 2];
+        $overallStatus = 'green';
+        foreach ($drivers as $d) {
+            if ($statusRank[$d['status']] > $statusRank[$overallStatus]) { $overallStatus = $d['status']; }
+        }
+
+        // Projected ROI — LIVE Contribution Margin ÷ projected Investment
+        // × 100, the SAME formula the Cashflow dashboard's own ROI dial
+        // uses (see ProjectsmainController::actionCfroi), not the
+        // profit÷revenue margin formula used to derive
+        // cost_variance_max_adverse_pct's baseline (that baseline still
+        // uses planned revenue/cost, since Contribution Margin doesn't
+        // exist yet before any site activity — see
+        // docs/dashboard-chatbot-roi-health-tool.md).
+        //
+        // Cost variance's effect on ROI is already fully reflected here
+        // — Contribution Margin (Contract Income − actual Project
+        // Expenditure) is itself an ACTUALS figure, so a cost overrun is
+        // already baked in. It is NOT separately subtracted again (that
+        // would double-count the same overrun) — cost_variance_adverse_pct
+        // remains its own driver above purely as a diagnostic signal.
+        //
+        // CCC's effect: projected Investment = current Total Investment
+        // scaled by (current CCC ÷ target CCC). A shorter cycle than
+        // target shrinks the ratio below 1, so investment scales DOWN
+        // (cash moving faster means less capital tied up) — and vice
+        // versa for a longer cycle. Both current Contribution Margin and
+        // current Total Investment are the Cashflow dashboard's own
+        // live, ledger-driven figures (same as the dials), not
+        // estimates.
+        $currentContributionMargin = (float)$projectsmainCtrl->cfContributionMarginCurrent($pid);
+        $currentTotalInvestment = (float)$projectsmainCtrl->cfNetInvestmentCurrent($pid);
+        $projectedInvestment = ($currentCccDays > 0 && $cccMaxDays > 0)
+            ? $currentTotalInvestment * ($currentCccDays / $cccMaxDays)
+            : $currentTotalInvestment;
+        $projectedRoiPct = $projectedInvestment > 0
+            ? round(($currentContributionMargin / $projectedInvestment) * 100, 2)
+            : 0.0;
+
+        return [
+            'status' => 'ok',
+            'project_id' => $pid,
+            'target_roi_pct' => round((float)$thresholds['target_roi_pct'], 2),
+            'projected_roi_pct' => $projectedRoiPct,
+            'overall_status' => $overallStatus,
+            'drivers' => $drivers,
+            'computed_at' => date('c'),
+        ];
+    }
+
+
+    // =======================================================================
+    // diagnose_productivity_gap — sits between check_roi_health (flags
+    // which driver is out of tolerance) and recommend_corrective_action
+    // (matches root_cause against corrective_action_rules). Given a
+    // project_id, activity_id, and the failing_driver already identified
+    // by check_roi_health, determines the root_cause tag via
+    // deterministic PHP thresholds against data already computed
+    // elsewhere in the app — no new data sources, no LLM inference.
+    //
+    // root_cause taxonomy (must match corrective_action_rules.root_cause_pattern
+    // values exactly — see docs/dashboard-chatbot-corrective-action-tool.md):
+    //   PUR / CDE  -> crew_below_plan | capacity_underutilised
+    //   cost_variance -> price_variance | usage_variance
+    //   critical_float -> predecessor_slippage | no_active_predecessor
+    //
+    // PUR/CDE root cause: uses _buildKpi()'s existing productivity ratio
+    // (actual_productivity/target_productivity) and capacity utilisation
+    // (cap_used/cap_max) — NOT a headcount comparison against
+    // scheduleactivities.resource_units, because resource_units is a
+    // productivity multiplier, not a directly-comparable headcount unit
+    // against schedule_resource_report_log's reported quantities, and
+    // there's no real report data locally to validate that mapping.
+    // Low productivity ratio + HIGH capacity utilisation (hours were
+    // worked, output still fell short) -> crew_below_plan (undersized
+    // crew). Low capacity utilisation (hours weren't used) ->
+    // capacity_underutilised, whether PUR or CDE was the failing driver
+    // — same underlying signal either way, deliberately not force-fit
+    // into the spec PDF's "crew_oversized" label for CDE, since CDE here
+    // is defined as cap_used/cap_max (locked in check_roi_health) and a
+    // LOW value means capacity was under-used, not over-deployed.
+    //
+    // cost_variance root cause: reuses toolGetCostVarianceDrivers()
+    // (scope=activity) rather than re-deriving price/usage variance —
+    // whichever of the two has the larger absolute magnitude across the
+    // activity's resources is the root cause.
+    //
+    // critical_float root cause: walks activity_relations for this
+    // activity's precedent_activity rows, finds whichever predecessor's
+    // actual/projected finish is latest relative to ITS OWN planned
+    // finish (i.e. the predecessor causing the delay, not just the one
+    // with the least float) -> predecessor_slippage. If no active
+    // predecessor relation exists, returns no_active_predecessor rather
+    // than guessing.
+    private function toolDiagnoseProductivityGap($db, $input)
+    {
+        $pid = (int)($input['project_id'] ?? 0);
+        $actid = (int)($input['activity_id'] ?? 0);
+        $failingDriver = strtoupper(trim($input['failing_driver'] ?? ''));
+
+        if ($actid <= 0) {
+            return ['status' => 'no_data', 'reason' => 'activity_id is required.'];
+        }
+        if (!in_array($failingDriver, ['PUR', 'CDE', 'COST_VARIANCE', 'CRITICAL_FLOAT'], true)) {
+            return ['status' => 'no_data', 'reason' => 'failing_driver must be one of PUR, CDE, cost_variance, critical_float.'];
+        }
+
+        $act = $db->createCommand(
+            "SELECT sa.id, sa.name, sa.projectId AS pid, p.Name AS project_name
+             FROM scheduleactivities sa
+             JOIN projects p ON p.Project_Id=sa.projectId AND p.Status=0
+             WHERE sa.id=:aid" . ($pid > 0 ? " AND sa.projectId=:pid" : ""),
+            $pid > 0 ? [':aid' => $actid, ':pid' => $pid] : [':aid' => $actid]
+        )->queryOne();
+        if (!$act) {
+            return ['status' => 'no_data', 'reason' => "No active activity found with activity_id {$actid}."];
+        }
+        $pid = (int)$act['pid'];
+
+        $projectsmainCtrl = new \app\controllers\ProjectsmainController('projectsmain', Yii::$app);
+        $kpi = $projectsmainCtrl->buildKpiForActivity($actid, $pid);
+        if (!$kpi) {
+            return ['status' => 'no_data', 'reason' => "No KPI data available for activity \"{$act['name']}\"."];
+        }
+
+        $rootCause = null;
+        $evidence = [];
+
+        if ($failingDriver === 'PUR' || $failingDriver === 'CDE') {
+            $capMax = (float)$kpi['cap_max'];
+            $capUsed = (float)$kpi['cap_used'];
+            $capacityUtilisation = $capMax > 0 ? round($capUsed / $capMax, 4) : 0.0;
+
+            $productivityRatio = ((float)$kpi['target_productivity'] > 0 && (float)$kpi['actual_productivity'] > 0)
+                ? round((float)$kpi['actual_productivity'] / (float)$kpi['target_productivity'], 4) : null;
+            $cycleTimeRatio = ((float)$kpi['actual_cycle_time'] > 0 && (float)$kpi['target_cycle_time'] > 0)
+                ? round((float)$kpi['target_cycle_time'] / (float)$kpi['actual_cycle_time'], 4) : null;
+
+            $evidence = [
+                'capacity_utilisation' => $capacityUtilisation,
+                'cap_used' => $capUsed,
+                'cap_max' => $capMax,
+                'productivity_ratio' => $productivityRatio,
+                'cycle_time_ratio' => $cycleTimeRatio,
+                'target_productivity' => (float)$kpi['target_productivity'],
+                'actual_productivity' => (float)$kpi['actual_productivity'],
+            ];
+
+            // High utilisation threshold: 0.85, same amber-band convention
+            // used elsewhere in this tool chain (check_roi_health's 20%
+            // amber band). Hours were substantially worked but output
+            // still fell short of target -> undersized crew, not idle time.
+            $rootCause = ($capacityUtilisation >= 0.85) ? 'crew_below_plan' : 'capacity_underutilised';
+
+        } elseif ($failingDriver === 'COST_VARIANCE') {
+            $varianceResult = $this->toolGetCostVarianceDrivers($db, [
+                'project_name' => $act['project_name'],
+                'scope' => 'activity',
+                'activity_name' => $act['name'],
+            ]);
+            if (isset($varianceResult['status']) && $varianceResult['status'] !== 'ok') {
+                return ['status' => 'no_data', 'reason' => "No cost variance data available for activity \"{$act['name']}\"."];
+            }
+            $totalPriceVar = (float)($varianceResult['total_price_variance'] ?? 0);
+            $totalUsageVar = (float)($varianceResult['total_usage_variance'] ?? 0);
+
+            $evidence = [
+                'total_price_variance' => $totalPriceVar,
+                'total_usage_variance' => $totalUsageVar,
+                'drivers' => $varianceResult['drivers'] ?? [],
+            ];
+
+            $rootCause = (abs($totalPriceVar) >= abs($totalUsageVar)) ? 'price_variance' : 'usage_variance';
+
+        } elseif ($failingDriver === 'CRITICAL_FLOAT') {
+            $predecessors = $db->createCommand(
+                "SELECT ar.precedent_activity, ar.lag_days, sa.name,
+                        sa.end_date AS planned_end_date, sa.actual_end_date,
+                        sa.completed_status
+                 FROM activity_relations ar
+                 JOIN scheduleactivities sa ON sa.id = ar.precedent_activity
+                 WHERE ar.dependent_activity=:aid AND ar.status=0",
+                [':aid' => $actid]
+            )->queryAll();
+
+            if (empty($predecessors)) {
+                $rootCause = 'no_active_predecessor';
+                $evidence = ['predecessors' => []];
+            } else {
+                // The predecessor causing the delay is the one whose own
+                // finish (actual if completed, else today if it's running
+                // past its planned end) has slipped furthest past ITS OWN
+                // planned end_date — not simply the one with the latest
+                // end_date overall.
+                $worst = null;
+                $worstSlipDays = -PHP_INT_MAX;
+                $predEvidence = [];
+                foreach ($predecessors as $p) {
+                    $plannedEnd = $p['planned_end_date'];
+                    $actualEnd = $p['actual_end_date'];
+                    $completed = (int)$p['completed_status'] === 1;
+                    $referenceEnd = $completed && $actualEnd && $actualEnd !== '0000-00-00'
+                        ? $actualEnd
+                        : date('Y-m-d');
+                    $slipDays = ($plannedEnd && $plannedEnd !== '0000-00-00')
+                        ? (int)round((strtotime($referenceEnd) - strtotime($plannedEnd)) / 86400)
+                        : 0;
+                    $predEvidence[] = [
+                        'activity_id' => (int)$p['precedent_activity'],
+                        'name' => $p['name'],
+                        'planned_end_date' => $plannedEnd,
+                        'reference_end_date' => $referenceEnd,
+                        'completed' => $completed,
+                        'lag_days' => (int)$p['lag_days'],
+                        'slip_days' => $slipDays,
+                    ];
+                    if ($slipDays > $worstSlipDays) {
+                        $worstSlipDays = $slipDays;
+                        $worst = $p;
+                    }
+                }
+                $evidence = ['predecessors' => $predEvidence];
+                $rootCause = ($worst && $worstSlipDays > 0) ? 'predecessor_slippage' : 'no_active_predecessor';
+                if ($rootCause === 'predecessor_slippage') {
+                    $evidence['culprit_activity_id'] = (int)$worst['precedent_activity'];
+                    $evidence['culprit_activity_name'] = $worst['name'];
+                    $evidence['culprit_slip_days'] = $worstSlipDays;
+                }
+            }
+        }
+
+        return [
+            'status' => 'ok',
+            'project_id' => $pid,
+            'activity_id' => $actid,
+            'activity_name' => $act['name'],
+            'failing_driver' => $failingDriver,
+            'root_cause' => $rootCause,
+            'evidence' => $evidence,
+            'confidence' => 'computed',
+            'computed_at' => date('c'),
+        ];
+    }
+
+    // =======================================================================
+    // recommend_corrective_action — see
+    // docs/dashboard-chatbot-corrective-action-tool.md for the full spec.
+    // Closes the loop after check_roi_health flags a driver and
+    // diagnose_productivity_gap identifies root_cause. Matches root_cause
+    // against corrective_action_rules (data-driven, not hardcoded
+    // if/else — see sql/corrective_action_rules.sql), then computes a
+    // PHP-only projected impact per candidate action. Does NOT write
+    // anything — options + numbers only, execution stays a separate
+    // human-in-loop action per the spec's "what happens after".
+    //
+    // new_projected_roi_pct: re-runs the FULL check_roi_health reverse
+    // formula per option (via the shared _projectedRoiForCostDelta()
+    // helper, Contribution Margin ÷ Investment — same as
+    // toolCheckRoiHealth), not a local approximation — confirmed choice,
+    // for consistency with check_roi_health's number everywhere else in
+    // the app.
+    //
+    // mobilize_additional_crew / reduce_crew_deployment: modelled as a
+    // productivity_uplift_pct / reduction_pct input rather than a literal
+    // worker headcount. pricing_estimate_resources_new.no_of_workers has
+    // no real local data to confirm its semantics match a literal
+    // "current crew size" — rate (cost per unit of work) is unambiguous
+    // and reliable, so cost impact is derived from rate × labour spend
+    // scaling, and duration impact from _buildKpi()'s already-proven
+    // actual_productivity, not from a headcount delta.
+    //
+    // resequence_activity: checks the IMMEDIATE successor only (not the
+    // full downstream chain) — confirmed scope for this first build.
+    private function toolRecommendCorrectiveAction($db, $input)
+    {
+        $pid = (int)($input['project_id'] ?? 0);
+        $actid = (int)($input['activity_id'] ?? 0);
+        $failingDriver = strtoupper(trim($input['failing_driver'] ?? ''));
+        $diagnosis = $input['diagnosis'] ?? null;
+
+        if ($actid <= 0 || !is_array($diagnosis) || empty($diagnosis['root_cause'])) {
+            return ['status' => 'no_data', 'reason' => 'activity_id and a diagnosis object (the output of diagnose_productivity_gap) are required.'];
+        }
+        $rootCause = $diagnosis['root_cause'];
+
+        $act = $db->createCommand(
+            "SELECT sa.id, sa.name, sa.projectId AS pid, sa.quantity, sa.unit, sa.duration,
+                    sa.old_duration, sa.end_date, sa.start_date, sa.float_duration, sa.critical_status,
+                    p.Name AS project_name
+             FROM scheduleactivities sa
+             JOIN projects p ON p.Project_Id=sa.projectId AND p.Status=0
+             WHERE sa.id=:aid" . ($pid > 0 ? " AND sa.projectId=:pid" : ""),
+            $pid > 0 ? [':aid' => $actid, ':pid' => $pid] : [':aid' => $actid]
+        )->queryOne();
+        if (!$act) {
+            return ['status' => 'no_data', 'reason' => "No active activity found with activity_id {$actid}."];
+        }
+        $pid = (int)$act['pid'];
+
+        // Rule matching (PHP, data-driven — see corrective_action_rules).
+        $rules = $db->createCommand(
+            "SELECT candidate_action_type, description FROM corrective_action_rules
+             WHERE failing_driver=:fd AND root_cause_pattern=:rc AND status=1",
+            [':fd' => $failingDriver, ':rc' => $rootCause]
+        )->queryAll();
+
+        if (empty($rules)) {
+            return [
+                'status' => 'ok',
+                'project_id' => $pid,
+                'activity_id' => $actid,
+                'failing_driver' => $failingDriver,
+                'root_cause' => $rootCause,
+                'options' => [],
+                'no_matching_rule' => true,
+                'computed_at' => date('c'),
+            ];
+        }
+
+        // ROI basis for new_projected_roi_pct — SAME formula and SAME
+        // live figures as check_roi_health (Contribution Margin ÷
+        // Investment, not planned revenue/cost), so an option's
+        // projected ROI is directly comparable to the project's current
+        // projected_roi_pct. A resource/schedule action here changes
+        // future Project Expenditure (and therefore Contribution
+        // Margin), not payment timing — Investment is held at its
+        // current live value for these projections (CCC/Investment
+        // scaling is check_roi_health's own concern, not a corrective
+        // action's).
+        $projectsmainCtrl = new \app\controllers\ProjectsmainController('projectsmain', Yii::$app);
+        $currentContributionMargin = (float)$projectsmainCtrl->cfContributionMarginCurrent($pid);
+        $currentTotalInvestment = (float)$projectsmainCtrl->cfNetInvestmentCurrent($pid);
+
+        $kpi = $projectsmainCtrl->buildKpiForActivity($actid, $pid);
+
+        // Activity's current total labour spend rate (rupees per unit of
+        // work) — reliable regardless of no_of_workers' exact semantics,
+        // used to scale cost impact for crew-size actions.
+        $labourRatePerUnit = (float)($db->createCommand(
+            "SELECT SUM(pern.rate * pern.quantity) FROM pricing_estimate_resources_new pern
+             WHERE pern.activity_id=:aid AND pern.project_id=:pid AND pern.resourcetype_Id=1 AND pern.pricing_status=0",
+            [':aid' => $actid, ':pid' => $pid]
+        )->queryScalar() ?: 0);
+
+        $options = [];
+        foreach ($rules as $rule) {
+            $actionType = $rule['candidate_action_type'];
+            switch ($actionType) {
+                case 'mobilize_additional_crew':
+                    $options[] = $this->_impactMobilizeAdditionalCrew($act, $kpi, $labourRatePerUnit, $rule['description'], $currentContributionMargin, $currentTotalInvestment);
+                    break;
+                case 'resequence_activity':
+                    $options[] = $this->_impactResequenceActivity($db, $act, $kpi, $rule['description'], $currentContributionMargin, $currentTotalInvestment);
+                    break;
+                case 'reduce_crew_deployment':
+                    $options[] = $this->_impactReduceCrewDeployment($act, $kpi, $labourRatePerUnit, $rule['description'], $currentContributionMargin, $currentTotalInvestment);
+                    break;
+                default:
+                    // Process actions (flag_procurement_review,
+                    // material_yield_review, expedite_predecessor,
+                    // investigate_reporting_gap) don't have a clean
+                    // forward-computed number — per spec, return null
+                    // rather than fabricate one.
+                    $options[] = [
+                        'action_type' => $actionType,
+                        'description' => $rule['description'],
+                        'projected_impact' => null,
+                        'confidence' => 'process_action_no_forecast',
+                    ];
+            }
+        }
+
+        return [
+            'project_id' => $pid,
+            'activity_id' => $actid,
+            'activity_name' => $act['name'],
+            'failing_driver' => $failingDriver,
+            'root_cause' => $rootCause,
+            'options' => $options,
+            'no_matching_rule' => false,
+            'status' => 'ok',
+            'computed_at' => date('c'),
+        ];
+    }
+
+    // Cost impact of a candidate action expressed as rupees, projected
+    // through the SAME Contribution Margin ÷ Investment formula
+    // check_roi_health uses (see toolCheckRoiHealth's projected_roi_pct
+    // comment). $costDeltaRupees is positive for an INCREASE in project
+    // cost (e.g. added crew — reduces Contribution Margin, since it
+    // raises Project Expenditure), negative for a saving (e.g. reduced
+    // crew — increases Contribution Margin). Investment is held at its
+    // current live value — these are resource/schedule actions, not
+    // payment-timing actions, so they don't move the Cash Conversion
+    // Cycle (that's check_roi_health's own concern via ccc_max_days).
+    private function _projectedRoiForCostDelta($currentContributionMargin, $currentTotalInvestment, $costDeltaRupees)
+    {
+        $newContributionMargin = $currentContributionMargin - $costDeltaRupees;
+        if ($currentTotalInvestment <= 0) return 0.0;
+        return round(($newContributionMargin / $currentTotalInvestment) * 100, 2);
+    }
+
+    private function _impactMobilizeAdditionalCrew($act, $kpi, $labourRatePerUnit, $description, $currentContributionMargin, $currentTotalInvestment)
+    {
+        $upliftPct = 25.0; // default proposed uplift — a starting point for the LLM/user to narrate and adjust, not a locked parameter
+        if (!$kpi || (float)$kpi['actual_productivity'] <= 0 || (float)$kpi['target_qty'] <= 0) {
+            return [
+                'action_type' => 'mobilize_additional_crew',
+                'description' => $description,
+                'projected_impact' => null,
+                'confidence' => 'insufficient_data',
+            ];
+        }
+        $remainingQty = max(0, (float)$kpi['target_qty'] - (float)$kpi['actual_qty']);
+        $currentDailyRate = (float)$kpi['actual_productivity'];
+        $newDailyRate = $currentDailyRate * (1 + $upliftPct / 100);
+
+        $oldRemainingDuration = $currentDailyRate > 0 ? $remainingQty / $currentDailyRate : 0;
+        $newRemainingDuration = $newDailyRate > 0 ? $remainingQty / $newDailyRate : 0;
+        $floatRecoveredDays = (int)round($oldRemainingDuration - $newRemainingDuration);
+
+        // Additional labour cost = the extra spend rate (uplift % of
+        // current per-unit labour rate) applied across the remaining
+        // quantity of work.
+        $additionalCostRupees = round($labourRatePerUnit * ($upliftPct / 100) * ($remainingQty / max(1, (float)$kpi['target_qty'])), 2);
+
+        $newProjectedRoiPct = $this->_projectedRoiForCostDelta($currentContributionMargin, $currentTotalInvestment, $additionalCostRupees);
+
+        return [
+            'action_type' => 'mobilize_additional_crew',
+            'description' => $description . " (modelled as a {$upliftPct}% productivity uplift)",
+            'projected_impact' => [
+                'productivity_uplift_pct' => $upliftPct,
+                'float_recovered_days' => $floatRecoveredDays,
+                'additional_cost_inr' => $additionalCostRupees,
+                'new_projected_roi_pct' => $newProjectedRoiPct,
+            ],
+            'confidence' => 'computed',
+        ];
+    }
+
+    private function _impactReduceCrewDeployment($act, $kpi, $labourRatePerUnit, $description, $currentContributionMargin, $currentTotalInvestment)
+    {
+        $reductionPct = 25.0; // default proposed reduction — starting point, not locked
+        if (!$kpi || (float)$kpi['actual_productivity'] <= 0 || (float)$kpi['target_qty'] <= 0) {
+            return [
+                'action_type' => 'reduce_crew_deployment',
+                'description' => $description,
+                'projected_impact' => null,
+                'confidence' => 'insufficient_data',
+            ];
+        }
+        $remainingQty = max(0, (float)$kpi['target_qty'] - (float)$kpi['actual_qty']);
+        $currentDailyRate = (float)$kpi['actual_productivity'];
+        $newDailyRate = $currentDailyRate * (1 - $reductionPct / 100);
+
+        $newRemainingDuration = $newDailyRate > 0 ? (int)ceil($remainingQty / $newDailyRate) : null;
+        $plannedEnd = $act['end_date'] ?? null;
+        $meetsCompletionDate = null;
+        if ($newRemainingDuration !== null && $plannedEnd && $plannedEnd !== '0000-00-00') {
+            $projectedFinish = strtotime(date('Y-m-d') . " +{$newRemainingDuration} days");
+            $meetsCompletionDate = $projectedFinish <= strtotime($plannedEnd);
+        }
+
+        $costSavingRupees = round($labourRatePerUnit * ($reductionPct / 100) * ($remainingQty / max(1, (float)$kpi['target_qty'])), 2);
+
+        $newProjectedRoiPct = $this->_projectedRoiForCostDelta($currentContributionMargin, $currentTotalInvestment, -$costSavingRupees);
+
+        return [
+            'action_type' => 'reduce_crew_deployment',
+            'description' => $description . " (modelled as a {$reductionPct}% deployment reduction)",
+            'projected_impact' => [
+                'deployment_reduction_pct' => $reductionPct,
+                'cost_saving_inr' => $costSavingRupees,
+                'meets_required_completion_date' => $meetsCompletionDate,
+                'new_projected_roi_pct' => $newProjectedRoiPct,
+            ],
+            'confidence' => 'computed',
+        ];
+    }
+
+    private function _impactResequenceActivity($db, $act, $kpi, $description, $currentContributionMargin, $currentTotalInvestment)
+    {
+        $actid = (int)$act['id'];
+        $shiftDays = max(1, (int)($kpi['start_delay'] ?? 0)) ?: 3; // default proposed shift if no computed delay exists
+
+        // Immediate successor only (confirmed scope) — the activities
+        // this one directly precedes.
+        $successors = $db->createCommand(
+            "SELECT ar.dependent_activity, ar.lag_days, sa.name, sa.float_duration
+             FROM activity_relations ar
+             JOIN scheduleactivities sa ON sa.id = ar.dependent_activity
+             WHERE ar.precedent_activity=:aid AND ar.status=0",
+            [':aid' => $actid]
+        )->queryAll();
+
+        if (empty($successors)) {
+            return [
+                'action_type' => 'resequence_activity',
+                'description' => $description,
+                'projected_impact' => null,
+                'confidence' => 'insufficient_data',
+            ];
+        }
+
+        // Worst-case (least remaining float after the shift) among the
+        // immediate successors — if shifting this activity would push
+        // any successor's float negative, that's the binding constraint.
+        $worstSuccessor = null;
+        $worstNewFloat = PHP_INT_MAX;
+        foreach ($successors as $s) {
+            $currentFloat = (int)$s['float_duration'];
+            $newFloat = $currentFloat - $shiftDays;
+            if ($newFloat < $worstNewFloat) {
+                $worstNewFloat = $newFloat;
+                $worstSuccessor = $s;
+            }
+        }
+
+        // No cost impact — resequencing doesn't add resources, it just
+        // consumes float. new_projected_roi_pct is unchanged from the
+        // current basis (cost delta = 0).
+        $newProjectedRoiPct = $this->_projectedRoiForCostDelta($currentContributionMargin, $currentTotalInvestment, 0);
+
+        return [
+            'action_type' => 'resequence_activity',
+            'description' => $description . " (modelled as a {$shiftDays}-day shift)",
+            'projected_impact' => [
+                'shift_days' => $shiftDays,
+                'float_recovered_days' => $shiftDays,
+                'additional_cost_inr' => 0,
+                'downstream_risk' => "Immediate successor \"{$worstSuccessor['name']}\" float reduced from {$worstSuccessor['float_duration']} to {$worstNewFloat} days",
+                'downstream_float_negative' => $worstNewFloat < 0,
+                'new_projected_roi_pct' => $newProjectedRoiPct,
+            ],
+            'confidence' => 'computed',
+        ];
+    }
+
     // Helper: resolve schedule activity IDs for a set of IOW IDs
     private function _schedIdsForIows($db, $pid, array $iowIds)
     {
@@ -2064,6 +2800,45 @@ class ChatbotController extends Controller
                     'required' => ['project_name'],
                 ],
             ],
+            [
+                'name'        => 'check_roi_health',
+                'description' => 'Checks whether a project is currently on track to hit its target ROI, and flags which specific driver (PUR, CDE, cost variance, or critical path float) is out of tolerance. Use when the user asks how a project is tracking against its ROI target, whether ROI is at risk, or which driver is causing an ROI shortfall. This does NOT diagnose root cause — only flags status per driver (green/amber/red) and a PHP-computed projected ROI %. If a driver is red or amber, follow up with get_cost_variance_drivers (for cost_variance_adverse_pct) or diagnose_productivity_gap (for PUR/CDE) to explain why. Requires roi_target_thresholds to already exist for the project (built via compute_roi_thresholds) — if missing, this tool will say so rather than inventing thresholds.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'project_name' => ['type' => 'string'],
+                        'project_id'   => ['type' => 'integer', 'description' => 'Alternative to project_name if already known.'],
+                    ],
+                    'required' => ['project_name'],
+                ],
+            ],
+            [
+                'name'        => 'diagnose_productivity_gap',
+                'description' => 'Given a specific activity and a failing driver already identified by check_roi_health (PUR, CDE, cost_variance, or critical_float), determines the PHP-computed root cause: crew_below_plan or capacity_underutilised (for PUR/CDE), price_variance or usage_variance (for cost_variance), or predecessor_slippage / no_active_predecessor (for critical_float). Use this AFTER check_roi_health has flagged a driver as amber/red, to explain WHY — never guess a root cause yourself. The result is the required input to recommend_corrective_action (pass this tool\'s entire output as the diagnosis argument).',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'project_id'     => ['type' => 'integer'],
+                        'activity_id'    => ['type' => 'integer', 'description' => 'The schedule activity to diagnose. Use get_activity_kpi or get_schedule_activities first if you only have an activity name.'],
+                        'failing_driver' => ['type' => 'string', 'enum' => ['PUR', 'CDE', 'cost_variance', 'critical_float']],
+                    ],
+                    'required' => ['activity_id', 'failing_driver'],
+                ],
+            ],
+            [
+                'name'        => 'recommend_corrective_action',
+                'description' => 'Given a diagnosis from diagnose_productivity_gap, matches the root cause against corrective_action_rules and returns ranked candidate actions with PHP-computed projected impact (float recovered, additional/saved cost, new projected ROI %). Use this AFTER diagnose_productivity_gap has run — pass its entire output as the diagnosis argument, unchanged. This tool does NOT decide or execute anything — it only returns options for the user to review. If no rule matches the diagnosed root cause, no_matching_rule will be true and options will be empty — say so plainly, do not invent an action. Some options are process actions (e.g. flag_procurement_review) with projected_impact: null — narrate those as-is, never estimate a number for them.',
+                'input_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'project_id'     => ['type' => 'integer'],
+                        'activity_id'    => ['type' => 'integer'],
+                        'failing_driver' => ['type' => 'string', 'enum' => ['PUR', 'CDE', 'cost_variance', 'critical_float']],
+                        'diagnosis'      => ['type' => 'object', 'description' => 'The complete, unmodified output object returned by diagnose_productivity_gap.'],
+                    ],
+                    'required' => ['activity_id', 'failing_driver', 'diagnosis'],
+                ],
+            ],
         ];
     }
 
@@ -2092,6 +2867,9 @@ class ChatbotController extends Controller
             case 'get_project_schedule_summary': return $this->toolGetProjectScheduleSummary($db, $input);
             case 'query_database':               return $this->toolQueryDatabase($db, $input);
             case 'get_cost_variance_drivers':    return $this->toolGetCostVarianceDrivers($db, $input);
+            case 'check_roi_health':             return $this->toolCheckRoiHealth($db, $input);
+            case 'diagnose_productivity_gap':    return $this->toolDiagnoseProductivityGap($db, $input);
+            case 'recommend_corrective_action':  return $this->toolRecommendCorrectiveAction($db, $input);
             default:
                 return ['status' => 'no_data', 'reason' => "Unknown tool: {$name}"];
         }
@@ -2137,6 +2915,17 @@ class ChatbotController extends Controller
 
             "KPI panel tools (use these for all schedule/performance questions):\n" .
             "- get_activity_kpi → all production KPIs for one activity: work done %, productivity, cycle times, capacity, elapsed, projected duration, tasks, cause-of-delay\n\n" .
+
+            "ROI health tool (use for \"is this project on track for its ROI target\" questions):\n" .
+            "- check_roi_health → PHP-computed comparison of the project's CURRENT PUR, CDE, cost variance %, critical path float, and Cash Conversion Cycle (CCC) against its stored target thresholds. Returns a status (green/amber/red) per driver (5 drivers total) plus an overall_status and a projected_roi_pct. It does NOT diagnose why a driver failed — only flags which one(s) did. If a driver comes back amber or red, follow up with get_cost_variance_drivers (for cost_variance_adverse_pct) or diagnose_productivity_gap (for PUR/CDE) to explain the cause, rather than guessing. There is no diagnosis tool for the CCC driver — narrate it as a cash-cycle timing issue (billing/collection is taking longer than the project's own C2C target) without inventing a root cause for it. If the tool returns status=no_data because no thresholds exist yet for the project, tell the user that plainly — do not estimate thresholds yourself.\n" .
+            "  PUR = Productive Hours ÷ Available Hours (a blend of productivity and cycle-time efficiency). CDE = Required Capacity ÷ Deployed Capacity (capacity utilisation — how effectively available resource time was used). CCC = Cash Conversion Cycle in days (how long cash stays tied up before it's collected back — the SAME Cash-to-Cash Cycle figure already shown on the Cashflow dashboard's own dial, current vs. that dial's user-set target). Use these exact definitions when explaining the drivers; never call PUR \"procurement unit rate\" or CDE \"cost & duration efficiency\" or any other invented expansion.\n" .
+            "  projected_roi_pct = live Contribution Margin ÷ projected Investment × 100 — the SAME formula as the Cashflow dashboard's own ROI dial, not a plan-vs-actual margin estimate. A longer-than-target CCC inflates projected Investment (more cash tied up for longer), which pulls projected_roi_pct down even when cost and productivity are otherwise on track — this is intentional, not a bug, and is how CCC's effect shows up in the single ROI number.\n\n" .
+
+            "Root cause diagnosis tool (use AFTER check_roi_health flags a driver amber/red):\n" .
+            "- diagnose_productivity_gap → PHP-computed root cause for a specific activity + failing driver. Returns root_cause: crew_below_plan or capacity_underutilised (for PUR/CDE — based on capacity utilisation, not a guess), price_variance or usage_variance (for cost_variance — whichever dominates that activity's variance), or predecessor_slippage / no_active_predecessor (for critical_float — the specific upstream activity actually causing the delay, walked via activity_relations, not just \"the earliest predecessor\"). Never invent a root cause yourself — always call this tool and report exactly what it returns, including the evidence figures.\n\n" .
+
+            "Corrective action tool (use AFTER diagnose_productivity_gap has returned a root cause):\n" .
+            "- recommend_corrective_action → matches the diagnosed root_cause against a rule table and returns ranked candidate actions, each with a PHP-computed projected_impact (float recovered, additional/saved cost, new_projected_roi_pct) OR projected_impact: null for process actions (e.g. flag_procurement_review, material_yield_review, expedite_predecessor, investigate_reporting_gap) that don't have a clean forward-computed number. Pass the ENTIRE diagnose_productivity_gap output as the diagnosis argument, unchanged. This tool never decides or executes — present the ranked options and let the user choose. You may rank/suggest which option reaches target_roi_pct fastest, but never alter, round differently, or invent a number not present in the tool's output, and never fabricate a number for an option whose projected_impact is null — say plainly that no forecast is available for that one. If no_matching_rule is true, say so and do not invent an action.\n\n" .
 
             "Other tools:\n" .
             "- get_projects → list of active projects\n" .
