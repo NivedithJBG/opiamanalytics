@@ -84,7 +84,7 @@ $(function(){
 
                 dataType: "json",
 
-                data: {fromdate:$('#trialfromdate').val(),todate:$('#trialtodate').val()},
+                data: {fromdate:$('#trialfromdate').val(),todate:$('#trialtodate').val(),projectID:$('#trialprojectid').val()},
 
                 success: function(data){
 

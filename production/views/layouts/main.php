@@ -17,6 +17,7 @@ use app\models\UserTabs;
 use app\models\DepartmentTab;
 use app\models\ProjuserSelection;
 use app\models\Projects;
+use app\models\AccountsItem;
 
 AppAsset::register($this);
 
@@ -44,6 +45,7 @@ $subDomain = array_shift(($HTTP_HOST));
 <!DOCTYPE html>
 <html lang="<?= Yii::$app->language ?>">
 <head>
+    <style>html,body{overflow-x:hidden;}</style>
     <meta charset="<?= Yii::$app->charset ?>">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -81,7 +83,7 @@ $subDomain = array_shift(($HTTP_HOST));
     <!-- <link href="<//?php echo Yii::$app->request->baseUrl; ?>/cssnew/style.css?v=1.18" rel="stylesheet"> -->
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer.css?v=1.18" rel="stylesheet">
   <!--   <link href="<//?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer1.css" rel="stylesheet"> -->
-    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer2.css?v=20260724a" rel="stylesheet">
+    <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer2.css?v=20260729e" rel="stylesheet">
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer3.css" rel="stylesheet">
 
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/developer4.css" rel="stylesheet">
@@ -140,9 +142,12 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .icon-copy.duplicateProject,
         .round-icons .icon-tools.overNow4,
         .round-icons .icon-wrench.reslib-btn,
+        .round-icons .icon-shop.overNowVendorLib,
         .round-icons .icon-cart.procurementlib-btn,
         .round-icons .icon-office.storeofficelib-btn,
+        .round-icons .icon-lock.userpermissionslib-btn,
         .round-icons .rel-nav-btn,
+        .round-icons .estreport-btn,
         .round-icons .pdoc-btn,
 
         .round-icons .perf-dashboard-btn,
@@ -152,24 +157,30 @@ $subDomain = array_shift(($HTTP_HOST));
 
         .round-icons .icon-chart3            { background-color: #003580 !important; }
         .round-icons .rel-nav-btn            { background-color: #5c3d8f !important; }
+        .round-icons .estreport-btn          { background-color: #37475a !important; }
         .round-icons .icon-calendar          { background-color: #B8860B !important; }
         .round-icons .icon-copy.duplicateProject { background-color: #E65C00 !important; }
         .round-icons .icon-tools.overNow4    { background-color: #CC0000 !important; }
         .round-icons .icon-wrench.reslib-btn { background-color: #555555 !important; }
+        .round-icons .icon-shop.overNowVendorLib { background-color: #795548 !important; }
         .round-icons .icon-cart.procurementlib-btn { background-color: #00695C !important; }
         .round-icons .icon-office.storeofficelib-btn { background-color: #2c4a4a !important; }
+        .round-icons .icon-lock.userpermissionslib-btn { background-color: #8e24aa !important; }
         .round-icons .perf-dashboard-btn     { background-color: #2e7d32 !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
         .round-icons .cost-dashboard-btn     { background-color: #7b1fa2 !important; height: 26px !important; width: 26px !important; font-size: 9px !important; padding: 0 !important; box-sizing: content-box !important; }
         .round-icons .qe-btn                 { background-color: #00838f !important; height: 26px !important; width: 26px !important; font-size: 12px !important; }
         /* Keep coloured backgrounds on hover/focus */
         .round-icons .icon-chart3:hover,            .round-icons .icon-chart3:focus            { background: #002060 !important; }
         .round-icons .rel-nav-btn:hover,            .round-icons .rel-nav-btn:focus            { background: #4a2f75 !important; }
+        .round-icons .estreport-btn:hover,          .round-icons .estreport-btn:focus          { background: #26313f !important; }
         .round-icons .icon-calendar:hover,          .round-icons .icon-calendar:focus          { background: #8a6200 !important; }
         .round-icons .icon-copy.duplicateProject:hover, .round-icons .icon-copy.duplicateProject:focus { background: #b84400 !important; }
         .round-icons .icon-tools.overNow4:hover,    .round-icons .icon-tools.overNow4:focus    { background: #990000 !important; }
         .round-icons .icon-wrench.reslib-btn:hover, .round-icons .icon-wrench.reslib-btn:focus { background: #333333 !important; }
+        .round-icons .icon-shop.overNowVendorLib:hover, .round-icons .icon-shop.overNowVendorLib:focus { background: #5d4037 !important; }
         .round-icons .icon-cart.procurementlib-btn:hover, .round-icons .icon-cart.procurementlib-btn:focus { background: #004D40 !important; }
         .round-icons .icon-office.storeofficelib-btn:hover, .round-icons .icon-office.storeofficelib-btn:focus { background: #1c3232 !important; }
+        .round-icons .icon-lock.userpermissionslib-btn:hover, .round-icons .icon-lock.userpermissionslib-btn:focus { background: #6a1b7a !important; }
         .round-icons .perf-dashboard-btn:hover,     .round-icons .perf-dashboard-btn:focus     { background: #1b5e20 !important; }
         .round-icons .cost-dashboard-btn:hover,     .round-icons .cost-dashboard-btn:focus     { background: #4a148c !important; }
         .round-icons .qe-btn:hover,                 .round-icons .qe-btn:focus                 { background: #005f6b !important; }
@@ -467,6 +478,9 @@ if($action=='login')
                 <li>
                     <a class="icon-sitemap rel-nav-btn" id="btn-gantt-relations" title="Activity Relationships" href="#" data-projectid="<?php echo $ProjectId?>"></a>
                 </li>
+                <li>
+                    <a class="icon-file-text estreport-btn" id="btn-estimate-report" title="Project Estimate" href="#" data-projectid="<?php echo $ProjectId?>"></a>
+                </li>
                 <?php if($ProjectId && Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'newganttchart') { ?>
                 <li><a class="icon-tools overNow4" title="Activity Library" href="<?php echo Yii::$app->urlManager->createUrl('projects/projectmasters')?>"></a></li>
                 <?php } ?>
@@ -531,10 +545,15 @@ if($action=='login')
                         </a>
                     </li>
                     <li><a class="icon-wrench reslib-btn" title="Resource Library" href="#"> </a></li>
+                    <li><a class="icon-shop overNowVendorLib" title="Vendor Library" href="#"> </a></li>
                                 <li><a class="icon-cart procurementlib-btn" title="Procurement" href="#"> </a></li>
                                 <li><a class="icon-office storeofficelib-btn" title="Site Office" href="#"> </a></li>
+                                <?php if($user->role_id == 0){ ?>
+                                <li><a class="icon-lock userpermissionslib-btn" title="Manage Permissions" href="#"> </a></li>
+                                <?php } ?>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-moneybag cashflow-dashboard-btn" title="Cashflow" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
@@ -548,10 +567,15 @@ if($action=='login')
                         </a>
                     </li>
                     <li><a class="icon-wrench reslib-btn" title="Resource Library" href="#"> </a></li>
+                    <li><a class="icon-shop overNowVendorLib" title="Vendor Library" href="#"> </a></li>
                                 <li><a class="icon-cart procurementlib-btn" title="Procurement" href="#"> </a></li>
                                 <li><a class="icon-office storeofficelib-btn" title="Site Office" href="#"> </a></li>
+                                <?php if($user->role_id == 0){ ?>
+                                <li><a class="icon-lock userpermissionslib-btn" title="Manage Permissions" href="#"> </a></li>
+                                <?php } ?>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-moneybag cashflow-dashboard-btn" title="Cashflow" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1555" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
@@ -622,10 +646,15 @@ if($action=='login')
                         </a>
                     </li>
                     <li><a class="icon-wrench reslib-btn" title="Resource Library" href="#"> </a></li>
+                    <li><a class="icon-shop overNowVendorLib" title="Vendor Library" href="#"> </a></li>
                                 <li><a class="icon-cart procurementlib-btn" title="Procurement" href="#"> </a></li>
                                 <li><a class="icon-office storeofficelib-btn" title="Site Office" href="#"> </a></li>
+                                <?php if($user->role_id == 0){ ?>
+                                <li><a class="icon-lock userpermissionslib-btn" title="Manage Permissions" href="#"> </a></li>
+                                <?php } ?>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-moneybag cashflow-dashboard-btn" title="Cashflow" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
@@ -635,7 +664,6 @@ if($action=='login')
 
 
                 <?php } elseif(Yii::$app->controller->id == 'procurement') { ?>
-                    <li><a class="icon-shop overNowVendorLib" title="Vendor Library" href="#"> </a></li>
                 <?php } else {
                             $user=User::find()->where(['id'=>Yii::$app->user->id])->one();
 
@@ -680,6 +708,7 @@ if($action=='login')
                     </li>
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
+                    <li><a class="icon-moneybag cashflow-dashboard-btn" title="Cashflow" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-pencil qe-btn" title="WBS" href="#" style="cursor:pointer;"> </a></li>
                 <?php  } } } ?>
 
@@ -795,6 +824,8 @@ if($action=='login')
                         <li><a href="<?php echo Yii::$app->urlManager->createUrl('projectsmain/index')?>">Projects</a></li>
 
                         <li><a href="<?php echo Yii::$app->urlManager->createUrl('procurement/index')?>">Procurement</a></li>
+
+                        <li><a href="<?php echo Yii::$app->urlManager->createUrl('financerequests/index')?>">Finance</a></li>
 
                         <li><a href="<?php echo Yii::$app->urlManager->createUrl('storekeeper/index')?>">Site Office</a></li>
 
@@ -916,8 +947,11 @@ if($action=='login')
         //Activity Relations Overrelay — always present when gantt-win is available
         echo \Yii::$app->view->renderFile(Yii::getAlias('@app') . '/views/projectsmain/overrelay-relations.php');
 
+        //Estimate Report Overrelay — always present when gantt-win is available
+        echo \Yii::$app->view->renderFile(Yii::getAlias('@app') . '/views/projectsmain/overrelay-estimatereport.php');
+
         //Vendor Library Overrelay start
-        if(Yii::$app->controller->id == 'procurement') {
+        if(Yii::$app->controller->id == 'procurement' || (Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'index') || (Yii::$app->controller->id == 'projectsmain' && Yii::$app->controller->action->id == 'reports') || (Yii::$app->controller->id == 'projects' && Yii::$app->controller->action->id == 'projectmasters')) {
             echo \Yii::$app->view->renderFile(Yii::getAlias('@app') . '/views/procurement/overrelay-vendorlibrary.php');
         }
         //Vendor Library Overrelay end
@@ -1382,6 +1416,24 @@ if($action=='login')
 
 
         <!---------------- POPUP - TASK REPORT ------------------->
+        <!-- Opened via Bootstrap's own data-toggle="modal" (see the
+             .taskreport button markup in ReportController), independent of
+             any JS z-index handling — Bootstrap's default .modal/.modal-backdrop
+             z-index (1050/1040) sits far below this app's floating-window
+             family (100000+, e.g. #storeoffice-win and its dynamically
+             created sk-win-* sub-windows). When this "Report Progress"
+             button is clicked from inside one of those floating windows,
+             the modal opened underneath it, appearing stuck/unreachable.
+             Pinned above the entire floater range (via JS on show.bs.modal,
+             since Bootstrap's backdrop <div> has no id to target from CSS
+             alone) so it always wins regardless of which window it was
+             triggered from. -->
+        <!-- storekeeper/index.php's own "Report Progress" sub-window
+             (#sk-win-* built by _skBuildWin) uses a hardcoded z-index of
+             999999+ for itself — higher than the 200500 first tried here —
+             so this modal needs to clear THAT too, not just the 100000-range
+             floater family. -->
+        <style>#taskReportPopup.modal{ z-index:1000500; }</style>
         <div class="modal fade taskReportPopup" id="taskReportPopup" >
             <div class="modal-dialog modal-lg" style="width:65%;">
                 <div class="modal-content">
@@ -1423,6 +1475,17 @@ if($action=='login')
                 </div>
             </div>
         </div>
+        <script>
+        $(document).on('show.bs.modal', '#taskReportPopup', function(){
+          // Bootstrap's backdrop <div> is appended to <body> with no id to
+          // target from CSS — bump the one just created for THIS modal
+          // above the floating-window z-index range (see the style block
+          // above #taskReportPopup for why).
+          setTimeout(function(){
+            $('.modal-backdrop').last().css('z-index', 1000450);
+          }, 0);
+        });
+        </script>
         <!------------------------------------------->
 
 
@@ -1604,7 +1667,7 @@ if($action=='login')
 #cb-btn:hover{background:#2d3f6e}
 
 /* Desktop floating panel */
-#cb-win{position:fixed;bottom:80px;right:24px;z-index:100000;width:330px;height:440px;background:#fff;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.28);display:none;flex-direction:column;font-family:'Times New Roman',Times,serif;overflow:hidden}
+#cb-win{position:fixed;bottom:80px;right:24px;z-index:100000;width:460px;height:640px;max-width:calc(100vw - 48px);max-height:calc(100vh - 104px);background:#fff;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.28);display:none;flex-direction:column;font-family:'Times New Roman',Times,serif;overflow:hidden}
 
 /* Mobile: full-screen overlay */
 @media(max-width:600px){
@@ -1675,11 +1738,18 @@ if($action=='login')
 <script>
 (function(){
     var cbHistory = [];
+    var cbPendingDocuments = null;
     var win     = document.getElementById('cb-win');
     var msgs    = document.getElementById('cb-msgs');
     var inp     = document.getElementById('cb-input');
     var sendBtn = document.getElementById('cb-send');
     var chatUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/chatbot/chat"]); ?>';
+
+    /* Allows other popups (e.g. Project Documents) to attach PDF/image
+       content to the NEXT outgoing message only. */
+    window.cbSetPendingDocuments = function(files){
+        cbPendingDocuments = files && files.length ? files : null;
+    };
 
     /* Auto-grow textarea */
     inp.addEventListener('input', function(){
@@ -1757,6 +1827,8 @@ if($action=='login')
         sendBtn.disabled = true;
 
         var priorHistory = cbHistory.slice(0, -1);
+        var docsForThisSend = cbPendingDocuments;
+        cbPendingDocuments = null; // documents attach to this one outgoing message only
         var xhr = new XMLHttpRequest();
         xhr.open('POST', chatUrl, true);
         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
@@ -1783,7 +1855,9 @@ if($action=='login')
             sendBtn.disabled = false;
             addMsg('Network error. Please try again.', 'bot');
         };
-        xhr.send('message=' + encodeURIComponent(text) + '&history=' + encodeURIComponent(JSON.stringify(priorHistory)));
+        var body = 'message=' + encodeURIComponent(text) + '&history=' + encodeURIComponent(JSON.stringify(priorHistory));
+        if(docsForThisSend) body += '&documents=' + encodeURIComponent(JSON.stringify(docsForThisSend));
+        xhr.send(body);
     }
 
     function addMsg(text, cls){
@@ -1944,6 +2018,20 @@ if($action=='login')
                   <option value="24">24 hrs</option>
                 </select>
                 <span class="text-danger gpm-err" id="gpm_wrkhrs_err" style="display:none;font-size:12px;"></span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>Bank Account</label>
+                <select id="gpm_bankaccount" class="form-control">
+                  <option value="">-- Select --</option>
+                  <?php
+                    $gpmBanks = AccountsItem::find()->where(['account_type' => 2])->andWhere(['Status' => 0])->orderBy(['name' => SORT_ASC])->all();
+                    foreach ($gpmBanks as $gpmBank):
+                  ?>
+                  <option value="<?php echo $gpmBank->id; ?>"><?php echo htmlspecialchars($gpmBank->name); ?></option>
+                  <?php endforeach; ?>
+                </select>
               </div>
             </div>
           </div>
@@ -2157,6 +2245,7 @@ if($action=='login')
                 $('#gpm_client').val(d.client_name);
                 $('#gpm_location').val(d.location);
                 $('#gpm_wrkhrs').val(d.wrkhours);
+                $('#gpm_bankaccount').val(d.bank_account_id || '');
                 $('.gpm-err').hide();
                 gpmShowFormPanel(true);
                 gpmLoadFiles(d.Project_Id);
@@ -2213,6 +2302,7 @@ if($action=='login')
         fd.append('clientname', client);
         fd.append('location', $('#gpm_location').val());
         fd.append('wrkhrss', hrs);
+        fd.append('bankaccount', $('#gpm_bankaccount').val());
         if(isEdit) fd.append('project_id', pid);
 
         var btn=$('#gpm-form-save').prop('disabled',true).text('Saving…');
@@ -2246,8 +2336,7 @@ if($action=='login')
   <div id="pdoc-header">
     <span style="font-size:15px;opacity:.85;">&#128196;</span>
     <h4>Project Documents</h4>
-    <button id="pdoc-upload-toggle" title="Upload Document" style="margin-left:auto;margin-right:8px;background:#27ae60;border:1px solid #1e8449;color:#fff;border-radius:20px;padding:3px 14px;font-size:12px;cursor:pointer;font-weight:600;">&#8679; Upload</button>
-    <button id="pdoc-close-x">&times;</button>
+    <button id="pdoc-close-x" style="margin-left:auto;">&times;</button>
   </div>
   <!-- Upload Panel -->
   <div id="pdoc-upload-panel" style="display:none;background:#f0f4fb;border-bottom:2px solid #dde3ef;padding:14px 16px;">
@@ -2330,6 +2419,8 @@ if($action=='login')
     </div>
     <button id="pdoc-search-btn">Search</button>
     <button id="pdoc-clear-btn">Clear</button>
+    <button id="pdoc-upload-toggle" title="Upload Document" style="margin-left:auto;background:#27ae60;border:1px solid #1e8449;color:#fff;border-radius:20px;padding:3px 14px;font-size:12px;cursor:pointer;font-weight:600;height:28px;">&#8679; Upload</button>
+    <button id="pdoc-ask-claude" title="Ask Claude about selected documents" disabled style="background:#8e44ad;border:1px solid #6c3483;color:#fff;border-radius:20px;padding:3px 14px;font-size:12px;cursor:pointer;font-weight:600;opacity:.5;height:28px;">&#129504; Ask Claude</button>
   </div>
   <div id="pdoc-table-wrap">
     <div id="pdoc-loading">Loading…</div>
@@ -2337,6 +2428,7 @@ if($action=='login')
     <table id="pdoc-table" style="display:none;">
       <thead>
         <tr>
+          <th style="width:30px;text-align:center;"><input type="checkbox" id="pdoc-select-all" title="Select all eligible (PDF/image) documents"></th>
           <th style="width:90px;">Date</th>
           <th>Project</th>
           <th>Addressee</th>
@@ -2365,6 +2457,7 @@ if($action=='login')
     var PDOC_PROJ_URL  = '<?php echo \yii\helpers\Url::to(["/projects/pdocprojects"]); ?>';
     var PDOC_FILE_BASE   = '/uploads/projects/';
     var PDOC_DELETE_URL  = '<?php echo \yii\helpers\Url::to(["/projects/deleteprojectfile"]); ?>';
+    var PDOC_GETCONTENT_URL = '<?php echo \yii\helpers\Url::to(["/projects/pdocgetcontent"]); ?>';
     var pdocInited = false, pdocViewerInited = false;
 
     function pdocShow(){
@@ -2420,6 +2513,7 @@ if($action=='login')
                 $('#pdoc-loading').hide();
                 if(!d || d.error!=='No' || !d.files || !d.files.length){ $('#pdoc-empty').show(); return; }
                 var rows='';
+                var PDOC_ASKABLE_EXT = ['pdf','jpg','jpeg','png'];
                 $.each(d.files,function(i,f){
                     var badge = f.file_type==='documents'
                         ? '<span class="pdoc-type-badge pdoc-badge-doc">Document</span>'
@@ -2431,7 +2525,13 @@ if($action=='login')
                     var subjCell = subj
                         ? '<span style="color:#1a1a1a;">'+subj+'</span><div style="font-size:10px;color:#444;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+fn+'">'+fn+'</div>'
                         : '<span style="color:#1a1a1a;">'+fn+'</span>';
+                    var ext = (f.filename||'').split('.').pop().toLowerCase();
+                    var askable = PDOC_ASKABLE_EXT.indexOf(ext) >= 0;
+                    var cbCell = askable
+                        ? '<input type="checkbox" class="pdoc-select-cb" data-id="'+f.id+'" data-name="'+fn+'">'
+                        : '<input type="checkbox" disabled title="Only PDF and image files can be sent to Claude">';
                     rows += '<tr>'
+                        +'<td style="text-align:center;">'+cbCell+'</td>'
                         +'<td style="white-space:nowrap;">'+f.uploaded_at+'</td>'
                         +'<td>'+proj+'</td>'
                         +'<td style="color:#1a1a1a;">'+addr+'</td>'
@@ -2442,6 +2542,7 @@ if($action=='login')
                 });
                 $('#pdoc-tbody').html(rows);
                 $('#pdoc-table').show();
+                pdocUpdateAskClaudeState();
             },
             error:function(){ $('#pdoc-loading').hide(); $('#pdoc-empty').show(); }
         });
@@ -2476,6 +2577,7 @@ if($action=='login')
     }
 
     var PDOC_UPLOAD_URL = '<?php echo \yii\helpers\Url::to(["/projects/pdocupload"]); ?>';
+    var PDOC_CURRENT_PID = '<?php echo $ProjectId; ?>';
 
     /* ── Upload panel toggle ── */
     $(document).on('click','#pdoc-upload-toggle', function(){
@@ -2494,7 +2596,7 @@ if($action=='login')
 
     /* ── Generic upload helper ── */
     function pdocDoUpload(type, fileInput, $btn, $msg, onSuccess){
-        var pid   = CURRENT_PID;
+        var pid   = PDOC_CURRENT_PID;
         var files = fileInput.files;
         $msg.css('color','#c00').text('');
         if(!pid)         { $msg.text('No active project. Please select a project first.'); return; }
@@ -2589,6 +2691,61 @@ if($action=='login')
     $(document).on('click','#pdoc-viewer-close', function(){
         $('#pdoc-viewer-popup').removeClass('pdoc-open');
         $('#pdoc-viewer-body').empty();
+    });
+
+    /* ── Ask Claude about selected documents ── */
+    function pdocUpdateAskClaudeState(){
+        var n = $('.pdoc-select-cb:checked').length;
+        $('#pdoc-ask-claude').prop('disabled', n===0).css('opacity', n===0 ? .5 : 1);
+        var allCbs = $('.pdoc-select-cb');
+        $('#pdoc-select-all').prop('checked', allCbs.length>0 && n===allCbs.length);
+    }
+
+    $(document).on('change','.pdoc-select-cb', pdocUpdateAskClaudeState);
+
+    $(document).on('change','#pdoc-select-all', function(){
+        $('.pdoc-select-cb').prop('checked', this.checked);
+        pdocUpdateAskClaudeState();
+    });
+
+    $(document).on('click','#pdoc-ask-claude', function(){
+        var $btn = $(this);
+        if($btn.prop('disabled')) return;
+        var ids = [], names = [];
+        $('.pdoc-select-cb:checked').each(function(){
+            ids.push($(this).data('id'));
+            names.push($(this).data('name'));
+        });
+        if(!ids.length) return;
+
+        $btn.prop('disabled',true).html('&#8987; Loading…');
+        $.ajax({
+            type:'POST', url:PDOC_GETCONTENT_URL, dataType:'json',
+            data:{ ids: ids },
+            success:function(d){
+                $btn.prop('disabled',false).html('&#129504; Ask Claude');
+                pdocUpdateAskClaudeState();
+                if(!d || d.error!=='No' || !d.files || !d.files.length){
+                    alert(d && d.errortext ? d.errortext : 'Could not load selected documents.');
+                    return;
+                }
+                if(window.cbSetPendingDocuments) window.cbSetPendingDocuments(d.files);
+                var cbWin = document.getElementById('cb-win');
+                if(cbWin.style.display !== 'flex') document.getElementById('cb-btn').click();
+                var inp = document.getElementById('cb-input');
+                if(inp){
+                    inp.value = 'I\'ve attached: ' + names.join(', ') + '. ';
+                    inp.focus();
+                    var ln = inp.value.length;
+                    if(inp.setSelectionRange) inp.setSelectionRange(ln, ln);
+                }
+            },
+            error:function(xhr){
+                $btn.prop('disabled',false).html('&#129504; Ask Claude');
+                pdocUpdateAskClaudeState();
+                alert('Server error ('+xhr.status+'). Please try again.');
+            }
+        });
     });
 })();
 </script>
@@ -2850,7 +3007,7 @@ if($action=='login')
 #pd-left .pb::-webkit-scrollbar{width:4px;}
 #pd-left .pb::-webkit-scrollbar-thumb{background:#c0c8d8;border-radius:2px;}
 #pd-left .pb::-webkit-scrollbar-track{background:transparent;}
-#pd-right{flex:2.2;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:8px;}
+#pd-right{flex:2.2;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(4,1fr);gap:8px;}
 #pd-tip{position:fixed;z-index:100300;background:#0c1535;color:#e8ecf4;font-family:'Barlow Condensed',sans-serif;font-size:12px;line-height:1.4;padding:6px 18px;border-radius:4px;pointer-events:none;display:none;white-space:pre;box-shadow:0 3px 12px rgba(0,0,0,.4);min-width:320px;max-width:420px;}
 /* ── Panel ────────────────────────────────────────────────────────────────── */
 .dash-modal .panel{background:#fff;border:none;border-right:1px solid #c8d0e0;overflow:hidden;display:flex;flex-direction:column;min-height:0}
@@ -2892,6 +3049,11 @@ if($action=='login')
 .dash-modal .reslabels{display:flex;gap:3px;margin-top:3px;flex-shrink:0}
 .dash-modal .reslbl{flex:1;font-family:'Barlow Condensed',sans-serif;font-size:10px;color:#4a5a72;text-align:center;line-height:1.2;overflow:hidden}
 .dash-modal .resfoot{text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:400;color:#1a2540;margin-top:2px;flex-shrink:0}
+/* ── Resource Capacity bar hover tooltip ──────────────────────────────────── */
+#pd-res-tip{display:none;position:fixed;z-index:200500;background:#fff;border-radius:6px;border:1px solid #dde3ef;box-shadow:0 6px 20px rgba(0,0,0,.28);overflow:hidden;font-family:'Barlow Condensed',sans-serif;min-width:160px;}
+#pd-res-tip table{width:100%;border-collapse:collapse;font-size:11px;}
+#pd-res-tip th{background:#1a2540;color:#fff;padding:5px 10px;text-align:left;white-space:nowrap;}
+#pd-res-tip td{padding:5px 10px;color:#1a2540;border-top:1px solid #eef1f5;}
 /* ── Tasks chip & tooltip ──────────────────────────────────────────────────── */
 .pd-tasks-chip{position:absolute;left:6px;top:6px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.6px;color:#1a2540;border:1px solid #b0bec5;border-radius:3px;padding:2px 8px;cursor:pointer;text-transform:uppercase;background:#fff;z-index:10;}
 .pd-tasks-chip:hover{background:#f0f4ff;border-color:#3461b8;color:#3461b8;}
@@ -2905,7 +3067,7 @@ if($action=='login')
 <style>
 #cd-bk{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100000}
 #cd-bk.cd-open{display:block}
-#cd-modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:78vw;max-width:1180px;height:88vh;z-index:100001;border-radius:6px;overflow:hidden;background:#f0f2f7;box-shadow:0 8px 32px rgba(0,0,0,.7);flex-direction:column}
+#cd-modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:78vw;max-width:1180px;height:88vh;z-index:100200;border-radius:6px;overflow:hidden;background:#f0f2f7;box-shadow:0 8px 32px rgba(0,0,0,.7);flex-direction:column}
 #cd-modal.cd-open{display:flex}
 #cd-hdr{background:linear-gradient(180deg,#0c1535 0%,#05091c 100%);padding:5px 16px;display:flex;align-items:center;border-bottom:1px solid #2a4a8a;flex-shrink:0}
 #cd-close{background:none;border:none;color:#fff;opacity:.85;font-size:18px;line-height:1;cursor:pointer;padding:0 3px;margin-left:6px}
@@ -2916,6 +3078,27 @@ if($action=='login')
 #cd-modal .panel{border-right:3px solid #a0aec0}
 #cd-c2,#cd-c1,#cd-c3,#cd-c4{overflow-y:auto !important;}
 #cd-c4 .brow, #cd-c3 .brow, #cd-c1 .brow{margin-bottom:0 !important;}
+
+#cf-bk{display:none;position:fixed;inset:0;background:transparent;z-index:100000;pointer-events:none}
+#cf-bk.cf-open{display:block}
+#cf-modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:58.5vw;max-width:885px;height:74vh;z-index:100200;border-radius:6px;overflow:hidden;background:#f0f2f7;box-shadow:0 8px 32px rgba(0,0,0,.7);flex-direction:column}
+#cf-modal.cf-open{display:flex}
+#cf-hdr{background:linear-gradient(180deg,#0c1535 0%,#05091c 100%);padding:5px 16px;display:flex;align-items:center;border-bottom:1px solid #2a4a8a;flex-shrink:0;cursor:move;user-select:none}
+.cf-rs{position:absolute;z-index:20;background:transparent}
+.cf-rs-e{right:-4px;top:10px;bottom:10px;width:10px;cursor:e-resize}
+.cf-rs-w{left:-4px;top:10px;bottom:10px;width:10px;cursor:w-resize}
+.cf-rs-s{bottom:-4px;left:10px;right:10px;height:10px;cursor:s-resize}
+.cf-rs-n{top:-4px;left:10px;right:10px;height:10px;cursor:n-resize}
+.cf-rs-se{right:-4px;bottom:-4px;width:14px;height:14px;cursor:se-resize}
+.cf-rs-sw{left:-4px;bottom:-4px;width:14px;height:14px;cursor:sw-resize}
+.cf-rs-ne{right:-4px;top:-4px;width:14px;height:14px;cursor:ne-resize}
+.cf-rs-nw{left:-4px;top:-4px;width:14px;height:14px;cursor:nw-resize}
+#cf-close{background:none;border:none;color:#fff;opacity:.85;font-size:18px;line-height:1;cursor:pointer;padding:0 3px;margin-left:6px}
+#cf-close:hover{opacity:1}
+#cf-body{flex:1;min-height:0;overflow:hidden;padding:6px 10px 0;display:flex;flex-direction:column;background:#e2e4e8}
+#cf-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(4, 1fr);grid-template-rows:repeat(3, 1fr);row-gap:0;column-gap:0}
+#cf-modal .ph{background:#5a5a5a;font-size:11px;}
+#cf-modal .panel{border-right:3px solid #a0aec0}
 
 </style>
 <div id="cd-bk"></div>
@@ -2936,6 +3119,37 @@ if($action=='login')
       <div class="panel" style="grid-column:3;grid-row:5/span 4"><div class="ph">Resource Cost</div><div class="resbody" id="cd-rcost"></div></div>
       <div class="panel" style="grid-column:2;grid-row:9/span 4"><div class="ph">Unit Cost of Resource</div><div class="resbody" id="cd-c6"></div></div>
       <div class="panel" style="grid-column:3;grid-row:9/span 4"><div class="ph">Resource Consumption</div><div class="resbody" id="cd-c7"></div></div>
+    </div>
+  </div>
+</div>
+<div id="cf-bk"></div>
+<div id="cf-modal" class="dash-modal">
+  <div class="cf-rs cf-rs-n" data-dir="n"></div>
+  <div class="cf-rs cf-rs-s" data-dir="s"></div>
+  <div class="cf-rs cf-rs-e" data-dir="e"></div>
+  <div class="cf-rs cf-rs-w" data-dir="w"></div>
+  <div class="cf-rs cf-rs-ne" data-dir="ne"></div>
+  <div class="cf-rs cf-rs-nw" data-dir="nw"></div>
+  <div class="cf-rs cf-rs-se" data-dir="se"></div>
+  <div class="cf-rs cf-rs-sw" data-dir="sw"></div>
+  <div id="cf-hdr">
+    <span id="cf-title" style="flex:1;color:#ffffff;font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;letter-spacing:.5px;text-align:center"><?php echo htmlspecialchars($ProjectName); ?> — Cashflow Dashboard</span>
+    <button id="cf-close">&times;</button>
+  </div>
+  <div id="cf-body">
+    <div id="cf-grid">
+      <div class="panel" style="grid-column:1;grid-row:1"><div class="ph" style="background:#251840;">Total Investment</div><div class="gp" id="cf-netinvestment"></div></div>
+      <div class="panel" style="grid-column:2;grid-row:1"><div class="ph" style="background:#334455;">Cash-to-Cash Cycle</div><div class="gp" id="cf-bank"></div></div>
+      <div class="panel" style="grid-column:3;grid-row:1"><div class="ph" style="background:#334455;">Contract Income</div><div class="gp" id="cf-contractincome"></div></div>
+      <div class="panel" style="grid-column:4;grid-row:1"><div class="ph" style="background:#334455;">Bank-Working Capital</div><div class="gp" id="cf-bankdial"></div></div>
+      <div class="panel" style="grid-column:1;grid-row:2"><div class="ph" style="background:#334455;">Bills Receivable</div><div class="gp" id="cf-contract-income"></div></div>
+      <div class="panel" style="grid-column:2;grid-row:2"><div class="ph" style="background:#251840;">Current Liabilities</div><div class="gp" id="cf-currentliabilities"></div></div>
+      <div class="panel" style="grid-column:3;grid-row:2"><div class="ph" style="background:#334455;">Work In Progress</div><div class="gp" id="cf-billsreceivable"></div></div>
+      <div class="panel" style="grid-column:4;grid-row:2"><div class="ph" style="background:#251840;">Investments</div><div class="gp" id="cf-currentassets"></div></div>
+      <div class="panel" style="grid-column:1;grid-row:3"><div class="ph" style="background:#251840;">Project Expenditure</div><div class="gp" id="cf-projectexpenditure"></div></div>
+      <div class="panel" style="grid-column:2;grid-row:3"><div class="ph" style="background:#081142;">Contribution Margin</div><div class="gp" id="cf-contribmargin"></div></div>
+      <div class="panel" style="grid-column:3;grid-row:3"><div class="ph" style="background:#081142;">ROI</div><div class="gp" id="cf-roi"></div></div>
+      <div class="panel" style="grid-column:4;grid-row:3"><div class="ph" style="background:#081142;">FREE CASH</div><div class="gp" id="cf-expenses"></div></div>
     </div>
   </div>
 </div>
@@ -2960,6 +3174,7 @@ if($action=='login')
         <div class="panel"><div class="ph">Activity Productivity</div><div class="gp" id="pd-g3"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
         <div class="panel"><div class="ph">Capacity Utilisation</div><div class="gp" id="pd-g5"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
         <div class="panel"><div class="ph">Cycle Time</div><div class="gp" id="pd-g4"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
+        <div class="panel"><div class="ph">Resource Capacity</div><div class="pb" id="pd-g7"><span style="font-size:9px;color:#aaa">Loading&hellip;</span></div></div>
       </div>
     </div>
   </div>
@@ -3434,6 +3649,12 @@ function openModal(saId, wanId){
     document.getElementById('qe-btn-add').style.display = 'none';
     document.getElementById('qe-btn-delete').style.display = '';
     document.getElementById('qe-btn-save').textContent = '💾 Save';
+    /* Clear every activity-specific field (Activity Name, Estimate Qty,
+       Sch. Qty/Unit, Rate, Amount, Tasks, Resources) before loading the
+       clicked bar's real data — without this, opening a different activity
+       right after another one left its previous Sch. Qty (etc.) visible
+       until/unless the new activity's own value happened to overwrite it. */
+    _resetModalActivityOnward();
     $.ajax({
       type:'POST', url:'../projectsmain/wbsget', dataType:'json',
       data:{ sa_id: saId || 0, wan_id: wanId || 0 },
@@ -3481,7 +3702,7 @@ function _prefillModal(d){
       loadGroups(d.proj_type_id, function(){
         var grpSel = document.getElementById('qe-group');
         if(d.act_type_id){ grpSel.value = d.act_type_id; grpSel.classList.remove('qe-needs-data'); }
-        loadActivities(d.proj_type_id, d.act_type_id, function(){
+        loadActivities(d.proj_type_id, d.act_type_id, d.iow_group_id || null, function(){
           if(d.iow_act_id){
             _setActivityById(d.iow_act_id, d.act_name);
           }
@@ -3546,8 +3767,11 @@ function _prefillModal(d){
         '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
       taskBody.appendChild(tr);
       _bindNumField(tr.querySelector('.qe-task-qty'));
+      _bindNumField(tr.querySelector('.qe-task-prod'));
+      _bindNumField(tr.querySelector('.qe-task-resunits'));
       tr.querySelector('.qe-task-qty').addEventListener('input', recalcDuration);
       tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
+      tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
       tr.querySelector('.qe-task-del').addEventListener('click', function(){
         if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
       });
@@ -3780,14 +4004,17 @@ function _resolveActivityId(){
 }
 
 /* ── duration calculation ──
-   Per task:  Duration/Unit = Qty/Sch Unit ÷ Productivity/Day
-              (days needed for this task per single unit of the activity's Sch Qty)
-   Activity:  Duration = Sch Qty × SUM(Duration/Unit across all tasks)
+   Per task:  Duration/Unit = (Qty/Sch Unit ÷ Productivity/Day) ÷ Resource Units
+              (days needed for this task per single unit of the activity's Sch Qty —
+              divided by how many of that resource are working the task in parallel,
+              so assigning more resource units to a task shortens it proportionally)
+   Activity:  Duration = ROUND UP ( Sch Qty × SUM(Duration/Unit across all tasks) )
               (tasks run sequentially — each task's own per-unit rate adds to the total). */
 function recalcTaskDurationPerUnit(tr){
-  var qty  = parseFloat(tr.querySelector('.qe-task-qty')  ? tr.querySelector('.qe-task-qty').value  : 0) || 0;
-  var prod = parseFloat(tr.querySelector('.qe-task-prod') ? tr.querySelector('.qe-task-prod').value : 0) || 0;
-  var durPerUnit = prod > 0 ? (qty / prod) : 0;
+  var qty      = parseFloat(tr.querySelector('.qe-task-qty')      ? tr.querySelector('.qe-task-qty').value      : 0) || 0;
+  var prod     = parseFloat(tr.querySelector('.qe-task-prod')     ? tr.querySelector('.qe-task-prod').value     : 0) || 0;
+  var resUnits = parseFloat(tr.querySelector('.qe-task-resunits') ? tr.querySelector('.qe-task-resunits').value : 0) || 1;
+  var durPerUnit = prod > 0 ? (qty / prod) / resUnits : 0;
   var durEl = tr.querySelector('.qe-task-durunit');
   if(durEl) durEl.value = durPerUnit > 0 ? durPerUnit.toFixed(4) : '';
   return durPerUnit;
@@ -3864,6 +4091,7 @@ function addTaskRow(){
   _bindNumField(tr.querySelector('.qe-task-resunits'));
   tr.querySelector('.qe-task-qty').addEventListener('input', recalcDuration);
   tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
+  tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
   tr.querySelector('.qe-task-del').addEventListener('click', function(){
     if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
   });
@@ -3953,6 +4181,7 @@ function _bindResRow(tr){
     var opt = this.options[this.selectedIndex];
     if(opt && opt.value){
       rateEl.value = opt.getAttribute('data-price') || '';
+      unitEl.value = opt.getAttribute('data-unit') || '';
       calcAmt();
     }
   });
@@ -4229,20 +4458,31 @@ $(function(){
   document.getElementById('qe-close').addEventListener('click', closeModal);
   document.getElementById('qe-close-btn').addEventListener('click', closeModal);
 
-  /* delete activity (from Gantt if scheduled, or the saved WBS item otherwise) */
-  document.getElementById('qe-btn-delete').addEventListener('click', function(){
-    var wgId = document.getElementById('qe-wg-id').value || '';
-    if(!_wbsSaId && !wgId){ alert('No activity to delete.'); return; }
-    if(!confirm('Delete this activity?')) return;
-    var btn = this;
+  /* delete activity (from Gantt if scheduled, or the saved WBS item otherwise) —
+     permanently deletes. If the activity has dependent data (progress reports,
+     indents, POs, work orders/billing), the server blocks the first attempt and
+     reports exactly what's attached; the user then sees that consequence
+     warning as its own step, separate from the final "are you sure" prompt,
+     before the delete is retried with force=1. */
+  function doWbsDelete(wgId, force){
+    var btn = document.getElementById('qe-btn-delete');
     btn.disabled = true;
     $.ajax({
       type:'POST', url:'../projectsmain/wbsdelete', dataType:'json',
-      data:{ sa_id: _wbsSaId || '', wg_id: wgId },
+      data:{ sa_id: _wbsSaId || '', wg_id: wgId, force: force ? 1 : 0 },
       success: function(d){
         btn.disabled = false;
+        if(d.conflict){
+          // Step 1: show exactly what will be destroyed.
+          alert('WARNING\n\n' + d.errortext);
+          // Step 2: a separate, explicit final confirmation.
+          if(confirm('Are you sure you want to permanently delete this activity and everything listed above?')){
+            doWbsDelete(wgId, true);
+          }
+          return;
+        }
         if(d.error){
-          alert(d.error);
+          alert(d.errortext || d.error);
         } else {
           closeModal();
           if(typeof window.reloadGantt === 'function') window.reloadGantt();
@@ -4250,6 +4490,12 @@ $(function(){
       },
       error: function(){ btn.disabled = false; alert('Delete failed. Please try again.'); }
     });
+  }
+  document.getElementById('qe-btn-delete').addEventListener('click', function(){
+    var wgId = document.getElementById('qe-wg-id').value || '';
+    if(!_wbsSaId && !wgId){ alert('No activity to delete.'); return; }
+    if(!confirm('Permanently delete this activity? This cannot be undone.')) return;
+    doWbsDelete(wgId, false);
   });
 
   /* drag + resize */
@@ -4365,6 +4611,19 @@ $(function(){
     var actId = document.getElementById('qe-activity-id').value;
     if(!actId) { _resolveActivityId(); actId = document.getElementById('qe-activity-id').value; }
     if(!actId) return; /* new activity — nothing to prefill yet */
+
+    /* Switching to a (possibly different) activity — Estimate Qty, Sch. Qty,
+       rate/amount and Duration are all specific to whichever activity was
+       previously loaded and must never carry over. Clear them up front,
+       before the AJAX prefill below runs, so a stale leftover value from
+       the last-edited activity can't linger if this one doesn't overwrite it. */
+    ['qe-qty','qe-sch-qty','qe-rate','qe-amount'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.value = '';
+    });
+    _schQtyTouched = false;
+    recalcDuration();
+
     $.ajax({
       type:'POST', url:'../projectsmain/getactivityresources', dataType:'json',
       data:{ activity_id: actId },
@@ -4388,12 +4647,15 @@ $(function(){
               '<td><input type="number" class="qe-task-qty" value="'+parseFloat(task.task_qty||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
               '<td><input type="number" class="qe-task-prod" value="'+parseFloat(task.productivity||0).toFixed(2)+'" placeholder="0.00" step="0.01" min="0"></td>'+
               '<td><input type="text" class="qe-task-durunit" placeholder="—" readonly></td>'+
-              '<td><input type="number" class="qe-task-resunits" value="1" placeholder="1" step="1" min="1"></td>'+
+              '<td><input type="number" class="qe-task-resunits" value="'+(task.resunits||1)+'" placeholder="1" step="1" min="1"></td>'+
               '<td style="text-align:right"><button class="qe-del-btn qe-task-del" title="Remove">&times;</button></td>';
             taskBody.appendChild(tr);
             _bindNumField(tr.querySelector('.qe-task-qty'));
+            _bindNumField(tr.querySelector('.qe-task-prod'));
+            _bindNumField(tr.querySelector('.qe-task-resunits'));
             tr.querySelector('.qe-task-qty').addEventListener('input', recalcDuration);
             tr.querySelector('.qe-task-prod').addEventListener('input', recalcDuration);
+            tr.querySelector('.qe-task-resunits').addEventListener('input', recalcDuration);
             tr.querySelector('.qe-task-del').addEventListener('click', function(){
               if(document.querySelectorAll('#qe-task-body tr').length > 1){ tr.remove(); recalcDuration(); }
             });
@@ -4465,9 +4727,7 @@ $(function(){
         if(d.iow_act_id) document.getElementById('qe-activity-id').value = d.iow_act_id;
         if(_wbsMode === 'edit'){
           if(typeof window.reloadGantt === 'function') window.reloadGantt();
-          clearActivityFields();
-          _wbsMode = 'new';
-          document.getElementById('qe-btn-add').style.display = '';
+          closeModal();
         } else {
           var msg = document.getElementById('qe-save-msg');
           msg.style.color = '#27ae60'; msg.textContent = '✔ Saved';
@@ -4584,9 +4844,10 @@ $(function(){
     <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:nowrap;">
       <span style="font-size:15px;font-weight:700;color:#fff;">Schedule</span>
       <span style="font-size:14px;font-weight:700;color:#fff;">Gantt Chart</span>
-      <span style="font-size:12px;font-weight:500;color:#c9c9c9;" id="gantt-win-proj-name"><?php echo htmlspecialchars($ProjectName); ?></span>
+      <span style="font-size:12px;font-weight:500;color:#c9c9c9;padding:3px 6px;border-radius:4px;cursor:pointer;" id="gantt-win-proj-name" title="Hover for project snapshot" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='transparent'"><?php echo htmlspecialchars($ProjectName); ?></span>
     </div>
     <div id="gantt-win-hdr-btns">
+      <a class="icon-clock" id="btn-project-duration" title="Project Duration" href="#" style="width:24px;height:24px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#2878c0;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.2);">&#8986;</a>
       <a class="icon-pencil" id="btn-quick-entry" title="WBS" href="#" style="width:24px;height:24px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#3a7d3a;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.25);"> </a>
       <a class="icon-sitemap" id="btn-gantt-relations-inline" title="Activity Relationships" href="#" style="width:24px;height:24px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#5c3d8f;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.2);"></a>
       <a class="icon-calendar" id="btn-gantt-calendar-inline" title="Holidays" href="#" style="width:24px;height:24px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#B8860B;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.2);"></a>
@@ -4617,11 +4878,23 @@ $(function(){
   var _ganttPid = (document.getElementById('gantt-win-open') || {}).getAttribute ? document.getElementById('gantt-win-open').getAttribute('data-projectid') : '';
   var _ganttUrl = '<?php echo Yii::$app->urlManager->createUrl("projectsmain/newganttchart")?>' + '?layout=false';
 
+  function _reparentGcmPopup(){
+    // See window.ensureGanttLoaded below for why this is necessary. Also
+    // covers the KPI modal/float panel (gkm-bk/gkm-modal/gkp-popup) — same
+    // trapped-stacking-context problem, they're rendered as DOM siblings of
+    // gcm-popup inside newganttview.php's injected markup.
+    ['gcm-popup','gm-ucr-tip','gm-rcon-tip','gm-rcost-tip','gkm-bk','gkm-modal','gkp-popup','gpd-tip'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el && el.parentNode !== document.body) document.body.appendChild(el);
+    });
+  }
+
   function _loadGanttWin(pid) {
     var url = _ganttUrl + '&id=' + (pid || _ganttPid);
     $('#gantt-win-body').html('<div id="gantt-win-loading">Loading Gantt chart&hellip;</div>');
     $.ajax({ url: url, success: function(html){
       $('#gantt-win-body').html(html);
+      _reparentGcmPopup();
     }, error: function(){
       $('#gantt-win-body').html('<div style="padding:30px;color:red;">Failed to load Gantt.</div>');
     }});
@@ -4637,6 +4910,31 @@ $(function(){
       // Full-page gantt view
       window.loadGantt();
     }
+  };
+
+  // Lazily loads the Gantt chart's markup/script into the (hidden)
+  // #gantt-win-body without opening the floating window itself, so pages
+  // that never open the Gantt window directly (e.g. the Project Estimate
+  // report) can still reach functions it exposes on window, such as
+  // showCostDashboardPopup. Calls cb() once ready — immediately if the
+  // content is already loaded.
+  // #gcm-popup (Cost Dashboard) and its hover-tooltips are meant to be
+  // usable even when the Gantt window itself stays closed (e.g. opened
+  // from the Project Estimate report) — but display:none on any ancestor
+  // (here, #gantt-win) hides position:fixed descendants too, so they must
+  // be reparented to <body>, out from under #gantt-win, the same way every
+  // other floating popup in this app is (see _reparentGcmPopup above).
+  window.ensureGanttLoaded = function(cb) {
+    if(_loaded){ cb && cb(); return; }
+    _loaded = true;
+    var url = _ganttUrl + '&id=' + _ganttPid;
+    $.ajax({ url: url, success: function(html){
+      $('#gantt-win-body').html(html);
+      _reparentGcmPopup();
+      cb && cb();
+    }, error: function(){
+      _loaded = false;
+    }});
   };
 
   // Open
@@ -5062,11 +5360,162 @@ $(function(){
 })();
 </script>
 
+<!-- ══════════════════════════════════════════════════════════════════════
+     USER PERMISSIONS FLOATING WINDOW
+════════════════════════════════════════════════════════════════════════ -->
+<style>
+#userpermissions-win {
+  display:none; position:fixed; top:80px; left:20px;
+  width:900px; height:calc(100vh - 110px);
+  min-width:420px; min-height:300px;
+  z-index:100000; background:#fff; border-radius:6px;
+  border:1px solid #d0d0d0;
+  box-shadow:0 4px 16px rgba(0,0,0,.15);
+  flex-direction:column; overflow:hidden;
+}
+#userpermissions-win.pw-open { display:flex; }
+#userpermissions-win-hdr {
+  background:#3a3f47; color:#fff; padding:7px 15px;
+  display:flex; align-items:center; justify-content:space-between;
+  cursor:move; user-select:none; flex-shrink:0;
+  font-family:'Nunito',sans-serif;
+  border-bottom:1px solid #24272c;
+}
+#userpermissions-win-hdr-btns { display:flex; align-items:center; gap:8px; }
+#userpermissions-win-hdr-btns button {
+  background:none; border:none; color:#fff; font-size:16px;
+  cursor:pointer; line-height:1; padding:0 4px; opacity:.85;
+}
+#userpermissions-win-hdr-btns button:hover { opacity:1; }
+#userpermissions-win-body { flex:1; min-height:0; overflow:auto; }
+#userpermissions-win-loading { padding:50px; text-align:center; color:#666; font-size:14px; }
+</style>
+
+<div id="userpermissions-win">
+  <div class="pw-rs pw-rs-n" data-dir="n"></div>
+  <div class="pw-rs pw-rs-s" data-dir="s"></div>
+  <div class="pw-rs pw-rs-e" data-dir="e"></div>
+  <div class="pw-rs pw-rs-w" data-dir="w"></div>
+  <div class="pw-rs pw-rs-ne" data-dir="ne"></div>
+  <div class="pw-rs pw-rs-nw" data-dir="nw"></div>
+  <div class="pw-rs pw-rs-se" data-dir="se"></div>
+  <div class="pw-rs pw-rs-sw" data-dir="sw"></div>
+  <div id="userpermissions-win-hdr">
+    <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:nowrap;">
+      <span style="font-size:14px;font-weight:600;color:#fff;letter-spacing:0.5px;">User Permissions</span>
+    </div>
+    <div id="userpermissions-win-hdr-btns">
+      <button id="userpermissions-win-expand" title="Fullscreen">&#x26F6;</button>
+      <button id="userpermissions-win-close" title="Close">&times;</button>
+    </div>
+  </div>
+  <div id="userpermissions-win-body">
+    <div id="userpermissions-win-loading">Loading User Permissions&hellip;</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var win = document.getElementById('userpermissions-win');
+  var hdr = document.getElementById('userpermissions-win-hdr');
+  var MIN_W=500, MIN_H=300, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0, _saved=null;
+  var _loaded = false;
+
+  function _anchor(){
+    var r=win.getBoundingClientRect();
+    win.style.right='auto'; win.style.left=r.left+'px';
+    win.style.top=r.top+'px'; win.style.width=r.width+'px';
+    win.style.height=r.height+'px'; return r;
+  }
+
+  var _userpermissionsUrl = '<?php echo Yii::$app->urlManager->createUrl("userpermissions/index")?>' + '?layout=false';
+
+  function _loadUserpermissionsWin() {
+    $('#userpermissions-win-body').html('<div id="userpermissions-win-loading">Loading User Permissions&hellip;</div>');
+    $.ajax({ url: _userpermissionsUrl, success: function(html){
+      $('#userpermissions-win-body').html(html);
+    }, error: function(){
+      $('#userpermissions-win-body').html('<div style="padding:30px;color:red;">Failed to load User Permissions.</div>');
+    }});
+  }
+
+  // Open
+  document.addEventListener('click', function(e){
+    if(!e.target.closest('.userpermissionslib-btn')) return;
+    e.preventDefault();
+    win.classList.add('pw-open');
+    if(typeof window.popupBringToFront === 'function') window.popupBringToFront('userpermissions-win');
+    if(typeof window.popupCascade === 'function') window.popupCascade('userpermissions-win');
+    if(!_loaded){
+      _loaded = true;
+      _loadUserpermissionsWin();
+    }
+  });
+
+  // Close
+  document.getElementById('userpermissions-win-close').addEventListener('click', function(){
+    win.classList.remove('pw-open');
+  });
+
+  // Expand / restore
+  document.getElementById('userpermissions-win-expand').addEventListener('click', function(){
+    if(_saved){
+      win.style.left=_saved.left; win.style.top=_saved.top;
+      win.style.width=_saved.width; win.style.height=_saved.height;
+      _saved=null; this.innerHTML='&#x26F6;'; this.title='Fullscreen';
+    } else {
+      var r=win.getBoundingClientRect();
+      _saved={left:win.style.left,top:win.style.top,width:win.style.width,height:win.style.height};
+      win.style.left='0'; win.style.top='0';
+      win.style.width='100vw'; win.style.height='100vh';
+      this.innerHTML='&#x2716;'; this.title='Restore';
+    }
+  });
+
+  // Drag
+  bindDragTouch(hdr, 'mousedown', function(e){
+    if(e.target.closest('#userpermissions-win-hdr-btns')) return;
+    var r=_anchor(); _action='drag';
+    _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault();
+  });
+
+  // Resize
+  win.querySelectorAll('.pw-rs').forEach(function(el){
+    bindDragTouch(el, 'mousedown', function(e){
+      var r=_anchor(); _action=el.getAttribute('data-dir');
+      _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height;
+      e.preventDefault(); e.stopPropagation();
+    });
+  });
+
+  bindDragTouch(document, 'mousemove', function(e){
+    if(!_action) return;
+    if(getComputedStyle(win).display === 'none') return;
+    e.preventDefault();
+    var dx=e.clientX-_sx, dy=e.clientY-_sy;
+    if(_action==='drag'){
+      var x=Math.max(0,Math.min(_ox+dx,window.innerWidth-win.offsetWidth));
+      var y=Math.max(0,Math.min(_oy+dy,window.innerHeight-win.offsetHeight));
+      win.style.left=x+'px'; win.style.top=y+'px';
+    } else {
+      var l=_ox,t=_oy,w=_ow,h=_oh;
+      if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);}
+      if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);}
+      if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;}
+      if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;}
+      win.style.left=l+'px'; win.style.top=t+'px';
+      win.style.width=w+'px'; win.style.height=h+'px';
+    }
+  });
+  bindDragTouch(document, 'mouseup', function(){ _action=null; });
+})();
+</script>
+
 <script>
 /* Ensure all floating popups are direct children of <body> so they
    are never trapped inside a parent stacking context */
 (function(){
-  var ids = ['pdoc-popup','pdoc-viewer-popup','gpm-overlay','gantt-win','qe-modal','qe-map-bk','cb-win','cb-btn','reslib-win','rel-win','menu4-popup-cntnr','procurement-win','storeoffice-win'];
+  var ids = ['pdoc-popup','pdoc-viewer-popup','gpm-overlay','gantt-win','qe-modal','qe-map-bk','cb-win','cb-btn','reslib-win','vendorlib-win','rel-win','estreport-win','menu4-popup-cntnr','procurement-win','storeoffice-win','userpermissions-win'];
   ids.forEach(function(id){
     var el = document.getElementById(id) || document.querySelector('.' + id);
     if(el && el.parentNode !== document.body) document.body.appendChild(el);
@@ -5084,7 +5533,7 @@ $(function(){
   var SUB_POPUP_GAP = 5000; /* sub-popups (Resource Library / Relationships
     "+add"-type popups) always sit at parent-floater-ceiling + this gap, so
     they can never end up under a repeatedly-clicked parent window. */
-  var floaters = ['pdoc-popup','pdoc-viewer-popup','gantt-win','qe-modal','cb-win','reslib-win','rel-win','menu4-popup-cntnr','procurement-win','storeoffice-win'];
+  var floaters = ['pdoc-popup','pdoc-viewer-popup','gantt-win','qe-modal','cb-win','reslib-win','vendorlib-win','rel-win','estreport-win','menu4-popup-cntnr','procurement-win','storeoffice-win','userpermissions-win','cd-modal','cf-modal','gkp-popup','gkm-modal','gcm-popup'];
 
   window.popupBringToFront = function(id){
     var el = document.getElementById(id) || document.querySelector('.' + id);
@@ -5178,9 +5627,92 @@ $(function(){
   document.addEventListener('wbs:open',    function(){ window.popupBringToFront('qe-modal'); window.popupCascade('qe-modal'); });
   document.addEventListener('chat:open',   function(){ window.popupBringToFront('cb-win'); window.popupCascade('cb-win'); });
   document.addEventListener('reslib:open', function(){ window.popupBringToFront('reslib-win'); window.popupCascade('reslib-win'); });
+  document.addEventListener('vendorlib:open', function(){ window.popupBringToFront('vendorlib-win'); window.popupCascade('vendorlib-win'); });
   document.addEventListener('rel:open',    function(){ window.popupBringToFront('rel-win'); window.popupCascade('rel-win'); });
+  document.addEventListener('estreport:open', function(){ window.popupBringToFront('estreport-win'); window.popupCascade('estreport-win'); });
   document.addEventListener('actlib:open', function(){ window.popupBringToFront('menu4-popup-cntnr'); window.popupCascade('menu4-popup-cntnr'); });
+
+  /* qe-modal's map sub-popup (openMapPopup/closeMapPopup, defined earlier
+     in this same layout) has no reraise registration today — whenever
+     qe-modal itself is brought back to front while the map is open, the
+     map popup's own z-index never gets bumped, so it can end up buried
+     under its own parent. Mirrors Resource Library's identical pattern
+     for its own sub-popups (overrelay-resourcemaster.php). */
+  window.registerSubPopupReraise('qe-modal', function(){
+    var bk = document.getElementById('qe-map-bk');
+    var popup = document.getElementById('qe-map-popup');
+    if(bk && bk.classList.contains('open')){
+      var mapZ = window.popupSubZBase();
+      bk.style.zIndex = mapZ;
+      if(popup) popup.style.zIndex = mapZ + 1;
+    }
+  });
 })();
 </script>
+
+<!-- ── Responsive overrides: every floating popup goes full-screen on
+     tablet/phone. Placed last so it cascades after each popup's own
+     inline <style> block regardless of selector specificity. Only
+     touches layout (position/size); each popup's internal content
+     still scrolls on overflow via its own existing rules. ── -->
+<style>
+@media (max-width: 900px) {
+    #pdoc-popup,
+    #pdoc-viewer-popup,
+    #gpm-dialog,
+    #qe-modal,
+    #gantt-win,
+    #procurement-win,
+    #storeoffice-win,
+    #userpermissions-win,
+    .menu4-popup-cntnr,
+    #reslib-win,
+    #vendorlib-win,
+    #rel-win,
+    #estreport-win {
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        max-width: 100vw !important;
+        max-height: 100vh !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        border-radius: 0 !important;
+    }
+
+    #gpm-overlay { padding: 0 !important; }
+
+    .rl-subwin, .rl2-subwin {
+        width: 94vw !important;
+        max-width: 94vw !important;
+        left: 3vw !important;
+    }
+
+    /* Bootstrap col-md-* doesn't reflow below the md breakpoint by
+       design (that's what col-sm-*/col-xs-* are for) — these popups
+       only ever used col-md-*, so force every grid column full-width
+       here instead of touching every view file's markup. */
+    #pdoc-popup [class*="col-md-"],
+    .menu4-popup-cntnr [class*="col-md-"],
+    #reslib-win [class*="col-md-"],
+    #vendorlib-win [class*="col-md-"],
+    #rel-win [class*="col-md-"] {
+        width: 100% !important;
+        float: none !important;
+    }
+}
+
+@media (max-width: 480px) {
+    #pdoc-popup table,
+    .menu4-popup-cntnr table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}
+</style>
 
 <?php $this->endPage() ?>

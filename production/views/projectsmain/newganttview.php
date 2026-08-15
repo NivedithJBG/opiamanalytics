@@ -7,22 +7,40 @@
  */
 ?>
 <style>
-#gantt-act-tooltip {
-  display: none;
-  position: fixed;
-  z-index: 9999;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 12px;
-  color: #222;
-  line-height: 1.8;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
-  pointer-events: none;
-  white-space: nowrap;
+/* ── Activity name hover tooltip: Planned/Actual Start-End grid ───────────── */
+#gname-tip {
+  display:none; position:fixed; z-index:200400;
+  background:#fff; border-radius:6px; box-shadow:0 6px 24px rgba(0,0,0,.3);
+  border:1px solid #dde3ef; padding:0; min-width:340px; font-size:11px;
 }
-#gantt-act-tooltip b { color: #1a2540; }
+#gname-tip.gname-tip-open { display:block; }
+#gname-tip .gname-tip-row {
+  display:flex; justify-content:space-between; padding:6px 12px;
+  white-space:nowrap;
+}
+#gname-tip .gname-tip-row.gname-tip-planned { background:#eef1f5; color:#1a2540; }
+#gname-tip .gname-tip-row.gname-tip-actual  { background:#f7f8f9; color:#1a2540; }
+#gname-tip .gname-tip-name {
+  padding:8px 12px; text-align:center; font-weight:700; font-size:12px;
+  color:#fff; background:#1a2540; border-bottom:1px solid #0d1730;
+  border-radius:5px 5px 0 0;
+}
+#gname-tip .gname-tip-row span { display:inline-block; }
+#gname-tip .gname-tip-row b { color:#1a2540; }
+#gname-tip .gname-tip-row.gname-tip-actual b { color:#1a2540; }
+#gname-tip .gname-date-late  { color:#e53935; font-weight:700; }
+#gname-tip .gname-date-early { color:#27ae60; font-weight:700; }
+/* Editable date value — Planned Start / Actual Start only (per-field class) */
+#gname-tip .gname-date-editable { cursor:pointer; border-bottom:1px dashed #8a93a6; }
+#gname-tip .gname-date-editable:hover { background:#dde6f5; }
+#gname-tip .gname-date-input {
+  border:1px solid #4a6fa5; border-radius:3px; font-size:11px; padding:1px 3px;
+  width:104px; font-family:inherit;
+}
+#gname-tip .gname-tip-err {
+  padding:5px 12px; font-size:10px; color:#e53935; background:#fdecea;
+  border-top:1px solid #f5c6c2;
+}
 
 /* ── Gantt row highlight when cost modal is open ──────────────────────────── */
 tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8820c; outline-offset: -1px; }
@@ -31,9 +49,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 #gkm-bk { display:none; }
 #gkm-modal {
   display:none; position:fixed; z-index:10015;
-  top:80px; left:calc(50% - 412px);
-  width:825px; height:65vh;
-  min-width:420px; min-height:280px;
+  top:80px; left:calc(50% - 370px);
+  width:740px; height:58vh;
+  min-width:380px; min-height:420px;
   background:#f0f3fa; border-radius:10px;
   box-shadow:0 8px 40px rgba(0,0,0,0.28);
   flex-direction:column; overflow:hidden;
@@ -56,13 +74,13 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 .gkm-rs-ne { right:-4px; top:-4px; width:14px; height:14px; cursor:ne-resize; }
 .gkm-rs-nw { left:-4px;  top:-4px; width:14px; height:14px; cursor:nw-resize; }
 #gkm-loading { text-align:center; padding:40px; font-size:13px; color:#5a6e8c; }
-#gkm-body { flex:1; min-height:0; display:flex; flex-direction:column; padding:10px; gap:8px; overflow:hidden; }
-#gkm-content { display:flex; flex-direction:column; gap:8px; flex:1; min-height:0; }
-#gkm-row1 { display:flex; gap:8px; flex:1; min-height:0; }
-#gkm-row2 { display:flex; gap:8px; flex:1; min-height:0; }
+#gkm-body { flex:1; min-height:0; display:flex; flex-direction:column; padding:6px 10px 0; gap:0; overflow:hidden; }
+#gkm-content { display:grid; grid-template-columns:repeat(3, 1fr); grid-template-rows:repeat(2, 1fr); gap:5px; flex:1; min-height:0; overflow-y:auto; }
+#gkm-row1 { display:contents; }
+#gkm-row2 { display:contents; }
 .gkm-panel {
-  flex:1; background:#fff; border-radius:6px; border:1px solid #dde3ef;
-  display:flex; flex-direction:column; overflow:hidden; min-width:0;
+  background:#fff; border-radius:5px; border:1px solid #dde3ef;
+  display:flex; flex-direction:column; overflow:hidden; min-width:0; min-height:0;
 }
 .gkm-panel-title {
   font-size:10px; font-weight:700; color:#e8efff; text-transform:uppercase;
@@ -73,10 +91,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
 /* ── KPI Float Panel ─────────────────────────────────────────────────────── */
 #gkp-popup {
-  display: none; position: fixed; z-index: 10015;
-  top: 80px; left: calc(50% - 490px);
-  width: 980px; height: 30vh;
-  min-width: 500px; min-height: 180px;
+  display: none; position: fixed; z-index: 100200;
+  top: 80px; left: calc(50% - 370px);
+  width: 740px; height: 58vh;
+  min-width: 380px; min-height: 420px;
   background: #f0f3fa;
   border-radius: 10px; box-shadow: 0 8px 36px rgba(0,0,0,0.32);
   overflow: hidden; pointer-events: auto;
@@ -91,7 +109,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 #gkp-close { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:0 4px; line-height:1; flex-shrink:0; }
 #gkp-body {
-  display: flex; flex-direction: row; gap: 5px; padding: 6px; flex: 1; min-height: 0; overflow: hidden;
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr);
+  gap: 5px; padding: 6px; flex: 1; min-height: 0; overflow-y: auto;
 }
 #gkp-row1 { display: contents; }
 #gkp-row2 { display: contents; }
@@ -105,8 +124,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 .gkp-rs-ne { right:-4px; top:-4px; width:14px; height:14px; cursor:ne-resize; }
 .gkp-rs-nw { left:-4px;  top:-4px; width:14px; height:14px; cursor:nw-resize; }
 .gkp-panel {
-  flex: 1; background: #fff; border-radius: 5px; border: 1px solid #dde3ef;
-  display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+  background: #fff; border-radius: 5px; border: 1px solid #dde3ef;
+  display: flex; flex-direction: column; overflow: hidden; min-width: 0; min-height: 0;
 }
 .gkp-panel-title {
   font-size: 9px; font-weight: 700; color: #e8efff; text-transform: uppercase;
@@ -121,48 +140,81 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 .gkp-kv-val.over { color:#e53935; }
 .gkp-kv-val.good { color:#27ae60; }
 
-/* ── Resource Cost Tooltip ──────────────────────────────────────────────────── */
-#rcost-tt {
-  display:none; position:fixed; z-index:10050;
-  background:#fff; color:#1a2540;
-  border-radius:8px; box-shadow:0 6px 28px rgba(0,0,0,0.28); border:1px solid #dde3ef;
-  padding:12px 16px; min-width:480px; max-width:700px;
-  font-family:'Barlow Condensed',sans-serif; font-size:11px;
-  pointer-events:none;
+/* ── Resource Capacity bar hover tooltip — reuses .gm-bar-tip (Cost
+   Dashboard's Est/Act popup style), sized up slightly ── */
+#gkp-res-tip.gkp-res-tip-big { padding: 14px 16px; min-width: 280px; }
+#gkp-res-tip.gkp-res-tip-big .gm-bar-tip-hdr { font-size: 12px; margin-bottom: 10px; }
+#gkp-res-tip.gkp-res-tip-big .gm-bar-stack { width: 34px; }
+#gkp-res-tip.gkp-res-tip-big .gm-bar-val { font-size: 12px; }
+#gkp-res-tip.gkp-res-tip-big .gm-bar-lbl { font-size: 11px; max-width: 68px; }
+
+/* ── Project Duration hover panel — independent of KPI/Cost dashboards.
+   Triggered by hovering #gantt-win-proj-name in the Gantt window header. ── */
+#gpd-tip {
+  display: none; position: fixed; z-index: 10020;
+  width: 520px;
+  background: #fff; border-radius: 6px; border: 1px solid #dde3ef;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  overflow: hidden; font-family: 'Barlow Condensed', sans-serif;
 }
-#rcost-tt .tt-type-hdr {
-  font-size:10px; font-weight:700; color:#3461b8; text-transform:uppercase;
-  letter-spacing:0.05em; padding:6px 0 4px; border-top:1px solid #e5eaf5;
-  margin-top:6px;
+#gpd-tip.gpd-open { display: block; }
+#gpd-tip-title {
+  font-size: 12px; font-weight: 700; color: #e8efff; text-transform: uppercase;
+  letter-spacing: 0.04em; text-align: center;
+  padding: 8px 12px; background: #1a2540;
+  border-bottom: 1px solid #0d1f3c;
+  cursor: move; user-select: none;
 }
-#rcost-tt .tt-type-hdr:first-child { border-top:none; margin-top:0; padding-top:0; }
-/* vertical bar chart per resource group */
-#rcost-tt .tt-vbar-section { display:flex; gap:6px; align-items:flex-end; padding:0 0 4px; }
-#rcost-tt .tt-vbar-col { display:flex; flex-direction:column; align-items:center; flex:1; min-width:0; }
-#rcost-tt .tt-vbar-vals { font-size:8px; color:#7a8aaa; text-align:center; line-height:1.3; margin-bottom:2px; width:100%; }
-#rcost-tt .tt-vbar-vals b { display:block; font-size:9px; }
-#rcost-tt .tt-vbar-bars { width:100%; display:flex; gap:3px; align-items:flex-end; height:80px; }
-#rcost-tt .tt-vbar-est { flex:1; background:#4a6fa5; border-radius:2px 2px 0 0; min-height:2px; }
-#rcost-tt .tt-vbar-act { flex:1; border-radius:2px 2px 0 0; min-height:2px; }
-#rcost-tt .tt-vbar-diff { font-size:8px; font-weight:700; text-align:center; margin-top:2px; }
-#rcost-tt .tt-vbar-name { font-size:8px; color:#1a2540; text-align:center; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; }
-#rcost-tt .tt-legend { display:flex; gap:12px; margin-top:8px; padding-top:6px; border-top:1px solid #e5eaf5; }
-#rcost-tt .tt-legend span { font-size:9px; color:#7a8aaa; display:flex; align-items:center; gap:3px; }
-#rcost-tt .tt-legend i { display:inline-block; width:9px; height:9px; border-radius:1px; }
-.rcost-info-icon {
-  display:inline-flex; align-items:center; justify-content:center;
-  width:16px; height:16px; border-radius:50%;
-  background:#3461b8; color:#fff; font-size:12px; font-weight:400;
-  cursor:default; flex-shrink:0; line-height:1; user-select:none;
-  margin-left:4px; vertical-align:middle;
+#gpd-tip-body { padding: 16px 18px; }
+#gpd-proj-name { font-size:14px; font-weight:700; color:#1a2540; text-align:left; margin-bottom:10px; }
+#gpd-bar-status { font-size:12px; font-weight:700; margin-bottom:4px; min-height:15px; }
+#gpd-bar-status.gpd-late  { color:#e53935; }
+#gpd-bar-status.gpd-early { color:#27ae60; }
+#gpd-bar { position:relative; display:flex; align-items:stretch; height:10px; border-radius:4px; overflow:hidden; margin:8px 0 15px; background:#eef1f6; }
+.gpd-bar-labels { display:flex; justify-content:space-between; font-size:13px; font-weight:400; color:#000; }
+.gpd-bar-labels b { color:#00838f; font-weight:700; }
+.gpd-divider { border-top:1px solid #b9c0cc; margin:11px 0; }
+.gpd-date-labels { font-size:13px; color:#000; }
+.gpd-date-labels b { color:#1a2540; }
+#gpd-tip-loading { padding:16px; text-align:center; color:#9aa5ba; font-size:11px; }
+
+/* ── Project Snapshot hover card — hovering the project name in the
+   Gantt window header (#gantt-win-proj-name). Independent of #gpd-tip
+   (the existing click-triggered popup) — separate element, separate
+   trigger, same visual language as the "Projects" list card (.gpm-card
+   in main.php: rounded white card, bold name in a bordered header
+   strip, label/value rows below). Values are placeholders for now —
+   the source formulas for several fields (Actual Duration,
+   Delayed/Earlier, Actual Completion Date) are still to be defined. ── */
+#gsc-tip {
+  display: none; position: fixed; z-index: 10025;
+  width: 480px;
+  border-radius:16px;
+  box-sizing:border-box;background:#efefef;overflow:hidden;
+  box-shadow:0 8px 30px rgba(0,0,0,0.25);
+  font-family: 'Barlow Condensed', sans-serif;
 }
+#gsc-tip.gsc-open { display: block; }
+#gsc-tip-top { background:#d8d8d8;padding:14px 20px; cursor:move; user-select:none; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+#gsc-tip-name { font-size:15px;font-weight:700;color:#1a1a1a;margin:0; }
+#gsc-tip-close { background:none; border:none; font-size:19px; line-height:1; color:#777; cursor:pointer; padding:0 2px; flex-shrink:0; }
+#gsc-tip-close:hover { color:#222; }
+#gsc-tip-body { padding:12px 22px 22px;background:transparent; }
+#gsc-tip-content { display:flex; flex-wrap:wrap; row-gap:16px; }
+.gsc-row { font-size:15px;color:#1a1a1a;display:flex; align-items:center; gap:10px; flex:0 0 50%; min-width:0; box-sizing:border-box; white-space:nowrap; }
+.gsc-row label { font-weight:400;color:#1a1a1a;margin:0;display:flex; align-items:center; gap:10px; }
+.gsc-swatch { display:inline-block; width:12px; height:12px; border-radius:2px; flex-shrink:0; }
+.gsc-row .gsc-val { font-weight:700; color:#1a1a1a; margin-left:6px; }
+.gsc-row .gsc-val.gsc-late  { color:#e53935; }
+.gsc-row .gsc-val.gsc-early { color:#27ae60; }
+#gsc-tip-loading { padding:16px; text-align:center; color:#9aa5ba; font-size:11px; }
 
 /* ── Gantt Cost Float Panel ─────────────────────────────────────────────────── */
 #gcm-popup {
-  display: none; position: fixed; z-index: 10015;
-  top: 80px; left: calc(50% - 470px);
-  width: 940px; height: 38vh;
-  min-width: 420px; min-height: 280px;
+  display: none; position: fixed; z-index: 100200;
+  top: 80px; left: calc(50% - 370px);
+  width: 740px; height: 58vh;
+  min-width: 380px; min-height: 420px;
   background: #f0f3fa;
   border-radius: 10px; box-shadow: 0 8px 36px rgba(0,0,0,0.32);
   overflow: hidden; pointer-events: auto;
@@ -171,16 +223,23 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 #gcm-popup.gcm-visible { display: flex; }
 #gcm-pop-hdr {
   background: #1a2540; color: #fff; padding: 10px 14px;
-  font-size: 13px; font-weight: 600; font-family: 'Barlow Condensed', sans-serif;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  display: flex; align-items: center; flex-shrink: 0;
   cursor: move; user-select: none;
+}
+#gcm-pop-hdr-left, #gcm-pop-hdr-right { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#gcm-pop-hdr-right { display: flex; justify-content: flex-end; }
+#gcm-pop-hdr-left, #gcm-pop-hdr-center {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+}
+#gcm-pop-hdr-left { color: #e8efff; }
+#gcm-pop-hdr-center {
+  flex-shrink: 0; text-align: center; padding: 0 12px; color: #ffffff;
 }
 #gcm-pop-close { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:0 4px; line-height:1; flex-shrink:0; }
 #gcm-pop-body {
   display: flex; flex-direction: column; gap: 5px; padding: 6px; flex: 1; min-height: 0; overflow: hidden;
 }
-#gcm-pop-row1 { display: flex; gap: 5px; flex: 1; min-height: 0; }
+#gcm-pop-row1 { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 5px; flex: 1; min-height: 0; overflow-y: auto; }
 #gcm-pop-row2 { display: none !important; }
 .gcm-rs { position:absolute; z-index:20; background:transparent; }
 .gcm-rs-e  { right:-4px; top:10px; bottom:10px; width:10px; cursor:e-resize; }
@@ -192,8 +251,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 .gcm-rs-ne { right:-4px; top:-4px; width:14px; height:14px; cursor:ne-resize; }
 .gcm-rs-nw { left:-4px;  top:-4px; width:14px; height:14px; cursor:nw-resize; }
 .gcm-pop-panel {
-  flex: 1; background: #fff; border-radius: 5px; border: 1px solid #dde3ef;
-  display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+  background: #fff; border-radius: 5px; border: 1px solid #dde3ef;
+  display: flex; flex-direction: column; overflow: hidden; min-width: 0; min-height: 0;
 }
 .gcm-pop-panel-title {
   font-size: 9px; font-weight: 700; color: #e8efff; text-transform: uppercase;
@@ -202,6 +261,43 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 .gcm-pop-panel-body { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 #gcm-pop-loading { text-align: center; padding: 18px; font-size: 11px; color: #5a6e8c; }
+
+/* ── Resource hover tooltips (vertical Est vs Act bars) — shared by Unit
+   Cost of Resources (#gm-ucr-tip) and Yield (#gm-rcon-tip) panels ── */
+#gm-cd-ucr, #gm-cd-rcon, #gm-cd-rcost { cursor:default; }
+.gm-bar-tip {
+  display:none; position:fixed; z-index:200300;
+  background:#fff; border-radius:6px; box-shadow:0 6px 24px rgba(0,0,0,.3);
+  padding:10px 12px; min-width:220px; max-width:560px; font-size:11px;
+}
+.gm-bar-tip.gm-bar-tip-open { display:block; }
+.gm-bar-tip .gm-bar-tip-hdr {
+  font-size:10px; font-weight:700; color:#1a2540; text-transform:uppercase;
+  letter-spacing:.04em; margin-bottom:8px;
+}
+.gm-bar-tip .gm-bar-bars {
+  display:flex; align-items:flex-end; gap:10px; overflow-x:auto; padding-bottom:2px;
+}
+.gm-bar-tip .gm-bar-col { display:flex; flex-direction:column; align-items:center; flex-shrink:0; width:auto; min-width:52px; }
+.gm-bar-tip .gm-bar-val { font-size:10px; font-weight:700; color:#1a2540; margin-bottom:3px; white-space:nowrap; padding:0 2px; }
+.gm-bar-tip .gm-bar-stack {
+  width:26px; display:flex; flex-direction:column; justify-content:flex-end;
+  border:1px solid #dde3ef; border-bottom:2px solid #1a2540; border-radius:2px 2px 0 0;
+  background-image: repeating-linear-gradient(to top, #eef1f5 0, #eef1f5 1px, transparent 1px, transparent 22.5px);
+  background-position: bottom; background-repeat: repeat-y;
+  position: relative; overflow:hidden;
+}
+.gm-bar-tip .gm-bar-lbl {
+  font-size:9.5px; color:#5a6e8c; margin-top:5px; text-align:center; line-height:1.2;
+  max-width:52px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.gm-bar-tip .gm-bar-tip-legend {
+  display:flex; gap:12px; flex-wrap:wrap; margin-top:10px; padding-top:8px;
+  border-top:1px solid #eee; font-size:9.5px; color:#5a6e8c;
+}
+.gm-bar-tip .gm-bar-tip-legend span { display:inline-flex; align-items:center; gap:4px; }
+.gm-bar-tip .gm-bar-tip-legend i { width:9px; height:9px; border-radius:2px; display:inline-block; }
+.gm-bar-tip .gm-bar-tip-empty { padding:10px; text-align:center; color:#aaa; }
 
 /* ── Gantt Cost Modal (kept for backwards compat, hidden by default) ─────── */
 #gcm-bk { display: none; }
@@ -286,16 +382,35 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 /* Widen the activity name column */
 #gantt-container .gtaskname,
 #gantt-container .gspanning.gtaskname {
-  min-width: 220px !important;
-  width: 220px !important;
-  max-width: 220px !important;
+  min-width: 280px !important;
+  width: 280px !important;
+  max-width: 280px !important;
 }
 /* Dedicated status-indicator column (sits just before the activity name column) */
 #gantt-container .gtasklist {
-  min-width: 16px !important;
-  width: 16px !important;
-  max-width: 16px !important;
+  min-width: 32px !important;
+  width: 32px !important;
+  max-width: 32px !important;
   text-align: center !important;
+  white-space: nowrap;
+}
+.gact-reorder-handle {
+  display: inline-block; cursor: grab; color: #9aa3b2; font-size: 11px;
+  letter-spacing: -2px; vertical-align: middle; margin-left: 3px;
+  user-select: none;
+}
+.gact-reorder-handle:hover { color: #1a6fc4; }
+.gact-reorder-handle.gact-dragging { cursor: grabbing; }
+/* Ghost row that follows the cursor while dragging */
+#gact-drag-ghost {
+  display: none; position: fixed; z-index: 300000; pointer-events: none;
+  background: #fff; border: 1px solid #4a6fa5; border-radius: 4px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25); padding: 4px 10px;
+  font-size: 12px; color: #1a2540; white-space: nowrap;
+}
+/* Highlight the row currently under the cursor as the drop target */
+#gantt-container .gtasktablewrapper tr.gact-drop-target td {
+  background: #eef4fb !important; outline: 1px dashed #4a6fa5; outline-offset: -1px;
 }
 .btn-opiam {
   position: relative;
@@ -326,6 +441,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 .dot-normal    { background: #337ab7; }
 /* Critical path bar colour — overrides external CSS (needed when view loads without full layout) */
 .gtaskpink, div.gtaskpink.gplan { background: #00ACC1 !important; border-color: #0097A7 !important; }
+/* Completed activity bar colour */
+.gtaskgreen, div.gtaskgreen.gplan { background: #1b5e20 !important; border-color: #0d3d10 !important; }
 /* Status dots */
 .act-dot {
   display: inline-block; width: 12px; height: 12px;
@@ -367,7 +484,6 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 <div id="gantt-embed-wrap">
   <div id="gantt-float-body" style="flex:1;min-height:0;display:flex;flex-direction:column;padding:8px 10px;overflow:hidden;">
 <?php endif; ?>
-    <div id="gantt-act-tooltip"></div>
     <div id="gantt-toolbar">
 
       <span id="gantt-status" style="font-size:12px;color:#666;margin-left:8px;"></span>
@@ -403,20 +519,30 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   <div class="gcm-rs gcm-rs-nw" data-dir="nw"></div>
   <div class="gcm-rs gcm-rs-se" data-dir="se"></div>
   <div class="gcm-rs gcm-rs-sw" data-dir="sw"></div>
-  <div id="gcm-pop-hdr">Cost Dashboard <button id="gcm-pop-close" title="Close">&times;</button></div>
+  <div id="gcm-pop-hdr">
+    <span id="gcm-pop-hdr-left">Cost Dashboard</span>
+    <span id="gcm-pop-hdr-center">Cost Drivers - Panel</span>
+    <span id="gcm-pop-hdr-right"><button id="gcm-pop-close" title="Close">&times;</button></span>
+  </div>
   <div id="gcm-pop-body">
     <div id="gcm-pop-loading">Loading&hellip;</div>
     <div id="gcm-pop-row1" style="display:none">
-      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Cost of Resources</div><div class="gcm-pop-panel-body" id="gm-cd-rcost"></div></div>
-      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Unit Cost of Activity</div><div class="gcm-pop-panel-body" id="gm-cd-g5" style="align-items:center;justify-content:center"></div></div>
-      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Work Done</div><div class="gcm-pop-panel-body" id="gm-cd-g4" style="align-items:center;justify-content:center"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Unit Cost of Resources</div><div class="gcm-pop-panel-body" id="gm-cd-ucr" style="align-items:center;justify-content:flex-start"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Yield</div><div class="gcm-pop-panel-body" id="gm-cd-rcon" style="align-items:center;justify-content:flex-start"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Cost of Resources</div><div class="gcm-pop-panel-body" id="gm-cd-rcost" style="align-items:center;justify-content:flex-start"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Unit Cost of Activity</div><div class="gcm-pop-panel-body" id="gm-cd-g5" style="align-items:center;justify-content:flex-start"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Work Done</div><div class="gcm-pop-panel-body" id="gm-cd-g4" style="align-items:center;justify-content:flex-start"></div></div>
       <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Cost of Activity</div><div class="gcm-pop-panel-body" id="gm-cd-g2"></div></div>
     </div>
     <div id="gcm-pop-row2" style="display:none"></div>
   </div>
 </div>
 
-<div id="rcost-tt"></div>
+<div id="gm-ucr-tip" class="gm-bar-tip"></div>
+<div id="gm-rcon-tip" class="gm-bar-tip"></div>
+<div id="gm-rcost-tip" class="gm-bar-tip"></div>
+<div id="gname-tip"></div>
+<div id="gact-drag-ghost"></div>
 
 <!-- KPI Click Modal -->
 <div id="gkm-bk"></div>
@@ -437,11 +563,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     <div id="gkm-loading">Loading&hellip;</div>
     <div id="gkm-content" style="display:none">
       <div id="gkm-row1">
-        <div class="gkm-panel" style="flex:1"><div class="gkm-panel-title">Target Production</div><div class="gkm-panel-body" id="gkm-tp"></div></div>
-        <div class="gkm-panel" style="flex:1.4"><div class="gkm-panel-title">Activity Duration</div><div class="gkm-panel-body" id="gkm-dur"></div></div>
+        <div class="gkm-panel"><div class="gkm-panel-title">Target Production</div><div class="gkm-panel-body" id="gkm-tp"></div></div>
+        <div class="gkm-panel"><div class="gkm-panel-title">Activity Duration</div><div class="gkm-panel-body" id="gkm-dur"></div></div>
+        <div class="gkm-panel"><div class="gkm-panel-title">Capacity Utilisation</div><div class="gkm-panel-body" id="gkm-g5"></div></div>
       </div>
       <div id="gkm-row2">
-        <div class="gkm-panel"><div class="gkm-panel-title">Capacity Utilisation</div><div class="gkm-panel-body" id="gkm-g5"></div></div>
         <div class="gkm-panel"><div class="gkm-panel-title">Cycle Time</div><div class="gkm-panel-body" id="gkm-g4"></div></div>
         <div class="gkm-panel"><div class="gkm-panel-title">Productivity</div><div class="gkm-panel-body" id="gkm-g3"></div></div>
       </div>
@@ -462,13 +588,69 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   <div id="gkp-hdr"><span id="gkp-title">KPI Dashboard</span><button id="gkp-close" title="Close">&times;</button></div>
   <div id="gkp-body">
     <div id="gkp-row1">
-      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Capacity Utilisation</div><div class="gkp-panel-body" id="gkp-g5"></div></div>
-      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Cycle Time</div><div class="gkp-panel-body" id="gkp-g4"></div></div>
-      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Productivity</div><div class="gkp-panel-body" id="gkp-g3"></div></div>
-      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Target Production</div><div class="gkp-panel-body" id="gkp-tp"></div></div>
-      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Activity Duration</div><div class="gkp-panel-body" id="gkp-dur"></div></div>
+      <div class="gkp-panel"><div class="gkp-panel-title">Resource Capacity</div><div class="gkp-panel-body" id="gkp-res"></div></div>
+      <div class="gkp-panel"><div class="gkp-panel-title">Capacity Utilisation</div><div class="gkp-panel-body" id="gkp-g5"></div></div>
+      <div class="gkp-panel"><div class="gkp-panel-title">Cycle Time</div><div class="gkp-panel-body" id="gkp-g4"></div></div>
     </div>
     <div id="gkp-row2">
+      <div class="gkp-panel"><div class="gkp-panel-title">Productivity</div><div class="gkp-panel-body" id="gkp-g3"></div></div>
+      <div class="gkp-panel"><div class="gkp-panel-title">Target Production</div><div class="gkp-panel-body" id="gkp-tp"></div></div>
+      <div class="gkp-panel"><div class="gkp-panel-title">Activity Duration</div><div class="gkp-panel-body" id="gkp-dur"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Resource Capacity bar hover tooltip — independent, own trigger, own data -->
+<div id="gkp-res-tip" class="gm-bar-tip"></div>
+
+<!-- Project Duration hover panel — independent, own trigger, own data -->
+<div id="gpd-tip">
+  <div id="gpd-tip-title">Project Schedule Summery</div>
+  <div id="gpd-tip-body">
+    <div id="gpd-proj-name"><?= htmlspecialchars(isset($project) && $project ? $project->Name : 'Project') ?></div>
+    <div id="gpd-tip-loading">Loading&hellip;</div>
+    <div id="gpd-tip-content" style="display:none">
+      <div id="gpd-bar-status"></div>
+      <div id="gpd-bar"></div>
+      <div class="gpd-bar-labels">
+        <span>Target Duration: <b id="gpd-target-comp">—</b></span>
+        <span>Expected Duration: <b id="gpd-expected-comp">—</b></span>
+      </div>
+      <div class="gpd-divider"></div>
+      <div class="gpd-bar-labels gpd-date-labels">
+        <span>Target Completion Date: <b id="gpd-target-date">—</b></span>
+        <span>Expected Completion Date: <b id="gpd-expected-date">—</b></span>
+      </div>
+      <div class="gpd-divider"></div>
+      <div class="gpd-bar-labels gpd-date-labels">
+        <span>Elapsed Days: <b id="gpd-elapsed-days">—</b></span>
+        <span>Remaining Days: <b id="gpd-remaining-days">—</b></span>
+      </div>
+      <div class="gpd-divider"></div>
+      <div class="gpd-bar-labels gpd-date-labels">
+        <span>Start Date: <b id="gpd-start-date">—</b></span>
+        <span>Work Completed: <b id="gpd-pct-complete">—</b></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Project Snapshot hover card — hovering the project name in the Gantt
+     window header. Independent of #gpd-tip (own trigger, own data, own
+     styling — matches the "Projects" list card look). -->
+<div id="gsc-tip">
+  <div id="gsc-tip-top"><div id="gsc-tip-name">Project</div><button id="gsc-tip-close" title="Close">&times;</button></div>
+  <div id="gsc-tip-body">
+    <div id="gsc-tip-loading">Loading&hellip;</div>
+    <div id="gsc-tip-content" style="display:none">
+      <div class="gsc-row"><label><span class="gsc-swatch" style="background:#ff9800;"></span>Planned Duration</label><span class="gsc-val" id="gsc-planned-dur">—</span></div>
+      <div class="gsc-row"><label><span class="gsc-swatch" style="background:#2979ff;"></span>Actual Duration</label><span class="gsc-val" id="gsc-actual-dur">—</span></div>
+      <div class="gsc-row"><label><span class="gsc-swatch" style="background:#43a047;"></span>Planned Completion</label><span class="gsc-val" id="gsc-planned-comp">—</span></div>
+      <div class="gsc-row"><label><span class="gsc-swatch" style="background:#fb8c00;"></span>Actual Completion</label><span class="gsc-val" id="gsc-actual-comp">—</span></div>
+      <div class="gsc-row"><label><span class="gsc-swatch" style="background:#ab47bc;"></span>Delayed</label><span class="gsc-val" id="gsc-status">—</span></div>
+      <div class="gsc-row"><label><span class="gsc-swatch" style="background:#00c853;"></span>% Completion</label><span class="gsc-val" id="gsc-pct">—</span></div>
+      <div class="gsc-row"><label><span class="gsc-swatch" style="background:#26c6da;"></span>Elapsed Days</label><span class="gsc-val" id="gsc-elapsed">—</span></div>
+      <div class="gsc-row"><label><span class="gsc-swatch" style="background:#e53935;"></span>Remaining Days</label><span class="gsc-val" id="gsc-remaining">—</span></div>
     </div>
   </div>
 </div>
@@ -717,9 +899,15 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                   var act = actData.result[j];
                   if (!safeDate(act.actual_start_date) || !safeDate(act.actual_end_date)) continue;
 
-                  var pId    = act.id + 'ABC' + act.id;
-                  var pClass = ($.inArray(Number(act.id), criticalid) !== -1)
-                               ? 'gtaskpink' : 'gtaskblue';
+                  var pId       = act.id + 'ABC' + act.id;
+                  var isCritical = ($.inArray(Number(act.id), criticalid) !== -1);
+                  // Completed overrides critical for the BAR colour — once
+                  // done, the bar shows green regardless of whether it sat
+                  // on the critical path. The status dot below keeps its
+                  // own separate priority (critical still wins there), so
+                  // isCritical is tracked independently of pClass.
+                  var pClass = (parseInt(act.completed_status) === 1) ? 'gtaskgreen'
+                               : isCritical ? 'gtaskpink' : 'gtaskblue';
 
                   var plannedStart = safeDate(act.actual_start_date);
                   var plannedEnd   = safeDate(act.actual_end_date);
@@ -774,7 +962,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     completed:   (parseInt(act.completed_status) === 1),
                     hasProgress: (parseFloat(act.cumulated_qty) > 0),
                     planStart:   safeDate(act.actual_start_date),
-                    critical:    (pClass === 'gtaskpink')
+                    critical:    isCritical
                   };
                   // B. columns show schedule values; A. columns fall back to B. when no progress
                   _actCells[_ti.getID()] = {
@@ -784,8 +972,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     actdur: actDur,
                     astart: aStart || act.actual_start_date,
                     aend:   aEndComputed || act.actual_end_date,
+                    scheduleitemId: parentId,
                     rawId:  act.id,
-                    wanId:  act.wan_id
+                    wanId:  act.wan_id,
+                    hasProgress: hasProgress
                   };
                   g.AddTaskItem(_ti);
                 }
@@ -864,21 +1054,6 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       }
     }
 
-    function _makeHdr(id, txt, width) {
-      var td = document.createElement('td');
-      td.id = id;
-      td.className = 'gtaskheading';
-      td.style.cssText = 'text-align:center;font-weight:600;font-size:11px;width:' + width + 'px;min-width:' + width + 'px;';
-      td.textContent = txt;
-      return td;
-    }
-
-    // Inject KPI header then Cost header after A.Duration (gres)
-    if (_resHdr && !document.getElementById('gcost-hdr-cell')) {
-      var _kpiHdrInserted = _resHdr.parentNode.insertBefore(_makeHdr('gkpi-hdr-cell', 'KPI', 50), _resHdr.nextSibling);
-      _resHdr.parentNode.insertBefore(_makeHdr('gcost-hdr-cell', 'Cost', 50), _kpiHdrInserted.nextSibling);
-    }
-
     // Apply progressive indentation + patch B. columns and A. columns with formatted values
     var _tasks = g.getList ? g.getList() : [];
     for (var _i = 0; _i < _tasks.length; _i++) {
@@ -932,6 +1107,20 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       // Leaf activity: patch B. Duration and A. Duration
       var _db = _actCells[_tid];
       if (_db) {
+        // Drag handle for reordering within this activity's WBS item —
+        // "press and hold, then move" like the KPI/Cost floating panels'
+        // own drag (raw mousedown/mousemove/mouseup), not jQuery UI
+        // sortable, which never engaged reliably against JSGantt's row
+        // structure. See _initActivityDrag below.
+        if (_dotCell && !_dotCell.querySelector('.gact-reorder-handle')) {
+          var _handle = document.createElement('span');
+          _handle.className = 'gact-reorder-handle';
+          _handle.title = 'Press and drag to reorder';
+          _handle.textContent = '⋮⋮';
+          _handle.setAttribute('data-tid', _tid);
+          _dotCell.appendChild(_handle);
+        }
+
         var _durEl = _row.querySelector('td.gdur div');
         if (_durEl) _durEl.textContent = formatGanttDur(_db.dur);
 
@@ -943,38 +1132,6 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
             _adEl.style.fontWeight = '600';
           }
         }
-      }
-
-      // Inject KPI cell then Cost cell after A.Duration (gres) — all rows
-      var _resTd = _row.querySelector('td.gres');
-      if (_resTd && !_row.querySelector('td.gcol-kpi')) {
-        // KPI cell
-        var _kpiTd = document.createElement('td');
-        _kpiTd.className = 'gcol-kpi';
-        _kpiTd.style.cssText = 'width:50px;min-width:50px;text-align:center;padding:0;vertical-align:middle;';
-        if (_db) {
-          var _kpiIcon = document.createElement('span');
-          _kpiIcon.style.cssText = 'display:inline-block;cursor:pointer;vertical-align:middle;';
-          _kpiIcon.innerHTML = '<svg width="14" height="12" viewBox="0 0 14 12" xmlns="http://www.w3.org/2000/svg">'
-            + '<rect x="0" y="7" width="3" height="5" rx="0.5" fill="#00838f"/>'
-            + '<rect x="4" y="4" width="3" height="8" rx="0.5" fill="#00838f"/>'
-            + '<rect x="8" y="1" width="3" height="11" rx="0.5" fill="#00838f"/>'
-            + '<polyline points="1.5,6 5.5,3 9.5,0.5 13,0" fill="none" stroke="#004d55" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>'
-            + '</svg>';
-          _kpiIcon.setAttribute('data-kpiactid', _db.rawId);
-          _kpiTd.appendChild(_kpiIcon);
-        }
-        _resTd.parentNode.insertBefore(_kpiTd, _resTd.nextSibling);
-        // Cost cell (after KPI)
-        var _costTd = document.createElement('td');
-        _costTd.className = 'gcol-cost';
-        _costTd.style.cssText = 'width:50px;min-width:50px;text-align:center;padding:0;vertical-align:middle;';
-        var _costIcon = document.createElement('span');
-        _costIcon.style.cssText = 'display:inline-block;width:8px;height:8px;background:#546e7a;border-radius:2px;cursor:pointer;';
-        // Store raw activity DB id so click handler can POST it
-        if (_db) _costIcon.setAttribute('data-actid', _db.rawId);
-        _costTd.appendChild(_costIcon);
-        _kpiTd.parentNode.insertBefore(_costTd, _kpiTd.nextSibling);
       }
 
       // Group row A. Duration
@@ -1074,51 +1231,117 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     })();
 
     $('#gantt-status').text('');
-
-    // ── Activity name tooltip — must run AFTER cloneNode so listeners survive ──
-    (function() {
-      var _tip = document.getElementById('gantt-act-tooltip');
-      if (!_tip) return;
-
-      function _fmt(d) {
-        if (!d || d === '0000-00-00') return '—';
-        var p = d.split('-');
-        return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d;
-      }
-
-      var _tasks2 = g.getList ? g.getList() : [];
-      for (var _ti2 = 0; _ti2 < _tasks2.length; _ti2++) {
-        var _tid2 = _tasks2[_ti2].getID();
-        var _db2  = _actCells[_tid2];
-        if (!_db2) continue;
-        // getElementById finds the cloned row (same ID, now in DOM)
-        var _row2 = document.getElementById('gantt-container' + 'child_' + _tid2);
-        if (!_row2) continue;
-        var _nameCell = _row2.querySelector('td.gtaskname');
-        if (!_nameCell) continue;
-
-        (function(db, cell) {
-          cell.addEventListener('mouseenter', function(e) {
-            _tip.innerHTML =
-              '<b>Planned Start:</b> ' + _fmt(db.start)  + '<br>' +
-              '<b>Actual Start:</b> '  + _fmt(db.astart) + '<br>' +
-              '<b>Planned End:</b> '   + _fmt(db.end)    + '<br>' +
-              '<b>Actual End:</b> '    + _fmt(db.aend);
-            _tip.style.display = 'block';
-            _tip.style.left = (e.clientX + 14) + 'px';
-            _tip.style.top  = (e.clientY + 14) + 'px';
-          });
-          cell.addEventListener('mousemove', function(e) {
-            _tip.style.left = (e.clientX + 14) + 'px';
-            _tip.style.top  = (e.clientY + 14) + 'px';
-          });
-          cell.addEventListener('mouseleave', function() {
-            _tip.style.display = 'none';
-          });
-        })(_db2, _nameCell);
-      }
-    })();
   }
+
+  // ── Reorder activities within one WBS item — press-and-hold drag ───────────
+  // Same raw mousedown/mousemove/mouseup shape as the KPI/Cost floating
+  // panels' own drag (see "Drag + Resize: KPI modal" above) — NOT jQuery UI
+  // sortable, which was tried first and never reliably engaged against
+  // JSGantt's row structure. Bound once via delegation on document (not
+  // per-row), so it keeps working across every loadGantt() reload without
+  // needing to re-bind. Reordering only ever changes
+  // workgroup_activities_new.sortorder — no dates are touched — and is
+  // rejected server-side if any activity in the WBS item has an active
+  // relationship (see actionReordertaskswithinwbs).
+  (function(){
+    var $ghost = $('#gact-drag-ghost');
+    var _dragTid = null, _dragScheduleitemId = null, _dragRow = null;
+    var _dropRow = null;
+
+    function _rowFromPoint(x, y) {
+      var el = document.elementFromPoint(x, y);
+      if (!el) return null;
+      var row = el.closest('tr');
+      if (!row || row.id.indexOf('child_') === -1 || row.id.indexOf('childrow_') !== -1) return null;
+      return row;
+    }
+
+    $(document).off('mousedown.gactdrag').on('mousedown.gactdrag', '#gantt-container .gact-reorder-handle', function(e) {
+      var tid = $(this).attr('data-tid');
+      var db = (window._ganttActCells || {})[tid];
+      if (!db) return;
+      var row = document.getElementById('gantt-container' + 'child_' + tid);
+      if (!row) return;
+
+      _dragTid = tid;
+      _dragScheduleitemId = db.scheduleitemId;
+      _dragRow = row;
+      $(this).addClass('gact-dragging');
+
+      var nameCell = row.querySelector('td.gtaskname');
+      $ghost.text(nameCell ? nameCell.textContent.trim() : 'Activity')
+        .css({ left: (e.clientX + 14) + 'px', top: (e.clientY + 10) + 'px', display: 'block' });
+
+      e.preventDefault();
+    });
+
+    $(document).off('mousemove.gactdrag').on('mousemove.gactdrag', function(e) {
+      if (!_dragTid) return;
+      $ghost.css({ left: (e.clientX + 14) + 'px', top: (e.clientY + 10) + 'px' });
+
+      if (_dropRow) { $(_dropRow).removeClass('gact-drop-target'); _dropRow = null; }
+      var cells = window._ganttActCells || {};
+      var row = _rowFromPoint(e.clientX, e.clientY);
+      if (row && row !== _dragRow) {
+        var rowTid = row.id.slice(row.id.indexOf('child_') + 'child_'.length);
+        var rowDb = cells[rowTid];
+        if (rowDb && rowDb.scheduleitemId === _dragScheduleitemId) {
+          _dropRow = row;
+          $(row).addClass('gact-drop-target');
+        }
+      }
+    });
+
+    $(document).off('mouseup.gactdrag').on('mouseup.gactdrag', function(e) {
+      if (!_dragTid) return;
+      $('.gact-reorder-handle.gact-dragging').removeClass('gact-dragging');
+      $ghost.css('display', 'none');
+      if (_dropRow) $(_dropRow).removeClass('gact-drop-target');
+
+      var dragTid = _dragTid, scheduleitemId = _dragScheduleitemId, dropRow = _dropRow;
+      _dragTid = null; _dragScheduleitemId = null; _dragRow = null; _dropRow = null;
+      if (!dropRow) return; // released outside a valid same-WBS-item row — no-op
+
+      var cells = window._ganttActCells || {};
+      var dropTid = dropRow.id.slice(dropRow.id.indexOf('child_') + 'child_'.length);
+
+      // Build the new order: every activity in this WBS item, in current DOM
+      // order, with the dragged one removed and reinserted at the drop row's
+      // position.
+      var orderedTids = [];
+      $('#gantt-container .gtasktablewrapper tr[id*="child_"]').each(function() {
+        if (this.id.indexOf('childrow_') !== -1) return;
+        var rowTid = this.id.slice(this.id.indexOf('child_') + 'child_'.length);
+        var rowDb = cells[rowTid];
+        if (rowDb && rowDb.scheduleitemId === scheduleitemId) orderedTids.push(rowTid);
+      });
+      var fromIdx = orderedTids.indexOf(dragTid);
+      var toIdx = orderedTids.indexOf(dropTid);
+      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+      orderedTids.splice(fromIdx, 1);
+      toIdx = orderedTids.indexOf(dropTid);
+      orderedTids.splice(toIdx, 0, dragTid);
+
+      var wanIds = orderedTids.map(function(t){ return cells[t].wanId; });
+
+      $.ajax({
+        type: 'POST',
+        url: _base + '/reordertaskswithinwbs',
+        dataType: 'json',
+        data: { scheduleitem_id: scheduleitemId, wan_ids: wanIds },
+        success: function(resp) {
+          if (!resp || resp.error !== 'No') {
+            alert((resp && resp.errortext) || 'Could not reorder — please try again.');
+            return;
+          }
+          if (typeof window.loadGantt === 'function') window.loadGantt();
+        },
+        error: function() {
+          alert('Network error — could not save the new order.');
+        }
+      });
+    });
+  })();
 
   // ── Gantt Cost Popup — wired once at page level (not per-draw) ──────────────
   (function() {
@@ -1190,18 +1413,20 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       }
       var trackSvg = (trackStyle === 'flat') ? arc(0, 1, '#a8d4f5')
         : (trackStyle === 'cost') ? arc(0, 0.5, '#00838f') + arc(0.5, 1, '#FF6D00')
+        : (trackStyle === 'qtygreen' || trackStyle === 'qtypercent') ? arc(0, 0.5, '#FF6D00') + arc(0.5, 1, '#27ae60')
+        : (trackStyle === 'costgreen' || trackStyle === 'costpercent') ? arc(0, 0.5, '#27ae60') + arc(0.5, 1, '#FF6D00')
         : arc(0, 0.5, '#8B0000') + arc(0.5, 1, '#81C784');
       var nr = r - 15, na = Math.PI * (1 - f);
       var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
-      var fillCol = (trackStyle === 'flat') ? '#0d1f6e' : (trackStyle === 'cost') ? '#1b9e8e' : '#1a3a6b';
+      var fillCol = (trackStyle === 'flat') ? '#0d1f6e' : (trackStyle === 'cost' || trackStyle === 'costgreen' || trackStyle === 'qtygreen' || trackStyle === 'costpercent' || trackStyle === 'qtypercent') ? '#1b9e8e' : '#1a3a6b';
       var dotCol  = (trackStyle === 'flat') ? '#a8d4f5' : '#dce3ef';
-      var centreVal = (trackStyle === 'cost') ? _fmtCost(val) : _fm(val);
+      var centreVal = (trackStyle === 'costpercent' || trackStyle === 'qtypercent') ? (Math.round(val) + '%') : (trackStyle === 'cost' || trackStyle === 'costgreen') ? _fmtCost(val) : _fm(val);
       var lblSvg = '';
       if (lbl1) lblSvg += '<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">' + lbl1 + ' <tspan font-weight="700">' + v1 + '</tspan></text>';
       if (lbl2) lblSvg += '<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">' + lbl2 + ' <tspan font-weight="700">' + v2 + '</tspan></text>';
-      var svg = '<svg width="100%" height="100%" viewBox="0 0 210 138" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:hidden;">'
+      var svg = '<svg width="100%" height="120" viewBox="0 0 210 138" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:hidden;flex-shrink:0;">'
         + trackSvg
-        + (f > 0 ? arc(0, f, fillCol, (trackStyle === 'cost' ? 'butt' : 'round')) : '')
+        + ((f > 0 && trackStyle !== 'costgreen' && trackStyle !== 'qtygreen' && trackStyle !== 'costpercent' && trackStyle !== 'qtypercent') ? arc(0, f, fillCol, (trackStyle === 'cost' ? 'butt' : 'round')) : '')
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="' + dotCol + '"/>'
@@ -1211,106 +1436,144 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       el.innerHTML += svg;
     }
 
-    // 1. Unit Cost of Resources → gm-cd-c6
+    // 1. Unit Cost of Resources → gm-cd-ucr — dial: centre = sum(estimated unit
+    // cost), needle = sum(actual unit cost, falling back to estimated where no
+    // actual exists). Needle sits left of centre (green) when the actual sum is
+    // under the estimated sum, right of centre (orange) when over. The dial's
+    // full-scale end (needle pinned) represents double the estimated sum.
+    var _ucrTipItems = [];
     function _renderUnitCostOfResource(items, actName) {
-      var el = document.getElementById('gm-cd-c6');
+      var el = document.getElementById('gm-cd-ucr');
       if (!el) return;
       items = items || [];
+      _ucrTipItems = items;
       if (!items.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No resources allocated</div>'; return; }
-      var maxVal = 0;
+
+      var estSum = 0, actSum = 0;
       items.forEach(function(r) {
-        var est = +r.rate || 0;
-        var act = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined) ? +r.actual_unit_cost : est;
-        if (Math.max(est, act) > maxVal) maxVal = Math.max(est, act);
-      });
-      if (maxVal === 0) maxVal = 1;
-
-      // Colour palette for resources (cycles if more than palette length)
-      var palette = ['#3461b8','#00838f','#e8820c','#8e44ad','#27ae60','#c0392b','#2980b9','#d4845a'];
-
-      var barCols = '', valRow = '', lblRow = '', legendRows = '';
-      items.forEach(function(r, idx) {
         var est = +r.rate || 0;
         var hasActual = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
         var act = hasActual ? +r.actual_unit_cost : est;
-        var unit = r.unit ? ' /' + _shu(r.unit) : '';
-        var col = palette[idx % palette.length];
-        var diff = act - est;
-        var diffCol = diff > 0 ? '#e8820c' : '#1b9e8e';
-        var valCol  = diff > 0 ? '#e8820c' : (diff < 0 ? '#1b9e8e' : col);
-
-        // Single stacked bar: base = estimated (resource colour), overlay = difference
-        // Over: [est base | orange extension on top]
-        // Under: [act base | teal saving on top up to est level]
-        // Even: just the base
-        var estH  = (est / maxVal * 100).toFixed(1);
-        var actH  = (act / maxVal * 100).toFixed(1);
-        var barInner;
-        if (diff > 0) {
-          var diffH = ((diff) / maxVal * 100).toFixed(1);
-          barInner =
-            '<div style="width:100%;height:' + diffH + '%;background:#e8820c;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
-            + '<div style="width:100%;height:' + estH + '%;background:' + col + ';flex-shrink:0"></div>';
-        } else if (diff < 0) {
-          var saveH = (Math.abs(diff) / maxVal * 100).toFixed(1);
-          barInner =
-            '<div style="width:100%;height:' + saveH + '%;background:#1b9e8e;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
-            + '<div style="width:100%;height:' + actH + '%;background:' + col + ';flex-shrink:0"></div>';
-        } else {
-          barInner = '<div style="width:100%;height:' + estH + '%;background:' + col + ';border-radius:2px 2px 0 0;flex-shrink:0"></div>';
-        }
-
-        barCols +=
-          '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;padding:0 3px">'
-          + barInner
-          + '</div>';
-
-        // Act value above bar (coloured by diff), Est value smaller below it
-        valRow +=
-          '<div style="flex:1;text-align:center;padding-bottom:1px">'
-          + '<div style="font-size:8px;font-weight:700;color:' + valCol + '">' + _fmtCost(act) + '</div>'
-          + '<div style="font-size:7px;color:#888">' + _fmtCost(est) + '</div>'
-          + '</div>';
-
-        // Index number below bars
-        lblRow += '<div style="flex:1;text-align:center;font-size:9px;color:#1a2540;font-weight:700;padding-top:2px">' + (idx + 1) + '</div>';
-
-        // Legend row
-        legendRows +=
-          '<div style="display:flex;align-items:baseline;gap:5px;padding:2px 6px;border-bottom:1px solid #f0f3fa;font-size:10px">'
-          + '<span style="font-weight:700;color:#1a2540;flex-shrink:0;min-width:12px">' + (idx + 1) + '.</span>'
-          + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + col + ';flex-shrink:0;margin-bottom:1px"></span>'
-          + '<span style="flex:1;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (r.name||'') + '">' + (r.name||'') + '</span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fmtFull(est) + unit + '</b></span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + valCol + '">' + _fmtFull(act) + unit + '</b></span>'
-          + '</div>';
+        estSum += est;
+        actSum += act;
       });
 
-      // Chart key
-      var key = '<div style="display:flex;gap:12px;padding:3px 6px;flex-shrink:0">'
-        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#4a5568;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Estimated</span>'
-        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#e8820c;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Over</span>'
-        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#1b9e8e;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Under</span>'
-        + '</div>';
+      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _sh(actName||'', 40) + '</div>';
 
-      el.innerHTML =
-        '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0">' + _sh(actName||'', 40) + '</div>'
-        + '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">'
-        +   '<div style="display:flex;gap:2px;padding:2px 6px 0;flex-shrink:0">' + valRow + '</div>'
-        +   '<div style="display:flex;gap:2px;flex:1;min-height:0;padding:0 6px;align-items:flex-end;border-bottom:1px solid #c8d0e0">' + barCols + '</div>'
-        +   '<div style="display:flex;gap:2px;padding:2px 6px;flex-shrink:0">' + lblRow + '</div>'
-        +   key
-        +   '<div style="overflow-y:auto;flex-shrink:0;max-height:90px;border-top:1px solid #e8efff;margin-top:2px">' + legendRows + '</div>'
-        + '</div>';
+      var actPct = estSum > 0 ? (actSum / estSum) * 100 : 0;
+      _gauge('gm-cd-ucr', actPct, 200, 'costpercent', 0.5, 'Est', '100%', 'Act', Math.round(actPct) + '%');
     }
 
-    // 2. Consumption of Resources → gm-cd-c7
+    // Shared renderer for both resource-hover tooltips: a vertical bar per
+    // resource — grey base up to the lower of Est/Act, then an orange
+    // segment on top when actual exceeds estimate, or a green segment when
+    // actual is under estimate. `rows` = [{name, est, act, hasActual}, ...],
+    // `fmt` formats the value shown above each bar, `title` is the tooltip heading.
+    function _renderBarTip(rows, fmt, title, hideLegend) {
+      if (!rows.length) return '<div class="gm-bar-tip-empty">No resources allocated</div>';
+      var maxVal = 0;
+      rows.forEach(function(r) { maxVal = Math.max(maxVal, r.est, r.act); });
+      if (maxVal <= 0) maxVal = 1;
+
+      var BAR_H = 90;
+      var html = '<div class="gm-bar-tip-hdr">' + title + '</div>'
+        + '<div class="gm-bar-bars">';
+      rows.forEach(function(r) {
+        var over  = r.hasActual && r.act > r.est;
+        var under = r.hasActual && r.act < r.est;
+        var baseVal = Math.min(r.est, r.act);
+        var baseH = Math.round((baseVal / maxVal) * BAR_H);
+        var diffH = Math.round((Math.abs(r.act - r.est) / maxVal) * BAR_H);
+        var diffCol = over ? '#e8820c' : (under ? '#1b9e8e' : '');
+        var diffSeg = (r.hasActual && diffH > 0) ? '<div style="height:' + diffH + 'px;background:' + diffCol + ';width:100%;"></div>' : '';
+        var unitLbl = r.unit ? (' ' + r.unit) : '';
+        html += '<div class="gm-bar-col">'
+          + '<div class="gm-bar-val">' + fmt(r.act) + unitLbl + '</div>'
+          + '<div class="gm-bar-stack" style="height:' + BAR_H + 'px;">'
+          +   diffSeg
+          +   '<div style="height:' + baseH + 'px;background:#64748b;width:100%;"></div>'
+          + '</div>'
+          + '<div class="gm-bar-lbl" title="' + $('<span>').text(r.name).html() + '">' + _sh($('<span>').text(r.name).html(), 12) + '</div>'
+          + '</div>';
+      });
+      html += '</div>';
+      if (!hideLegend) {
+        html += '<div class="gm-bar-tip-legend">'
+          +   '<span><i style="background:#64748b"></i> Base</span>'
+          +   '<span><i style="background:#e8820c"></i> Over Estimate</span>'
+          +   '<span><i style="background:#1b9e8e"></i> Under Estimate</span>'
+          + '</div>';
+      }
+      return html;
+    }
+
+    // Binds hover/move/leave handlers for a bar-tip panel. `panelSel` is the
+    // panel body to hover over, `$tip` its tooltip element, `getRows` lazily
+    // builds the [{name,est,act,hasActual}] rows from that panel's current data.
+    function _bindBarTip(panelSel, $tip, getRows, fmt, title) {
+      $(document).on('mouseenter', panelSel, function(){
+        $tip.html(_renderBarTip(getRows(), fmt, title)).addClass('gm-bar-tip-open');
+      });
+      $(document).on('mousemove', panelSel, function(e){
+        if (!$tip.hasClass('gm-bar-tip-open')) return;
+        var tw = $tip.outerWidth(), th = $tip.outerHeight();
+        var left = Math.min(e.clientX + 14, window.innerWidth  - tw - 8);
+        var top  = Math.min(e.clientY + 14, window.innerHeight - th - 8);
+        $tip.css({ left: Math.max(8,left) + 'px', top: Math.max(8,top) + 'px' });
+      });
+      $(document).on('mouseleave', panelSel, function(){
+        $tip.removeClass('gm-bar-tip-open');
+      });
+    }
+
+    _bindBarTip('#gm-cd-ucr', $('#gm-ucr-tip'), function(){
+      return _ucrTipItems.map(function(r) {
+        var est = +r.rate || 0;
+        var hasActual = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+        var act = hasActual ? +r.actual_unit_cost : est;
+        var unit = (+r.type_id === 4 && r.task_unit) ? r.task_unit : (r.unit || '');
+        return { name: r.name || '', est: est, act: act, hasActual: hasActual, unit: unit ? ('/' + _shu(unit)) : '' };
+      });
+    }, _fmtFull, 'Est. vs Act. Unit Cost');
+
+    _bindBarTip('#gm-cd-rcon', $('#gm-rcon-tip'), function(){
+      return _rconTipItems.map(function(r) {
+        var est = +r.planned_consumption || 0;
+        var typeId = +r.type_id;
+        var isMaterial = [2, 6, 7, 8].indexOf(typeId) >= 0;
+        var isSC = typeId === 4;
+        var hasActual = (isMaterial && r.indent_raised) || (isSC && r.has_mb);
+        var act = hasActual ? (+r.actual_consumption || 0) : est;
+        var unit = (isSC && r.task_unit) ? r.task_unit : (r.unit || '');
+        return { name: r.name || '', est: est, act: act, hasActual: hasActual, unit: unit ? _shu(unit) : '' };
+      });
+    }, _fm, 'Est. vs Act. Quantity Consumed');
+
+    _bindBarTip('#gm-cd-rcost', $('#gm-rcost-tip'), function(){
+      var schedQty = _rcostTipSchedQty;
+      return _rcostTipItems.map(function(r) {
+        var estUC = +r.rate || 0;
+        var hasActual = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+        var actUC = hasActual ? +r.actual_unit_cost : estUC;
+        var est = estUC * (+r.planned_consumption || 0) * schedQty;
+        var act = actUC * (+r.actual_consumption  || 0) * schedQty;
+        return { name: r.name || '', est: est, act: act, hasActual: hasActual };
+      });
+    }, _fmtFull, 'Est. vs Act. Cost of Resources');
+
+    // 2. Consumption of Resources → gm-cd-rcon
+    // Yield dial: centre = sum(planned consumption), needle = sum(actual
+    // consumption, falling back to planned per-resource where no actual
+    // exists yet). Same mechanic as the Unit Cost of Resources dial above.
+    var _rconTipItems = [];
     function _renderResourceConsumption(items, actName, lastQty, actUnit) {
-      var el = document.getElementById('gm-cd-c7');
+      var el = document.getElementById('gm-cd-rcon');
       if (!el) return;
       items = items || [];
+      _rconTipItems = items;
       if (!items.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No resources allocated</div>'; return; }
-      var maxVal = 0;
+
+      var estSum = 0, actSum = 0;
       items.forEach(function(r) {
         var est = +r.planned_consumption || 0;
         var typeId = +r.type_id;
@@ -1318,251 +1581,40 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         var isSC = typeId === 4;
         var hasActual = (isMaterial && r.indent_raised) || (isSC && r.has_mb);
         var act = hasActual ? (+r.actual_consumption || 0) : est;
-        if (Math.max(est, act) > maxVal) maxVal = Math.max(est, act);
-      });
-      if (maxVal === 0) maxVal = 1;
-
-      var palette = ['#3461b8','#00838f','#e8820c','#8e44ad','#27ae60','#c0392b','#2980b9','#d4845a'];
-      var barCols = '', valRow = '', lblRow = '', legendRows = '';
-
-      items.forEach(function(r, idx) {
-        var est = +r.planned_consumption || 0;
-        var typeId = +r.type_id;
-        var isMaterial = [2, 6, 7, 8].indexOf(typeId) >= 0;
-        var isSC = typeId === 4;
-        var hasActual = (isMaterial && r.indent_raised) || (isSC && r.has_mb);
-        var act = hasActual ? (+r.actual_consumption || 0) : est;
-        var unit = r.unit ? _shu(r.unit) : (r.task_unit ? _shu(r.task_unit) : '');
-        var col = palette[idx % palette.length];
-        var diff = act - est;
-        var valCol = diff > 0 ? '#e8820c' : (diff < 0 ? '#1b9e8e' : col);
-
-        var estH  = (est / maxVal * 100).toFixed(1);
-        var actH  = (act / maxVal * 100).toFixed(1);
-        var barInner;
-        if (diff > 0) {
-          var diffH = (diff / maxVal * 100).toFixed(1);
-          barInner =
-            '<div style="width:100%;height:' + diffH + '%;background:#e8820c;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
-            + '<div style="width:100%;height:' + estH + '%;background:' + col + ';flex-shrink:0"></div>';
-        } else if (diff < 0) {
-          var saveH = (Math.abs(diff) / maxVal * 100).toFixed(1);
-          barInner =
-            '<div style="width:100%;height:' + saveH + '%;background:#1b9e8e;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
-            + '<div style="width:100%;height:' + actH + '%;background:' + col + ';flex-shrink:0"></div>';
-        } else {
-          barInner = '<div style="width:100%;height:' + estH + '%;background:' + col + ';border-radius:2px 2px 0 0;flex-shrink:0"></div>';
-        }
-
-        barCols +=
-          '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;padding:0 3px">'
-          + barInner
-          + '</div>';
-
-        valRow +=
-          '<div style="flex:1;text-align:center;padding-bottom:1px">'
-          + '<div style="font-size:8px;font-weight:700;color:' + valCol + '">' + _fm(act) + (unit ? ' '+unit : '') + '</div>'
-          + '<div style="font-size:7px;color:#888">' + _fm(est) + (unit ? ' '+unit : '') + '</div>'
-          + '</div>';
-
-        lblRow += '<div style="flex:1;text-align:center;font-size:9px;color:#1a2540;font-weight:700;padding-top:2px">' + (idx + 1) + '</div>';
-
-        legendRows +=
-          '<div style="display:flex;align-items:baseline;gap:5px;padding:2px 6px;border-bottom:1px solid #f0f3fa;font-size:10px">'
-          + '<span style="font-weight:700;color:#1a2540;flex-shrink:0;min-width:12px">' + (idx + 1) + '.</span>'
-          + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + col + ';flex-shrink:0;margin-bottom:1px"></span>'
-          + '<span style="flex:1;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (r.name||'') + '">' + (r.name||'') + '</span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fmtFull(est) + (unit ? ' '+unit : '') + '</b></span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + valCol + '">' + _fmtFull(act) + (unit ? ' '+unit : '') + '</b></span>'
-          + '</div>';
+        estSum += est;
+        actSum += act;
       });
 
-      var key = '<div style="display:flex;gap:12px;padding:3px 6px;flex-shrink:0">'
-        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#4a5568;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Estimated</span>'
-        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#e8820c;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Over</span>'
-        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#1b9e8e;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Under</span>'
-        + '</div>';
+      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _sh(actName||'', 40) + '</div>';
 
-      el.innerHTML =
-        '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0">' + _sh(actName||'', 40) + '</div>'
-        + '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">'
-        +   '<div style="display:flex;gap:2px;padding:2px 6px 0;flex-shrink:0">' + valRow + '</div>'
-        +   '<div style="display:flex;gap:2px;flex:1;min-height:0;padding:0 6px;align-items:flex-end;border-bottom:1px solid #c8d0e0">' + barCols + '</div>'
-        +   '<div style="display:flex;gap:2px;padding:2px 6px;flex-shrink:0">' + lblRow + '</div>'
-        +   key
-        +   '<div style="overflow-y:auto;flex-shrink:0;max-height:90px;border-top:1px solid #e8efff;margin-top:2px">' + legendRows + '</div>'
-        + '</div>';
+      var actPct = estSum > 0 ? (actSum / estSum) * 100 : 0;
+      _gauge('gm-cd-rcon', actPct, 200, 'qtypercent', 0.5, 'Est', '100%', 'Act', Math.round(actPct) + '%');
     }
 
-    // 3. Cost of Resources → gm-cd-rcost
-    function _renderResourceCost(items, actName, actUnit) {
+    // 3. Cost of Resources → gm-cd-rcost — dial: centre/needle = sum of all
+    // resources' actual cost (rate × consumption × Sch. Qty), estimated sum =
+    // dial half-scale. Green when actual cost is under estimate, orange when over.
+    var _rcostTipItems = [], _rcostTipSchedQty = 0;
+    function _renderResourceCost(items, actName, actUnit, schedQty) {
       var el = document.getElementById('gm-cd-rcost');
       if (!el) return;
       items = items || [];
+      schedQty = +schedQty || 0;
+      _rcostTipItems = items;
+      _rcostTipSchedQty = schedQty;
       if (!items.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No resources</div>'; return; }
 
-      // Build grouped data (for chart) and per-resource detail (for tooltip)
-      var groups = {}, groupItems = {};
+      var estSum = 0, actSum = 0;
       items.forEach(function(r) {
-        var key = r.type_name || 'Other';
-        if (!groups[key]) { groups[key] = { est: 0, act: 0 }; groupItems[key] = []; }
         var estUC = +r.rate || 0;
         var actUC = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined) ? +r.actual_unit_cost : estUC;
-        var estC  = estUC * (+r.planned_consumption || 0);
-        var actC  = actUC * (+r.actual_consumption  || 0);
-        groups[key].est += estC;
-        groups[key].act += actC;
-        groupItems[key].push({
-          name: r.name || r.resource_name || '—',
-          estUC: estUC, actUC: actUC,
-          estCons: +r.planned_consumption || 0,
-          actCons: +r.actual_consumption  || 0,
-          estCost: estC, actCost: actC,
-          unit: r.consumption_unit || actUnit || ''
-        });
+        estSum += estUC * (+r.planned_consumption || 0) * schedQty;
+        actSum += actUC * (+r.actual_consumption  || 0) * schedQty;
       });
 
-      var labels = Object.keys(groups);
-      if (!labels.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No data</div>'; return; }
-      var maxVal = 0;
-      labels.forEach(function(k) { maxVal = Math.max(maxVal, groups[k].est, groups[k].act); });
-      if (maxVal === 0) maxVal = 1;
-      var estRow = '', actRow = '', bars = '', lblRow = '', legendRows3 = '';
-      labels.forEach(function(k, idx3) {
-        var est = groups[k].est, act = groups[k].act;
-        var diff = act - est;
-        var actCol = diff > 0 ? '#e8820c' : (diff < 0 ? '#1b9e8e' : '#4a5568');
-        var estPct = (est / maxVal * 100).toFixed(1);
-        var actPct = (act / maxVal * 100).toFixed(1);
-        estRow += '<div style="flex:1;text-align:center;font-size:9px;font-weight:700;color:#4a5568">' + _fmtCost(est) + '</div>';
-        actRow += '<div style="flex:1;text-align:center;font-size:9px;font-weight:700;color:' + actCol + '">' + _fmtCost(act) + '</div>';
-        var barInner;
-        if (diff > 0) {
-          var diffPct = (diff / maxVal * 100).toFixed(1);
-          barInner = '<div style="width:100%;height:' + diffPct + '%;background:#e8820c;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
-                   + '<div style="width:100%;height:' + estPct + '%;background:#4a5568;flex-shrink:0"></div>';
-        } else if (diff < 0) {
-          var savePct = (Math.abs(diff) / maxVal * 100).toFixed(1);
-          barInner = '<div style="width:100%;height:' + savePct + '%;background:#1b9e8e;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
-                   + '<div style="width:100%;height:' + actPct + '%;background:#4a5568;flex-shrink:0"></div>';
-        } else {
-          barInner = '<div style="width:100%;height:' + estPct + '%;background:#4a5568;border-radius:2px 2px 0 0;flex-shrink:0"></div>';
-        }
-        bars += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;padding:0 3px">' + barInner + '</div>';
-        lblRow += '<div style="flex:1;text-align:center;font-size:9px;color:#1a2540;font-weight:600;padding-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + k + '">' + (idx3 + 1) + '</div>';
-        legendRows3 +=
-          '<div style="display:flex;align-items:baseline;gap:5px;padding:2px 6px;border-bottom:1px solid #f0f3fa;font-size:10px">'
-          + '<span style="font-weight:700;color:#1a2540;flex-shrink:0;min-width:12px">' + (idx3 + 1) + '.</span>'
-          + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#4a5568;flex-shrink:0;margin-bottom:1px"></span>'
-          + '<span style="flex:1;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + k + '">' + k + '</span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fmtFull(est) + (actUnit ? ' ' + actUnit : '') + '</b></span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + actCol + '">' + _fmtFull(act) + (actUnit ? ' ' + actUnit : '') + '</b></span>'
-          + '</div>';
-      });
+      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _sh(actName||'', 40) + '</div>';
 
-      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;display:flex;align-items:center;justify-content:space-between">'
-        + '<span>' + _sh(actName||'', 40) + '</span>'
-        + '<span class="rcost-info-icon" id="rcost-info-btn">&#9432;</span>'
-        + '</div>'
-        + '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">'
-        +   '<div style="display:flex;gap:2px;padding:2px 6px 0;flex-shrink:0">' + estRow + '</div>'
-        +   '<div style="display:flex;gap:2px;padding:0 6px;flex-shrink:0">' + actRow + '</div>'
-        +   '<div style="display:flex;gap:2px;flex:1;min-height:0;padding:0 6px;align-items:flex-end;border-bottom:1px solid #c8d0e0">' + bars + '</div>'
-        +   '<div style="display:flex;gap:2px;padding:2px 6px;flex-shrink:0">' + lblRow + '</div>'
-        +   '<div style="display:flex;gap:12px;padding:3px 6px;flex-shrink:0;flex-wrap:wrap">'
-        +     '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#4a5568;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Estimated</span>'
-        +     '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#e8820c;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Over</span>'
-        +     '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#1b9e8e;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Under</span>'
-        +   '</div>'
-        +   '<div style="overflow-y:auto;flex-shrink:0;max-height:80px;border-top:1px solid #e8efff;margin-top:2px">' + legendRows3 + '</div>'
-        + '</div>';
-
-      // Build tooltip content — vertical bar chart per resource, grouped by type
-      var ttHtml = '';
-      labels.forEach(function(typeName) {
-        ttHtml += '<div class="tt-type-hdr">' + typeName + '</div>';
-        var resArr = groupItems[typeName];
-        // Compute maxima across all resources in this type for scaling
-        var maxCons = 0, maxUC = 0;
-        resArr.forEach(function(r){
-          maxCons = Math.max(maxCons, r.estCons, r.actCons);
-          maxUC   = Math.max(maxUC,  r.estUC,   r.actUC);
-        });
-        if (maxCons === 0) maxCons = 1;
-        if (maxUC   === 0) maxUC   = 1;
-
-        // Section header row labels
-        ttHtml += '<div style="display:flex;gap:6px;margin-bottom:3px;">';
-        resArr.forEach(function(r) {
-          ttHtml += '<div style="flex:1;min-width:0;text-align:center;font-size:9px;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + r.name + '">' + r.name + '</div>';
-        });
-        ttHtml += '</div>';
-
-        // Row 1: Unit Cost bars
-        ttHtml += '<div style="font-size:9px;color:#7a8aaa;margin-bottom:2px;margin-top:5px;font-weight:600;">Unit Cost</div>';
-        ttHtml += '<div class="tt-vbar-section">';
-        resArr.forEach(function(r) {
-          var ucDiff   = r.actUC - r.estUC;
-          var actUCCol = ucDiff > 0 ? '#e8820c' : (ucDiff < 0 ? '#1b9e8e' : '#4a6fa5');
-          var ucDiffStr = ucDiff > 0 ? '+' + _fmtCost(ucDiff) : (ucDiff < 0 ? '−' + _fmtCost(Math.abs(ucDiff)) : '');
-          var estH = Math.max(2, (r.estUC / maxUC * 80)).toFixed(1);
-          var actH = Math.max(2, (r.actUC / maxUC * 80)).toFixed(1);
-          ttHtml += '<div class="tt-vbar-col">'
-            + '<div class="tt-vbar-vals"><span style="color:#7a8aaa">' + _fmtCost(r.estUC) + '</span><b style="color:' + actUCCol + '">' + _fmtCost(r.actUC) + '</b></div>'
-            + '<div class="tt-vbar-bars">'
-            + '<div class="tt-vbar-est" style="height:' + estH + 'px"></div>'
-            + '<div class="tt-vbar-act" style="height:' + actH + 'px;background:' + actUCCol + '"></div>'
-            + '</div>'
-            + (ucDiffStr ? '<div class="tt-vbar-diff" style="color:' + (ucDiff>0?'#e8820c':'#1b9e8e') + '">' + ucDiffStr + '</div>' : '<div class="tt-vbar-diff"></div>')
-            + '</div>';
-        });
-        ttHtml += '</div>';
-
-        // Row 2: Consumption bars
-        ttHtml += '<div style="font-size:9px;color:#7a8aaa;margin-bottom:2px;margin-top:8px;font-weight:600;">Consumption</div>';
-        ttHtml += '<div class="tt-vbar-section">';
-        resArr.forEach(function(r) {
-          var cDiff    = r.actCons - r.estCons;
-          var actCCol  = cDiff > 0 ? '#e8820c' : (cDiff < 0 ? '#1b9e8e' : '#4a6fa5');
-          var cDiffStr = cDiff > 0 ? '+' + _fmtFull(cDiff) : (cDiff < 0 ? '−' + _fmtFull(Math.abs(cDiff)) : '');
-          var estH = Math.max(2, (r.estCons / maxCons * 80)).toFixed(1);
-          var actH = Math.max(2, (r.actCons / maxCons * 80)).toFixed(1);
-          ttHtml += '<div class="tt-vbar-col">'
-            + '<div class="tt-vbar-vals"><span style="color:#7a8aaa">' + _fmtFull(r.estCons) + '</span><b style="color:' + actCCol + '">' + _fmtFull(r.actCons) + (r.unit?' '+r.unit:'') + '</b></div>'
-            + '<div class="tt-vbar-bars">'
-            + '<div class="tt-vbar-est" style="height:' + estH + 'px"></div>'
-            + '<div class="tt-vbar-act" style="height:' + actH + 'px;background:' + actCCol + '"></div>'
-            + '</div>'
-            + (cDiffStr ? '<div class="tt-vbar-diff" style="color:' + (cDiff>0?'#e8820c':'#1b9e8e') + '">' + cDiffStr + '</div>' : '<div class="tt-vbar-diff"></div>')
-            + '</div>';
-        });
-        ttHtml += '</div>';
-      });
-
-      ttHtml += '<div class="tt-legend">'
-        + '<span><i style="background:#4a6fa5"></i>Estimated</span>'
-        + '<span><i style="background:#e8820c"></i>Over</span>'
-        + '<span><i style="background:#1b9e8e"></i>Saving</span>'
-        + '</div>';
-
-      var ttEl = document.getElementById('rcost-tt');
-      if (ttEl) ttEl.innerHTML = ttHtml;
-
-      // Wire hover on info icon
-      var iconEl = document.getElementById('rcost-info-btn');
-      if (iconEl && ttEl) {
-        iconEl.addEventListener('mouseenter', function(e) {
-          ttEl.style.display = 'block';
-          var r = iconEl.getBoundingClientRect();
-          var ttW = 560;
-          var left = Math.min(r.right + 8, window.innerWidth - ttW - 8);
-          ttEl.style.left = Math.max(8, left) + 'px';
-          ttEl.style.top  = Math.max(8, r.top - 10) + 'px';
-        });
-        iconEl.addEventListener('mouseleave', function() {
-          ttEl.style.display = 'none';
-        });
-      }
+      _gauge('gm-cd-rcost', actSum, estSum * 2, 'costgreen', 0.5, 'Est', _fmtFull(estSum), 'Act', _fmtFull(actSum));
     }
 
     // 4. Unit Cost of Activity → gm-cd-g5
@@ -1604,7 +1656,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var nr=r-15,na=Math.PI*(1-f);
       var nx=(cx+nr*Math.cos(na)).toFixed(1),ny=(cy-nr*Math.sin(na)).toFixed(1);
       var pct=schedQty>0?(lastQty/schedQty*100).toFixed(1):'0.0';
-      var svg='<svg width="100%" height="100%" viewBox="0 0 210 138" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:hidden;">'
+      var svg='<svg width="100%" height="120" viewBox="0 0 210 138" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:hidden;flex-shrink:0;">'
         +arc(0,1,'#64748b')+(f>0?arc(0,f,'#94a3b8','butt'):'')
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
         +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
@@ -1698,7 +1750,28 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       clearTimeout(_gcpTimer);
       if (_gcpXhr) { _gcpXhr.abort(); _gcpXhr = null; }
       var pop = document.getElementById('gcm-popup');
-      if (pop) pop.classList.remove('gcm-visible');
+      if (pop) { pop.classList.remove('gcm-visible'); pop.style.display = 'none'; }
+    }
+
+    // Guarantees the popup is actually laid out and visible even if this
+    // AJAX-loaded fragment's own <style> block hasn't taken effect for any
+    // reason (e.g. injected into a page that already had conflicting rules) —
+    // sets the same properties the .gcm-visible CSS class is meant to apply,
+    // directly as inline style, which always wins.
+    function _forceShowCostPopup(pop) {
+      pop.classList.add('gcm-visible');
+      pop.style.display = 'flex';
+      if (!pop.style.width)  pop.style.width  = '740px';
+      if (!pop.style.height) pop.style.height = '58vh';
+      if (!pop.style.position) pop.style.position = 'fixed';
+      // #gcm-popup is a true floater (like cd-modal/cf-modal), not a
+      // sub-popup — it must get its own live ++_z on every open, not a
+      // one-time snapshot (popupSubZBase's _z + 5000 goes stale the moment
+      // any other floater is clicked/opened afterward, letting this popup
+      // get buried again — the exact bug class this fixes, see KPI/Cost
+      // Dashboard/Cashflow all needing to stay visible simultaneously).
+      if (typeof window.popupBringToFront === 'function') { window.popupBringToFront('gcm-popup'); }
+      else { pop.style.zIndex = 10015; }
     }
 
     function _showCostPopup(actId, anchorEl) {
@@ -1706,13 +1779,15 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       if (!pop) return;
 
       function _doRender(d) {
-        document.getElementById('gcm-pop-hdr').childNodes[0].textContent = 'Cost Dashboard — ' + (d.activity_name || '');
-        ['gm-cd-rcost','gm-cd-g5','gm-cd-g4','gm-cd-g2'].forEach(function(id) {
+        document.getElementById('gcm-pop-hdr-left').textContent = 'Cost Dashboard — ' + (d.activity_name || '');
+        ['gm-cd-rcost','gm-cd-ucr','gm-cd-rcon','gm-cd-g5','gm-cd-g4','gm-cd-g2'].forEach(function(id) {
           var el = document.getElementById(id); if (el) el.innerHTML = '';
         });
         document.getElementById('gcm-pop-loading').style.display = 'none';
-        document.getElementById('gcm-pop-row1').style.display = 'flex';
-        _renderResourceCost(d.items, d.activity_name, d.unit);
+        document.getElementById('gcm-pop-row1').style.display = 'grid';
+        _renderResourceCost(d.items, d.activity_name, d.unit, d.schedule_qty);
+        _renderUnitCostOfResource(d.items, d.activity_name);
+        _renderResourceConsumption(d.items, d.activity_name, d.last_report_qty, d.unit);
         _renderUnitCostOfActivity(d.items, d.activity_name, d.unit, d.schedule_qty);
         _renderValueOfWorkDone(d);
         _renderCostOfActivity(d);
@@ -1721,17 +1796,17 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
       if (_gcpCache[actId]) {
         document.getElementById('gcm-pop-loading').style.display = 'none';
-        pop.classList.add('gcm-visible');
+        _forceShowCostPopup(pop);
         _positionCostPopup(anchorEl);
         _doRender(_gcpCache[actId]);
         return;
       }
 
       // Show loading state
-      document.getElementById('gcm-pop-hdr').childNodes[0].textContent = 'Cost Dashboard — Loading…';
+      document.getElementById('gcm-pop-hdr-left').textContent = 'Cost Dashboard — Loading…';
       document.getElementById('gcm-pop-loading').style.display = 'block';
       document.getElementById('gcm-pop-row1').style.display = 'none';
-      pop.classList.add('gcm-visible');
+      _forceShowCostPopup(pop);
       _positionCostPopup(anchorEl);
 
       if (_gcpXhr) _gcpXhr.abort();
@@ -1751,12 +1826,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       });
     }
 
-    $(document).on('click', '#gantt-container .gcol-cost span[data-actid]', function(e) {
-      e.stopPropagation();
-      var actId = $(this).data('actid');
-      if (!actId) return;
-      _showCostPopup(actId, this);
-    });
+    // The Cost Dashboard is intentionally not triggerable from anywhere in
+    // the Gantt chart itself (its own gcol-cost trigger cell was removed) —
+    // it is only ever opened from the Project Estimate report, which calls
+    // this exposed function directly for a given scheduleactivities id.
+    window.showCostDashboardPopup = _showCostPopup;
 
     $('#gcm-pop-close').on('click', function() {
       _hideCostPopup();
@@ -1919,6 +1993,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     (function(){
       var win = document.getElementById('gkm-modal');
       var hdr = document.getElementById('gkm-header');
+      // Join the app-wide floater stacking authority — clicking this panel
+      // brings it above every other floating window, in actual click order,
+      // same as Resource Library/Vendor Library/etc. already do.
+      if(typeof window.bindDragTouch === 'function' && typeof window.popupBringToFront === 'function'){
+        window.bindDragTouch(win, 'mousedown', function(){ window.popupBringToFront('gkm-modal'); }, true);
+      }
       var MIN_W=420, MIN_H=280, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0;
       function _anchor(){ var r=win.getBoundingClientRect(); win.style.left=r.left+'px'; win.style.top=r.top+'px'; win.style.width=r.width+'px'; win.style.height=r.height+'px'; return r; }
       hdr.addEventListener('mousedown', function(e){ if(e.target.id==='gkm-close') return; var r=_anchor(); _action='drag'; _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault(); });
@@ -1931,12 +2011,344 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     (function(){
       var win = document.getElementById('gcm-popup');
       var hdr = document.getElementById('gcm-pop-hdr');
+      // Join the app-wide floater stacking authority — see the KPI modal's
+      // identical binding just above for why.
+      if(typeof window.bindDragTouch === 'function' && typeof window.popupBringToFront === 'function'){
+        window.bindDragTouch(win, 'mousedown', function(){ window.popupBringToFront('gcm-popup'); }, true);
+      }
       var MIN_W=420, MIN_H=280, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0;
       function _anchor(){ var r=win.getBoundingClientRect(); win.style.left=r.left+'px'; win.style.top=r.top+'px'; win.style.width=r.width+'px'; win.style.height=r.height+'px'; return r; }
-      hdr.addEventListener('mousedown', function(e){ if(e.target.id==='gcm-pop-close') return; var r=_anchor(); _action='drag'; _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault(); });
+      hdr.addEventListener('mousedown', function(e){ if(e.target.closest('#gcm-pop-close')) return; var r=_anchor(); _action='drag'; _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault(); });
       document.querySelectorAll('.gcm-rs').forEach(function(el){ el.addEventListener('mousedown', function(e){ var r=_anchor(); _action=el.getAttribute('data-dir'); _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height; e.preventDefault(); e.stopPropagation(); }); });
       document.addEventListener('mousemove', function(e){ if(!_action) return; var dx=e.clientX-_sx, dy=e.clientY-_sy; if(_action==='drag'){ win.style.left=Math.max(0,_ox+dx)+'px'; win.style.top=Math.max(0,_oy+dy)+'px'; } else { var l=_ox,t=_oy,w=_ow,h=_oh; if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);} if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);} if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;} if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;} win.style.left=l+'px'; win.style.top=t+'px'; win.style.width=w+'px'; win.style.height=h+'px'; } });
       document.addEventListener('mouseup', function(){ _action=null; });
+    })();
+
+    // Whenever #gantt-win itself is brought to front, re-raise gpd-tip (a
+    // true small anchored sub-popup) so it stays above it — same guarantee
+    // Resource Library gives its own sub-popups. gkp-popup and gcm-popup
+    // are NOT included here any more — they're true floaters now (see
+    // _raiseKpiPopup / _forceShowCostPopup), each with their own live
+    // popupBringToFront() z-index; overwriting that with a stale
+    // popupSubZBase() snapshot here would re-bury them behind
+    // cd-modal/cf-modal, which is exactly the bug this replaced. gkm-modal
+    // is dead/unreachable code (see its own comment above) — left in place
+    // only because it can never actually be visible.
+    if(typeof window.registerSubPopupReraise === 'function'){
+      window.registerSubPopupReraise('gantt-win', function(){
+        ['gkm-modal','gpd-tip'].forEach(function(id){
+          var el = document.getElementById(id);
+          if(el && getComputedStyle(el).display !== 'none'){
+            el.style.zIndex = window.popupSubZBase();
+          }
+        });
+      });
+    }
+  })();
+
+  // ── Project Duration popup — independent of the KPI/Cost dashboards.
+  // Clicking the small clock icon next to the project name in the Gantt
+  // window header (#btn-project-duration) shows planned vs actual project
+  // duration, fetched via the existing performancedashboard endpoint's
+  // project_bar payload (no new backend).
+  (function(){
+    var tip = document.getElementById('gpd-tip');
+    if (!tip) return;
+    var _cache = null;
+
+    function fmD(s){
+      if(!s || s==='0000-00-00') return '—';
+      var d = new Date(s); if (isNaN(d)) return '—';
+      var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear();
+    }
+
+    function render(pb){
+      var planned = Math.max(0, +pb.budgeted || 0);
+      var diff = Math.max(0, +pb.delay || 0);
+      var expectedDur = Math.max(0, +pb.actual || 0);
+
+      document.getElementById('gpd-target-comp').textContent   = planned + ' d';
+      document.getElementById('gpd-expected-comp').textContent = expectedDur > 0 ? (expectedDur + ' d') : '—';
+      document.getElementById('gpd-target-date').textContent   = fmD(pb.b_end_date);
+      document.getElementById('gpd-expected-date').textContent = fmD(pb.proj_end_date || pb.a_end_date);
+
+      // Elapsed Days = planned start date of the first activity till today.
+      // Remaining Days = project planned duration - elapsed days.
+      var plannedStart = pb.b_start_date || '';
+      var elapsedDays = 0;
+      if (plannedStart) {
+        var sd = new Date(plannedStart); sd.setHours(0,0,0,0);
+        var td = new Date(); td.setHours(0,0,0,0);
+        elapsedDays = Math.max(0, Math.round((td - sd) / 86400000) + 1);
+      }
+      var remainingDays = Math.max(0, planned - elapsedDays);
+      document.getElementById('gpd-elapsed-days').textContent   = plannedStart ? (elapsedDays + ' d') : '—';
+      document.getElementById('gpd-remaining-days').textContent = remainingDays + ' d';
+
+      document.getElementById('gpd-start-date').textContent = fmD(plannedStart);
+      document.getElementById('gpd-pct-complete').textContent = (pb.pct_complete != null ? pb.pct_complete : 0) + '%';
+
+      // Delayed/Savings status line above the bar — delay comes from the
+      // critical-path overrun (pb.delay); savings is when the expected
+      // duration undercuts the target duration.
+      (function(){
+        var statusEl = document.getElementById('gpd-bar-status');
+        statusEl.className = '';
+        if (diff > 0) {
+          statusEl.textContent = 'Delayed by: ' + diff + ' d';
+          statusEl.className = 'gpd-late';
+        } else if (expectedDur > 0 && expectedDur < planned) {
+          statusEl.textContent = 'Savings by: ' + (planned - expectedDur) + ' d';
+          statusEl.className = 'gpd-early';
+        } else {
+          statusEl.textContent = '';
+        }
+      })();
+
+      // Duration bar — planned span in the Gantt's critical-path colour
+      // (#00ACC1), overrun (if any) in red, same visual language as the
+      // Activity Duration panel's bar. Bar length = B. Duration, the same
+      // planned/budgeted duration shown against the project row in the Gantt.
+      (function(){
+        var actual = planned + diff;
+        var maxDur = Math.max(planned, actual, 1);
+        var barHtml;
+        if (diff > 0) {
+          barHtml = '<div style="width:'+(planned/maxDur*100).toFixed(1)+'%;background:#00ACC1;min-width:3px;"></div>'
+                  + '<div style="width:'+(diff/maxDur*100).toFixed(1)+'%;background:#e53935;min-width:3px;"></div>';
+        } else {
+          barHtml = '<div style="width:100%;background:#00ACC1;"></div>';
+        }
+        document.getElementById('gpd-bar').innerHTML = barHtml;
+      })();
+
+      document.getElementById('gpd-tip-loading').style.display = 'none';
+      document.getElementById('gpd-tip-content').style.display = 'block';
+    }
+
+    var _dragged = false;
+
+    function position(anchorEl){
+      var r = anchorEl.getBoundingClientRect();
+      var top = r.bottom + 6;
+      var left = Math.min(r.left, window.innerWidth - 536);
+      tip.style.top = Math.max(4, top) + 'px';
+      tip.style.left = Math.max(4, left) + 'px';
+    }
+
+    function show(anchorEl){
+      if (!_dragged) position(anchorEl);
+      tip.style.zIndex = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 10020;
+      tip.classList.add('gpd-open');
+      if (_cache) { render(_cache); return; }
+      document.getElementById('gpd-tip-loading').style.display = 'block';
+      document.getElementById('gpd-tip-content').style.display = 'none';
+      $.ajax({
+        type: 'POST', url: _base + '/performancedashboard', dataType: 'json',
+        success: function(d){
+          if (!d || !d.project_bar) { document.getElementById('gpd-tip-loading').textContent = 'No data.'; return; }
+          _cache = d.project_bar;
+          var acts = d.activities || [];
+          var total = acts.length, done = 0;
+          acts.forEach(function(a){ if (+a.completed_status !== 0) done++; });
+          _cache.pct_complete = total > 0 ? Math.round((done / total) * 100) : 0;
+          render(_cache);
+        },
+        error: function(){ document.getElementById('gpd-tip-loading').textContent = 'Failed to load.'; }
+      });
+    }
+    function hide(){ tip.classList.remove('gpd-open'); }
+
+    function bind(){
+      var btn = document.getElementById('btn-project-duration');
+      if (!btn || btn.dataset.gpdBound) return;
+      btn.dataset.gpdBound = '1';
+      btn.addEventListener('click', function(e){
+        e.preventDefault(); e.stopPropagation();
+        if (tip.classList.contains('gpd-open')) { hide(); return; }
+        show(btn);
+      });
+      document.addEventListener('click', function(e){
+        if (!tip.classList.contains('gpd-open')) return;
+        if (e.target === btn || btn.contains(e.target)) return;
+        if (tip.contains(e.target)) return;
+        hide();
+      });
+    }
+    bind();
+    // #btn-project-duration lives in main.php outside this embedded view; if
+    // this script runs before it's in the DOM, retry shortly.
+    if (!document.getElementById('btn-project-duration')) setTimeout(bind, 500);
+
+    // ── Drag ──────────────────────────────────────────────────────────────
+    (function(){
+      var titleEl = document.getElementById('gpd-tip-title');
+      var _action=false, _sx=0, _sy=0, _ox=0, _oy=0;
+      function _anchor(){ var r=tip.getBoundingClientRect(); tip.style.left=r.left+'px'; tip.style.top=r.top+'px'; return r; }
+      titleEl.addEventListener('mousedown', function(e){
+        var r=_anchor(); _action=true; _dragged=true;
+        _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault();
+      });
+      document.addEventListener('mousemove', function(e){
+        if(!_action) return;
+        var dx=e.clientX-_sx, dy=e.clientY-_sy;
+        tip.style.left=Math.max(0,_ox+dx)+'px'; tip.style.top=Math.max(0,_oy+dy)+'px';
+      });
+      document.addEventListener('mouseup', function(){ _action=false; });
+    })();
+  })();
+
+  // ── Project Snapshot hover card ─────────────────────────────────────────
+  // Hovering the project name in the Gantt window header
+  // (#gantt-win-proj-name) shows a compact card styled like the
+  // "Projects" list card (.gpm-card in main.php), independent of the
+  // click-triggered #gpd-tip popup above (own trigger, own element, own
+  // styling — same underlying performancedashboard data for now, since
+  // several of the 8 fields share the same source; formulas for
+  // Actual Duration / Status / Actual Completion are placeholders
+  // pending further direction).
+  (function(){
+    var tip = document.getElementById('gsc-tip');
+    if (!tip) return;
+    var _cache = null;
+
+    function fmD(s){
+      if(!s || s==='0000-00-00') return '—';
+      var d = new Date(s); if (isNaN(d)) return '—';
+      var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear();
+    }
+
+    function render(pb, projName){
+      document.getElementById('gsc-tip-name').textContent = projName || 'Project';
+
+      var planned = Math.max(0, +pb.budgeted || 0);
+      var diff = Math.max(0, +pb.delay || 0);
+      var expectedDur = Math.max(0, +pb.actual || 0);
+
+      document.getElementById('gsc-planned-dur').textContent = planned + ' d';
+      document.getElementById('gsc-actual-dur').textContent = expectedDur > 0 ? (expectedDur + ' d') : '—';
+      document.getElementById('gsc-planned-comp').textContent = fmD(pb.b_end_date);
+      document.getElementById('gsc-actual-comp').textContent = fmD(pb.proj_end_date || pb.a_end_date);
+
+      var plannedStart = pb.b_start_date || '';
+      var elapsedDays = 0;
+      if (plannedStart) {
+        var sd = new Date(plannedStart); sd.setHours(0,0,0,0);
+        var td = new Date(); td.setHours(0,0,0,0);
+        elapsedDays = Math.max(0, Math.round((td - sd) / 86400000) + 1);
+      }
+      var remainingDays = Math.max(0, planned - elapsedDays);
+      document.getElementById('gsc-elapsed').textContent = plannedStart ? (elapsedDays + ' d') : '—';
+      document.getElementById('gsc-remaining').textContent = remainingDays + ' d';
+      document.getElementById('gsc-pct').textContent = (pb.pct_complete != null ? pb.pct_complete : 0) + '%';
+
+      var statusEl = document.getElementById('gsc-status');
+      statusEl.className = 'gsc-val';
+      if (diff > 0) {
+        statusEl.textContent = 'Delayed by ' + diff + ' d';
+        statusEl.className = 'gsc-val gsc-late';
+      } else if (expectedDur > 0 && expectedDur < planned) {
+        statusEl.textContent = 'Earlier by ' + (planned - expectedDur) + ' d';
+        statusEl.className = 'gsc-val gsc-early';
+      } else {
+        statusEl.textContent = '—';
+      }
+
+      document.getElementById('gsc-tip-loading').style.display = 'none';
+      document.getElementById('gsc-tip-content').style.display = 'flex';
+    }
+
+    function position(anchorEl){
+      var r = anchorEl.getBoundingClientRect();
+      var top = r.bottom + 6;
+      var left = Math.min(r.left, window.innerWidth - 496);
+      tip.style.top = Math.max(4, top) + 'px';
+      tip.style.left = Math.max(4, left) + 'px';
+    }
+
+    // Once the user starts dragging the card by its header, it "pins"
+    // open — mouseleave no longer auto-hides it, and the card stays
+    // wherever it was dragged to until the user explicitly closes it
+    // (× button) or clicks elsewhere. Un-pinned (the normal hover
+    // state), it still auto-hides ~150ms after the mouse leaves both
+    // the trigger and the card, same as before.
+    var _pinned = false;
+
+    function show(anchorEl){
+      if (!_pinned) position(anchorEl);
+      tip.style.zIndex = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 10025;
+      tip.classList.add('gsc-open');
+      var projName = anchorEl.textContent || 'Project';
+      if (_cache) { render(_cache, projName); return; }
+      document.getElementById('gsc-tip-loading').style.display = 'block';
+      document.getElementById('gsc-tip-content').style.display = 'none';
+      $.ajax({
+        type: 'POST', url: _base + '/performancedashboard', dataType: 'json',
+        success: function(d){
+          if (!d || !d.project_bar) { document.getElementById('gsc-tip-loading').textContent = 'No data.'; return; }
+          _cache = d.project_bar;
+          var acts = d.activities || [];
+          var total = acts.length, done = 0;
+          acts.forEach(function(a){ if (+a.completed_status !== 0) done++; });
+          _cache.pct_complete = total > 0 ? Math.round((done / total) * 100) : 0;
+          render(_cache, projName);
+        },
+        error: function(){ document.getElementById('gsc-tip-loading').textContent = 'Failed to load.'; }
+      });
+    }
+    function hide(){ tip.classList.remove('gsc-open'); _pinned = false; }
+
+    function bind(){
+      var nameEl = document.getElementById('gantt-win-proj-name');
+      if (!nameEl || nameEl.dataset.gscBound) return;
+      nameEl.dataset.gscBound = '1';
+      var hideTimer = null;
+      nameEl.addEventListener('mouseenter', function(){
+        clearTimeout(hideTimer);
+        show(nameEl);
+      });
+      nameEl.addEventListener('mouseleave', function(){
+        if (_pinned) return;
+        hideTimer = setTimeout(hide, 150);
+      });
+      tip.addEventListener('mouseenter', function(){ clearTimeout(hideTimer); });
+      tip.addEventListener('mouseleave', function(){
+        if (_pinned) return;
+        hideTimer = setTimeout(hide, 150);
+      });
+    }
+    bind();
+    // #gantt-win-proj-name lives in main.php outside this embedded view; if
+    // this script runs before it's in the DOM, retry shortly.
+    if (!document.getElementById('gantt-win-proj-name')) setTimeout(bind, 500);
+
+    document.getElementById('gsc-tip-close').addEventListener('click', function(e){
+      e.stopPropagation();
+      hide();
+    });
+
+    // ── Drag by the header (#gsc-tip-top) — same mechanics as the other
+    // draggable popups in this app. Starting a drag pins the card open.
+    (function(){
+      var hdr = document.getElementById('gsc-tip-top');
+      var _action = false, _sx = 0, _sy = 0, _ox = 0, _oy = 0;
+      function _anchor(){ var r = tip.getBoundingClientRect(); tip.style.left = r.left + 'px'; tip.style.top = r.top + 'px'; return r; }
+      hdr.addEventListener('mousedown', function(e){
+        if (e.target.id === 'gsc-tip-close') return;
+        var r = _anchor();
+        _action = true; _pinned = true;
+        _sx = e.clientX; _sy = e.clientY; _ox = r.left; _oy = r.top;
+        e.preventDefault();
+      });
+      document.addEventListener('mousemove', function(e){
+        if (!_action) return;
+        var dx = e.clientX - _sx, dy = e.clientY - _sy;
+        tip.style.left = Math.max(0, _ox + dx) + 'px';
+        tip.style.top = Math.max(0, _oy + dy) + 'px';
+      });
+      document.addEventListener('mouseup', function(){ _action = false; });
     })();
   })();
 
@@ -2145,6 +2557,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     var _kpTimer   = null;   // debounce timer
     var _kpXhr     = null;   // in-flight request
     var _kpCache   = {};     // actid → kpi data cache
+    var _kpOpenActId = null; // actid whose popup is currently shown, for click-to-toggle
 
     var _fmK = function(v){ v=+v||0; if(!v)return'0'; return(+v.toFixed(2)).toLocaleString('en-IN'); };
     var _shK = function(s,n){ s=String(s||''); return s.length>n?s.slice(0,n-1)+'…':s; };
@@ -2304,6 +2717,62 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         +'</div>');
     }
 
+    var _gkpResData = []; // last-rendered resource_latest rows, indexed same as the bars, for hover lookup
+
+    function _renderKpuResourceCapacity(k) {
+      var el = document.getElementById('gkp-res'); if (!el) return;
+      var items = k.resource_latest || [];
+      _gkpResData = items;
+      if (!items.length) {
+        el.innerHTML = '<div style="text-align:center;font-size:11px;color:#9aa5ba;padding:14px 0;font-family:\'Barlow Condensed\',sans-serif;">No resource data</div>';
+        return;
+      }
+      var cols = ['#3461b8','#d4845a','#27afc4','#7c5cbf','#f0c419','#8fa3bc','#ec407a','#26a69a'];
+      var maxVal = 0;
+      items.forEach(function(r){ maxVal = Math.max(maxVal, +r.qty || 0); });
+      if (!maxVal) maxVal = 1;
+      var fam = "font-family:'Barlow Condensed',sans-serif;";
+      var bars = '<div class="gkp-res-hover-area" style="flex:1;min-height:0;display:flex;align-items:flex-end;gap:4px;padding:6px 8px 0;border-bottom:1px solid #dde3ef;overflow-x:auto;cursor:default;">';
+      var labels = '<div style="display:flex;gap:4px;padding:3px 8px 5px;flex-shrink:0;overflow-x:hidden;">';
+      items.forEach(function(r, i) {
+        var qty = +r.qty || 0;
+        var col = cols[i % cols.length];
+        var pct = Math.max(4, (qty / maxVal * 100)).toFixed(1) + '%';
+        bars += '<div style="flex:1;min-width:14px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">'
+          + '<div style="width:60%;height:' + pct + ';min-height:3px;background:' + col + ';border-radius:2px 2px 0 0;"></div>'
+          + '</div>';
+        labels += '<div style="flex:1;min-width:14px;text-align:center;font-size:8px;color:#5a6e8c;' + fam + 'overflow:hidden;white-space:nowrap;">' + _shK(r.type_name || '', 10) + '</div>';
+      });
+      bars += '</div>';
+      labels += '</div>';
+      el.innerHTML = bars + labels;
+    }
+
+    // Hover the panel → rich bar-chart tooltip (same style/classes as the
+    // Cost Dashboard's Est/Act popups: gridline-textured bars + legend),
+    // one bar per resource, sized slightly larger per request.
+    (function(){
+      var $tip = $('#gkp-res-tip');
+      function _rows(){
+        return _gkpResData.map(function(r){
+          return { name: r.name || '', est: +r.qty || 0, act: +r.qty || 0, hasActual: false, unit: '' };
+        });
+      }
+      $(document).on('mouseenter', '.gkp-res-hover-area', function(){
+        $tip.html(_renderBarTip(_rows(), function(v){ return _fmK(v); }, 'Resource Quantity (Latest Reported)', true)).addClass('gm-bar-tip-open gkp-res-tip-big');
+      });
+      $(document).on('mousemove', '.gkp-res-hover-area', function(e){
+        if (!$tip.hasClass('gm-bar-tip-open')) return;
+        var tw = $tip.outerWidth(), th = $tip.outerHeight();
+        var left = Math.min(e.clientX + 14, window.innerWidth  - tw - 8);
+        var top  = Math.min(e.clientY + 14, window.innerHeight - th - 8);
+        $tip.css({ left: Math.max(8,left) + 'px', top: Math.max(8,top) + 'px' });
+      });
+      $(document).on('mouseleave', '.gkp-res-hover-area', function(){
+        $tip.removeClass('gm-bar-tip-open gkp-res-tip-big');
+      });
+    })();
+
     function _renderKpi(k) {
       document.getElementById('gkp-title').textContent = 'KPI — ' + (k.activity_name || '');
       _renderKpuCapacity(k);
@@ -2311,6 +2780,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       _renderKpuProductivity(k);
       _renderKpuTargetProd(k);
       _renderKpuDuration(k);
+      _renderKpuResourceCapacity(k);
     }
 
     function _positionPopup(mouseX, mouseY) {
@@ -2349,6 +2819,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       if (_kpXhr) { _kpXhr.abort(); _kpXhr = null; }
       var pop = document.getElementById('gkp-popup');
       pop.classList.remove('gkp-visible');
+      _kpOpenActId = null;
     }
 
     // Extract raw actid from the bar's hashed task ID via _actCells lookup
@@ -2357,27 +2828,55 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var pfx = 'gantt-containerbardiv_';
       if (idAttr.indexOf(pfx) !== 0) return null;
       var tid = idAttr.slice(pfx.length);
-      var cells = _actCells || window._ganttActCells || {};
+      var cells = window._ganttActCells || {};
       var db  = cells[tid];
       return (db && db.rawId) ? db.rawId : null;
     }
 
+    // Same lookup, keyed off the grid ROW's id instead of the bar's — the
+    // row (left-hand name/columns table) is a separate element from the bar
+    // (right-hand timeline), so hovering it can trigger the KPI popup
+    // without competing with clicking the bar to open the WBS entry form.
+    function _getActIdFromRow(row) {
+      var idAttr = row.id || '';   // e.g. "gantt-containerchildrow_<hashed_tid>"
+      var pfx = 'gantt-containerchildrow_';
+      if (idAttr.indexOf(pfx) !== 0) return null;
+      var tid = idAttr.slice(pfx.length);
+      var cells = window._ganttActCells || {};
+      var db  = cells[tid];
+      return (db && db.rawId) ? db.rawId : null;
+    }
+
+    // #gkp-popup is a true floater (like cd-modal/cf-modal), not a
+    // sub-popup — it must get its own live ++_z on every open, not a
+    // one-time snapshot (popupSubZBase's _z + 5000 goes stale the moment
+    // any other floater is clicked/opened afterward, letting this popup
+    // get buried again — the exact bug class this fixes, see KPI/Cost
+    // Dashboard/Cashflow all needing to stay visible simultaneously).
+    function _raiseKpiPopup(pop) {
+      if (typeof window.popupBringToFront === 'function') { window.popupBringToFront('gkp-popup'); return; }
+      pop.style.zIndex = 10015;
+    }
+
     // Generic KPI fetch + show function (used by bar hover and KPI icon hover)
     function _showKpiForAct(actId, positionFn) {
+      _kpOpenActId = actId;
       if (_kpCache[actId]) {
         _renderKpi(_kpCache[actId]);
         var pop = document.getElementById('gkp-popup');
         pop.classList.add('gkp-visible');
+        _raiseKpiPopup(pop);
         positionFn();
         return;
       }
       if (_kpXhr) _kpXhr.abort();
       document.getElementById('gkp-title').textContent = 'Loading KPI…';
-      ['gkp-g5','gkp-g4','gkp-g3','gkp-tp','gkp-dur'].forEach(function(id){
+      ['gkp-g5','gkp-g4','gkp-g3','gkp-tp','gkp-dur','gkp-res'].forEach(function(id){
         var el=document.getElementById(id); if(el) el.innerHTML='';
       });
       var pop = document.getElementById('gkp-popup');
       pop.classList.add('gkp-visible');
+      _raiseKpiPopup(pop);
       positionFn();
       _kpXhr = $.ajax({
         type: 'POST', url: _base + '/performancedashboardkpi',
@@ -2393,33 +2892,229 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       });
     }
 
-    // Bar hover — KPI popup (disabled: now click-only)
-    $(document).off('mouseover.gkpihover').on('mouseover.gkpihover', '#gantt-container .gtaskbarcontainer:not(.gplan)', function(e) {
-      return; // click on KPI icon opens the panel instead
-      var actId = _getActIdFromBarDiv(this);
-      if (!actId) return;
-      clearTimeout(_kpTimer);
-      var mx = e.clientX, my = e.clientY;
-      _kpTimer = setTimeout(function() {
+    // Row click — KPI popup. Bound to #gantt-container itself (not the row
+    // element directly) so it also catches clicks on nested cells/backdrop
+    // divs inside the row whose own delegated-selector match might not be
+    // the <tr> — resolves the activity id via closest('tr') off the actual
+    // click target rather than relying on `this`. Explicitly excludes the
+    // bar itself so it doesn't compete with clicking the bar to open the
+    // WBS entry form (see the click.qebar handler further below). Stays
+    // open until the user clicks a different row (which replaces its
+    // contents), clicks the same row again while its popup is open
+    // (toggle-close), or clicks the × close button.
+    (function(){
+      var _gc = document.getElementById('gantt-container');
+      if (!_gc) return;
+      _gc.addEventListener('click', function(e) {
+        if (e.target.closest('.gtaskbarcontainer')) return;
+        var row = e.target.closest('[id^="gantt-containerchildrow_"]');
+        if (!row) return;
+        var actId = _getActIdFromRow(row);
+        if (!actId) return;
+        var pop = document.getElementById('gkp-popup');
+        if (_kpOpenActId === actId && pop.classList.contains('gkp-visible')) {
+          _hidePopup();
+          return;
+        }
+        var mx = e.clientX, my = e.clientY;
         _showKpiForAct(actId, function(){ _positionPopup(mx, my); });
-      }, 300);
-    });
+      }, true);
+    })();
 
+    // Activity name click — Planned/Actual Start-End grid tooltip. Bound to
+    // the .gtaskname cell specifically (not the whole row, unlike the KPI
+    // hover above). Opens on click and stays open (unlike the old hover
+    // version) until the user clicks elsewhere — see click.gnametipoutside
+    // below — so Planned Start / Actual Start can be clicked to edit without
+    // the tooltip vanishing first.
+    (function(){
+      var $nameTip = $('#gname-tip');
+      var _curActId = null;   // rawId (scheduleactivities.id) of the activity currently shown
+      function _fmtNameDate(d) {
+        if (!d || d === '0000-00-00') return '—';
+        var p = d.split('-');
+        return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d;
+      }
+      // Actual vs Planned, per date (Start compared to Start, End to End,
+      // independently) — later than planned = red, earlier than planned =
+      // green, same date = no colour change. Raw YYYY-MM-DD strings compare
+      // correctly with plain string comparison.
+      function _dateCls(actual, planned) {
+        if (!actual || actual === '0000-00-00' || !planned || planned === '0000-00-00' || actual === planned) return '';
+        return actual > planned ? 'gname-date-late' : 'gname-date-early';
+      }
+      function _dateSpan(field, raw, cls, editable) {
+        var tag = editable ? 'u' : 'span';
+        var cssCls = (editable ? 'gname-date-editable ' : '') + (cls || '');
+        return '<' + tag + ' class="' + cssCls + '" data-field="' + field + '" data-date="' + (raw || '') + '">' + _fmtNameDate(raw) + '</' + tag + '>';
+      }
+      function _render(name, db) {
+        // Before any progress is reported, "Actual Start" is only ever a
+        // mirror of Planned Start (see astart: aStart || act.actual_start_date
+        // above) — both are the same editable value/edit window. Once
+        // progress exists, schedule_progress_report.start_date becomes the
+        // historical record and neither is editable any more (server also
+        // enforces this — see actionUpdateactivitystartdate).
+        var editable = !db.hasProgress;
+        $nameTip.html(
+          '<div class="gname-tip-name">' + $('<span>').text(name).html() + '</div>'
+          + '<div class="gname-tip-row gname-tip-planned">'
+            + '<span><b>Planned Start:</b> ' + _dateSpan('planned', db.start, '', editable) + '</span>'
+            + '<span><b>Planned End:</b> ' + _fmtNameDate(db.end) + '</span>'
+          + '</div>'
+          + '<div class="gname-tip-row gname-tip-actual">'
+            + '<span><b>Actual Start:</b> ' + _dateSpan('actual', db.astart, _dateCls(db.astart, db.start), editable) + '</span>'
+            + '<span><b>Actual End:</b> <span class="' + _dateCls(db.aend, db.end) + '">' + _fmtNameDate(db.aend) + '</span></span>'
+          + '</div>'
+        ).addClass('gname-tip-open');
+      }
+      function _showErr(msg) {
+        $nameTip.find('.gname-tip-err').remove();
+        $nameTip.append('<div class="gname-tip-err">' + $('<span>').text(msg).html() + '</div>');
+      }
+      var _editing = false;   // true while a date input inside the tooltip is open
+
+      // Anchored to the cell's own bounding box (not the mouse position) and
+      // positioned immediately to its right, touching/overlapping the cell
+      // edge — not just "near" it. This removes the empty gap a cursor had
+      // to cross to reach the tooltip, which is what let mouseleave fire
+      // and close it before the cursor ever arrived (the previous
+      // cursor-offset + delayed-close approach was too fragile/timing
+      // dependent). No mousemove repositioning either — it stays put once shown.
+      function _positionNearCell(cellEl) {
+        var r = cellEl.getBoundingClientRect();
+        var tw = $nameTip.outerWidth() || 340, th = $nameTip.outerHeight() || 90;
+        var left = r.right - 6;   // slight overlap with the cell so there's no gap to cross
+        if (left + tw > window.innerWidth - 8) left = Math.max(8, r.left - tw + 6);
+        var top = r.top;
+        if (top + th > window.innerHeight - 8) top = Math.max(8, window.innerHeight - th - 8);
+        $nameTip.css({ left: left + 'px', top: top + 'px' });
+      }
+      $(document).off('mouseenter.gnametip').on('mouseenter.gnametip', '#gantt-container td.gtaskname', function(e){
+        // .gtaskname lives in the LEFT list table's row — id prefix
+        // "...child_<id>" — a distinct element from the chart/bar table's
+        // row ("...childrow_<id>", used by the KPI row-hover). Match "child_"
+        // but not "childrow_" (which also starts with "child").
+        var row = this.closest('tr');
+        if (!row || row.id.indexOf('child_') === -1 || row.id.indexOf('childrow_') !== -1) return;
+        var tid = row.id.slice(row.id.indexOf('child_') + 'child_'.length);
+        var cells = window._ganttActCells || {};
+        var db = cells[tid];
+        if (!db) return;
+        _curActId = db.rawId || null;
+        var name = this.textContent.trim();
+        _render(name, db);
+        _positionNearCell(this);
+      });
+      // Leaving the name cell schedules a close — a short grace period still
+      // helps for the sliver of travel between the cell edge and the
+      // (now overlapping) tooltip edge, cancelled the instant the cursor
+      // reaches either the cell again or the tooltip itself.
+      var _closeTimer = null;
+      function _scheduleClose() {
+        if (_editing) return;
+        clearTimeout(_closeTimer);
+        _closeTimer = setTimeout(function(){
+          if (_editing) return;
+          $nameTip.removeClass('gname-tip-open').empty();
+          _curActId = null;
+        }, 300);
+      }
+      function _cancelClose() { clearTimeout(_closeTimer); }
+      $(document).off('mouseleave.gnametip').on('mouseleave.gnametip', '#gantt-container td.gtaskname', _scheduleClose);
+      $(document).off('mouseenter.gnametipcancel').on('mouseenter.gnametipcancel', '#gantt-container td.gtaskname', _cancelClose);
+      $nameTip.off('mouseenter.gnametip').on('mouseenter.gnametip', _cancelClose);
+      $nameTip.off('mouseleave.gnametip').on('mouseleave.gnametip', _scheduleClose);
+
+      // Click on an editable date value → swap it for a native date input
+      // (browser renders its own calendar picker on focus/click). One more
+      // click on the date, or anywhere else, closes/commits it — handled by
+      // the input's own change/blur below.
+      $nameTip.on('click', '.gname-date-editable', function(e){
+        e.stopPropagation();
+        if (!_curActId) return;
+        var $val = $(this);
+        if ($val.is('input')) return;
+        _editing = true;
+        var field = $val.data('field');
+        var raw = $val.data('date');
+        var $input = $('<input type="date" class="gname-date-input">').val(raw && raw !== '0000-00-00' ? raw : '');
+        $val.replaceWith($input);
+        $input.trigger('focus');
+        if ($input[0].showPicker) { try { $input[0].showPicker(); } catch(err) {} }
+
+        function _commit() {
+          var newDate = $input.val();
+          $input.off();
+          if (!newDate || newDate === raw) { _closeEditor(); return; }
+          $.ajax({
+            type: 'POST', url: _base + '/updateactivitystartdate',
+            data: { id: _curActId, field: field, date: newDate }, dataType: 'json',
+            success: function(resp) {
+              if (resp && resp.error === 'No') {
+                // scheduleactivities/schedule_progress_report changed server-side
+                // (planned edits also shift the End date to preserve duration) —
+                // simplest correct path is a full reload rather than patching the
+                // cached _ganttActCells values and risking drift.
+                _editing = false;
+                $nameTip.removeClass('gname-tip-open').empty();
+                _curActId = null;
+                if (typeof window.loadGantt === 'function') window.loadGantt();
+              } else {
+                _closeEditor();
+                _showErr((resp && resp.errortext) || 'Could not update the date.');
+              }
+            },
+            error: function() { _closeEditor(); _showErr('Could not update the date.'); }
+          });
+        }
+        function _closeEditor() {
+          _editing = false;
+          var $u = $('<u class="gname-date-editable ' + (field === 'actual' ? _dateCls($input.val(), raw) : '') + '" data-field="' + field + '" data-date="' + (raw || '') + '">' + _fmtNameDate(raw) + '</u>');
+          $input.replaceWith($u);
+        }
+        $input.off('change.gnamedate').on('change.gnamedate', _commit);
+        $input.off('blur.gnamedate').on('blur.gnamedate', function(){
+          // Native date pickers fire change on pick; a blur with no change
+          // (user clicked away without picking) just reverts the editor.
+          setTimeout(function(){ if ($input.parent().length || $input.closest('#gname-tip').length) _commit(); }, 150);
+        });
+        $input.off('click.gnamedate').on('click.gnamedate', function(ev){ ev.stopPropagation(); });
+      });
+
+      // While mid-edit the tooltip ignores mouseleave (see above), so a
+      // click anywhere outside it is the only way to abandon the edit —
+      // reverts the open input back to its display value without saving.
+      $(document).off('click.gnametipoutside').on('click.gnametipoutside', function(e) {
+        if (!$nameTip.hasClass('gname-tip-open')) return;
+        if (e.target.closest && e.target.closest('#gname-tip')) return;
+        _editing = false;
+        $nameTip.removeClass('gname-tip-open').empty();
+        _curActId = null;
+      });
+    })();
 
     $('#gkp-close').off('click').on('click', function() { _hidePopup(); });
 
-    // KPI icon click — inside this IIFE so _showKpiForAct is in scope
-    $(document).off('click.gkpiicon').on('click.gkpiicon', '#gantt-container .gcol-kpi span[data-kpiactid]', function(e) {
-      e.stopPropagation();
-      var actId = $(this).data('kpiactid');
-      if (!actId) return;
-      _showKpiForAct(actId, function(){});
-    });
+    // NOTE: deliberately no "click outside closes it" handler here — KPI,
+    // Cost Dashboard, and Cashflow Dashboard must all be able to stay open
+    // at the same time (user requirement), so clicking one popup's trigger
+    // must never auto-close another. Close only via the × button
+    // (#gkp-close, bound above) or clicking the same row again (toggle,
+    // bound in the row-click handler below) — matching how #cd-modal and
+    // #cf-modal already behave (their own × / backdrop only, never a
+    // generic outside-click).
+    $(document).off('click.gkpioutside');
 
     // Drag + Resize: KPI float panel
     (function(){
       var win = document.getElementById('gkp-popup');
       var hdr = document.getElementById('gkp-hdr');
+      // Join the app-wide floater stacking authority — see the KPI modal's
+      // identical binding earlier in this file for why.
+      if(typeof window.bindDragTouch === 'function' && typeof window.popupBringToFront === 'function'){
+        window.bindDragTouch(win, 'mousedown', function(){ window.popupBringToFront('gkp-popup'); }, true);
+      }
       var MIN_W=400, MIN_H=280, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0;
       function _anchor(){ var r=win.getBoundingClientRect(); win.style.left=r.left+'px'; win.style.top=r.top+'px'; win.style.width=r.width+'px'; win.style.height=r.height+'px'; return r; }
       hdr.addEventListener('mousedown', function(e){ if(e.target.id==='gkp-close') return; var r=_anchor(); _action='drag'; _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault(); });
@@ -2510,6 +3205,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 (function(){
   var panel = document.getElementById('gantt-float');
   var hdr   = document.getElementById('gantt-float-hdr');
+  // Join the app-wide floater stacking authority (this standalone page
+  // loads the normal layout, so main.php's floater script is present here
+  // too) — see the embed-mode KPI/Cost panels' identical binding for why.
+  if(typeof window.bindDragTouch === 'function' && typeof window.popupBringToFront === 'function'){
+    window.bindDragTouch(panel, 'mousedown', function(){ window.popupBringToFront('gantt-float'); }, true);
+  }
   var MIN_W = 500, MIN_H = 300;
   var _action=null,_sx=0,_sy=0,_ox=0,_oy=0,_ow=0,_oh=0;
   function _anchor(){

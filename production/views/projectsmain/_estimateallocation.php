@@ -61,14 +61,14 @@ use app\models\Resources;
 								<div class="row" style="margin-top:16px;">
 
 									<!-- Left panel: Resource Types -->
-									<div class="col-md-3" style="border-right:1px solid #e0e0e0; padding-right:16px; min-height:300px;">
+									<div class="col-md-2" style="border-right:1px solid #e0e0e0; padding-right:16px; min-height:300px;">
 										<div class="estimation-left-bar allocation-left-bar items-select-bar">
 											<!-- Resource type buttons injected here by actionActivityresources -->
 										</div>
 									</div>
 
 									<!-- Right panel: Resource Groups accordion -->
-									<div class="col-md-9" style="padding-left:20px;">
+									<div class="col-md-10" style="padding-left:20px;">
 										<div id="alloc-groups-panel">
 											<p style="color:#aaa; padding-top:20px; font-size:13px;">Select a Resource Type on the left to view groups</p>
 										</div>

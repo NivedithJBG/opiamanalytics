@@ -111,6 +111,10 @@ $(function(){
                         alert(data.errortext);
                     }
                     $('.preloader').hide();
+                },
+                error: function(){
+                    $('.preloader').hide();
+                    alert('Could not load Ledger. Please try again.');
                 }
             });
         }

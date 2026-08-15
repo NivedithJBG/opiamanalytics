@@ -4,6 +4,7 @@ namespace app\controllers;
 use Yii;
 use yii\web\Controller;
 use app\models\ProjuserSelection;
+use app\components\ResourceTypeCategories;
 use kartik\mpdf\Pdf;
 
 class ProcurementController extends Controller
@@ -12,6 +13,17 @@ class ProcurementController extends Controller
     {
         $this->enableCsrfValidation = false;
         return parent::beforeAction($action);
+    }
+
+    /* Work Order tab actions below all need "the Sub Contractor resource
+       type id" to filter/validate pricing_estimate_resources_new. Delegates
+       to ResourceTypeCategories (the single shared source of truth for
+       every PO/LO/WO resourcetype-name routing rule in the app — see that
+       class for the full rationale) rather than resolving independently. */
+    private function _subContractorTypeId()
+    {
+        $ids = ResourceTypeCategories::ids('wo');
+        return $ids[0] ?? 0;
     }
 
     public function actionIndex($layout = 'true')
@@ -34,12 +46,23 @@ class ProcurementController extends Controller
         $projectid = $projuser->projectid;
         $db  = Yii::$app->db;
 
+        $poTypeNames = ResourceTypeCategories::names('po');
+        $typeParams  = [];
+        $typeKeys    = [];
+        foreach ($poTypeNames as $i => $name) {
+            $key = ":t$i";
+            $typeKeys[] = $key;
+            $typeParams[$key] = $name;
+        }
+        $typeInClause = implode(',', $typeKeys);
+
         $sql = "SELECT
                     p.pricing_resourceid                           AS allocation_id,
                     r.Resource_Id                                  AS resource_id,
                     rt.Name                                        AS resource_type,
                     COALESCE(p.display_name, r.Name)               AS resource_name,
                     wa.activity_Name                               AS activity_name,
+                    p.activity_id                                  AS activity_id,
                     r.Unit                                         AS unit,
                     p.quantity * pe.activity_qty                   AS estimated_quantity,
                     p.rate                                         AS rate,
@@ -72,18 +95,87 @@ class ProcurementController extends Controller
                     GROUP BY por.allocation_id
                 ) pq ON p.pricing_resourceid = pq.allocation_id
                 LEFT JOIN store_indents si ON si.resource_id = r.Resource_Id
+                                          AND si.activity_id = p.activity_id
                                           AND si.project_id  = :pid3
                 WHERE p.project_id      = :pid
-                  AND rt.Name IN ('Materials', 'Consumables', 'Purchased Inputs')
+                  AND rt.Name IN ($typeInClause)
                   AND p.pricing_status  = 0
                 ORDER BY rt.Name, resource_name";
 
-        $rows = $db->createCommand($sql, [
+        $rows = $db->createCommand($sql, array_merge([
             ':pid'  => $projectid,
             ':pid2' => $projectid,
             ':pid3' => $projectid,
             ':pid4' => $projectid,
-        ])->queryAll();
+        ], $typeParams))->queryAll();
+
+        $proj = $db->createCommand(
+            'SELECT Name, location FROM projects WHERE Project_Id = :pid',
+            [':pid' => $projectid]
+        )->queryOne();
+        $projectName     = $proj ? trim($proj['Name']     ?? '') : '';
+        $projectLocation = $proj ? trim($proj['location'] ?? '') : '';
+
+        return json_encode([
+            'error'            => 'No',
+            'rows'             => $rows,
+            'project_name'     => $projectName,
+            'project_location' => $projectLocation,
+        ]);
+    }
+
+    /* Lease Orders tab — read-only for now (no raise/email/cancel workflow
+       yet, that's a separate future request). Modeled directly on
+       actionPurchaseorders() above, filtered to the "lo" category
+       (Leased equipments) instead of "po". No purchased-quantity or
+       store_indents joins here — those are PO/Indents-specific concepts
+       (goods received against a purchase order; site material stock) with
+       no equivalent for leased equipment in this first pass. */
+    public function actionLeaseorders()
+    {
+        $uid      = Yii::$app->user->id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+
+        if (!$projuser) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'No project selected.']);
+        }
+
+        $projectid = $projuser->projectid;
+        $db  = Yii::$app->db;
+
+        $loTypeNames = ResourceTypeCategories::names('lo');
+        $typeParams  = [];
+        $typeKeys    = [];
+        foreach ($loTypeNames as $i => $name) {
+            $key = ":t$i";
+            $typeKeys[] = $key;
+            $typeParams[$key] = $name;
+        }
+        $typeInClause = implode(',', $typeKeys);
+
+        $sql = "SELECT
+                    p.pricing_resourceid                           AS allocation_id,
+                    r.Resource_Id                                  AS resource_id,
+                    rt.Name                                        AS resource_type,
+                    COALESCE(p.display_name, r.Name)               AS resource_name,
+                    wa.activity_Name                               AS activity_name,
+                    p.activity_id                                  AS activity_id,
+                    r.Unit                                         AS unit,
+                    p.quantity * pe.activity_qty                   AS estimated_quantity,
+                    p.rate                                         AS rate,
+                    p.quantity * pe.activity_qty * p.rate          AS amount
+                FROM pricing_estimate_resources_new p
+                JOIN pricing_estimate_new pe ON p.activity_id  = pe.activity_Id
+                                            AND pe.project_Id  = p.project_id
+                JOIN resources r             ON p.resource_Id  = r.Resource_Id
+                JOIN resourcetype rt         ON p.resourcetype_Id = rt.ResourceType_Id
+                LEFT JOIN workgroup_activities_new wa ON wa.id = p.activity_id
+                WHERE p.project_id      = :pid
+                  AND rt.Name IN ($typeInClause)
+                  AND p.pricing_status  = 0
+                ORDER BY rt.Name, resource_name";
+
+        $rows = $db->createCommand($sql, array_merge([':pid' => $projectid], $typeParams))->queryAll();
 
         $proj = $db->createCommand(
             'SELECT Name, location FROM projects WHERE Project_Id = :pid',
@@ -237,21 +329,21 @@ class ProcurementController extends Controller
                 [':rid' => $resourceId]
             )->queryAll();
         } elseif ($context === 'po') {
-            $rows = $db->createCommand(
+            $poIds = ResourceTypeCategories::ids('po');
+            $rows = $poIds ? $db->createCommand(
                 "SELECT v.Vendor_Id, v.Name FROM vendors v
-                 JOIN resourcetype rt ON rt.ResourceType_Id = v.resource_type_id
                  WHERE v.Status = 0
-                   AND rt.Name IN ('Materials', 'Purchased Inputs', 'Consumables')
+                   AND v.resource_type_id IN (" . implode(',', $poIds) . ")
                  ORDER BY v.Name"
-            )->queryAll();
+            )->queryAll() : [];
         } elseif ($context === 'wo') {
-            $rows = $db->createCommand(
+            $woIds = ResourceTypeCategories::ids('wo');
+            $rows = $woIds ? $db->createCommand(
                 "SELECT v.Vendor_Id, v.Name FROM vendors v
-                 JOIN resourcetype rt ON rt.ResourceType_Id = v.resource_type_id
                  WHERE v.Status = 0
-                   AND rt.Name = 'Sub Contractors'
+                   AND v.resource_type_id IN (" . implode(',', $woIds) . ")
                  ORDER BY v.Name"
-            )->queryAll();
+            )->queryAll() : [];
         } else {
             $rows = $db->createCommand(
                 'SELECT Vendor_Id, Name FROM vendors WHERE Status = 0 ORDER BY Name'
@@ -421,12 +513,13 @@ class ProcurementController extends Controller
             }
         }
 
-        $rids = array_values(array_filter(array_map(fn($r) => (int)($r['resource_id'] ?? 0), $resources)));
-        if (!empty($rids)) {
-            $db->createCommand()->delete('store_indents', [
-                'project_id'  => $projectid,
-                'resource_id' => $rids,
-            ])->execute();
+        foreach ($resources as $r) {
+            $rid = (int)($r['resource_id'] ?? 0);
+            $aid = (int)($r['activity_id'] ?? 0);
+            if (!$rid) continue;
+            $cond = ['project_id' => $projectid, 'resource_id' => $rid];
+            if ($aid) $cond['activity_id'] = $aid;
+            $db->createCommand()->delete('store_indents', $cond)->execute();
         }
 
         $vendor = $db->createCommand(
@@ -815,7 +908,7 @@ class ProcurementController extends Controller
                     FROM pricing_estimate_resources_new pr
                     WHERE pr.activity_id     = wa.id
                       AND pr.project_id      = :pid5
-                      AND pr.resourcetype_Id = 4
+                      AND pr.resourcetype_Id = :sctype
                       AND pr.pricing_status  = 0
                 ), 0)                               AS sc_estimated_value,
                 COALESCE(wdq.work_done_qty, 0)  AS work_done_qty,
@@ -827,14 +920,16 @@ class ProcurementController extends Controller
                 ON  wn.Workgroup_Id = wa.wbs_id
                 AND wn.Project_Id   = :pid
                 AND wn.Status       = 0
+            LEFT JOIN estimateactivities ea
+                ON  ea.activity_id = wa.activity_Id
             LEFT JOIN estimateactivitytypes eat
-                ON  eat.activitytype_id     = wa.activitytype_id
+                ON  eat.activitytype_id     = COALESCE(NULLIF(wa.activitytype_id, 0), ea.activity_type)
                 AND eat.activitytype_status = 0
             LEFT JOIN pricing_estimate_new pe
                 ON  pe.activity_Id    = wa.id
                 AND pe.project_Id     = :pid2
                 AND pe.pricing_status = 0
-            LEFT JOIN scheduleactivities sa
+            JOIN scheduleactivities sa
                 ON  sa.activity_id = wa.id
                 AND sa.projectId   = :pid3
                 AND sa.status      = 0
@@ -846,13 +941,13 @@ class ProcurementController extends Controller
                   SELECT 1 FROM pricing_estimate_resources_new pr
                   WHERE pr.activity_id    = wa.id
                     AND pr.project_id     = :pid6
-                    AND pr.resourcetype_Id = 4
+                    AND pr.resourcetype_Id = :sctype
                     AND pr.pricing_status  = 0
               )
             ORDER BY COALESCE(wn.sortorder, 999999) ASC, COALESCE(wa.sortorder, 999999) ASC, sa.id ASC
         ";
 
-        $rows = $db->createCommand($sql, [':pid' => $projectid, ':pid2' => $projectid, ':pid3' => $projectid, ':pid4' => $projectid, ':pid5' => $projectid, ':pid6' => $projectid])->queryAll();
+        $rows = $db->createCommand($sql, [':pid' => $projectid, ':pid2' => $projectid, ':pid3' => $projectid, ':pid4' => $projectid, ':pid5' => $projectid, ':pid6' => $projectid, ':sctype' => $this->_subContractorTypeId()])->queryAll();
 
         // Build M.Book qty map: sum qty per activity_id from all issued (sent_status=1) M.Books
         $mbBooks = $db->createCommand(
@@ -1018,8 +1113,8 @@ class ProcurementController extends Controller
             if (!$actId) continue;
             $n = $db->createCommand(
                 "SELECT COUNT(*) FROM pricing_estimate_resources_new
-                 WHERE activity_id=:aid AND project_id=:pid AND resourcetype_Id=4 AND pricing_status=0",
-                [':aid' => $actId, ':pid' => $projectid]
+                 WHERE activity_id=:aid AND project_id=:pid AND resourcetype_Id=:sctype AND pricing_status=0",
+                [':aid' => $actId, ':pid' => $projectid, ':sctype' => $this->_subContractorTypeId()]
             )->queryScalar();
             if (!$n) return json_encode(['error' => 'Yes', 'errortext' => 'Please allocate a contractor for this task']);
 
@@ -1031,9 +1126,9 @@ class ProcurementController extends Controller
             foreach ($selectedTasks as $tid) {
                 $mapped = $db->createCommand(
                     "SELECT COUNT(*) FROM pricing_estimate_resources_new
-                     WHERE activity_id=:aid AND project_id=:pid AND resourcetype_Id=4
+                     WHERE activity_id=:aid AND project_id=:pid AND resourcetype_Id=:sctype
                        AND pricing_status=0 AND FIND_IN_SET(:tid, task_ids)",
-                    [':aid' => $actId, ':pid' => $projectid, ':tid' => (int)$tid]
+                    [':aid' => $actId, ':pid' => $projectid, ':tid' => (int)$tid, ':sctype' => $this->_subContractorTypeId()]
                 )->queryScalar();
                 if (!$mapped) return json_encode(['error' => 'Yes',
                     'errortext' => 'Please map the resource to this task in the Resource Allocation page before raising the Work Order.']);
@@ -1063,8 +1158,8 @@ class ProcurementController extends Controller
         // Ensure a sub-contractor resource is allocated for this activity
         $scCount = $db->createCommand(
             "SELECT COUNT(*) FROM pricing_estimate_resources_new
-             WHERE activity_id=:aid AND project_id=:pid AND resourcetype_Id=4 AND pricing_status=0",
-            [':aid' => $activityId, ':pid' => $projectid]
+             WHERE activity_id=:aid AND project_id=:pid AND resourcetype_Id=:sctype AND pricing_status=0",
+            [':aid' => $activityId, ':pid' => $projectid, ':sctype' => $this->_subContractorTypeId()]
         )->queryScalar();
         if (!$scCount) {
             return ['error' => 'Yes', 'errortext' => 'Please allocate a contractor for this task'];
@@ -1125,9 +1220,9 @@ class ProcurementController extends Controller
                 }
                 $mapped = $db->createCommand(
                     "SELECT COUNT(*) FROM pricing_estimate_resources_new
-                     WHERE activity_id=:aid AND project_id=:pid AND resourcetype_Id=4
+                     WHERE activity_id=:aid AND project_id=:pid AND resourcetype_Id=:sctype
                        AND pricing_status=0 AND FIND_IN_SET(:tid, task_ids)",
-                    [':aid' => $activityId, ':pid' => $projectid, ':tid' => $taskId]
+                    [':aid' => $activityId, ':pid' => $projectid, ':tid' => $taskId, ':sctype' => $this->_subContractorTypeId()]
                 )->queryScalar();
                 if (!$mapped) {
                     return ['error' => 'Yes', 'errortext' => 'Please map a Sub Contractor resource to this task in the Resource Allocation page before saving.'];

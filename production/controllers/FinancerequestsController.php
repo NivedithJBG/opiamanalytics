@@ -4761,7 +4761,7 @@ public function beforeAction($action)
             $bankid=$_POST['bankid'];
         }
         else{
-            $bankid=$cashaccntuser->accountid;
+            $bankid=$cashaccntuser ? $cashaccntuser->accountid : 0;
         }
         $acntitms=AccountsItem::find()->where(['id'=>$bankid])->andWhere(['Status'=>0])->one();
         $startdate=date('Y-m-d',strtotime($_POST['fromdate']));
@@ -4785,7 +4785,7 @@ public function beforeAction($action)
         $datarows.="
                 <div class='row list-head'>
                     <div class='col-md-12 text-center'>
-                        <label style='text-align: center;font-size: 15px;'>Bank Book Of  ".$acntitms->name."</label>From 
+                        <label style='text-align: center;font-size: 15px;'>Bank Book Of  ".($acntitms ? $acntitms->name : '')."</label>From
                         <span class='date'><em class='cal-icon icon-calendar1'></em>".$fromdate."</span> 
                         to <span class='date'><em class='cal-icon icon-calendar1'></em>
                         ".$todate."</span>
@@ -4809,7 +4809,7 @@ public function beforeAction($action)
 
         
         if($bankid!='0')
-        $sql.=" (bank_id='".$bankid."' OR account_id='".$bankid."') ".$condition;
+        $sql.=" (bank_id='".$bankid."' OR account_id='".$bankid."' OR creditacnt='".$bankid."') ".$condition;
         //$sql.=" payment='2' AND date BETWEEN '$startdate' AND '$enddate' ORDER BY UNIX_TIMESTAMP(date) ASC";
         $sql.=" date BETWEEN '$startdate' AND '$enddate' ORDER BY UNIX_TIMESTAMP(date) ASC";
         //echo $sql;exit;
@@ -4833,41 +4833,27 @@ public function beforeAction($action)
         $initialdate='2014-04-01';
         $enddate=date('Y-m-d', strtotime($startdate .' -1 day'));
 
-        //if($placeid!='' && $projectid!=''):
-            if($bankid=='0'):
-                //$command = Yii::app()->db->createCommand("CALL GetBalance(:startdate, :currentdate,".$projectid.",2,NULL,".$bankid.",@outval)");
-                $command = Yii::$app->db->createCommand("CALL GetChartBalance(:startdate, :currentdate,NULL,NULL,2,NULL,NULL,@outval)");
-            else:
-                //$command = Yii::app()->db->createCommand("CALL GetBalance(:startdate, :currentdate,".$projectid.",2,".$bankid.",".$bankid.",@outval)"); 
-                $command = Yii::$app->db->createCommand("CALL GetChartBalance(:startdate, :currentdate,NULL,NULL,2,".$bankid.",".$bankid.",@outval)");           
-            endif;
-       //endif;
-
-        
-            /*if($bankid=='0'):
-                //$command = Yii::app()->db->createCommand("CALL GetBalance(:startdate, :currentdate,".$projectid.",2,NULL,".$bankid.",@outval)");
-                $command = Yii::$app->db->createCommand("CALL GetChartBalance(:startdate, :currentdate,NULL,".$projectid.",2,NULL,NULL,@outval)");
-            else:
-                //$command = Yii::app()->db->createCommand("CALL GetBalance(:startdate, :currentdate,".$projectid.",2,".$bankid.",".$bankid.",@outval)"); 
-                $command = Yii::$app->db->createCommand("CALL GetChartBalance(:startdate, :currentdate,NULL,NULL,2,".$bankid.",".$bankid.",@outval)");           
-            endif;*/
-        
-
-       
-
-        $command->bindParam(":startdate",$initialdate);
-        $command->bindParam(":currentdate", $enddate);
-        $command->query();
+        // NOTE: this used to CALL a stored procedure GetChartBalance(...) here
+        // to compute an opening balance into a MySQL @outval session var, but
+        // that procedure does not exist on the database (confirmed via app
+        // log: SQLSTATE[42000] 1305 "PROCEDURE ... GetChartBalance does not
+        // exist") and its result was never actually read afterwards anyway —
+        // the one line that would have consumed @outval (feeding it into
+        // $openbalance, below) was already commented out. The opening
+        // balance is computed independently a few lines down from
+        // ledger_openingbalance + summed voucher/journalvoucher totals, so
+        // removing the dead CALL doesn't change behaviour — it just stops
+        // every Bank Book search from crashing with a 500 error.
         if($bankid!='0'){
             $sql3="SELECT balance FROM ledger_openingbalance WHERE accountid='$bankid' ";
             $command=$connection->createCommand($sql3);
             $dataReader=$command->query();
             $data=$dataReader->read();
-            $openingbal=$data['balance']; 
+            $openingbal= $data ? $data['balance'] : 0;
         }
         else{
-            $openingbal=0; 
-        }      
+            $openingbal=0;
+        }
 
         $newstartdate=date('Y-m-d', strtotime($startdate .' -1 day'));
 
@@ -5832,6 +5818,7 @@ public function beforeAction($action)
         $command=$connection->createCommand($sql);
         $dataReader=$command->query();
         $value=$dataReader->read();
+        if(!$value){ $value=['Name'=>'']; }
         $month=date('m');
         if($month=='01' || $month=='02' || $month=='03'):
             $initialdate=date("Y",strtotime("-1 year")).'-04-01';
@@ -5978,20 +5965,15 @@ public function beforeAction($action)
             $enddate=date('Y-m-d', strtotime($_POST['fromdate'] .' -1 day'));
             //echo $enddate;exit();
             $accounthead=$_POST['accountid'];
-            $command = Yii::$app->db->createCommand("CALL ".$ledproc."(:startdate, :currentdate,:place,:accounthead,:project,@outval)");
-            $command->bindParam(":startdate",$initialdate);
-            $command->bindParam(":currentdate", $enddate);
-            /*if($_POST['place']==12):
-                $place='NULL';
-            else:
-                $place=$_POST['place'];
-            endif;*/ 
-            $place=$_POST['place'];   
-            $project=$_POST['projectID'];                    
-            $command->bindParam(":place", $place);
-            $command->bindParam(":accounthead", $accounthead);
-            $command->bindParam(":project", $project);
-            $command->query();
+            // NOTE: used to CALL GetLedgerBalance(...) here (same dead
+            // stored-procedure pattern already fixed in actionBankbook —
+            // see that action's comment for the full explanation: the
+            // procedure doesn't exist on the DB and its @outval result was
+            // never read anyway). Opening balance is computed independently
+            // below from ledger_openingbalance + summed voucher/journal
+            // totals, so removing the dead CALL doesn't change behaviour.
+            $place=$_POST['place'];
+            $project=$_POST['projectID'];
 
             $vcondtn1 = '';
             $jcondtn2 = '';
@@ -6098,7 +6080,7 @@ public function beforeAction($action)
             $command=$connection->createCommand($sql3);
             $dataReader=$command->query();
             $result=$dataReader->read();
-            $openingbal=$result['balance'];                        
+            $openingbal= $result ? $result['balance'] : 0;
             //$openbalance = $openingbal + (Yii::$app->db->createCommand("select @outval as result;")->queryScalar());
             $openbalance = $openingbal + $totalamt;
         else:
@@ -6111,31 +6093,15 @@ public function beforeAction($action)
             $enddate=$initialdate;
             //echo $initialdate.'<br>'.$enddate;exit;
             $accounthead=$_POST['accountid'];
-            $command = Yii::$app->db->createCommand("CALL ".$ledproc."(:startdate, :currentdate,:place,:accounthead,:project,@outval)");
-            $command->bindParam(":startdate",$initialdate);
-            $command->bindParam(":currentdate", $enddate);
-            /*if($_POST['place']==12):
-                $place='NULL';
-            else:
-                $place=$_POST['place'];
-            endif;*/
+            // NOTE: dead CALL GetLedgerBalance(...) removed here too — see
+            // the identical fix + explanation a few lines above.
             $place=$_POST['place'];
             $project=$_POST['projectID'];
-            $command->bindParam(":place", $place);
-            $command->bindParam(":accounthead", $accounthead);
-            $command->bindParam(":project", $project);
-            $command->query();
-            //print_r($command);exit;
-            //$datavouchers=Yii::$app->db->createCommand("select @outval as result;")->queryScalar();
-            //if($datavouchers!=0):
                 $sql1="SELECT balance FROM ledger_openingbalance WHERE accountid='".$_POST['accountid']."'";
                 $command=$connection->createCommand($sql1);
                 $dataReader=$command->query();
                 $balance=$dataReader->read();
-                $openingbal=$balance['balance'];
-            //else:
-                //$openingbal=0;
-            //endif;
+                $openingbal= $balance ? $balance['balance'] : 0;
 
             $vcondtn1 = '';
             $jcondtn2 = '';
@@ -6755,6 +6721,7 @@ public function beforeAction($action)
         $command=$connection->createCommand($sql);
         $dataReader=$command->query();
         $value=$dataReader->read();
+        if(!$value){ $value=['Name'=>'']; }
         $month=date('m');
         if($month=='01' || $month=='02' || $month=='03'):
             $initialdate=date("Y",strtotime("-1 year")).'-04-01';
@@ -6829,15 +6796,10 @@ public function beforeAction($action)
             $enddate=date('Y-m-d', strtotime($_POST['fromdate'] .' -1 day'));
             //echo $enddate;exit();
             $accounthead=$_POST['accountid'];
-            $command = Yii::$app->db->createCommand("CALL ".$ledproc."(:startdate, :currentdate,:place,:accounthead,:project,@outval)");
-            $command->bindParam(":startdate",$initialdate);
-            $command->bindParam(":currentdate", $enddate); 
-            $place=$_POST['place'];   
-            $project=$_POST['projectID'];                    
-            $command->bindParam(":place", $place);
-            $command->bindParam(":accounthead", $accounthead);
-            $command->bindParam(":project", $project);
-            $command->query();
+            // NOTE: dead CALL GetLedgerBalance(...) removed — see
+            // actionLedger's identical fix/comment above for why.
+            $place=$_POST['place'];
+            $project=$_POST['projectID'];
 
             $vcondtn1 = '';
             $jcondtn2 = '';
@@ -6941,7 +6903,7 @@ public function beforeAction($action)
             $command=$connection->createCommand($sql3);
             $dataReader=$command->query();
             $result=$dataReader->read();
-            $openingbal=$result['balance'];                        
+            $openingbal= $result ? $result['balance'] : 0;
             $openbalance = $openingbal + $totalamt;
         else:
             $initialdate='2014-03-31';
@@ -6952,20 +6914,15 @@ public function beforeAction($action)
             endif;
             $enddate=$initialdate;
             $accounthead=$_POST['accountid'];
-            $command = Yii::$app->db->createCommand("CALL ".$ledproc."(:startdate, :currentdate,:place,:accounthead,:project,@outval)");
-            $command->bindParam(":startdate",$initialdate);
-            $command->bindParam(":currentdate", $enddate);
+            // NOTE: dead CALL GetLedgerBalance(...) removed — see
+            // actionLedger's identical fix/comment above for why.
             $place=$_POST['place'];
             $project=$_POST['projectID'];
-            $command->bindParam(":place", $place);
-            $command->bindParam(":accounthead", $accounthead);
-            $command->bindParam(":project", $project);
-            $command->query();
             $sql1="SELECT balance FROM ledger_openingbalance WHERE accountid='".$_POST['accountid']."'";
             $command=$connection->createCommand($sql1);
             $dataReader=$command->query();
             $balance=$dataReader->read();
-            $openingbal=$balance['balance'];
+            $openingbal= $balance ? $balance['balance'] : 0;
 
             $vcondtn1 = '';
             $jcondtn2 = '';
@@ -7241,6 +7198,7 @@ public function beforeAction($action)
         $command=$connection->createCommand($sql);
         $dataReader=$command->query();
         $value=$dataReader->read();
+        if(!$value){ $value=['Name'=>'']; }
         $month=date('m');
         if($month=='01' || $month=='02' || $month=='03'):
             $initialdate=date("Y",strtotime("-1 year")).'-04-01';
@@ -7317,15 +7275,10 @@ public function beforeAction($action)
             $enddate=date('Y-m-d', strtotime($_POST['fromdate'] .' -1 day'));
             //echo $enddate;exit();
             $accounthead=$_POST['accountid'];
-            $command = Yii::$app->db->createCommand("CALL ".$ledproc."(:startdate, :currentdate,:place,:accounthead,:project,@outval)");
-            $command->bindParam(":startdate",$initialdate);
-            $command->bindParam(":currentdate", $enddate); 
-            $place=$_POST['place'];   
-            $project=$_POST['projectID'];                    
-            $command->bindParam(":place", $place);
-            $command->bindParam(":accounthead", $accounthead);
-            $command->bindParam(":project", $project);
-            $command->query();
+            // NOTE: dead CALL GetLedgerBalance(...) removed — see
+            // actionLedger's identical fix/comment above for why.
+            $place=$_POST['place'];
+            $project=$_POST['projectID'];
 
             $vcondtn1 = '';
             $jcondtn2 = '';
@@ -7429,7 +7382,7 @@ public function beforeAction($action)
             $command=$connection->createCommand($sql3);
             $dataReader=$command->query();
             $result=$dataReader->read();
-            $openingbal=$result['balance'];                        
+            $openingbal= $result ? $result['balance'] : 0;
             $openbalance = $openingbal + $totalamt;
         else:
             $initialdate='2014-03-31';
@@ -7440,20 +7393,15 @@ public function beforeAction($action)
             endif;
             $enddate=$initialdate;
             $accounthead=$_POST['accountid'];
-            $command = Yii::$app->db->createCommand("CALL ".$ledproc."(:startdate, :currentdate,:place,:accounthead,:project,@outval)");
-            $command->bindParam(":startdate",$initialdate);
-            $command->bindParam(":currentdate", $enddate);
+            // NOTE: dead CALL GetLedgerBalance(...) removed — see
+            // actionLedger's identical fix/comment above for why.
             $place=$_POST['place'];
             $project=$_POST['projectID'];
-            $command->bindParam(":place", $place);
-            $command->bindParam(":accounthead", $accounthead);
-            $command->bindParam(":project", $project);
-            $command->query();
             $sql1="SELECT balance FROM ledger_openingbalance WHERE accountid='".$_POST['accountid']."'";
             $command=$connection->createCommand($sql1);
             $dataReader=$command->query();
             $balance=$dataReader->read();
-            $openingbal=$balance['balance'];
+            $openingbal= $balance ? $balance['balance'] : 0;
 
             $vcondtn1 = '';
             $jcondtn2 = '';
@@ -7745,7 +7693,7 @@ public function beforeAction($action)
             $command=$connection->createCommand($sql);
             $dataReader=$command->query();
             $data=$dataReader->read();
-            $groupid=$data['contragroup'];
+            $groupid = $data ? $data['contragroup'] : '';
 
            
 
@@ -7765,7 +7713,9 @@ public function beforeAction($action)
                    // $sql1="DELETE FROM voucher WHERE id='".$_POST['item']."'";
 
                     $modelv=Voucher::findOne($_POST['item']);
-                    $modelv->delete();
+                    if ($modelv):
+                        $modelv->delete();
+                    endif;
                 else:
                      
 
@@ -7778,7 +7728,9 @@ public function beforeAction($action)
 
                     //$sql1="DELETE FROM journalvoucher WHERE id='".$_POST['item']."'";
                     $modelj=Journalvoucher::findOne($_POST['item']);
-                    $modelj->delete();
+                    if ($modelj):
+                        $modelj->delete();
+                    endif;
 
                 endif;                    
             //$command=$connection->createCommand($sql1);
@@ -7788,8 +7740,10 @@ public function beforeAction($action)
                     /*$sql2="DELETE FROM voucher WHERE contragroup='".$groupid."'";
                     $command=$connection->createCommand($sql2);
                     $dataReader=$command->query();*/
-                    $model=Voucher::find()->where(['contragroup'=>$invoice['invoice_id']])->one();
-                    $model->delete();
+                    $model=Voucher::find()->where(['contragroup'=>$groupid])->one();
+                    if ($model):
+                        $model->delete();
+                    endif;
                 endif;
                 $returnarray=array('error'=>'no');
             else:
@@ -8397,9 +8351,47 @@ public function beforeAction($action)
         }
     }
 
+    // Replaces the dead `CALL GetTrialBalance(startdate, currentdate,
+    // accounthead, @outval)` stored procedure (confirmed via app log:
+    // SQLSTATE[42000] 1305 "PROCEDURE ... GetTrialBalance does not
+    // exist") shared by Trial Balance, Profit & Loss, and Balance Sheet.
+    // Returns the net movement for one account between two dates, using
+    // the same sign convention the procedure's callers expect: positive
+    // = net credit, negative = net debit (mirrors the Bank Book fix's
+    // credit-minus-debit convention).
+    // $projectId is optional — null (the default) preserves the original
+    // behaviour of summing movement across ALL projects, used by
+    // Profit & Loss and Balance Sheet, and by Trial Balance's own
+    // "All Projects" mode. When given, every query is additionally
+    // restricted to that voucher/journalvoucher row's own project_id —
+    // for a project-specific Trial Balance.
+    private function _trialBalanceMovement($accounthead, $startdate, $enddate, $projectId = null)
+    {
+        $connection = Yii::$app->db;
+        $projCondition = $projectId !== null ? " AND project_id=:pid" : "";
+        $sum = function($sql) use ($connection, $accounthead, $startdate, $enddate, $projectId) {
+            $params = [':id' => $accounthead, ':sd' => $startdate, ':ed' => $enddate];
+            if ($projectId !== null) { $params[':pid'] = $projectId; }
+            $v = $connection->createCommand($sql, $params)->queryScalar();
+            return $v ? (float)$v : 0;
+        };
+        $debit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=0 AND date BETWEEN :sd AND :ed" . $projCondition);
+        $credit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=0 AND date BETWEEN :sd AND :ed" . $projCondition);
+        $contraDebit  = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=1 AND type='Payment' AND date BETWEEN :sd AND :ed" . $projCondition);
+        $contraCredit = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=1 AND type='Receipt' AND date BETWEEN :sd AND :ed" . $projCondition);
+        $journalDebit  = $sum("SELECT SUM(amount) FROM journalvoucher WHERE debitacnt=:id AND date BETWEEN :sd AND :ed" . $projCondition);
+        $journalCredit = $sum("SELECT SUM(amount) FROM journalvoucher WHERE creditacnt=:id AND date BETWEEN :sd AND :ed" . $projCondition);
+        return ($credit + $contraCredit + $journalCredit) - ($debit + $contraDebit + $journalDebit);
+    }
+
     public function actionTrialbalance()
     {
         $connection = Yii::$app->db;
+        // projectID=0 (or absent) means "All Projects" — same behaviour
+        // as before this field existed. Any other value restricts every
+        // transaction pulled into the Trial Balance to vouchers/journal
+        // entries whose own project_id matches the selected project.
+        $trialProjectId = (!empty($_POST['projectID']) && (int)$_POST['projectID'] > 0) ? (int)$_POST['projectID'] : null;
         $startdate=date('d-m-Y',strtotime($_POST['fromdate']));
         $enddate=date('d-m-Y',strtotime($_POST['todate']));
         if($_POST['fromdate']!='' && $_POST['todate']!=''):
@@ -8421,6 +8413,14 @@ public function beforeAction($action)
         $command=$connection->createCommand($sql);
         $dataReader=$command->query();
         $dataProvider=$dataReader->readAll();//print_r($dataProvider);exit;
+        $trialProjectName = '';
+        if ($trialProjectId) {
+            $trialProjectName = Yii::$app->db->createCommand(
+                "SELECT Name FROM projects WHERE Project_Id=:pid",
+                [':pid' => $trialProjectId]
+            )->queryScalar();
+        }
+        $trialProjectHeading = $trialProjectName ? '<h5>'.htmlspecialchars($trialProjectName).'</h5>' : '';
         $datarows='';
         $month=date('m');
         if($month=='01' || $month=='02' || $month=='03'):
@@ -8432,6 +8432,7 @@ public function beforeAction($action)
             $dateinfo='<div class="row list-head">
                             <div class="col-md-12 text-center type">
                                 <h5>Geotech Offshore Structures (P) Ltd</h5>
+                                '.$trialProjectHeading.'
                                 Trial Balance From <span class="date"><em class="cal-icon icon-calendar1"></em>'.date('d-m-Y',strtotime($_POST['fromdate'])).'</span> to <span class="date"><em class="cal-icon icon-calendar1"></em>'.date('d-m-Y',strtotime($_POST['todate'])).'</span>
                                 <div align="right"><!--<a href="'.Yii::$app->request->baseUrl.'/financerequests/printtrialbalance'.$str.'" target="_blank"><i class="glyphicon glyphicon-print"></i>Print</a>&nbsp&nbsp&nbsp
                                 <a href="'.Yii::$app->request->baseUrl.'/financerequests/exporttrialbalance'.$str.'" target="_blank"><i class="glyphicon glyphicon-export"></i>Export</a>-->'.$export.'
@@ -8441,6 +8442,7 @@ public function beforeAction($action)
             $dateinfo='<div class="row list-head">
             <div class="col-md-12 text-center type">
                 <h5>Geotech Offshore Structures (P) Ltd</h5>
+                '.$trialProjectHeading.'
                 Trial Balance as on <span class="date"><em class="cal-icon icon-calendar1"></em>'.date("d/m/Y").'</span>
                 <div align="right"><!--<a href="'.Yii::$app->request->baseUrl.'/financerequests/printtrialbalance'.$str.'" target="_blank"><i class="glyphicon glyphicon-print"></i>Print</a>&nbsp&nbsp&nbsp
                 <a href="'.Yii::$app->request->baseUrl.'/financerequests/exporttrialbalance'.$str.'" target="_blank"><i class="glyphicon glyphicon-export"></i>Export</a>-->'.$export.'
@@ -8452,67 +8454,76 @@ public function beforeAction($action)
         $totalcredit=0;
         $datarows.='<div class="row"><div class="table-wrpr"><table class="table table-bordered"><thead style="border-bottom: #CCC solid 2px;">
                     <tr><th>Account Head</th><th>Debit</th><th>Credit</th></tr></thead><tbody>';
-        //foreach($dataProvider AS $key=>$data):
-            //$type=AccountTypes::model()->findByPk($data['type_id'])->name;
-            //$type=AccountTypes::findOne($data['type_id'])->name;
-            //$datarows.='<tr><td class="table-subhead" colspan="3"><strong>'.$type.'</strong></td></tr>';
-            //$sql2="SELECT id,name FROM accounts_item WHERE account_type ='".$data['type_id']."' ORDER BY name ASC ";
-                   
-                   
-            foreach($dataProvider AS $key=>$data):
+
+        // Current Assets / Current Liabilities are reclassified per-account
+        // by live balance sign (debit = Current Assets, credit = Current
+        // Liabilities), and accounts carrying either label can live under
+        // ANY Account Type (Bank, Assets, Liabilities, etc — see
+        // subgroup_accounts). Rather than rendering that sub-heading once
+        // per Account Type section (producing several separate "Current
+        // Assets"/"Current Liabilities" blocks scattered through the
+        // report), pull those accounts out of their native Account Type
+        // entirely and render ONE combined section per label at the end.
+        $currentAssetRows = [];
+        $currentLiabilityRows = [];
+
+        foreach($dataProvider AS $key=>$data):
             $type=AccountTypes::find()->where(['type_id'=>$data['type_id']])->ORDERBY(['name'=>SORT_ASC])->one();
-            
-            //$sql2="SELECT id,name FROM accounts_item WHERE account_type ='".$data['type_id']."' AND Status=0 ORDER BY name ASC ";
+
             $sql2="
-            SELECT accitem.id as id,accitem.name as name, accsub.name as subgrp_name 
-            FROM accounts_item as accitem 
-            LEFT JOIN subgroup_accounts as subacc ON subacc.account_id = accitem.id 
-            LEFT JOIN accounts_sub as accsub ON accsub.id = subacc.subgrp_id 
-            WHERE accitem.account_type ='".$data['type_id']."' AND accitem.Status=0 
+            SELECT accitem.id as id,accitem.name as name, accsub.name as subgrp_name
+            FROM accounts_item as accitem
+            LEFT JOIN subgroup_accounts as subacc ON subacc.account_id = accitem.id
+            LEFT JOIN accounts_sub as accsub ON accsub.id = subacc.subgrp_id
+            WHERE accitem.account_type ='".$data['type_id']."' AND accitem.Status=0
             ORDER BY accsub.name, accitem.name ASC";
 
             $command=$connection->createCommand($sql2);
             $dataReader=$command->query();
             $accounts=$dataReader->readAll();
-            
+
             $accountrows='';
             $gdebittot=0;
             $gcredittot=0;
             $subgrp_name = '';
             foreach($accounts AS $account):
-                if($account['subgrp_name'] != $subgrp_name)
-                    $accountrows.="<tr><td colspan='3' style='padding-left: 15px;'><b>".$account['subgrp_name']."</b></td></tr>";
-                $subgrp_name = $account['subgrp_name'];
                 $sql3="SELECT balance FROM ledger_openingbalance WHERE accountid='".$account['id']."' ";
                 $command=$connection->createCommand($sql3);
                 $dataReader=$command->query();
                 $result=$dataReader->read();
-                $openingbal=$result['balance'];
+                $openingbal=$result ? $result['balance'] : 0;
                 if($_POST['fromdate']!=''):
                     $initialdate='2013-04-01';
                     $enddate=date('Y-m-d',strtotime($_POST['todate']));
 
                     $accounthead=$account['id'];
-                    $command = Yii::$app->db->createCommand("CALL GetTrialBalance(:startdate, :currentdate,:accounthead,@outval)");
-                    $command->bindParam(":startdate",$initialdate);
-                    $command->bindParam(":currentdate", $enddate);
-                    $command->bindParam(":accounthead", $accounthead);
-                    $command->query();
-                    //print_r($command);exit;
-                    $openingbalance = $openingbal + (Yii::$app->db->createCommand("select @outval as result;")->queryScalar());
+                    // NOTE: dead CALL GetTrialBalance(...) removed — see
+                    // the _trialBalanceMovement() helper's comment above
+                    // actionTrialbalance() for why.
+                    $openingbalance = $openingbal + $this->_trialBalanceMovement($accounthead, $initialdate, $enddate, $trialProjectId);
                 else:
                     $initialdate='2013-04-01';
                     $enddate=date('Y-m-d');
 
                     $accounthead=$account['id'];
-                    $command = Yii::$app->db->createCommand("CALL GetTrialBalance(:startdate, :currentdate,:accounthead,@outval)");
-                    $command->bindParam(":startdate",$initialdate);
-                    $command->bindParam(":currentdate", $enddate);
-                    $command->bindParam(":accounthead", $accounthead);
-                    $command->query();
-                    //print_r($command);exit;
-                    $openingbalance = $openingbal + (Yii::$app->db->createCommand("select @outval as result;")->queryScalar());
+                    $openingbalance = $openingbal + $this->_trialBalanceMovement($accounthead, $initialdate, $enddate, $trialProjectId);
                 endif;
+
+                $effectiveGroup = $account['subgrp_name'];
+                if ($effectiveGroup === 'Current Assets' || $effectiveGroup === 'Current Liabilities') {
+                    // Debit-normal balance ($openingbalance < 0 in this
+                    // function's convention, per the debit/credit block
+                    // below) = Current Assets; credit-normal = Current
+                    // Liabilities.
+                    $effectiveGroup = ($openingbalance < 0) ? 'Current Assets' : 'Current Liabilities';
+                    if ($effectiveGroup === 'Current Assets') {
+                        $currentAssetRows[] = ['account' => $account, 'openingbalance' => $openingbalance];
+                    } else {
+                        $currentLiabilityRows[] = ['account' => $account, 'openingbalance' => $openingbalance];
+                    }
+                    continue;
+                }
+
                 if($openingbalance!=0):
                     if($openingbalance<0):
                         $debit=abs($openingbalance);
@@ -8530,8 +8541,6 @@ public function beforeAction($action)
 
                     $deb=str_replace( ',', '', $debitbal );
                     $cr=str_replace( ',', '', $credit );
-                    //$gdebittot=$gdebittot + (int)$deb;
-                    //$gcredittot=$gcredittot + (int)$cr;
 
                     $gdebittot=$gdebittot + (float)$deb;
                     $gcredittot=$gcredittot + (float)$cr;
@@ -8542,21 +8551,62 @@ public function beforeAction($action)
                 $datarows.="<tr><td colspan='3' style='background-color: #f1f1f1;font-size: 15px;'><b>".$type->name."</b></td></tr>";
                 $datarows.=$accountrows;
                 $datarows.="<tr>
-                        <td style='text-align: center;'>Group Total</td>
-                        <td style='text-align: right;'>".number_format((float)$gdebittot, 2)."</td>
-                        <td style='text-align: right;'>".number_format((float)$gcredittot, 2)."</td>
+                        <td style='text-align: center;'><b>Group Total</b></td>
+                        <td style='text-align: right;'><b>".number_format((float)$gdebittot, 2)."</b></td>
+                        <td style='text-align: right;'><b>".number_format((float)$gcredittot, 2)."</b></td>
 
                         </tr>";
             }
-            //$openingbalance = Yii::app()->db->createCommand("select @outval as result;")->queryScalar();
             $deb=str_replace( ',', '', $gdebittot );
             $cr=str_replace( ',', '', $gcredittot );
-            //$totaldebit=$totaldebit + $deb;
-            //$totalcredit=$totalcredit + $cr;
 
             $totaldebit=$totaldebit + (float)$deb;
             $totalcredit=$totalcredit + (float)$cr;
 
+        endforeach;
+
+        // Render the two combined Current Assets / Current Liabilities
+        // sections once each, pooling accounts from every Account Type.
+        foreach ([['label' => 'Current Assets', 'rows' => $currentAssetRows], ['label' => 'Current Liabilities', 'rows' => $currentLiabilityRows]] as $group):
+            if (empty($group['rows'])) continue;
+            usort($group['rows'], function($a, $b) {
+                return strcmp($a['account']['name'], $b['account']['name']);
+            });
+            $accountrows='';
+            $gdebittot=0;
+            $gcredittot=0;
+            foreach($group['rows'] AS $row):
+                $account = $row['account'];
+                $openingbalance = $row['openingbalance'];
+                if($openingbalance<0):
+                    $debit=abs($openingbalance);
+                    $debitbal=number_format((float)$debit, 2);
+                    $credit='';
+                else:
+                    $debitbal='';
+                    $credit=number_format((float)$openingbalance, 2);
+                endif;
+                $accountrows.="<tr>
+                    <td style='padding-left: 25px;'>".$account['name']."</td>
+                    <td style='text-align: right;'>".$debitbal."</td>
+                    <td style='text-align: right;'>".$credit."</td>
+                    </tr>";
+                $deb=str_replace( ',', '', $debitbal );
+                $cr=str_replace( ',', '', $credit );
+                $gdebittot=$gdebittot + (float)$deb;
+                $gcredittot=$gcredittot + (float)$cr;
+            endforeach;
+            if($gdebittot!=0 || $gcredittot!=0 ){
+                $datarows.="<tr><td colspan='3' style='background-color: #f1f1f1;font-size: 15px;'><b>".$group['label']."</b></td></tr>";
+                $datarows.=$accountrows;
+                $datarows.="<tr>
+                        <td style='text-align: center;'><b>Group Total</b></td>
+                        <td style='text-align: right;'><b>".number_format((float)$gdebittot, 2)."</b></td>
+                        <td style='text-align: right;'><b>".number_format((float)$gcredittot, 2)."</b></td>
+                        </tr>";
+            }
+            $totaldebit=$totaldebit + $gdebittot;
+            $totalcredit=$totalcredit + $gcredittot;
         endforeach;
 
         $datarows.="<tr>
@@ -8626,31 +8676,22 @@ public function beforeAction($action)
                 $command=$connection->createCommand($sql3);
                 $dataReader=$command->query();
                 $result=$dataReader->read();
-                $openingbal=$result['balance'];
+                $openingbal=$result ? $result['balance'] : 0;
                 if($_GET['startdate']!=''):
                     $initialdate='2013-04-01';
                     $enddate=date('Y-m-d',strtotime($_GET['enddate']));
 
                     $accounthead=$account['id'];
-                    $command = Yii::$app->db->createCommand("CALL GetTrialBalance(:startdate, :currentdate,:accounthead,@outval)");
-                    $command->bindParam(":startdate",$initialdate);
-                    $command->bindParam(":currentdate", $enddate);
-                    $command->bindParam(":accounthead", $accounthead);
-                    $command->query();
-                    //print_r($command);exit;
-                    $openingbalance = $openingbal + (Yii::$app->db->createCommand("select @outval as result;")->queryScalar());
+                    // NOTE: dead CALL GetTrialBalance(...) removed — see
+                    // the _trialBalanceMovement() helper's comment above
+                    // actionTrialbalance() for why.
+                    $openingbalance = $openingbal + $this->_trialBalanceMovement($accounthead, $initialdate, $enddate);
                 else:
                     $initialdate='2013-04-01';
                     $enddate=date('Y-m-d');
 
                     $accounthead=$account['id'];
-                    $command = Yii::$app->db->createCommand("CALL GetTrialBalance(:startdate, :currentdate,:accounthead,@outval)");
-                    $command->bindParam(":startdate",$initialdate);
-                    $command->bindParam(":currentdate", $enddate);
-                    $command->bindParam(":accounthead", $accounthead);
-                    $command->query();
-                    //print_r($command);exit;
-                    $openingbalance = $openingbal + (Yii::$app->db->createCommand("select @outval as result;")->queryScalar());
+                    $openingbalance = $openingbal + $this->_trialBalanceMovement($accounthead, $initialdate, $enddate);
                 endif;
                 if($openingbalance!=0):
                     if($openingbalance<0):
@@ -8797,31 +8838,25 @@ public function beforeAction($action)
                 $command=$connection->createCommand($sql3);
                 $dataReader=$command->query();
                 $result=$dataReader->read();
-                $openingbal=$result['balance'];
+                $openingbal=$result ? $result['balance'] : 0;
                 if($_POST['fromdate']!=''):
                     $initialdate='2013-04-01';
                     $enddate=date('Y-m-d',strtotime($_POST['todate']));
 
                     $accounthead=$account['id'];
-                    $command = Yii::$app->db->createCommand("CALL GetTrialBalance(:startdate, :currentdate,:accounthead,@outval)");
-                    $command->bindParam(":startdate",$initialdate);
-                    $command->bindParam(":currentdate", $enddate);
-                    $command->bindParam(":accounthead", $accounthead);
-                    $command->query();
-                    //print_r($command);exit;
-                    $openingbalance = $openingbal + (Yii::$app->db->createCommand("select @outval as result;")->queryScalar());
+                    // NOTE: dead CALL GetTrialBalance(...) removed — see
+                    // the _trialBalanceMovement() helper's comment above
+                    // actionTrialbalance() for why.
+                    $openingbalance = $openingbal + $this->_trialBalanceMovement($accounthead, $initialdate, $enddate);
                 else:
                     $initialdate='2013-04-01';
                     $enddate=date('Y-m-d');
 
                     $accounthead=$account['id'];
-                    $command = Yii::$app->db->createCommand("CALL GetTrialBalance(:startdate, :currentdate,:accounthead,@outval)");
-                    $command->bindParam(":startdate",$initialdate);
-                    $command->bindParam(":currentdate", $enddate);
-                    $command->bindParam(":accounthead", $accounthead);
-                    $command->query();
-                    //print_r($command);exit;
-                    $openingbalance = $openingbal + (Yii::$app->db->createCommand("select @outval as result;")->queryScalar());
+                    // NOTE: dead CALL GetTrialBalance(...) removed — see
+                    // the _trialBalanceMovement() helper's comment above
+                    // actionTrialbalance() for why.
+                    $openingbalance = $openingbal + $this->_trialBalanceMovement($accounthead, $initialdate, $enddate);
                 endif;
                 if($openingbalance!=0):
                     if($openingbalance<0):
@@ -8969,31 +9004,25 @@ public function beforeAction($action)
                 $command=$connection->createCommand($sql3);
                 $dataReader=$command->query();
                 $result=$dataReader->read();
-                $openingbal=$result['balance'];
+                $openingbal=$result ? $result['balance'] : 0;
                 if($_POST['fromdate']!=''):
                     $initialdate='2013-04-01';
                     $enddate=date('Y-m-d',strtotime($_POST['todate']));
 
                     $accounthead=$account['id'];
-                    $command = Yii::$app->db->createCommand("CALL GetTrialBalance(:startdate, :currentdate,:accounthead,@outval)");
-                    $command->bindParam(":startdate",$initialdate);
-                    $command->bindParam(":currentdate", $enddate);
-                    $command->bindParam(":accounthead", $accounthead);
-                    $command->query();
-                    //print_r($command);exit;
-                    $openingbalance = $openingbal + (Yii::$app->db->createCommand("select @outval as result;")->queryScalar());
+                    // NOTE: dead CALL GetTrialBalance(...) removed — see
+                    // the _trialBalanceMovement() helper's comment above
+                    // actionTrialbalance() for why.
+                    $openingbalance = $openingbal + $this->_trialBalanceMovement($accounthead, $initialdate, $enddate);
                 else:
                     $initialdate='2013-04-01';
                     $enddate=date('Y-m-d');
 
                     $accounthead=$account['id'];
-                    $command = Yii::$app->db->createCommand("CALL GetTrialBalance(:startdate, :currentdate,:accounthead,@outval)");
-                    $command->bindParam(":startdate",$initialdate);
-                    $command->bindParam(":currentdate", $enddate);
-                    $command->bindParam(":accounthead", $accounthead);
-                    $command->query();
-                    //print_r($command);exit;
-                    $openingbalance = $openingbal + (Yii::$app->db->createCommand("select @outval as result;")->queryScalar());
+                    // NOTE: dead CALL GetTrialBalance(...) removed — see
+                    // the _trialBalanceMovement() helper's comment above
+                    // actionTrialbalance() for why.
+                    $openingbalance = $openingbal + $this->_trialBalanceMovement($accounthead, $initialdate, $enddate);
                 endif;
                 if($openingbalance!=0):
                     if($openingbalance<0):
@@ -9099,19 +9128,16 @@ public function beforeAction($action)
                     $command=$connection->createCommand($sql3);
                     $dataReader=$command->query();
                     $result=$dataReader->read();
-                    $openingbal=$result['balance'];
+                    $openingbal=$result ? $result['balance'] : 0;
 
                     $initialdate='2013-04-01';
                     $enddate=date('Y-m-d');
 
                     $accounthead=$account['id'];
-                    $command = Yii::$app->db->createCommand("CALL GetTrialBalance(:startdate, :currentdate,:accounthead,@outval)");
-                    $command->bindParam(":startdate",$initialdate);
-                    $command->bindParam(":currentdate", $enddate);
-                    $command->bindParam(":accounthead", $accounthead);
-                    $command->query();
-                    //print_r($command);exit;
-                    $openingbalance = $openingbal + (Yii::$app->db->createCommand("select @outval as result;")->queryScalar());
+                    // NOTE: dead CALL GetTrialBalance(...) removed — see
+                    // the _trialBalanceMovement() helper's comment above
+                    // actionTrialbalance() for why.
+                    $openingbalance = $openingbal + $this->_trialBalanceMovement($accounthead, $initialdate, $enddate);
 
                     if($openingbalance!=0):
                         //$nocount++;
@@ -9270,7 +9296,7 @@ public function beforeAction($action)
                 $dataReader=$command->query();
                 $result=$dataReader->read();
                 if(!empty($result)){
-                    $openingbal=$result['balance'];
+                    $openingbal=$result ? $result['balance'] : 0;
                 }else{
                     $openingbal=0;
                 }
@@ -9278,25 +9304,19 @@ public function beforeAction($action)
                     $initialdate='2013-04-01';
                     $enddate=date('Y-m-d',strtotime($_GET['enddate']));
                     $accounthead=$account['id'];
-                    $command = Yii::$app->db->createCommand("CALL GetTrialBalance(:startdate, :currentdate,:accounthead,@outval)");
-                    $command->bindParam(":startdate",$initialdate);
-                    $command->bindParam(":currentdate", $enddate);
-                    $command->bindParam(":accounthead", $accounthead);
-                    $command->query();
-                    //print_r($command);exit;
-                    $openingbalance = $openingbal + (Yii::$app->db->createCommand("select @outval as result;")->queryScalar());
+                    // NOTE: dead CALL GetTrialBalance(...) removed — see
+                    // the _trialBalanceMovement() helper's comment above
+                    // actionTrialbalance() for why.
+                    $openingbalance = $openingbal + $this->_trialBalanceMovement($accounthead, $initialdate, $enddate);
                 else:
                     $initialdate='2013-04-01';
                     $enddate=date('Y-m-d');
                     //echo $enddate;exit;
                     $accounthead=$account['id'];
-                    $command = Yii::$app->db->createCommand("CALL GetTrialBalance(:startdate, :currentdate,:accounthead,@outval)");
-                    $command->bindParam(":startdate",$initialdate);
-                    $command->bindParam(":currentdate", $enddate);
-                    $command->bindParam(":accounthead", $accounthead);
-                    $command->query();
-                    //print_r($command);exit;
-                    $openingbalance = $openingbal + (Yii::$app->db->createCommand("select @outval as result;")->queryScalar());
+                    // NOTE: dead CALL GetTrialBalance(...) removed — see
+                    // the _trialBalanceMovement() helper's comment above
+                    // actionTrialbalance() for why.
+                    $openingbalance = $openingbal + $this->_trialBalanceMovement($accounthead, $initialdate, $enddate);
                 endif;
                 if($openingbalance!=0):
                     if($openingbalance<0):
@@ -9376,25 +9396,16 @@ public function beforeAction($action)
                     $enddate=date('Y-m-d',strtotime($enddate));
 
                     $accounthead=$account['id'];
-                    $command = Yii::$app->db->createCommand("CALL GetTrialBalance(:startdate, :currentdate,:accounthead,@outval)");
-                    $command->bindParam(":startdate",$initialdate);
-                    $command->bindParam(":currentdate", $enddate);
-                    $command->bindParam(":accounthead", $accounthead);
-                    $command->query();
-                    //print_r($command);exit;
-                    $openingbalance = (Yii::$app->db->createCommand("select @outval as result;")->queryScalar());
+                    // NOTE: dead CALL GetTrialBalance(...) removed — see
+                    // the _trialBalanceMovement() helper's comment above
+                    // actionTrialbalance() for why.
+                    $openingbalance = $this->_trialBalanceMovement($accounthead, $initialdate, $enddate);
                 else:
                     $initialdate='2013-04-01';
                     $enddate=date('Y-m-d');
 
                     $accounthead=$account['id'];
-                    $command = Yii::$app->db->createCommand("CALL GetTrialBalance(:startdate, :currentdate,:accounthead,@outval)");
-                    $command->bindParam(":startdate",$initialdate);
-                    $command->bindParam(":currentdate", $enddate);
-                    $command->bindParam(":accounthead", $accounthead);
-                    $command->query();
-                    //print_r($command);exit;
-                    $openingbalance = (Yii::$app->db->createCommand("select @outval as result;")->queryScalar());
+                    $openingbalance = $this->_trialBalanceMovement($accounthead, $initialdate, $enddate);
                 endif;
                 if($openingbalance!=0):
                     if($openingbalance<0):
@@ -9823,7 +9834,7 @@ public function beforeAction($action)
        // }
         
         if($bankid!='0')
-            $sql.=" (bank_id='".$bankid."' OR account_id='".$bankid."') ".$condition;
+            $sql.=" (bank_id='".$bankid."' OR account_id='".$bankid."' OR creditacnt='".$bankid."') ".$condition;
         $sql.="AND payment='2' AND date BETWEEN '$startdate' AND '$enddate' ORDER BY UNIX_TIMESTAMP(date) ASC";
         //echo $sql;exit;
         $command=$connection->createCommand($sql);
@@ -10177,7 +10188,7 @@ public function beforeAction($action)
                         </thead>
                         <tbody>';
 
-        $sql="SELECT id,name FROM accounts_sub WHERE master_id='1' AND Status=0 ORDER BY sortorder ASC,id DESC";
+        $sql="SELECT id,name FROM accounts_sub WHERE master_id='1' AND Status=0 AND name != 'Investments' ORDER BY sortorder ASC,id DESC";
         $command=$connection->createCommand($sql);
         $dataReader=$command->query();
         $subgroups=$dataReader->readAll();
@@ -10282,6 +10293,160 @@ public function beforeAction($action)
 
     }
 
+    // Shared helper: the date of the MOST RECENT journal entry crediting
+    // "Contract Income" for this project — mirrors
+    // ProjectsmainController::_cfLatestContractIncomeDate (duplicated
+    // here rather than called cross-controller, matching this
+    // codebase's existing pattern of controller-local helpers). Used by
+    // actionCfprojectexpenditure/actionCfprojectexpenditurebreakdown to
+    // cap the expenditure total at the latest billed date — see their
+    // comments.
+    private function _cfLatestContractIncomeDate($pid)
+    {
+        $connection = \Yii::$app->db;
+        $contractIncomeId = $connection->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return null;
+        }
+
+        $latestDate = $connection->createCommand(
+            "SELECT MAX(date) FROM journalvoucher WHERE creditacnt = :cid AND project_id = :pid",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryScalar();
+
+        return $latestDate ?: null;
+    }
+
+    // Cashflow Dashboard "Project Expenditure" panel: the same
+    // "Project Expenditure Total" figure shown at the bottom of the
+    // actionProexpenditure() report (every account under a master_id=1
+    // subgroup, excluding "Investments", with account_type IN (5,8,6),
+    // summed by closing balance).
+    //
+    // DATE CAP: expense should match income — once Contract Income has
+    // been credited (billed) at least once, this total is capped at the
+    // LATEST such credit date (see _cfLatestContractIncomeDate): the sum
+    // covers every expense from project inception THROUGH that date,
+    // and stays frozen there — any expense posted after that date is
+    // excluded — until the NEXT Contract Income credit extends the cap
+    // further. Before any Contract Income has ever been credited, there
+    // is no cap and the full project-to-date range is used (unchanged
+    // prior behaviour).
+    public function actionCfprojectexpenditure()
+    {
+        $connection = \Yii::$app->db;
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $projectid = $projuser->projectid;
+
+        $capDate = $this->_cfLatestContractIncomeDate($projectid);
+        $startdate = $capDate ? '2013-04-01' : '';
+        $enddate = $capDate ? $capDate : '';
+
+        $subgroups = $connection->createCommand(
+            "SELECT id FROM accounts_sub WHERE master_id='1' AND Status=0 AND name != 'Investments'"
+        )->queryColumn();
+
+        $projexptot = 0;
+        foreach ($subgroups as $subgrpId) {
+            $accounts = $connection->createCommand(
+                "SELECT DISTINCT b.id FROM subgroup_accounts AS a
+                 INNER JOIN accounts_item AS b ON a.account_id = b.id
+                 WHERE a.subgrp_id=:sid AND a.accountschedule_id=0 AND b.account_type IN (5,8,6)",
+                [':sid' => $subgrpId]
+            )->queryColumn();
+
+            foreach ($accounts as $acctId) {
+                $openingbal = $connection->createCommand(
+                    "SELECT balance FROM ledger_openingbalance WHERE accountid=:id",
+                    [':id' => $acctId]
+                )->queryScalar();
+                $openingbal = $openingbal ?: 0;
+                $closingbal = $openingbal + $this->closingbalance($acctId, $projectid, $startdate, $enddate);
+                $projexptot += abs($closingbal);
+            }
+        }
+
+        // Target = 90% of the project's contract value (projects.project_value).
+        $projectValue = $connection->createCommand(
+            "SELECT project_value FROM projects WHERE Project_Id=:pid",
+            [':pid' => $projectid]
+        )->queryScalar();
+        $target = ($projectValue ?: 0) * 0.9;
+
+        return json_encode([
+            'target' => round($target, 2),
+            'error' => 'No',
+            'total' => round($projexptot, 2),
+        ]);
+    }
+
+    // Project Expenditure panel breakdown (Cashflow Dashboard tooltip):
+    // same computation as actionCfprojectexpenditure — INCLUDING the
+    // same latest-Contract-Income-credit date cap (see that action's
+    // comment) — but instead of a single total, buckets every
+    // contributing account's closing balance by its Project Expenditure
+    // group (accounts_sub, via subgroup_accounts) for the click-to-open
+    // bar chart — one bar per group, each carrying its individual
+    // contributing account heads (name + amount) for a hover breakdown,
+    // same shape as actionCfwipbreakdown() in ProjectsmainController.
+    public function actionCfprojectexpenditurebreakdown()
+    {
+        $connection = \Yii::$app->db;
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $projectid = $projuser->projectid;
+
+        $capDate = $this->_cfLatestContractIncomeDate($projectid);
+        $startdate = $capDate ? '2013-04-01' : '';
+        $enddate = $capDate ? $capDate : '';
+
+        $subgroups = $connection->createCommand(
+            "SELECT id, name FROM accounts_sub WHERE master_id='1' AND Status=0 AND name != 'Investments'"
+        )->queryAll();
+
+        $rows = [];
+        foreach ($subgroups as $subgroup) {
+            $accounts = $connection->createCommand(
+                "SELECT DISTINCT b.id, b.name FROM subgroup_accounts AS a
+                 INNER JOIN accounts_item AS b ON a.account_id = b.id
+                 WHERE a.subgrp_id=:sid AND a.accountschedule_id=0 AND b.account_type IN (5,8,6)",
+                [':sid' => $subgroup['id']]
+            )->queryAll();
+
+            $groupTotal = 0;
+            $members = [];
+            foreach ($accounts as $acct) {
+                $openingbal = $connection->createCommand(
+                    "SELECT balance FROM ledger_openingbalance WHERE accountid=:id",
+                    [':id' => $acct['id']]
+                )->queryScalar();
+                $openingbal = $openingbal ?: 0;
+                $closingbal = $openingbal + $this->closingbalance($acct['id'], $projectid, $startdate, $enddate);
+                $amount = abs($closingbal);
+                if ($amount > 0) {
+                    $members[] = ['name' => $acct['name'], 'amount' => round($amount, 2)];
+                    $groupTotal += $amount;
+                }
+            }
+
+            if ($groupTotal > 0) {
+                usort($members, function ($a, $b) { return $b['amount'] <=> $a['amount']; });
+                $rows[] = ['name' => $subgroup['name'], 'amount' => round($groupTotal, 2), 'members' => $members];
+            }
+        }
+        usort($rows, function ($a, $b) { return $b['amount'] <=> $a['amount']; });
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+        ]);
+    }
+
     function closingbalance($acntid,$projid,$startdate,$enddate)
     {
         $connection = \Yii::$app->db;
@@ -10384,36 +10549,20 @@ public function beforeAction($action)
             $enddate=date('Y-m-d', strtotime($startdate1 .' -1 day'));
 
             $accounthead=$accountid;
-            $command = Yii::$app->db->createCommand("CALL GetLedgerBalance(:startdate, :currentdate,:place,:accounthead,:project,@outval)");
-            $command->bindParam(":startdate",$initialdate);
-            $command->bindParam(":currentdate", $enddate);
-
+            // NOTE: dead CALL GetLedgerBalance(...) removed — see
+            // actionLedger's identical fix/comment above for why (this
+            // function's own $openbalance display was already commented
+            // out below, so the CALL's result was never used at all here).
             $place=$projectid;
             $project=0;
-            $command->bindParam(":place", $place);
-            $command->bindParam(":accounthead", $accounthead);
-            $command->bindParam(":project", $project);
-            $command->query();
 
         else:
             $initialdate='2014-03-31';
             $enddate=date("Y",strtotime("-1 year")).'-03-31';
             //echo $initialdate.'<br>'.$enddate;exit;
             $accounthead=$accountid;
-            $command = Yii::$app->db->createCommand("CALL GetLedgerBalance(:startdate, :currentdate,:place,:accounthead,:project,@outval)");
-            $command->bindParam(":startdate",$initialdate);
-            $command->bindParam(":currentdate", $enddate);
-            /*if($_POST['place']==12):
-                $place='NULL';
-            else:
-                $place=$_POST['place'];
-            endif;*/
             $place=$projectid;
             $project=0;
-            $command->bindParam(":place", $place);
-            $command->bindParam(":accounthead", $accounthead);
-            $command->bindParam(":project", $project);
-            $command->query();
 
         endif;
         //echo $accounthead;exit;

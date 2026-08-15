@@ -2323,7 +2323,39 @@ class ChatbotController extends Controller
             if (trim($content) === '') continue;
             $messages[] = ['role' => $h['role'], 'content' => $content];
         }
-        $messages[] = ['role' => 'user', 'content' => $message];
+
+        // Optional document attachments (PDF/image) for this turn only
+        $documentsRaw = Yii::$app->request->post('documents', '');
+        $documents    = is_array($documentsRaw) ? $documentsRaw : (json_decode($documentsRaw, true) ?: []);
+        $allowedDocMediaTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+
+        if (!empty($documents)) {
+            $userContentBlocks = [];
+            foreach ($documents as $doc) {
+                $mediaType = $doc['media_type'] ?? '';
+                $data      = $doc['data'] ?? '';
+                if (!in_array($mediaType, $allowedDocMediaTypes, true) || $data === '') continue;
+
+                $blockType = ($mediaType === 'application/pdf') ? 'document' : 'image';
+                $userContentBlocks[] = [
+                    'type'   => $blockType,
+                    'source' => [
+                        'type'       => 'base64',
+                        'media_type' => $mediaType,
+                        'data'       => $data,
+                    ],
+                ];
+            }
+
+            if (!empty($userContentBlocks)) {
+                $userContentBlocks[] = ['type' => 'text', 'text' => $message];
+                $messages[] = ['role' => 'user', 'content' => $userContentBlocks];
+            } else {
+                $messages[] = ['role' => 'user', 'content' => $message];
+            }
+        } else {
+            $messages[] = ['role' => 'user', 'content' => $message];
+        }
 
         $tools = $this->toolDefinitions();
 

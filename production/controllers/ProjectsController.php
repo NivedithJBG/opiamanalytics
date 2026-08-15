@@ -453,6 +453,7 @@ class ProjectsController extends Controller
             $ts = strtotime($d);
             return $ts ? date('Y-m-d', $ts) : '';
         };
+        $bankAccount = \app\models\AccountsItem::find()->where(['projectid' => $id, 'account_type' => 2, 'Status' => 0])->one();
         echo json_encode([
             'error'         => 'No',
             'Project_Id'    => $p->Project_Id,
@@ -464,6 +465,7 @@ class ProjectsController extends Controller
             'client_name'   => $p->client_name,
             'location'      => $p->location,
             'wrkhours'      => $p->wrkhours,
+            'bank_account_id' => $bankAccount ? $bankAccount->id : '',
         ]);
     }
 
@@ -484,6 +486,15 @@ class ProjectsController extends Controller
         $p->wrkhours      = intval($_POST['wrkhrss'] ?? 0);
         if ($p->save(false)) {
             $connection = \Yii::$app->db;
+            // Bank account link lives on accounts_item.projectid (one bank
+            // account per project, same design actionCreate already uses).
+            // Clear any account currently linked to this project, then
+            // re-link the newly selected one — covers switching banks, and
+            // clearing the selection entirely (bankaccount posted empty).
+            $connection->createCommand("UPDATE accounts_item SET projectid=0 WHERE projectid=:pid AND account_type=2", [':pid' => $id])->execute();
+            if (!empty($_POST['bankaccount'])) {
+                $connection->createCommand("UPDATE accounts_item SET projectid=:pid WHERE id=:aid", [':pid' => $id, ':aid' => $_POST['bankaccount']])->execute();
+            }
             $uploadDir = Yii::getAlias('@webroot') . '/uploads/projects/';
             $allowed = ['pdf','doc','docx','xls','xlsx','jpg','jpeg','png'];
             $uid = Yii::$app->user->Id;
@@ -3938,6 +3949,58 @@ class ProjectsController extends Controller
 
         if ($saved === 0) { echo json_encode(['error'=>'Yes','errortext'=>'No valid file uploaded.']); return; }
         echo json_encode(['error'=>'No','saved'=>$saved]);
+    }
+
+    public function actionPdocgetcontent()
+    {
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+
+        $ids = $_POST['ids'] ?? [];
+        if (!is_array($ids)) $ids = [$ids];
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if (empty($ids)) { return ['error'=>'Yes','errortext'=>'No documents selected.']; }
+
+        $mediaTypeByExt = ['pdf'=>'application/pdf', 'jpg'=>'image/jpeg', 'jpeg'=>'image/jpeg', 'png'=>'image/png'];
+        $uploadDir = Yii::getAlias('@webroot') . '/uploads/projects/';
+        $maxTotalBytes = 25 * 1024 * 1024; // 25MB combined, comfortably under the API's 32MB request limit
+
+        $placeholders = [];
+        $params = [];
+        foreach ($ids as $i => $id) {
+            $ph = ":id$i";
+            $placeholders[] = $ph;
+            $params[$ph] = $id;
+        }
+        $rows = \Yii::$app->db->createCommand(
+            "SELECT id, filename, original_name FROM project_files WHERE id IN (" . implode(',', $placeholders) . ")",
+            $params
+        )->queryAll();
+
+        $files = [];
+        $totalBytes = 0;
+        foreach ($rows as $row) {
+            $ext = strtolower(pathinfo($row['filename'], PATHINFO_EXTENSION));
+            if (!isset($mediaTypeByExt[$ext])) continue; // skip anything not PDF/image (server-side re-validation)
+
+            $path = $uploadDir . $row['filename'];
+            if (!file_exists($path)) continue;
+
+            $totalBytes += filesize($path);
+            if ($totalBytes > $maxTotalBytes) {
+                return ['error'=>'Yes','errortext'=>'Selected documents are too large to send together (limit 25MB total). Please select fewer or smaller files.'];
+            }
+
+            $files[] = [
+                'id'            => (int)$row['id'],
+                'original_name' => $row['original_name'],
+                'media_type'    => $mediaTypeByExt[$ext],
+                'data'          => base64_encode(file_get_contents($path)),
+            ];
+        }
+
+        if (empty($files)) { return ['error'=>'Yes','errortext'=>'No valid PDF or image files found in the selection.']; }
+
+        return ['error'=>'No','files'=>$files];
     }
 
     public function actionDuplicate(){
@@ -19218,16 +19281,6 @@ public function actionActivitymusterprocess()
 
     }
 
-    public function actionRemoveiowschitem()
-    {
-        $model=IowWbsActivities::model()->findByPk($_POST['actid']);
-        $model->delete();
-        //$pricing=PricingEstimate::model()->deleteAll(array('condition'=>'activity_Id='.$_POST['actid'].''));
-        //$pricingres=PricingEstimateResources::model()->deleteAll(array('condition'=>'activity_id='.$_POST['actid'].''));
-        $arr = array('result' => $_POST['actid'],'error'=>'No');
-        echo json_encode($arr);
-    }
-
     public function actionGetprocess()
     {
         $connection = CActiveRecord::getDbConnection();
@@ -21241,11 +21294,11 @@ public function actionActivitymusterprocess()
          foreach ($resourcetypes as $key => $resourcetype) {
          if($key==0)
          {
-            $datarows.='<label>Resource Types</label>';   
+            $datarows.='<label>Resource Types</label>';
          }
-          $datarows.='<a  class="btn btn-primary rounded-coner-btn resourcesearch" data-id="'.$resourcetype->ResourceType_Id.'" href="javascript:void(0)">'.$resourcetype->Name.'</a>';   
+          $datarows.='<a  class="btn btn-primary rounded-coner-btn resourcesearch" data-id="'.$resourcetype->ResourceType_Id.'" href="javascript:void(0)">'.$resourcetype->Name.'</a>';
          }
-         $added=0; 
+         $added=0;
          $connection = $connection = \Yii::$app->db;
          $sqlactivity="SELECT * FROM estimateactivities WHERE activity_id=".$_POST['id']."";
         $command=$connection->createCommand($sqlactivity);
@@ -21302,7 +21355,7 @@ public function actionActivitymusterprocess()
                         </div>';
         foreach($resourcesadded AS $key=>$data){
         $sno++;
-        $res_type = Resourcetype::find()->where(['ResourceType_Id'=>$data['ResourceType_Id']])->one(); 
+        $res_type = Resourcetype::find()->where(['ResourceType_Id'=>$data['ResourceType_Id']])->one();
 
         if( ($data['ResourceType_Id'] == 26 && $data['fuel_type'] != null)  || ($data['ResourceType_Id'] == 24 && $data['fuel_type'] != null ))
         {
@@ -21319,7 +21372,7 @@ public function actionActivitymusterprocess()
                             $addedresource.='
 
                             <div class="row resmasterss res-masterrow'.$data['estactres_id'].'"  id="tempresrow'.$data['estactres_id'].'">
-                                        
+
                                         <div class="col-md-1 resmstrfrst">
                                         <span class="number">'.$sno.'</span>
                                         </div>
@@ -21329,40 +21382,40 @@ public function actionActivitymusterprocess()
                                             </div> -->
 
                                         <div class="col-md-2 type rsnamemastr">
-                                            
+
                                             <span>'.$res_type->Name.'</span>
                                         </div>
 
                                         <div class="col-md-2 type rsnamemastr">
-                                            
+
                                             <span>'.$resName.'</span>
                                         </div>
-                                        
+
                                         <div class="col-md-5 type vendor-column colmastr">
                                             <div class="row">
-                                            
+
                                             <div class="col-md-3 type rsmstrunt">
-                                                
+
                                                 <span>'.$unt.'</span>
                                             </div>
                                             <div class="col-md-3 type resmstrqty">
-                                                
+
                                                 <span id="allocateresourceqty'.$data['estactres_id'].'">'.$data['est_resource_quantity'].'</span>
                                                 <input class="form-control editallocateresourceqty" style="display:none;" type="text" id="editallocateresourceqty'.$data['estactres_id'].'" data-v="'.$data['estactres_id'].'" value="'.$data['est_resource_quantity'].'">
                                             </div>
                                             <div class="col-md-3 type resmstrrte" style="text-align: right;">
-                                                
+
                                                 <span id="allocateresourceunit'.$data['estactres_id'].'">'.number_format($data['est_resource_rate'],2).'</span>
                                                 <input class="form-control editallocateresourceunit" style="display:none;" type="text" id="editallocateresourceunit'.$data['estactres_id'].'" data-v="'.$data['estactres_id'].'" value="'.$data['est_resource_rate'].'">
                                             </div>
                                             <div class="col-md-3 amount-column type resmstrsmnt" style="text-align: right;">
-                                                
+
                                                 <span id="allocateres_amt'.$data['estactres_id'].'">'.number_format($data['est_resource_amount'],2).'</span>
                                             </div>
                                             </div>
                                         </div>
-                                        
-                                        
+
+
                                         <div class="col-md-2 icon-groups resmstrgrps">
                                             <a href="javascript:void(0);" class="btn btn-primary updatesallocateresourceunit icon-edit" data-v="'.$data['estactres_id'].'" id="updatesallocateresourceunit'.$data['estactres_id'].'" title="Edit Resource"></a>
                                             <a href="javascript:void(0);" style="display:none;" class="btn btn-primary savesallocateresourceunit icon-save" data-v="'.$data['estactres_id'].'" data-activity="'.$data['estactivity_id'].'" id="savesallocateresourceunit'.$data['estactres_id'].'" title="Save"></a>
@@ -21371,12 +21424,98 @@ public function actionActivitymusterprocess()
                                     </div>';
 
 
-                                } 
-                                
+                                }
+
 
 
          $arr = array('result' => $datarows,'activitynamerate'=>$activitynamerate,'activitynameval'=>$activitynameval ,'actvtyunit'=>$actvtyunit,'added'=>$added,'listadded'=>$addedresource,'error'=>'No');
          return json_encode($arr);
+    }
+
+    public function actionAllocationsearch()
+    {
+        $connection = \Yii::$app->db;
+        $activityId = (int)($_POST['activity_id'] ?? 0);
+        $restypeId  = (int)($_POST['restypeid'] ?? 0);
+        $search     = isset($_POST['resgroup']) ? trim($_POST['resgroup']) : '';
+
+        $sql = "SELECT r.Resource_Id, r.Name, r.Unit, r.ResourceType_Id, r.Resource_group_Id,
+                       rg.Resource_group_Name AS GroupName, rt.Name AS TypeName
+                FROM resources r
+                LEFT JOIN resource_group rg ON rg.Resource_group_Id = r.Resource_group_Id
+                LEFT JOIN resourcetype rt ON rt.ResourceType_Id = r.ResourceType_Id
+                WHERE r.Status = 0";
+        $params = [];
+        if ($restypeId > 0) {
+            $sql .= " AND r.ResourceType_Id = :restypeid";
+            $params[':restypeid'] = $restypeId;
+        }
+        if ($search !== '') {
+            $sql .= " AND r.Name LIKE :search";
+            $params[':search'] = '%' . $search . '%';
+        }
+        if ($activityId > 0) {
+            $sql .= " AND r.Resource_Id NOT IN (
+                        SELECT est_resource_id FROM estactivity_resources
+                        WHERE estactivity_id = :activityid AND est_resource_status = 0
+                      )";
+            $params[':activityid'] = $activityId;
+        }
+        $sql .= " ORDER BY rt.Name ASC, rg.Resource_group_Name ASC, r.Name ASC";
+
+        $rows = $connection->createCommand($sql, $params)->queryAll();
+
+        if (empty($rows)) {
+            $datarows = '<div style="text-align:center;">No Resources Found</div>';
+            return json_encode(['result' => $datarows, 'error' => 'No']);
+        }
+
+        // Group by Resource Type -> Resource Group
+        $grouped = [];
+        foreach ($rows as $row) {
+            $type  = $row['TypeName']  ?: 'Unassigned';
+            $group = $row['GroupName'] ?: 'Unassigned';
+            $grouped[$type][$group][] = $row;
+        }
+
+        $datarows = '';
+        $first = true;
+        foreach ($grouped as $typeName => $groups) {
+            $safeType = htmlspecialchars($typeName, ENT_QUOTES);
+            $collapseId = 'restype-collapse-' . preg_replace('/[^a-zA-Z0-9]/', '', $typeName);
+            $datarows .= '<div class="panel panel-default">'
+                       . '<div class="panel-heading">'
+                       . '<h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordionmast" href="#' . $collapseId . '">' . $safeType . '</a></h4>'
+                       . '</div>'
+                       . '<div id="' . $collapseId . '" class="panel-collapse collapse' . ($first ? ' in' : '') . '">'
+                       . '<div class="panel-body">';
+            $first = false;
+
+            foreach ($groups as $groupName => $groupRows) {
+                $safeGroup = htmlspecialchars($groupName, ENT_QUOTES);
+                $datarows .= '<div class="row resource-group-hdr" style="background:#e8f0f7;color:#2c3e50;font-weight:600;padding:6px 12px;margin:0;">'
+                           . '<span class="icon-folder" style="margin-right:5px;color:#5b8ab5;"></span>' . $safeGroup
+                           . '</div>';
+
+                foreach ($groupRows as $data) {
+                    $safeName = htmlspecialchars($data['Name'], ENT_QUOTES);
+                    $safeUnit = htmlspecialchars($data['Unit'] ?? '', ENT_QUOTES);
+                    $datarows .= '<div class="row resourcetype' . $data['ResourceType_Id'] . '" id="allocsearchrow' . $data['Resource_Id'] . '" style="align-items:center;padding:5px 12px;border-bottom:1px solid #eee;margin:0;">'
+                               . '<div class="col-md-4">' . $safeName . '</div>'
+                               . '<div class="col-md-2">' . $safeUnit . '</div>'
+                               . '<div class="col-md-2"><input type="text" class="form-control" id="quantity' . $data['Resource_Id'] . '" placeholder="Qty"></div>'
+                               . '<div class="col-md-2"><input type="text" class="form-control" id="srate' . $data['Resource_Id'] . '" placeholder="Rate"></div>'
+                               . '<div class="col-md-2" style="text-align:right;">'
+                               .     '<button type="button" class="btn btn-primary resource-add-btn" data-resid="' . $data['Resource_Id'] . '" data-restype="' . $data['ResourceType_Id'] . '" data-type="" title="Add"><span class="icon-add"></span></button>'
+                               . '</div>'
+                               . '</div>';
+                }
+            }
+
+            $datarows .= '</div></div></div>';
+        }
+
+        return json_encode(['result' => $datarows, 'error' => 'No']);
     }
 
     public function actionUpdateallocaterrated()
@@ -21411,10 +21550,10 @@ public function actionActivitymusterprocess()
         $sql1="UPDATE estimateactivities SET activity_rate=".$price." WHERE activity_id='".$dataProvider['estactivity_id']."'";
         $command=$connection->createCommand($sql1);
         $dataReader=$command->query();
-    
+
         $arr = array('result' => $_POST['PRID'],'restotal' => number_format($amount,2),'total' => number_format($price,2), 'error' => 'No');
         return json_encode($arr);
-         
+
     }
     //status active
     public function actionAddactivityresource()
@@ -21452,12 +21591,12 @@ public function actionActivitymusterprocess()
                     else{
                         $res_Rate = ($_POST['fuelrate'] * $_POST['fuelqty']);
                     }
-                    
+
                     $rate = ($res_Rate * $res_Qty);
 
                     if($_POST['fueltype'] != 'Power')
                     {
-                    
+
                         $sql="INSERT INTO estactivity_resources (estactivity_id,est_resource_id,est_resource_quantity,est_resource_rate,est_resource_amount,est_resource_status,fuel_type,fuel_vendor_id,fuel_rate,fuel_qty,hours_no,repair_cost) VALUES('".$_POST['EstActivity_Id']."','".$_POST['resid']."','".$res_Qty."','".$res_Rate."','".($rate)."','0','".$_POST['fueltype']."','" . $_POST['fuel_vendor'] . "','".$_POST['fuelrate']."','".$_POST['fuelqty']."','".$_POST['hoursno']."','".$_POST['repair']."')";
                     }else{
                         $sql="INSERT INTO estactivity_resources (estactivity_id,est_resource_id,est_resource_quantity,est_resource_rate,est_resource_amount,est_resource_status,fuel_type,fuel_vendor_id,fuel_rate,fuel_qty,hours_no,repair_cost,powerstatus) VALUES('".$_POST['EstActivity_Id']."','".$_POST['resid']."','".$res_Qty."','".$res_Rate."','".($rate)."','0','".$_POST['fueltype']."','" . $_POST['fuel_vendor'] . "','".$_POST['fuelrate']."','".$_POST['fuelqty']."','".$_POST['hoursno']."','".$_POST['repair']."','1')";
@@ -21477,7 +21616,7 @@ public function actionActivitymusterprocess()
                     $res_Qty = $_POST['hoursno'];
                     $res_Rate = ($_POST['fuelrate'] * $_POST['fuelqty']);
                     $rate = ($res_Rate * $res_Qty);
-                    
+
                     if($_POST['fueltype'] != 'Power')
                     {
                         $sql="INSERT INTO estactivity_resources (estactivity_id,est_resource_id,est_resource_quantity,est_resource_rate,est_resource_amount,est_resource_status,fuel_type,fuel_rate,fuel_qty,hours_no) VALUES('".$_POST['EstActivity_Id']."','".$_POST['resid']."','".$res_Qty."','".$res_Rate."','".($rate)."','0','".$_POST['fueltype']."','".$_POST['fuelrate']."','".$_POST['fuelqty']."','".$_POST['hoursno']."')";
@@ -21491,7 +21630,7 @@ public function actionActivitymusterprocess()
                     $sql="INSERT INTO estactivity_resources (estactivity_id,est_resource_id,est_resource_quantity,est_resource_rate,est_resource_amount,est_resource_status,lease_period) VALUES('".$_POST['EstActivity_Id']."','".$_POST['resid']."','".$_POST['leaseperiod']."','".$_POST['resourcerate']."','".($rate)."','0','".$_POST['leaseperiod']."')";
                 }
 
-                
+
 
 
 
@@ -21508,7 +21647,7 @@ public function actionActivitymusterprocess()
             $command=$connection->createCommand($sql1);
             $dataReader=$command->query();
 
-            
+
            /*  $rate=$_POST['quantity']*$_POST['srate'];
             $sql="INSERT INTO estactivity_resources (estactivity_id,est_resource_id,est_resource_quantity,est_resource_rate,est_resource_amount,est_resource_status) VALUES('".$_POST['EstActivity_Id']."','".$_POST['resid']."','".$_POST['quantity']."','".$_POST['srate']."','".($rate)."','0')";
             //echo $sql;exit;
@@ -21518,7 +21657,7 @@ public function actionActivitymusterprocess()
             $sql1="UPDATE estimateactivities SET activity_rate=activity_rate+".$rate."  WHERE activity_id='".$_POST['EstActivity_Id']."'";
             $command=$connection->createCommand($sql1);
             $dataReader=$command->query(); */
-            
+
             $sqltemvals="SELECT a.*,b.* FROM resources AS a
                     INNER JOIN estactivity_resources AS b ON  a.Resource_Id=b.est_resource_id
                     WHERE b.estactivity_id='".$_POST['EstActivity_Id']."' ORDER BY b.estactres_id DESC";
@@ -21546,7 +21685,7 @@ public function actionActivitymusterprocess()
             endforeach;
 
             $price=number_format($price,2);
-           
+
 
         $sqlactivity="SELECT * FROM estimateactivities WHERE activity_id=".$_POST['EstActivity_Id']."";
         $command=$connection->createCommand($sqlactivity);
@@ -21568,13 +21707,14 @@ public function actionActivitymusterprocess()
     {
         if(isset($_POST['resid'])):
             $connection = $connection = \Yii::$app->db;
-            $sql="SELECT estactivity_id,est_resource_amount AS Price FROM estactivity_resources WHERE estactres_id='".$_POST['resid']."'";
+            $sql="SELECT estactivity_id,est_resource_id,est_resource_amount AS Price FROM estactivity_resources WHERE estactres_id='".$_POST['resid']."'";
             $command=$connection->createCommand($sql);
             $dataReader=$command->query();
             $overheads=$dataReader->read();
             $sql="DELETE FROM estactivity_resources WHERE estactres_id='".$_POST['resid']."'";
             $command=$connection->createCommand($sql);
             $dataReader=$command->query();
+
             $sqltemvals="SELECT a.*,b.* FROM resources AS a
                     INNER JOIN estactivity_resources AS b ON  a.Resource_Id=b.est_resource_id
                     WHERE b.estactivity_id='".$_POST['activityid']."' ORDER BY a.Resource_Id";
@@ -21604,6 +21744,7 @@ public function actionActivitymusterprocess()
         endif;
     }
 //status active
+
     public function actionEquipments()
     {
         $connection = CActiveRecord::getDbConnection();

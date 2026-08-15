@@ -215,7 +215,7 @@ class Workgroups1Controller extends \yii\web\Controller
         if(isset($_POST['workid'])):
             $model= WorkgroupActivitiesNew::find()->where(['wbs_id'=>$_POST['workid']])->andwhere(['pricing_status'=>0])->one();
 
-           
+
         endif;
         if(!empty($model))
         {
@@ -225,90 +225,167 @@ class Workgroups1Controller extends \yii\web\Controller
             $arr = array('Id' => $_POST['workid'],'error'=>'No','errortext'=>'');
         }
 
-        
+
         return json_encode($arr);
-        
+
 
     }
 
     public function actionDeleteworkgroup()
     {
-        if(isset($_POST['workid'])):
-            $model= WorkgroupsNew::findOne($_POST['workid']);
-            $model->Status=1;
-            if($model->save(false)):
+        if(!isset($_POST['workid'])) return;
 
+        $workId = $_POST['workid'];
+        $force  = (bool)($_POST['force'] ?? false);
+        $connection = Yii::$app->db;
 
-                $connection = Yii::$app->db;
-                // Delete Item of Works
-                $sql="SELECT IOW_Id FROM itemofworks WHERE Workgroup_Id='".$_POST['workid']."'";
-                $command=$connection->createCommand($sql);
-                $dataReader=$command->query();
-                $ioworks=$dataReader->readAll();
-                 $totalduration=0;
+        $model = WorkgroupsNew::findOne($workId);
+        if (!$model) {
+            $arr = array('Id' => $workId,'error'=>'Yes','errortext'=>'Workgroup not found.');
+            return json_encode($arr);
+        }
 
-                foreach($ioworks AS $iow):
-                    $modeliow=itemofworks::findOne($iow['IOW_Id']);
-                    $sql="SELECT SUM(Budgeted_Duration) AS duration FROM  iowactivities WHERE IOW_Id='".$iow['IOW_Id']."'";
-                    $command=$connection->createCommand($sql);
-                    $dataReader=$command->query();
-                    $ioworksduration=$dataReader->read();
-                    $calcduration=($ioworksduration['duration']*$modeliow->Cycles)/$modeliow->Resourceunits;
-                    $totalduration=$totalduration+$calcduration;
-                endforeach;
+        // Data-integrity conflict check: block a permanent delete if any activity
+        // under this workgroup has reported progress, indents, POs, or work-order
+        // billing, unless the user has explicitly confirmed with force=1. Counted
+        // across every activity in the IOW, not just the first one found.
+        if (!$force) {
+            $wbsactivityIds = WorkgroupActivitiesNew::find()->where(['wbs_id' => $workId])->select('id')->column();
+            $activityCount = 0;
+            $totals = ['progress' => 0, 'indents' => 0, 'po' => 0, 'wo' => 0];
+            foreach ($wbsactivityIds as $wanId) {
+                $saId = (int)$connection->createCommand(
+                    "SELECT id FROM scheduleactivities WHERE activity_id = :aid LIMIT 1", [':aid' => $wanId]
+                )->queryScalar();
+                $counts = $this->countActivityDeleteConflicts($saId, $wanId);
+                if ($counts['progress'] || $counts['indents'] || $counts['po'] || $counts['wo']) $activityCount++;
+                $totals['progress'] += $counts['progress'];
+                $totals['indents']  += $counts['indents'];
+                $totals['po']       += $counts['po'];
+                $totals['wo']       += $counts['wo'];
+            }
 
-               
+            $conflicts = [];
+            if ($totals['progress']) $conflicts[] = $totals['progress'] . ' reported progress ' . ($totals['progress'] === 1 ? 'entry' : 'entries');
+            if ($totals['indents'])  $conflicts[] = $totals['indents'] . ' raised ' . ($totals['indents'] === 1 ? 'indent' : 'indents');
+            if ($totals['po'])       $conflicts[] = $totals['po'] . ' purchase ' . ($totals['po'] === 1 ? 'order' : 'orders') . ' (including any goods received against them)';
+            if ($totals['wo'])       $conflicts[] = $totals['wo'] . ' work ' . ($totals['wo'] === 1 ? 'order' : 'orders') . ' (including any measurement book billing against them)';
 
-                $sql="DELETE FROM itemofworks WHERE Workgroup_Id='".$_POST['workid']."'";
-                $command=$connection->createCommand($sql);
-                $dataReader=$command->query();
-                if(!empty($ioworks)){
-                    $sql="DELETE FROM iowactivities WHERE IOW_Id='".$iow['IOW_Id']."'";
-                    $command=$connection->createCommand($sql);
-                    $dataReader=$command->query();
-                    $sql="DELETE FROM gantt_links WHERE source='".$iow['IOW_Id']."' OR target='".$iow['IOW_Id']."' ";
-                    $command=$connection->createCommand($sql);
-                    $dataReader=$command->query();
+            if (!empty($conflicts)) {
+                $arr = array(
+                    'Id' => $workId, 'error' => 'Yes', 'conflict' => true,
+                    'errortext' => 'This IOW has ' . $activityCount . ' ' . ($activityCount === 1 ? 'activity' : 'activities') . ' with related data. Deleting it will also permanently delete: ' . implode('; ', $conflicts) . '. This cannot be undone.',
+                );
+                return json_encode($arr);
+            }
+        }
+
+        // Delete Item of Works (and every IOW's own activities/gantt links — not
+        // just the last one, unlike the old loop-variable-leak version of this).
+        $ioworks = $connection->createCommand(
+            "SELECT IOW_Id FROM itemofworks WHERE Workgroup_Id=:wid", [':wid' => $workId]
+        )->queryAll();
+
+        foreach ($ioworks as $iow) {
+            $connection->createCommand()->delete('iowactivities', ['IOW_Id' => $iow['IOW_Id']])->execute();
+            $connection->createCommand(
+                "DELETE FROM gantt_links WHERE source=:id OR target=:id", [':id' => $iow['IOW_Id']]
+            )->execute();
+        }
+        $connection->createCommand()->delete('itemofworks', ['Workgroup_Id' => $workId])->execute();
+
+        // Cascade-delete every activity under this workgroup, same as the main
+        // Gantt delete flow: procurement/indent/work-order/progress history, then
+        // the activity itself.
+        $wbsactivities = WorkgroupActivitiesNew::find()->where(['wbs_id' => $workId])->all();
+        foreach ($wbsactivities as $wbsactivity) {
+            $wanId = $wbsactivity->id;
+            $saId  = (int)$connection->createCommand(
+                "SELECT id FROM scheduleactivities WHERE activity_id = :aid LIMIT 1", [':aid' => $wanId]
+            )->queryScalar();
+
+            $pricingIds = $connection->createCommand(
+                "SELECT pricing_resourceid FROM pricing_estimate_resources_new WHERE activity_id=:aid", [':aid' => $wanId]
+            )->queryColumn();
+            if (!empty($pricingIds)) {
+                $connection->createCommand()->delete('store_indents', ['pricing_resourceid' => $pricingIds])->execute();
+            }
+
+            $connection->createCommand()->delete('wo_task_rates',   ['activity_id' => $wanId])->execute();
+            $connection->createCommand()->delete('wo_sc_rates',     ['activity_id' => $wanId])->execute();
+            $connection->createCommand()->delete('wo_activity_qty', ['activity_id' => $wanId])->execute();
+
+            $woNums = $connection->createCommand(
+                "SELECT WO_Number FROM work_order
+                 WHERE JSON_SEARCH(WO_Subject, 'one', :aid, NULL, '\$[*].activity_id') IS NOT NULL",
+                [':aid' => (string)$wanId]
+            )->queryColumn();
+            if (!empty($woNums)) {
+                $connection->createCommand()->delete('wo_measurement_book', ['wo_number' => $woNums])->execute();
+                $connection->createCommand()->delete('work_order', ['WO_Number' => $woNums])->execute();
+            }
+
+            if ($saId) {
+                $poIds = $connection->createCommand(
+                    "SELECT DISTINCT order_id FROM purchase_order_activities WHERE activity_id=:sid", [':sid' => $saId]
+                )->queryColumn();
+                if (!empty($poIds)) {
+                    $connection->createCommand()->delete('goods_received_note',      ['GRN_Purchase_Order' => $poIds])->execute();
+                    $connection->createCommand()->delete('purchase_order_resources',  ['order_id' => $poIds])->execute();
+                    $connection->createCommand()->delete('purchase_order_activities', ['order_id' => $poIds])->execute();
+                    $connection->createCommand()->delete('purchase_orders',           ['order_id' => $poIds])->execute();
                 }
-                $wbsactivities=WorkgroupActivitiesNew::find()->where(['wbs_id' => $_POST['workid']])->all();
-                foreach($wbsactivities AS $wbsactivity):
-                    //$pricing=PricingEstimate::model()->deleteAll(array('condition'=>'activity_Id='.$wbsactivity['id'].' '));
-                    $pricing=PricingEstimate::find()->where(['activity_Id' => $wbsactivity['id']])->all();
-                    foreach($pricing AS $item):
-                        $item->pricing_status=1;
-                        $item->save(false);
-                    endforeach;
-                    //$pricingres=PricingEstimateResources::model()->deleteAll(array('condition'=>'activity_id='.$wbsactivity['id'].' '));
-                    $pricingres=PricingEstimateResourcesNew::find()->where(['activity_id' => $wbsactivity['id']])->all();
-                    foreach($pricingres AS $pricingre):
-                        $pricingre->pricing_status=1;
-                        $pricingre->save(false);
-                    endforeach;
-                    $wbsactivity->pricing_status=1;
-                    $wbsactivity->save(false);
-                endforeach;
 
-                // new line added by anil on sept 20
- 
-                 $sql="DELETE FROM wbsscheduleitems WHERE wbsid ='".$_POST['workid']."'";
-                $command=$connection->createCommand($sql);
-                $dataReader=$command->query();
+                $connection->createCommand()->delete('schedule_progress_report', ['activity_id' => $saId])->execute();
+                $connection->createCommand()->delete('schedule_progress_report_log', ['activity_id' => $saId])->execute();
+                $connection->createCommand()->delete('schedule_resource', ['activityid' => $saId])->execute();
+                $connection->createCommand()->delete('scheduleactivities', ['id' => $saId])->execute();
+            }
 
-                  // new line end by anil on sept 20
+            $connection->createCommand()->delete('pricing_estimate', ['activity_Id' => $wanId])->execute();
+            $connection->createCommand()->delete('pricing_estimate_resources_new', ['activity_id' => $wanId])->execute();
+        }
 
-                $sql="DELETE FROM workgroup_activities_new WHERE wbs_id ='".$_POST['workid']."'";
-                $command=$connection->createCommand($sql);
-                $dataReader=$command->query();
-                $arr = array('Id' => $_POST['workid'],'error'=>'No');
-                return json_encode($arr);
+        $connection->createCommand()->delete('wbsscheduleitems', ['wbsid' => $workId])->execute();
+        $connection->createCommand()->delete('workgroup_activities_new', ['wbs_id' => $workId])->execute();
+        $connection->createCommand()->delete('workgroups_new', ['Workgroup_Id' => $workId])->execute();
 
+        $arr = array('Id' => $workId,'error'=>'No');
+        return json_encode($arr);
+    }
 
-            else:
-                $arr = array('Id' => $_POST['workid'],'error'=>'Yes','errortext'=>'Can not Delete Project with ID '.$_POST['resid'].'.');
-                return json_encode($arr);
-            endif;
-        endif;
+    // Shared conflict check used before permanently deleting an activity —
+    // returns raw counts (per category) so callers can total them across every
+    // activity in a workgroup, or report them individually. Mirrors
+    // ProjectsmainController::checkActivityDeleteConflicts, count form.
+    private function countActivityDeleteConflicts($saId, $wanId)
+    {
+        $db = Yii::$app->db;
+        $counts = ['progress' => 0, 'indents' => 0, 'po' => 0, 'wo' => 0];
 
+        if ($saId) {
+            $counts['progress'] = (int)$db->createCommand(
+                "SELECT COUNT(*) FROM schedule_progress_report WHERE activity_id = :id", [':id' => $saId]
+            )->queryScalar();
+
+            $counts['po'] = (int)$db->createCommand(
+                "SELECT COUNT(DISTINCT order_id) FROM purchase_order_activities WHERE activity_id = :id", [':id' => $saId]
+            )->queryScalar();
+        }
+
+        $counts['indents'] = (int)$db->createCommand(
+            "SELECT COUNT(*) FROM store_indents si
+             JOIN pricing_estimate_resources_new p ON p.pricing_resourceid = si.pricing_resourceid
+             WHERE p.activity_id = :id", [':id' => $wanId]
+        )->queryScalar();
+
+        $counts['wo'] = (int)$db->createCommand(
+            "SELECT COUNT(*) FROM work_order
+             WHERE JSON_SEARCH(WO_Subject, 'one', :aid, NULL, '\$[*].activity_id') IS NOT NULL",
+            [':aid' => (string)$wanId]
+        )->queryScalar();
+
+        return $counts;
     }
 
     public function actionCreate()

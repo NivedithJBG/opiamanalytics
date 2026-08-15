@@ -428,6 +428,8 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     $.each(others, function(cls, cntnr){
       if($(cls).hasClass('active')){ $(cls).removeClass('active'); $(cntnr).removeClass('active'); $('body').css('overflow-y','auto'); }
     });
+    $('#vendorlib-win').removeClass('rl-open');
+    $('.overNowVendorLib').removeClass('active');
     openReslib();
     $(this).addClass('active');
   });

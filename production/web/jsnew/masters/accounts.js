@@ -76,6 +76,10 @@ $(document).on( "click", "#listaccounts", function(){
 
             $('.preloader_accnthead').hide();
 
+        },
+
+        error: function(){
+            $('.preloader_accnthead').hide();
         }
 
     });

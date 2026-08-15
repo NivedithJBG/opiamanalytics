@@ -21,15 +21,23 @@ class RelationController extends Controller
 
         $db = \Yii::$app->db;
 
-        /* WBS/IOW groups that have scheduled activities */
+        /* WBS/IOW groups that have scheduled activities. scheduleactivities.
+           scheduleitem_id references wbsscheduleitems.scheduleitem_id, NOT
+           workgroups_new.Workgroup_Id directly — wbsscheduleitems.wbsid is
+           the actual FK to workgroups_new. Skipping that hop (the previous
+           bug here) meant this EXISTS check could never match, so newly
+           added IOWs/activities never appeared as selectable in the
+           Relationships window despite being live on the Gantt chart. */
         $groups = $db->createCommand("
             SELECT wn.Workgroup_Id, wn.Name AS iow_name, ig.name AS iow_group_name
             FROM workgroups_new wn
             LEFT JOIN iow_groups ig ON ig.id = wn.iowGroupid AND ig.status = 0
             WHERE wn.Project_Id = :pid AND wn.Status = 0
               AND EXISTS (
-                  SELECT 1 FROM scheduleactivities sa
-                  WHERE sa.scheduleitem_id = wn.Workgroup_Id
+                  SELECT 1 FROM wbsscheduleitems wsi
+                  JOIN scheduleactivities sa ON sa.scheduleitem_id = wsi.scheduleitem_id
+                  WHERE wsi.wbsid = wn.Workgroup_Id
+                    AND wsi.status = 0
                     AND sa.status = 0
                     AND sa.actual_start_date IS NOT NULL
                     AND sa.actual_start_date != '0000-00-00'
@@ -37,14 +45,18 @@ class RelationController extends Controller
             ORDER BY wn.sortorder ASC, wn.Workgroup_Id ASC
         ", [':pid' => $projectId])->queryAll();
 
-        /* Activities per group */
+        /* Activities per group — scheduleitem_id here is remapped to the
+           workgroups_new.Workgroup_Id (via wbsscheduleitems.wbsid) so the
+           frontend can match each activity to a group from the list above
+           using the same key. */
         $activities = $db->createCommand("
-            SELECT sa.id, sa.name, sa.scheduleitem_id
+            SELECT sa.id, sa.name, wsi.wbsid AS scheduleitem_id
             FROM scheduleactivities sa
+            JOIN wbsscheduleitems wsi ON wsi.scheduleitem_id = sa.scheduleitem_id AND wsi.status = 0
             WHERE sa.projectId = :pid AND sa.status = 0
               AND sa.actual_start_date IS NOT NULL
               AND sa.actual_start_date != '0000-00-00'
-            ORDER BY sa.scheduleitem_id ASC, sa.id ASC
+            ORDER BY wsi.wbsid ASC, sa.id ASC
         ", [':pid' => $projectId])->queryAll();
 
         return json_encode(['error' => 'No', 'groups' => $groups, 'activities' => $activities]);

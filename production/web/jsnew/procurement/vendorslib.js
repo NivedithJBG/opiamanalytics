@@ -156,16 +156,14 @@ $(function(){
     $(document).on('click', '#addvendorlibbtn', function(){
         resetVendorForm();
         $('#vlf-save').text('Add Vendor');
-        $('#vendorlib-heading').text('ADD Vendor');
         $('#vendor-search-bar').hide();
         $('#vendorliblistsection').hide();
-        $('.add-vendor-form').slideDown('fast');
+        $('.add-vendor-form').show();
     });
 
     $(document).on('click', '#vlf-cancel', function(){
-        $('.add-vendor-form').slideUp('fast');
+        $('.add-vendor-form').hide();
         resetVendorForm();
-        $('#vendorlib-heading').text('VENDOR');
         $('#vendor-search-bar').show();
         $('#listvendorslib').trigger('click');
     });
@@ -227,9 +225,8 @@ $(function(){
             success: function(data){
                 $('#vlf-save').attr('disabled', false);
                 if(data.error === 'No'){
-                    $('.add-vendor-form').slideUp('fast');
+                    $('.add-vendor-form').hide();
                     resetVendorForm();
-                    $('#vendorlib-heading').text('VENDOR');
                     $('#vendor-search-bar').show();
                     $('#listvendorslib').trigger('click');
                 } else {
@@ -271,10 +268,9 @@ $(function(){
         $('#vlf-resid-group').hide();
 
         $('#vlf-save').text('Save Changes');
-        $('#vendorlib-heading').text('ADD Vendor');
         $('#vendor-search-bar').hide();
         $('#vendorliblistsection').hide();
-        $('.add-vendor-form').slideDown('fast');
+        $('.add-vendor-form').show();
     });
 
     // ── Delete (delegated) ─────────────────────────────────────────────────

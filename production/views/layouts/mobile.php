@@ -10,6 +10,9 @@ $this->beginPage();
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Progress Report">
 <meta name="theme-color" content="#334155">
+<link rel="manifest" href="/mob_theme/manifest.json">
+<link rel="apple-touch-icon" href="/mob_theme/assets/images/pwa-icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/mob_theme/assets/images/pwa-icon-192.png">
 <title><?= Html::encode($this->title ?: 'Progress Report') ?></title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
 <?php $this->head() ?>

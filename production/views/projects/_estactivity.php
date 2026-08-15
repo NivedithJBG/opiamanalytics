@@ -61,13 +61,13 @@ use app\models\Resources;
         <div class="panel-body">
 
                     <div class="search-and-content-wrpr">
-                        <div class="search-and-actions-wrpr" id="AR-allocate-body-one-head" style="display:flex;align-items:center;gap:3px;padding:4px 0;flex-wrap:nowrap;justify-content:flex-start;">
+                        <div class="search-and-actions-wrpr" id="AR-allocate-body-one-head" style="display:flex;align-items:center;gap:3px;padding:4px 0;flex-wrap:wrap;justify-content:flex-start;">
                             <a href="#alProjTypePopup" class="btn btn-default" id="alOpenProjTypePopup" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ Project Type</a>
                             <a href="#alIowGroupPopup" class="btn btn-default" id="alOpenIowGroupPopup" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ IOW Group</a>
                             <a href="#alActTypePopup" class="btn btn-default" id="alOpenActTypePopup" data-toggle="modal" data-target="#alActTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ Activity Type</a>
                             <a href="#alAddActivityPopup" class="btn" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-add"></span> Activity</a>
                             <a href="#" class="btn list-accountType" id="listestactivity" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-th-list"></span> List</a>
-                            <select id="searchestworktypelist" class="form-control" style="margin-left:10px;width:160px;border-radius:20px;height:34px;display:inline-block;">
+                            <select id="searchestworktypelist" class="form-control" style="margin-left:10px;width:120px;border-radius:20px;height:34px;display:inline-block;">
                                 <option value="0">All Project Types</option>
                                 <?php
                                 $typelist = EstimateWorkType::find()->where(['estworktype_status' => 0])->orderBy(['estworktype_name' => SORT_ASC])->all();
@@ -76,7 +76,7 @@ use app\models\Resources;
                                 endforeach;
                                 ?>
                             </select>
-                            <input type="text" id="searchestactivityname" placeholder="Search activity..." class="form-control" style="margin-left:6px;width:160px;border-radius:20px;height:34px;display:inline-block;">
+                            <input type="text" id="searchestactivityname" placeholder="Search..." class="form-control" style="margin-left:6px;width:90px;border-radius:20px;height:34px;display:inline-block;flex-shrink:0;">
                             <button id="estactivitysearch" class="btn btn-primary" type="button" style="margin-left:3px;border-radius:20px;width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="icon-search5"></span></button>
                             <input type="hidden" name="estworktypedisplay" id="estworktypedisplay">
                         </div>
@@ -152,7 +152,7 @@ use app\models\Resources;
                                 <img src="/opiamnew/web/images/loader.gif" align="middle"></center>
                             </div>
                             <div class="activities-cntnt-wrpr data-content-list" id="estactivityitems">
-                                                        
+
                             </div>
                             <div class="Estimate-allocate" id="Ar-allocate-body-two" style="display: none;">
                                                     <div class="col-md-12 project-boq" >
@@ -164,7 +164,7 @@ use app\models\Resources;
                                                             <label style="margin-top: 8px;"><span><b id="activityrate" style="color: black;"></b></span></label>
                                                             </div>
                                                             <div class="col-md-6">
-                                                                
+
                                                                     <div class="col-md-3"></div>
                                                             <div class="col-md-3">
                                                                 <label><span><b id="activityunt" style="color: black;"></b></span></label>
@@ -176,7 +176,7 @@ use app\models\Resources;
                                                         </div>
                                                             <div class="col-md-2" style="text-align: right;">
                                                                 <a href="#" class="btn btn-primary text-button back-butn-new close-prjctactactvty">Back</a>
-                                                            </div>    
+                                                            </div>
                                                         </div>
                                                         <div class="allocated-list-cntnt-wrpr added-alloc-items-wrpr data-content-list">
                                                 <div class="infodisplay"></div>
@@ -187,7 +187,7 @@ use app\models\Resources;
                                                 <div class="allocation-list-items-cntnr added-activity-list-wrpr collapse in allocation-list-items-master" id="add-activity-cbody">
 
                                                 </div>
-                                                
+
                                             </div><br>
                                             <div class="col-md-12 type project-boq" >
                                                 <a href="javascript:void(0);"  class="btn btn-primary resource-list-btn"><span class="icon-add"></span> Allocate Resources</a>
@@ -195,7 +195,7 @@ use app\models\Resources;
                                                 <a href="javascript:void(0);" class="expand-collapse-palist icon-arrow-up1" data-toggle="collapse" data-target="#add-activity-cbody" style="display: none;"></a>
                                             </div>
                                             </div></div>
-                                            
+
                                             <div class="allocation-cntnt-wrpr resource-not-allocated">
                                     <div class="allocation-left-bar items-select-bar">
                                     </div>
@@ -209,7 +209,7 @@ use app\models\Resources;
                                     <div class="resources-from-selected-item-wrpr ">
                                         <div class="row">
                                             <div class="col-md-12 ">
-                                            
+
                                                 <div class="preloader" style="display: none;"><center><img src="<?php echo Yii::$app->request->baseUrl; ?>/images/loader.gif" align="middle"></center></div>
                                                 <div class="search-and-allocate-content-wrpr">
 
@@ -222,7 +222,7 @@ use app\models\Resources;
 
                                                                         <!--<datalist id="resourcelist">
                                                                             <?php
-                                                                        
+
                                                     /*$resources=Resources::find()->where(['status'=>0])->andwhere(['pricing_status'=>0])->groupBy(['Name'])->all();
 
                                                                             foreach($resources AS $resource):
@@ -238,13 +238,13 @@ use app\models\Resources;
 
                                                     </div>
                                                 </div>
-                                                
-                                            </div>	
-                                            
+
+                                            </div>
+
                                         </div>
-                                        
+
                                     </div>
-                                    
+
                                 </div>
 
                             <!-- list end here -->
@@ -313,7 +313,7 @@ use app\models\Resources;
                                 </div>
                             </div>
                         </div>
-                        <!-- Activity Name + Unit -->
+                        <!-- Activity Name + Unit + Working Hours -->
                         <div class="row" style="margin-top:2px;">
                             <div class="col-md-8">
                                 <div class="form-group">
@@ -322,18 +322,16 @@ use app\models\Resources;
                                     <span style="color:red;"></span>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-2">
                                 <div class="form-group">
-                                    <label>Activity Unit</label>
-                                    <input class="form-control estactivityunit" type="text" id="estactivityunit1" data-id="1" name="estactivityunit[]" placeholder="Activity Unit">
+                                    <label>Unit</label>
+                                    <input class="form-control estactivityunit" type="text" id="estactivityunit1" data-id="1" name="estactivityunit[]" placeholder="Unit" oninput="this.value=this.value.replace(/[0-9]/g,'')">
                                     <span style="color:red;"></span>
                                 </div>
                             </div>
-                        </div>
-                        <div class="row" style="margin-top:4px;">
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <div class="form-group">
-                                    <label>Working Hours</label>
+                                    <label>W. Hrs</label>
                                     <select class="form-control" id="est_working_hours" name="working_hours">
                                         <option value="8">8</option>
                                         <option value="10">10</option>
@@ -361,7 +359,7 @@ use app\models\Resources;
                                     <input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name">
                                 </div>
                                 <div class="col-md-2">
-                                    <input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit">
+                                    <input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit" oninput="this.value=this.value.replace(/[0-9]/g,'')">
                                 </div>
                                 <div class="col-md-3">
                                     <input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day">

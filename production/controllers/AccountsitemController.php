@@ -756,7 +756,8 @@ class AccountsitemController extends Controller
                                 <button type='button' class='btn btn-primary linkresunitbtn' id='linkresunitbtn".$data['id']."' data-toggle='modal' data-target='#LinkRes' title='Edit Resource Unit' value='".$data['id']."' >Edit Resource</button>
                                 </td>";
 
-                $types=AccountTypes::findOne($data['account_type']); 
+                $types=AccountTypes::findOne($data['account_type']);
+                if(!$types){ $types=['name'=>'']; }
                 if($data['resource_id']!=0){
                     $resunits=Resources::find($data['resource_id'])->one()->Name; 
                 }
@@ -1597,7 +1598,8 @@ class AccountsitemController extends Controller
         $sql = "SELECT group_id,subgrp_id,accountschedule_id,bsitem_id FROM subgroup_accounts WHERE group_id='".$group."'AND account_id='" .$account. "'";
         $command = $connection->createCommand($sql);
         $dataReader = $command->query();
-        $datasub = $dataReader->read();  
+        $datasub = $dataReader->read();
+        if(!$datasub){ $datasub=['subgrp_id'=>0,'bsitem_id'=>0,'accountschedule_id'=>0]; }
 
         return array('count'=>$count['total'],'subgroup'=>$datasub['subgrp_id'],'bsitem'=>$datasub['bsitem_id'],'schedule'=>$datasub['accountschedule_id']);
             
@@ -1614,6 +1616,7 @@ class AccountsitemController extends Controller
         $command = $connection->createCommand($sql);
         $dataReader = $command->query();
         $datasub = $dataReader->read();
+        if(!$datasub){ $datasub=['subgrp_id'=>0,'bsitem_id'=>0,'accountschedule_id'=>0]; }
         if($datasub['subgrp_id']!=0):
 
             $code = AccountsSub::find()->where(['master_id'=>7])->all();
