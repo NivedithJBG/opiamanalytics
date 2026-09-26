@@ -1,0 +1,14089 @@
+<?php
+
+namespace app\controllers;  
+
+use Yii;
+use yii\filters\AccessControl;
+use yii\web\Controller;
+use app\components\MetricsCacheHelper;
+use yii\web\Response;
+use yii\filters\VerbFilter;
+use app\models\Projects;
+use app\models\UserTabs;
+use app\models\EstimateActivityType;
+use app\models\WorkgroupsNew;
+use app\models\Boq;
+use app\models\WorkgroupActivitiesNew;
+use app\models\ClientBill;
+use app\models\Wbsscheduleitems;
+use app\models\Scheduleactivities;
+use app\models\ScheduleProgressReport;
+use app\models\ActivityRelations;
+use app\models\ProgressReport;
+use app\models\ScheduleActivityNew;
+use app\models\PricingEstimateNew;
+use app\models\PricingEstimate;
+use app\models\PricingEstimateResourcesNew;
+use app\models\ProjuserSelection;
+use app\models\ScheduleResource;
+use app\models\Resources;
+use app\models\ResourceGroup;  
+use app\models\Resourcetype;
+use app\models\TasksNew;
+use app\models\Jobcard;
+use app\models\Cart;
+use app\models\Invoice;
+use app\models\Orders;
+use app\models\InvoiceResources;
+use app\models\OrderedResource;  
+use amnah\yii2\user\models\User;
+use app\models\PlaceorderResAudit;
+use app\models\PlaceorderStatus;
+use app\models\UserProjects;
+use app\models\Pricingordereddiesel;
+use app\models\PlaceorderRes;
+use app\models\ScheduleTaskReport;
+use app\models\ScheduleProgressReportLog;
+use app\models\IowGroup;
+use app\models\Holidays;
+use app\models\PurchaseOrderActivities;
+
+
+
+class ProjectsmainController extends Controller
+{
+	/**
+	 * @var string the default layout for the views. Defaults to '//layouts/column2', meaning
+	 * using two-column layout. See 'protected/views/layouts/column2.php'.
+	 */
+	//public $layout='//layouts/column2';
+
+	/**
+	 * @return array action filters
+	 */
+	public function filters()
+	{
+		return array(
+			'accessControl', // perform access control for CRUD operations
+			'postOnly + delete', // we only allow deletion via POST request
+		);
+	}
+
+	/**
+	 * Specifies the access control rules.
+	 * This method is used by the 'accessControl' filter.
+	 * @return array access control rules
+	 */
+
+    public function behaviors()
+    {
+        return [
+            'access' => [
+                'class' => AccessControl::className(),
+                'rules' => [
+                    [
+                        'allow' => true,
+                        'actions' => ['login'],
+                        'roles' => ['?'],
+                    ],
+                    [
+                        'allow' => true,
+                        'roles' => ['@'],
+                    ],
+                ],
+            ],
+            'verbs' => [
+                'class' => VerbFilter::className(),
+                'actions' => [
+                    'delete' => ['POST'],
+                ],
+            ],
+        ];
+    }
+
+    
+    public function beforeAction($action) 
+    { 
+        $this->enableCsrfValidation = false; 
+        return parent::beforeAction($action); 
+    }
+
+ 
+
+    public function actionIndex()
+    {
+        $user_id = Yii::$app->user->id;
+        $user = User::find()->where(['id'=>Yii::$app->user->id])->one();
+        if($user->account_type == 'project_performance_only'){
+            $this->redirect(array('projectsmain/projectperformance'));
+        }
+
+        return $this->render('index');
+
+    }
+
+    // Direct entry point for the unified site-engineer mobile app, independent
+    // of device/account-type auto-detection (used for testing and can be
+    // bookmarked/added-to-home-screen directly).
+    public function actionSiteapp()
+    {
+        $this->layout = '@app/views/layouts/mobile';
+        $user_id = Yii::$app->user->id;
+
+        $projectName = 'No Project Selected';
+        if($projuser = ProjuserSelection::find()->where(['userid' => $user_id])->one()){
+            if($proj = Projects::findOne($projuser->projectid))
+                $projectName = $proj->Name;
+        }
+
+        return $this->render('siteapp_home', ['projectName' => $projectName]);
+    }
+
+    public function actionDashboard()
+    {
+        return $this->render('dashboard');
+    }
+
+
+
+    public function actionGetrestypelist()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $connection = \Yii::$app->db;
+        $rows = $connection->createCommand(
+            "SELECT ResourceType_Id AS id, Name AS name FROM resourcetype WHERE Status=0 ORDER BY sortorder ASC"
+        )->queryAll();
+        return ['items' => $rows];
+    }
+
+    public function actionGetresgrouplist()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $typeId = (int)\Yii::$app->request->post('type_id', 0);
+        $sql = "SELECT Resource_group_Id AS id, Resource_group_Name AS name FROM resource_group WHERE status=0";
+        if ($typeId) $sql .= " AND ResourceType_Id=" . $typeId;
+        $sql .= " ORDER BY RG_sortorder ASC, Resource_group_Name ASC";
+        $rows = \Yii::$app->db->createCommand($sql)->queryAll();
+        return ['items' => $rows];
+    }
+
+    public function actionGetwbresources()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $typeId  = (int)\Yii::$app->request->post('type_id', 0);
+        $groupId = (int)\Yii::$app->request->post('group_id', 0);
+        if (!$typeId && !$groupId) return ['items' => []];
+        $sql = "SELECT Resource_Id AS id, Name AS name, Unit AS unit, Price AS price
+                FROM resources WHERE Status=0";
+        if ($typeId)  $sql .= " AND ResourceType_Id=" . $typeId;
+        if ($groupId) $sql .= " AND Resource_group_Id=" . $groupId;
+        $sql .= " ORDER BY Name ASC";
+        $rows = \Yii::$app->db->createCommand($sql)->queryAll();
+        return ['items' => $rows];
+    }
+
+    public function actionGetactivityresources()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $activityId = (int)\Yii::$app->request->post('activity_id', 0);
+        if(!$activityId) return ['items' => [], 'tasks' => [], 'unit' => '', 'rate' => 0, 'qty' => 0];
+        $db = \Yii::$app->db;
+
+        $activity = $db->createCommand(
+            "SELECT activity_unit, activity_rate FROM estimateactivities WHERE activity_id = :aid LIMIT 1"
+        )->bindValue(':aid', $activityId)->queryOne();
+
+        $resources = $db->createCommand(
+            "SELECT ar.estactres_id, ar.est_resource_id, ar.est_resource_rate, ar.est_resource_quantity, ar.est_resource_amount,
+                    r.Name AS resource_name, r.Unit AS resource_unit, r.ResourceType_Id AS type_id, r.Resource_group_Id AS group_id
+             FROM estactivity_resources ar
+             JOIN resources r ON r.Resource_Id = ar.est_resource_id
+             WHERE ar.estactivity_id = :aid AND ar.est_resource_status = 0
+             ORDER BY ar.estactres_id ASC"
+        )->bindValue(':aid', $activityId)->queryAll();
+
+        $tasks = $db->createCommand(
+            "SELECT id, task_name, task_unit, task_qty, productivity, resource_units AS resunits FROM activity_tasks WHERE activity_id = :aid ORDER BY sort_order ASC, id ASC"
+        )->bindValue(':aid', $activityId)->queryAll();
+
+        // estimate qty + schedule unit/qty for this project
+        $uid      = \Yii::$app->user->Id;
+        $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
+        $pid      = $projuser ? (int)$projuser->projectid : 0;
+        $estQty   = 0.0;
+        $schUnit  = '';
+        $schQty   = 0.0;
+        if ($pid) {
+            $peRow = $db->createCommand(
+                "SELECT activity_qty FROM pricing_estimate_new
+                 WHERE activity_Id = :a AND project_Id = :p AND pricing_status = 0 LIMIT 1",
+                [':a' => $activityId, ':p' => $pid]
+            )->queryOne();
+            if ($peRow) $estQty = (float)$peRow['activity_qty'];
+
+            // schedule unit and qty from workgroup_activities_new
+            $wanRow = $db->createCommand(
+                "SELECT cycle_Unit, cycle_Quantity FROM workgroup_activities_new
+                 WHERE project_Id = :p AND activity_Id = :a LIMIT 1",
+                [':p' => $pid, ':a' => $activityId]
+            )->queryOne();
+            if ($wanRow) {
+                $schUnit = $wanRow['cycle_Unit']     ?? '';
+                $schQty  = (float)($wanRow['cycle_Quantity'] ?? 0);
+            }
+        }
+
+        // calculated rate from resources
+        $calcRate = 0.0;
+        foreach ($resources as $r) { $calcRate += (float)$r['est_resource_rate'] * (float)$r['est_resource_quantity']; }
+        if (!$calcRate && $activity) $calcRate = (float)$activity['activity_rate'];
+
+        return [
+            'items'    => $resources,
+            'tasks'    => $tasks,
+            'unit'     => $activity ? $activity['activity_unit'] : '',
+            'rate'     => round($calcRate, 2),
+            'qty'      => $estQty,
+            'sch_unit' => $schUnit,
+            'sch_qty'  => $schQty,
+        ];
+    }
+
+    public function actionGetwbtypelist()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $rows = \Yii::$app->db->createCommand(
+            "SELECT estworktype_id AS id, estworktype_name AS name FROM estimateworktypes WHERE estworktype_status = 0 ORDER BY sortorder ASC, estworktype_name ASC"
+        )->queryAll();
+        return ['items' => $rows];
+    }
+
+    public function actionGetwbgrouplist()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $rows = \Yii::$app->db->createCommand(
+            "SELECT activitytype_id AS id, activitytype_name AS name FROM estimateactivitytypes WHERE activitytype_status = 0 ORDER BY sortorder ASC, activitytype_name ASC"
+        )->queryAll();
+        return ['items' => $rows];
+    }
+
+
+
+    /* ── Library mini-popup endpoints ──────────────────────────────────── */
+
+
+
+    public function actionGetactivitiesbytypeandgroup()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $typeId    = (int)\Yii::$app->request->post('typeId');
+        $groupId   = (int)\Yii::$app->request->post('groupId');
+        $iowGroupId = (int)\Yii::$app->request->post('iowGroupId');
+        if (!$typeId && !$groupId && !$iowGroupId) return ['items' => []];
+        $sql  = "SELECT ea.activity_id AS id, ea.activity_name AS name
+                 FROM estimateactivities ea
+                 WHERE ea.activity_status = 0";
+        if ($typeId)     $sql .= " AND ea.work_type = " . $typeId;
+        if ($groupId)    $sql .= " AND ea.activity_type = " . $groupId;
+        if ($iowGroupId) $sql .= " AND ea.iow_group_id = " . $iowGroupId;
+        $sql .= " ORDER BY ea.activity_name ASC";
+        $rows = \Yii::$app->db->createCommand($sql)->queryAll();
+        return ['items' => $rows];
+    }
+
+    /**
+     * actionWbsaddiows — creates one or more bare IOWs (workgroups_new
+     * rows) under a single IOW Group, with no activity/estimate/schedule
+     * bar attached. This is the entry point for the simplified "Add
+     * IOWs" popup that replaces the old WBS Quick Entry form — adding an
+     * activity under an IOW is a separate, later step, not part of this
+     * action.
+     *
+     * Reuses the exact same IOW-Group-resolve + workgroups_new-resolve-
+     * or-create logic as actionWbssave() (see lines ~330-388), just
+     * looped once per IOW name and with no activity-library step
+     * following it.
+     */
+    public function actionWbsaddiows()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid      = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return ['error' => 'No project selected'];
+        $pid = (int)$projuser->projectid;
+        $db  = \Yii::$app->db;
+
+        $raw = \Yii::$app->request->post('payload');
+        if (!$raw) return ['error' => 'No payload'];
+        $p = json_decode($raw, true);
+        if (!$p) return ['error' => 'Bad payload'];
+
+        $iowGroupId   = (int)($p['iow_group_id']   ?? 0);
+        $iowGroupName = trim($p['iow_group_name'] ?? '');
+        $iowNames     = array_values(array_filter(array_map('trim', $p['iow_names'] ?? []), function ($n) {
+            return $n !== '';
+        }));
+
+        if (!$iowGroupId && $iowGroupName === '') return ['error' => 'IOW Group is required'];
+        if (empty($iowNames)) return ['error' => 'At least one IOW name is required'];
+
+        // Resolve IOW group by ID (from dropdown) or fall back to creating one from name
+        if (!$iowGroupId) {
+            $igRow = $db->createCommand(
+                "SELECT id FROM iow_groups WHERE name=:n AND project_id=:p AND status=0 LIMIT 1",
+                [':n' => $iowGroupName, ':p' => $pid]
+            )->queryOne();
+            if ($igRow) {
+                $iowGroupId = (int)$igRow['id'];
+            } else {
+                $db->createCommand(
+                    "INSERT INTO iow_groups (name, project_id, status, primavera_id) VALUES (:n, :p, 0, 0)",
+                    [':n' => $iowGroupName, ':p' => $pid]
+                )->execute();
+                $iowGroupId = (int)$db->lastInsertID;
+            }
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $created = [];
+        $skipped = [];
+
+        foreach ($iowNames as $iowName) {
+            $wgRow = $db->createCommand(
+                "SELECT Workgroup_Id FROM workgroups_new WHERE Project_Id=:p AND iowGroupid=:g AND Name=:n AND Status=0 LIMIT 1",
+                [':p' => $pid, ':g' => $iowGroupId, ':n' => $iowName]
+            )->queryOne();
+            if ($wgRow) {
+                // Already exists under this IOW Group — skip rather than duplicate,
+                // but still report its id/name so the caller can open it directly.
+                $skipped[] = ['id' => (int)$wgRow['Workgroup_Id'], 'name' => $iowName];
+                continue;
+            }
+            $nextSort = (int)($db->createCommand(
+                "SELECT COALESCE(MAX(sortorder),0)+1 AS s FROM workgroups_new WHERE Project_Id=:p", [':p' => $pid]
+            )->queryOne()['s'] ?? 0);
+            $db->createCommand(
+                "INSERT INTO workgroups_new
+                 (Project_Id, Name, iowGroupid, Status, sortorder, Added_On, Updated_On, Added_By,
+                  start_date, end_date, duration, progress, open, parent, itemtype, worktype, worktypegroup,
+                  wbs_estimate_id, pricing_status, notes, primavera_id)
+                 VALUES (:p, :n, :g, 0, :s, :t, :t, :uid,
+                  :t, :t, 0, 0, 0, 0, '', 0, 0, 0, 0, '', 0)",
+                [':p' => $pid, ':n' => $iowName, ':g' => $iowGroupId, ':s' => $nextSort, ':t' => $now, ':uid' => $uid]
+            )->execute();
+            $created[] = ['id' => (int)$db->lastInsertID, 'name' => $iowName];
+        }
+
+        return ['error' => 'No', 'created' => $created, 'skipped' => $skipped];
+    }
+
+    /**
+     * actionWbssave — saves all WBS data to DB (does NOT create Gantt bar).
+     * Returns wan_id so the frontend can pass it to actionWbsadd.
+     */
+    public function actionWbssave()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid      = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return ['error' => 'No project selected'];
+        $pid = (int)$projuser->projectid;
+        $db  = \Yii::$app->db;
+
+        $raw = \Yii::$app->request->post('payload');
+        if (!$raw) return ['error' => 'No payload'];
+        $p = json_decode($raw, true);
+        if (!$p) return ['error' => 'Bad payload'];
+
+        $iowGroupId   = (int)($p['iow_group_id']   ?? 0);
+        $iowGroupName = trim($p['iow_group_name'] ?? ($p['iow_group'] ?? ''));
+        $iowName      = trim($p['iow_name']       ?? ($p['iow_group'] ?? ''));
+        $iowActId     = (int)($p['iow_act_id']    ?? 0);
+        $wgIdInput    = (int)($p['wg_id']          ?? 0);
+        $actNameInput = trim($p['act_name']        ?? '');
+        $unit         = trim($p['unit']            ?? '');
+        $schUnit      = trim($p['sch_unit']        ?? '');
+        $qty          = (float)($p['qty']           ?? 0);
+        $schQty       = (float)($p['sch_qty']       ?? 0);
+        $duration     = max(1, (int)($p['duration'] ?? 1));
+        $tasks        = $p['tasks']     ?? [];
+        $resources    = $p['resources'] ?? [];
+        $projTypeId   = (int)($p['proj_type_id']   ?? 0);
+        $actTypeId    = (int)($p['group_id']        ?? 0);
+
+        if (!$actNameInput) return ['error' => 'Activity name is required'];
+
+        // Resolve IOW group by ID (from dropdown) or fall back to creating one from name
+        if (!$iowGroupId && $iowGroupName !== '') {
+            $igRow = $db->createCommand(
+                "SELECT id FROM iow_groups WHERE name=:n AND project_id=:p AND status=0 LIMIT 1",
+                [':n' => $iowGroupName, ':p' => $pid]
+            )->queryOne();
+            if ($igRow) {
+                $iowGroupId = (int)$igRow['id'];
+            } else {
+                $db->createCommand(
+                    "INSERT INTO iow_groups (name, project_id, status, primavera_id) VALUES (:n, :p, 0, 0)",
+                    [':n' => $iowGroupName, ':p' => $pid]
+                )->execute();
+                $iowGroupId = (int)$db->lastInsertID;
+            }
+        }
+        // IOW name: if not supplied, use activity name
+        if ($iowName === '') $iowName = $actNameInput;
+
+        $now = date('Y-m-d H:i:s');
+
+        // 1. Editing an existing WBS item (wg_id supplied): rename/re-group it in place.
+        //    Otherwise, find-or-create a workgroups_new row for this IOW group + IOW name.
+        $wgId = 0;
+        if ($wgIdInput) {
+            $wgExists = $db->createCommand(
+                "SELECT Workgroup_Id FROM workgroups_new WHERE Workgroup_Id=:id AND Project_Id=:p AND Status=0 LIMIT 1",
+                [':id' => $wgIdInput, ':p' => $pid]
+            )->queryScalar();
+            if ($wgExists) {
+                $wgId = (int)$wgExists;
+                $db->createCommand(
+                    "UPDATE workgroups_new SET Name=:n, iowGroupid=:g, Updated_On=:t WHERE Workgroup_Id=:id",
+                    [':n' => $iowName, ':g' => $iowGroupId ?: null, ':t' => $now, ':id' => $wgId]
+                )->execute();
+            }
+        }
+        if (!$wgId && $iowGroupId) {
+            $wgRow = $db->createCommand(
+                "SELECT Workgroup_Id FROM workgroups_new WHERE Project_Id=:p AND iowGroupid=:g AND Name=:n AND Status=0 LIMIT 1",
+                [':p' => $pid, ':g' => $iowGroupId, ':n' => $iowName]
+            )->queryOne();
+            if (!$wgRow) {
+                $nextSort = (int)($db->createCommand(
+                    "SELECT COALESCE(MAX(sortorder),0)+1 AS s FROM workgroups_new WHERE Project_Id=:p", [':p'=>$pid]
+                )->queryOne()['s'] ?? 0);
+                $db->createCommand(
+                    "INSERT INTO workgroups_new
+                     (Project_Id, Name, iowGroupid, Status, sortorder, Added_On, Updated_On, Added_By,
+                      start_date, end_date, duration, progress, open, parent, itemtype, worktype, worktypegroup,
+                      wbs_estimate_id, pricing_status, notes, primavera_id)
+                     VALUES (:p, :n, :g, 0, :s, :t, :t, :uid,
+                      :t, :t, 0, 0, 0, 0, '', 0, 0, 0, 0, '', 0)",
+                    [':p'=>$pid, ':n'=>$iowName, ':g'=>$iowGroupId, ':s'=>$nextSort, ':t'=>$now, ':uid'=>$uid]
+                )->execute();
+                $wgId = (int)$db->lastInsertID;
+            } else {
+                $wgId = (int)$wgRow['Workgroup_Id'];
+            }
+        }
+
+        // 2. Find or create activity in estimateactivities; if iowActId=0 create new one
+        if (!$iowActId) {
+            // Check if activity with this name already exists for this type/group
+            $existAct = $db->createCommand(
+                "SELECT activity_id FROM estimateactivities
+                 WHERE activity_name=:n AND work_type=:wt AND activity_type=:at AND activity_status=0 LIMIT 1",
+                [':n' => $actNameInput, ':wt' => $projTypeId, ':at' => $actTypeId]
+            )->queryOne();
+            if ($existAct) {
+                $iowActId = (int)$existAct['activity_id'];
+            } else {
+                $db->createCommand(
+                    "INSERT INTO estimateactivities
+                     (activity_name, activity_unit, work_type, activity_type, iow_group_id, activity_rate, activity_status)
+                     VALUES (:n, :u, :wt, :at, :g, 0, 0)",
+                    [':n' => $actNameInput, ':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId, ':g' => $iowGroupId]
+                )->execute();
+                $iowActId = (int)$db->lastInsertID;
+            }
+        } else {
+            // Update existing activity's unit/type in estimateactivities
+            $db->createCommand(
+                "UPDATE estimateactivities SET activity_unit=:u, work_type=:wt, activity_type=:at, iow_group_id=:g
+                 WHERE activity_id=:id",
+                [':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId, ':g' => $iowGroupId, ':id' => $iowActId]
+            )->execute();
+        }
+
+        // 3. Save tasks to activity_tasks
+        //    $taskOrdinalToId maps the 0-based ordinal of each saved task
+        //    (skipping blank names, same filtering the frontend applies in
+        //    collectPayload()/openMapPopup()) to its freshly-inserted real
+        //    id — tasks are DELETE+re-INSERTed every save so old ids are
+        //    invalid, and this is the only place the new ids are known.
+        //    resources[].task_map below is by this same ordinal, so it's
+        //    translated through this map before being written as task_ids.
+        $taskOrdinalToId = [];
+        if (!empty($tasks)) {
+            $db->createCommand(
+                "DELETE FROM activity_tasks WHERE activity_id=:id",
+                [':id' => $iowActId]
+            )->execute();
+            $sort = 0;
+            foreach ($tasks as $task) {
+                $tname = trim($task['name'] ?? '');
+                if (!$tname) continue;
+                $db->createCommand(
+                    "INSERT INTO activity_tasks (activity_id, task_name, task_unit, task_qty, productivity, resource_units, sort_order)
+                     VALUES (:a, :n, :u, :q, :p, :ru, :s)",
+                    [':a' => $iowActId, ':n' => $tname,
+                     ':u' => trim($task['unit'] ?? ''),
+                     ':q' => (float)($task['qty'] ?? 0),
+                     ':p' => (float)($task['prod'] ?? 0),
+                     ':ru' => max(1, (float)($task['resunits'] ?? 1)),
+                     ':s' => $sort]
+                )->execute();
+                $taskOrdinalToId[$sort] = (int)$db->lastInsertID;
+                $sort++;
+            }
+        }
+
+        // 5. Find or update workgroup_activities_new row (schedule data) — resolved
+        //    BEFORE pricing_estimate_new/pricing_estimate_resources_new below, since
+        //    those tables key off wan_id (the project-specific activity instance),
+        //    not iowActId (the library-level estimateactivities id).
+        $calcRate = 0.0;
+        foreach ($resources as $res) { $calcRate += (float)($res['rate'] ?? 0) * (float)($res['qty'] ?? 0); }
+
+        $wanId = 0;
+        if ($iowActId && $wgId) {
+            $wanRow = $db->createCommand(
+                "SELECT id FROM workgroup_activities_new WHERE project_Id=:p AND activity_Id=:a AND wbs_id=:w LIMIT 1",
+                [':p' => $pid, ':a' => $iowActId, ':w' => $wgId]
+            )->queryOne();
+            if ($wanRow) {
+                $wanId = (int)$wanRow['id'];
+                $db->createCommand(
+                    "UPDATE workgroup_activities_new
+                     SET activity_Unit=:u, estimate=1, amount=:amt, duration=:d,
+                         cycle_Unit=:cu, cycle_Quantity=:cq, activity_Name=:n
+                     WHERE id=:id",
+                    [':u' => $unit ?: $schUnit, ':amt' => round($qty * $calcRate, 2),
+                     ':d' => $duration, ':cu' => $schUnit, ':cq' => $schQty,
+                     ':n' => $actNameInput, ':id' => $wanId]
+                )->execute();
+            } else {
+                $lastSort = $db->createCommand(
+                    "SELECT COALESCE(MAX(sortorder),0) AS s FROM workgroup_activities_new WHERE wbs_id=:w",
+                    [':w' => $wgId]
+                )->queryOne();
+                $sortorder = ((int)($lastSort['s'] ?? 0)) + 1;
+                $db->createCommand(
+                    "INSERT INTO workgroup_activities_new
+                     (project_Id, wbs_id, worktype_Id, activitytype_id, activity_Id, activity_Unit,
+                      estimate, amount, sortorder, type, activity_Name, process_Id, schedule, duration,
+                      cycle_Unit, cycle_Quantity, pr_status, pricing_status, operations_status, wbs_estimate_id)
+                     VALUES (:p, :w, 0, 0, :ia, :u, 1, :amt, :s, 0, :n, 0, 1, :d, :cu, :cq, 0, 0, 0, 0)",
+                    [':p' => $pid, ':w' => $wgId, ':ia' => $iowActId,
+                     ':u' => $unit ?: $schUnit, ':amt' => round($qty * $calcRate, 2),
+                     ':s' => $sortorder, ':n' => $actNameInput,
+                     ':d' => $duration, ':cu' => $schUnit, ':cq' => $schQty]
+                )->execute();
+                $wanId = (int)$db->lastInsertID;
+            }
+        }
+
+        // 5b. If this activity already has a live Gantt bar, propagate the
+        //     edited Quantity/Duration into scheduleactivities too — this is
+        //     the table the Gantt chart itself reads, and it was previously
+        //     only ever written once at bar creation (actionWbsadd), so
+        //     editing an existing activity's WBS values here never used to
+        //     reach it. End date is recomputed from the (unchanged) start
+        //     date + the new duration, mirroring actionWbsadd's own formula.
+        if ($wanId) {
+            $saRow = $db->createCommand(
+                "SELECT id, start_date FROM scheduleactivities WHERE activity_id=:w AND projectId=:p AND status=0 LIMIT 1",
+                [':w' => $wanId, ':p' => $pid]
+            )->queryOne();
+            if ($saRow) {
+                $saId = (int)$saRow['id'];
+                $saStart = $saRow['start_date'] ?: date('Y-m-d');
+                $saEnd   = date('Y-m-d', strtotime($saStart . ' + ' . ($duration - 1) . ' days'));
+                $db->createCommand(
+                    "UPDATE scheduleactivities
+                     SET name=:n, unit=:u, quantity=:q, duration=:d, old_duration=:d, end_date=:ed
+                     WHERE id=:id",
+                    [':n' => $actNameInput, ':u' => $schUnit ?: $unit, ':q' => $schQty ?: $qty,
+                     ':d' => $duration, ':ed' => $saEnd, ':id' => $saId]
+                )->execute();
+
+                // Re-mirror this activity's tasks into schedule_task_new,
+                // keyed by this live scheduleactivities row — the Progress
+                // Report screen (ReportController::actionScheduletaskreporting)
+                // reads tasks from schedule_task_new, not activity_tasks
+                // directly, so edits made here (step 3 above, which only
+                // touches activity_tasks) never reached Progress Report
+                // until this re-sync existed. Delete+re-insert, same
+                // convention actionWbsadd() already uses for the initial
+                // mirror when a bar is first created.
+                $db->createCommand(
+                    "DELETE FROM schedule_task_new WHERE activity_Id=:id",
+                    [':id' => $saId]
+                )->execute();
+                $wanTasks = $db->createCommand(
+                    "SELECT id, task_name, task_qty, productivity FROM activity_tasks WHERE activity_id=:id",
+                    [':id' => $iowActId]
+                )->queryAll();
+                foreach ($wanTasks as $wt) {
+                    $tQty  = (float)$wt['task_qty'];
+                    $tProd = (float)$wt['productivity'];
+                    $budgetedDuration = ($tQty > 0 && $tProd > 0) ? round($tQty / $tProd, 4) : 0;
+                    $db->createCommand()->insert('schedule_task_new', [
+                        'wbs_id'              => 0,
+                        'activity_Id'         => $saId,
+                        'process_Id'          => 0,
+                        'task_Id'             => (int)$wt['id'],
+                        'Budgeted_Duration'   => $budgetedDuration,
+                        'End_Duration'        => 0,
+                        'status'              => 0,
+                        'wbs_activity_Id'     => 0,
+                        'activity_name'       => $actNameInput,
+                        'primavera_id'        => 0,
+                        'task_qty'            => $tQty,
+                        'task_productivity'   => $tProd,
+                        'task_resource_units' => 1,
+                    ])->execute();
+                }
+            }
+        }
+
+        // 6. Save estimate qty and calculated rate to pricing_estimate_new.
+        //    activity_Id = wan_id (project-instance), est_activity_Id = iowActId
+        //    (library activity) — same two-column convention as
+        //    pricing_estimate_resources_new below. No unique key exists on this
+        //    table to use ON DUPLICATE KEY UPDATE, so check-then-write explicitly.
+        $peKey = $wanId ?: $iowActId;
+        $peExists = $db->createCommand(
+            "SELECT pricing_estimate_Id FROM pricing_estimate_new WHERE project_Id=:p AND activity_Id=:a LIMIT 1",
+            [':p' => $pid, ':a' => $peKey]
+        )->queryScalar();
+        if ($peExists) {
+            $db->createCommand(
+                "UPDATE pricing_estimate_new SET activity_qty=:qty, specific_rate=:rate, est_activity_Id=:ea WHERE pricing_estimate_Id=:id",
+                [':qty' => $qty, ':rate' => round($calcRate, 2), ':ea' => $iowActId, ':id' => $peExists]
+            )->execute();
+        } else {
+            $db->createCommand(
+                "INSERT INTO pricing_estimate_new
+                 (project_Id, activity_Id, activity_qty, specific_rate, est_activity_Id,
+                  pricing_status, operations_status, primavera_id)
+                 VALUES (:p, :a, :qty, :rate, :ea, 0, 0, 0)",
+                [':p' => $pid, ':a' => $peKey, ':qty' => $qty,
+                 ':rate' => round($calcRate, 2), ':ea' => $iowActId]
+            )->execute();
+        }
+
+        // 7. Sync resource allocation to pricing_estimate_resources_new — the table
+        //    Procurement/Storekeeper read to know what's allocated to this activity.
+        //    Always upserts (unlike wbsadd's insert-once-on-first-Gantt-add), so
+        //    edits to an activity's resources after it's already scheduled still
+        //    reach Procurement. task_ids comes from the Map-to-Task selection
+        //    already collected client-side (resources[].task_map). No unique key
+        //    exists on this table either, so check-then-write explicitly.
+        if ($wanId && !empty($resources)) {
+            $keptResIds = [];
+            foreach ($resources as $res) {
+                $resId  = (int)($res['resource_id'] ?? 0);
+                $typeId = (int)($res['type_id']     ?? 0);
+                $resQty = (float)($res['qty']  ?? 0);
+                $resRate= (float)($res['rate'] ?? 0);
+                if (!$resId) continue;
+                $keptResIds[] = $resId;
+                // task_map entries are ordinals into the tasks list (see
+                // $taskOrdinalToId above), NOT real activity_tasks ids —
+                // translate, and don't drop ordinal/id 0 (array_filter's
+                // default truthiness check would wrongly erase a mapping
+                // to the very first task).
+                $taskMap = $res['task_map'] ?? [];
+                $resolvedTaskIds = [];
+                if (is_array($taskMap)) {
+                    foreach ($taskMap as $ord) {
+                        $ord = (int)$ord;
+                        if (isset($taskOrdinalToId[$ord])) $resolvedTaskIds[] = $taskOrdinalToId[$ord];
+                    }
+                }
+                $taskIds = implode(',', $resolvedTaskIds);
+                $perExists = $db->createCommand(
+                    "SELECT pricing_resourceid FROM pricing_estimate_resources_new
+                     WHERE activity_id=:a AND project_id=:p AND resource_Id=:r LIMIT 1",
+                    [':a' => $wanId, ':p' => $pid, ':r' => $resId]
+                )->queryScalar();
+                if ($perExists) {
+                    $db->createCommand(
+                        "UPDATE pricing_estimate_resources_new
+                         SET quantity=:q, rate=:rt, resourcetype_Id=:t, task_ids=:tids,
+                             est_activity_Id=:ea, pricing_status=0
+                         WHERE pricing_resourceid=:id",
+                        [':q' => $resQty, ':rt' => $resRate, ':t' => $typeId, ':tids' => $taskIds,
+                         ':ea' => $iowActId, ':id' => $perExists]
+                    )->execute();
+                } else {
+                    $db->createCommand()->insert('pricing_estimate_resources_new', [
+                        'activity_id'       => $wanId,
+                        'resource_Id'       => $resId,
+                        'resourcetype_Id'   => $typeId,
+                        'quantity'          => $resQty,
+                        'rate'              => $resRate,
+                        'project_id'        => $pid,
+                        'est_activity_Id'   => $iowActId,
+                        'process_Id'        => 0,
+                        'pricing_status'    => 0,
+                        'operations_status' => 0,
+                        'task_ids'          => $taskIds,
+                    ])->execute();
+                }
+
+                // Two-way sync: mirror this resource back into the shared
+                // Activity Library (estactivity_resources), so it becomes
+                // visible to every other project using this same library
+                // activity too — see ProjectsController::actionAddactivityresource
+                // etc. for the reverse direction. Keyed by
+                // (estactivity_id=$iowActId, est_resource_id), same
+                // check-then-write convention, since neither table has a
+                // unique constraint to upsert against.
+                if ($iowActId) {
+                    $libExists = $db->createCommand(
+                        "SELECT estactres_id FROM estactivity_resources WHERE estactivity_id=:a AND est_resource_id=:r LIMIT 1",
+                        [':a' => $iowActId, ':r' => $resId]
+                    )->queryScalar();
+                    $resAmount = round($resQty * $resRate, 2);
+                    if ($libExists) {
+                        $db->createCommand(
+                            "UPDATE estactivity_resources
+                             SET est_resource_quantity=:q, est_resource_rate=:rt, est_resource_amount=:amt, est_resource_status=0
+                             WHERE estactres_id=:id",
+                            [':q' => $resQty, ':rt' => $resRate, ':amt' => $resAmount, ':id' => $libExists]
+                        )->execute();
+                    } else {
+                        $db->createCommand()->insert('estactivity_resources', [
+                            'estactivity_id'        => $iowActId,
+                            'est_resource_id'       => $resId,
+                            'est_resource_quantity' => $resQty,
+                            'est_resource_rate'     => $resRate,
+                            'est_resource_amount'   => $resAmount,
+                            'est_resource_status'   => 0,
+                        ])->execute();
+                    }
+                }
+            }
+            // Soft-remove allocations for resources no longer in the payload.
+            if (!empty($keptResIds)) {
+                $params = [':a' => $wanId, ':p' => $pid];
+                $placeholders = [];
+                foreach (array_values($keptResIds) as $i => $rid) {
+                    $key = ":r$i";
+                    $placeholders[] = $key;
+                    $params[$key] = $rid;
+                }
+                $db->createCommand(
+                    "UPDATE pricing_estimate_resources_new
+                     SET pricing_status = 1
+                     WHERE activity_id = :a AND project_id = :p AND resource_Id NOT IN (" . implode(',', $placeholders) . ")",
+                    $params
+                )->execute();
+
+                // Mirror the removal into the Library too.
+                if ($iowActId) {
+                    $libParams = [':a' => $iowActId];
+                    $libPlaceholders = [];
+                    foreach (array_values($keptResIds) as $i => $rid) {
+                        $key = ":r$i";
+                        $libPlaceholders[] = $key;
+                        $libParams[$key] = $rid;
+                    }
+                    $db->createCommand(
+                        "UPDATE estactivity_resources
+                         SET est_resource_status = 1
+                         WHERE estactivity_id = :a AND est_resource_id NOT IN (" . implode(',', $libPlaceholders) . ")",
+                        $libParams
+                    )->execute();
+                }
+            }
+        }
+
+        return [
+            'error'       => 'No',
+            'iow_act_id'  => $iowActId,
+            'wan_id'      => $wanId,
+            'wg_id'       => $wgId,
+            'act_name'    => $actNameInput,
+            'duration'    => $duration,
+            'calc_rate'   => round($calcRate, 2),
+            'sch_unit'    => $schUnit,
+            'sch_qty'     => $schQty,
+        ];
+    }
+
+    /**
+     * actionWbsadd — saves WBS data and creates a Gantt bar in one step.
+     * Accepts the full form payload; wan_id may be 0 (new) or set (existing).
+     */
+    public function actionWbsadd()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        try {
+        $uid      = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return ['error' => 'No project selected'];
+        $pid = (int)$projuser->projectid;
+        $db  = \Yii::$app->db;
+
+        $raw = \Yii::$app->request->post('payload');
+        if (!$raw) return ['error' => 'No payload'];
+        $p = json_decode($raw, true);
+        if (!$p) return ['error' => 'Bad payload'];
+
+        $wanId        = (int)($p['wan_id']         ?? 0);
+        $iowGroupId   = (int)($p['iow_group_id']   ?? 0);
+        $iowGroupName = trim($p['iow_group_name']  ?? ($p['iow_group'] ?? ''));
+        $iowName      = trim($p['iow_name']        ?? ($p['iow_group'] ?? ''));
+        $iowActId     = (int)($p['iow_act_id']     ?? 0);
+        $wgIdInput    = (int)($p['wg_id']           ?? 0);
+        $actNameInput = trim($p['act_name']         ?? '');
+        $unit         = trim($p['unit']             ?? '');
+        $schUnit      = trim($p['sch_unit']         ?? '');
+        $qty          = (float)($p['qty']            ?? 0);
+        $schQty       = (float)($p['sch_qty']        ?? 0);
+        $duration     = max(1, (int)($p['duration']  ?? 1));
+        $tasks        = $p['tasks']     ?? [];
+        $resources    = $p['resources'] ?? [];
+        $projTypeId   = (int)($p['proj_type_id']    ?? 0);
+        $actTypeId    = (int)($p['group_id']         ?? 0);
+
+        if (!$actNameInput) return ['error' => 'Activity name is required'];
+
+        // ── Run the full wbssave logic to get/create wan_id ──────────────────
+        if (!$wanId) {
+            if (!$iowGroupId && $iowGroupName !== '') {
+                $igRow = $db->createCommand(
+                    "SELECT id FROM iow_groups WHERE name=:n AND project_id=:p AND status=0 LIMIT 1",
+                    [':n' => $iowGroupName, ':p' => $pid]
+                )->queryOne();
+                if ($igRow) {
+                    $iowGroupId = (int)$igRow['id'];
+                } else {
+                    $db->createCommand(
+                        "INSERT INTO iow_groups (name, project_id, status, primavera_id) VALUES (:n, :p, 0, 0)",
+                        [':n' => $iowGroupName, ':p' => $pid]
+                    )->execute();
+                    $iowGroupId = (int)$db->lastInsertID;
+                }
+            }
+            $now = date('Y-m-d H:i:s');
+            $wgId = 0;
+            if ($wgIdInput) {
+                $wgExists = $db->createCommand(
+                    "SELECT Workgroup_Id FROM workgroups_new WHERE Workgroup_Id=:id AND Project_Id=:p AND Status=0 LIMIT 1",
+                    [':id' => $wgIdInput, ':p' => $pid]
+                )->queryScalar();
+                if ($wgExists) {
+                    $wgId = (int)$wgExists;
+                    // Only rename/re-group an EXISTING IOW if the caller
+                    // actually supplied a real iow_name — never fall back
+                    // to the activity name here. That fallback is only
+                    // valid for a brand-new IOW (below), where a blank
+                    // name genuinely means "name it after the activity".
+                    // Silently renaming an EXISTING IOW to whatever
+                    // activity happens to be added under it next
+                    // corrupted the WBS tree every time a caller (e.g.
+                    // the Gantt's Activity Picker) omitted iow_name —
+                    // see docs/... this comment marks the fix.
+                    if ($iowName !== '') {
+                        $db->createCommand(
+                            "UPDATE workgroups_new SET Name=:n, iowGroupid=:g, Updated_On=:t WHERE Workgroup_Id=:id",
+                            [':n' => $iowName, ':g' => $iowGroupId ?: null, ':t' => $now, ':id' => $wgId]
+                        )->execute();
+                    } elseif ($iowGroupId) {
+                        // Name not supplied, but a group was — still
+                        // safe to update just the group, name untouched.
+                        $db->createCommand(
+                            "UPDATE workgroups_new SET iowGroupid=:g, Updated_On=:t WHERE Workgroup_Id=:id",
+                            [':g' => $iowGroupId, ':t' => $now, ':id' => $wgId]
+                        )->execute();
+                    }
+                }
+            }
+            if ($iowName === '') $iowName = $actNameInput;
+            if (!$wgId && $iowGroupId) {
+                $wgRow = $db->createCommand(
+                    "SELECT Workgroup_Id FROM workgroups_new WHERE Project_Id=:p AND iowGroupid=:g AND Name=:n AND Status=0 LIMIT 1",
+                    [':p' => $pid, ':g' => $iowGroupId, ':n' => $iowName]
+                )->queryOne();
+                if (!$wgRow) {
+                    $nextSort = (int)($db->createCommand(
+                        "SELECT COALESCE(MAX(sortorder),0)+1 AS s FROM workgroups_new WHERE Project_Id=:p", [':p'=>$pid]
+                    )->queryOne()['s'] ?? 0);
+                    $db->createCommand(
+                        "INSERT INTO workgroups_new
+                         (Project_Id, Name, iowGroupid, Status, sortorder, Added_On, Updated_On, Added_By,
+                          start_date, end_date, duration, progress, open, parent, itemtype, worktype, worktypegroup,
+                          wbs_estimate_id, pricing_status, notes, primavera_id)
+                         VALUES (:p, :n, :g, 0, :s, :t, :t, :uid,
+                          :t, :t, 0, 0, 0, 0, '', 0, 0, 0, 0, '', 0)",
+                        [':p'=>$pid, ':n'=>$iowName, ':g'=>$iowGroupId, ':s'=>$nextSort, ':t'=>$now, ':uid'=>$uid]
+                    )->execute();
+                    $wgId = (int)$db->lastInsertID;
+                } else {
+                    $wgId = (int)$wgRow['Workgroup_Id'];
+                }
+            }
+
+            if (!$iowActId) {
+                $existAct = $db->createCommand(
+                    "SELECT activity_id FROM estimateactivities
+                     WHERE activity_name=:n AND work_type=:wt AND activity_type=:at AND activity_status=0 LIMIT 1",
+                    [':n' => $actNameInput, ':wt' => $projTypeId, ':at' => $actTypeId]
+                )->queryOne();
+                if ($existAct) {
+                    $iowActId = (int)$existAct['activity_id'];
+                } else {
+                    $db->createCommand(
+                        "INSERT INTO estimateactivities
+                         (activity_name, activity_unit, work_type, activity_type, iow_group_id, activity_rate, activity_status)
+                         VALUES (:n, :u, :wt, :at, :g, 0, 0)",
+                        [':n' => $actNameInput, ':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId, ':g' => $iowGroupId]
+                    )->execute();
+                    $iowActId = (int)$db->lastInsertID;
+                }
+            } else {
+                // iow_group_id / work_type / activity_type intentionally
+                // NOT unconditionally overwritten here — they're the
+                // library activity's OWN categorization, set once when
+                // the activity is first created (see the INSERT branch
+                // above) or edited via the real Activity Library screen.
+                // Adding an EXISTING library activity under a WBS/IOW
+                // (e.g. via the Gantt's Activity Picker, which has no
+                // Project Type / Activity Type / IOW Group fields of its
+                // own to submit) must never silently blank out that
+                // activity's real categorization — this previously
+                // corrupted the Activity Library's own data every time
+                // the Activity Picker added an existing activity. Only
+                // write a field here if the caller actually supplied a
+                // non-zero value for it (the old WBS form, which DOES
+                // have these fields, still updates them as before).
+                $setSql = ['activity_unit=:u'];
+                $params = [':u' => $unit, ':id' => $iowActId];
+                if ($projTypeId > 0) { $setSql[] = 'work_type=:wt'; $params[':wt'] = $projTypeId; }
+                if ($actTypeId  > 0) { $setSql[] = 'activity_type=:at'; $params[':at'] = $actTypeId; }
+                if ($iowGroupId > 0) { $setSql[] = 'iow_group_id=:g'; $params[':g'] = $iowGroupId; }
+                $db->createCommand(
+                    "UPDATE estimateactivities SET " . implode(', ', $setSql) . " WHERE activity_id=:id",
+                    $params
+                )->execute();
+            }
+
+            // $taskOrdinalToId maps each saved task's 0-based ordinal (skipping
+            // blank names, same filtering the frontend applies) to its
+            // freshly-inserted real id — see the matching comment in
+            // actionWbssave() for why this indirection is needed.
+            $taskOrdinalToId = [];
+            if (!empty($tasks)) {
+                $db->createCommand("DELETE FROM activity_tasks WHERE activity_id=:id", [':id' => $iowActId])->execute();
+                $sort = 0;
+                foreach ($tasks as $task) {
+                    $tname = trim($task['name'] ?? '');
+                    if (!$tname) continue;
+                    $db->createCommand(
+                        "INSERT INTO activity_tasks (activity_id, task_name, task_unit, task_qty, productivity, resource_units, sort_order)
+                         VALUES (:a, :n, :u, :q, :p, :ru, :s)",
+                        [':a' => $iowActId, ':n' => $tname, ':u' => trim($task['unit'] ?? ''),
+                         ':q' => (float)($task['qty'] ?? 0),
+                         ':p' => (float)($task['prod'] ?? 0),
+                         ':ru' => max(1, (float)($task['resunits'] ?? 1)),
+                         ':s' => $sort]
+                    )->execute();
+                    $taskOrdinalToId[$sort] = (int)$db->lastInsertID;
+                    $sort++;
+                }
+            }
+
+            $calcRate = 0.0;
+            foreach ($resources as $res) { $calcRate += (float)($res['rate'] ?? 0) * (float)($res['qty'] ?? 0); }
+
+            // pricing_estimate_new is written AFTER wan_id is resolved below (its
+            // activity_Id column must hold wan_id, not iowActId — see the note on
+            // the equivalent write in actionWbssave). Defer this insert/update
+            // until $wanId is known.
+
+            if ($iowActId && $wgId) {
+                $wanRow2 = $db->createCommand(
+                    "SELECT id FROM workgroup_activities_new WHERE project_Id=:p AND activity_Id=:a AND wbs_id=:w LIMIT 1",
+                    [':p' => $pid, ':a' => $iowActId, ':w' => $wgId]
+                )->queryOne();
+                if ($wanRow2) {
+                    $wanId = (int)$wanRow2['id'];
+                    $db->createCommand(
+                        "UPDATE workgroup_activities_new
+                         SET activity_Unit=:u, estimate=1, amount=:amt, duration=:d, cycle_Unit=:cu, cycle_Quantity=:cq, activity_Name=:n
+                         WHERE id=:id",
+                        [':u' => $unit ?: $schUnit, ':amt' => round($qty * $calcRate, 2),
+                         ':d' => $duration, ':cu' => $schUnit, ':cq' => $schQty, ':n' => $actNameInput, ':id' => $wanId]
+                    )->execute();
+                } else {
+                    $lastSort = $db->createCommand(
+                        "SELECT COALESCE(MAX(sortorder),0) AS s FROM workgroup_activities_new WHERE wbs_id=:w", [':w' => $wgId]
+                    )->queryOne();
+                    $db->createCommand(
+                        "INSERT INTO workgroup_activities_new
+                         (project_Id, wbs_id, worktype_Id, activitytype_id, activity_Id, activity_Unit,
+                          estimate, amount, sortorder, type, activity_Name, process_Id, schedule, duration,
+                          cycle_Unit, cycle_Quantity, pr_status, pricing_status, operations_status, wbs_estimate_id)
+                         VALUES (:p, :w, 0, 0, :ia, :u, 1, :amt, :s, 0, :n, 0, 1, :d, :cu, :cq, 0, 0, 0, 0)",
+                        [':p' => $pid, ':w' => $wgId, ':ia' => $iowActId, ':u' => $unit ?: $schUnit,
+                         ':amt' => round($qty * $calcRate, 2), ':s' => ((int)($lastSort['s'] ?? 0)) + 1,
+                         ':n' => $actNameInput, ':d' => $duration, ':cu' => $schUnit, ':cq' => $schQty]
+                    )->execute();
+                    $wanId = (int)$db->lastInsertID;
+                }
+            }
+
+            if (!$wanId) return ['error' => 'Could not save activity — check IOW group and activity name'];
+
+            // pricing_estimate_new: activity_Id = wan_id (project-instance),
+            // est_activity_Id = iowActId (library activity). No unique key on
+            // this table, so check-then-write explicitly.
+            $peExists = $db->createCommand(
+                "SELECT pricing_estimate_Id FROM pricing_estimate_new WHERE project_Id=:p AND activity_Id=:a LIMIT 1",
+                [':p' => $pid, ':a' => $wanId]
+            )->queryScalar();
+            if ($peExists) {
+                $db->createCommand(
+                    "UPDATE pricing_estimate_new SET activity_qty=:qty, specific_rate=:rate, est_activity_Id=:ea WHERE pricing_estimate_Id=:id",
+                    [':qty' => $qty, ':rate' => round($calcRate, 2), ':ea' => $iowActId, ':id' => $peExists]
+                )->execute();
+            } else {
+                $db->createCommand(
+                    "INSERT INTO pricing_estimate_new
+                     (project_Id, activity_Id, activity_qty, specific_rate, est_activity_Id, pricing_status, operations_status, primavera_id)
+                     VALUES (:p, :a, :qty, :rate, :ea, 0, 0, 0)",
+                    [':p' => $pid, ':a' => $wanId, ':qty' => $qty, ':rate' => round($calcRate, 2), ':ea' => $iowActId]
+                )->execute();
+            }
+        }
+
+        // ── Now fetch the wan row and create the scheduleactivities bar ───────
+        $wanRow = $db->createCommand(
+            "SELECT wbs_id, activity_Name, activity_Unit, cycle_Unit, cycle_Quantity, duration
+             FROM workgroup_activities_new WHERE id=:id LIMIT 1",
+            [':id' => $wanId]
+        )->queryOne();
+        if (!$wanRow) return ['error' => 'WAN row not found'];
+
+        $wgId        = (int)$wanRow['wbs_id'];
+        $savedName   = $wanRow['activity_Name'] ?: $actNameInput;
+        $savedUnit   = $wanRow['cycle_Unit']    ?: ($schUnit ?: $unit);
+        $savedSchQty = (float)$wanRow['cycle_Quantity'] ?: $schQty;
+        $savedDur    = (int)$wanRow['duration']         ?: $duration;
+
+        // Check if a gantt bar already exists for this wan_id (avoid duplicates)
+        $existingSa = $db->createCommand(
+            "SELECT id FROM scheduleactivities WHERE activity_id=:w AND projectId=:p AND status=0 LIMIT 1",
+            [':w' => $wanId, ':p' => $pid]
+        )->queryScalar();
+        if ($existingSa) {
+            return ['error' => 'No', 'sa_id' => (int)$existingSa, 'already_exists' => true];
+        }
+
+        $wbsItem = $db->createCommand(
+            "SELECT scheduleitem_id FROM wbsscheduleitems WHERE wbsid=:w AND projectId=:p AND status=0 LIMIT 1",
+            [':w' => $wgId, ':p' => $pid]
+        )->queryOne();
+        if (!$wbsItem) {
+            $db->createCommand(
+                "INSERT INTO wbsscheduleitems (name, projectId, wbsid, schedulegrp_id, status)
+                 VALUES (:n, :p, :w, 0, 0)",
+                [':n' => $iowName ?: $savedName, ':p' => $pid, ':w' => $wgId]
+            )->execute();
+            $scheduleItemId = (int)$db->lastInsertID;
+        } else {
+            $scheduleItemId = (int)$wbsItem['scheduleitem_id'];
+        }
+
+        $today   = date('Y-m-d');
+        $endDate = date('Y-m-d', strtotime($today . ' + ' . ($savedDur - 1) . ' days'));
+
+        $lastSchSort = $db->createCommand(
+            "SELECT COALESCE(MAX(sortorder),0) AS s FROM scheduleactivities WHERE projectId=:p",
+            [':p' => $pid]
+        )->queryOne();
+        $schSort = ((int)($lastSchSort['s'] ?? 0)) + 1;
+
+        $db->createCommand(
+            "INSERT INTO scheduleactivities
+             (name, activity_id, unit, quantity, start_date, end_date,
+              actual_start_date, actual_end_date, duration, old_duration,
+              scheduleitem_id, projectId, status, sortorder, resource_units)
+             VALUES (:n, :aid, :u, :q, :sd, :ed, :sd, :ed, :dur, :dur, :si, :p, 0, :so, 1)",
+            [
+                ':n'   => $savedName,
+                ':aid' => $wanId,
+                ':u'   => $savedUnit,
+                ':q'   => $savedSchQty ?: $qty,
+                ':sd'  => $today,
+                ':ed'  => $endDate,
+                ':dur' => $savedDur,
+                ':si'  => $scheduleItemId,
+                ':p'   => $pid,
+                ':so'  => $schSort,
+            ]
+        )->execute();
+        $saId = (int)$db->lastInsertID;
+
+        // Save this activity's resource allocation into pricing_estimate_resources_new
+        // (the per-project table Storekeeper/Procurement read). This only runs on
+        // first creation of the Gantt bar (the $existingSa check above returns
+        // early on subsequent calls) — later resource edits are synced by
+        // actionWbssave's own upsert instead, which runs on every save regardless
+        // of Gantt state.
+        // $taskOrdinalToId is only populated when $wanId was resolved above
+        // (the !$wanId branch); if a wan_id was passed in directly and had no
+        // existing schedule bar, tasks were never touched in this request and
+        // there is nothing to translate against.
+        if (!isset($taskOrdinalToId)) $taskOrdinalToId = [];
+        if (!empty($resources)) {
+            foreach ($resources as $res) {
+                $resId  = (int)($res['resource_id'] ?? 0);
+                $typeId = (int)($res['type_id']     ?? 0);
+                $resQty = (float)($res['qty']  ?? 0);
+                $resRate= (float)($res['rate'] ?? 0);
+                if (!$resId) continue;
+                // task_map entries are ordinals into the tasks list, translated
+                // via $taskOrdinalToId — see actionWbssave() for full rationale.
+                $taskMap = $res['task_map'] ?? [];
+                $resolvedTaskIds = [];
+                if (is_array($taskMap)) {
+                    foreach ($taskMap as $ord) {
+                        $ord = (int)$ord;
+                        if (isset($taskOrdinalToId[$ord])) $resolvedTaskIds[] = $taskOrdinalToId[$ord];
+                    }
+                }
+                $taskIds = implode(',', $resolvedTaskIds);
+                $exists = $db->createCommand(
+                    "SELECT 1 FROM pricing_estimate_resources_new
+                     WHERE project_id=:p AND activity_id=:a AND resource_Id=:r LIMIT 1",
+                    [':p' => $pid, ':a' => $wanId, ':r' => $resId]
+                )->queryScalar();
+                if ($exists) continue;
+                $db->createCommand()->insert('pricing_estimate_resources_new', [
+                    'activity_id'       => $wanId,
+                    'resource_Id'       => $resId,
+                    'resourcetype_Id'   => $typeId,
+                    'quantity'          => $resQty,
+                    'rate'              => $resRate,
+                    'project_id'        => $pid,
+                    'est_activity_Id'   => $iowActId,
+                    'process_Id'        => 0,
+                    'pricing_status'    => 0,
+                    'operations_status' => 0,
+                    'task_ids'          => $taskIds,
+                ])->execute();
+
+                // Two-way sync — mirror into the shared Activity Library too
+                // (same convention as actionWbssave(); see that function for
+                // the full rationale). Only need the insert-if-missing branch
+                // here since this whole block already only runs when no row
+                // existed yet for this resource.
+                if ($iowActId) {
+                    $libExists = $db->createCommand(
+                        "SELECT estactres_id FROM estactivity_resources WHERE estactivity_id=:a AND est_resource_id=:r LIMIT 1",
+                        [':a' => $iowActId, ':r' => $resId]
+                    )->queryScalar();
+                    if (!$libExists) {
+                        $db->createCommand()->insert('estactivity_resources', [
+                            'estactivity_id'        => $iowActId,
+                            'est_resource_id'       => $resId,
+                            'est_resource_quantity' => $resQty,
+                            'est_resource_rate'     => $resRate,
+                            'est_resource_amount'   => round($resQty * $resRate, 2),
+                            'est_resource_status'   => 0,
+                        ])->execute();
+                    }
+                }
+            }
+        }
+
+        // Mirror this activity's tasks into schedule_task_new, keyed by the
+        // scheduleactivities row just created (matches how Storekeeper/
+        // Procurement already read task_Id → activity_tasks.id elsewhere).
+        $wanTasks = $db->createCommand(
+            "SELECT id, task_name, task_qty, productivity FROM activity_tasks WHERE activity_id=:id",
+            [':id' => $iowActId]
+        )->queryAll();
+        foreach ($wanTasks as $wt) {
+            $tQty  = (float)$wt['task_qty'];
+            $tProd = (float)$wt['productivity'];
+            $budgetedDuration = ($tQty > 0 && $tProd > 0) ? round($tQty / $tProd, 4) : 0;
+            $db->createCommand()->insert('schedule_task_new', [
+                'wbs_id'           => 0,
+                'activity_Id'      => $saId,
+                'process_Id'       => 0,
+                'task_Id'          => (int)$wt['id'],
+                'Budgeted_Duration'=> $budgetedDuration,
+                'End_Duration'     => 0,
+                'status'           => 0,
+                'wbs_activity_Id'  => 0,
+                'activity_name'    => $savedName,
+                'primavera_id'     => 0,
+                'task_qty'         => $tQty,
+                'task_productivity'=> $tProd,
+                'task_resource_units' => 1,
+            ])->execute();
+        }
+
+        $db->createCommand(
+            "UPDATE activity_relations ar
+             JOIN scheduleactivities sa_pre ON sa_pre.id = ar.precedent_activity AND sa_pre.projectId = :p AND sa_pre.status = 0
+             JOIN scheduleactivities sa_dep ON sa_dep.id = ar.dependent_activity AND sa_dep.projectId = :p AND sa_dep.status = 0
+             SET ar.status = 0
+             WHERE ar.projectId = :p AND ar.status = 1",
+            [':p' => $pid]
+        )->execute();
+
+        return [
+            'error'           => 'No',
+            'sa_id'           => $saId,
+            'scheduleitem_id' => $scheduleItemId,
+            'duration'        => $savedDur,
+            'act_name'        => $savedName,
+        ];
+        } catch (\Exception $e) {
+            return ['error' => $e->getMessage()];
+        }
+    }
+
+    public function actionWbsget()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $saId  = (int)\Yii::$app->request->post('sa_id', 0);
+        $wanId = (int)\Yii::$app->request->post('wan_id', 0);
+        if (!$saId && !$wanId) return ['error' => 'No id'];
+        $db = \Yii::$app->db;
+
+        // Look up via scheduleactivities (preferred) or directly via workgroup_activities_new
+        if ($saId) {
+            $sa = $db->createCommand(
+                "SELECT sa.name, sa.unit, sa.quantity, sa.duration,
+                        wga.id AS wan_id, wga.activity_Id AS iow_act_id, wga.activitytype_id, wga.wbs_id,
+                        wga.activity_Unit AS est_unit, wga.estimate AS est_qty,
+                        wga.cycle_Unit AS sch_unit, wga.cycle_Quantity AS sch_qty,
+                        wg.iowGroupid, ig.name AS iow_group_name, wg.Name AS iow_name,
+                        ea.activity_name, ea.activity_unit
+                 FROM scheduleactivities sa
+                 LEFT JOIN workgroup_activities_new wga ON wga.id = sa.activity_id
+                 LEFT JOIN workgroups_new wg ON wg.Workgroup_Id = wga.wbs_id
+                 LEFT JOIN iow_groups ig ON ig.id = wg.iowGroupid
+                 LEFT JOIN estimateactivities ea ON ea.activity_id = wga.activity_Id
+                 WHERE sa.id = :id AND sa.status = 0 LIMIT 1",
+                [':id' => $saId]
+            )->queryOne();
+        } else {
+            // Fallback: look up directly from workgroup_activities_new (old bars without scheduleactivities row)
+            $sa = $db->createCommand(
+                "SELECT wga.id AS wan_id, wga.activity_Name AS name, wga.activity_Unit AS unit,
+                        wga.estimate AS quantity, wga.duration,
+                        wga.activity_Id AS iow_act_id, wga.activitytype_id, wga.wbs_id,
+                        wga.activity_Unit AS est_unit, wga.estimate AS est_qty,
+                        wga.cycle_Unit AS sch_unit, wga.cycle_Quantity AS sch_qty,
+                        wg.iowGroupid, ig.name AS iow_group_name, wg.Name AS iow_name,
+                        ea.activity_name, ea.activity_unit
+                 FROM workgroup_activities_new wga
+                 LEFT JOIN workgroups_new wg ON wg.Workgroup_Id = wga.wbs_id
+                 LEFT JOIN iow_groups ig ON ig.id = wg.iowGroupid
+                 LEFT JOIN estimateactivities ea ON ea.activity_id = wga.activity_Id
+                 WHERE wga.id = :id LIMIT 1",
+                [':id' => $wanId]
+            )->queryOne();
+            // Also look up the scheduleactivities.id so the JS can use it for delete
+            if ($sa && !$saId) {
+                $saId = (int)$db->createCommand(
+                    "SELECT id FROM scheduleactivities WHERE activity_id = :w AND status = 0 LIMIT 1",
+                    [':w' => $wanId]
+                )->queryScalar();
+            }
+        }
+        if (!$sa) return ['error' => 'Not found'];
+
+        $iowActId = (int)($sa['iow_act_id'] ?? 0);
+        $uid      = \Yii::$app->user->Id;
+        $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
+        $pid      = $projuser ? (int)$projuser->projectid : 0;
+
+        // tasks — from activity_tasks, the table actionWbssave/actionWbsadd actually write to.
+        // resource_units aliased to resunits to match the key name the WBS
+        // form's prefill code (main.php _prefillModal) already reads.
+        $tasks = $db->createCommand(
+            "SELECT id, task_name, task_unit, task_qty, productivity, resource_units AS resunits FROM activity_tasks WHERE activity_id = :id ORDER BY sort_order ASC, id ASC",
+            [':id' => $iowActId]
+        )->queryAll();
+
+        // resources — from pricing_estimate_resources_new, the project-scoped
+        // allocation table Procurement/Storekeeper already read. estactivity_resources
+        // is a library-wide table (no project_id column) and its save path wipes
+        // and re-inserts all rows for the shared activity on every save, which can
+        // silently drop resources — pricing_estimate_resources_new is upserted
+        // per-resource instead, so it stays accurate per project.
+        $resources = [];
+        $wanIdForRes = (int)($sa['wan_id'] ?? 0) ?: $wanId;
+        if ($wanIdForRes) {
+            $resRows = $db->createCommand(
+                "SELECT pern.pricing_resourceid, pern.resource_Id AS resource_id,
+                        r.Name AS resource_name, r.Unit AS resource_unit,
+                        pern.resourcetype_Id AS type_id, r.Resource_group_Id AS group_id,
+                        pern.rate, pern.quantity, pern.task_ids
+                 FROM pricing_estimate_resources_new pern
+                 JOIN resources r ON r.Resource_Id = pern.resource_Id
+                 WHERE pern.activity_id = :a AND pern.project_id = :p AND pern.pricing_status = 0
+                 ORDER BY pern.pricing_resourceid ASC",
+                [':a' => $wanIdForRes, ':p' => $pid]
+            )->queryAll();
+
+            // ordinal position of each task's real id, in the same order the
+            // tasks array above is returned — task_map sent to the frontend
+            // is by ordinal (matching collectPayload()'s filtered tasks list),
+            // not by raw activity_tasks.id, so translate here.
+            $taskOrdinalById = [];
+            foreach ($tasks as $ord => $t) { $taskOrdinalById[(int)$t['id']] = $ord; }
+
+            foreach ($resRows as $r) {
+                $taskMap = [];
+                if (!empty($r['task_ids'])) {
+                    foreach (explode(',', $r['task_ids']) as $tid) {
+                        $tid = (int)$tid;
+                        if (isset($taskOrdinalById[$tid])) $taskMap[] = $taskOrdinalById[$tid];
+                    }
+                }
+                $resources[] = [
+                    'estactres_id' => (int)$r['pricing_resourceid'],
+                    'resource_id'  => (int)$r['resource_id'],
+                    'type_id'      => (int)$r['type_id'],
+                    'group_id'     => (int)$r['group_id'],
+                    'unit'         => $r['resource_unit'] ?? '',
+                    'rate'         => (float)$r['rate'],
+                    'qty'          => (float)$r['quantity'],
+                    'amount'       => round((float)$r['rate'] * (float)$r['quantity'], 2),
+                    'task_map'     => $taskMap,
+                ];
+            }
+        }
+
+        // proj type, activity type, unit, rate — from estimateactivities
+        $projTypeId = 0; $actTypeId = 0; $estUnit = ''; $estRate = 0.0;
+        if ($iowActId) {
+            $ea = $db->createCommand(
+                "SELECT work_type AS proj_type_id, activity_type AS act_type_id,
+                        activity_unit AS unit, activity_rate AS rate
+                 FROM estimateactivities WHERE activity_id = :id LIMIT 1",
+                [':id' => $iowActId]
+            )->queryOne();
+            if ($ea) {
+                $projTypeId = (int)$ea['proj_type_id'];
+                $actTypeId  = (int)$ea['act_type_id'];
+                $estUnit    = $ea['unit'] ?? '';
+                $estRate    = (float)$ea['rate'];
+            }
+        }
+
+        // Estimate quantity — from pricing_estimate_new, keyed by wan_id
+        // (workgroup_activities_new.id, the project-specific activity
+        // instance) — NOT iowActId (the shared library activity id). This
+        // matches the exact convention actionWbssave()/actionWbsadd() write
+        // under: 'activity_Id' => wan_id, 'est_activity_Id' => iowActId.
+        // Querying by iowActId here (the previous bug) meant this lookup
+        // essentially never matched, so the field silently fell through to
+        // workgroup_activities_new.estimate, which actionWbssave() writes as
+        // a hardcoded 1 (a legacy has-estimate flag, not a real quantity) —
+        // that's why Estimate Quantity showed blank/wrong when editing.
+        $estQty = 0.0;
+        if ($wanIdForRes && $pid) {
+            $peRow = $db->createCommand(
+                "SELECT activity_qty FROM pricing_estimate_new
+                 WHERE activity_Id = :a AND project_Id = :p AND pricing_status = 0 LIMIT 1",
+                [':a' => $wanIdForRes, ':p' => $pid]
+            )->queryOne();
+            if ($peRow) $estQty = (float)$peRow['activity_qty'];
+        }
+
+        // if estQty still 0, fall back to workgroup_activities_new.estimate
+        if (!$estQty) $estQty = (float)($sa['est_qty'] ?? $sa['quantity'] ?? 0);
+
+        // calculated rate = sum of (resource rate × qty) — recalculated fresh
+        $calcRate = 0.0;
+        foreach ($resources as $r) { $calcRate += $r['rate'] * $r['qty']; }
+        if (!$calcRate) $calcRate = $estRate;
+
+        // wan_id = workgroup_activities_new.id
+        $wanIdReturn = (int)($sa['wan_id'] ?? 0) ?: $wanId;
+
+        return [
+            'sa_id'          => $saId,
+            'wan_id'         => $wanIdReturn,
+            'proj_type_id'   => $projTypeId,
+            'act_type_id'    => $actTypeId,
+            'iow_group_id'   => (int)($sa['iowGroupid'] ?? 0),
+            'iow_group_name' => $sa['iow_group_name'] ?? '',
+            'iow_name'       => $sa['iow_name'] ?? '',
+            'iow_act_id'     => $iowActId,
+            'act_name'       => $sa['name'] ?: ($sa['activity_name'] ?? ''),
+            'est_unit'       => $estUnit ?: ($sa['est_unit'] ?? $sa['activity_unit'] ?? ''),
+            'est_qty'        => $estQty,
+            'est_rate'       => round($calcRate, 2),
+            'est_amt'        => round($estQty * $calcRate, 2),
+            'sch_unit'       => ($sa['sch_unit'] !== null && $sa['sch_unit'] !== '') ? $sa['sch_unit'] : ($sa['unit'] ?? ''),
+            'sch_qty'        => ($sa['sch_qty'] !== null && (float)$sa['sch_qty'] > 0) ? (float)$sa['sch_qty'] : (float)($sa['quantity'] ?? 0),
+            'duration'       => (int)($sa['duration'] ?? 0),
+            'tasks'          => $tasks,
+            'resources'      => $resources,
+        ];
+    }
+
+    public function actionWbsdelete()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $saId  = (int)\Yii::$app->request->post('sa_id', 0);
+        $wgId  = (int)\Yii::$app->request->post('wg_id', 0);
+        $force = (bool)\Yii::$app->request->post('force', false);
+        if (!$saId && !$wgId) return ['error' => 'No activity id'];
+
+        $db = \Yii::$app->db;
+
+        // WBS item was only "Saved" (never "Added to Gantt"), so it has no
+        // scheduleactivities row to key off — hard-delete the workgroups_new
+        // row directly instead of going through the schedule-bar cascade below.
+        if (!$saId && $wgId) {
+            $uid      = Yii::$app->user->Id;
+            $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+            $pid      = $projuser ? (int)$projuser->projectid : 0;
+            $owned = $db->createCommand(
+                "SELECT Workgroup_Id FROM workgroups_new WHERE Workgroup_Id=:id AND Project_Id=:p AND Status=0 LIMIT 1",
+                [':id' => $wgId, ':p' => $pid]
+            )->queryScalar();
+            if (!$owned) return ['error' => 'WBS item not found'];
+            $db->createCommand()->delete('workgroups_new', ['Workgroup_Id' => $wgId])->execute();
+            return ['ok' => true];
+        }
+
+        // Check for any active relationships (as predecessor or successor)
+        $relCount = (int)$db->createCommand(
+            "SELECT COUNT(*) FROM activity_relations
+             WHERE (precedent_activity = :id OR dependent_activity = :id) AND status = 0",
+            [':id' => $saId]
+        )->queryScalar();
+
+        if ($relCount > 0) {
+            return ['error' => 'Please remove the relation before deleting this activity'];
+        }
+
+        // Get parent wbsscheduleitems id (and the linked workgroup_activities_new
+        // id) before deleting
+        $sa = $db->createCommand(
+            "SELECT scheduleitem_id, activity_id FROM scheduleactivities WHERE id = :id",
+            [':id' => $saId]
+        )->queryOne();
+
+        $wanIdForCascade = $sa ? (int)$sa['activity_id'] : 0;
+
+        // Data-integrity conflict check: block a permanent delete if progress
+        // has already been reported against this activity, unless the user
+        // has explicitly confirmed with force=1.
+        if ($wanIdForCascade && !$force) {
+            $conflicts = $this->checkActivityDeleteConflicts($saId, $wanIdForCascade);
+            if (!empty($conflicts)) {
+                return [
+                    'error'     => 'Yes',
+                    'conflict'  => true,
+                    'errortext' => 'Deleting this activity will also permanently delete: ' . implode('; ', $conflicts) . '. This cannot be undone.',
+                ];
+            }
+        }
+
+        $this->hardDeleteScheduleActivity($saId, $sa, $wanIdForCascade);
+
+        return ['ok' => true];
+    }
+
+    // Shared cascade used by every path that permanently removes a single
+    // scheduleactivities row — nothing is left orphaned or soft-flagged in
+    // workgroup_activities_new, pricing tables, or downstream procurement
+    // data. $sa/$wanId may be passed in if the caller already fetched them
+    // (e.g. actionWbsdelete), otherwise they're looked up here.
+    private function hardDeleteScheduleActivity($saId, $sa = null, $wanId = null)
+    {
+        $db = \Yii::$app->db;
+
+        if ($sa === null) {
+            $sa = $db->createCommand(
+                "SELECT scheduleitem_id, activity_id FROM scheduleactivities WHERE id = :id",
+                [':id' => $saId]
+            )->queryOne();
+        }
+        if ($wanId === null) {
+            $wanId = $sa ? (int)$sa['activity_id'] : 0;
+        }
+
+        // Cascade: permanently remove any procurement/indent/work-order/progress
+        // data raised against this activity — nothing is left orphaned or soft-flagged.
+        if ($sa) {
+            $pricingIds = $db->createCommand(
+                "SELECT pricing_resourceid FROM pricing_estimate_resources_new WHERE activity_id=:aid",
+                [':aid' => $wanId]
+            )->queryColumn();
+            if (!empty($pricingIds)) {
+                $db->createCommand()->delete('store_indents', ['pricing_resourceid' => $pricingIds])->execute();
+            }
+
+            $db->createCommand()->delete('wo_task_rates',   ['activity_id' => $wanId])->execute();
+            $db->createCommand()->delete('wo_sc_rates',     ['activity_id' => $wanId])->execute();
+            $db->createCommand()->delete('wo_activity_qty', ['activity_id' => $wanId])->execute();
+
+            $woNums = $db->createCommand(
+                "SELECT WO_Number FROM work_order
+                 WHERE JSON_SEARCH(WO_Subject, 'one', :aid, NULL, '\$[*].activity_id') IS NOT NULL",
+                [':aid' => (string)$wanId]
+            )->queryColumn();
+            if (!empty($woNums)) {
+                $db->createCommand()->delete('wo_measurement_book', ['wo_number' => $woNums])->execute();
+                $db->createCommand()->delete('work_order', ['WO_Number' => $woNums])->execute();
+            }
+
+            $poIds = $db->createCommand(
+                "SELECT DISTINCT order_id FROM purchase_order_activities WHERE activity_id=:sid",
+                [':sid' => $saId]
+            )->queryColumn();
+            if (!empty($poIds)) {
+                $db->createCommand()->delete('goods_received_note',      ['GRN_Purchase_Order' => $poIds])->execute();
+                $db->createCommand()->delete('purchase_order_resources',  ['order_id' => $poIds])->execute();
+                $db->createCommand()->delete('purchase_order_activities', ['order_id' => $poIds])->execute();
+                $db->createCommand()->delete('purchase_orders',           ['order_id' => $poIds])->execute();
+            }
+
+            $db->createCommand()->delete('pricing_estimate_resources_new', ['activity_id' => $wanId])->execute();
+            $db->createCommand()->delete('pricing_estimate_new', ['activity_Id' => $wanId])->execute();
+            $db->createCommand()->delete('workgroup_activities_new', ['id' => $wanId])->execute();
+        }
+
+        // Permanently remove progress-report history for this activity.
+        $db->createCommand()->delete('schedule_progress_report', ['activity_id' => $saId])->execute();
+        $db->createCommand()->delete('schedule_progress_report_log', ['activity_id' => $saId])->execute();
+        $db->createCommand()->delete('schedule_resource', ['activityid' => $saId])->execute();
+
+        // Permanently remove any relationships this activity was part of.
+        $db->createCommand()->delete('activity_relations', [
+            'or', ['precedent_activity' => $saId], ['dependent_activity' => $saId]
+        ])->execute();
+
+        // Permanently remove the scheduleactivities row
+        $db->createCommand()->delete('scheduleactivities', ['id' => $saId])->execute();
+
+        if ($sa) {
+            $wsiId = (int)$sa['scheduleitem_id'];
+
+            // If no activities remain under this wbsscheduleitems row, remove it too
+            $remainAct = (int)$db->createCommand(
+                "SELECT COUNT(*) FROM scheduleactivities WHERE scheduleitem_id = :w",
+                [':w' => $wsiId]
+            )->queryScalar();
+
+            if ($remainAct === 0) {
+                // Get the workgroup (IOW) linked to this wbsscheduleitems before removing it
+                $wsi = $db->createCommand(
+                    "SELECT schedulegrp_id FROM wbsscheduleitems WHERE scheduleitem_id = :w",
+                    [':w' => $wsiId]
+                )->queryOne();
+
+                $db->createCommand()->delete('wbsscheduleitems', ['scheduleitem_id' => $wsiId])->execute();
+
+                if ($wsi) {
+                    $wgId = (int)$wsi['schedulegrp_id'];
+
+                    // If no wbsscheduleitems remain under this workgroup, remove it too
+                    $remainWsi = (int)$db->createCommand(
+                        "SELECT COUNT(*) FROM wbsscheduleitems WHERE schedulegrp_id = :g",
+                        [':g' => $wgId]
+                    )->queryScalar();
+
+                    if ($remainWsi === 0) {
+                        $db->createCommand()->delete('workgroups_new', ['Workgroup_Id' => $wgId])->execute();
+                    }
+                }
+            }
+        }
+    }
+
+    // Shared conflict check used before permanently deleting an activity —
+    // lists (in plain English) what dependent data exists so the user can
+    // make an informed decision before forcing the delete through.
+    private function checkActivityDeleteConflicts($saId, $wanId)
+    {
+        $db = \Yii::$app->db;
+        $conflicts = [];
+
+        $progressCount = (int)$db->createCommand(
+            "SELECT COUNT(*) FROM schedule_progress_report WHERE activity_id = :id",
+            [':id' => $saId]
+        )->queryScalar();
+        if ($progressCount) {
+            $conflicts[] = $progressCount . ' reported progress ' . ($progressCount === 1 ? 'entry' : 'entries');
+        }
+
+        $indentCount = (int)$db->createCommand(
+            "SELECT COUNT(*) FROM store_indents si
+             JOIN pricing_estimate_resources_new p ON p.pricing_resourceid = si.pricing_resourceid
+             WHERE p.activity_id = :id",
+            [':id' => $wanId]
+        )->queryScalar();
+        if ($indentCount) {
+            $conflicts[] = $indentCount . ' raised ' . ($indentCount === 1 ? 'indent' : 'indents');
+        }
+
+        $poCount = (int)$db->createCommand(
+            "SELECT COUNT(DISTINCT order_id) FROM purchase_order_activities WHERE activity_id = :id",
+            [':id' => $saId]
+        )->queryScalar();
+        if ($poCount) {
+            $conflicts[] = $poCount . ' purchase ' . ($poCount === 1 ? 'order' : 'orders') . ' (including any goods received against them)';
+        }
+
+        $woCount = (int)$db->createCommand(
+            "SELECT COUNT(*) FROM work_order
+             WHERE JSON_SEARCH(WO_Subject, 'one', :aid, NULL, '\$[*].activity_id') IS NOT NULL",
+            [':aid' => (string)$wanId]
+        )->queryScalar();
+        if ($woCount) {
+            $conflicts[] = $woCount . ' work ' . ($woCount === 1 ? 'order' : 'orders') . ' (including any measurement book billing against them)';
+        }
+
+        return $conflicts;
+    }
+
+    // ── Cashflow Dashboard editable targets ─────────────────────────────
+    // Generic per-project, per-metric target store backing the dial gauges
+    // on the Cashflow dashboard (e.g. Cash-To-Cash Cycle) — one row per
+    // project+metric, upserted on save.
+    public function actionCfgettarget()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+        $metricKey = (string)($_POST['metric_key'] ?? '');
+        if ($metricKey === '') { return json_encode(['error' => 'No metric_key']); }
+
+        $row = Yii::$app->db->createCommand(
+            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key=:mk",
+            [':pid' => $pid, ':mk' => $metricKey]
+        )->queryOne();
+
+        return json_encode([
+            'error'  => 'No',
+            'target' => $row ? (float)$row['target_value'] : 0,
+        ]);
+    }
+
+    public function actionCfsavetarget()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+        $metricKey = (string)($_POST['metric_key'] ?? '');
+        $value = (float)($_POST['target_value'] ?? 0);
+        if ($metricKey === '') { return json_encode(['error' => 'No metric_key']); }
+
+        Yii::$app->db->createCommand(
+            "INSERT INTO cf_dashboard_targets (project_id, metric_key, target_value, updated_by)
+             VALUES (:pid, :mk, :val, :uid)
+             ON DUPLICATE KEY UPDATE target_value=:val, updated_by=:uid",
+            [':pid' => $pid, ':mk' => $metricKey, ':val' => $value, ':uid' => $uid]
+        )->execute();
+
+        return json_encode(['error' => 'No']);
+    }
+
+    // Cashflow Dashboard "Bank" panel — current balance across ANY Bank
+    // account (accounts_item.account_type = 2), NOT restricted to a bank
+    // account linked to this project via accounts_item.projectid, since
+    // a project's transactions can pass through a shared/company-wide
+    // bank account that isn't itself tied to any one project. Project
+    // scoping comes entirely from each voucher/journalvoucher row's own
+    // project_id column — same correction already applied to
+    // actionCfwip/actionCfcurrentassets/actionCfcurrentliabilities.
+    // Computed the same way the Finance module's own Ledger/Bank Book
+    // do: sum every voucher and journalvoucher row where a Bank account
+    // is on either side, restricted to this project. A net CREDIT
+    // balance (money drawn against the account, e.g. a CC account in
+    // use) is "Availed" — shown as an orange overlay + needle on the
+    // dial. A net DEBIT balance means nothing is availed (needle at
+    // 0/left tip, dial fully grey, no overlay).
+    public function actionCfbankbalance()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $sum = function($sql) use ($pid) {
+            $v = Yii::$app->db->createCommand($sql, [':pid' => $pid])->queryScalar();
+            return $v ? (float)$v : 0;
+        };
+
+        $debit  = $sum("SELECT SUM(v.amount) FROM voucher v INNER JOIN accounts_item ai ON ai.id=v.account_id WHERE ai.account_type=2 AND v.contra=0 AND v.project_id=:pid");
+        $credit = $sum("SELECT SUM(v.amount) FROM voucher v INNER JOIN accounts_item ai ON ai.id=v.creditacnt WHERE ai.account_type=2 AND v.contra=0 AND v.project_id=:pid");
+        $contraDebit  = $sum("SELECT SUM(v.amount) FROM voucher v INNER JOIN accounts_item ai ON ai.id=v.account_id WHERE ai.account_type=2 AND v.contra=1 AND v.type='Receipt' AND v.project_id=:pid");
+        $contraCredit = $sum("SELECT SUM(v.amount) FROM voucher v INNER JOIN accounts_item ai ON ai.id=v.creditacnt WHERE ai.account_type=2 AND v.contra=1 AND v.type='Payment' AND v.project_id=:pid");
+        $journalDebit  = $sum("SELECT SUM(j.amount) FROM journalvoucher j INNER JOIN accounts_item ai ON ai.id=j.debitacnt WHERE ai.account_type=2 AND j.project_id=:pid");
+        $journalCredit = $sum("SELECT SUM(j.amount) FROM journalvoucher j INNER JOIN accounts_item ai ON ai.id=j.creditacnt WHERE ai.account_type=2 AND j.project_id=:pid");
+
+        $totalDebit  = $debit + $contraDebit + $journalDebit;
+        $totalCredit = $credit + $contraCredit + $journalCredit;
+        $net = $totalCredit - $totalDebit; // positive = net credit balance (availed)
+
+        $hasBank = ($totalDebit > 0 || $totalCredit > 0);
+
+        return json_encode([
+            'error'    => 'No',
+            'has_bank' => $hasBank,
+            'total_debit'  => round($totalDebit, 2),
+            'total_credit' => round($totalCredit, 2),
+            'balance_type' => $net > 0 ? 'credit' : 'debit',
+            'availed'      => $net > 0 ? round($net, 2) : 0,
+        ]);
+    }
+
+    // Shared helper: sums Bank/Cash PAYMENT transactions for a project,
+    // filtered to only those whose debited counterparty account belongs
+    // to a given account_type. In a bank/cash book, Bank/Cash is
+    // CREDITED when an expense is incurred or an asset is purchased —
+    // the debited side is the actual Expense/Asset account head. This
+    // walks every non-contra voucher where the CREDITED side is ANY
+    // Bank or Cash account head (account_type IN (1,2)) — NOT restricted
+    // to a Bank/Cash account linked to this project via
+    // accounts_item.projectid, since a project's transactions can pass
+    // through a shared/company-wide Bank or Cash account that isn't
+    // itself tied to any one project. Project scoping comes entirely
+    // from the voucher row's own project_id column. Sums the amount only
+    // when the debited account_id's account_type matches
+    // $debitAccountType (e.g. 8 = Expenses for Work In Progress). Contra
+    // (internal transfer) rows are excluded — they're not real external
+    // expense transactions. journalvoucher entries are NOT included here
+    // (journal entries don't touch Bank/Cash directly by definition in
+    // this schema's voucher/journalvoucher split).
+    private function _cfBankCashDebitedByType($pid, $debitAccountType)
+    {
+        $sql = "SELECT SUM(v.amount)
+                FROM voucher v
+                INNER JOIN accounts_item debitAi ON debitAi.id = v.account_id
+                INNER JOIN accounts_item creditAi ON creditAi.id = v.creditacnt
+                WHERE creditAi.account_type IN (1,2)
+                  AND v.contra = 0
+                  AND debitAi.account_type = :debitType
+                  AND v.project_id = :pid";
+
+        $v = Yii::$app->db->createCommand($sql, [':debitType' => $debitAccountType, ':pid' => $pid])->queryScalar();
+        return $v ? (float)$v : 0;
+    }
+
+    // Shared helper: sums BOTH Bank/Cash voucher PAYMENTs and
+    // journalvoucher postings for a project, filtered to a single
+    // specific debited counterparty account (rather than a whole
+    // account_type, see _cfBankCashDebitedByType above). Journal entries
+    // aren't restricted to a Bank/Cash credit side — any journal posting
+    // that debits this account counts, matching the "every bank or
+    // journal entry" rule.
+    private function _cfDebitedTo($accountId, $pid)
+    {
+        $voucherTotal = Yii::$app->db->createCommand(
+            "SELECT SUM(v.amount)
+             FROM voucher v
+             INNER JOIN accounts_item creditAi ON creditAi.id = v.creditacnt
+             WHERE creditAi.account_type IN (1,2)
+               AND v.contra = 0
+               AND v.account_id = :id
+               AND v.project_id = :pid",
+            [':id' => $accountId, ':pid' => $pid]
+        )->queryScalar();
+
+        $journalTotal = Yii::$app->db->createCommand(
+            "SELECT SUM(j.amount) FROM journalvoucher j
+             WHERE j.debitacnt = :id AND j.project_id = :pid",
+            [':id' => $accountId, ':pid' => $pid]
+        )->queryScalar();
+
+        return ($voucherTotal ? (float)$voucherTotal : 0) + ($journalTotal ? (float)$journalTotal : 0);
+    }
+
+    // Same as _cfDebitedTo, but restricted to transactions dated AFTER
+    // $sinceDate (exclusive — the cycle boundary date's own transaction,
+    // the Contract Income credit itself, belongs to the cycle that just
+    // closed, not the new one). Pass null/'' for $sinceDate to mean "no
+    // lower bound" (the very first cycle, from project inception).
+    private function _cfDebitedToSince($accountId, $pid, $sinceDate)
+    {
+        return $this->_cfDebitedToWindow($accountId, $pid, $sinceDate, null);
+    }
+
+    // Same as _cfDebitedToSince, but also accepts an optional inclusive
+    // UPPER bound ($uptoDate) — used to compute a single CLOSED cycle's
+    // contribution (dates strictly after the previous cycle boundary, up
+    // to and including the cycle-closing Contract Income credit date).
+    // Pass null for either bound to mean "no bound on that side".
+    private function _cfDebitedToWindow($accountId, $pid, $sinceDate, $uptoDate)
+    {
+        $cond = "";
+        $params = [':id' => $accountId, ':pid' => $pid];
+        if ($sinceDate) { $cond .= " AND date(v.date) > :sd"; $params[':sd'] = $sinceDate; }
+        if ($uptoDate) { $cond .= " AND date(v.date) <= :ud"; $params[':ud'] = $uptoDate; }
+        $voucherTotal = Yii::$app->db->createCommand(
+            "SELECT SUM(v.amount)
+             FROM voucher v
+             INNER JOIN accounts_item creditAi ON creditAi.id = v.creditacnt
+             WHERE creditAi.account_type IN (1,2)
+               AND v.contra = 0
+               AND v.account_id = :id
+               AND v.project_id = :pid
+               $cond",
+            $params
+        )->queryScalar();
+
+        $condJ = "";
+        $paramsJ = [':id' => $accountId, ':pid' => $pid];
+        if ($sinceDate) { $condJ .= " AND date(j.date) > :sd"; $paramsJ[':sd'] = $sinceDate; }
+        if ($uptoDate) { $condJ .= " AND date(j.date) <= :ud"; $paramsJ[':ud'] = $uptoDate; }
+        $journalTotal = Yii::$app->db->createCommand(
+            "SELECT SUM(j.amount) FROM journalvoucher j
+             WHERE j.debitacnt = :id AND j.project_id = :pid
+             $condJ",
+            $paramsJ
+        )->queryScalar();
+
+        return ($voucherTotal ? (float)$voucherTotal : 0) + ($journalTotal ? (float)$journalTotal : 0);
+    }
+
+    // Shared helper: net (Debit - Credit) balance of one account head,
+    // restricted to one project's own voucher/journalvoucher
+    // transactions. Positive = debit balance (the account is behaving as
+    // an Asset); negative = credit balance (behaving as a Liability).
+    // Opening balances excluded — pure transaction movement.
+    private function _cfAccountDebitBalance($accountId, $pid)
+    {
+        $sum = function($sql) use ($accountId, $pid) {
+            $v = Yii::$app->db->createCommand($sql, [':id' => $accountId, ':pid' => $pid])->queryScalar();
+            return $v ? (float)$v : 0;
+        };
+        $debit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=0 AND project_id=:pid");
+        $credit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=0 AND project_id=:pid");
+        $contraDebit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=1 AND type='Receipt' AND project_id=:pid");
+        $contraCredit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=1 AND type='Payment' AND project_id=:pid");
+        $journalDebit  = $sum("SELECT SUM(amount) FROM journalvoucher WHERE debitacnt=:id AND project_id=:pid");
+        $journalCredit = $sum("SELECT SUM(amount) FROM journalvoucher WHERE creditacnt=:id AND project_id=:pid");
+
+        $totalDebit  = $debit + $contraDebit + $journalDebit;
+        $totalCredit = $credit + $contraCredit + $journalCredit;
+        return $totalDebit - $totalCredit;
+    }
+
+    // Same as _cfAccountDebitBalance, but restricted to transactions
+    // dated ON OR BEFORE $uptoDate (inclusive) — used to reconstruct
+    // what an account's balance would have read as of a past cycle's
+    // closing date, for the Total Investment per-cycle breakdown chart.
+    // Pass null for $uptoDate to mean "no upper bound" (same as
+    // _cfAccountDebitBalance).
+    private function _cfAccountDebitBalanceAsOf($accountId, $pid, $uptoDate)
+    {
+        if (!$uptoDate) {
+            return $this->_cfAccountDebitBalance($accountId, $pid);
+        }
+        $sum = function($sql) use ($accountId, $pid, $uptoDate) {
+            $v = Yii::$app->db->createCommand($sql, [':id' => $accountId, ':pid' => $pid, ':ud' => $uptoDate])->queryScalar();
+            return $v ? (float)$v : 0;
+        };
+        $debit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=0 AND project_id=:pid AND date(date) <= :ud");
+        $credit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=0 AND project_id=:pid AND date(date) <= :ud");
+        $contraDebit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=1 AND type='Receipt' AND project_id=:pid AND date(date) <= :ud");
+        $contraCredit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=1 AND type='Payment' AND project_id=:pid AND date(date) <= :ud");
+        $journalDebit  = $sum("SELECT SUM(amount) FROM journalvoucher WHERE debitacnt=:id AND project_id=:pid AND date(date) <= :ud");
+        $journalCredit = $sum("SELECT SUM(amount) FROM journalvoucher WHERE creditacnt=:id AND project_id=:pid AND date(date) <= :ud");
+
+        $totalDebit  = $debit + $contraDebit + $journalDebit;
+        $totalCredit = $credit + $contraCredit + $journalCredit;
+        return $totalDebit - $totalCredit;
+    }
+
+    // Shared helper: every account head mapped under EITHER the
+    // "Current Assets" (accounts_sub.id = 32) OR "Current Liabilities"
+    // (accounts_sub.id = 30) subgroup, via subgroup_accounts. This is
+    // the combined candidate pool for both actionCfcurrentassets and
+    // actionCfcurrentliabilities — an account head doesn't statically
+    // "belong" to one bucket or the other; each one's OWN current
+    // balance sign (Debit - Credit, project-scoped) decides which
+    // bucket it falls into for a given project: a debit balance means
+    // it's currently behaving as an Asset, a credit balance means it's
+    // currently behaving as a Liability. The same account can move
+    // between the two panels project to project, or period to period,
+    // as its balance sign changes.
+    private function _cfCurrentAssetLiabilityAccountIds()
+    {
+        return Yii::$app->db->createCommand(
+            "SELECT DISTINCT account_id FROM subgroup_accounts WHERE subgrp_id IN (32, 30)"
+        )->queryColumn();
+    }
+
+    // Investments panel (Cashflow Dashboard, formerly "Net Investments" /
+    // "Current Assets"): sum of DEBIT current balances of every account
+    // head in EITHER the combined Current Assets/Liabilities subgroup
+    // pool (see _cfCurrentAssetLiabilityAccountIds) OR the dynamically-
+    // discovered WIP candidate set (see _cfWipCandidateAccountIds) —
+    // restricted to the selected project's own voucher/journalvoucher
+    // transactions (Debit - Credit per head, project-scoped). Only heads
+    // whose balance actually comes out as a strictly positive (debit)
+    // balance are included here; balance <= 0 (credit or fully
+    // reconciled) counts toward Work In Progress instead (see
+    // actionCfwip) — same account set, mirrored by balance sign, so any
+    // account head can move between the two panels as its balance
+    // changes.
+    public function actionCfcurrentassets()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $acctIds = array_unique(array_merge(
+            $this->_cfCurrentAssetLiabilityAccountIds(),
+            $this->_cfWipCandidateAccountIds($pid)
+        ));
+
+        $total = 0;
+        foreach ($acctIds as $acctId) {
+            $balance = $this->_cfAccountDebitBalance((int)$acctId, $pid);
+            if ($balance > 0) {
+                $total += $balance;
+            }
+        }
+
+        return json_encode([
+            'error' => 'No',
+            'total' => round($total, 2),
+        ]);
+    }
+
+    // Investments panel breakdown (Cashflow Dashboard tooltip): same
+    // account pool and balance>0 filter as actionCfcurrentassets, but
+    // returns each contributing account head individually instead of
+    // just the sum — for the click-to-open per-account bar chart.
+    public function actionCfcurrentassetsbreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $acctIds = array_unique(array_merge(
+            $this->_cfCurrentAssetLiabilityAccountIds(),
+            $this->_cfWipCandidateAccountIds($pid)
+        ));
+
+        $rows = [];
+        foreach ($acctIds as $acctId) {
+            $balance = $this->_cfAccountDebitBalance((int)$acctId, $pid);
+            if ($balance > 0) {
+                $name = Yii::$app->db->createCommand(
+                    "SELECT name FROM accounts_item WHERE id=:id",
+                    [':id' => (int)$acctId]
+                )->queryScalar();
+                $rows[] = ['name' => $name ?: ('Account #' . $acctId), 'amount' => round($balance, 2)];
+            }
+        }
+        usort($rows, function($a, $b) { return $b['amount'] <=> $a['amount']; });
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+        ]);
+    }
+
+    // Shared helper: the Bills Receivable value — the current balance of
+    // the account head that has a CREDIT posting against "Contract
+    // Income" through a JOURNAL entry (journalvoucher only) for the
+    // selected project. There is only ever one such debit account per
+    // project. Returns 0 if there's no "Contract Income" account or no
+    // qualifying journal entry yet. Shared by actionCfbillsreceivable
+    // and actionCfwip (which subtracts this from the WIP total — see
+    // Shared helper: the date of the MOST RECENT journal entry crediting
+    // "Contract Income" for this project — the start of the current,
+    // still-open WIP accrual cycle. Every time Contract Income is
+    // credited, the WIP accumulated up to that date is considered
+    // billed out (at its real cost, not the invoice/quoted value — see
+    // actionCfwip's comment) and permanently excluded from future WIP
+    // totals; only transactions dated AFTER this date belong to the
+    // still-open cycle. Returns null if there's no "Contract Income"
+    // account or no credit entry yet (the whole project-to-date range is
+    // one open cycle in that case).
+    private function _cfLatestContractIncomeDate($pid)
+    {
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return null;
+        }
+
+        $latestDate = Yii::$app->db->createCommand(
+            "SELECT MAX(date) FROM journalvoucher WHERE creditacnt = :cid AND project_id = :pid",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryScalar();
+
+        return $latestDate ?: null;
+    }
+
+    // Shared helper: every distinct date on which a journal entry
+    // credited "Contract Income" for this project, in ascending order —
+    // the full list of WIP accrual cycle boundaries (see
+    // _cfLatestContractIncomeDate, which just returns the last one of
+    // this list). Used by _cfNetInvestmentClosedCyclesWip to walk each
+    // now-closed cycle in turn. Returns an empty array if there's no
+    // "Contract Income" account or no credit entries yet.
+    private function _cfAllContractIncomeDates($pid)
+    {
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return [];
+        }
+
+        return Yii::$app->db->createCommand(
+            "SELECT DISTINCT date FROM journalvoucher WHERE creditacnt = :cid AND project_id = :pid ORDER BY date ASC",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryColumn();
+    }
+
+    // Core Work In Progress computation for an arbitrary accrual window:
+    // transactions dated strictly AFTER $sinceDate, up to and including
+    // $uptoDate (pass null for either bound to mean unbounded on that
+    // side). Same rules as actionCfwip's doc comment — direct Bank/Cash
+    // payments to Expense accounts, Expense-debiting journal entries
+    // whose credit side still carries an outstanding LIFETIME balance,
+    // and every other WIP-candidate account whose LIFETIME balance is
+    // <=0, counting only the portion of money moved to it within this
+    // window. Shared by actionCfwip (open cycle: sinceDate=latest
+    // boundary, uptoDate=null) and _cfNetInvestmentClosedCyclesWip (each
+    // closed cycle in turn).
+    private function _cfWipForWindow($pid, $sinceDate, $uptoDate)
+    {
+        $cond = "";
+        $params = [':debitType' => 8, ':pid' => $pid];
+        if ($sinceDate) { $cond .= " AND date(v.date) > :sd"; $params[':sd'] = $sinceDate; }
+        if ($uptoDate) { $cond .= " AND date(v.date) <= :ud"; $params[':ud'] = $uptoDate; }
+        $total = Yii::$app->db->createCommand(
+            "SELECT SUM(v.amount)
+             FROM voucher v
+             INNER JOIN accounts_item debitAi ON debitAi.id = v.account_id
+             INNER JOIN accounts_item creditAi ON creditAi.id = v.creditacnt
+             WHERE creditAi.account_type IN (1,2)
+               AND v.contra = 0
+               AND debitAi.account_type = :debitType
+               AND v.project_id = :pid
+               $cond",
+            $params
+        )->queryScalar();
+        $total = $total ? (float)$total : 0;
+
+        $condJ = "";
+        $paramsJ = [':pid' => $pid];
+        if ($sinceDate) { $condJ .= " AND date(j.date) > :sd"; $paramsJ[':sd'] = $sinceDate; }
+        if ($uptoDate) { $condJ .= " AND date(j.date) <= :ud"; $paramsJ[':ud'] = $uptoDate; }
+        $expenseJournalRows = Yii::$app->db->createCommand(
+            "SELECT j.creditacnt, j.amount FROM journalvoucher j
+             INNER JOIN accounts_item debitAi ON debitAi.id = j.debitacnt
+             WHERE debitAi.account_type = 8 AND j.project_id = :pid
+             $condJ",
+            $paramsJ
+        )->queryAll();
+        foreach ($expenseJournalRows as $row) {
+            $creditBalance = $this->_cfAccountDebitBalance((int)$row['creditacnt'], $pid);
+            if ($creditBalance != 0) {
+                $total += (float)$row['amount'];
+            }
+        }
+
+        $otherAccounts = $this->_cfWipCandidateAccountIds($pid);
+        foreach ($otherAccounts as $acctId) {
+            $balance = $this->_cfAccountDebitBalance((int)$acctId, $pid);
+            if ($balance <= 0) {
+                $total += $this->_cfDebitedToWindow((int)$acctId, $pid, $sinceDate, $uptoDate);
+            }
+        }
+
+        return max(0, $total);
+    }
+
+    // Net Investment panel (Cashflow Dashboard): the sum of every
+    // now-CLOSED WIP accrual cycle's own computed WIP total (see
+    // _cfWipForWindow), one term per cycle boundary from
+    // _cfAllContractIncomeDates. Each time Contract Income is credited,
+    // that cycle's real WIP cost is dropped out of the live WIP total
+    // (see actionCfwip) — but that money hasn't actually been recovered
+    // yet; it's sitting inside the Bills Receivable figure (billed at
+    // the quoted/profit-inclusive amount, but not yet paid by the
+    // client) until Contract Income is realized. So it's still a real,
+    // un-recovered investment and belongs back in Net Investment
+    // (Investments + open-cycle WIP + this sum) rather than vanishing.
+    // Returns 0 if there are no Contract Income credits yet (nothing
+    // closed out yet).
+    private function _cfNetInvestmentClosedCyclesWip($pid)
+    {
+        $boundaries = $this->_cfAllContractIncomeDates($pid);
+        $sum = 0;
+        $sinceDate = null;
+        foreach ($boundaries as $uptoDate) {
+            $sum += $this->_cfWipForWindow($pid, $sinceDate, $uptoDate);
+            $sinceDate = $uptoDate;
+        }
+        return $sum;
+    }
+
+    // Net Investment panel: Investments + current open-cycle Work In
+    // Progress + the cumulative WIP cost already closed out against
+    // past Bills Receivable events (see _cfNetInvestmentClosedCyclesWip)
+    // MINUS the amount actually RECEIVED from the client so far (see
+    // _cfBillsReceivableRecovered) — i.e. every rupee that has ever gone
+    // into the project's cost base and has NOT YET come back as actual
+    // cash, regardless of which panel it's currently displayed under.
+    //
+    // Raising a bill (a journal crediting Contract Income) does NOT by
+    // itself reduce Net Investment — it only moves that cycle's cost
+    // from the "WIP" term into the "closed cycles" term, so the total
+    // stays the same at that instant (the money billed is still
+    // un-recovered, just now sitting inside Bills Receivable instead of
+    // WIP). Net Investment only actually drops once the client PAYS —
+    // a real receipt against the Bills Receivable account — which is
+    // exactly what _cfBillsReceivableRecovered measures. (Working
+    // Capital's own Availed figure drops at that same moment too, but
+    // independently — it's driven by the live Bank balance in
+    // actionCfbankbalance, not this calculation.)
+    //
+    // Target reuses the Bank-Working Capital target (bank_wcapital)
+    // rather than having its own — Net Investment and Working Capital
+    // represent the same capital commitment viewed from different
+    // angles.
+    public function actionCfnetinvestment()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $total = $this->_cfNetInvestmentAsOf($pid, null);
+
+        return json_encode([
+            'error' => 'No',
+            'total' => round($total, 2),
+        ]);
+    }
+
+    // Core Total/Net Investment computation, reconstructed as of an
+    // arbitrary date ($uptoDate — pass null for "as of today", which is
+    // what the live actionCfnetinvestment dial uses). Same formula:
+    // Investments-as-of-that-date + open-cycle-WIP-as-of-that-date +
+    // closed-cycles-WIP-up-to-that-date, minus amount-recovered-as-of-
+    // that-date. Used both by the live dial (uptoDate=null) and by the
+    // Total Investment breakdown popup (uptoDate = each past cycle's own
+    // closing date, to show what Total Investment read as at the moment
+    // each cycle closed — see actionCfnetinvestmentbreakdown).
+    private function _cfNetInvestmentAsOf($pid, $uptoDate)
+    {
+        $acctIds = array_unique(array_merge(
+            $this->_cfCurrentAssetLiabilityAccountIds(),
+            $this->_cfWipCandidateAccountIds($pid)
+        ));
+        $investments = 0;
+        foreach ($acctIds as $acctId) {
+            $balance = $this->_cfAccountDebitBalanceAsOf((int)$acctId, $pid, $uptoDate);
+            if ($balance > 0) {
+                $investments += $balance;
+            }
+        }
+
+        // Every Contract Income boundary at or before $uptoDate (or all
+        // of them, if $uptoDate is null/today) — walks the same cycles
+        // as _cfNetInvestmentClosedCyclesWip, but only up to the cutoff.
+        $allBoundaries = $this->_cfAllContractIncomeDates($pid);
+        $boundariesUpTo = [];
+        foreach ($allBoundaries as $b) {
+            if (!$uptoDate || $b <= $uptoDate) { $boundariesUpTo[] = $b; }
+        }
+        $latestBoundaryUpTo = count($boundariesUpTo) ? end($boundariesUpTo) : null;
+
+        $sinceDate = null;
+        $closedCyclesWip = 0;
+        foreach ($boundariesUpTo as $b) {
+            $closedCyclesWip += $this->_cfWipForWindow($pid, $sinceDate, $b);
+            $sinceDate = $b;
+        }
+        // Open cycle: from the last boundary at-or-before the cutoff, up
+        // to the cutoff itself (or unbounded, if uptoDate is null).
+        $openCycleWip = $this->_cfWipForWindow($pid, $latestBoundaryUpTo, $uptoDate);
+
+        $recovered = $this->_cfBillsReceivableRecoveredAsOf($pid, $uptoDate);
+
+        $total = $investments + $openCycleWip + $closedCyclesWip - $recovered;
+        return max(0, $total);
+    }
+
+    // Total Investment panel breakdown (Cashflow Dashboard popup): one
+    // bar per WIP accrual cycle — CLOSED cycles are valued at their own
+    // CLOSING Total Investment figure (see _cfNetInvestmentAsOf, as of
+    // that cycle's own Contract Income credit date), and the current
+    // still-open cycle is valued as of today (same as the live dial).
+    // This is the cycle's CLOSING value, not a true day-by-day peak
+    // within the cycle — a deliberately simpler, cheaper approximation.
+    // Each bar is labelled by the month/year its cycle closed ("Current"
+    // for the open cycle). Also returns the plain average of all
+    // returned bar values across every cycle (closed + open).
+    public function actionCfnetinvestmentbreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $rows = $this->_cfNetInvestmentPerCycleRows($pid);
+        $average = $this->_cfNetInvestmentAverage($pid, $rows);
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+            'average' => round($average, 2),
+        ]);
+    }
+
+    // Shared helper: one {name, amount} row per WIP accrual cycle's own
+    // Total Investment value — CLOSED cycles valued at their own closing
+    // date (see _cfNetInvestmentAsOf), the current open cycle valued as
+    // of today. Same rows as actionCfnetinvestmentbreakdown returns,
+    // extracted so actionCfreecash can compute the same "average
+    // investment" figure without duplicating this cycle-walking logic.
+    private function _cfNetInvestmentPerCycleRows($pid)
+    {
+        $boundaries = $this->_cfAllContractIncomeDates($pid);
+
+        $rows = [];
+        foreach ($boundaries as $b) {
+            $value = $this->_cfNetInvestmentAsOf($pid, $b);
+            $label = date('M Y', strtotime($b));
+            $rows[] = ['name' => $label, 'amount' => round($value, 2)];
+        }
+        // Current still-open cycle, valued as of today.
+        $rows[] = ['name' => 'Current', 'amount' => round($this->_cfNetInvestmentAsOf($pid, null), 2)];
+
+        return $rows;
+    }
+
+    // Shared helper: plain average of _cfNetInvestmentPerCycleRows'
+    // amounts — the "Average Investment" figure Free Cash's percentage
+    // is measured against (see actionCfreecash).
+    private function _cfNetInvestmentAverage($pid, $rows = null)
+    {
+        if ($rows === null) { $rows = $this->_cfNetInvestmentPerCycleRows($pid); }
+        $sum = 0;
+        foreach ($rows as $r) { $sum += $r['amount']; }
+        return count($rows) ? $sum / count($rows) : 0;
+    }
+
+    // Free Cash panel (Cashflow Dashboard): a PERCENTAGE dial, same
+    // presentation pattern as Contribution Margin. The money you "take
+    // home" — the return before tax — after every investment and
+    // liability is accounted for.
+    //
+    // Free Cash (rupee value) = Contribution Margin (see
+    // _cfContributionMarginValue) MINUS Total Investment (see
+    // _cfNetInvestmentAsOf, as of today — same figure as the live Total
+    // Investment dial) MINUS Current Liabilities (see
+    // _cfCurrentLiabilitiesTotal).
+    //
+    // The dial's needle position/percentage shown at its center = (Free
+    // Cash / Average Investment) * 100, where Average Investment is the
+    // SAME "Average" figure shown in the Total Investment breakdown
+    // popup (see _cfNetInvestmentAverage — the plain average of every
+    // cycle's own closing Total Investment value, including the current
+    // open cycle).
+    //
+    // The rupee value itself is shown to the LEFT of the dial (Actual),
+    // in Lakhs if <= 99 Lakhs or Crores if greater. Target is a
+    // user-editable PERCENTAGE (not a rupee value), saved under
+    // metric_key "free_cash_target".
+    public function actionCfreecash()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $freeCashValue = $this->_cfFreeCashValue($pid);
+        $averageInvestment = $this->_cfNetInvestmentAverage($pid);
+        $freeCashPct = $averageInvestment > 0 ? ($freeCashValue / $averageInvestment) * 100 : 0;
+
+        return json_encode([
+            'error' => 'No',
+            'value' => round($freeCashValue, 2),
+            'percent' => round($freeCashPct, 2),
+        ]);
+    }
+
+    // Shared helper: Free Cash's rupee value — Contribution Margin (see
+    // _cfContributionMarginValue) MINUS Total Investment (see
+    // _cfNetInvestmentAsOf, as of today) MINUS Current Liabilities (see
+    // _cfCurrentLiabilitiesTotal). Extracted from actionCfreecash so
+    // actionCfroi can reuse it without duplicating this three-way
+    // subtraction.
+    private function _cfFreeCashValue($pid)
+    {
+        $contributionMargin = $this->_cfContributionMarginValue($pid);
+        $totalInvestment = $this->_cfNetInvestmentAsOf($pid, null);
+        $currentLiabilities = $this->_cfCurrentLiabilitiesTotal($pid);
+        return $contributionMargin - $totalInvestment - $currentLiabilities;
+    }
+
+    // ROI panel (Cashflow Dashboard): a PERCENTAGE dial, same
+    // presentation pattern as Contribution Margin/Free Cash. ROI =
+    // (Contribution Margin / Average Investment) * 100 — same Average
+    // Investment figure used by Free Cash's own percentage (see
+    // _cfNetInvestmentAverage — the plain average of every WIP accrual
+    // cycle's own closing Total Investment value, including the current
+    // open cycle). The rupee value shown to the LEFT of the dial
+    // (Actual) is Contribution Margin's own rupee value (see
+    // _cfContributionMarginValue) — ROI is a ratio of that same figure,
+    // not a separate rupee amount of its own. Target is a user-editable
+    // PERCENTAGE, saved under metric_key "roi_target".
+    public function actionCfroi()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $contributionMarginValue = $this->_cfContributionMarginValue($pid);
+        $averageInvestment = $this->_cfNetInvestmentAverage($pid);
+        $roiPct = $averageInvestment > 0 ? ($contributionMarginValue / $averageInvestment) * 100 : 0;
+
+        return json_encode([
+            'error' => 'No',
+            'value' => round($contributionMarginValue, 2),
+            'percent' => round($roiPct, 2),
+        ]);
+    }
+
+    // actionCfwip's comment).
+    private function _cfBillsReceivable($pid)
+    {
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return 0;
+        }
+
+        $debitAcctId = Yii::$app->db->createCommand(
+            "SELECT j.debitacnt FROM journalvoucher j
+             WHERE j.creditacnt = :cid AND j.project_id = :pid
+             LIMIT 1",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryScalar();
+        if (!$debitAcctId) {
+            return 0;
+        }
+
+        $balance = $this->_cfAccountDebitBalance((int)$debitAcctId, $pid);
+        return max(0, $balance);
+    }
+
+    // Same as _cfBillsReceivable, but reconstructed as of an arbitrary
+    // date ($uptoDate — pass null for "as of today", same as the
+    // unbounded version). Used by actionCfbillsreceivablebreakdown for
+    // the per-cycle breakdown popup.
+    private function _cfBillsReceivableAsOf($pid, $uptoDate)
+    {
+        if (!$uptoDate) {
+            return $this->_cfBillsReceivable($pid);
+        }
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return 0;
+        }
+
+        $debitAcctId = Yii::$app->db->createCommand(
+            "SELECT j.debitacnt FROM journalvoucher j
+             WHERE j.creditacnt = :cid AND j.project_id = :pid
+             LIMIT 1",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryScalar();
+        if (!$debitAcctId) {
+            return 0;
+        }
+
+        $balance = $this->_cfAccountDebitBalanceAsOf((int)$debitAcctId, $pid, $uptoDate);
+        return max(0, $balance);
+    }
+
+    // Shared helper: how much of the money ever billed to the client
+    // (via the Bills Receivable debit account — see _cfBillsReceivable)
+    // has actually been RECEIVED so far — i.e. the total debit postings
+    // ever made to that account (every bill raised, across all cycles)
+    // minus its current outstanding balance. A real receipt against that
+    // account (crediting it when the client pays) reduces the balance
+    // without reducing the total-ever-debited figure, so the gap between
+    // the two is exactly the cumulative amount actually recovered.
+    // Returns 0 if there's no Contract Income account or no qualifying
+    // debit account yet.
+    private function _cfBillsReceivableRecovered($pid)
+    {
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return 0;
+        }
+
+        $debitAcctId = Yii::$app->db->createCommand(
+            "SELECT j.debitacnt FROM journalvoucher j
+             WHERE j.creditacnt = :cid AND j.project_id = :pid
+             LIMIT 1",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryScalar();
+        if (!$debitAcctId) {
+            return 0;
+        }
+
+        $sum = function ($sql) use ($debitAcctId, $pid) {
+            $v = Yii::$app->db->createCommand($sql, [':id' => (int)$debitAcctId, ':pid' => $pid])->queryScalar();
+            return $v ? (float)$v : 0;
+        };
+        $totalEverBilled =
+            $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=0 AND project_id=:pid")
+            + $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=1 AND type='Receipt' AND project_id=:pid")
+            + $sum("SELECT SUM(amount) FROM journalvoucher WHERE debitacnt=:id AND project_id=:pid");
+
+        $outstanding = $this->_cfAccountDebitBalance((int)$debitAcctId, $pid);
+        return max(0, $totalEverBilled - max(0, $outstanding));
+    }
+
+    // Same as _cfBillsReceivableRecovered, but reconstructed as of an
+    // arbitrary date ($uptoDate — pass null for "as of today", same as
+    // the unbounded version). Used by _cfNetInvestmentAsOf for the Total
+    // Investment breakdown popup's per-cycle historical reconstruction.
+    private function _cfBillsReceivableRecoveredAsOf($pid, $uptoDate)
+    {
+        if (!$uptoDate) {
+            return $this->_cfBillsReceivableRecovered($pid);
+        }
+
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return 0;
+        }
+
+        $debitAcctId = Yii::$app->db->createCommand(
+            "SELECT j.debitacnt FROM journalvoucher j
+             WHERE j.creditacnt = :cid AND j.project_id = :pid
+             LIMIT 1",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryScalar();
+        if (!$debitAcctId) {
+            return 0;
+        }
+
+        $sum = function ($sql) use ($debitAcctId, $pid, $uptoDate) {
+            $v = Yii::$app->db->createCommand($sql, [':id' => (int)$debitAcctId, ':pid' => $pid, ':ud' => $uptoDate])->queryScalar();
+            return $v ? (float)$v : 0;
+        };
+        $totalEverBilled =
+            $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=0 AND project_id=:pid AND date(date) <= :ud")
+            + $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=1 AND type='Receipt' AND project_id=:pid AND date(date) <= :ud")
+            + $sum("SELECT SUM(amount) FROM journalvoucher WHERE debitacnt=:id AND project_id=:pid AND date(date) <= :ud");
+
+        $outstanding = $this->_cfAccountDebitBalanceAsOf((int)$debitAcctId, $pid, $uptoDate);
+        return max(0, $totalEverBilled - max(0, $outstanding));
+    }
+
+    // Bills Receivable panel (Cashflow Dashboard): see _cfBillsReceivable.
+    public function actionCfbillsreceivable()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        return json_encode([
+            'error' => 'No',
+            'total' => round($this->_cfBillsReceivable($pid), 2),
+        ]);
+    }
+
+    // Bills Receivable panel breakdown (Cashflow Dashboard popup): one
+    // bar per WIP accrual cycle, same pattern as
+    // actionCfnetinvestmentbreakdown — each CLOSED cycle is valued at
+    // its own CLOSING Bills Receivable balance (see
+    // _cfBillsReceivableAsOf, as of that cycle's own Contract Income
+    // credit date), and the current still-open cycle is valued as of
+    // today (same as the live dial). Bars are labelled by the month/year
+    // each cycle closed ("Current" for the open cycle). Also returns the
+    // plain average of all returned bar values across every cycle.
+    public function actionCfbillsreceivablebreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $boundaries = $this->_cfAllContractIncomeDates($pid);
+
+        $rows = [];
+        foreach ($boundaries as $b) {
+            $value = $this->_cfBillsReceivableAsOf($pid, $b);
+            $label = date('M Y', strtotime($b));
+            $rows[] = ['name' => $label, 'amount' => round($value, 2)];
+        }
+        $rows[] = ['name' => 'Current', 'amount' => round($this->_cfBillsReceivable($pid), 2)];
+
+        $sum = 0;
+        foreach ($rows as $r) { $sum += $r['amount']; }
+        $average = count($rows) ? $sum / count($rows) : 0;
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+            'average' => round($average, 2),
+        ]);
+    }
+
+    // Contract Income panel (Cashflow Dashboard): the AMOUNT of the MOST
+    // RECENT transaction (voucher or journalvoucher) that credits the
+    // "Contract Income" account head for the selected project — same
+    // lookup as actionCfbillsreceivable, just returning that
+    // transaction's own amount instead of its debit account's balance.
+    public function actionCfcontractincome()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return json_encode(['error' => 'No', 'total' => 0]);
+        }
+
+        $latestAmount = Yii::$app->db->createCommand(
+            "SELECT amount FROM (
+                 SELECT v.amount AS amount, v.date AS txn_date FROM voucher v
+                     WHERE v.creditacnt = :cid1 AND v.contra = 0 AND v.project_id = :pid1
+                 UNION ALL
+                 SELECT j.amount AS amount, j.date AS txn_date FROM journalvoucher j
+                     WHERE j.creditacnt = :cid2 AND j.project_id = :pid2
+             ) t
+             ORDER BY t.txn_date DESC LIMIT 1",
+            [':cid1' => (int)$contractIncomeId, ':pid1' => $pid, ':cid2' => (int)$contractIncomeId, ':pid2' => $pid]
+        )->queryScalar();
+
+        return json_encode([
+            'error' => 'No',
+            'total' => $latestAmount ? round((float)$latestAmount, 2) : 0,
+        ]);
+    }
+
+    // Contract Income panel breakdown (Cashflow Dashboard popup): one
+    // bar per Contract Income credit transaction (voucher or
+    // journalvoucher) — i.e. one bar per WIP accrual cycle's own billed
+    // amount, in date order, labelled by the month/year it was credited.
+    // Also returns the plain average per cycle and the CUMULATIVE total
+    // (sum) across every credit.
+    public function actionCfcontractincomebreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return json_encode(['error' => 'No', 'accounts' => [], 'average' => 0, 'cumulative' => 0]);
+        }
+
+        $credits = Yii::$app->db->createCommand(
+            "SELECT amount, txn_date FROM (
+                 SELECT v.amount AS amount, v.date AS txn_date FROM voucher v
+                     WHERE v.creditacnt = :cid1 AND v.contra = 0 AND v.project_id = :pid1
+                 UNION ALL
+                 SELECT j.amount AS amount, j.date AS txn_date FROM journalvoucher j
+                     WHERE j.creditacnt = :cid2 AND j.project_id = :pid2
+             ) t
+             ORDER BY t.txn_date ASC",
+            [':cid1' => (int)$contractIncomeId, ':pid1' => $pid, ':cid2' => (int)$contractIncomeId, ':pid2' => $pid]
+        )->queryAll();
+
+        $rows = [];
+        $cumulative = 0;
+        foreach ($credits as $c) {
+            $amount = (float)$c['amount'];
+            $rows[] = ['name' => date('M Y', strtotime($c['txn_date'])), 'amount' => round($amount, 2)];
+            $cumulative += $amount;
+        }
+        $average = count($rows) ? $cumulative / count($rows) : 0;
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+            'average' => round($average, 2),
+            'cumulative' => round($cumulative, 2),
+        ]);
+    }
+
+    // Shared helper: the SAME "Project Expenditure Total" computation as
+    // FinancerequestsController::actionCfprojectexpenditure — every
+    // account under a master_id=1 accounts_sub subgroup (excluding
+    // "Investments"), account_type IN (5,8,6), summed by closing
+    // balance — duplicated here (controller-local, matching this
+    // codebase's existing pattern) rather than called cross-controller,
+    // WITH the same latest-Contract-Income-credit date cap: once
+    // Contract Income has been credited at least once, the sum only
+    // covers expenses from project inception through that date. Used by
+    // actionCfcontributionmargin.
+    private function _cfProjectExpenditureTotal($pid, $capDate)
+    {
+        $startdate = $capDate ? '2013-04-01' : '';
+        $enddate = $capDate ? $capDate : '';
+
+        $subgroups = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_sub WHERE master_id='1' AND Status=0 AND name != 'Investments'"
+        )->queryColumn();
+
+        $total = 0;
+        foreach ($subgroups as $subgrpId) {
+            $accounts = Yii::$app->db->createCommand(
+                "SELECT DISTINCT b.id FROM subgroup_accounts AS a
+                 INNER JOIN accounts_item AS b ON a.account_id = b.id
+                 WHERE a.subgrp_id=:sid AND a.accountschedule_id=0 AND b.account_type IN (5,8,6)",
+                [':sid' => $subgrpId]
+            )->queryColumn();
+
+            foreach ($accounts as $acctId) {
+                $openingbal = Yii::$app->db->createCommand(
+                    "SELECT balance FROM ledger_openingbalance WHERE accountid=:id",
+                    [':id' => $acctId]
+                )->queryScalar();
+                $openingbal = $openingbal ?: 0;
+                $closingbal = $openingbal + $this->_cfClosingBalanceForRange((int)$acctId, $pid, $startdate, $enddate);
+                $total += abs($closingbal);
+            }
+        }
+        return $total;
+    }
+
+    // Same date-range/credit-minus-debit logic as
+    // FinancerequestsController::closingbalance, duplicated here
+    // (controller-local) for _cfProjectExpenditureTotal's use.
+    private function _cfClosingBalanceForRange($acctId, $pid, $startdate, $enddate)
+    {
+        $initialdate = '2013-04-01';
+        $dateCond = ($startdate !== '' && $enddate !== '')
+            ? "date BETWEEN '" . $startdate . "' AND '" . $enddate . "'"
+            : "date >= '" . $initialdate . "'";
+
+        $rows = Yii::$app->db->createCommand(
+            "(SELECT amount, type, creditacnt, contra, account_id FROM voucher
+                WHERE (account_id=:id1 OR creditacnt=:id2) AND (project_id=:pid1) AND $dateCond)
+             UNION ALL
+             (SELECT amount, type, creditacnt, contra, debitacnt AS account_id FROM journalvoucher
+                WHERE (debitacnt=:id3 OR creditacnt=:id4) AND (place=:pid2) AND $dateCond)",
+            [':id1' => $acctId, ':id2' => $acctId, ':pid1' => $pid, ':id3' => $acctId, ':id4' => $acctId, ':pid2' => $pid]
+        )->queryAll();
+
+        $creditTotal = 0;
+        $debitTotal = 0;
+        foreach ($rows as $row) {
+            if ((int)$row['contra'] === 0) {
+                if ((int)$row['creditacnt'] === $acctId) { $creditTotal += (float)$row['amount']; }
+                elseif ((int)$row['account_id'] === $acctId) { $debitTotal += (float)$row['amount']; }
+            } else {
+                if ($row['type'] === 'Payment' && (int)$row['creditacnt'] === $acctId) { $creditTotal += (float)$row['amount']; }
+                elseif ($row['type'] === 'Receipt' && (int)$row['account_id'] === $acctId) { $debitTotal += (float)$row['amount']; }
+            }
+        }
+        return $creditTotal - $debitTotal;
+    }
+
+    // Contribution Margin panel (Cashflow Dashboard): a PERCENTAGE dial.
+    // Contribution Margin (rupee value) = Contract Income (see
+    // actionCfcontractincome — the amount of the single most recent
+    // transaction crediting Contract Income) MINUS Project Expenditure
+    // (see _cfProjectExpenditureTotal — cumulative, capped at the latest
+    // Contract Income credit date, same as the Project Expenditure
+    // panel). The dial's needle position/percentage shown at its center
+    // = (Contribution Margin / Contract Income) * 100. The rupee value
+    // itself is shown below the dial, in Lakhs if <= 99 Lakhs or Crores
+    // if greater. Target is a user-editable PERCENTAGE (not a rupee
+    // value), saved under metric_key "contribution_margin_target".
+    public function actionCfcontributionmargin()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $marginValue = $this->_cfContributionMarginValue($pid);
+        $contractIncome = $this->_cfLatestContractIncomeAmount($pid);
+        $marginPct = $contractIncome > 0 ? ($marginValue / $contractIncome) * 100 : 0;
+
+        return json_encode([
+            'error' => 'No',
+            'value' => round($marginValue, 2),
+            'percent' => round($marginPct, 2),
+        ]);
+    }
+
+    // Shared helper: the amount of the single most recent transaction
+    // crediting "Contract Income" for this project — same lookup used
+    // by actionCfcontractincome, extracted so actionCfcontributionmargin
+    // and actionCfreecash don't duplicate this query.
+    private function _cfLatestContractIncomeAmount($pid)
+    {
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return 0;
+        }
+        $latestAmount = Yii::$app->db->createCommand(
+            "SELECT amount FROM (
+                 SELECT v.amount AS amount, v.date AS txn_date FROM voucher v
+                     WHERE v.creditacnt = :cid1 AND v.contra = 0 AND v.project_id = :pid1
+                 UNION ALL
+                 SELECT j.amount AS amount, j.date AS txn_date FROM journalvoucher j
+                     WHERE j.creditacnt = :cid2 AND j.project_id = :pid2
+             ) t
+             ORDER BY t.txn_date DESC LIMIT 1",
+            [':cid1' => (int)$contractIncomeId, ':pid1' => $pid, ':cid2' => (int)$contractIncomeId, ':pid2' => $pid]
+        )->queryScalar();
+        return $latestAmount ? (float)$latestAmount : 0;
+    }
+
+    // Shared helper: Contribution Margin's rupee value — Contract Income
+    // (see _cfLatestContractIncomeAmount) MINUS Project Expenditure (see
+    // _cfProjectExpenditureTotal — cumulative, capped at the latest
+    // Contract Income credit date). Extracted so actionCfreecash can
+    // reuse it without duplicating actionCfcontributionmargin's logic.
+    private function _cfContributionMarginValue($pid)
+    {
+        $contractIncome = $this->_cfLatestContractIncomeAmount($pid);
+        $capDate = $this->_cfLatestContractIncomeDate($pid);
+        $projectExpenditure = $this->_cfProjectExpenditureTotal($pid, $capDate);
+        return $contractIncome - $projectExpenditure;
+    }
+
+    // Current Liabilities panel (Cashflow Dashboard): mirror of
+    // actionCfcurrentassets — every account head in the SAME combined
+    // Current Assets/Liabilities pool whose own current balance is a
+    // CREDIT balance is summed here (as a positive magnitude) — EXCEPT
+    // Bank-type accounts (accounts_item.account_type = 2, e.g. a Bank CC
+    // account mapped into the pool via subgroup_accounts), which are
+    // excluded entirely regardless of their balance sign. Bank/CC
+    // facilities are working-capital instruments, not a trade/other
+    // current liability, so they're kept out of this figure even though
+    // they may carry a credit balance.
+    public function actionCfcurrentliabilities()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        return json_encode([
+            'error' => 'No',
+            'total' => round($this->_cfCurrentLiabilitiesTotal($pid), 2),
+        ]);
+    }
+
+    // Shared helper: Current Liabilities' rupee total — extracted from
+    // actionCfcurrentliabilities so actionCfreecash can reuse it without
+    // duplicating this account-pool walk.
+    private function _cfCurrentLiabilitiesTotal($pid)
+    {
+        $total = 0;
+        foreach ($this->_cfCurrentAssetLiabilityAccountIds() as $acctId) {
+            $accountType = Yii::$app->db->createCommand(
+                "SELECT account_type FROM accounts_item WHERE id=:id",
+                [':id' => (int)$acctId]
+            )->queryScalar();
+            if ((int)$accountType === 2) {
+                continue;
+            }
+            $balance = $this->_cfAccountDebitBalance((int)$acctId, $pid);
+            if ($balance < 0) {
+                $total += -$balance;
+            }
+        }
+        return $total;
+    }
+
+    // Current Liabilities panel breakdown (Cashflow Dashboard tooltip):
+    // same account pool/filter as actionCfcurrentliabilities, but
+    // returns each contributing account head (party) individually
+    // instead of just the sum — for the click-to-open per-account bar
+    // chart, same pattern as actionCfcurrentassetsbreakdown.
+    public function actionCfcurrentliabilitiesbreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $rows = [];
+        foreach ($this->_cfCurrentAssetLiabilityAccountIds() as $acctId) {
+            $accountType = Yii::$app->db->createCommand(
+                "SELECT account_type FROM accounts_item WHERE id=:id",
+                [':id' => (int)$acctId]
+            )->queryScalar();
+            if ((int)$accountType === 2) {
+                continue;
+            }
+            $balance = $this->_cfAccountDebitBalance((int)$acctId, $pid);
+            if ($balance < 0) {
+                $name = Yii::$app->db->createCommand(
+                    "SELECT name FROM accounts_item WHERE id=:id",
+                    [':id' => (int)$acctId]
+                )->queryScalar();
+                $rows[] = ['name' => $name ?: ('Account #' . $acctId), 'amount' => round(-$balance, 2)];
+            }
+        }
+        usort($rows, function ($a, $b) { return $b['amount'] <=> $a['amount']; });
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+        ]);
+    }
+
+    // Shared helper: every account head (excluding Bank, Cash, Income,
+    // and Expense — types 1,2,4,8) that received a DEBIT posting for
+    // this project, via either a Bank/Cash voucher payment or a journal
+    // entry. This is the dynamically-discovered candidate set an
+    // account head "moves between" WIP and Investments/Current Assets
+    // within — broader than the fixed subgroup_accounts pool used by
+    // Current Liabilities, since any account that ever received project
+    // money is a candidate, not just ones manually pre-classified into
+    // a subgroup. Used by both actionCfwip (balance <= 0) and
+    // actionCfcurrentassets (balance > 0) so the two panels stay true
+    // mirror images of each other.
+    private function _cfWipCandidateAccountIds($pid)
+    {
+        return Yii::$app->db->createCommand(
+            "SELECT DISTINCT debit_id FROM (
+                 SELECT v.account_id AS debit_id
+                 FROM voucher v
+                 INNER JOIN accounts_item debitAi ON debitAi.id = v.account_id
+                 INNER JOIN accounts_item creditAi ON creditAi.id = v.creditacnt
+                 WHERE creditAi.account_type IN (1,2)
+                   AND v.contra = 0
+                   AND debitAi.account_type NOT IN (1,2,4,8)
+                   AND v.project_id = :pid1
+                 UNION
+                 SELECT j.debitacnt AS debit_id
+                 FROM journalvoucher j
+                 INNER JOIN accounts_item debitAi ON debitAi.id = j.debitacnt
+                 WHERE debitAi.account_type NOT IN (1,2,4,8)
+                   AND j.project_id = :pid2
+             ) t",
+            [':pid1' => $pid, ':pid2' => $pid]
+        )->queryColumn();
+    }
+
+    // Current Work In Progress panel (Cashflow Dashboard):
+    // 1) Bank/Cash voucher payments AND journalvoucher postings for the
+    //    selected project whose debited counterparty is an Expense-type
+    //    account head (accounts_item.account_type = 8).
+    // 2) PLUS every OTHER (non-Expense, non-Income, non-Bank/Cash)
+    //    account head that received a debit posting — via a Bank/Cash
+    //    voucher payment OR a journal entry — for this project, i.e.
+    //    payments/postings to parties/suppliers/sub-contractors/assets/
+    //    liabilities/etc. Each such account is checked EVERY time: only
+    //    counted toward WIP when that account's own CURRENT live balance
+    //    (Debit - Credit, project-scoped, across ALL its transactions,
+    //    NOT date-restricted — the balance sign is a running/lifetime
+    //    check) is credit OR exactly zero (still outstanding, or fully
+    //    reconciled — e.g. a Bank advance later matched 1:1 against an
+    //    Expense journal entry nets to 0, but that money still really
+    //    left the bank and became a real expense). Only a strictly
+    //    positive (debit) balance is excluded from WIP — that's a
+    //    genuine asset/deposit still held, which belongs in Investments/
+    //    Current Assets instead (see actionCfcurrentassets). Excludes
+    //    Income (4) so Contract Income postings never get pulled into
+    //    WIP.
+    //
+    // WIP ACCRUAL CYCLES: every time Contract Income is credited via a
+    // journal entry, the WIP accumulated up to that date is considered
+    // billed out and permanently excluded from the total going forward
+    // — NOT by subtracting the Bills Receivable (invoice/quoted) value,
+    // since a bill is prepared from the quoted amount and includes
+    // profit/margin that has no counterpart in raw WIP cost. Instead,
+    // only transactions dated AFTER the LATEST Contract Income credit
+    // (see _cfLatestContractIncomeDate) count toward this total — the
+    // still-open accrual cycle. Everything from project inception up to
+    // that date belonged to a prior, now-closed cycle and is dropped
+    // entirely, cycle by cycle, as each new Contract Income credit
+    // lands.
+    public function actionCfwip()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $sinceDate = $this->_cfLatestContractIncomeDate($pid);
+        $total = $this->_cfWipForWindow($pid, $sinceDate, null);
+
+        return json_encode([
+            'error' => 'No',
+            'total' => round($total, 2),
+        ]);
+    }
+
+    // Work In Progress panel breakdown (Cashflow Dashboard tooltip): same
+    // computation as actionCfwip — including the same accrual-cycle date
+    // scoping (see _cfLatestContractIncomeDate) — but instead of a
+    // single total, buckets every contributing amount by its Project
+    // Expenditure group (accounts_sub, via subgroup_accounts) for the
+    // click-to-open bar chart. Accounts not mapped into any Project
+    // Expenditure subgroup (e.g. a Party/Liability account like Pearl
+    // Enterprises, routed into WIP via the balance<=0 rule rather than
+    // being a real expense head) are bucketed as "Vendors and Others".
+    // Each bucket also carries its individual contributing account heads
+    // (name + amount) so the frontend can show a per-account hover
+    // tooltip on each bar. No proportional scaling is needed here (that
+    // was only an artifact of the old Bills-Receivable-value deduction)
+    // — every underlying query is already date-restricted to the open
+    // cycle, so the bucket totals sum to actionCfwip's total exactly.
+    public function actionCfwipbreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $sinceDate = $this->_cfLatestContractIncomeDate($pid);
+
+        $groupOf = function ($acctId) {
+            $name = Yii::$app->db->createCommand(
+                "SELECT s.name FROM subgroup_accounts sa
+                 INNER JOIN accounts_sub s ON s.id = sa.subgrp_id
+                 WHERE sa.account_id = :id AND sa.accountschedule_id = 0
+                 LIMIT 1",
+                [':id' => (int)$acctId]
+            )->queryScalar();
+            if (!$name || $name === 'Current Liabilities' || $name === 'Current Assets') {
+                return 'Vendors and Others';
+            }
+            return $name;
+        };
+
+        // buckets[group] = total; bucketAccounts[group][acctId] = amount
+        $buckets = [];
+        $bucketAccounts = [];
+        $addTo = function ($group, $acctId, $amount) use (&$buckets, &$bucketAccounts) {
+            if ($amount == 0) { return; }
+            if (!isset($buckets[$group])) { $buckets[$group] = 0; $bucketAccounts[$group] = []; }
+            $buckets[$group] += $amount;
+            if (!isset($bucketAccounts[$group][$acctId])) { $bucketAccounts[$group][$acctId] = 0; }
+            $bucketAccounts[$group][$acctId] += $amount;
+        };
+
+        $dateCond = $sinceDate ? "AND date(v.date) > :sd" : "";
+        $params = [':pid' => $pid];
+        if ($sinceDate) { $params[':sd'] = $sinceDate; }
+        $directExpenseRows = Yii::$app->db->createCommand(
+            "SELECT v.account_id, SUM(v.amount) AS amt
+             FROM voucher v
+             INNER JOIN accounts_item debitAi ON debitAi.id = v.account_id
+             INNER JOIN accounts_item creditAi ON creditAi.id = v.creditacnt
+             WHERE creditAi.account_type IN (1,2)
+               AND v.contra = 0
+               AND debitAi.account_type = 8
+               AND v.project_id = :pid
+               $dateCond
+             GROUP BY v.account_id",
+            $params
+        )->queryAll();
+        foreach ($directExpenseRows as $row) {
+            $addTo($groupOf($row['account_id']), (int)$row['account_id'], (float)$row['amt']);
+        }
+
+        $dateCondJ = $sinceDate ? "AND date(j.date) > :sd" : "";
+        $paramsJ = [':pid' => $pid];
+        if ($sinceDate) { $paramsJ[':sd'] = $sinceDate; }
+        $expenseJournalRows = Yii::$app->db->createCommand(
+            "SELECT j.debitacnt, j.creditacnt, j.amount FROM journalvoucher j
+             INNER JOIN accounts_item debitAi ON debitAi.id = j.debitacnt
+             WHERE debitAi.account_type = 8 AND j.project_id = :pid
+             $dateCondJ",
+            $paramsJ
+        )->queryAll();
+        foreach ($expenseJournalRows as $row) {
+            $creditBalance = $this->_cfAccountDebitBalance((int)$row['creditacnt'], $pid);
+            if ($creditBalance != 0) {
+                $addTo($groupOf($row['debitacnt']), (int)$row['debitacnt'], (float)$row['amount']);
+            }
+        }
+
+        $otherAccounts = $this->_cfWipCandidateAccountIds($pid);
+        foreach ($otherAccounts as $acctId) {
+            $balance = $this->_cfAccountDebitBalance((int)$acctId, $pid);
+            if ($balance <= 0) {
+                $addTo($groupOf($acctId), (int)$acctId, $this->_cfDebitedToSince((int)$acctId, $pid, $sinceDate));
+            }
+        }
+
+        // Batch-resolve every contributing account id's name in one query.
+        $allAcctIds = [];
+        foreach ($bucketAccounts as $accts) {
+            foreach ($accts as $acctId => $amt) { $allAcctIds[$acctId] = true; }
+        }
+        $acctNames = [];
+        if ($allAcctIds) {
+            $nameRows = Yii::$app->db->createCommand(
+                "SELECT id, name FROM accounts_item WHERE id IN (" . implode(',', array_keys($allAcctIds)) . ")"
+            )->queryAll();
+            foreach ($nameRows as $nr) { $acctNames[$nr['id']] = $nr['name']; }
+        }
+
+        $rows = [];
+        foreach ($buckets as $name => $amount) {
+            if ($amount <= 0) { continue; }
+            $members = [];
+            foreach ($bucketAccounts[$name] as $acctId => $amt) {
+                if ($amt <= 0) { continue; }
+                $members[] = [
+                    'name' => $acctNames[$acctId] ?? ('Account #' . $acctId),
+                    'amount' => round($amt, 2),
+                ];
+            }
+            usort($members, function ($a, $b) { return $b['amount'] <=> $a['amount']; });
+            $rows[] = ['name' => $name, 'amount' => round($amount, 2), 'members' => $members];
+        }
+        usort($rows, function ($a, $b) { return $b['amount'] <=> $a['amount']; });
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+        ]);
+    }
+
+    // Shared helper: the length, in days, of EACH cash-to-cash cycle —
+    // where each cycle's length is the gap between consecutive Contract
+    // Income credit-side transactions for the selected project — EXCEPT
+    // the first cycle, which is measured from the project's very first
+    // Bank/Cash transaction (any Bank/Cash account, project-scoped) to
+    // the first Contract Income credit. If there are N Contract Income
+    // credits, there are N gaps (cycle 1 = first Bank/Cash txn ->
+    // credit 1; cycle 2 = credit 1 -> credit 2; ...; cycle N = credit
+    // N-1 -> credit N). Returns an array of ['date' => creditDate,
+    // 'days' => gapDays] — one entry per gap/cycle, in ascending date
+    // order — or an empty array if there's no first Bank/Cash
+    // transaction, no Contract Income account head, or no Contract
+    // Income credits yet. Used by both actionCfactualc2c (which
+    // averages these) and actionCfactualc2cbreakdown (which shows them
+    // individually).
+    private function _cfActualC2cCycleGaps($pid)
+    {
+        $firstBankCashDate = Yii::$app->db->createCommand(
+            "SELECT MIN(d) FROM (
+                SELECT v.date AS d FROM voucher v
+                INNER JOIN accounts_item ai ON ai.id IN (v.account_id, v.creditacnt)
+                WHERE ai.account_type IN (1,2) AND v.project_id = :pid1
+                UNION ALL
+                SELECT j.date FROM journalvoucher j
+                INNER JOIN accounts_item ai ON ai.id IN (j.debitacnt, j.creditacnt)
+                WHERE ai.account_type IN (1,2) AND j.project_id = :pid2
+             ) t",
+            [':pid1' => $pid, ':pid2' => $pid]
+        )->queryScalar();
+
+        if (!$firstBankCashDate) {
+            return [];
+        }
+
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+
+        if (!$contractIncomeId) {
+            return [];
+        }
+
+        $creditDates = Yii::$app->db->createCommand(
+            "SELECT date FROM (
+                SELECT date FROM voucher WHERE creditacnt = :id1 AND contra = 0 AND project_id = :pid1
+                UNION ALL
+                SELECT date FROM journalvoucher WHERE creditacnt = :id2 AND project_id = :pid2
+             ) t
+             ORDER BY date ASC",
+            [':id1' => (int)$contractIncomeId, ':pid1' => $pid, ':id2' => (int)$contractIncomeId, ':pid2' => $pid]
+        )->queryColumn();
+
+        if (!$creditDates) {
+            return [];
+        }
+
+        $prevDate = $firstBankCashDate;
+        $gaps = [];
+        foreach ($creditDates as $creditDate) {
+            $gapDays = (strtotime($creditDate) - strtotime($prevDate)) / 86400;
+            $gaps[] = ['date' => $creditDate, 'days' => $gapDays];
+            $prevDate = $creditDate;
+        }
+
+        return $gaps;
+    }
+
+    // Shared helper: average number of days per cash-to-cash cycle — see
+    // _cfActualC2cCycleGaps for the full explanation of how each cycle
+    // is measured. Returns 0 if there are no cycles yet.
+    private function _cfActualC2cCycle($pid)
+    {
+        $gaps = $this->_cfActualC2cCycleGaps($pid);
+        if (!count($gaps)) { return 0; }
+        $sum = 0;
+        foreach ($gaps as $g) { $sum += $g['days']; }
+        return $sum / count($gaps);
+    }
+
+    // Actual Cash-to-Cash Cycle panel (Cashflow Dashboard) — see
+    // _cfActualC2cCycle for the full explanation.
+    public function actionCfactualc2c()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        return json_encode([
+            'error' => 'No',
+            'total' => round($this->_cfActualC2cCycle($pid), 2),
+        ]);
+    }
+
+    // Cash-to-Cash Cycle panel breakdown (Cashflow Dashboard popup): one
+    // bar per completed cycle, showing that cycle's own length in days
+    // (see _cfActualC2cCycleGaps) — bars labelled by the month/year the
+    // cycle's Contract Income credit landed. Unlike Total
+    // Investment/Bills Receivable, there's no "Current" bar here — a
+    // cycle's length is only defined once it CLOSES with a Contract
+    // Income credit; an open, not-yet-credited cycle has no end date to
+    // measure against. Also returns the plain average across all
+    // cycles (same figure as the live dial's actionCfactualc2c total).
+    public function actionCfactualc2cbreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $gaps = $this->_cfActualC2cCycleGaps($pid);
+
+        $rows = [];
+        foreach ($gaps as $g) {
+            $rows[] = ['name' => date('M Y', strtotime($g['date'])), 'amount' => round($g['days'], 2)];
+        }
+
+        $sum = 0;
+        foreach ($rows as $r) { $sum += $r['amount']; }
+        $average = count($rows) ? $sum / count($rows) : 0;
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+            'average' => round($average, 2),
+        ]);
+    }
+
+    public function actionPerformancedashboard()
+    {
+        $uid  = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+
+        $pid = (int)$projuser->projectid;
+        $connection = \Yii::$app->db;
+
+        // Project info
+        $project = $connection->createCommand(
+            "SELECT Name, start_date FROM projects WHERE Project_Id=$pid"
+        )->queryOne();
+        $proj_start = $project ? $project['start_date'] : date('Y-m-d');
+
+        // All activities for this project
+        $activities = $connection->createCommand(
+            "SELECT sa.id, sa.name, sa.scheduleitem_id, sa.activity_id, sa.duration, sa.delay,
+                    sa.completed_status, sa.start_date, sa.end_date,
+                    sa.actual_start_date, sa.actual_end_date, sa.unit, sa.resource_units,
+                    sa.quantity, sa.old_duration, sa.critical_status,
+                    DATEDIFF(sa.start_date, '$proj_start') AS padding,
+                    COALESCE(pr.report_count, 0)  AS pr_report_count,
+                    pr.cumulated_qty,
+                    pr.spr_start_date,
+                    pr.last_report_date,
+                    CASE
+                        WHEN pr.cumulated_qty > 0 AND sa.quantity > 0
+                             AND pr.spr_start_date IS NOT NULL AND pr.spr_start_date != '0000-00-00'
+                        THEN ROUND(
+                               (DATEDIFF(pr.last_report_date, pr.spr_start_date) + 1)
+                               / pr.cumulated_qty * sa.quantity
+                             )
+                        ELSE NULL
+                    END AS actual_duration,
+                    COALESCE(cost.activity_cost, 0) AS activity_cost,
+                    COALESCE(cost.unit_cost, 0)    AS unit_cost,
+                    COALESCE(ac.actual_cost, 0)    AS actual_cost
+             FROM scheduleactivities sa
+             LEFT JOIN (
+                 SELECT
+                     spr.activity_id,
+                     COUNT(*)                                        AS report_count,
+                     MAX(spr.cumulated_qty)                         AS cumulated_qty,
+                     MIN(spr.start_date)                            AS spr_start_date,
+                     COALESCE(MAX(sprl.report_date), MAX(spr.updated_at)) AS last_report_date
+                 FROM schedule_progress_report spr
+                 LEFT JOIN schedule_progress_report_log sprl
+                        ON sprl.activity_id = spr.activity_id AND sprl.currentqty > 0
+                 GROUP BY spr.activity_id
+             ) pr ON pr.activity_id = sa.id
+             LEFT JOIN (
+                 SELECT pen.activity_Id,
+                        COALESCE(pen.activity_qty, 0) * COALESCE(SUM(pern.quantity * pern.rate), 0) AS activity_cost,
+                        COALESCE(SUM(pern.quantity * pern.rate), 0) AS unit_cost
+                 FROM pricing_estimate_new pen
+                 LEFT JOIN pricing_estimate_resources_new pern
+                        ON pern.activity_id = pen.activity_Id AND pern.project_id = pen.project_Id AND pern.pricing_status = 0
+                 WHERE pen.project_Id = $pid AND pen.pricing_status = 0
+                 GROUP BY pen.activity_Id
+             ) cost ON cost.activity_Id = sa.activity_id
+             LEFT JOIN (
+                 SELECT pern.activity_id,
+                        SUM(g.GRN_Quantity * por.rate) AS actual_cost
+                 FROM pricing_estimate_resources_new pern
+                 JOIN purchase_order_resources por ON por.allocation_id = pern.pricing_resourceid
+                 JOIN goods_received_note g         ON g.GRN_Purchase_Order = por.order_id
+                                                   AND g.GRN_Item = pern.resource_Id
+                 JOIN purchase_orders po            ON po.order_id = por.order_id
+                 WHERE pern.project_id = $pid
+                   AND po.project_id   = $pid
+                   AND po.delete_status = 0
+                   AND por.delete_status = 0
+                 GROUP BY pern.activity_id
+             ) ac ON ac.activity_id = sa.activity_id
+             LEFT JOIN workgroup_activities_new wa ON wa.id = sa.activity_id
+             WHERE sa.projectId=$pid AND sa.status=0
+             ORDER BY COALESCE(wa.sortorder, 999999) ASC, sa.id ASC"
+        )->queryAll();
+
+        foreach ($activities as &$a) {
+            // Use old_duration as the current planned duration for the bar
+            $a['duration'] = (float)($a['old_duration'] ?? $a['duration']);
+            $a['projected_duration'] = $a['duration'];
+            // Anchor: if activity has started use reported start, otherwise use planned start
+            $plannedStart  = (!empty($a['start_date'])     && $a['start_date']     !== '0000-00-00') ? $a['start_date']     : '';
+            $reportedStart = (!empty($a['spr_start_date']) && $a['spr_start_date'] !== '0000-00-00') ? $a['spr_start_date'] : '';
+            $hasStarted    = (int)($a['pr_report_count'] ?? 0) > 0 && (float)($a['cumulated_qty'] ?? 0) > 0;
+            $anchorStart   = ($hasStarted && $reportedStart) ? $reportedStart : $plannedStart;
+            $a['spr_start_date'] = $anchorStart;
+            if ((int)($a['pr_report_count'] ?? 0) > 0
+                && $anchorStart
+                && !empty($a['last_report_date'])
+                && (float)($a['cumulated_qty'] ?? 0) > 0
+                && (float)($a['quantity']      ?? 0) > 0)
+            {
+                $elapsed = max(1, (strtotime(date('Y-m-d')) - strtotime($anchorStart)) / 86400 + 1);
+                $a['projected_duration'] = ($elapsed / (float)$a['cumulated_qty']) * (float)$a['quantity'];
+                $a['delay'] = max(0, $a['projected_duration'] - $a['duration']);
+            }
+        }
+        unset($a);
+
+        // Compute MB (Measurement Book) costs per WBS activity — adds SC actual costs
+        $mbCostByWbs = [];
+        $mbRows = $connection->createCommand(
+            "SELECT entries FROM wo_measurement_book WHERE project_id=:pid AND sent_status=1 AND delete_status=0",
+            [':pid' => $pid]
+        )->queryAll();
+        foreach ($mbRows as $mb) {
+            foreach (json_decode($mb['entries'] ?? '[]', true) ?: [] as $entry) {
+                $wbsId = (int)($entry['activity_id'] ?? 0);
+                if (!$wbsId) continue;
+                foreach ($entry['tasks'] ?? [] as $task) {
+                    $wd = (float)($task['work_done'] ?? 0);
+                    $rt = (float)($task['rate']      ?? 0);
+                    $mbCostByWbs[$wbsId] = ($mbCostByWbs[$wbsId] ?? 0.0) + $rt * $wd;
+                }
+            }
+        }
+        // Merge MB cost into each activity as actual_work_done = GRN cost + MB cost
+        foreach ($activities as &$a) {
+            $wbsId = (int)($a['activity_id'] ?? 0);
+            $a['actual_work_done'] = (float)($a['actual_cost'] ?? 0) + ($mbCostByWbs[$wbsId] ?? 0.0);
+        }
+        unset($a);
+
+        // Anchor overrun expression — used by project bar, IOW groups and IOW items
+        // Two cases: progress reported = projected overrun; no progress = start delay
+        $anchorOverrunExpr = "
+            GREATEST(0, ROUND(
+                CASE
+                    WHEN rpt.cumulated_qty > 0 AND sa.quantity > 0
+                         AND (
+                             (sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00')
+                             OR (spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00')
+                         )
+                    THEN (
+                        (DATEDIFF(rpt.last_report_date,
+                            CASE WHEN sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                                      AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                 THEN LEAST(sa.start_date, spr.start_date)
+                                 WHEN spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                 THEN spr.start_date
+                                 ELSE sa.start_date END
+                        ) + 1) / rpt.cumulated_qty * sa.quantity
+                    ) - sa.old_duration
+                    WHEN (rpt.cumulated_qty IS NULL OR rpt.cumulated_qty = 0)
+                         AND sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                         AND sa.start_date < CURDATE()
+                    THEN DATEDIFF(CURDATE(), sa.start_date)
+                    ELSE 0
+                END
+            ))";
+
+        // Project-level duration bar — matches Gantt B./A. Duration columns exactly:
+        // B. Duration = span from earliest schedule start to latest schedule end across all WBS items
+        // A. Duration = span from earliest actual start to latest actual/projected end
+        $dur_row = $connection->createCommand("
+            SELECT
+                DATEDIFF(MAX(wbs.b_end_plain), MIN(wbs.b_start_plain)) + 1 AS budgeted,
+                CASE WHEN MIN(wbs.a_start) IS NOT NULL AND MAX(wbs.a_end) IS NOT NULL
+                     THEN DATEDIFF(MAX(wbs.a_end), MIN(wbs.a_start)) + 1
+                     ELSE NULL END AS actual,
+                MIN(wbs.b_start_plain) AS b_start_date,
+                MAX(wbs.b_end_plain) AS b_end_date,
+                MAX(wbs.a_end) AS a_end_date
+            FROM (
+                SELECT
+                    MIN(sa.start_date) AS b_start_plain,
+                    MAX(sa.end_date)   AS b_end_plain,
+                    MIN(sa.actual_start_date) AS b_start,
+                    MAX(sa.actual_end_date)   AS b_end,
+                    MIN(COALESCE(
+                        CASE WHEN sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                                  AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                             THEN LEAST(sa.start_date, spr.start_date)
+                             WHEN spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                             THEN spr.start_date
+                             ELSE sa.start_date END,
+                        sa.actual_start_date
+                    )) AS a_start,
+                    MAX(COALESCE(
+                        CASE WHEN rpt.cumulated_qty > 0 AND sa.quantity > 0
+                                  AND (
+                                      (sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00')
+                                      OR (spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00')
+                                  )
+                             THEN DATE_ADD(
+                                      CASE WHEN sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                                                AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                           THEN LEAST(sa.start_date, spr.start_date)
+                                           WHEN spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                           THEN spr.start_date
+                                           ELSE sa.start_date END,
+                                      INTERVAL GREATEST(0, ROUND(
+                                          (DATEDIFF(rpt.last_report_date,
+                                              CASE WHEN sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                                                        AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                                   THEN LEAST(sa.start_date, spr.start_date)
+                                                   WHEN spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                                   THEN spr.start_date
+                                                   ELSE sa.start_date END
+                                          ) + 1)
+                                          / rpt.cumulated_qty * sa.quantity
+                                      ) - 1) DAY
+                                  )
+                             ELSE NULL END,
+                        sa.actual_end_date
+                    )) AS a_end
+                FROM wbsscheduleitems w
+                JOIN scheduleactivities sa ON sa.scheduleitem_id = w.scheduleitem_id
+                    AND sa.status = 0
+                    AND sa.actual_start_date IS NOT NULL AND sa.actual_start_date != '0000-00-00'
+                LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
+                LEFT JOIN (
+                    SELECT activity_id,
+                           MAX(report_date) AS last_report_date,
+                           SUM(currentqty)  AS cumulated_qty
+                    FROM schedule_progress_report_log
+                    GROUP BY activity_id
+                ) AS rpt ON rpt.activity_id = sa.id
+                WHERE w.projectId = $pid AND w.status = 0
+                GROUP BY w.scheduleitem_id
+                HAVING MAX(sa.actual_end_date) IS NOT NULL
+            ) AS wbs
+        ")->queryOne();
+        $proj_budgeted    = max(1, (int)($dur_row['budgeted']  ?? 0));
+        $proj_actual      = max(0, (int)($dur_row['actual']    ?? 0));
+        $proj_b_start_raw = $dur_row['b_start_date'] ?? '';
+        $proj_b_end_date  = $dur_row['b_end_date'] ?? '';
+        $proj_a_end_date  = $dur_row['a_end_date'] ?? '';
+
+        // Project delay = DATEDIFF(actual_end, planned_end) of critical activities
+        // actual_end comes from projected end (anchor_overrun applied to planned end)
+        $proj_delay_row = $connection->createCommand("
+            SELECT
+                MAX(sa.end_date) AS planned_end,
+                MAX(DATE_ADD(sa.end_date, INTERVAL GREATEST(0, ROUND($anchorOverrunExpr)) DAY)) AS actual_end
+            FROM scheduleactivities sa
+            LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
+            LEFT JOIN (
+                SELECT activity_id, MAX(report_date) AS last_report_date, SUM(currentqty) AS cumulated_qty
+                FROM schedule_progress_report_log GROUP BY activity_id
+            ) rpt ON rpt.activity_id = sa.id
+            WHERE sa.projectId = $pid AND sa.status = 0 AND sa.critical_status = 'Yes'
+        ")->queryOne();
+        $proj_planned_end = $proj_delay_row['planned_end'] ?? '';
+        $proj_actual_end  = $proj_delay_row['actual_end']  ?? '';
+        $proj_delay = ($proj_planned_end && $proj_actual_end)
+            ? max(0, (int)((strtotime($proj_actual_end) - strtotime($proj_planned_end)) / 86400))
+            : 0;
+        // Start date = planned start date (no adjustment)
+        $proj_b_start_date = $proj_b_start_raw;
+        // Actual start = earliest reported start date across all activities
+        $actual_start_row = $connection->createCommand(
+            "SELECT MIN(spr.start_date) AS actual_start
+             FROM schedule_progress_report spr
+             JOIN scheduleactivities sa ON sa.id = spr.activity_id
+             WHERE sa.projectId = $pid AND sa.status = 0
+               AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'"
+        )->queryOne();
+        $proj_actual_start = ($actual_start_row && !empty($actual_start_row['actual_start']))
+            ? $actual_start_row['actual_start'] : '';
+        // End date = actual end of critical activities (planned end + delay)
+        $proj_b_end_computed = $proj_actual_end ?: $proj_b_end_date;
+
+        // Per-activity overrun (projected_duration - old_duration, floored at 0) using the
+        // IOW/Group-level delay: if any critical activity underneath has a delay, surface
+        // that (critical path drives the schedule); otherwise fall back to any activity's
+        // delay so a non-critical overrun still isn't hidden.
+        $iowDelayExpr = "
+            CASE WHEN SUM(CASE WHEN sa.critical_status = 'Yes' THEN 1 ELSE 0 END) > 0
+                 THEN MAX(CASE WHEN sa.critical_status = 'Yes' THEN $anchorOverrunExpr ELSE NULL END)
+                 ELSE MAX($anchorOverrunExpr)
+            END";
+
+        // IOW Groups — route through workgroups_new (bridge: iow_groups → workgroups_new → wbsscheduleitems)
+        $groups_raw = $connection->createCommand(
+            "SELECT g.id, g.name,
+                    COALESCE(DATEDIFF(MAX(sa.end_date), MIN(sa.start_date)) + 1, 0) AS scheduled,
+                    COALESCE($iowDelayExpr,0) AS delay,
+                    MIN(sa.start_date) AS start_date,
+                    MAX(sa.end_date) AS end_date,
+                    MAX(sa.actual_end_date) AS actual_end_date,
+                    MAX(DATE_ADD(sa.end_date, INTERVAL GREATEST(0, ROUND($anchorOverrunExpr)) DAY)) AS proj_end_date
+             FROM iow_groups g
+             JOIN workgroups_new wn ON wn.iowGroupid = g.id
+                                    AND wn.Project_Id = $pid AND wn.Status = 0
+             LEFT JOIN wbsscheduleitems w  ON w.wbsid = wn.Workgroup_Id AND w.status = 0
+             LEFT JOIN scheduleactivities sa ON sa.scheduleitem_id = w.scheduleitem_id
+                                             AND sa.projectId = $pid AND sa.status = 0
+             LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
+             LEFT JOIN (
+                 SELECT activity_id, MAX(report_date) AS last_report_date, SUM(currentqty) AS cumulated_qty
+                 FROM schedule_progress_report_log
+                 GROUP BY activity_id
+             ) rpt ON rpt.activity_id = sa.id
+             WHERE g.status = 0
+             GROUP BY g.id, g.name
+             ORDER BY MIN(COALESCE(wn.sortorder, 999999)) ASC, g.id ASC"
+        )->queryAll();
+
+        // IOW Items — carry iow_groups.id as group_id via workgroups_new
+        $iow_items_raw = $connection->createCommand(
+            "SELECT w.scheduleitem_id AS id, w.name, wn.iowGroupid AS group_id,
+                    COALESCE(DATEDIFF(MAX(sa.end_date), MIN(sa.start_date)) + 1, 0) AS scheduled,
+                    COALESCE($iowDelayExpr,0) AS delay,
+                    MIN(sa.start_date) AS start_date,
+                    MAX(sa.end_date) AS end_date,
+                    MAX(sa.actual_end_date) AS actual_end_date,
+                    MAX(DATE_ADD(sa.end_date, INTERVAL GREATEST(0, ROUND($anchorOverrunExpr)) DAY)) AS proj_end_date
+             FROM wbsscheduleitems w
+             JOIN workgroups_new wn ON wn.Workgroup_Id = w.wbsid
+                                    AND wn.Project_Id = $pid AND wn.Status = 0
+             LEFT JOIN scheduleactivities sa ON sa.scheduleitem_id = w.scheduleitem_id
+                                             AND sa.projectId = $pid AND sa.status = 0
+             LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
+             LEFT JOIN (
+                 SELECT activity_id, MAX(report_date) AS last_report_date, SUM(currentqty) AS cumulated_qty
+                 FROM schedule_progress_report_log
+                 GROUP BY activity_id
+             ) rpt ON rpt.activity_id = sa.id
+             WHERE w.projectId = $pid AND w.status = 0
+             GROUP BY w.scheduleitem_id, w.name, wn.iowGroupid
+             ORDER BY COALESCE(wn.sortorder, 999999) ASC, w.scheduleitem_id ASC"
+        )->queryAll();
+
+        // Default: first IOW item of first group
+        $default_iow_id = null;
+        if (!empty($groups_raw)) {
+            $first_gid = (int)$groups_raw[0]['id'];
+            foreach ($iow_items_raw as $iow) {
+                if ((int)$iow['group_id'] === $first_gid) {
+                    $default_iow_id = (int)$iow['id'];
+                    break;
+                }
+            }
+        }
+
+        // Ongoing / upcoming for default IOW
+        $ongoing = $upcoming = [];
+        foreach ($activities as $a) {
+            if ($default_iow_id && (int)$a['scheduleitem_id'] !== $default_iow_id) continue;
+            if ($a['completed_status'] != 0) continue;
+            if ((int)($a['pr_report_count'] ?? 0) > 0) {
+                $ongoing[]  = $a;
+            } else {
+                $upcoming[] = $a;
+            }
+        }
+        $ongoing  = array_values($ongoing);
+        usort($upcoming, function($a, $b){
+            return strcmp($a['start_date'] ?? '', $b['start_date'] ?? '');
+        });
+        $upcoming = array_values($upcoming);
+
+        // Default KPI: first ongoing activity of default IOW, else first activity
+        $kpi_act = !empty($ongoing) ? $ongoing[0] : (!empty($activities) ? $activities[0] : null);
+        $kpi = $this->_buildKpi($kpi_act, $pid, $connection);
+
+        // Write dashboard-computed totals to chatbot cache — exactly what the UI displays
+        $cache_estimated   = 0.0;
+        $cache_actual_work = 0.0;
+        $cache_completed   = 0;
+        $cache_total       = 0;
+        foreach ($activities as $a) {
+            $cache_estimated   += (float)($a['activity_cost']    ?? 0);
+            $cache_actual_work += (float)($a['actual_work_done'] ?? 0);
+            $cache_total++;
+            if (!empty($a['completed_status'])) $cache_completed++;
+        }
+        MetricsCacheHelper::writeMetrics($pid, [
+            'estimated_cost'       => $cache_estimated,
+            'actual_cost_work_done'=> $cache_actual_work,
+            'total_activities'     => $cache_total,
+            'completed_activities' => $cache_completed,
+        ]);
+
+        return json_encode([
+            'error'          => 'No',
+            'project_name'   => $project ? $project['Name'] : '',
+            'project_bar'    => [
+                'budgeted'      => $proj_budgeted,
+                'actual'        => $proj_actual,
+                'delay'         => $proj_delay,
+                'b_start_date'  => $proj_b_start_date,
+                'actual_start'  => $proj_actual_start,
+                'b_end_date'    => $proj_b_end_date,
+                'proj_end_date' => $proj_b_end_computed,
+                'a_end_date'    => $proj_a_end_date,
+            ],
+            'iow_groups'     => $groups_raw,
+            'iow_items'      => $iow_items_raw,
+            'activities'     => $activities,
+            'ongoing'        => $ongoing,
+            'upcoming'       => $upcoming,
+            'kpi'            => $kpi,
+            'default_iow_id' => $default_iow_id,
+        ]);
+    }
+
+
+    public function actionPerformancedashboardkpi()
+    {
+        $actid = (int)$_POST['actid'];
+        $uid   = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project']); }
+        $pid = (int)$projuser->projectid;
+        $connection = \Yii::$app->db;
+        $act = $connection->createCommand(
+            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status
+             FROM scheduleactivities WHERE id=$actid AND projectId=$pid"
+        )->queryOne();
+        $kpi = $this->_buildKpi($act, $pid, $connection);
+        file_put_contents(Yii::getAlias('@app') . '/runtime/kpi_debug.json', json_encode($kpi, JSON_PRETTY_PRINT));
+        return json_encode(['error'=>'No', 'kpi' => $kpi]);
+    }
+
+
+    /**
+     * Public wrapper around _buildKpi() for callers outside this
+     * controller (e.g. ChatbotController::toolDiagnoseProductivityGap)
+     * that need the exact same per-activity KPI data — same convention
+     * as computeRoiThresholds() being called directly by
+     * ChatbotController rather than re-implemented. Looks the activity
+     * up by id, scoped to the given project, same query shape as
+     * actionKpidebug() above. Returns null if not found.
+     */
+    public function buildKpiForActivity($activityId, $projectId)
+    {
+        $connection = \Yii::$app->db;
+        $actid = (int)$activityId;
+        $pid = (int)$projectId;
+        $act = $connection->createCommand(
+            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status
+             FROM scheduleactivities WHERE id=$actid AND projectId=$pid"
+        )->queryOne();
+        if (!$act) return null;
+        return $this->_buildKpi($act, $pid, $connection);
+    }
+
+    /**
+     * Public wrappers around the Cashflow dashboard's existing private
+     * Cash-to-Cash Cycle / Total Investment / Contribution Margin
+     * helpers, for ChatbotController::toolCheckRoiHealth() — the CCC
+     * driver reuses these AS-IS rather than re-deriving cash-cycle or
+     * investment math from per-bill dates, per explicit instruction to
+     * just use the dashboard's existing actual/target C2C. Same
+     * public-wrapper convention as buildKpiForActivity() /
+     * checkRoiHealthForProject() above.
+     */
+    public function cfActualC2cCycle($pid)
+    {
+        return $this->_cfActualC2cCycle((int)$pid);
+    }
+
+    public function cfNetInvestmentCurrent($pid)
+    {
+        return $this->_cfNetInvestmentAsOf((int)$pid, null);
+    }
+
+    public function cfContributionMarginCurrent($pid)
+    {
+        return $this->_cfContributionMarginValue((int)$pid);
+    }
+
+    private function _buildKpi($act, $pid, $connection)
+    {
+        if (!$act) return null;
+        $actid = (int)$act['id'];
+
+        // Project name
+        $proj = $connection->createCommand("SELECT Name FROM projects WHERE Project_Id=$pid")->queryOne();
+        $project_name = $proj ? ($proj['Name'] ?? '') : '';
+
+        // schedule_activity_new data
+        $san = $connection->createCommand(
+            "SELECT progress, cycle_qty, Workhours, Cycles, Resourceunits,
+                    cycle_unit_type
+             FROM schedule_activity_new WHERE actvity_id=$actid"
+        )->queryOne();
+
+        $target_qty = (float)($act['quantity'] ?? 0);
+        $unit       = $act['unit'] ?? '';
+        $wh         = $san ? (int)$san['Workhours']      : 8;
+        $cycles     = $san ? (float)$san['Cycles']       : 1;
+        $progress   = $san ? (float)$san['progress']     : 0;
+
+        // Actual qty from progress report
+        $pr = $connection->createCommand(
+            "SELECT cumulated_qty FROM schedule_progress_report
+             WHERE activity_id=$actid ORDER BY updated_at DESC LIMIT 1"
+        )->queryOne();
+        $actual_qty = $pr ? (float)$pr['cumulated_qty'] : 0;
+
+        // Work done %
+        $work_done_pct = ($target_qty > 0) ? round($actual_qty / $target_qty * 100, 1) : $progress;
+
+        // Target productivity = schedule_qty / duration (planned_per_day, computed below)
+        // Actual productivity = actual_qty / elapsed days (last_reported_date - act_start_date)
+        $actual_prod = 0;
+
+        $target_cycle = ($target_qty > 0)
+            ? round(((float)($act['old_duration'] ?? 0) / $target_qty) * $wh, 3) : 0;
+        $resource_units = max(1, (float)($act['resource_units'] ?? 1));
+        $actual_cycle = 0;
+
+        // Capacity utilisation: used = (elapsed × wh) - cumulated break hours
+        $brk = $connection->createCommand(
+            "SELECT SUM(break_hour) AS total_break FROM schedule_progress_report_log
+             WHERE activity_id=$actid"
+        )->queryOne();
+        $cum_break = $brk ? (float)$brk['total_break'] : 0;
+        $cap_max   = 0;
+        $cap_used  = 0;
+
+        // Cause of delay
+        $cod_rows = $connection->createCommand(
+            "SELECT cd.title, COUNT(strc.id) AS cnt
+             FROM schedule_task_report_cause_of_delays strc
+             JOIN cause_of_delays cd ON cd.id = strc.cause_of_delay_id
+             WHERE strc.activity_id=$actid
+             GROUP BY cd.id, cd.title"
+        )->queryAll();
+        $total_cod = array_sum(array_column($cod_rows, 'cnt'));
+        $cause_of_delay = array_map(function($r) use ($total_cod) {
+            return [
+                'name'  => $r['title'],
+                'count' => (int)$r['cnt'],
+                'pct'   => $total_cod > 0 ? round($r['cnt']/$total_cod*100) : 0,
+            ];
+        }, $cod_rows);
+
+        // Resource capacity — latest reported qty per resource (one bar per
+        // resource row, not grouped by type — two resources sharing the same
+        // type each get their own bar), from the Report Resource popup's own
+        // save table. One row per resource_id: the most recent date logged
+        // for that resource on this activity.
+        $res_latest_rows = $connection->createCommand(
+            "SELECT srl.resource_id, srl.name, srl.quantity, rt.Name AS type_name
+             FROM schedule_resource_report_log srl
+             LEFT JOIN resourcetype rt ON rt.ResourceType_Id = srl.resource_type_id
+             INNER JOIN (
+                 SELECT resource_id, MAX(date) AS max_date
+                 FROM schedule_resource_report_log
+                 WHERE activity_id=$actid
+                 GROUP BY resource_id
+             ) latest ON latest.resource_id = srl.resource_id AND latest.max_date = srl.date
+             WHERE srl.activity_id=$actid
+             ORDER BY srl.name ASC"
+        )->queryAll();
+
+        // Last reported date for target production needle
+        $lrd = $connection->createCommand(
+            "SELECT MAX(report_date) AS last_date FROM schedule_progress_report_log
+             WHERE activity_id=$actid AND currentqty > 0"
+        )->queryOne();
+        $last_reported_date = ($lrd && !empty($lrd['last_date'])) ? $lrd['last_date'] : '';
+
+        // Activity start anchor:
+        // - Started (has progress): use the reported start date from schedule_progress_report
+        // - Not started: use the budgeted start date from scheduleactivities
+        $spr = $connection->createCommand(
+            "SELECT start_date FROM schedule_progress_report
+             WHERE activity_id=$actid LIMIT 1"
+        )->queryOne();
+        $reported_start = ($spr && !empty($spr['start_date']) && $spr['start_date'] != '0000-00-00')
+            ? $spr['start_date'] : '';
+        $planned_start = (!empty($act['start_date']) && $act['start_date'] != '0000-00-00')
+            ? $act['start_date'] : '';
+        // Use reported start if activity has started, otherwise planned start
+        $act_start_date = ($actual_qty > 0 && $reported_start)
+            ? $reported_start
+            : $planned_start;
+
+        $duration   = (float)($act['duration']     ?? 0);
+        $b_duration = (float)($act['old_duration'] ?? 0);
+        $planned_per_day = ($b_duration > 0 && $target_qty > 0)
+            ? round($target_qty / $b_duration, 3) : 0;
+
+        $target_prod = $planned_per_day;
+        $elapsed_work       = 0; // for Productivity: (last_reported - start + 1) - break_days (days)
+        $elapsed_work_hours = 0; // for Cycle Time only: (elapsed calendar hours) - break hours (hours)
+        $elapsed_calendar = 0; // for Capacity, Projected Duration, Activity bars: today - start + 1
+        $elapsed          = 0; // sent to JS as k.elapsed (calendar-based)
+        $start_delay = 0;
+        $today_ts = strtotime(date('Y-m-d'));
+        if ($act_start_date && $last_reported_date && $actual_qty > 0) {
+            // break_hour column stores hours (user enters break hours directly).
+            // elapsed_work is day-based (used by Productivity), so break hours are
+            // converted to days for it. Cycle Time uses its own hours-based elapsed
+            // value instead, so break hours are subtracted directly with no conversion.
+            $break_days       = $wh > 0 ? ($cum_break / $wh) : 0;
+            $elapsed_work     = max(1, (strtotime($last_reported_date) - strtotime($act_start_date)) / 86400 + 1 - $break_days);
+            $elapsed_calendar = max(1, ($today_ts - strtotime($act_start_date)) / 86400 + 1);
+            $elapsed          = $elapsed_calendar;
+            $elapsed_work_hours = max(1, ((strtotime($last_reported_date) - strtotime($act_start_date)) / 86400 + 1) * $wh - $cum_break);
+            $actual_prod  = round($actual_qty / $elapsed_work, 3);
+            $actual_cycle = round($elapsed_work_hours / $actual_qty, 3);
+            $cap_max  = round($elapsed_calendar * $wh, 2);
+            $cap_used = round(max(0, $cap_max - $cum_break), 2); // cap_used = cap_max - cumulative break hours
+        } elseif ($planned_start && $actual_qty == 0 && strtotime($planned_start) < $today_ts) {
+            // No progress yet but start date has passed — count start delay as elapsed
+            $start_delay      = (int)floor(($today_ts - strtotime($planned_start)) / 86400);
+            $elapsed_calendar = $start_delay;
+            $elapsed          = $start_delay;
+        }
+        $projected_duration = ($actual_qty > 0 && $elapsed_calendar > 0)
+            ? (int)round($elapsed_calendar / $actual_qty * $target_qty)
+            : ($start_delay > 0 ? $b_duration + $start_delay : 0);
+
+        // Tasks for Resource Productivity panel
+        $sa_act = $connection->createCommand(
+            "SELECT activity_id FROM scheduleactivities WHERE id=$actid"
+        )->queryOne();
+        $wbn_id = $sa_act ? (int)$sa_act['activity_id'] : 0;
+        $wbn_row = $wbn_id ? $connection->createCommand(
+            "SELECT activity_Id FROM workgroup_activities_new WHERE id=$wbn_id"
+        )->queryOne() : null;
+        $masterActId = ($wbn_row && $wbn_row['activity_Id']) ? (int)$wbn_row['activity_Id'] : $wbn_id;
+        $task_rows = $masterActId ? $connection->createCommand(
+            "SELECT at.id AS task_id, at.task_name, at.task_unit,
+                    COALESCE(stn.task_productivity, at.productivity, 0) AS productivity,
+                    COALESCE(stn.task_resource_units, 1) AS resource_units,
+                    COALESCE(stn.task_qty, 0) AS task_qty,
+                    COALESCE(stn.Budgeted_Duration, 0) AS planned_duration
+             FROM activity_tasks at
+             LEFT JOIN schedule_task_new stn ON stn.task_Id = at.id AND stn.activity_Id = $actid
+             WHERE at.activity_id = $masterActId
+             ORDER BY at.sort_order ASC"
+        )->queryAll() : [];
+
+        // Sum measurement-book "work done" qty per task for this activity (Site Office > Measurement Book)
+        $taskMbQty = [];
+        $mbRows = $connection->createCommand(
+            "SELECT entries FROM wo_measurement_book WHERE project_id=$pid AND sent_status=1"
+        )->queryAll();
+        foreach ($mbRows as $mbRow) {
+            foreach (json_decode($mbRow['entries'] ?? '[]', true) ?: [] as $entry) {
+                if ((string)($entry['activity_id'] ?? '') !== (string)$wbn_id) continue;
+                foreach ($entry['tasks'] ?? [] as $t) {
+                    $tid = (int)($t['task_id'] ?? 0);
+                    if (!$tid) continue;
+                    $taskMbQty[$tid] = ($taskMbQty[$tid] ?? 0) + (float)($t['work_done'] ?? 0);
+                }
+            }
+        }
+
+        $tasks = array_map(function($t) use ($target_qty, $actual_qty, $elapsed, $elapsed_work, $taskMbQty) {
+            $tqu = (float)$t['task_qty'];
+            $actual = ($elapsed_work > 0 && $actual_qty > 0 && $tqu > 0)
+                ? round($actual_qty * $tqu / $elapsed_work, 3) : 0;
+            $mbQty = $taskMbQty[(int)$t['task_id']] ?? 0;
+            return [
+                'name'             => $t['task_name'],
+                'unit'             => $t['task_unit'],
+                'val'              => round((float)$t['productivity'] * max(1, (float)$t['resource_units']), 3),
+                'actual'           => $actual,
+                'qty'              => round($tqu * $target_qty, 3),
+                'planned_duration' => (float)$t['planned_duration'],
+                'actual_duration'  => ($elapsed_work > 0 && $mbQty > 0) ? round($elapsed_work / $mbQty, 3) : 0,
+            ];
+        }, $task_rows);
+
+        return [
+            'activity_id'          => $actid,
+            'activity_name'        => $act['name'],
+            'work_done_pct'        => $work_done_pct,
+            'target_qty'           => $target_qty,
+            'actual_qty'           => $actual_qty,
+            'unit'                 => $unit,
+            'duration'             => $duration,
+            'b_duration'           => $b_duration,
+            'act_start_date'       => $act_start_date,
+            'last_reported_date'   => $last_reported_date,
+            'planned_per_day'      => $planned_per_day,
+            'resource_units'       => $resource_units,
+            'target_productivity'  => $target_prod,
+            'actual_productivity'  => $actual_prod,
+            'wh'                   => $wh,
+            'target_cycle_time'    => $target_cycle,
+            'actual_cycle_time'    => $actual_cycle,
+            'cap_max'              => $cap_max,
+            'cap_used'             => $cap_used,
+            'cause_of_delay'       => $cause_of_delay,
+            'resource_latest'      => array_map(function($r){
+                return ['resource_id' => (int)$r['resource_id'], 'name' => $r['name'], 'type_name' => $r['type_name'] ?: '', 'qty' => round((float)$r['quantity'], 2)];
+            }, $res_latest_rows),
+            'tasks'                => $tasks,
+            'elapsed'              => (int)round($elapsed),
+            'start_delay'          => $start_delay,
+            'projected_duration'   => $projected_duration,
+            'planned_end_date'     => ($act['end_date'] ?? ''),
+            'reported_start_date'  => $reported_start ?: '',
+            'adj_start_date'       => $planned_start ?: $act_start_date,
+            'adj_end_date'         => $planned_start
+                ? date('Y-m-d', strtotime($planned_start . ' +' . (max(1, $b_duration) - 1) . ' days'))
+                : ($act['end_date'] ?? ''),
+            'critical'             => (($act['critical_status'] ?? '') === 'Yes'),
+            'project_name'         => $project_name,
+        ];
+    }
+
+    // ROI Target Thresholds baseline derivation — see
+    // docs/dashboard-chatbot-roi-health-tool.md section 2 for the full
+    // spec. Computes and upserts one roi_target_thresholds row for
+    // $project_id. Deterministic PHP only — no LLM involvement, per the
+    // spec's "deterministic PHP, never LLM-inferred" principle.
+    //
+    // NOTE: this only builds the BASELINE thresholds row. It does NOT
+    // implement the check_roi_health tool (comparing live values against
+    // these thresholds) — that is explicitly deferred to a future
+    // session per the spec's section 4 / the instruction that created
+    // this function.
+    //
+    // pur_min / cde_min derivation: PUR and CDE are not yet first-class
+    // metrics anywhere else in this codebase (no existing "PUR"/"CDE"
+    // dashboard function to call). Built from the three per-activity
+    // metric families _buildKpi() already computes — Capacity
+    // Utilisation, Cycle Time, and Productivity — per explicit mapping:
+    //   - CDE (Required Capacity ÷ Deployed Capacity) = Capacity
+    //     Utilisation alone = cap_used / cap_max — how effectively the
+    //     available time was used by the resources.
+    //   - PUR (Productive Hours ÷ Available Hours) = an EQUAL-WEIGHT
+    //     (50/50) blend, WITHIN each activity, of:
+    //       - Productivity ratio  = actual_productivity / target_productivity
+    //         (how much they produced per day)
+    //       - Cycle Time ratio    = target_cycle_time / actual_cycle_time
+    //         (how efficiently they worked — how long to produce one
+    //         unit; NOT inverted the other way, since dividing target by
+    //         actual already reads "higher is better", the same
+    //         direction as the other two ratios, without needing any
+    //         sign flip)
+    // Both the per-activity CDE and per-activity PUR are then aggregated
+    // into ONE project-level pur_min/cde_min, weighted by each
+    // activity's ESTIMATED cost (activity_cost) — heavier activities
+    // pull the project-level threshold more than small ones, since they
+    // matter more for ROI. Activities with zero estimated cost, or
+    // missing the inputs a given ratio needs, are excluded from that
+    // ratio's weighted average rather than treated as 0.
+    //
+    // cost_variance_max_adverse_pct derivation: back-calculated from
+    // target_roi_pct against planned revenue (projects.project_value)
+    // and planned cost (SUM of every activity's estimated activity_cost)
+    // — the max adverse cost overrun, as a % of planned cost, that still
+    // leaves target_roi_pct of margin. Planned profit = revenue - cost;
+    // required minimum profit to hit target_roi_pct is
+    // revenue * target_roi_pct/100 — this baseline derivation uses
+    // profit as a % of revenue, NOT the Cashflow Dashboard's live
+    // Contribution Margin / Average Investment ROI formula (see
+    // actionCfroi), because Contribution Margin (Contract Income minus
+    // actual Project Expenditure) is purely ledger-driven and doesn't
+    // exist yet before any site activity — planned revenue/cost from the
+    // estimate is the only data available at baseline. The LIVE
+    // check_roi_health/recommend_corrective_action comparison, once a
+    // project has real ledger activity, DOES use the dashboard's actual
+    // Contribution Margin / Investment formula (see toolCheckRoiHealth's
+    // own projected_roi_pct comment) — only this baseline threshold
+    // stays on the planned-data proxy. The tolerable overrun is: current
+    // planned profit minus that required minimum, expressed as a % of
+    // planned cost.
+    //
+    // critical_float_min_days: a scheduling buffer POLICY, not derived
+    // from ROI math (per spec) — defaults to 5 days here; callers may
+    // override via $criticalFloatMinDays.
+    // $persist: when true (default), upserts the computed values into
+    // roi_target_thresholds as the project's baseline — the normal
+    // "compute the baseline" call. When false, computes and returns the
+    // exact same figures WITHOUT writing to the table — used by
+    // check_roi_health to read live current PUR/CDE/planned-cost figures
+    // for comparison against the ALREADY-STORED baseline, without
+    // silently overwriting that baseline every time someone asks a
+    // health question.
+    public function computeRoiThresholds($projectId, $targetRoiPct = 40.00, $criticalFloatMinDays = 5, $persist = true)
+    {
+        $pid = (int)$projectId;
+        $connection = \Yii::$app->db;
+
+        // Same activity list / cost joins as actionPerformancedashboard's
+        // main query (see lines ~3104-3166), trimmed to just what this
+        // baseline needs: activity id and estimated activity_cost.
+        $activities = $connection->createCommand(
+            "SELECT sa.id, COALESCE(cost.activity_cost, 0) AS activity_cost
+             FROM scheduleactivities sa
+             LEFT JOIN (
+                 SELECT pen.activity_Id,
+                        COALESCE(pen.activity_qty, 0) * COALESCE(SUM(pern.quantity * pern.rate), 0) AS activity_cost
+                 FROM pricing_estimate_new pen
+                 LEFT JOIN pricing_estimate_resources_new pern
+                        ON pern.activity_id = pen.activity_Id AND pern.project_id = pen.project_Id AND pern.pricing_status = 0
+                 WHERE pen.project_Id = $pid AND pen.pricing_status = 0
+                 GROUP BY pen.activity_Id
+             ) cost ON cost.activity_Id = sa.activity_id
+             WHERE sa.projectId=$pid AND sa.status=0"
+        )->queryAll();
+
+        // For each activity, pull the same raw fields _buildKpi() uses to
+        // derive target_productivity/actual_productivity and
+        // cap_max/cap_used, WITHOUT running the full _buildKpi() (which
+        // also builds tasks/resources/cause-of-delay — unneeded overhead
+        // here). We reuse _buildKpi() directly instead: it is already the
+        // single source of truth for these ratios (ChatbotController's
+        // KPI tool is an "exact port" of it), and re-deriving the same
+        // logic separately would risk the two silently drifting apart.
+        $purWeightedSum = 0; $purWeightTotal = 0;
+        $cdeWeightedSum = 0; $cdeWeightTotal = 0;
+        $plannedCostTotal = 0;
+
+        foreach ($activities as $actRow) {
+            $weight = (float)$actRow['activity_cost'];
+            $plannedCostTotal += $weight;
+            if ($weight <= 0) { continue; }
+
+            $act = $connection->createCommand(
+                "SELECT sa.id, sa.name, sa.scheduleitem_id, sa.activity_id, sa.duration, sa.delay,
+                        sa.completed_status, sa.start_date, sa.end_date,
+                        sa.actual_start_date, sa.actual_end_date, sa.unit, sa.resource_units,
+                        sa.quantity, sa.old_duration, sa.critical_status
+                 FROM scheduleactivities sa WHERE sa.id = " . (int)$actRow['id']
+            )->queryOne();
+            if (!$act) { continue; }
+
+            $kpi = $this->_buildKpi($act, $pid, $connection);
+            if (!$kpi) { continue; }
+
+            // PUR: equal-weight (50/50) blend of Productivity ratio and
+            // Cycle Time ratio, WITHIN this activity. Each sub-ratio only
+            // contributes if its own inputs are available; if only one
+            // of the two is available, PUR for this activity falls back
+            // to that one ratio alone rather than being skipped entirely
+            // or averaged against a missing value.
+            $productivityRatio = null;
+            if ((float)$kpi['target_productivity'] > 0 && (float)$kpi['actual_productivity'] > 0) {
+                $productivityRatio = (float)$kpi['actual_productivity'] / (float)$kpi['target_productivity'];
+            }
+            $cycleTimeRatio = null;
+            if ((float)$kpi['actual_cycle_time'] > 0 && (float)$kpi['target_cycle_time'] > 0) {
+                $cycleTimeRatio = (float)$kpi['target_cycle_time'] / (float)$kpi['actual_cycle_time'];
+            }
+            if ($productivityRatio !== null || $cycleTimeRatio !== null) {
+                $parts = array_filter([$productivityRatio, $cycleTimeRatio], function ($v) { return $v !== null; });
+                $pur = array_sum($parts) / count($parts);
+                $purWeightedSum += $pur * $weight;
+                $purWeightTotal += $weight;
+            }
+
+            // CDE: Capacity Utilisation alone — only meaningful once
+            // cap_max is non-zero (activity has started).
+            if ((float)$kpi['cap_max'] > 0) {
+                $cde = (float)$kpi['cap_used'] / (float)$kpi['cap_max'];
+                $cdeWeightedSum += $cde * $weight;
+                $cdeWeightTotal += $weight;
+            }
+        }
+
+        $purMin = $purWeightTotal > 0 ? round($purWeightedSum / $purWeightTotal, 4) : 0.0000;
+        $cdeMin = $cdeWeightTotal > 0 ? round($cdeWeightedSum / $cdeWeightTotal, 4) : 0.0000;
+
+        // Planned revenue = projects.project_value (contract value) —
+        // same field already used elsewhere as the project's revenue
+        // baseline (see FinancerequestsController::actionCfprojectexpenditure,
+        // Project Expenditure panel's 90% target).
+        $projectValue = $connection->createCommand(
+            "SELECT project_value FROM projects WHERE Project_Id=$pid"
+        )->queryScalar();
+        $plannedRevenue = (float)($projectValue ?: 0);
+
+        $costVarianceMaxAdversePct = 0.00;
+        if ($plannedRevenue > 0 && $plannedCostTotal > 0) {
+            $plannedProfit = $plannedRevenue - $plannedCostTotal;
+            $requiredMinProfit = $plannedRevenue * ((float)$targetRoiPct / 100);
+            $tolerableOverrun = $plannedProfit - $requiredMinProfit; // rupees of cost cushion before target ROI is missed
+            $costVarianceMaxAdversePct = round(max(0, $tolerableOverrun) / $plannedCostTotal * 100, 2);
+        }
+
+        // ccc_max_days: NOT back-calculated from target_roi_pct. Per
+        // explicit instruction, this reads the Cashflow dashboard's own
+        // existing user-editable Cash-to-Cash Cycle target — the same
+        // number the user already sets via the pencil icon on the C2C
+        // dial (cf_dashboard_targets, metric_key='c2c_cycle') — rather
+        // than deriving a threshold from ROI math against per-bill data
+        // this app doesn't capture. Falls back to the project's current
+        // actual C2C if no target has been set yet, so a fresh project
+        // reads as "on target" rather than red against a phantom 0-day
+        // threshold.
+        $cccTarget = $connection->createCommand(
+            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=$pid AND metric_key='c2c_cycle'"
+        )->queryScalar();
+        $cccMaxDays = $cccTarget !== false && (float)$cccTarget > 0
+            ? (int)round((float)$cccTarget)
+            : (int)round($this->_cfActualC2cCycle($pid));
+
+        $data = [
+            'project_id' => $pid,
+            'target_roi_pct' => $targetRoiPct,
+            'pur_min' => $purMin,
+            'cde_min' => $cdeMin,
+            'cost_variance_max_adverse_pct' => $costVarianceMaxAdversePct,
+            'critical_float_min_days' => (int)$criticalFloatMinDays,
+            'ccc_max_days' => $cccMaxDays,
+        ];
+
+        if ($persist) {
+            $now = date('Y-m-d H:i:s');
+            $existing = $connection->createCommand(
+                "SELECT id FROM roi_target_thresholds WHERE project_id=$pid"
+            )->queryScalar();
+
+            if ($existing) {
+                $data['last_reviewed_at'] = $now;
+                $connection->createCommand()->update('roi_target_thresholds', $data, ['project_id' => $pid])->execute();
+            } else {
+                $data['baseline_computed_at'] = $now;
+                $connection->createCommand()->insert('roi_target_thresholds', $data)->execute();
+            }
+        }
+
+        return array_merge($data, [
+            'project_id' => $pid,
+            'planned_revenue' => $plannedRevenue,
+            'planned_cost_total' => round($plannedCostTotal, 2),
+        ]);
+    }
+
+    public function actionCostdashboardbatch()
+    {
+        $uid      = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return json_encode(['error' => 'No project selected', 'data' => []]);
+        $pid = (int)$projuser->projectid;
+        $db  = \Yii::$app->db;
+
+        // Load all schedule activities for the project
+        $schedActs = $db->createCommand(
+            "SELECT sa.id, sa.activity_id, sa.quantity, sa.name
+             FROM scheduleactivities sa WHERE sa.projectId=:pid AND sa.status=0",
+            [':pid' => $pid]
+        )->queryAll();
+        if (!$schedActs) return json_encode(['error' => 'No', 'data' => []]);
+
+        $actIds    = array_column($schedActs, 'id');
+        $wbIds     = array_unique(array_column($schedActs, 'activity_id'));
+        $actMap    = [];  // schedId => sa row
+        foreach ($schedActs as $sa) { $actMap[(int)$sa['id']] = $sa; }
+
+        // Last reported qty per schedule activity
+        $lqRows = $db->createCommand(
+            "SELECT activity_id, MAX(cumulated_qty) AS lq FROM schedule_progress_report
+             WHERE activity_id IN (".implode(',', $actIds).") GROUP BY activity_id"
+        )->queryAll();
+        $lastQtyMap = [];
+        foreach ($lqRows as $r) { $lastQtyMap[(int)$r['activity_id']] = (float)$r['lq']; }
+
+        // Estimate activity qty per WBS id
+        $penRows = $db->createCommand(
+            "SELECT activity_Id, activity_qty FROM pricing_estimate_new
+             WHERE activity_Id IN (".implode(',', array_map('intval', $wbIds)).") AND project_Id=:pid AND pricing_status=0",
+            [':pid' => $pid]
+        )->queryAll();
+        $estQtyMap = [];
+        foreach ($penRows as $r) { $estQtyMap[(int)$r['activity_Id']] = (float)$r['activity_qty']; }
+
+        // All resources per WBS id — activity-specific store_indents for correct stock
+        $resRows = $db->createCommand(
+            "SELECT pern.activity_id, pern.pricing_resourceid, pern.resourcetype_Id AS type_id,
+                    pern.rate, pern.quantity AS res_qty, pern.task_ids, pern.resource_Id,
+                    grn.actual_unit_cost, grn.grn_qty,
+                    si.stock_at_site
+             FROM pricing_estimate_resources_new pern
+             LEFT JOIN (
+                 SELECT por.allocation_id,
+                        SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))*por.rate)/NULLIF(SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))),0) AS actual_unit_cost,
+                        SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))) AS grn_qty
+                 FROM purchase_order_resources por
+                 JOIN goods_received_note g ON g.GRN_Purchase_Order=por.order_id AND g.GRN_Item=por.resource_id
+                 JOIN purchase_orders po ON po.order_id=por.order_id
+                 WHERE po.project_id=:pid2 AND po.delete_status=0 AND por.delete_status=0
+                 GROUP BY por.allocation_id
+             ) grn ON grn.allocation_id=pern.pricing_resourceid
+             LEFT JOIN (
+                 SELECT si2.resource_id, si2.activity_id AS si_activity_id, si2.stock_at_site FROM store_indents si2
+                 INNER JOIN (SELECT resource_id, activity_id, MAX(id) AS mx FROM store_indents WHERE project_id=:pid3 GROUP BY resource_id, activity_id) lsi
+                 ON lsi.resource_id=si2.resource_id AND lsi.activity_id=si2.activity_id AND si2.id=lsi.mx
+             ) si ON si.resource_id=pern.resource_Id AND si.si_activity_id=pern.activity_id
+             WHERE pern.activity_id IN (".implode(',', array_map('intval', $wbIds)).") AND pern.project_id=:pid AND pern.pricing_status=0",
+            [':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid]
+        )->queryAll();
+
+        // Group resources by WBS id
+        $resByWbs = [];
+        foreach ($resRows as $r) {
+            $resByWbs[(int)$r['activity_id']][] = $r;
+        }
+
+        // MB data: task amounts and work done by task_id, grouped by wbsId
+        $taskAmountById   = [];  // task_id => total value
+        $taskWorkDoneById = [];  // task_id => total work_done qty
+        $mbQtyByWbs       = [];  // wbsId   => total MB qty
+        $mbs = $db->createCommand(
+            "SELECT entries FROM wo_measurement_book WHERE project_id=:pid AND sent_status=1 AND delete_status=0",
+            [':pid' => $pid]
+        )->queryAll();
+        foreach ($mbs as $mb) {
+            foreach (json_decode($mb['entries'] ?? '[]', true) ?: [] as $entry) {
+                $wbsId = (int)($entry['activity_id'] ?? 0);
+                if (!$wbsId) continue;
+                $mbQtyByWbs[$wbsId] = ($mbQtyByWbs[$wbsId] ?? 0.0) + (float)($entry['qty'] ?? 0);
+                foreach ($entry['tasks'] ?? [] as $task) {
+                    $wd  = (float)($task['work_done'] ?? 0);
+                    $rt  = (float)($task['rate']      ?? 0);
+                    $tid = (int)($task['task_id']     ?? 0);
+                    if ($tid) {
+                        $taskAmountById[$tid]   = ($taskAmountById[$tid]   ?? 0.0) + $rt * $wd;
+                        $taskWorkDoneById[$tid] = ($taskWorkDoneById[$tid] ?? 0.0) + $wd;
+                    }
+                }
+            }
+        }
+
+        // Compute est and acoa per schedule activity — same logic as actionCostdashboardactivity
+        $data = [];
+        foreach ($schedActs as $sa) {
+            $schedId   = (int)$sa['id'];
+            $wbId      = (int)$sa['activity_id'];
+            $schedQty  = (float)$sa['quantity'];
+            $estQty    = $estQtyMap[$wbId] ?? 0;
+            $lastQty   = $lastQtyMap[$schedId] ?? 0;
+            $resources = $resByWbs[$wbId] ?? [];
+            $ratio     = ($schedQty > 0) ? $estQty / $schedQty : 0.0;
+
+            // Estimated cost
+            $unitCost = 0.0;
+            foreach ($resources as $r) { $unitCost += (float)$r['res_qty'] * (float)$r['rate']; }
+            $est = $unitCost * $estQty;
+
+            // Actual cost — mirrors actionCostdashboardactivity logic
+            $actualTotal = 0.0;
+            foreach ($resources as $r) {
+                $typeId  = (int)$r['type_id'];
+                $resQty  = (float)$r['res_qty'];
+                $plannedConsumption = $resQty * $ratio;
+
+                // Actual unit cost
+                if ($typeId === 4) {
+                    // Subcontractor: weighted avg from MB task work done
+                    $taskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
+                    $wdVal = 0.0; $wdQty = 0.0;
+                    foreach ($taskIds as $tid) {
+                        $wdVal += $taskAmountById[$tid]   ?? 0.0;
+                        $wdQty += $taskWorkDoneById[$tid] ?? 0.0;
+                    }
+                    $actUnit = $wdQty > 0 ? $wdVal / $wdQty : null;
+                } else {
+                    $actUnit = (in_array($typeId, [2, 6, 7, 8]) && $r['actual_unit_cost'] !== null)
+                        ? (float)$r['actual_unit_cost'] : null;
+                }
+
+                // Actual consumption
+                if ($typeId === 4) {
+                    $taskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
+                    $scWd = 0.0;
+                    foreach ($taskIds as $tid) { $scWd += $taskWorkDoneById[$tid] ?? 0.0; }
+                    $actualConsumption = ($lastQty > 0 && $scWd > 0)
+                        ? $scWd / $lastQty : $plannedConsumption;
+                } elseif (in_array($typeId, [2, 6, 7, 8])) {
+                    $indentRaised = ($r['stock_at_site'] !== null);
+                    if ($indentRaised && $lastQty > 0) {
+                        $actualConsumption = max(0, (float)($r['grn_qty'] ?? 0) - (float)($r['stock_at_site'] ?? 0)) / $lastQty;
+                    } else {
+                        $actualConsumption = $plannedConsumption;
+                    }
+                } else {
+                    $actualConsumption = $plannedConsumption;
+                }
+
+                if ($actUnit !== null) {
+                    $actualTotal += $actUnit * $actualConsumption;
+                }
+            }
+
+            // estUCTotal = Σ(rate × resQty × ratio) — matches JS renderCdCostOfActivity formula
+            // ratio = estQty/schedQty, so estUCTotal = unitCost × ratio
+            $estUCTotal = $unitCost * $ratio;
+            $acoa    = round($actualTotal * $schedQty, 2);
+            $estwd   = round($estUCTotal * $lastQty, 2);
+            $actwd   = $actualTotal > 0 ? round($actualTotal * $lastQty, 2) : $estwd;
+            $data[$schedId] = ['est' => round($est, 2), 'acoa' => $acoa, 'estwd' => $estwd, 'actwd' => $actwd];
+        }
+
+        // Cache the project-level totals so the chatbot reads the same numbers the UI displays
+        $totalEstWd = 0.0;
+        $totalActWd = 0.0;
+        foreach ($data as $row) {
+            $totalEstWd += (float)$row['estwd'];
+            $totalActWd += (float)$row['actwd'];
+        }
+        \app\components\MetricsCacheHelper::writeMetrics($pid, [
+            'estimated_cost_work_done'  => $totalEstWd,
+            'actual_cost_work_done'     => $totalActWd,
+        ]);
+
+        return json_encode(['error' => 'No', 'data' => $data]);
+    }
+
+    public function actionCostdashboardactivity()
+    {
+        $uid      = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return json_encode(['error' => 'No project selected', 'items' => []]);
+
+        $pid   = (int)$projuser->projectid;
+        $actid = (int)($_POST['actid'] ?? 0);
+        if (!$actid) return json_encode(['error' => 'No activity', 'items' => []]);
+
+        $db = \Yii::$app->db;
+
+        $sa = $db->createCommand(
+            "SELECT name, activity_id, quantity, unit FROM scheduleactivities WHERE id = :actid AND projectId = :pid",
+            [':actid' => $actid, ':pid' => $pid]
+        )->queryOne();
+        if (!$sa) return json_encode(['error' => 'Not found', 'items' => []]);
+
+        $wbId = (int)$sa['activity_id'];
+
+        // Activity quantity from estimate
+        $actQty = 0;
+        if ($wbId) {
+            $actQty = (float)($db->createCommand(
+                "SELECT COALESCE(activity_qty, 0) FROM pricing_estimate_new
+                 WHERE activity_Id = :wid AND project_Id = :pid AND pricing_status = 0 LIMIT 1",
+                [':wid' => $wbId, ':pid' => $pid]
+            )->queryScalar() ?: 0);
+        }
+
+        // Last reported quantity from progress reporting
+        $lastQty = (float)($db->createCommand(
+            "SELECT COALESCE(cumulated_qty, 0) FROM schedule_progress_report
+             WHERE activity_id = :actid ORDER BY updated_at DESC LIMIT 1",
+            [':actid' => $actid]
+        )->queryScalar() ?: 0);
+
+        $items = [];
+        if ($wbId) {
+            $rows = $db->createCommand(
+                "SELECT pern.pricing_resourceid,
+                        COALESCE(pern.display_name, r.Name, rt.Name) AS name,
+                        COALESCE(rt.Name, '') AS type_name,
+                        pern.rate, pern.quantity,
+                        pern.resourcetype_Id AS type_id,
+                        COALESCE(r.Unit, '') AS unit,
+                        grn_cost.actual_unit_cost,
+                        grn_cost.grn_qty,
+                        si.stock_at_site,
+                        pern.task_ids
+                 FROM pricing_estimate_resources_new pern
+                 LEFT JOIN resources r     ON r.Resource_Id        = pern.resource_Id
+                 LEFT JOIN resourcetype rt ON rt.ResourceType_Id   = pern.resourcetype_Id
+                 LEFT JOIN (
+                     SELECT por.allocation_id,
+                            SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4)) * por.rate)
+                                / NULLIF(SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))), 0) AS actual_unit_cost,
+                            SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))) AS grn_qty
+                     FROM purchase_order_resources por
+                     JOIN goods_received_note g ON g.GRN_Purchase_Order = por.order_id
+                                                AND g.GRN_Item = por.resource_id
+                     JOIN purchase_orders po    ON po.order_id = por.order_id
+                     WHERE po.project_id = :pid2
+                       AND po.delete_status = 0
+                       AND por.delete_status = 0
+                     GROUP BY por.allocation_id
+                 ) grn_cost ON grn_cost.allocation_id = pern.pricing_resourceid
+                 LEFT JOIN (
+                     SELECT si.resource_id, si.stock_at_site, si.avg_consumption
+                     FROM store_indents si
+                     INNER JOIN (
+                         SELECT resource_id, MAX(id) AS max_id
+                         FROM store_indents
+                         WHERE project_id = :pid3 AND activity_id = :wid2
+                         GROUP BY resource_id
+                     ) latest ON latest.resource_id = si.resource_id
+                              AND si.id = latest.max_id
+                 ) si ON si.resource_id = pern.resource_Id
+                 WHERE pern.activity_id = :wid AND pern.project_id = :pid AND pern.pricing_status = 0
+                 ORDER BY pern.rate DESC",
+                [':wid' => $wbId, ':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid, ':wid2' => $wbId]
+            )->queryAll();
+            // Build task planned qty per unit from schedule_task_new (Schedule tab → Activity → Task → Qty/Unit)
+            $taskQtyMap  = [];  // task_id => task_qty (planned qty per activity unit)
+            $taskUnitMap = [];  // task_id => task_unit from activity_tasks
+            $stnRows = $db->createCommand(
+                "SELECT stn.task_Id AS task_id, stn.task_qty, COALESCE(at.task_unit, '') AS task_unit
+                 FROM schedule_task_new stn
+                 LEFT JOIN activity_tasks at ON at.id = stn.task_Id
+                 WHERE stn.activity_Id = :actid",
+                [':actid' => $actid]
+            )->queryAll();
+            foreach ($stnRows as $stn) {
+                $taskQtyMap[(int)$stn['task_id']]  = (float)($stn['task_qty'] ?? 0);
+                $taskUnitMap[(int)$stn['task_id']] = $stn['task_unit'] ?? '';
+            }
+
+            // Cumulate work_done across ALL sent MBs — cum_work_done = Qty Till Today
+            $taskWorkDoneById = []; // task_id => SUM(work_done) across all MBs
+            $taskAmountById   = []; // task_id => SUM(rate × work_done) across all MBs
+            $mbQty = 0.0; $mbAmount = 0.0;
+            $allMbs = $db->createCommand(
+                "SELECT entries FROM wo_measurement_book
+                 WHERE project_id=:pid AND sent_status=1 AND delete_status=0",
+                [':pid' => $pid]
+            )->queryAll();
+            foreach ($allMbs as $mb) {
+                foreach (json_decode($mb['entries'] ?? '[]', true) ?: [] as $entry) {
+                    if ((int)($entry['activity_id'] ?? 0) !== $wbId) continue;
+                    $mbQty += (float)($entry['qty'] ?? 0);
+                    foreach ($entry['tasks'] ?? [] as $task) {
+                        $wd  = (float)($task['work_done'] ?? 0);
+                        $rt  = (float)($task['rate']      ?? 0);
+                        $tid = (int)($task['task_id']     ?? 0);
+                        if ($tid) {
+                            $taskWorkDoneById[$tid] = ($taskWorkDoneById[$tid] ?? 0.0) + $wd;
+                            $taskAmountById[$tid]   = ($taskAmountById[$tid]   ?? 0.0) + $rt * $wd;
+                            $mbAmount += $rt * $wd;
+                        }
+                    }
+                }
+            }
+            $scActualUnitCost = $mbQty > 0 ? $mbAmount / $mbQty : null;
+            $actualUnitCostTotal = 0.0;
+            $schedQty = (float)($sa['quantity'] ?? 0);
+            $ratio    = ($schedQty > 0) ? $actQty / $schedQty : 0.0;
+            foreach ($rows as $r) {
+                $resQty  = (float)$r['quantity'];
+                $typeId  = (int)$r['type_id'];
+                if ($typeId === 4) {
+                    // Actual rate = SUM(work_done_value) / SUM(work_done_qty) from sent MBs
+                    $taskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
+                    $actUnit = null;
+                    if (!empty($taskIds)) {
+                        $totalWdValue = 0.0;
+                        $totalWdQty   = 0.0;
+                        foreach ($taskIds as $tid) {
+                            $totalWdValue += $taskAmountById[$tid]   ?? 0.0;
+                            $totalWdQty   += $taskWorkDoneById[$tid] ?? 0.0;
+                        }
+                        if ($totalWdQty > 0) {
+                            $actUnit = $totalWdValue / $totalWdQty;
+                        }
+                    }
+                } else {
+                    $actUnit = (in_array($typeId, [2, 6, 7, 8]) && $r['actual_unit_cost'] !== null
+                        ? (float)$r['actual_unit_cost']
+                        : null);
+                }
+                // Planned Consumption = res_qty × (estQty / schedQty)
+                $plannedConsumption = round($resQty * $ratio, 3);
+
+                // Actual Consumption:
+                // SC (type 4): task Qty-Till-Today from last MB / lastReportedQty
+                // Materials/Consumables/Purchased Inputs/Tools (type 2,6,7,8):
+                //   Use saved avg_consumption from store_indents (calculated at indent time)
+                //   If no indent raised: use planned consumption
+                // All other types: same as planned
+                if ($typeId === 4) {
+                    $scTaskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
+                    $scWorkDone = 0.0;
+                    foreach ($scTaskIds as $stid) {
+                        $scWorkDone += $taskWorkDoneById[$stid] ?? 0.0;
+                    }
+                    $actualConsumption = ($lastQty > 0 && $scWorkDone > 0)
+                        ? round($scWorkDone / $lastQty, 3)
+                        : $plannedConsumption;
+                } elseif (in_array($typeId, [2, 6, 7, 8])) {
+                    $indentRaised = ($r['stock_at_site'] !== null);
+                    if ($indentRaised && $lastQty > 0) {
+                        $grnQty = (float)($r['grn_qty']       ?? 0);
+                        $stock  = (float)($r['stock_at_site'] ?? 0);
+                        $actualConsumption = round(max(0, $grnQty - $stock) / $lastQty, 3);
+                    } else {
+                        $actualConsumption = $plannedConsumption;
+                    }
+                } else {
+                    $actualConsumption = $plannedConsumption;
+                }
+
+                $actualResQty = $actualConsumption;
+
+                // Actual cost contribution = actual_unit_cost × actual_consumption
+                $actualContrib = 0.0;
+                if ($actUnit !== null) {
+                    $actualContrib = (float)$actUnit * $actualConsumption;
+                }
+                $actualUnitCostTotal += $actualContrib;
+
+                $taskUnit = '';
+                if ($typeId === 4) {
+                    $scTaskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
+                    if (!empty($scTaskIds)) {
+                        $taskUnit = $taskUnitMap[reset($scTaskIds)] ?? '';
+                    }
+                }
+
+                $items[] = [
+                    'name'                 => $r['name'],
+                    'type_name'            => $r['type_name'],
+                    'rate'                 => (float)$r['rate'],
+                    'type_id'              => $typeId,
+                    'unit'                 => $r['unit'],
+                    'task_unit'            => $taskUnit,
+                    'res_qty'              => $resQty,
+                    'consumption'          => round($lastQty * $resQty, 3),
+                    'actual_unit_cost'     => $actUnit,
+                    'actual_res_qty'       => $actualResQty,
+                    'planned_consumption'  => $plannedConsumption,
+                    'actual_consumption'   => $actualConsumption,
+                    'indent_raised'        => ($r['stock_at_site'] !== null),
+                    'has_mb'               => ($typeId === 4 && isset($taskWorkDoneById) && !empty(array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')), function($tid) use ($taskWorkDoneById){ return ($taskWorkDoneById[$tid] ?? 0) > 0; }))),
+                ];
+            }
+        }
+
+        return json_encode([
+            'activity_name'       => $sa['name'],
+            'activity_qty'        => $actQty,
+            'schedule_qty'        => (float)($sa['quantity'] ?? 0),
+            'unit'                => $sa['unit'] ?? '',
+            'last_report_qty'     => $lastQty,
+            'actual_unit_cost_raw'=> round($actualUnitCostTotal, 4),
+            'items'               => $items,
+        ]);
+    }
+
+    public function actionTableaurefresh(){
+        return Yii::$app->helper->tableauRefresh(['workBookName' => $_POST['workBookName']]);
+    }
+
+
+    public function actionTableaurefreshprogress(){
+        return Yii::$app->helper->tableauRefreshProgress(['jobid' => $_POST['jobid']]);
+    }
+
+
+
+    function count_digit($number) {
+        return strlen($number);
+    }
+      
+    function divider($number_of_digits) {
+        $tens="1";
+    
+        if($number_of_digits>8)
+            return 10000000;
+        
+        while(($number_of_digits-1)>0)
+        {
+            $tens.="0";
+            $number_of_digits--;
+        }
+        return $tens;
+    }
+    
+    public function actionSearch()
+    {
+        $connection = Yii::$app->db;
+        $sql = "SELECT * FROM projects WHERE status='0' AND Project_Delete_Status='0' AND favourite=1";
+        if ($_POST['projectname'] != '')
+            $sql .= "AND Name LIKE '%" . $_POST['projectname'] . "%'";
+        $sql .= " ORDER BY Project_Id ASC, Name ASC";
+        $command = $connection->createCommand($sql);
+        $dataReader = $command->query();
+        $dataProvider = $dataReader->readAll();
+        $datarows = '';
+        //$datarows .= '<div class="projects-list-wrpr">';
+        $uid = Yii::$app->user->Id; 
+        $row = User::findOne($uid);
+
+        if($row->role_id != 0)
+        {
+            $assignedprojects =  UserProjects::find()->where(['userid'=>$uid])->all();
+            if(count($assignedprojects)>0)
+            {
+
+                foreach($assignedprojects as $usprojects){
+                    $projs = Projects::findOne($usprojects->projectid);
+
+                    $days = $projs->duration;
+                    if($projs->duration!=0){
+
+                        //$years = intval($days / 365); 
+                        //$days = $days % 365;
+                        //$months = intval($days / 30); 
+                        //$days = $days % 30;
+                        //$prjctdate = $years.' years '.$months.' months '.$days.' days';
+                        $prjctdate = $days.' days';
+
+                    }
+                    else{
+                        //$prjctdate = '0 years 0 months 0 days';
+                        $prjctdate = '0 days';
+                    }
+
+                    $datarows .= '<div class="col-md-4">';
+
+                    $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+                    if($projuser && $projuser->projectid==$usprojects->projectid){
+
+                            $datarows .= '<div class="projselctid fav-project-wrpr card active" id="projselctid'.$usprojects->projectid.'" data-id='.$usprojects->projectid.'>';
+                    }
+                    else
+                    {
+                        $datarows .= '<div class="projselctid fav-project-wrpr card" id="projselctid'.$usprojects->projectid.'" data-id='.$usprojects->projectid.'>';
+
+                    }
+
+          $datarows .= ' <div class="card-body">
+                                    <a href="#"><span class="icon-check"></span>'. $projs->Name.'</a>
+                                </div>
+                                <div class="card-footer">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="type project-client-name">
+                                                <label>Client</label>
+                                                <span>'.$projs->client_name.'</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="type">
+                                                <label>Project Duration</label>
+                                                <span>'.$prjctdate.'</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="type text-right">
+                                                <label>Project Value</label>
+                                                <span>'.$projs->project_value.'</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
+                            <div class="project-doc-upload" style="margin-top:5px;">
+                                <div class="input-group input-group-sm">
+                                    <input type="file" class="form-control project-doc-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="font-size:11px;">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-success btn-sm project-doc-save" data-id="'.$usprojects->projectid.'" title="Save Documents">
+                                            <span class="icon-floppy-disk"></span>
+                                        </button>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>';
+
+
+
+                }
+
+            }else{
+                $datarows = '<div class="row"><div class="col-md-12"><div class="text-center">No Featured Projects Found</div></div></div>';
+            }
+
+        }else{
+            if (count($dataProvider) > 0):
+            foreach ($dataProvider AS $key => $data):
+                // $sqlst = "SELECT COUNT(*) AS total FROM iowactivities AS a,itemofworks AS b WHERE a.Budgeted_Duration!=0 AND a.End_Duration!=0 AND a.IOW_Id=b.IOW_Id AND b.Project_Id='" . $data['Project_Id'] . "'";
+                $sqlst = "SELECT COUNT(*) AS total FROM schedule_activity WHERE progress!=0 AND Project_Id='" . $data['Project_Id'] . "'";
+                $command = $connection->createCommand($sqlst);
+                $dataReader = $command->query();
+                $status = $dataReader->read();
+                $changestat = '';
+                if ($status['total'] != 0)
+                    $changestat = '<a href="' . Yii::$app->request->baseUrl . "/projects/GanttChart/" . $data['Project_Id'] . '" title="Click to view Project Crictical Path"><button type="button" class="btn btn-primary" >CPM</button></a>';
+                else
+                    $changestat = '<button type="button" class="btn btn-primary" disabled="disabled">CPM</button>';
+
+                if ($status['total'] != 0)
+                    $changeiow = '<a href="' . Yii::$app->request->baseUrl . "/dashboard/BarChart/" . $data['Project_Id'] . '" title="Click to view Overhead Status"><button type="button" class="btn btn-primary" >Dashboard</button></a>';
+                else
+                    $changeiow = '<button title="Click to view  Overhead Status" type="button" class="btn btn-primary" disabled="disabled">Dashboard</button></a>';
+
+                $sqlcost = "SELECT SUM(Price) AS totalcost FROM iowproducts AS a JOIN itemofworks AS b ON a.IOW_Id=b.IOW_Id WHERE b.Project_Id='" . $data['Project_Id'] . "'";
+
+                $command = $connection->createCommand($sqlcost);
+                $dataReader = $command->query();
+                $totalcost = $dataReader->read();
+                if ($totalcost['totalcost'] == '') {
+                    $cost = '0';
+                } else {
+                    $cost = $totalcost['totalcost'];
+                }
+
+                $days = $data['duration'];
+                if($data['duration']!=0){
+
+                    //$years = intval($days / 365); 
+                    //$days = $days % 365;
+                    //$months = intval($days / 30); 
+                    //$days = $days % 30;
+                    //$prjctdate = $years.' years '.$months.' months '.$days.' days';
+                    $prjctdate = $days.' days';
+
+                }
+                else{
+                    //$prjctdate = '0 years 0 months 0 days';
+                    $prjctdate = '0 days';
+                }
+
+                $num = $data['project_value'];
+                $ext="";//thousand,lac, crore
+                $number_of_digits = $this->count_digit($num); //this is call :)
+                    if($number_of_digits>3)
+                {
+                    if($number_of_digits%2!=0)
+                        $divider= $this->divider($number_of_digits-1);
+                    else
+                        $divider= $this->divider($number_of_digits);
+                }
+                else
+                    $divider=1;
+
+                $fraction=$num/$divider;
+                $fraction=number_format($fraction,2);
+                if($number_of_digits==4 ||$number_of_digits==5)
+                    $ext="k";
+                if($number_of_digits==6 ||$number_of_digits==7)
+                    $ext="Lac";
+                if($number_of_digits==8 ||$number_of_digits==9)
+                    $ext="Cr";
+                $provalue =$fraction." ".$ext;
+
+                $uid = Yii::$app->user->Id; 
+
+                $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+
+
+
+                if($projuser && $projuser->projectid==$data['Project_Id']){
+                    $datarows .= '
+                        <div class="col-md-4">
+                            <div class="projselctid fav-project-wrpr card active" id="projselctid'.$data['Project_Id'].'" data-id='.$data['Project_Id'].'>
+                                <div class="card-body">
+                                    <a href="#"><span class="icon-check"></span>'. $data['Name'] .'</a>
+                                </div>
+                                <div class="card-footer">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="type project-client-name">
+                                                <label>Client</label>
+                                                <span>'.$data['client_name'].'</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="type">
+                                                <label>Project Duration</label>
+                                                <span>'.$prjctdate.'</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="type text-right">
+                                                <label>Project Value</label>
+                                                <span>'.$provalue.'</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="project-doc-upload" style="margin-top:5px;">
+                                <div class="input-group input-group-sm">
+                                    <input type="file" class="form-control project-doc-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="font-size:11px;">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-success btn-sm project-doc-save" data-id="'.$data['Project_Id'].'" title="Save Documents">
+                                            <span class="icon-floppy-disk"></span>
+                                        </button>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>  ';
+                }
+                else{
+                    $datarows .= '
+                        <div class="col-md-4">
+                            <div class="projselctid fav-project-wrpr card" id="projselctid'.$data['Project_Id'].'" data-id='.$data['Project_Id'].'>
+                                <div class="card-body">
+                                    <a href="#"><span class="icon-check"></span>'. $data['Name'] .'</a>
+                                </div>
+                                <div class="card-footer">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="type project-client-name">
+                                                <label>Client</label>
+                                                <span>'.$data['client_name'].'</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="type">
+                                                <label>Project Duration</label>
+                                                <span>'.$prjctdate.'</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="type text-right">
+                                                <label>Project Value</label>
+                                                <span>'.$provalue.'</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="project-doc-upload" style="margin-top:5px;">
+                                <div class="input-group input-group-sm">
+                                    <input type="file" class="form-control project-doc-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="font-size:11px;">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-success btn-sm project-doc-save" data-id="'.$data['Project_Id'].'" title="Save Documents">
+                                            <span class="icon-floppy-disk"></span>
+                                        </button>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>  ';
+                }
+
+                /*$datarows .= '<div class="row" id="projectrow' . $data['Project_Id'] . '">
+                                    <div class="col-md-8 type">
+                                        <label></label>
+                                        <span id="projecttext'. $data['Project_Id'] .'"><a href="#" title="Edit">'. $data['Name'] .'</a></span>
+                                    </div>
+                                    <div class="col-md-4 icon-groups project-tab-buttons">
+                                        <a href="#" class="btn btn-primary text-button viewestimate" data-id="'.$data['Project_Id'].'" value="' . $data['Project_Id'] . '" title="Estimate"><span class="icon-calculator1"></span>Estimate</a>
+                                        <a href="#" class="btn btn-primary text-button viewwbsSchedule" data-id="' . $data['Project_Id'] . '" value="' . $data['Project_Id'] . '" title="Click to view Work groups under Project '.$data['Name'].' "><span class="icon-time1"></span>Schedule</a>
+                                        <a href="#" class="btn btn-primary viewBOQ" data-id="'.$data['Project_Id'].'" value="' . $data['Project_Id'] . '"  title="BOQ"><span class="icon-assignment"></span></a>
+                                        <a href="#" class="btn btn-primary viewworkgroups" data-id="' . $data['Project_Id'] . '" value="' . $data['Project_Id'] . '" title="Click to view Work groups under Project '.$data['Name'].' "><span class="icon-chart6"></span></a>
+                                        <div class="dropdown icons-group-dropmenu">
+                                            <a href="#" class="btn btn-primary nav-link dropdown-toggle" data-toggle="dropdown" aria-expanded="false"><span class="icon-more_vert"></span></a>
+                                            <div class="dropdown-menu">
+                                                <a class="dropdown-item viewnotes" data-id="'.$data['Project_Id'].'" value="' . $data['Project_Id'] . '" title="Notes" data-toggle="modal" data-target="#notesModel" data-name="' . $data['Name'] . '" href="#"><span class="icon-comment"></span> Notes</a>
+                                                <a class="dropdown-item billsquantity" data-id="' . $data['Project_Id'] . '" value="' . $data['Project_Id'] . '" title="Click to view Work groups under Project \'' . $data['Name'] . '\'"" href="#"><span class="icon-note1"></span>Reports</a>
+                                                <a class="dropdown-item chart" data-id="' . $data['Project_Id'] . '" value="' . $data['Project_Id'] . '" title="Click to view chart under Project \'' . $data['Name'] . '\'" href="#"><span class="icon-chart2"></span>Chart</a>
+                                            </div>
+                                        </div>    
+                                    </div></div>';*/
+            endforeach;
+            //$datarows .= '</div>';
+        else:
+            $datarows = '<div class="row"><div class="col-md-12"><div class="text-center">No Featured Projects Found</div></div></div>';
+        endif;
+        }
+        $arr = array('result' => $datarows, 'error' => 'No');
+        return json_encode($arr);
+    }
+
+    public function actionProjectperformance()
+    {
+        $connection = Yii::$app->db;
+        $sql = "SELECT * FROM projects WHERE status='0' AND Project_Delete_Status='0' AND favourite=1";
+        $sql .= " ORDER BY Project_Id ASC, Name ASC";
+        $command = $connection->createCommand($sql);
+        $dataReader = $command->query();
+        $dataProvider = $dataReader->readAll();
+        $datarows = '';
+        //$datarows .= '<div class="projects-list-wrpr">';
+        $uid = Yii::$app->user->Id; 
+        $row = User::findOne($uid);
+
+        if($row->role_id != 0)
+        {
+            $assignedprojects =  UserProjects::find()->where(['userid'=>$uid])->all();
+            if(count($assignedprojects)>0)
+            {
+
+                foreach($assignedprojects as $usprojects){
+                    $projs = Projects::findOne($usprojects->projectid);
+
+                    $days = $projs->duration;
+                    if($projs->duration!=0){
+
+                        //$years = intval($days / 365); 
+                        //$days = $days % 365;
+                        //$months = intval($days / 30); 
+                        //$days = $days % 30;
+                        //$prjctdate = $years.' years '.$months.' months '.$days.' days';
+                        $prjctdate = $days.' days';
+
+                    }
+                    else{
+                        //$prjctdate = '0 years 0 months 0 days';
+                        $prjctdate = '0 days';
+                    }
+
+                    $datarows .= '<div class="col-md-4">';
+
+                    $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+                    if($projuser && $projuser->projectid==$usprojects->projectid){
+
+                            $datarows .= '<div class="projselctid fav-project-wrpr card active" id="projselctid'.$usprojects->projectid.'" data-id='.$usprojects->projectid.'>';
+                    }
+                    else
+                    {
+                        $datarows .= '<div class="projselctid fav-project-wrpr card" id="projselctid'.$usprojects->projectid.'" data-id='.$usprojects->projectid.'>';
+
+                    }
+
+                    $datarows .= ' 
+                                <div class="card-body">
+                                    <a href="#"><span class="icon-check"></span>'. $projs->Name.'</a>
+                                </div>
+                                <div class="card-footer">                                    
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="type project-client-name">
+                                                <label>Client</label>
+                                                <span>'.$projs->client_name.'</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="type">
+                                                <label>Project Duration</label>
+                                                <span>'.$prjctdate.'</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="type text-right">
+                                                <label>Project Value</label>
+                                                <span>'.$projs->project_value.'</span>
+                                            </div>
+                                        </div>
+                                    </div>                                   
+                                </div>
+                            </div>
+                        </div>';
+                }
+
+            }else{
+                $datarows = '<div class="row"><div class="col-md-12"><div class="text-center">No Featured Projects Found</div></div></div>';
+            }
+
+        }else{
+            if (count($dataProvider) > 0):
+            foreach ($dataProvider AS $key => $data):
+                // $sqlst = "SELECT COUNT(*) AS total FROM iowactivities AS a,itemofworks AS b WHERE a.Budgeted_Duration!=0 AND a.End_Duration!=0 AND a.IOW_Id=b.IOW_Id AND b.Project_Id='" . $data['Project_Id'] . "'";
+                $sqlst = "SELECT COUNT(*) AS total FROM schedule_activity WHERE progress!=0 AND Project_Id='" . $data['Project_Id'] . "'";
+                $command = $connection->createCommand($sqlst);
+                $dataReader = $command->query();
+                $status = $dataReader->read();
+                $changestat = '';
+                if ($status['total'] != 0)
+                    $changestat = '<a href="' . Yii::$app->request->baseUrl . "/projects/GanttChart/" . $data['Project_Id'] . '" title="Click to view Project Crictical Path"><button type="button" class="btn btn-primary" >CPM</button></a>';
+                else
+                    $changestat = '<button type="button" class="btn btn-primary" disabled="disabled">CPM</button>';
+
+                if ($status['total'] != 0)
+                    $changeiow = '<a href="' . Yii::$app->request->baseUrl . "/dashboard/BarChart/" . $data['Project_Id'] . '" title="Click to view Overhead Status"><button type="button" class="btn btn-primary" >Dashboard</button></a>';
+                else
+                    $changeiow = '<button title="Click to view  Overhead Status" type="button" class="btn btn-primary" disabled="disabled">Dashboard</button></a>';
+
+                $sqlcost = "SELECT SUM(Price) AS totalcost FROM iowproducts AS a JOIN itemofworks AS b ON a.IOW_Id=b.IOW_Id WHERE b.Project_Id='" . $data['Project_Id'] . "'";
+
+                $command = $connection->createCommand($sqlcost);
+                $dataReader = $command->query();
+                $totalcost = $dataReader->read();
+                if ($totalcost['totalcost'] == '') {
+                    $cost = '0';
+                } else {
+                    $cost = $totalcost['totalcost'];
+                }
+
+                $days = $data['duration'];
+                if($data['duration']!=0){
+
+                    //$years = intval($days / 365); 
+                    //$days = $days % 365;
+                    //$months = intval($days / 30); 
+                    //$days = $days % 30;
+                    //$prjctdate = $years.' years '.$months.' months '.$days.' days';
+                    $prjctdate = $days.' days';
+
+                }
+                else{
+                    //$prjctdate = '0 years 0 months 0 days';
+                    $prjctdate = '0 days';
+                }
+
+                $num = $data['project_value'];
+                $ext="";//thousand,lac, crore
+                $number_of_digits = $this->count_digit($num); //this is call :)
+                    if($number_of_digits>3)
+                {
+                    if($number_of_digits%2!=0)
+                        $divider= $this->divider($number_of_digits-1);
+                    else
+                        $divider= $this->divider($number_of_digits);
+                }
+                else
+                    $divider=1;
+
+                $fraction=$num/$divider;
+                $fraction=number_format($fraction,2);
+                if($number_of_digits==4 ||$number_of_digits==5)
+                    $ext="k";
+                if($number_of_digits==6 ||$number_of_digits==7)
+                    $ext="Lac";
+                if($number_of_digits==8 ||$number_of_digits==9)
+                    $ext="Cr";
+                $provalue =$fraction." ".$ext;
+
+                $uid = Yii::$app->user->Id; 
+
+                $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+
+                $selProjClass = '';
+                if($projuser && $projuser->projectid==$data['Project_Id']){
+                    $selProjClass = 'active';
+                }
+
+                /*$sql="  SELECT DATEDIFF(MAX(end_date), MAX(actual_end_date)) as date_diff, 
+                        MIN(actual_start_date) as start_date, MAX(actual_end_date) as end_date 
+                        FROM scheduleactivities 
+                        WHERE projectId = '".$data['Project_Id']."' AND status=0";*/
+
+                $sql="  SELECT DATEDIFF(MAX(end_date), MAX(actual_end_date)) as date_diff,
+                                MIN(start_date) as sched_start_date,
+                                MAX(end_date) as sched_end_date,
+                                DATEDIFF(MAX(end_date), MIN(start_date)) + 1 as sched_duration
+                        FROM scheduleactivities
+                        WHERE projectId = '".$data['Project_Id']."' AND status=0";
+                $command = $connection->createCommand($sql);
+                $dataReader = $command->query();
+                $projSchedData = $dataReader->readAll();
+
+                if (!empty($projSchedData[0]['sched_duration']) && $projSchedData[0]['sched_duration'] > 0) {
+                    $prjctdate = $projSchedData[0]['sched_duration'] . ' days';
+                }
+                $schedStartDate = (!empty($projSchedData[0]['sched_start_date']) && $projSchedData[0]['sched_start_date'] !== '0000-00-00') ? $projSchedData[0]['sched_start_date'] : $data['start_date'];
+                $schedEndDate   = (!empty($projSchedData[0]['sched_end_date'])   && $projSchedData[0]['sched_end_date']   !== '0000-00-00') ? $projSchedData[0]['sched_end_date']   : $data['end_date'];
+
+                $scheduleStatusBar = 'green-bar';
+                $scheduleStatusVal = '';
+                if($projSchedData[0]['date_diff'] > 0){
+                    $scheduleStatusBar = 'red-bar';
+                    $scheduleStatusVal = '<span class="icon-warning3"></span>'.$projSchedData[0]['date_diff'].' Days';
+                }
+
+
+                $totEstAmount  = Yii::$app->helper->getDataFromQuery(' 
+                                        SELECT SUM( round((round(pern.rate,2) * round(pern.quantity*pen.activity_qty,2)),2)) as totAmount 
+                                        FROM `pricing_estimate_resources_new` as pern 
+                                        INNER JOIN pricing_estimate_new as pen ON pen.activity_Id=pern.activity_id AND pen.project_Id = '.$data['Project_Id'].'
+                                        INNER JOIN workgroup_activities_new as wact ON wact.id=pern.activity_id AND wact.project_Id = '.$data['Project_Id'].'
+                                        WHERE pern.pricing_status = 0 AND pen.pricing_status = 0 AND pern.project_id = '.$data['Project_Id']
+                                )['totAmount'];
+
+
+
+                $totMatPurAmount  = Yii::$app->helper->getDataFromQuery(' SELECT SUM(a.amount) as totAmount 
+                                                                        FROM purchase_order_resources as a 
+                                                                        INNER JOIN purchase_orders as c ON c.order_id = a.order_id 
+                                                                        WHERE c.project_id='.$data['Project_Id'].' AND c.order_type=1'
+                                                                    )['totAmount'];
+
+                $totSubconAmount  = Yii::$app->helper->getDataFromQuery('SELECT SUM((a.no_of_skilled_labour*a.trade_rate)+(a.no_of_unskilled_labour*a.trade_rate)) as totRate 
+                                                                          FROM `schedule_task_report_resources` as a 
+                                                                          JOIN scheduleactivities as b ON a.activity_id=b.id AND b.projectId='.$data['Project_Id'].' 
+                                                                          WHERE a.res_type = 19 AND (a.no_of_skilled_labour!=0 OR a.no_of_unskilled_labour !=0)'
+                                                                    )['totRate'];
+
+
+
+                $activities      =  WorkgroupActivitiesNew::find()
+                                    ->where(['project_Id' => $data['Project_Id']])
+                                    ->andWhere(['estimate' => 1])
+                                    ->andWhere(['pricing_status' => 0])
+                                    ->all();
+
+                $totEstAmount    = 0;
+                $totActualAmount = 0;
+                if($activities){
+                    foreach ($activities as $activity) {
+                            
+                        $totActAmount  =    Yii::$app->helper->getDataFromQuery(' 
+                                                SELECT SUM( round((round(pern.rate,2) * round(pern.quantity*pen.activity_qty,2)),2)) as totAmount 
+                                                FROM `pricing_estimate_resources_new` as pern 
+                                                INNER JOIN pricing_estimate_new as pen ON pen.activity_Id=pern.activity_id AND pen.project_Id = '.$data['Project_Id'].'
+                                                WHERE pern.pricing_status = 0 AND pern.activity_id = '.$activity->id.' AND pen.pricing_status = 0 AND pern.project_id = '.$data['Project_Id']
+                                            )['totAmount'];
+                        $totEstAmount   +=  $totActAmount;
+
+                        $scheduleAct    = Scheduleactivities::find()->where(['activity_id' => $activity->id])->one();
+                        $progReport     = ($scheduleAct) ? (ScheduleProgressReport::find()->where(['activity_id' => $scheduleAct->id])->one()) : '';
+                        
+                        if($progReport){
+
+                            $cumulated_qty    = $progReport->cumulated_qty;
+                            $pricResources    = PricingEstimateResourcesNew::find()
+                                                ->where(['activity_id' => $activity->id])
+                                                ->andWhere(['pricing_status' => 0])
+                                                ->all();
+                            if($pricResources){
+                                foreach ($pricResources as $pricResource){
+                                    $schActId           = $scheduleAct->id;
+
+                                    $pricingEstimateNew = PricingEstimateNew::find()
+                                                            ->where(['project_Id'=>$data['Project_Id']])
+                                                            ->andWhere(['activity_Id'=>$activity->id])
+                                                            ->andWhere(['pricing_status'=>0])
+                                                            ->one();
+                                    $activity_qty       = $pricingEstimateNew->activity_qty;
+
+                                    //----------Materials / Major Consumables / Purchased Inputs----------------
+                                    if($pricResource->resourcetype_Id == 16 || $pricResource->resourcetype_Id == 20 || $pricResource->resourcetype_Id == 21){
+
+                                        /*$totMatPurAmount  = Yii::$app->helper->getDataFromQuery(' SELECT SUM(rate * purchased_qty) as totAmount 
+                                                                FROM purchase_order_activities
+                                                                WHERE activity_id ='.$schActId.' AND resource_id ='.$pricResource->resource_Id
+                                                            )['totAmount'];*/
+
+                                        $matPurUnitRate   = PurchaseOrderActivities::find()
+                                                            ->where(['activity_id' => $schActId])
+                                                            ->andWhere(['resource_id' => $pricResource->resource_Id])
+                                                            ->one();
+
+                                        $resConsumption   = Yii::$app->helper->getDataFromQuery(" SELECT SUM(quantity) AS totalqty 
+                                                                    FROM schedule_resource_report_log 
+                                                                    WHERE  activity_id=".$schActId."
+                                                                    AND  project_id=".$data['Project_Id']."
+                                                                    AND resource_id=".$pricResource->resource_Id
+                                                                )['totalqty'];
+                                        if($matPurUnitRate)
+                                            $totMatPurAmount  = $matPurUnitRate->rate * $resConsumption;
+
+
+                                        $totActualAmount    += ($totMatPurAmount / $cumulated_qty) * $activity_qty;
+
+                                    }
+
+                                    //-----Sub Contractor
+                                    if($pricResource->resourcetype_Id == 19){
+
+                                        $labourData     = Yii::$app->helper->getDataFromQuery(" 
+                                                                    SELECT SUM(no_of_skilled_labour) AS totalSkilled,
+                                                                    SUM(no_of_unskilled_labour) AS totalUnskilled
+                                                                    FROM schedule_task_report_resources 
+                                                                    WHERE  activity_id=".$schActId."
+                                                                    AND res_id=".$pricResource->resource_Id
+                                                                );
+
+                                        $skilledRate   = Yii::$app->helper->getDataFromQuery(" 
+                                                                    SELECT ((SUM(no_of_skilled_labour) * trade_rate) ) AS totalRate
+                                                                    FROM schedule_task_report_resources 
+                                                                    WHERE  activity_id=".$schActId."
+                                                                    AND res_id=".$pricResource->resource_Id."
+                                                                    AND no_of_skilled_labour != 0"
+                                                                )['totalRate'];
+
+                                        $unskilledRate  = Yii::$app->helper->getDataFromQuery(" 
+                                                                    SELECT ((SUM(no_of_unskilled_labour) * trade_rate)) AS totalRate
+                                                                    FROM schedule_task_report_resources 
+                                                                    WHERE  activity_id=".$schActId."
+                                                                    AND res_id=".$pricResource->resource_Id."
+                                                                    AND no_of_unskilled_labour != 0"
+                                                                )['totalRate'];
+
+                                        if(($skilledRate || $unskilledRate) && $labourData){
+                                            $labourUnitCost = ( ($skilledRate + $unskilledRate) 
+                                                                / 
+                                                                ($labourData['totalSkilled'] + $labourData['totalUnskilled'])
+                                                              );
+
+                                            $startDateQuery =   ScheduleTaskReport::find()
+                                                                ->where(['activityid' => $schActId])
+                                                                ->orderBy(['task_date'=>SORT_ASC, 'start_time'=>SORT_ASC])
+                                                                ->one();
+                                            $endDateQuery   =   ScheduleTaskReport::find()
+                                                                ->where(['activityid' => $schActId])
+                                                                ->orderBy(['task_enddate'=>SORT_DESC, 'end_time'=>SORT_DESC])
+                                                                ->one();
+                                            $schactnew      =   ScheduleActivityNew::find()->where(['actvity_id' => $schActId])->one();
+                                            $workhours      =  ($schactnew) ? $schactnew->Workhours : 8;
+                                            
+
+                                            $from_time      = strtotime($startDateQuery->task_date." ".$startDateQuery->start_time); 
+                                            $to_time        = strtotime($endDateQuery->task_enddate." ".$endDateQuery->end_time); 
+                                            $diff_minutes   = round(abs($from_time - $to_time) / 60,2);
+                                            $holidayCount   = Yii::$app->helper->getHolidayCount($startDateQuery->task_date, $endDateQuery->task_enddate, $data['Project_Id']);
+                                            $stoppageDaysDeduct = 0;
+                                            $totCumDays     = ($diff_minutes/(24*60)) - $stoppageDaysDeduct;
+                                            $totCumDuration = (floor($totCumDays) * $workhours) + ceil($diff_minutes%(24*60)/60);
+                                            $reptdDays      = ($totCumDuration/$workhours) - $holidayCount;
+
+                                            $cyclesReported = $endDateQuery->current_cycle;
+
+                                            $actualManDays = (($labourData['totalSkilled']/$cyclesReported) + ($labourData['totalUnskilled']/$cyclesReported)) * $reptdDays;
+
+                                            $actualCost     = $labourUnitCost * $actualManDays;
+
+                                            $totActualAmount    += ($actualCost / $cumulated_qty) * $activity_qty;
+
+                                        }
+
+                                    }
+
+
+                                }
+                            }
+
+                        }
+                        else{
+                            $totActualAmount += $totActAmount;
+                        }
+                    }
+                }
+
+
+
+
+
+                $costStatusBar = 'green-bar';
+                $costStatusVal = '';
+                if($totEstAmount < $totActualAmount){
+                    $costStatusBar = 'red-bar';
+                    $costStatusVal = '<span class="icon-warning3"></span>'.number_format(($totActualAmount - $totEstAmount),2);
+                }
+                
+                $projDuration = $prjctdate;
+                if($schedStartDate && $schedEndDate){
+                    $projDuration .= '<span style="font-size:11px;"> ('.date('jS M Y', strtotime($schedStartDate)).' - '.date('jS M Y', strtotime($schedEndDate)).')</span>';
+                }
+
+
+                $datarows .= '
+                    <div class="col-md-4">
+                        <div class="projselctid fav-project-wrpr card '.$selProjClass.'" id="projselctid'.$data['Project_Id'].'" data-id='.$data['Project_Id'].'>
+                            <div class="card-body">
+                                <a href="#"><span class="icon-check"></span>'. $data['Name'] .'</a>
+                            </div>
+                            <div class="card-footer ">                                    
+                                
+                                <div class="row" style="padding:5px 5px 0 5px">
+                                    <div class="project-info">
+                                        <!--
+                                        <div class="col-md-12">
+                                            <div class="type project-client-name">
+                                                <label style="min-width:95px;">Client Name</label>
+                                                <span>: '.$data['client_name'].'</span>
+                                            </div>
+                                        </div>
+                                        -->
+                                        <div class="col-md-8">
+                                            <div class="type project-spec text-left">
+                                                <!--<label>Client Name</label>-->
+                                                <span class="project-spec-icon icon-users1" title="Client Name"></span>
+                                                <span class="project-spec-text  project-spec-dates"> '.$data['client_name'].'</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="type project-spec text-left">
+                                                <!--<label>Project Value</label>-->
+                                                <span class="project-spec-icon icon-monetization_on" title="Project Value"></span>
+                                                <span class="project-spec-text  project-spec-dates"> '.$provalue.'</span>
+                                            </div>
+                                        </div>
+
+                                        <!--<div class="col-md-7">
+                                            <div class="type project-spec text-left">
+                                                <label>Start Date</label>
+                                                <span style="font-size:12px;">: '.date('jS M Y', strtotime($data['start_date'])).'</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-5" style="padding:0px;">
+                                            <div class="type project-spec text-left">
+                                                <label  style="min-width:60px;" class="text-left" title="">End Date</label>
+                                                <span style="font-size:12px;">: '.date('jS M Y', strtotime($data['end_date'])).'</span>
+                                            </div>
+                                        </div>
+                                        -->
+
+                                        <div class="col-md-8">
+                                            <div class="type project-spec text-left">
+                                                <span class="project-spec-icon icon-calendar1" title="Start Date - End Date"></span>
+                                                <span class="project-spec-text project-spec-dates"> '.date('jS M Y', strtotime($schedStartDate)).' to '.date('jS M Y', strtotime($schedEndDate)).'</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-4" >
+                                            <div class="type project-spec text-left">
+                                                <!--<label style="min-width:60px;" class="text-left">Duration</label>-->
+                                                <span class="project-spec-icon icon-schedule"  title="Project Duration"></span>
+                                                <span class="project-spec-text  project-spec-dates"> '.$prjctdate.'</span>
+                                            </div>
+                                        </div>
+
+                                        <!--<div class="col-md-12" ><hr style="margin:0;"></div>-->
+                                    </div>
+                                </div>
+
+
+                                <div class="row project-status-bar-container">
+
+                                    <div class="col-md-12 no-padding" style="">
+                                        <div class="row type project-status">
+                                            <div class="col-md-3" ><label>Schedule</label></div>
+                                            <div class="col-md-7" ><div class="status-bar '.$scheduleStatusBar.'">'.$scheduleStatusVal.'</div></div>
+                                            <div class="col-md-2 text-right" >
+                                                <div class="dashboard-link">
+                                                    <a href="#dashboardPopup" class="btn icon-schedule dropdown-toggle" data-toggle="modal" data-target="#dashboardPopup" onclick="getTableauDashboard(\'Performance\', 1, \''. $data['Name'] .'\')"  data-type="Performance"></a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-12 no-padding" style="">
+                                        <div class="row type project-status">
+                                            <div class="col-md-3" ><label>Cost</label></div>
+                                            <div class="col-md-7" ><div class="status-bar '.$costStatusBar.'">'.$costStatusVal.'</div></div>
+                                            <div class="col-md-2  text-right">
+                                                <div class="dashboard-link">
+                                                    <a href="#dashboardPopup" class="btn icon-attach_money dropdown-toggle" data-toggle="modal" data-target="#dashboardPopup" onclick="getTableauDashboard(\'Cost\', 1, \''. $data['Name'] .'\')"  data-type="Cost"></a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-12 no-padding" style="">
+                                        <div class="row type project-status">
+                                            <div class="col-md-3" ><label>Cashflow</label></div>
+                                            <div class="col-md-7" ><div class="status-bar "></div></div>
+                                            <div class="col-md-2  text-right">
+                                                <div class="dashboard-link">
+                                                    <a class="btn icon-compare_arrows" title="View Cashflow Dashboard" href="javascript:void(0);"></a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+
+
+
+                                    <!--<div class="col-md-12" style="">
+                                        <div class="type project-status ">
+                                            <label>Schedule</label>
+                                            <div class="status-bar '.$scheduleStatusBar.'"></div>
+                                            <div class="dashboard-link">
+
+                                                <a href="#dashboardPopup" class="btn icon-schedule dropdown-toggle" data-toggle="modal" data-target="#dashboardPopup" onclick="getTableauDashboard(\'Performance\', 1, \''. $data['Name'] .'\')"  data-type="Performance"></a>
+
+
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-12">
+                                        <div class="type project-status ">
+                                            <label>Cost</label>
+                                            <div class="status-bar '.$costStatusBar.'"></div>
+                                            <div class="dashboard-link">
+                                                <a href="#dashboardPopup" class="btn icon-attach_money dropdown-toggle" data-toggle="modal" data-target="#dashboardPopup" onclick="getTableauDashboard(\'Cost\', 1, \''. $data['Name'] .'\')"  data-type="Cost"></a>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-12">
+                                        <div class="type project-status ">
+                                            <label>Cashflow</label>
+                                            <div class="status-bar"></div>
+                                            <div class="dashboard-link">
+                                                <a class="btn icon-compare_arrows" title="View Cashflow Dashboard" href="javascript:void(0);"></a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    -->
+
+                                    <!--<div class="col-md-12">
+                                        <div class="type project-status ">
+                                            <label>Sales</label>
+                                            <div class="status-bar"></div>
+                                            <div class="dashboard-link">
+                                                <a class="btn icon-graph" title="View Sales Dashboard" href="javascript:void(0);"></a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    -->
+
+                                </div>                                   
+                            </div>
+                        </div>
+                    </div>  ';
+
+
+            endforeach;
+            //$datarows .= '</div>';
+        else:
+            $datarows = '<div class="row"><div class="col-md-12"><div class="text-center">No Featured Projects Found</div></div></div>';
+        endif;
+        }
+        $arr = array('result' => $datarows, 'error' => 'No');
+        //return json_encode($arr);
+
+        return $this->render('projectPerformance', array(
+          'datarows' => $datarows
+        ));
+    }
+
+    public function actionUserproject()
+    {
+        $uid = Yii::$app->user->Id;
+        $projectid = $_POST['prjctid'];
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if($projuser){
+            $projuser->projectid = $projectid;
+            $projuser->save(false);
+        }
+        else{
+            $model = new ProjuserSelection();
+            $model->userid = $uid;
+            $model->projectid = $projectid;
+            $model->save(false);
+        }
+
+        MetricsCacheHelper::refresh($projectid);
+
+        $prjct = Projects::findOne($projectid);
+
+        $datarows = '
+                <h4 class="panel-title" id="rprojectlist">
+                    <a data-toggle="collapse" data-parent="#accordionoper" href="#collapseproj">
+                    <span class="icon-note1"></span>Projects - '.$prjct->Name.'</a>
+                </h4>';
+
+        $arr = array('error' => 'No','result'=>$datarows);
+        return json_encode($arr);
+    }
+     public function actionUserprojectmain()
+    {
+        $uid = Yii::$app->user->Id;
+        $projectid = $_POST['prjctid'];
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if($projuser){
+            $projuser->projectid = $projectid;
+            $projuser->save(false);
+        }
+        else{
+            $model = new ProjuserSelection();
+            $model->userid = $uid;
+            $model->projectid = $projectid;
+            $model->save(false);
+        }
+
+        MetricsCacheHelper::refresh($projectid);
+
+        $prjct = Projects::findOne($projectid);
+
+        $datarows = '
+                <h4 class="panel-title" id="projtitle">
+                    <a data-toggle="collapse" data-parent="#accordionprojindex" href="#collapseprojindex">
+                    <span class="icon-note1"></span>Projects - '.$prjct->Name.'</a>
+                </h4>';
+
+        $arr = array('error' => 'No','result'=>$datarows);
+        return json_encode($arr);
+    }
+
+    public function actionNotes()
+    {
+        $connection = Yii::$app->db;
+        $sql = "SELECT notes FROM notes WHERE projectID='" . $_POST['id'] . "' ";
+        $command = $connection->createCommand($sql);
+        $dataReader = $command->query();
+        $notes = $dataReader->read();
+        if(!empty($notes)){
+            if ($notes['notes'] == ''):
+                $notestext = '<textarea rows="8" cols="50" rows="100" name="notes" placeholder="Notes" id="notes" class="form-control notes" style="height: 200%" ></textarea>';
+
+            else:
+                $notestext = '<textarea rows="25" id="notes"  name="notes" placeholder="Notes" id="methedology" class="form-control methedology" style="height: 200%" >' . $notes['notes'] . ' </textarea>';
+
+            endif;
+        }else{
+            $notestext = '<textarea rows="8" name="notes" placeholder="Notes" id="notes" class="form-control notes" style="height: 200%" ></textarea>';
+        }
+        $arr = array('result' => $notestext, 'project' => Projects::findOne($_POST['id'])->Name, 'error' => 'No');
+        return json_encode($arr);
+    }
+
+    public function actionSavenotes()
+    {
+        $connection = Yii::$app->db;
+        $sql = "SELECT notes FROM notes WHERE projectID='" . $_POST['currentproj'] . "' ";
+        $command = $connection->createCommand($sql);
+        $dataReader = $command->query();
+        $notes = $dataReader->read();
+        if ($notes['notes'] == ''):
+            $sql = "INSERT INTO notes (projectID,notes) VALUES('" . $_POST['currentproj'] . "','" . $_POST['notes'] . "')";
+            $command = $connection->createCommand($sql);
+            $dataReader = $command->query();
+        else:
+            $sql = "UPDATE notes SET notes='".$_POST['notes']."' WHERE projectID='".$_POST['currentproj']."' ";
+            $command = $connection->createCommand($sql);
+            $dataReader = $command->query();
+        endif;
+
+    }
+
+    public function actionGetname()
+    {
+        if (isset($_POST['id'])):
+            $connection = Yii::$app->db;
+            $sql = "SELECT Name FROM projects WHERE Project_Id='" . $_POST['id'] . "'";
+            $command = $connection->createCommand($sql);
+            $dataReader = $command->query();
+            $data = $dataReader->read();
+            return $data['Name'];
+        endif;
+    }
+
+     public function actionGetnames()
+    {
+        if (isset($_POST['id'])):
+            $connection = Yii::$app->db;
+            $sql = "SELECT Name FROM projects WHERE Project_Id='" . $_POST['id'] . "'";
+            $command = $connection->createCommand($sql);
+            $dataReader = $command->query();
+            $data = $dataReader->read();
+            return $data['Name'];
+        endif;
+    }
+
+	public function actionBoqsearch()
+	{
+		$connection = Yii::$app->db;
+		$uid = Yii::$app->user->Id; 
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if($projuser){
+    		$sql = "SELECT a.wbs,b.sortorder FROM boq AS a INNER JOIN workgroups_new AS b ON a.wbs=b.Workgroup_Id WHERE a.projectid='".$projuser->projectid."' GROUP BY a.wbs ORDER BY a.slno ASC";
+    		//echo $sql;exit;
+    		$command = $connection->createCommand($sql);
+    		$dataReader = $command->query();
+    		$dataProvider = $dataReader->readAll();
+            $datarows = '';
+    		if (count($dataProvider) > 0):
+    			$projecttot=0;
+    			foreach ($dataProvider AS $key => $data):
+    				$wbs=WorkgroupsNew::findOne($data['wbs']);
+    				$boqitems=Boq::find()->where(['wbs' => $data['wbs']])->orderBy(['slno' => SORT_ASC])->all();
+    		        if($boqitems[0]['slno']!=0){
+    				 $array = $boqitems[0]['slno'];
+    				 $myArray = explode('.', $array);
+    				 $slno1 = $myArray[0];
+    				}
+    		        else{
+    				 $slno1 = '';
+    				}
+    				if($boqitems[0]['iowname']!='' && $boqitems[0]['iowname']!=$wbs['Name']){
+    					$iowname = $boqitems[0]['iowname'];
+    				}
+    				else{
+    					$iowname = $wbs['Name'];
+    				}
+    		        $datarows.='<tr>
+                    <td colspan="7" style="font-weight: bold;"><span></span> '.$iowname.'</td>
+                    </tr>';
+    				$itemstot=0;
+    				$countboq = count($boqitems);
+    				$countNow = 0;
+    				foreach($boqitems AS $boqitem):
+    					$amount=$boqitem['quantity'] * $boqitem['rate'];
+    					//$total=$total + $amount;
+    		            if($boqitem['slno']!=0){
+    					 $slno = $boqitem['slno'];
+    					}
+    		            else{
+    					 $slno = '';
+    					}
+    		            $activity = $boqitem['activity'];
+    		            $iowid=$boqitem['wbs'];
+    					$wbsactivities=WorkgroupActivitiesNew::find()->where(['wbs_id' => $iowid])->andWhere(['pricing_status' =>0])->orderBy(['wbs_id'=> SORT_ASC])->all();
+    					if(count($wbsactivities)>0):
+    						$datarows1="<option value='0'>Select Activity</option>";
+    						foreach($wbsactivities AS $key=>$wbsactivity):
+    		                 if($wbsactivity->id==$boqitem['activity']){
+    						 $selected = 'selected';
+    						 }
+    		                 else{
+    						 $selected = '';
+    						 }
+    						 $datarows1.="<option value='".$wbsactivity->id."' $selected>$wbsactivity->activity_Name</option>";
+    						endforeach;
+    					endif;
+    					$workgroupact=WorkgroupActivitiesNew::find()->where(['id' => $boqitem['activity']])->andWhere(['pricing_status' =>0])->one();
+    					$datarows.="<tr id='boqrow".$boqitem['boq_id']."'>
+    								<td>
+    								<span id='slnotext".$boqitem['boq_id']."'>".$slno."</span>
+    								<input style='display:none;' class='form-control editslno' type='text' id='editslno".$boqitem['boq_id']."' value='".$slno."' placeholder='Sl No'>
+    								</td>
+    								<!--<td>
+    								<span id='activity".$boqitem['boq_id']."'></span>
+    								<select style='display:none;' class='form-control editactivity' id='editactivity".$boqitem['boq_id']."' ></select> 
+    								<span class='error'></span>
+    								</td>-->
+    								<td>
+    								<span id='itemtext".$boqitem['boq_id']."'>".$boqitem['item']."</span>
+    								<input style='display:none;' class='form-control edititemname' type='text' id='edititemname".$boqitem['boq_id']."' value='".$boqitem['item']."'>
+    								<span class='error'></span></td>
+    								<td colspan='1'><span id='unittext".$boqitem['boq_id']."'>".$boqitem['unit']."</span>
+    								<input style='display:none;' class='form-control editunitname' type='text' id='editunitname".$boqitem['boq_id']."' value='".$boqitem['unit']."'>
+    								<span class='error'></span></td>
+    								<td><span id='quantitytext".$boqitem['boq_id']."'>".$boqitem['quantity']."</span>
+    								<input style='display:none;' class='form-control editquantityname' type='text' id='editquantityname".$boqitem['boq_id']."' value='".$boqitem['quantity']."'>
+    								<span class='error'></span></td>
+    								<td style='text-align: right !important;'><span id='ratetext".$boqitem['boq_id']."'>".number_format($boqitem['rate'], 2)."</span>
+    								<input style='display:none;' class='form-control editratename' type='text' id='editratename".$boqitem['boq_id']."' value='".$boqitem['rate']."'>
+    								<span class='error'></span></td>
+    								<td style='text-align: right !important;'>".number_format($amount, 2)."</td>
+                                    <td><a class='btn btn-primary icon-pencil editboqbutton' style='border-radius:30px;' data-v='".$boqitem['boq_id']."' value='".$boqitem['boq_id']."' id='editboqbutton".$boqitem['boq_id']."' title='Edit BOQ' href='javascript:void(0)'></a>
+                                    <a class='btn btn-primary icon-save  saveboqbutton' style='border-radius:30px;display:none;' data-v='".$boqitem['boq_id']."' title='Save BOQ' value='".$boqitem['boq_id']."' id='saveboqbutton".$boqitem['boq_id']."' href='javascript:void(0)'></a>
+    								</td>
+    								<!--<td><button type='button' class='btn btn-primary deleteboqbutton' value='" . $boqitem['boq_id'] . "' id='deleteboqbutton" . $boqitem['boq_id'] . "' title='Delete BOQ'><span class='glyphicon glyphicon-trash'></span></button></td>-->
+    								</tr>";
+    					$itemstot=$itemstot + $amount;
+    					
+                    endforeach;
+                    $datarows.="<tr><th></th><th>Total</th><th colspan='3'></th><th style='text-align: right !important;'>".number_format($itemstot, 2)."</th><th></th></tr>";
+    				$projecttot=$projecttot + $itemstot;
+    				
+    			endforeach;
+    			$datarows.="<tr><th>Project Total</th><th colspan='4'></th><th style='text-align: right !important;'>".number_format($projecttot, 2)."</th><th></th></tr>";
+    		else:
+    			$datarows = '<tr><td colspan="7" style="text-align: center;">No BOQ Found</td></tr>';
+    		endif;
+    		$print="<a href='".Yii::$app->request->baseUrl."/ProjectPricing/Export/".$projuser->projectid."' target='_blank'><button type='button' class='btn btn-primary small75 pull-right' title='Export'>Export</button></a>";
+    		$import ='<a href="#" class="btn btn-primary addForm" id="boqimport" data-id="'.$projuser->projectid.'" title="Import"><span class="icon-download7"></span> Import</a>';
+
+    		$client_bills = ClientBill::find()->where(['projectid' => $projuser->projectid])->andWhere(['status' =>0])->groupBy(['bill_no'])->orderBy(['raise_date'=> SORT_DESC])->all();
+    		if(count($client_bills)>0){
+    			$boqclear='<a href="#" class="btn btn-primary clearboq-btn" id="clearboq" data-id="'.$projuser->projectid.'" title="Clear BOQ"><span class="icon-trashcan" disabled></span> Clear BOQ DD</a>';
+    		}
+    		else{
+    			$boqclear='<a href="#" class="btn btn-primary clearboq-btn" id="clearboq" data-id="'.$projuser->projectid.'" title="Clear BOQ"><span class="icon-trashcan"></span> Clear BOQ</a>';
+    		}
+
+    		$arr = array('result' => $datarows,'projectid'=>$projuser->projectid,'print'=>$print,'import'=>$import,'boqclear'=>$boqclear, 'error' => 'No');
+    		return json_encode($arr);
+        }
+        else{
+            $datarows = '<tr><td colspan="7" style="text-align: center;">No Project Selected</td></tr>';
+
+            $arr = array('result' => $datarows,'projectid'=>'','print'=>'','import'=>'','boqclear'=>'', 'error' => 'No');
+            return json_encode($arr);
+        }
+	}
+
+	public function actionImport()
+	{
+		$connection = Yii::$app->db;
+		if($_FILES["import_boq_file"]["name"] != '')
+		{
+			$allowed_extension = array('csv');
+ 			$file_array = explode(".", $_FILES["import_boq_file"]["name"]);
+ 			$file_extension = end($file_array);
+ 			if(in_array($file_extension, $allowed_extension))
+ 			{
+ 				
+				if (($handle = fopen($_FILES['import_boq_file']['tmp_name'], "r")) !== FALSE) {
+					$count=0;
+					$values=fgetcsv($handle);
+
+					while (($values = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                        //print_r($values[0]);exit;
+	            		if(fmod($values[0],1) == 0.00 && is_numeric($values[0])){
+	            			//echo 'iow'; exit;
+	            			//$wrkgrpname = explode("  ", $values[1]);
+	            			$var = $values[0];
+	            			$patt = '/^\d+\.{1}\d+$/';
+							$resp = preg_match($patt,$var);
+                            $wrkgrpname='';
+	            			if($resp){
+		            			$wrkgrpname = $values[1];
+								//$workgroup=WorkgroupsNew::model()->find(array('condition'=>'Name LIKE "'.$wrkgrpname.'" AND Project_Id='.$_POST['projectid'].''));
+								$workgroup=WorkgroupsNew::find()->where(['Project_Id' => $_POST['projectid']])->andWhere(['Status' => 0])->andFilterWhere(['like','Name', $wrkgrpname])->one();
+		            			if(!$workgroup && $wrkgrpname!=''){
+		            				$model=new WorkgroupsNew;
+						            $model->Project_Id=$_POST['projectid'];
+						            $model->Name=$wrkgrpname;
+						            //$model->unit=$_POST['unit'];
+						            //$model->quantity=$_POST['quantity'];
+						            $model->parent=$_POST['projectid'];
+						            $model->itemtype= 'workgroup';
+									$model->wbs_estimate_id=0;
+						            $model->save(false);
+		            			}
+		            		}
+	            		}
+
+	            		//print_r($values); exit;
+
+	            		if(fmod((float)$values[0], 1) !== 0.00){
+
+							//if($count!='0' & $wrkgrpname[1]!=''):
+							//$wrkgrpname = $values[1];//var_dump($wrkgrpname);exit;
+                            //echo $wrkgrpname; exit;
+            				if($count!='0' && $wrkgrpname!=''):
+		            			//$workgroupname=WorkgroupsNew::model()->find(array('condition'=>'Name LIKE "'.$wrkgrpname[1].'" AND Project_Id='.$_POST['projectid'].''));
+								//$workgroupname=WorkgroupsNew::model()->find(array('condition'=>'Name LIKE "'.$wrkgrpname.'" AND Project_Id='.$_POST['projectid'].''));
+								$workgroupname=WorkgroupsNew::find()->where(['Project_Id' => $_POST['projectid']])->andWhere(['Status' => 0])->where(['LIKE','Name',$wrkgrpname])->one();
+
+								if($workgroupname){
+
+                                    $insert_data = array(
+                                    ':wbs'  => $workgroupname->Workgroup_Id,
+                                    ':slno'  => $values[0],
+                                    ':item'  => $values[1],
+                                    ':unit'  => $values[2],
+                                    ':quantity'  => str_replace(',', '', $values[3]),
+                                    ':rate'  => str_replace(',', '', $values[4]),
+                                    ':amount'  => str_replace(',', '', $values[5]),
+                                    ':project'=>$_POST['projectid']
+                                   );
+                                    $workgroupact = WorkgroupActivitiesNew::find()->where(['LIKE','activity_Name',$values[1]])->andWhere(['wbs_id' => $workgroupname->Workgroup_Id])->one();
+                                    if(!empty($workgroupact)){
+                                        $wg = $workgroupact->id;
+                                    }else{
+                                        $wg = 0;
+                                    }
+
+									//$boq = Boq::model()->find(array('condition'=>'wbs = '.$workgroupname->Workgroup_Id.' AND item LIKE "'.$values[1].'"'));
+									//$boq = Boq::find()->where(['wbs' => $workgroupname->Workgroup_Id])->andFilterWhere(['like','item',$values[1]])->one();
+
+                                    $boq = Boq::find()->where(['wbs' => $workgroupname->Workgroup_Id])->andWhere(['like','item',$values[1]])->andWhere(['quantity' => $values[3]])->andWhere(['rate' => $values[4]])->one();
+
+			            			if($boq){
+			            				$boq->slno=$values[0];
+										$boq->item=$values[1];
+										$boq->iowname=$workgroupname->Name;
+										$boq->unit=$values[2];
+										$boq->quantity=str_replace(',', '', $values[3]);
+										$boq->rate=str_replace(',', '', $values[4]);
+										$boq->amount=str_replace(',', '', $values[5]);
+										$boq->projectid=$_POST['projectid'];
+										$boq->wbs=$workgroupname->Workgroup_Id;
+										$boq->activity=$wg;
+										$boq->save(false);
+			            			}
+			            			else{
+			            				$model=New Boq();
+										$model->slno=$values[0];
+										$model->item=$values[1];
+										$model->iowname=$workgroupname->Name;
+										$model->unit=$values[2];
+										$model->quantity=str_replace(',', '', $values[3]);
+										$model->rate=str_replace(',', '', $values[4]);
+										$model->amount=str_replace(',', '', $values[5]);
+										$model->projectid=$_POST['projectid'];
+										$model->wbs=$workgroupname->Workgroup_Id;
+										$model->save(false);
+									}
+
+								}
+		            		endif;
+
+	            		}
+	            		$count++; 
+
+	            		/*if($count!='0' & $values[0]!=''):
+	            			$workgroupname=WorkgroupsNew::model()->find(array('condition'=>'Name LIKE "'.$values[0].'" AND Project_Id='.$_POST['projectid'].''));
+	            			$insert_data = array(
+						    ':wbs'  => $workgroupname->Workgroup_Id,
+						    ':slno'  => $values[1],
+						    ':item'  => $values[2],
+						    ':unit'  => $values[3],
+						    ':quantity'  => $values[4],
+						    ':rate'  => $values[5],
+						    ':project'=>$_POST['projectid']
+						   );
+	            			//print_r($insert_data);exit;
+	            			$workgroupact = WorkgroupActivitiesNew::model()->find(array('condition'=>'activity_Name LIKE "'.$values[2].'" AND wbs_id='.$workgroupname->Workgroup_Id.''));
+
+	            			$boq = Boq::model()->find(array('condition'=>'wbs = '.$workgroupname->Workgroup_Id.' AND activity='.$workgroupact->id.''));
+
+	            			if($boq){
+	            				$boq->slno=$values[1];
+								$boq->item=$values[2];
+								$boq->unit=$values[3];
+								$boq->quantity=$values[4];
+								$boq->rate=$values[5];
+								$boq->projectid=$_POST['projectid'];
+								$boq->wbs=$workgroupname->Workgroup_Id;
+								$boq->activity=$workgroupact->id;
+								$boq->save(false);
+	            			}
+	            			else{
+	            				$model=New Boq();
+								$model->slno=$values[1];
+								$model->item=$values[2];
+								$model->unit=$values[3];
+								$model->quantity=$values[4];
+								$model->rate=$values[5];
+								$model->projectid=$_POST['projectid'];
+								$model->wbs=$workgroupname->Workgroup_Id;
+								$model->activity=$workgroupact->id;
+								$model->save(false);
+							}
+	            		endif;
+	            		$count++; */
+	            	}
+	            	fclose($handle);
+	        	}
+		        
+ 				$message = '<span class="alert alert-success">Data Imported Successfully</span>';
+ 			}
+ 			else
+ 			{
+  				$message = '<span class="alert alert-danger">Only .csv file allowed</span>';
+ 			}
+		}	
+		else {
+			$message = '<span class="alert alert-danger">Please Select File</span>';
+		}
+		return $message;
+	}
+
+	public function actionClearboq()
+    {
+        $projectid = $_POST['projectid'];
+
+        $connection = Yii::$app->db;
+
+        $sql = "SELECT a.wbs,b.sortorder FROM boq AS a INNER JOIN workgroups_new AS b ON a.wbs=b.Workgroup_Id WHERE a.projectid='".$_POST['projectid']."' GROUP BY a.wbs ORDER BY a.slno ASC";
+		//echo $sql;exit;
+		$command = $connection->createCommand($sql);
+		$dataReader = $command->query();
+		$dataProvider = $dataReader->readAll();
+		if (count($dataProvider) > 0):
+			foreach ($dataProvider AS $key => $data):
+				$wbs=WorkgroupsNew::findOne($data['wbs']);
+				$boqitems=Boq::find()->where(['wbs' => $data['wbs']])->orderBy(['slno' => SORT_ASC])->all();
+				foreach($boqitems AS $boqitem):
+					$boqitem->delete(); 
+				endforeach;
+
+                $wbs->Status = 1;
+                $wbs->save(false);
+
+			endforeach;
+		endif;
+
+		$arr = array('error'=>'No');
+        return json_encode($arr);
+	}
+	
+	public function actionSearchscheduleitem()
+    {
+        $uid = Yii::$app->user->Id; 
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        $user=User::find()->where(['id'=>Yii::$app->user->id])->one();
+        if($projuser)
+        {
+            //$scheduleItems = Wbsscheduleitems::find()->where(['projectId' => $projuser->projectid])->andWhere(['status' => 0])->orderBy(['sortorder' => SORT_ASC])->all();
+
+            $connection = Yii::$app->db;
+
+            $sql="SELECT a.scheduleitem_id,a.wbsid,a.name,a.projectId FROM wbsscheduleitems AS a
+                INNER JOIN workgroups_new AS b ON  a.wbsid=b.Workgroup_Id
+                WHERE  a.projectId='".$projuser->projectid."' AND b.status=0  ORDER BY b.sortorder  ASC,b.Workgroup_Id ASC";
+                
+            $command=$connection->createCommand($sql);
+            $dataReader=$command->query();
+            $scheduleItems=$dataReader->readAll();
+
+
+
+            $datarows="";
+            if($scheduleItems) {
+                $datarows.='<div class="col-md-12 scheduleitemheader schdhead">
+                <div class="row">
+                <div class="col-md-1 hash">
+                                <label>#</label>
+                            </div>
+                            <div class="col-md-7 all">
+                            <label>Schedule Item</label>
+                            </div>
+                            <div class="col-md-4 lin">
+                                <label>&nbsp;</label>
+                            </div>
+                            </div></div>
+                ';
+                foreach($scheduleItems as $key => $data) {
+                    $scheduleactivities = Scheduleactivities::find()->where(['projectId' => $projuser->projectid])->andWhere(['scheduleitem_id'=>$data['scheduleitem_id']])->andWhere(['status'=>0])->all();
+                  
+                  //if($data['wbsid']==""){
+                  if($data['wbsid']){
+                    $schdleitmname=$data['name'];
+                  }else{
+                    $schudleitemname = WorkgroupsNew::find()->where(['Workgroup_Id' => $data['wbsid']])->one();
+                    $schdleitmname=$schudleitemname['Name'];
+                  }
+
+					$datarows.='<div style="bottom: 15px;" class="col-md-12 datalists scheduleitemcontent" id="scheduleitemrow'.$data['scheduleitem_id'].'" data-id="'.$data['scheduleitem_id'].'">
+                    <div class="row  datslis" style="cursor: pointer;" id="scheduleitemrow'.$data['scheduleitem_id'].'" data-id="'.$data['scheduleitem_id'].'">
+									<div class="col-md-1">
+										<span class="number">'.($key + 1).'</span>
+										<input type="hidden" value="'.$data['scheduleitem_id'].'">
+									</div>
+									<div class="col-md-7 type">
+										
+										<span class="schedul" id="scheduleitemname'.$data['scheduleitem_id'].'">'.$schdleitmname.'</span>
+										<input class="form-control editscheduleitemname" type="text" id="editscheduleitemname'.$data['scheduleitem_id'].'" value="'.$schdleitmname.'" style="display:none;">
+										<span class="error"></span>
+									</div>
+									<div class="col-md-4 icon-groups">
+                                        <a class="btn btn-primary text-button listscheduleactivity" value="'.$data['scheduleitem_id'].'" id="listscheduleactivity'.$data['scheduleitem_id'].'" data-v="'.$data['scheduleitem_id'].'" href="#" title="Activities"><span class="icon-directions_run"></span>Activities</a>
+                                    ';
+
+					if($user->account_type != 'perfm_pad_reporting_only'){ 					
+					   $datarows.='	
+										<a class="btn btn-primary icon-pencil editscheduleitemgroupbuttonq" value="'.$data['scheduleitem_id'].'" id="editscheduleitemgroupbutton'.$data['scheduleitem_id'].'" data-v="'.$data['scheduleitem_id'].'" title="Rename Work Group" href="#"></a>
+										<a class="btn btn-primary icon-save savewbsscheduleitembutton" value="'.$data['scheduleitem_id'].'" style="display:none;" data-v="'.$data['scheduleitem_id'].'" id="savewbsscheduleitembutton'.$data['scheduleitem_id'].'" title="Save" href="#"></a>
+										<a style="display:none;" class="btn btn-danger  icon-trash1 deletewbsscheduleitembutton" value="'.$data['scheduleitem_id'].'" id="deletewbsscheduleitembutton'.$data['scheduleitem_id'].'" data-v="'.$data['scheduleitem_id'].'" title="Delete Work Group" href="#"></a>';
+                    }
+									
+
+					$datarows.='</div></div></div>';	
+                }
+            }
+
+			$gantt = '<a target="_blank" class="btn btn-primary text-button listactssganttback" value="' . $projuser->projectid . '" href="' . Yii::$app->request->baseUrl . '/projectsmain/newganttchart?id=' . $projuser->projectid . '#schgantt" title="Click to view Gantt chart"><span class="icon-chart6" style="font-size: 15px;"></span>  Gantt Chart</a>';
+                      
+            $arr = array('result' => $datarows, 'gantt'=> $gantt,  'projectID'=> $projuser->projectid, 'error'=>'No');
+            return json_encode($arr);
+
+        }  
+        else{
+
+            $datarows = '<div style="text-align: center;">No Project Selected</div>';
+
+            $arr = array('result' => $datarows, 'gantt'=> '', 'error'=>'No project');
+            return json_encode($arr);
+
+        }       
+	}
+    public function actionUpdateitemlistsort()
+    {
+        if(isset($_POST['datavalue']))
+        {
+            foreach($_POST['datavalue'] AS $data)
+            {
+                $work=Wbsscheduleitems::findOne($data['rowid']);
+                $work->sortorder=$data['rowindex'];
+                $work->save(false);
+            }
+        }
+    }
+	
+	public function actionAddwbschedulegroup()
+    {        
+        $uid = Yii::$app->user->Id; 
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        $isscheduleItemexists = Wbsscheduleitems::find()->where(['LIKE','name',$_POST['scheduleitemname']])->andWhere(['projectId'=>$projuser->projectid])->one();
+        if(!$isscheduleItemexists)
+        {
+            $scheduleItem = New Wbsscheduleitems();
+            $scheduleItem->name=$_POST['scheduleitemname'];
+            $scheduleItem->schedulegrp_id = 0;
+            $scheduleItem->projectId = $projuser->projectid;
+            $scheduleItem->save(false);
+            $arr = array('Id' => $scheduleItem->scheduleitem_id, 'Name' => $scheduleItem->name, 'error' => 'No');
+        }
+        else
+            $arr = array('Name' => $_POST['scheduleitemname'], 'error' => 'Yes', 'Message'=>'Schedule Item with name "'.$_POST['scheduleitemname'].'" exists' );
+        return json_encode($arr);
+	}
+	
+	public function actionUpdatescheduleitem()
+    {
+        if(isset($_POST['itemid']))
+        {
+            $model=Wbsscheduleitems::findOne($_POST['itemid']);
+            $model->name=$_POST['Itemname'];
+            $error=0;
+            if($model->save(false))
+            {
+                /*$modelGroup=Wbsschedulegroups::model()->findByPk($model->schedulegrp_id);
+                if(count($modelGroup)>0):
+                $modelGroup->name=$_POST['scheduleGroup'];
+                if(!$modelGroup->save(false)){
+                    $error = 1;
+                }
+                endif; */
+            }
+            else
+                $error=1;
+           
+            if($error == 0):
+                $arr = array('Id' => $_POST['itemid'], 'itemName' => $model->name,'groupName' =>'','error'=>'No');
+                return json_encode($arr);
+            else:
+                $arr = array('Id' => $_POST['itemid'],'error'=>'Yes','errortext'=>'Can not update now.');
+                return json_encode($arr);
+            endif;
+        }
+	}
+	
+	// Deletes an entire WBS schedule item (group) — every activity under it
+    // is permanently removed via the same hardDeleteScheduleActivity cascade
+    // used for single-activity deletes, so nothing is left orphaned in
+    // workgroup_activities_new / pricing tables / procurement data. A
+    // conflict check runs first (unless force=1) and reports back in plain
+    // English what would also be deleted, matching actionWbsdelete's UX.
+    public function actionDeletescheduleitem()
+    {
+        $itemId = (int)($_POST['itemId'] ?? 0);
+        $force  = (bool)($_POST['force'] ?? false);
+        if (!$itemId) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'No item id.']);
+        }
+
+        $model = Wbsscheduleitems::findOne($itemId);
+        if (!$model) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Item not found.']);
+        }
+
+        $activities = Scheduleactivities::find()
+            ->where(['projectId' => $model->projectId, 'scheduleitem_id' => $model->scheduleitem_id])
+            ->all();
+
+        if (!$force) {
+            $conflicts = [];
+            foreach ($activities as $activity) {
+                $wanId = (int)$activity->activity_id;
+                $conflicts = array_merge($conflicts, $this->checkActivityDeleteConflicts($activity->id, $wanId));
+            }
+            if (!empty($conflicts)) {
+                return json_encode([
+                    'error'     => 'Yes',
+                    'conflict'  => true,
+                    'errortext' => 'Deleting this WBS item will also permanently delete: ' . implode('; ', array_unique($conflicts)) . '. This cannot be undone.',
+                ]);
+            }
+        }
+
+        foreach ($activities as $activity) {
+            $this->hardDeleteScheduleActivity($activity->id, ['scheduleitem_id' => $activity->scheduleitem_id, 'activity_id' => $activity->activity_id], (int)$activity->activity_id);
+        }
+
+        // hardDeleteScheduleActivity already removes the wbsscheduleitems row
+        // once its last activity is gone; only clean up here if it somehow
+        // had none to begin with (an empty WBS item deleted with no children).
+        $stillExists = Wbsscheduleitems::findOne($itemId);
+        if ($stillExists) {
+            $db = \Yii::$app->db;
+            $wgId = (int)$stillExists->schedulegrp_id;
+            $db->createCommand()->delete('wbsscheduleitems', ['scheduleitem_id' => $itemId])->execute();
+
+            $remainWsi = (int)$db->createCommand(
+                "SELECT COUNT(*) FROM wbsscheduleitems WHERE schedulegrp_id = :g",
+                [':g' => $wgId]
+            )->queryScalar();
+            if ($remainWsi === 0) {
+                $db->createCommand()->delete('workgroups_new', ['Workgroup_Id' => $wgId])->execute();
+            }
+        }
+
+        return json_encode(['Id' => $itemId, 'error' => 'No']);
+	}
+
+	
+	public function actionGetitemname()
+    {
+        $model=Wbsscheduleitems::findOne($_POST['id']);
+        if($model)
+        {
+            $arr = array('itemName' => $model->name,'error'=>'No');
+            return json_encode($arr);
+        }
+        else
+        {
+            $arr = array('error'=>'Yes');
+            return json_encode($arr);
+        }
+
+	}
+	
+	public function actionListscheduleactivities()
+    {
+        $uid = Yii::$app->user->Id; 
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        $user = User::find()->where(['id'=>Yii::$app->user->id])->one();
+
+        if($projuser){
+            //------ Holidays-----------------------------
+            $holiday_arr = $holiday_week_arr = [];
+            $holiday_dates = $holiday_weeks = '';
+            if($holiday = Holidays::find()->where(['project_id'=>$projuser->projectid])->one()){
+                $holiday_dates      = $holiday->dates;
+                $holiday_weeks      = $holiday->weeks;
+                $holiday_arr        = ($holiday->dates) ? explode(',', $holiday->dates) : '';
+                $holiday_week_arr   = ($holiday->weeks != '') ? explode(',', $holiday->weeks) : '';
+            }
+            //---------------------------------------------
+
+            //$activities=Scheduleactivities::find()->where(['status' => 0])->all();
+            $connection = Yii::$app->db;
+
+            $schActWhereCond = '';
+            if($user->account_type == 'perfm_pad_reporting_only')
+                $schActWhereCond = " AND a.assigned_to='".$uid."'";
+
+            $sql = "SELECT a.reference_activityid,a.id,a.name,a.actual_start_date,a.actual_end_date,
+                        a.start_date,a.end_date,a.activity_id,a.process,a.unit,a.old_duration,
+                        a.projectId,a.quantity as sch_quantity, a.assigned_to, a.resource_units,
+                        IF(a.quantity > 0, a.quantity, COALESCE(e.activity_qty, 0)) as display_qty
+                    FROM scheduleactivities AS a
+                    LEFT JOIN workgroup_activities_new AS b ON  a.activity_id=b.id
+                    LEFT JOIN pricing_estimate_new AS e ON e.activity_Id = a.activity_id AND e.project_Id = a.projectId AND e.pricing_status = 0
+                    WHERE a.scheduleitem_id='".$_POST['itemId']."'
+                    AND a.projectId='".$projuser->projectid."'
+                    AND a.status=0
+                    ".$schActWhereCond."
+                    ORDER BY b.sortorder ASC, a.id ASC";
+
+            $command = $connection->createCommand($sql);
+            $dataReader = $command->query();
+            $dataProvider = $dataReader->readAll();
+
+            $datarows='';
+            $datarows='<input type="hidden" id="holiday_arr" value="'.$holiday_dates.'">
+                        <input type="hidden" id="holiday_week_arr" value="'.$holiday_weeks.'">
+                        <style>
+                            #scheduleact-wrap{margin:0 -8px;}
+                            #scheduleact-table{width:100%;border-collapse:collapse;margin-bottom:0;font-size:14px;table-layout:auto;}
+                            #scheduleact-table thead th{background-color:#555;color:#fff;font-weight:bold;padding:10px 12px;text-align:center;border:1px solid #444;white-space:nowrap;}
+                            #scheduleact-table thead th:nth-child(2){text-align:left;}
+                            #scheduleact-table tbody td{padding:8px 10px;border:1px solid #ddd;vertical-align:middle;text-align:center;white-space:nowrap;}
+                            #scheduleact-table tbody td:nth-child(2){text-align:left;white-space:normal;min-width:150px;}
+                            #scheduleact-table tbody tr:hover{background-color:#f9f9f9;}
+                            #scheduleact-table .form-control{padding:4px 7px;height:30px;font-size:14px;}
+                            #scheduleact-table .btn{padding:4px 9px;font-size:14px;}
+                            #scheduleact-table tbody td:last-child{padding:5px 8px;white-space:nowrap;}
+                            #scheduleact-table tbody td:last-child .btn{padding:4px 9px;font-size:13px;line-height:1.4;}
+                            #scheduleact-table tbody td:last-child .hover{display:inline-block;vertical-align:middle;}
+                        </style>
+                        <div id="scheduleact-wrap"><table id="scheduleact-table" class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Activity Name</th>
+                                <th>Unit</th>
+                                <th>Quantity</th>
+                                <th>Duration</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>';
+            if(count($dataProvider)>0):
+                $totalindex = 0;
+                foreach($dataProvider AS $key=>$data):
+                   $reportedstyle = ''; // activity editing always allowed regardless of progress reports
+                $reportlog = "SELECT SUM(currentqty) AS totalqty FROM schedule_progress_report_log WHERE activity_id='".$data['id']."'";
+                $command = $connection->createCommand($reportlog);
+                $dataReader = $command->query();
+                $totalQty = $dataReader->read();
+                if($totalQty['totalqty']>0){
+                    $cumulatedQty = $totalQty['totalqty'];
+                }
+                else{
+                    $cumulatedQty = 0;
+                }
+                if($data['actual_start_date']!='' && $data['actual_end_date']!='' && $data['actual_start_date']!='0000-00-00' && $data['actual_end_date']!='0000-00-00'){
+                    $start_date      = date("d-m-Y", strtotime($data['actual_start_date']));
+                    $end_date        = date("d-m-Y", strtotime($data['actual_end_date']));
+                    $start_date_edit = $data['actual_start_date'];
+                    $end_date_edit   = $data['actual_end_date'];
+                } else {
+                    $currentDate     = Yii::$app->helper->getDateAfterHoliday(date("d-m-Y"), $projuser->projectid);
+                    $start_date      = $currentDate;
+                    $end_date        = $currentDate;
+                    $start_date_edit = $currentDate;
+                    $end_date_edit   = $currentDate;
+                }
+                // Lock start date only when this activity has predecessors (CPM controls when it can start).
+                // Having only successors is fine — GetRelationcorrect() cascades date changes downstream.
+                $hasPredecessors = ActivityRelations::find()
+                    ->where(['status' => 0])
+                    ->andWhere(['dependent_activity' => $data['id']])
+                    ->exists();
+                $start_date_visible = $hasPredecessors ? 'readonly' : '';
+                $end_date_visible   = '';
+                $duration_visible   = '';
+
+                $duration_visible = 'readonly';
+
+                  $Wbsscheduleitems=Wbsscheduleitems::find()->where(['scheduleitem_id' => $_POST['itemId']])->andWhere(['status' => 0])->one();
+                  //$workgroupact = WorkgroupActivitiesNew::model()->findByPk($data['reference_activityid']);
+                  $workgroupact = WorkgroupActivitiesNew::find()->where(['id'=> $data['reference_activityid']])->andWhere(['wbs_id' => $Wbsscheduleitems->reference_itemid])->andWhere(['schedule'=> 1])->andWhere(['pricing_status'=> 0])->one();
+    			  //$schedulecheck = $workgroupact->schedule;
+                  
+                  /*if(!empty($workgroupact)){
+                    if($workgroupact->process_Id==2 || $workgroupact->process_Id==5):
+                        $totalindex++;
+                        $sql1 = "SELECT SUM(Budgeted_Duration) AS duration FROM schedule_task_new WHERE activity_Id=".$data['id']." AND status=0 ";
+                        $command = $connection->createCommand($sql1);
+                        $dataReader = $command->query();
+                        $cycletime = $dataReader->read();
+                        $task_created = '';
+                        if($cycletime['duration']!=0){
+                            $task = ScheduleActivityNew::find()->where(['actvity_id'=> $data['id']])->one();
+                            $duration = ($cycletime['duration'] * $task['Cycles']) / $task['Resourceunits'];
+                            $task_created = 'readonly';
+    					}
+    					$datarows.='<div class="col-md-12 activitiess activitycontent" id="enggactivities'.$data['id'].'"  data-id="'.$data['id'].'">
+                        <div style="padding:0px !important;margin-right:0px;" class="row " id="enggactivities'.$data['id'].'"  data-id="'.$data['id'].'">
+    									<div class="col-md-1 nums">
+    										<span class="number">'.($totalindex).'</span>
+    									</div>
+    									<div class="col-md-2 type aname">
+    										
+    										<span class="activityvertical" id="'.str_replace(' ','',$data['process']).'activityname'.$data['id'].'">'.$data['name'].'</span>
+    										<input class="form-control editenggactivityname" style="display:none;" type="text" id="edit'.str_replace(' ','',$data['process']).'activityname'.$data['id'].'" value="'.$data['name'].'">
+                                        	<span class="error"></span>
+    									</div>
+    									<div class="col-md-1 type utss">
+    										
+    										<span class="unitvertical" id="'.str_replace(' ','',$data['process']).'activityunit'.$data['id'].'">'.$data['unit'].'</span>
+    										<input class="form-control editenggactivityunit" style="display:none;" type="text" id="edit'.str_replace(' ','',$data['process']).'activityunit'.$data['id'].'" value="'.$data['unit'].'">
+                                        	<span class="error"></span>
+    									</div>
+    									<div class="col-md-1 type qtyssss">
+    										
+    										<span class="quantityvertical" id="'.str_replace(' ','',$data['process']).'activityquantity'.$data['id'].'">'.$data['quantity'].'</span>
+    										<input type="hidden" id="cumulatedqty'.$data['id'].'" value="'.$cumulatedQty.'">
+                                        	<input class="form-control editenggactivityquantity" style="display:none;" type="text" id="edit'.str_replace(' ','',$data['process']).'activityquantity'.$data['id'].'" value="'.$data['quantity'].'">
+                                        	<span class="error"></span>
+    									</div>
+    									<div class="col-md-1 type drtn">
+    										
+    										<span class="durationvertical" id="'.str_replace(' ','',$data['process']).'activityduration'.$data['id'].'">'.$data['old_duration'].'</span>
+    										<input class="form-control editenggactivityduration" style="display:none;" data-id="'.$data['id'].'" type="text" id="edit'.str_replace(' ','',$data['process']).'activityduration'.$data['id'].'" value="'.$data['old_duration'].'" '.$duration_visible.' '.$task_created.'>
+                                        	<span class="error"></span>
+    									</div>
+                                        <div class="col-md-2 type srdte">
+                                            
+                                            <span class="startvertical" id="'.str_replace(' ','',$data['process']).'activitystartdate'.$data['id'].'">'.$start_date.'</span>
+                                            <input class="form-control editactivitystartdate" style="display:none;" data-id="'.$data['id'].'" type="date" id="edit'.str_replace(' ','',$data['process']).'activitystartdate'.$data['id'].'" value="'.$start_date_edit.'" '.$start_date_visible.'>
+                                            <span class="error"></span>
+                                        </div>
+                                        <div class="col-md-2 type">
+                                            
+                                            <span class="enddatevertical" id="'.str_replace(' ','',$data['process']).'activityenddate'.$data['id'].'">'.$end_date.'</span>
+                                            <input class="form-control editactivityenddate" style="display:none;" data-id="'.$data['id'].'" type="date" id="edit'.str_replace(' ','',$data['process']).'activityenddate'.$data['id'].'" value="'.$end_date_edit.'" '.$end_date_visible.' readonly>
+                                            <span class="error"></span>
+                                        </div>
+                                        <div class="col-md-2 icon-groups" style="bottom: 3px;">
+                                            <a class="btn btn-primary assignresource icon-dns" value="'. $data['id'] .'" id="assignresource'. $data['id'] .'" data-v="'. $data['id'] .'" data-proid="'. $data['projectId'] .'" href="javascript:void(0);" title="Assign Resources"></a>
+
+    										<button style="width: unset !important;min-width: 0px;" type="button" class="btn btn-primary viewwbsestimatetasks tstbtnn" value="'. $data['id'] .'" id="viewwbsestimatetask' . $data['id'] . '" title="Task">Tasks</button>
+
+
+
+    										<a class="btn btn-primary icon-pencil  editscheduleactivitybutton" value="' . $data['id'] . '" id="edit'.str_replace(' ','',$data['process']).'activitybut' . $data['id'] . '" data-type="'.$data['process'].'" title="Edit Activity" href="javascript:void(0);"></a>
+    										<a class="btn btn-primary icon-save  savescheduleactivitybutton" value="' . $data['id'] . '" data-type="'.$data['process'].'" id="save'.str_replace(' ','',$data['process']).'activitybutton' . $data['id'] . '" title="Save" style="display:none;" href="javascript:void(0);"></a>
+    										<a class="btn btn-danger  icon-trash1 deletescheduleactivity" value="'.$data['id'].'" data-type="'.$data['process'].'" id="deletescheactivitybotton'.$data['id'].'" title="Delete Activity" '.$reportedstyle.' href="javascript:void(0);"></a>
+    									</div>
+                                        
+                                        
+
+    								</div></div>
+    					
+    					';
+                    endif;
+                  }
+                  elseif(empty($workgroupact) && $data['reference_activityid']==0){*/
+                    $totalindex++;
+                    $task_created = '';
+                    $est_qtyy = ($data['display_qty'] !== null) ? $data['display_qty'] : 0;
+                    $display_duration = $data['old_duration'];
+                    
+    				$datarows.='<tr class="activitycontent activitiess" id="enggactivities'.$data['id'].'" data-id="'.$data['id'].'">
+    								<td style="text-align:center;">
+    									<span class="number">'.($totalindex).'</span>
+    								</td>
+    								<td>
+    									<span id="'.str_replace(' ','',$data['process']).'activityname'.$data['id'].'">'.$data['name'].'</span>
+    									<input class="form-control editenggactivityname" style="display:none;" type="text" id="edit'.str_replace(' ','',$data['process']).'activityname'.$data['id'].'" value="'.$data['name'].'">
+    									<span class="error"></span>
+    								</td>
+    								<td>
+    									<span id="'.str_replace(' ','',$data['process']).'activityunit'.$data['id'].'" style="display:none;">'.$data['unit'].'</span>
+    									<input class="form-control editenggactivityunit" type="text" id="edit'.str_replace(' ','',$data['process']).'activityunit'.$data['id'].'" value="'.$data['unit'].'">
+    									<span class="error"></span>
+    								</td>
+    								<td>
+    									<span id="'.str_replace(' ','',$data['process']).'activityquantity'.$data['id'].'" style="display:none;">'.$est_qtyy.'</span>
+    									<input type="hidden" id="cumulatedqty'.$data['id'].'" value="'.$cumulatedQty.'">
+    									<input class="form-control editenggactivityquantity" type="text" id="edit'.str_replace(' ','',$data['process']).'activityquantity'.$data['id'].'" value="'.$est_qtyy.'" data-original="'.$est_qtyy.'">
+    									<span class="error"></span>
+    								</td>
+    								<td>
+    									<span id="'.str_replace(' ','',$data['process']).'activityduration'.$data['id'].'">'.$display_duration.'</span>
+    									<input class="form-control editenggactivityduration" style="display:none;" data-id="'.$data['id'].'" type="text" id="edit'.str_replace(' ','',$data['process']).'activityduration'.$data['id'].'" value="'.$display_duration.'" '.$duration_visible.' '.$task_created.'>
+    									<span class="error"></span>
+    								</td>
+    								<td>
+    									<span id="'.str_replace(' ','',$data['process']).'activitystartdate'.$data['id'].'">'.$start_date.'</span>
+    									<input class="form-control editactivitystartdate holidayAppliedDatepicker" style="display:none;" data-id="'.$data['id'].'" type="text" id="edit'.str_replace(' ','',$data['process']).'activitystartdate'.$data['id'].'" value="'.$start_date_edit.'" '.$start_date_visible.'>
+    									<span class="error"></span>
+    								</td>
+    								<td>
+    									<span class="enddatevertical" id="'.str_replace(' ','',$data['process']).'activityenddate'.$data['id'].'">'.$end_date.'</span>
+    									<input class="form-control editactivityenddate" style="display:none;" data-id="'.$data['id'].'" type="text" id="edit'.str_replace(' ','',$data['process']).'activityenddate'.$data['id'].'" value="'.$end_date_edit.'" '.$end_date_visible.' readonly>
+    									<span class="error"></span>
+    								</td>
+    								<td style="white-space:nowrap;">
+                                        <a class="btn btn-primary  assignresource icon-dns" style="display:none;" value="'. $data['id'] .'" id="assignresource'. $data['id'] .'" data-v="'. $data['id'] .'" data-proid="'. $data['projectId'] .'" href="javascript:void(0);" title="Assign Resources"></a>
+
+
+
+                                        
+    									<button type="button" class="btn btn-primary viewwbsestimatetasks tstbtnn" data-p="'.$projuser->projectid.'" data-v="' . $data['id'] . '" 
+                                        data-q="' . $data['id'] . '"  value="'. $data['id'] .'" id="viewwbsestimatetask' . $data['id'] . '" title="Tasks">Tasks</button>';
+
+                                    if($user->account_type != 'perfm_pad_reporting_only'){
+
+                                        $reportOnlyUsers = User::find()->where(['account_type'=> 'perfm_pad_reporting_only'])->all();
+
+                                        $user_dropdown = '<select class="form-control" name="activity_assign_user" id="activity_assign_user'.$data['id'].'" data-act="'.$data['id'].'" >';
+                                        $user_dropdown .= '<option value="">Select User</option>';
+                                        if($reportOnlyUsers){
+                                            foreach ($reportOnlyUsers as $reportOnlyUser) {
+                                                $reportOnlyUserSelected = ($data['assigned_to'] == $reportOnlyUser->id) ? 'Selected' : '';
+                                                $user_dropdown .= '<option value="'.$reportOnlyUser->id.'" '.$reportOnlyUserSelected.'>'.$reportOnlyUser->displayName.'</option>';
+                                            }
+                                        }
+                                        $user_dropdown .= '</select>';
+
+
+
+    								$datarows.='
+
+                                        <div class="hover" data-tooltip="tooltip_task_report" style="cursor:pointer; ">
+                                            <a  class="btn icon-user3 assignActivity hover" data-tooltip="tooltip_task_report" data-v="' . $data['id'] . '" value="'.$data['id'].'" data-type="'.$data['process'].'" id="assignActivity'.$data['id'].'" title="Assign to User"  href="javascript:void(0);"></a>
+                                            <div class="tooltiptable" id="tooltip_task_report" style="min-width: 250px;height: auto;padding: 20px !important;right: -90px;">
+                                                <div>
+                                                    <div style="padding-bottom:10px;"><b>Assign User</b></div>
+                                                    <div>
+                                                        '.$user_dropdown.'
+                                                        <span class="error"></span>
+                                                    </div>
+                                                    <div id="assignuser_btn_contanier'.$data['id'].'" style="text-align: center; padding-top:10px;">
+                                                        <button class="btn btn-primary btn-assignuser" id="btn-assignuser'.$data['id'].'"  style="background-color: #087acf;border-color: #087acf;" data-act="'.$data['id'].'" value="">'.(($data['assigned_to']) ? 'Re-Assign' : 'Assign').'</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+
+
+
+                                        <a  class="btn btn-primary icon-pencil editscheduleactivitybutton" data-v="' . $data['id'] . '" value="' . $data['id'] . '" id="edit'.str_replace(' ','',$data['process']).'activitybut' . $data['id'] . '" data-type="'.$data['process'].'" title="Edit Activity" href="javascript:void(0);" '.$reportedstyle.'></a>
+    									
+                                        <a class="btn btn-primary icon-save savescheduleactivitybutton" data-v="' . $data['id'] . '" value="' . $data['id'] . '" data-type="'.$data['process'].'" id="save'.str_replace(' ','',$data['process']).'activitybutton' . $data['id'] . '" title="Save" style="display:none;" href="javascript:void(0);"></a>
+                                        
+                                        <a  class="btn btn-danger  icon-trash1 deletescheduleactivity" data-v="' . $data['id'] . '" value="'.$data['id'].'" data-type="'.$data['process'].'" id="deletescheactivitybotton'.$data['id'].'" title="Delete Activity" '.$reportedstyle.' href="javascript:void(0);"></a>';
+                                    }
+
+                                $datarows.='
+    							</td>
+    						</tr>
+
+    				';
+                  //}
+                endforeach;
+                $datarows .= '</tbody></table></div>';
+            else:
+                $datarows .= '<tr><td colspan="9" class="text-center" style="padding:20px;">No Activities Found</td></tr></tbody></table></div>';
+            endif;
+
+                $gantt = '<a class="btn btn-primary text-button listactganttback" value="' . $projuser->projectid . '" href="' . Yii::$app->request->baseUrl . '/projectsmain/newganttchart?id=' . $projuser->projectid . '#listgnt" title="Click to view Gantt chart"><span class="icon-chart6"></span>  Gantt Chart</a>';
+            /*$gantt = 'href="' . Yii::$app->request->baseUrl . '/projectsmain/newganttchart?id=' . $projuser->projectid . '"';*/
+
+            $arr = array(   'result' => $datarows,
+                            'gantt'=> $gantt,
+                            'holiday_arr'=> $holiday_arr,
+                            'holiday_week_arr'=> $holiday_week_arr,
+                            'error'=>'No'
+                        );
+            return json_encode($arr);
+
+        }
+        else{
+
+            $datarows='<div class="row"><div class="col-md-12"><div class="text-center">No Project Selected</div></div></div>';
+
+            $arr = array('result' => $datarows,'gantt'=> '','error'=>'No');
+            return json_encode($arr);
+        }
+
+    }
+
+
+  
+
+    public function actionWbsestimatetasklists() 
+    {
+
+        $uid = Yii::$app->user->Id; 
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        $user = User::find()->where(['id'=>Yii::$app->user->id])->one();
+
+        if($projuser){
+            //$activities=Scheduleactivities::find()->where(['status' => 0])->all();
+    
+            $activityid = $_POST['wrkactivityid'];
+            //$estimate = Scheduleactivities::model()->findByPk($activityid);
+
+            $estimate=Scheduleactivities::find()->where(['id' => $activityid])->andWhere(['projectId'=>$projuser->projectid])->one();
+
+            //print_r($estimate); exit;
+            // $wbsactivity=WorkgroupActivitiesNew::model()->findByPk($estimate->reference_activityid);
+            $wbsactivity=WorkgroupActivitiesNew::findOne($estimate->reference_activityid); 
+
+            $name = $estimate['name'];
+            $unit = $estimate['cycle_unit'];
+            $quantity = $estimate['cycle_quantity'];
+            $est_qty = $estimate['quantity'];
+            $est_unit = $estimate['unit'];
+                
+            $connection = \Yii::$app->db;
+            
+            $estActivityId = $estimate['activity_id'];
+            // scheduleactivities.activity_id = workgroup_activities_new.id
+            // activity_tasks uses workgroup_activities_new.activity_Id — bridge through the table
+            $wbnRow = $connection->createCommand(
+                "SELECT activity_Id FROM workgroup_activities_new WHERE id='".(int)$estActivityId."'"
+            )->queryOne();
+            if ($wbnRow && !empty($wbnRow['activity_Id'])) {
+                $estActivityId = $wbnRow['activity_Id'];
+            }
+            $estActivity = $connection->createCommand("SELECT working_hours FROM estimateactivities WHERE activity_id='".$estActivityId."'")->queryOne();
+            $defaultWorkHours = !empty($estActivity) ? $estActivity['working_hours'] : 8;
+            $sql = "SELECT id AS Id, task_name AS task, task_unit, productivity FROM activity_tasks WHERE activity_id='".$estActivityId."' ORDER BY sort_order ASC";
+            $command = $connection->createCommand($sql);
+            $dataReader = $command->query();
+            $tasks = $dataReader->readAll();
+            // $datarows = '';
+
+            //$sqlforactschedule = "SELECT * FROM schedule_activity_new WHERE actvity_id='".$activityid."' AND activity_name='".$name."' ";
+            $sqlforactschedule = "SELECT * FROM schedule_activity_new WHERE actvity_id='".$activityid."' ";
+            $command1 = $connection->createCommand($sqlforactschedule);
+            $dataReader1 = $command1->query();
+            $sche_act = $dataReader1->read();
+            
+            $sch_cycle_fixed_qty = '';
+            $sch_cycle_var_qty = '';
+            $sch_rep_mothod_daily = '';
+            $sch_rep_mothod_weekly = '';
+            $sch_cycle_unit_style = '';
+
+            if(!empty($sche_act))
+            { 
+                $sch_cycle_type     = $sche_act['cycle_type'];
+                if($sch_cycle_type == 'fixed_qty')      $sch_cycle_fixed_qty = 'checked';
+                if($sch_cycle_type == 'variable_qty')   $sch_cycle_var_qty = 'checked';
+
+                $sch_rep_mothod     = $sche_act['report_method'];
+                if($sch_rep_mothod == 'daily'){
+                    $sch_rep_mothod_daily = 'checked';
+                    $sch_rep_mothod_weekly = '';
+                }
+                elseif($sch_rep_mothod == 'weekly') {
+                    $sch_rep_mothod_weekly = 'checked';
+                    $sch_rep_mothod_daily = '';
+                }
+
+                //$sch_cycle_unit_style = 'readonly';
+            }
+
+            $disabledForm = '';
+            if($user->account_type == 'perfm_pad_reporting_only')
+                $disabledForm = 'disabled';
+
+            // Pre-compute cycle parameters
+            if(!empty($sche_act)) {
+                $sch_res             = $sche_act['Resourceunits'];
+                $sch_cyc             = $sche_act['Cycles'];
+                $sch_work            = $sche_act['Workhours'];
+                $sch_cyc_qty         = $sche_act['cycle_qty'];
+                $sch_cycle_units     = $sche_act['cycle_units'];
+                $sch_cycle_unit_type = $sche_act['cycle_unit_type'];
+                $sch_cycle_type_val  = $sche_act['cycle_type'];
+                $sch_rep_mothod_val  = $sche_act['report_method'];
+            } else {
+                $sch_res             = '';
+                $sch_cyc             = '1';
+                $sch_work            = '';
+                $sch_cyc_qty         = $est_qty;
+                $sch_cycle_units     = 1;
+                $sch_cycle_unit_type = '';
+                $sch_cycle_type_val  = 'fixed_qty';
+                $sch_rep_mothod_val  = 'daily';
+            }
+
+            // Pre-compute task rows HTML and btime
+            $btime = 0;
+            $atime = 0;
+            $taskRowsHtml = '';
+
+            // Qty/Unit formula: SUM(SC res_qty mapped to task) × (estQty / schedQty)
+            $estPenRow = $connection->createCommand(
+                "SELECT activity_qty FROM pricing_estimate_new WHERE activity_Id=:wid AND project_Id=:pid AND pricing_status=0 LIMIT 1",
+                [':wid' => $estimate['activity_id'], ':pid' => $projuser->projectid]
+            )->queryOne();
+            $estActQtyForTask = $estPenRow ? (float)$estPenRow['activity_qty'] : 0;
+            $schedQtyForTask  = (float)($est_qty ?? 0);
+            $taskRatio        = $schedQtyForTask > 0 ? $estActQtyForTask / $schedQtyForTask : 0.0;
+
+            if(count($tasks) > 0) {
+                foreach($tasks AS $key => $task):
+                    $sqlqr = "SELECT Budgeted_Duration,End_Duration,status,task_qty,task_productivity,task_resource_units FROM schedule_task_new WHERE activity_Id='".$activityid."' AND task_Id='".$task['Id']."'";
+                    $command1 = $connection->createCommand($sqlqr);
+                    $dataReader1 = $command1->query();
+                    $sche_tasks = $dataReader1->read();
+
+                    // task_qty = SUM(res_qty of all resources mapped to this task) × (estQty / schedQty)
+                    $scResQty = (float)($connection->createCommand(
+                        "SELECT COALESCE(SUM(quantity), 0) FROM pricing_estimate_resources_new
+                         WHERE activity_id=:wid AND project_id=:pid AND pricing_status=0
+                           AND FIND_IN_SET(:tid, task_ids)",
+                        [':wid' => $estimate['activity_id'], ':tid' => $task['Id'], ':pid' => $projuser->projectid]
+                    )->queryScalar() ?: 0);
+                    $computedTaskQty = round($scResQty * $taskRatio, 3);
+
+                    $repquery = "SELECT reportid FROM new_report WHERE activity_Id='".$activityid."' AND status=0 AND totalduration!=0";
+                    $command = $connection->createCommand($repquery);
+                    $dataReader = $command->query();
+                    $report = $dataReader->readAll();
+                    if(count($report) != 0) {
+                        $totalofactual = 0;
+                        $count = 0;
+                        foreach($report AS $reportid) {
+                            $report_id = $reportid['reportid'];
+                            $actquery = "SELECT actualduration FROM reporttasks WHERE reportid='".$report_id."' AND taskid='".$task['Id']."'";
+                            $command = $connection->createCommand($actquery);
+                            $dataReader = $command->query();
+                            $actdur = $dataReader->read();
+                            $totalofactual += $actdur['actualduration'];
+                            $count++;
+                        }
+                        $averageactulal = substr($totalofactual/$count, 0, 4);
+                    } else {
+                        $averageactulal = !empty($sche_tasks) ? $sche_tasks['Budgeted_Duration'] : 0;
+                    }
+
+                    $buttonrow = '';
+                    if($user->account_type != 'perfm_pad_reporting_only') {
+                        if($key == 0) {
+                            $buttonrow = '<a class="btn btn-primary icon-plus icon_plus" id="tasknewrow" title="Add more Task"></a>';
+                        } else {
+                            $buttonrow = '<a class="btn btn-danger icon-times taskremoverow" data-id="'.$key.'" id="taskremoverow'.$key.'" title="Remove Task"></a>';
+                        }
+                    }
+
+                    $savedResUnits = (!empty($sche_tasks) && $sche_tasks['task_resource_units'] > 0) ? $sche_tasks['task_resource_units'] : 1;
+                    $taskRowsHtml .= '<tr class="tastrow" id="activityrow'.$key.'">
+                        <td><input type="hidden" name="tasknewid[]" value="'.$task['Id'].'">
+                            <input type="text" class="form-control taskname_edit" name="taskname[]" value="'.$task['task'].'" '.$disabledForm.'></td>
+                        <td><input type="text" class="form-control" name="task_unit[]" value="'.htmlspecialchars($task['task_unit']).'"></td>
+                        <td><input type="number" step="0.001" class="form-control task-productivity-val" name="task_productivity_val[]" value="'.(!empty($sche_tasks) && $sche_tasks['task_productivity'] > 0 ? number_format((float)$sche_tasks['task_productivity'], 3, '.', '') : number_format((float)$task['productivity'], 3, '.', '')).'" '.$disabledForm.'></td>
+                        <td><input type="number" step="0.001" class="form-control" name="task_qty[]" value="'.(!empty($sche_tasks) && $sche_tasks['task_qty'] > 0 ? $sche_tasks['task_qty'] : $computedTaskQty).'"></td>
+                        <td><input type="number" step="0.001" min="0.001" class="form-control task-resource-units-val" name="task_resource_units[]" value="'.$savedResUnits.'"></td>
+                        <td><input type="number" class="form-control taskduration_edit" name="taskduration[]" value="'.(!empty($sche_tasks) ? $sche_tasks['Budgeted_Duration'] : '').'" readonly style="background-color:#e9ecef;"></td>
+                        <td style="text-align:center;">'.$buttonrow.'</td>
+                    </tr>';
+
+                    if(!empty($sche_tasks) && $sche_tasks['status'] == 0) {
+                        $btime = $btime + $sche_tasks['Budgeted_Duration'];
+                        $atime = $atime + $averageactulal;
+                    }
+                endforeach;
+            } else {
+                $addBtn = ($user->account_type != 'perfm_pad_reporting_only') ? '<a class="btn btn-primary icon-plus icon_plus" id="tasknewrow"></a>' : '';
+                $taskRowsHtml = '<tr class="tastrow" id="activityrow0">
+                    <td><input type="hidden" name="tasknewid[]" value="">
+                        <input type="text" class="form-control taskname_edit" name="taskname[]" value=""></td>
+                    <td></td>
+                    <td><input type="number" step="0.001" class="form-control task-productivity-val" name="task_productivity_val[]" value=""></td>
+                    <td><input type="number" step="0.001" class="form-control" name="task_qty[]" value=""></td>
+                    <td><input type="number" step="0.001" min="0.001" class="form-control task-resource-units-val" name="task_resource_units[]" value="1"></td>
+                    <td><input type="number" class="form-control taskduration_edit" name="taskduration[]" value="" readonly style="background-color:#e9ecef;"></td>
+                    <td style="text-align:center;">'.$addBtn.'</td>
+                </tr>';
+            }
+
+            // Build new form
+            $form = '<style>
+                #scheduleform{display:flex;flex-direction:column;}
+                .task-screen-title{text-align:center;font-size:18px;font-weight:bold;letter-spacing:1px;margin-bottom:14px;padding-top:8px;}
+                .task-screen-info{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px;padding:0 20px;}
+                .task-screen-info .info-item{display:flex;align-items:center;gap:8px;white-space:nowrap;}
+                .task-screen-info .info-item label{font-weight:600;margin:0;font-size:13px;}
+                .task-screen-info .info-item span{font-size:13px;}
+                #activitytasktable thead tr th{background-color:#b0b0b0;font-weight:bold;padding:8px 10px;}
+                #activitytasktable tbody tr td:last-child{text-align:center;vertical-align:middle;}
+                .table>thead>tr>th,.table>tbody>tr>th,.table>tfoot>tr>th,
+                .table>thead>tr>td,.table>tbody>tr>td,.table>tfoot>tr>td{padding:6px 8px;}
+            </style>';
+
+            $form .= '<form method="POST" action="" id="scheduleform" class="col-md-12 scheduleform">';
+
+            // Preserved hidden fields
+            $form .= '<input type="hidden" name="activityid" value="'.$activityid.'">';
+            if($wbsactivity):
+                $form .= '<input type="hidden" name="wbsid" value="'.$wbsactivity['wbs_id'].'">';
+                $form .= '<input type="hidden" name="estimateid" value="'.$wbsactivity['id'].'">';
+                $form .= '<input type="hidden" name="iowid" value="'.$wbsactivity['wbs_id'].'">';
+            endif;
+            $form .= '<input type="hidden" name="activityname" value="'.$name.'">';
+            $form .= '<input type="hidden" name="type" value="schedule">';
+            $form .= '<input type="hidden" id="est_qty" name="est_qty" value="'.$est_qty.'">';
+            $form .= '<input type="hidden" name="cycle_type" value="'.$sch_cycle_type_val.'">';
+            $form .= '<input type="hidden" name="report_method" value="'.$sch_rep_mothod_val.'">';
+            $form .= '<input type="hidden" name="cycle_qty" id="cycle_qty" value="'.$sch_cyc_qty.'">';
+            $form .= '<input type="hidden" name="cycles" id="no_of_cycles" value="'.$sch_cyc.'">';
+            $form .= '<input type="hidden" name="resourceunit" id="resourceunit" value="'.$sch_res.'">';
+            $form .= '<input type="hidden" name="cycle_units" id="cycle_units" value="'.$sch_cycle_units.'">';
+            $form .= '<input type="hidden" name="cycle_unit_type" id="cycle_unit_type" value="'.$sch_cycle_unit_type.'">';
+            $form .= '<input type="hidden" name="totalbudget" id="budcycle" value="'.$btime.'">';
+            $form .= '<input type="hidden" id="default_working_hours" value="'.$defaultWorkHours.'">';
+
+            // Header: TASKS title on top, info row below
+            $activeWork = !empty($sch_work) ? $sch_work : $defaultWorkHours;
+            $form .= '<div class="task-screen-title">TASKS</div>
+            <div class="task-screen-info">
+                <div class="info-item">
+                    <label>Activity Name:</label>
+                    <span>'.htmlspecialchars($name).'</span>
+                </div>
+                <div class="info-item">
+                    <label>Activity Unit:</label>
+                    <span>'.htmlspecialchars($est_unit).'</span>
+                </div>
+                <div class="info-item">
+                    <label>Working Hours:</label>
+                    <select class="form-control" name="wrkhrs" id="wrkkhrs" style="width:90px;" '.$disabledForm.'>
+                        <option value="8" '.(($activeWork=="8")?"selected":"").'>8</option>
+                        <option value="10" '.(($activeWork=="10")?"selected":"").'>10</option>
+                        <option value="12" '.(($activeWork=="12")?"selected":"").'>12</option>
+                        <option value="24" '.(($activeWork=="24")?"selected":"").'>24</option>
+                    </select>
+                </div>
+            </div>';
+
+            // Task table
+            $form .= '<div class="task-table-wrap"><table cellpadding="0" cellspacing="0" id="activitytasktable" class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th style="width:25%;">Tasks</th>
+                        <th style="width:8%;">Unit</th>
+                        <th style="width:14%;">Productivity / Day</th>
+                        <th style="width:13%;">Quantity / Unit</th>
+                        <th style="width:12%;">Resource Units</th>
+                        <th style="width:13%;">Duration in Days</th>
+                        <th style="width:8%;"></th>
+                    </tr>
+                </thead>
+                <tbody id="tasklistname">
+                    '.$taskRowsHtml.'
+                </tbody>
+            </table></div>';
+
+            // Cycle time
+            $form .= '<div style="text-align:right;margin:8px 0;padding-right:14%;">
+                <strong>Cycle Time:</strong>&nbsp;<span id="cyclebud" style="font-size:15px;">'.number_format($btime, 4).'</span>&nbsp;Days
+            </div>';
+
+            // Buttons
+            $form .= '<div class="text-center"><span class="error" id="taskScheduleError"></span></div>
+            <div class="text-center" style="margin-top:10px;">
+                <button type="button" class="btn btn-danger cancel" id="cancelschedule_new" name="cancelschedule" data-id="'.$activityid.'" data-iow="'.$estimate->scheduleitem_id.'"><span class="icon-close"></span>Cancel</button>&nbsp;';
+
+            if($user->account_type != 'perfm_pad_reporting_only'){
+                $form .= '<button type="button" class="btn btn-primary" id="saveschedule_new" name="saveschedule"><span class="icon-check"></span>Save</button>';
+            }
+
+            $form .= '</div>
+            </form>';
+        }
+        $arr=array('result'=>$form,'error'=>'No');
+        return json_encode($arr);
+        //echo json_encode($arr);
+    
+    }
+
+
+    public function actionAssignuser()
+    {
+        $id = $_POST['id'];
+
+        $schActivity=Scheduleactivities::findOne($id); 
+        $schActivity->assigned_to = $_POST['user_id'];
+        $schActivity->save(false);
+        
+        $arr=array('error'=>'No');
+        return json_encode($arr);
+    }
+
+
+
+     public function actionTaskeditname()
+    {
+        $id = $_POST['id'];
+       // $task = TasksNew::model()->findByPk($id);
+        $task=TasksNew::findOne($id); 
+
+
+        $task->Name = $_POST['taskname'];
+        $task->save(false);
+        
+        $arr=array('error'=>'No');
+        return json_encode($arr);
+        
+    }
+
+
+    public function actionTaskdelete()
+    {
+        $id = $_POST['id'];
+       // $task = TasksNew::model()->findByPk($id);
+         $task=TasksNew::findOne($id); 
+        $task->delete();
+        
+        $arr=array('error'=>'No');
+        return json_encode($arr);
+        
+    }
+
+
+    public function actionSchedulecreate()
+    {
+
+        $actid = $_POST['activityid'];
+        $activityname=$_POST['activityname'];
+
+        $wrk=Scheduleactivities::findOne($actid); 
+
+        if(isset($_POST['tasknewid'])){
+            $count = count($_POST['tasknewid']);
+        }
+        else{
+            $count = 0;
+        }
+
+        //echo $count; exit;
+
+        $connection = \Yii::$app->db; 
+
+        //$delquery = 'DELETE FROM schedule_task_new WHERE activity_name LIKE "'.$activityname.'" AND activity_Id="'.$actid.'"';
+        $delquery = 'DELETE FROM schedule_task_new WHERE activity_Id="'.$actid.'"';
+        //echo $delquery;exit;
+        $command1=$connection->createCommand($delquery);
+        $dataReader1=$command1->query();
+
+        $allacttasks=TasksNew::find()->Where(['activity_Id'=>$actid])->all();
+
+        if($allacttasks){
+
+            foreach($allacttasks as $allacttask):
+
+                $allacttask->status = 1;
+                  
+                $allacttask->save(false);
+
+            endforeach;
+        }
+
+        if($count!=0):
+
+            for ($i = 0; $i < $count; $i++) {
+
+                $taskid = $_POST['tasknewid'][$i] != '' ? $_POST['tasknewid'][$i] : 0;
+
+                if($taskid != 0){
+
+                    $tqty      = isset($_POST['task_qty'][$i])              ? (float)$_POST['task_qty'][$i]              : 0;
+                    $tprod     = isset($_POST['task_productivity_val'][$i])  ? (float)$_POST['task_productivity_val'][$i]  : 0;
+                    $tres      = isset($_POST['task_resource_units'][$i])    ? (float)$_POST['task_resource_units'][$i]    : 1;
+                    if ($tres <= 0) $tres = 1;
+
+                    $sql1 = 'INSERT INTO schedule_task_new ( wbs_id, activity_Id, process_Id,wbs_activity_Id, task_Id, Budgeted_Duration, End_Duration, status,activity_name, task_qty, task_productivity, task_resource_units )
+                        VALUES
+                        ( "0","'.$actid.'","0","0","'.$taskid.'","'.$_POST['taskduration'][$i].'","0","0","'.$activityname.'","'.$tqty.'","'.$tprod.'","'.$tres.'")';
+                    $command=$connection->createCommand($sql1);
+                    $dataReader=$command->query();
+
+                }
+
+            }
+
+        endif;
+
+        $startdate=date('Y-m-d');
+
+        $enddate=date('Y-m-d');
+
+        //$delquery2 = 'DELETE FROM schedule_activity_new WHERE activity_name="'.$activityname.'" AND actvity_id="'.$actid.'"';
+        $delquery2 = 'DELETE FROM schedule_activity_new WHERE  actvity_id="'.$actid.'"';
+        //echo $delquery2;exit;
+        $command2=$connection->createCommand($delquery2);
+        $dataReader2=$command2->query();
+
+        if($_POST['resourceunit']=='' || $_POST['resourceunit']==0){
+            $_POST['resourceunit'] = 1;
+        }
+
+        if($_POST['cycles']==''){
+            $_POST['cycles'] = 0;
+        }
+        if($_POST['cycle_qty']==''){
+            $_POST['cycle_qty'] = 0;
+        }
+        if($_POST['wrkhrs']==''){
+            $_POST['wrkhrs'] = 0;
+        }
+
+        $sql = 'INSERT INTO schedule_activity_new ( actvity_id,wbs_activity_Id,Project_Id, process_id, wbs_id, cycle_type, report_method, cycle_units, cycle_unit_type,Resourceunits,Workhours,Cycles,cycle_qty,progress,duration,start_date,end_date,activity_name )
+                    VALUES
+                    ( "'.$actid.'","0","'.$wrk['projectId'].'","0","0","'.$_POST['cycle_type'].'","'.$_POST['report_method'].'","'.$_POST['cycle_units'].'","'.$_POST['cycle_unit_type'].'","'.$_POST['resourceunit'].'","'.$_POST['wrkhrs'].'","'.$_POST['cycles'].'","'.$_POST['cycle_qty'].'","0","0","'.$startdate.'","'.$enddate.'","'.$activityname.'")';
+        $command=$connection->createCommand($sql);
+        $dataReader=$command->query();
+
+        // Calculate duration: Cycle Time × Activity Quantity ÷ No of Resources
+        $cycleTime = 0;
+        if (!empty($_POST['taskduration']) && is_array($_POST['taskduration'])) {
+            foreach ($_POST['taskduration'] as $td) { $cycleTime += (float)$td; }
+        }
+        if ($cycleTime == 0) {
+            $cycleTime = isset($_POST['totalbudget']) ? (float)$_POST['totalbudget'] : 0;
+        }
+        $cycleTime = round($cycleTime, 4);
+
+        if ($cycleTime > 0) {
+            $activityQty   = (float)$wrk->quantity > 0 ? (float)$wrk->quantity : 1;
+            $wrk->old_duration = (int)ceil(round($cycleTime * $activityQty, 6));
+            $startDate  = $wrk->actual_start_date ?: date('Y-m-d');
+            $endDateRaw = Yii::$app->helper->getDateAfterHoliday($startDate, $wrk->projectId, max(0, (int)$wrk->old_duration - 1));
+            $wrk->actual_end_date = date('Y-m-d', strtotime($endDateRaw));
+            $wrk->save(false);
+        }
+
+        Yii::$app->helper->GetRelationcorrect($wrk->projectId);
+
+        $arr = array('error' => 'No');
+        return json_encode($arr);
+
+    }
+
+    /*public function actionSchedulecreate()
+    {
+        echo 'hai'; exit;
+
+        $actid=$_POST['activityid'];
+        $activityname=$_POST['activityname'];
+        if(isset($_POST['processid'])){
+        $processid=$_POST['processid'];
+        }else{
+            $processid="";
+        }
+        $estimateid=$_POST['estimateid'];
+         if(isset($_POST['workhours'])){
+        $workhourss=$_POST['workhours'];
+        }else{
+           $workhourss=""; 
+        }
+
+        $wbsid=$_POST['wbsid'];
+        $type=$_POST['type'];
+       // $wbsact=Scheduleactivities::model()->findByPk($actid);
+        $wbsact=Scheduleactivities::findOne($actid);
+        $connection = \Yii::$app->db; 
+        // $model = itemofworks::model()->findByPk($_POST['iowid']);
+        $count = count($_POST['task_id']);
+        $duration = 0;
+        $budgetedduration = 0;
+        $actualduration = 0;
+        //deleting the current schedule
+        //$delquery = 'DELETE FROM schedule_task WHERE wbs_activity_Id="'.$estimateid.'" AND wbs_id="'.$wbsid.'" AND activity_Id="'.$actid.'" AND process_Id="'.$processid.'"';
+        $delquery = 'DELETE FROM schedule_task_new WHERE activity_name LIKE "'.$activityname.'" AND activity_Id="'.$actid.'"';
+        //echo $delquery;exit;
+        $command1=$connection->createCommand($delquery);
+        $dataReader1=$command1->query();
+
+        $q = '';
+        for ($i = 0; $i < $count; $i++) {
+            $curactualduration=0;
+            $curbudgetdur = 0;
+            $taskid = $_POST['task_id'][$i];
+            if (isset($_POST['cyclexclude' . $taskid])) {
+                $status = '1';
+            } else {
+                $status = '0';
+            }
+            if (!isset($_POST['cyclexclude' . $taskid])) {
+                $budgetedduration = $budgetedduration + $_POST['bduration'][$i];
+                if(isset($_POST['eduration'][$i]) && $_POST['eduration'][$i]!=''){
+                $actualduration = $actualduration + $_POST['eduration'][$i];
+                 }
+                 else{
+                     $actualduration="";
+                 }
+                $curbudgetdur = $_POST['bduration'][$i];
+                 if(isset($_POST['eduration'][$i])){
+                $curactualduration = $_POST['eduration'][$i];
+            }
+            }
+            $sql1 = 'INSERT INTO schedule_task_new ( wbs_id, activity_Id, process_Id,wbs_activity_Id, task_Id, Budgeted_Duration, End_Duration, status,activity_name )
+                    VALUES
+                    ( "'.$wbsid.'","'.$actid.'","'.$processid.'","'.$estimateid.'","'.$taskid.'","'.$curbudgetdur.'","'.$curactualduration.'","'.$status.'","'.$activityname.'")';
+            //echo $sql1;exit;
+            $command=$connection->createCommand($sql1);
+            $dataReader=$command->query();
+
+        }
+        
+        if(isset($_POST['workhours'])){
+        $days = $_POST['workhours'] / 12;
+        }
+        else{
+             $days="";
+
+        }
+
+        $rdays = round($days, 2);
+       // echo $rdays; exit;
+        if($rdays!=0){
+        $budgeteddurationcalc = ($budgetedduration * $_POST['cycles']) / ($rdays);
+        }else{
+           $budgeteddurationcalc=0; 
+        }
+        $budgeteddurationcalc = round($budgeteddurationcalc, 2);
+        $finalbuddur = $budgeteddurationcalc / $_POST['resourceunit'];
+        $finalbuddur = round($finalbuddur, 2);
+         if($rdays!=0){
+        $actualdurationcalc = ($actualduration * $_POST['cycles']) / ($rdays);
+       }else{
+         $actualdurationcalc=0;
+       }
+        $actualdurationcalc = round($actualdurationcalc, 2);
+        $finalactdur = $actualdurationcalc / $_POST['resourceunit'];
+        $finalactdur = round($finalactdur, 2);
+        $startdate=date('Y-m-d');
+        if($finalactdur>0):
+            $enddate=date('Y-m-d', strtotime("+".$finalactdur." days"));
+        else:
+            $enddate=date('Y-m-d');;
+        endif;
+        if($finalactdur==0):
+            $finalactdur=$finalbuddur;
+        endif;
+        
+        //$ssqq = 'SELECT Project_Id FROM workgroups_new WHERE Workgroup_Id="'.$wbsid.'" ';
+        //$command=$connection->createCommand($ssqq);
+        //$dataReader=$command->query();
+        //$projid = $dataReader->read();
+        
+        $delquery2 = 'DELETE FROM schedule_activity_new WHERE activity_name="'.$activityname.'" AND actvity_id="'.$actid.'"';
+        //echo $delquery2;exit;
+        $command2=$connection->createCommand($delquery2);
+        $dataReader2=$command2->query();
+        $sql = 'INSERT INTO schedule_activity_new ( actvity_id,wbs_activity_Id,Project_Id, process_id, wbs_id,Resourceunits,Workhours,Cycles,progress,duration,start_date,end_date,activity_name )
+                    VALUES
+                    ( "'.$actid.'","'.$estimateid.'","'.$wbsact['projectId'].'","'.$processid.'","'.$wbsid.'","'.$_POST['resourceunit'].'","'.$workhourss.'","'.$_POST['cycles'].'","'.$finalbuddur.'","'.$finalactdur.'","'.$startdate.'","'.$enddate.'","'.$activityname.'")';
+        $command=$connection->createCommand($sql);
+        $dataReader=$command->query();
+
+        $activityduration = "SELECT SUM(Budgeted_Duration) AS duration FROM schedule_task_new WHERE activity_Id=".$actid." AND status=0 ";
+        $command = $connection->createCommand($activityduration);
+        $dataReader = $command->query();
+        $cycletime = $dataReader->read();
+        //if($cycletime['duration']!=0){
+
+            //$task = ScheduleActivityNew::model()->find(array('condition'=>'actvity_id ='.$actid.' '));
+
+            //$task=ScheduleActivityNew::find()->where(['actvity_id' =>$actid])->one();
+
+            //$duration = round(($cycletime['duration'] * $task['Cycles']) / $task['Resourceunits']);
+            //$wbsact->duration= $duration;
+            //$dateadjust = $duration - 1;
+            //$wbsact->end_date = date('Y-m-d', strtotime($wbsact->start_date. ' + '.$dateadjust.' days')); 
+        //}
+
+    //}
+        if(isset($_POST['activityqty'])){
+        $wbsact->cycle_quantity=$_POST['activityqty'];
+        }
+        if(isset($_POST['activityunit'])){
+        $wbsact->cycle_unit=$_POST['activityunit'];
+        }
+        $wbsact->status=0;
+        $wbsact->save(false);
+
+        //$availableActivites = Scheduleactivities::model()->findAll(array('condition'=>'projectId ='.$wbsact->projectId.' AND status =0','order'=>'sortorder ASC'));
+
+        $availableActivites=Scheduleactivities::find()->Where(['projectId'=>$wbsact->projectId])->andWhere(['status'=>0])->orderBy(['sortorder'=> 'SORT_ASC'])->all();  
+
+
+        if(count($availableActivites) > 0)
+        {       
+            // echo $actID;exit;
+            foreach ($availableActivites as $activity) 
+            {
+                $acId = $activity->id;
+               // $allRelations = ActivityRelations::model()->findAll(array('condition'=>'precedent_activity ='.$acId.' AND status =0'));
+              
+               $allRelations=ActivityRelations::find()->Where(['precedent_activity'=>$acId])->andWhere(['status'=>0])->all();
+
+                if(count($allRelations) > 0)
+                {
+
+                    // echo "test";exit;
+                    foreach ($allRelations AS $relation)
+                    {
+
+                       // $precAct = Scheduleactivities::model()->findByPk($acId);
+                        $precAct=Scheduleactivities::findOne($acId);
+
+                       // $dependAc = Scheduleactivities::model()->findByPk($relation->dependent_activity);
+                       $dependAc=Scheduleactivities::findOne($relation->dependent_activity);
+
+                        // check if already reported or not
+                        //$reported = ProgressReport::model()->find(array('condition'=>'activity_id ='.$relation->dependent_activity.' AND status =1'));
+
+                    
+                        $reported=ProgressReport::find()->where(['activity_id' =>$relation->dependent_activity])->andWhere(['status'=>1])->one();
+
+
+                       // $precedentActual = ProgressReport::model()->find(array('condition'=>'activity_id ='.$acId));
+
+                     $precedentActual=ProgressReport::find()->where(['activity_id' =>$acId])->one();
+
+                        if($precedentActual)
+                        {
+
+                            $start_date = strtotime($precedentActual->start_date);
+                            if($precedentActual->status==1)
+                            {
+                                $end_date = strtotime($precedentActual->end_date);
+                                $datediff = $end_date - $start_date;
+                                $duration = round($datediff / (60 * 60 * 24)+1);
+                                $dayForOneUnitQty = $duration/$precedentActual->total_quantity;
+                                $totalDaysForComp = $dayForOneUnitQty*$precAct->quantity;
+
+                                $actEndDate = strtotime("+".floor($totalDaysForComp)." day", strtotime($precedentActual->start_date));
+                                $enDateWillBe =  date('Y-m-d', $actEndDate);
+                                // echo floor($totalDaysForComp);exit;
+
+                            }
+                            else
+                            {
+                                $actEndDate = strtotime("+".round($precAct->duration)." day", strtotime($precedentActual->start_date));
+                                $enDateWillBe =  date('Y-m-d', $actEndDate);
+
+                            }       
+                        }
+                        if(!$precedentActual){  
+                            $precedentActual = $precAct;
+                            $start_date = strtotime($precedentActual->start_date);
+                            $end_date = strtotime($precedentActual->end_date);
+                            $enDateWillBe =  date('Y-m-d', $end_date);
+                        }
+                        //print_r($reportedpre); exit;
+                        // if(!$reported)
+                        // {
+                            if($relation->relation_type == 1)
+                            {
+                                // echo $dependAc->start_date;exit;
+                                //  if($precAct->start_date != $dependAc->start_date)
+                                //  {
+                                    $lag = $dependAc->lag;
+                                    $dependAc->start_date = date('Y-m-d', strtotime($precAct->start_date. ' + '.$lag.' days'));
+                                    $duration = $dependAc->duration + $lag - 1;
+                                    $dependAc->end_date = date('Y-m-d', strtotime($precAct->start_date. ' + '.$duration.' days'));
+                                    $dependAc->save(false);
+
+                                // }
+                                $lag = $dependAc->lag;
+                               // $ProgressReport = ProgressReport::model()->find(array('condition'=>'activity_id ='.$relation->dependent_activity.' AND status =0'));
+
+                         $ProgressReport=ProgressReport::find()->where(['activity_id' =>$relation->dependent_activity])->andWhere(['status'=>0])->one();
+
+
+
+                                if(($ProgressReport)>0):
+                                    $ProgressReport->start_date = date('Y-m-d', strtotime($precedentActual->start_date. ' + '.$lag.' days'));
+                                    $ProgressReport->save(false);
+                                endif;                                   
+                            }
+                            elseif($relation->relation_type == 2)
+                            {
+                                // echo $dependAc->start_date;exit;
+                               // $ProgressReport = ProgressReport::model()->find(array('condition'=>'activity_id ='.$relation->dependent_activity.' AND status =0'));
+                            $ProgressReport=ProgressReport::find()->where(['activity_id' =>$relation->dependent_activity])->andWhere(['status'=>0])->one();
+
+
+
+                                if(($ProgressReport)>0):
+                                    $ProgressReport->start_date = date('Y-m-d', strtotime($enDateWillBe.' + 0 days'));
+                                    $ProgressReport->save(false);
+                                endif;
+
+                                if(date('Y-m-d', strtotime($precAct->end_date.' + 1 days')) != $dependAc->start_date)
+                                {
+                                    $dependAc->start_date = date('Y-m-d', strtotime($precAct->end_date.' + 1 days'));
+                                    $start = date('Y-m-d', strtotime($precAct->end_date));
+                                    $duration = $dependAc->duration;
+                                    $dependAc->end_date = date('Y-m-d', strtotime($start. ' + '.$duration.' days'));
+                                    if($dependAc->save(false))
+                                    {
+                                        // echo $dependAc->end_date;
+                                        // exit;
+                                    }
+                                }  
+                            }
+                        //}
+                        // var_dump($dependAc);
+                    }
+
+                }
+                // exit;
+                
+            }
+        }
+
+    //}
+
+        $arr = array('error' => 'No');
+        return json_encode($arr);
+
+    }*/
+
+    public function actionNewtaskcreate()
+    {
+      $activityid = $_POST['activityid'];
+     // echo $activityid; exit;
+      $wrk=Scheduleactivities::findOne($activityid); 
+
+      $model = New TasksNew();
+      $model->activity_Id = $activityid;
+      $model->Name = $_POST['taskname'];
+      if($wrk->process==""){
+         $model->process_id = 0;
+      }else{
+       $model->process_id = $wrk->process;
+      }
+      
+      if($model->save(false)){
+        //$tasks = TasksNew::model()->findAll(array('condition'=>'activity_Id ='.$activityid.''));
+        $tasks = TasksNew::find()->where(['activity_Id' => $activityid])->all();
+        $key = count($tasks);
+        $form = '<tr id="activityrow' . $model['task_Id'] . '">
+                    <td><span id="taskname'.$model['task_Id'].'" data-id="'.$model['task_Id'].'">' . $model['Name'] . '</span>
+                    <input type="text" class="form-control taskname_edit" id="taskname_edit'.$model['task_Id'].'"  data-id="' . $model['task_Id'] . '" name="taskname" value="' . $model['Name'] . '" style="display:none;">
+                    </td>
+                    <td id="b">
+                      <input type="hidden" name="task_id[]" value="'. $model['task_Id'] .'">
+                      <input type="text" class="form-control bduration" id="bduration' . $key . '"  data-id="' . $key . '" name="bduration[]" value=""><span class="error"></span>
+                    </td>
+                    <!--<td><input type="text" class="form-control eduration"  readonly="readonly" id="eduratio' . $model['task_Id'] . '"  data-id="' . $model['task_Id'] . '" name="eduration[]" value=""><span class="error"></span></td>-->
+                    <td class="icon-groups">
+                    <!--<input type="checkbox" name="cyclexclude' . $model['task_Id'] . '" class="activity" data-id="' . $model['task_Id'] . '" value="' . $model['task_Id'] . '" style="visibility: visible;">-->
+                    <a class="btn btn-primary icon-pencil edittaskname" id="edittaskname'.$model['task_Id'].'" data-id="'.$model['task_Id'].'"></a>
+                    <a class="btn btn-primary icon-save savetaskname" id="savetaskname'.$model['task_Id'].'" data-id="'.$model['task_Id'].'" style="display:none;"></a>
+                    <a class="btn btn-danger icon-trash1" id="removetask" data-id="'.$model['task_Id'].'"></a></td>
+                 </tr>';
+      }
+      
+      $arr=array('result'=>$form,'error'=>'No');
+      return json_encode($arr);
+    }
+    
+
+
+
+
+    public function actionUpdateganttsort()
+    {
+       if(isset($_POST['datavalue']))
+        {
+            foreach($_POST['datavalue'] AS $data)
+            {
+                $activities=Scheduleactivities::findOne($data['rowid']);
+                $activities->sortorder=$data['rowindex'];
+                $activities->save(false);
+            }
+        } 
+    }
+    public function actionResourceassign()
+    {
+        $connection = Yii::$app->db;
+        $activityid=$_POST['activityid'];
+        $projectid=$_POST['projectid'];
+        $project = Projects::findOne($_POST['projectid']);
+
+        $scheduleactivity = Scheduleactivities::find()->where(['id' => $activityid])->one();
+        
+        $resourcelists = ScheduleResource::find()->where(['activityid' => $activityid])->andWhere(['status' => 0])->all();
+        
+        $headone='<span>Activity: '.$scheduleactivity->name.' <em>Quantity: '.number_format((float)$scheduleactivity->quantity, 3, '.', '').'</em>  <em>Unit: '.$scheduleactivity->unit.'</em></span>
+            <input type="hidden" id="activityid" name="activityid" value="'.$activityid.'">
+            <input type="hidden" id="Project_Id" name="Project_Id" value="'.$projectid.'">';
+        $addedones='';
+        $SAbuttonlist='';
+
+        $addedones.='<div class="row scacvts">
+                        <div class="col-md-1">
+                            <label>#</label>
+                        </div>
+                        <div class="col-md-4">
+                            <label>Resource</label>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-md-6" style="padding-left:0px;">
+                                    <label>Resource Available Capacity</label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label>Resource Utilised/ Hours</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-1">
+                        </div>
+                     </div>';
+
+        foreach($resourcelists as $key => $resourcelist):
+            $addedones.='<div class="row added-item" id="scheresrow'.$resourcelist->id.'" style="padding:0px;">
+                                <div class="col-md-1 srnoact">
+                                    <span class="number">'.intval($key+1).'</span>
+                                </div>
+                                <div class="col-md-4 type rsnmee ">
+
+                                    <span>'.Resources::findOne( $resourcelist->resourceid)->Name.'</span>
+                                </div>
+                                <div class="col-md-6 type vendor-column " style="margin-bottom:0px;">
+                                    <div class="row">
+                                    <div class="col-md-6 type reavil">
+                                        
+                                        <span id="resource_cpcty'.$resourcelist->id.'">'.number_format((float)$resourcelist->capacity, 3, '.', '').'</span>
+                                        <input type="text" data-id="'.$resourcelist->id.'" class="form-control resourcecpcty" id="resourcecpcty'.$resourcelist->id.'" value="'.number_format((float)$resourcelist->capacity, 3, '.', '').'" style="display:none;"><span class="error"></span></td>
+                                    </div>
+                                    <div class="col-md-6 ton-column type rshrs">
+                                        
+                                        <span id="resource_utilzd'.$resourcelist->id.'">'.number_format((float)$resourcelist->utilised, 3, '.', '').'</span>
+                                        <input type="text" data-id="'.$resourcelist->id.'" class="form-control resourceutilzd" id="resourceutilzd'.$resourcelist->id.'" value="'.number_format((float)$resourcelist->utilised, 3, '.', '').'" style="display:none;"><span class="error"></span></td>
+                                    </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-1 icon-groups grpsicnss" style="bottom: 8px;">
+                                    <a href="javascript:void(0);" class="btn btn-primary icon-pen editresourceschitem" id="editresourceschitem'.$resourcelist->id.'" data-v="'.$resourcelist->id.'" value="'.$resourcelist->id.'" title="Edit Item"></a>
+                                    <a href="javascript:void(0);" class="btn btn-primary icon-save saveresourceschitem" id="saveresourceschitem'.$resourcelist->id.'" data-v="'.$resourcelist->id.'" value="'.$resourcelist->id.'" title="Save Item" style="display:none;"></a>
+                                    <a href="javascript:void(0);" class="btn btn-primary icon-trash1 removeresourceschitem" id="removeresourceschitem'.$resourcelist->id.'" data-v="'.$resourcelist->id.'" value="'.$resourcelist->id.'" title="Remove Item"></a>
+                                </div>
+                            </div>';
+        endforeach;
+        $resourcetypes = Resourcetype::find()->orderBy(['sortorder'=> SORT_ASC])->all();
+        foreach($resourcetypes AS $key => $resourcetype):
+            if($key == 1){
+                $activelist = 'active';
+            }else{
+                $activelist = '';
+            }
+            if($resourcetype->ResourceType_Id==26 || $resourcetype->ResourceType_Id==24 || $resourcetype->ResourceType_Id==19 || $resourcetype->ResourceType_Id==33)
+            {
+                $SAbuttonlist.='<a class="btn btn-primary rounded-coner-btn '.$activelist.' resourcesearch1" href="javascript:void(0);" id="selected_resource" data-v="'.$resourcetype->ResourceType_Id.'" value="'.$resourcetype->ResourceType_Id.'" title="'.$resourcetype->Name .'">'.$resourcetype->Name.'</a>';
+            }
+        endforeach;
+
+        $arr = array('headone' => $headone,'error'=>'No','addedones' =>$addedones,'SAbuttonlist' =>$SAbuttonlist);
+		return json_encode($arr);
+
+        // $this->render('assignresource', array(
+        //     'project' => $project,
+        //     'scheduleactivity' => $scheduleactivity,
+        //     'addedones' => $addedones,
+        // ));
+    }
+
+    public function actionResourcesearchbytyid()
+    {
+        $restypeid = $_POST['resourcetypeid'];
+        //$resourcegroupid = $_POST['resourcegroup'];
+        if(isset($_POST['vendorid'])){
+            $vendorid = $_POST['vendorid'];
+        }else{
+            $vendorid = '';
+        }
+        $connection = Yii::$app->db;
+        $sql="SELECT r.Resource_Id,r.Name,r.Unit,r.Price,r.ResourceType_Id,r.Resource_group_Id,r.Resource_Location,r.Vendor_Id,
+                     rg.Resource_group_Name AS GroupName
+              FROM resources r
+              LEFT JOIN resource_group rg ON rg.Resource_group_Id = r.Resource_group_Id
+              WHERE r.status='0' AND r.pricing_status=0 ";
+
+        if($restypeid!='')
+            $sql.="AND r.ResourceType_Id ='".$restypeid."' ";
+        /*if($resourcegroupid!='none' && $resourcegroupid!='')
+            $sql.="AND r.Resource_group_Id ='".$resourcegroupid."' ";*/
+        if($vendorid!='none' && $vendorid!='')
+            $sql.="AND r.Vendor_Id ='".$vendorid."' ";
+        if($_POST['name']!='')
+            $sql .= "AND r.Name LIKE '%" . $_POST['name'] . "%'";
+        $sql.=" GROUP BY r.Name ORDER BY rg.Resource_group_Name ASC, r.Resource_Id ASC, r.Name ASC";
+        //echo $sql;exit;
+        $command=$connection->createCommand($sql);
+        $dataReader=$command->query();
+        $dataProvider=$dataReader->readAll();
+        $datarows='';
+        /*$grouplist = ResourceGroup::find()->where(['ResourceType_Id' => $restypeid])->all();
+        $resgpname = "<option value='none'>Select Resource Group</option>";
+        foreach($grouplist AS $list):
+            if($resourcegroupid==$list->Resource_group_Id):
+                $selected='selected';
+            else:
+                $selected='';
+            endif;
+            $resgpname .="<option value='".$list->Resource_group_Id."' ".$selected.">".$list->Resource_group_Name."</option>";
+        endforeach;*/
+        $restypename=Resourcetype::findOne($restypeid)->Name;
+        /*if($resourcegroupid!='none' && $resourcegroupid!=''):
+            $groupname = ResourceGroup::findOne($resourcegroupid)->Resource_group_Name;
+        else:
+            $groupname='';
+        endif;*/
+        $datarows.='<div class="row">
+                                <div class="add-activity-search-and-list-cntnr col-md-12">
+                            
+                                    <div class="add-activity-search-results-title-wpr row">
+                                        <div class="col-md-1">
+                                            <label>#</label>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>Resource Name</label>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label>Resource Capacity</label>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label>&nbsp;</label>
+                                        </div>
+                                    </div>';
+        if(count($dataProvider)>0):
+            $project = Projects::findOne($_POST['Project_Id']);
+            $rescapacity = $project->duration * $project->wrkhours;
+            $currentGroup = null;
+            $rowIndex = 1;
+            foreach($dataProvider AS $key=>$data):
+                $groupName = $data['GroupName'] ?: 'Unassigned';
+                if($groupName !== $currentGroup):
+                    $currentGroup = $groupName;
+                    $safeGroup = htmlspecialchars($groupName, ENT_QUOTES);
+                    $datarows.='<div class="row resource-group-hdr" style="background:#e8f0f7;color:#2c3e50;font-weight:600;padding:6px 12px;margin:0;">
+                                    <span class="icon-folder" style="margin-right:5px;color:#5b8ab5;"></span>'.$safeGroup.'
+                                </div>';
+                endif;
+                $datarows.='<div class="add-activity-search-results-content-wpr row resourcetype'.$data['ResourceType_Id'].'" id="resourcerow'.$data['Resource_Id'].'">
+                                <div class="col-md-1">
+                                    <label>&nbsp;</label>
+                                    <span>'.$rowIndex.'</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label>&nbsp;</label>
+                                    <span >'.$data['Name'].'</span></div>
+                                <div class="col-md-3">
+                                    <label>&nbsp;</label>
+                                    <span>'.$rescapacity.'</span>
+                                </div>
+                                <div class="col-md-2">
+                                    <label>&nbsp;</label>
+                                    <input type="hidden" class="form-control" id="iowactivityamount3" value="0">
+                                    <!--<span><b>Added</b></span>-->
+                                    <button type="button" class="btn btn-primary addresource add-alloc-item" value="'.$data['Resource_Id'].'" id="addresource_button'.$data['Resource_Id'].'" title="Add Item"> <span class="glyphicon glyphicon-upload"></span></button>
+                                </div>
+                            </div>';
+                $rowIndex++;
+            endforeach;
+            $datarows.='</div>
+            </div>';
+        else:
+            $datarows= '<div style="text-align: center;">No Resources Found</div>';
+        endif;
+        $arr = array('result' => $datarows, 'group' => '', 'error'=>'No');
+        return json_encode($arr);
+
+
+    }
+
+    public function actionAddresourceassign()
+    {
+        $connection = Yii::$app->db;
+        $addedones='';
+        $resource=Resources::findOne($_POST['resid']);
+        $restype=$resource['ResourceType_Id'];
+        $resname=$resource['Name'];
+        $resunit=$resource['Unit'];
+        $resid=$_POST['resid'];
+        $scheduleres = new ScheduleResource();
+        $scheduleres->activityid = $_POST['activityid'];
+        $scheduleres->projectid = $_POST['Project_Id'];
+        $scheduleres->resourceid = $resid;
+        $project = Projects::findOne($_POST['Project_Id']); 
+        $schactvty = Scheduleactivities::findOne($_POST['activityid']);
+        $scheduleres->capacity = $project->duration * $project->wrkhours;
+        $scheduleres->utilised = $schactvty->duration * $project->wrkhours;
+        $scheduleres->status = 0;
+        $scheduleres->save(false);
+
+        $addedones.="<tr id='scheresrow".$scheduleres->id."'>
+                            <td>".Resources::findOne( $scheduleres->resourceid)->Name."</td>
+                            <td style='width: 20%'>
+                            <span id='resource_cpcty".$scheduleres->id."'>".number_format((float)$scheduleres->capacity, 3, '.', '')."</span>
+                            <input type='text' data-id='".$scheduleres->id."' class='form-control resourcecpcty' id='resourcecpcty".$scheduleres->id."' value='".number_format((float)$scheduleres->capacity, 3, '.', '')."' style='display:none;'><span class='error'></span></td>
+                            <td style='width: 20%'>
+                            <span id='resource_utilzd".$scheduleres->id."'>".number_format((float)$scheduleres->utilised, 3, '.', '')."</span>
+                            <input type='text' data-id='".$scheduleres->id."' class='form-control resourceutilzd' id='resourceutilzd".$scheduleres->id."' value='".number_format((float)$scheduleres->utilised, 3, '.', '')."' style='display:none;'><span class='error'></span></td>
+                            <td>
+                                <button type='button' class='btn btn-primary editresourceschitem' id='editresourceschitem".$scheduleres->id."' value='".$scheduleres->id."' title='Edit Item'><span>Edit</span>
+                                </button>
+                                <button type='button' class='btn btn-primary saveresourceschitem' id='saveresourceschitem".$scheduleres->id."' value='".$scheduleres->id."' title='Save Item' style='display:none;'><span>Save</span>
+                                </button>
+                            </td>
+                            <td><button type='button' class='btn btn-primary removeresourceschitem' id='removeresourceschitem".$scheduleres->id."' value='".$scheduleres->id."' title='Remove Item'><span>Remove</span></button></td>
+                                </tr>";
+
+        //$arr = array('result' => $addedones,'price'=>$price,'error'=>'No');
+        $arr = array('result' => $addedones,'error'=>'No');
+        return json_encode($arr);
+    }
+
+    public function actionDeletescheduleres()
+    {
+        $resource = ScheduleResource::find()->where(['id' => $_POST['projresid']])->one();
+        $resource->status = 1;
+        $resource->save(false);
+
+        $arr = array('error'=>'No');
+        return json_encode($arr);
+    }
+
+    public function actionSavescheduleres()
+    {
+        $resource = ScheduleResource::find()->where(['id' => $_POST['projresid']])->one();
+        $resource->capacity = $_POST['capacity'];
+        $resource->utilised = $_POST['utilised'];
+        $resource->save(false);
+
+        $arr = array('error'=>'No');
+        return json_encode($arr);
+    }
+
+	public function actionAddscheduleactivities()
+    {
+        
+        $model = New Scheduleactivities();
+        $model->name=$_POST['activityname'];
+        $model->unit=$_POST['activityunit'];
+        $model->start_date = $_POST['startDate'];
+        if($_POST['duration'] != '')
+            $model->duration = $_POST['duration'];
+        $model->end_date = $_POST['endDate'];
+        $model->actual_start_date = $_POST['startDate'];
+        $model->actual_end_date = $_POST['endDate'];
+        $model->old_duration = $_POST['duration'];
+        $model->quantity = $_POST['quantity'];
+        $model->resource_units = isset($_POST['resourceunits']) && $_POST['resourceunits'] != '' ? (float)$_POST['resourceunits'] : 1;
+        $model->scheduleitem_id=$_POST['itemId'];
+
+        $uid = Yii::$app->user->Id; 
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        $projectid = $projuser->projectid;
+
+        $model->projectId=$projectid;
+        $activity=Scheduleactivities::find()->orderBy(['id'=> SORT_DESC])->one();
+        $sortorder=$activity['sortorder'] + 1;
+        $model->sortorder=$sortorder;
+        $model->save(false);
+    
+        
+        $arr = array('Name' => $_POST['activityname'], 'Unit' => $_POST['activityunit'], 'error' => 'No');
+        return json_encode($arr);
+    }
+
+	public function actionScheduleactivitydelete()
+    {
+        $_POST['sa_id'] = $_POST['id'] ?? 0;
+        return $this->actionWbsdelete();
+    }
+
+	//functions
+
+	public function GetRelationcorrect($projectid)
+    {
+        // DEACTIVATED legacy — all CPM scheduling now runs through the textbook
+        // engine in HelperComponent::GetRelationcorrect(). Body below is unreachable.
+        return Yii::$app->helper->GetRelationcorrect($projectid);
+
+        $scheduleactivities = Scheduleactivities::find()->where(['projectId'=>$projectid])->andWhere(['status'=> 0])->orderBy(['scheduleitem_id'=> SORT_ASC,'sortorder'=>SORT_ASC])->all();
+        $connection = Yii::$app->db;
+        //if(count($scheduleactivities) > 0)
+        if(!empty($scheduleactivities))
+        {
+            foreach ($scheduleactivities as $scheduleactivity) 
+            {
+                $today = date('Y-m-d');
+                $activityid = $scheduleactivity->id;
+                $schedulereport = ScheduleProgressReport::find()->where(['activity_id'=> $activityid])->one(); 
+
+                $sql1 = "SELECT SUM(currentqty) AS totalqty FROM schedule_progress_report_log WHERE activity_id='".$activityid."'";
+                $command = $connection->createCommand($sql1);
+                $dataReader = $command->query();
+                $totalQty = $dataReader->read();
+
+
+
+                if($schedulereport && $totalQty['totalqty']>0){
+                    $start_date1 = date('Y-m-d', strtotime($schedulereport->start_date));
+                    $start_date = $schedulereport->start_date;
+                }
+                else{
+                    $start_date1 = date('Y-m-d', strtotime($scheduleactivity->actual_start_date));
+                    if($today>$scheduleactivity->actual_start_date){
+                        $start_date = $today;
+                    }
+                    else{
+                        $start_date = $scheduleactivity->actual_start_date;
+                    }
+                }
+
+                //--- NEW ACTUAL DURATION CALCULATION BASED ON TASK REPORTING --------------
+
+                $totCumDuration     =   Yii::$app->helper->secondsToTime(
+                            Yii::$app->helper->getDataFromQuery("   
+                                SELECT (SUM( (act_duration)) + 
+                                        SUM( (waste_hour)) + 
+                                        SUM( (break_hour)) 
+                                      ) as tot_duration_sum  
+                                FROM schedule_task_report 
+                                WHERE status = 1
+                                AND activityid=".$activityid
+                            )['tot_duration_sum']
+                        );
+
+                $totStoppageTime    =   Yii::$app->helper->secondsToTime(
+                                            Yii::$app->helper->getDataFromQuery("   
+                                                SELECT SUM(stoppage_time) as tot_stoppage_time  
+                                                FROM schedule_task_report 
+                                                WHERE status = 1
+                                                AND activityid=".$activityid
+                                            )['tot_stoppage_time']
+                                        );
+                $actualDuration = 0;
+                if($totCumDuration && $totCumDuration != '00:00'){
+                    $cumqty         = Yii::$app->helper->getDataFromQuery(" SELECT SUM(currentqty) AS totalqty 
+                                                                FROM schedule_progress_report_log 
+                                                                WHERE  activity_id=".$activityid
+                                             )['totalqty'];
+                    $cumqty = round($cumqty,3);
+
+                    $schactnew  = ScheduleActivityNew::find()->where(['actvity_id' => $activityid])->one();
+                    $Cycles     = $schactnew->Cycles;
+                    $workhours  = $schactnew->Workhours;
+                    $resunit    = $schactnew->Resourceunits;
+                    
+                    $activityQty = $scheduleactivity->quantity;
+                    $actualDuration = 0;
+                    if($cumqty){
+                        //$workhours = 24;//Consider only 24
+                        $totStoppageDays = 0;
+                        if($totStoppageTime)
+                            $totStoppageDays = Yii::$app->helper->hoursToMinutes($totStoppageTime)/(24*60);
+
+                        //$actualDuration   = round((($totCumDuration / $cumqty) * $activityQty)  / $workhours);
+                        //$actualDuration   = round((((Yii::$app->helper->hoursToMinutes($totCumDuration)/($workhours*60))/$cumqty)*$activityQty)+ $totStoppageDays);
+
+
+                        $startDateQuery =   ScheduleTaskReport::find()
+                                            ->where(['activityid' => $activityid])
+                                            ->orderBy(['task_date'=>SORT_ASC, 'start_time'=>SORT_ASC])
+                                            ->one();
+                        $endDateQuery   =   ScheduleTaskReport::find()
+                                            ->where(['activityid' => $activityid])
+                                            ->orderBy(['task_enddate'=>SORT_DESC, 'end_time'=>SORT_DESC])
+                                            ->one();
+
+                        $from_time      = strtotime($startDateQuery->task_date." ".$startDateQuery->start_time); 
+                        $to_time        = strtotime($endDateQuery->task_enddate." ".$endDateQuery->end_time); 
+                        $diff_minutes   = round(abs($from_time - $to_time) / 60,2);
+
+                        /*$totCumDuration = Yii::$app->helper->secondsToTime(($diff_minutes - Yii::$app->helper->hoursToMinutes($totStoppageTime))*60);
+                        //$reptdDays      = (Yii::$app->helper->hoursToMinutes($totCumDuration)/($workhours*60));
+                        $reptdDays      = (
+                                            (  
+                                                (floor(Yii::$app->helper->hoursToMinutes($totCumDuration)/(24*60)) * $workhours) + 
+                                                (((Yii::$app->helper->hoursToMinutes($totCumDuration)%($workhours*60))/($workhours*60)) * $workhours)
+                                            )
+                                            - (floor(Yii::$app->helper->hoursToMinutes($totStoppageTime)/(24*60)) * $workhours)
+                                          ) / $workhours;*/
+
+                        $stoppageDaysDeduct = 0;
+                        if($totStoppageDays)
+                            $stoppageDaysDeduct = ($totStoppageDays > 1) ? floor($totStoppageDays) : 1;
+
+                        $totCumDays     = ($diff_minutes/(24*60)) - $stoppageDaysDeduct;
+                        $totCumDuration = (floor($totCumDays) * $workhours) + ceil($diff_minutes%(24*60)/60);
+                        $reptdDays      = $totCumDuration/$workhours;
+                        
+                        $actualDuration = round((($reptdDays/$cumqty)*$activityQty)+ $totStoppageDays);
+
+                        if(round($reptdDays) > $actualDuration){
+                            $task_start_date = date_create($startDateQuery->task_date);
+                            $task_end_date   = date_create($endDateQuery->task_enddate);
+                            $diff            = date_diff($task_start_date, $task_end_date);
+                            $duration        = $diff->format("%a");
+
+                            $scheduleactivity->duration =  $duration;
+                            $scheduleactivity->end_date = date('Y-m-d', strtotime($endDateQuery->task_enddate));
+                        }
+                        else{
+                            $scheduleactivity->duration = $actualDuration;
+                            $scheduleactivity->end_date = date('Y-m-d', strtotime($scheduleactivity->start_date. ' + '.$actualDuration.' days'));
+                        }
+                    }
+                }
+                if($actualDuration)
+                    $no_of_days = $actualDuration;
+                else
+                    $no_of_days = $scheduleactivity->old_duration;
+
+                //----END-----------------------------------------------------------------------------
+
+
+                if($start_date!='' && $start_date!='0000-00-00'){
+                    $duration = $no_of_days - 1;
+                    $scheduleactivity->duration = $no_of_days;
+                    $scheduleactivity->start_date = $start_date;
+                    $scheduleactivity->end_date = date('Y-m-d', strtotime($start_date. ' + '.$duration.' days'));
+                }
+                else{
+                    $duration = $no_of_days;
+                    $scheduleactivity->duration = $no_of_days;
+                    $scheduleactivity->start_date = $start_date;
+                    $scheduleactivity->end_date = date('Y-m-d', strtotime($start_date. ' + '.$duration.' days'));
+                }
+                $scheduleactivity->save(false);
+
+                if($actualDuration){
+                    $schProgRepLog = ScheduleProgressReportLog::find()
+                                    ->where(['activity_id' => $activityid])
+                                    ->orderBy(['id'=>SORT_DESC])
+                                    ->one();
+                    $schProgRepLog->activity_duration    = $actualDuration;
+                    $schProgRepLog->last_activity        = Yii::$app->helper->getLongestActivity($scheduleactivity->projectId)['id'];
+                    $schProgRepLog->last_activity_date   = Yii::$app->helper->getLongestActivity($scheduleactivity->projectId)['end_date'];
+                    $schProgRepLog->save(false);
+                }
+            }
+        }
+
+
+        $sql = "SELECT a.* FROM scheduleactivities AS a INNER JOIN wbsscheduleitems AS b ON a.scheduleitem_id=b.scheduleitem_id WHERE a.projectId=".$projectid." AND a.status=0 ORDER BY b.sortorder ASC,a.sortorder ASC";
+        //echo $sql;exit;
+        $command = $connection->createCommand($sql);
+        $dataReader = $command->query();
+        $availableActivites = $dataReader->readAll();
+
+        if(!empty($availableActivites))
+        {       
+            foreach ($availableActivites as $activity) 
+            {
+                $acId = $activity['id'];
+                $today = date('Y-m-d');
+                $allRelations = ActivityRelations::find()->where(['precedent_activity' => $acId])->andWhere(['status'=>0])->all();
+                if(!empty($allRelations))
+                {
+                    foreach ($allRelations AS $relation)
+                    {
+                        $precAct = Scheduleactivities::findOne($acId);
+                        $dependAc = Scheduleactivities::findOne($relation->dependent_activity);
+
+                        $actreported = ScheduleProgressReport::find()->where(['activity_id' => $dependAc->id])->one();
+                        $reportlog = "SELECT SUM(currentqty) AS totalqty FROM schedule_progress_report_log WHERE activity_id='".$dependAc->id."'";
+                        $command = $connection->createCommand($reportlog);
+                        $dataReader = $command->query();
+                        $totalQty = $dataReader->read();
+                        $reported = ProgressReport::find()->where(['activity_id'=> $relation->dependent_activity])->andWhere(['status' => 1])->one();
+                        $precedentActual = ProgressReport::find()->where(['activity_id'=>$acId])->one();
+
+                        if(!$precedentActual){  
+                            $precedentActual = $precAct;
+                            $start_date = strtotime($precedentActual->start_date);
+                            $end_date = strtotime($precedentActual->end_date);
+                            $enDateWillBe =  date('Y-m-d', $end_date);
+                        }
+
+                        
+                        if($relation->relation_type == 1)//SS
+                            {
+
+                                $depRelations = ActivityRelations::find()->where(['dependent_activity' => $dependAc->id])->andWhere(['status'=>0])->all();
+
+                                $scheduleID = '';
+                                $scheduleEnddate = '';
+                                foreach($depRelations as $depRelation):
+                                    $thisAct = Scheduleactivities::findOne($depRelation->precedent_activity);
+                                    $thisdepAct = Scheduleactivities::findOne($depRelation->dependent_activity);
+                                    
+                                    if($depRelation->relation_type == 1){//SS
+                                        $deplag = $thisdepAct->lag;
+                                        $depduration = $thisdepAct->duration + $deplag - 1;
+                                        $depend = date('Y-m-d', strtotime($thisAct->start_date. ' + '.$depduration.' days'));
+                                    }
+                                    elseif($depRelation->relation_type == 2)//FS
+                                    {
+                                        $deplag = $dependAc->lag + 1;
+                                        $depstart = date('Y-m-d', strtotime($thisAct->end_date. ' + '.$deplag.' days'));
+                                        $depduration = $thisdepAct->duration - 1;
+                                        $depend = date('Y-m-d', strtotime($depstart. ' + '.$depduration.' days'));
+                                    }
+                                    elseif($depRelation->relation_type == 3)//FF
+                                    {
+                                        $deplag = $dependAc->lag;
+                                        $depend = date('Y-m-d', strtotime($thisAct->end_date. ' + '.$deplag.' days'));
+                                    }
+
+                                    if($scheduleEnddate=='' || $depend > $scheduleEnddate){
+                                        //if($depRelation->relation_type==2){
+                                            $scheduleID = $thisAct->id;
+                                            //$scheduleEnddate = $thisAct->end_date;
+                                            $scheduleEnddate = $depend;
+                                        //}
+                                    }
+                                endforeach;
+
+                                if($scheduleID == $precAct->id){
+
+                                    $lag = $dependAc->lag;
+                                    $depstart = date('Y-m-d', strtotime($precAct->start_date. ' + '.$lag.' days'));
+                                    if($actreported && $totalQty['totalqty']>0){
+                                        if($actreported->start_date > $depstart){
+                                            $dependAc->start_date = $actreported->start_date;
+                                            $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_start_date. ' + '.$lag.' days'));
+                                        }
+                                        else{
+                                            $dependAc->start_date = date('Y-m-d', strtotime($precAct->start_date. ' + '.$lag.' days'));
+                                            $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_start_date. ' + '.$lag.' days'));
+                                        }
+                                    }
+                                    else{
+                                        /*if($today > $depstart){
+                                            $dependAc->start_date = $today;
+                                            $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_start_date. ' + '.$lag.' days'));
+                                        }
+                                        else{
+                                            $dependAc->start_date = date('Y-m-d', strtotime($precAct->start_date. ' + '.$lag.' days'));
+                                            $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_start_date. ' + '.$lag.' days'));
+                                        }*/
+
+                                        //-----/\/\COMMENTED BY SREEJITH - To avoid the today restrictions-----/\/\------
+                                        $dependAc->start_date = date('Y-m-d', strtotime($precAct->start_date. ' + '.$lag.' days'));
+                                        $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_start_date. ' + '.$lag.' days'));
+
+                                    }
+                                    //$duration = $dependAc->duration + $lag - 1;
+                                    $duration = $dependAc->duration - 1;
+                                    $oduration = $dependAc->old_duration - 1;
+                                    $dependAc->end_date = date('Y-m-d', strtotime($dependAc->start_date. ' + '.$duration.' days'));
+                                    $dependAc->actual_end_date = date('Y-m-d', strtotime($dependAc->actual_start_date. ' + '.$oduration.' days'));
+                                    $dependAc->save(false);
+
+                                }
+
+                               // }
+                                $lag = $dependAc->lag;
+                                
+                            }
+                            elseif($relation->relation_type == 2)//FS
+                            {
+
+                                $depRelations = ActivityRelations::find()->where(['dependent_activity' => $dependAc->id])->andWhere(['status' => 0])->all();
+
+                                $scheduleID = '';
+                                $scheduleEnddate = '';
+                                foreach($depRelations as $depRelation):
+                                    $thisAct = Scheduleactivities::findOne($depRelation->precedent_activity);
+                                    $thisdepAct = Scheduleactivities::findOne($depRelation->dependent_activity);
+                                    if($depRelation->relation_type == 1){
+                                        $deplag = $thisdepAct->lag;
+                                        $depduration = $thisdepAct->duration + $deplag - 1;
+                                        $depend = date('Y-m-d', strtotime($thisAct->start_date. ' + '.$depduration.' days'));
+                                    }
+                                    elseif($depRelation->relation_type == 2)
+                                    {
+                                        $deplag = $dependAc->lag + 1;
+                                        $depstart = date('Y-m-d', strtotime($thisAct->end_date. ' + '.$deplag.' days'));
+                                        $depduration = $thisdepAct->duration - 1;
+                                        $depend = date('Y-m-d', strtotime($depstart. ' + '.$depduration.' days'));
+                                    }
+                                    elseif($depRelation->relation_type == 3)
+                                    {
+                                        $deplag = $dependAc->lag;
+                                        $depend = date('Y-m-d', strtotime($thisAct->end_date. ' + '.$deplag.' days'));
+                                    }
+                                    if($scheduleEnddate=='' || $depend > $scheduleEnddate){
+                                        //if($depRelation->relation_type==2){
+                                            $scheduleID = $thisAct->id;
+                                            //$scheduleEnddate = $thisAct->end_date;
+                                            $scheduleEnddate = $depend;
+                                        //}
+                                    }
+                                endforeach;
+
+                                if($scheduleID == $precAct->id){
+
+                                    //if(date('Y-m-d', strtotime($precAct->end_date.' + 1 days')) != $dependAc->start_date)
+                                    //{
+                                        $lead = $dependAc->lag + 1;
+                                        $depstart = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                        if($actreported && $totalQty['totalqty']>0){
+                                            if($actreported->start_date > $depstart){
+                                                $dependAc->start_date = $actreported->start_date;
+                                                //$dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                            }
+                                            else{
+                                                $dependAc->start_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                                $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                            }
+                                        }
+                                        else{
+                                            /*if($today > $depstart){
+                                                $dependAc->start_date = $today;
+                                                $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                            }
+                                            else{
+                                                $dependAc->start_date = $depstart;
+                                                $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                            }*/
+                                            //-----/\/\COMMENTED BY SREEJITH - To avoid the today restrictions-----/\/\------
+                                            $dependAc->start_date = $depstart;
+                                            $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                        }
+                                        $start = date('Y-m-d', strtotime($precAct->end_date));
+                                        $duration = $dependAc->duration - 1;
+                                        $oduration = $dependAc->old_duration - 1;
+                                        $dependAc->end_date = date('Y-m-d', strtotime($dependAc->start_date. ' + '.$duration.' days'));
+                                        $dependAc->actual_end_date = date('Y-m-d', strtotime($dependAc->actual_start_date. ' + '.$oduration.' days'));
+                                        $dependAc->save(false);
+                                    //}  
+
+                                }
+                            }
+                            elseif($relation->relation_type == 3)//FF
+                            {
+
+                                //$depRelations = ActivityRelations::model()->findAll(array('condition'=>'dependent_activity ='.$dependAc->id.' AND relation_type=3 AND status =0'));
+
+                                $depRelations = ActivityRelations::find()->where(['dependent_activity' => $dependAc->id])->andWhere(['status'=> 0])->all();
+
+                                $scheduleID = '';
+                                $scheduleEnddate = '';
+                                foreach($depRelations as $depRelation):
+                                    $thisAct = Scheduleactivities::findOne($depRelation->precedent_activity);
+                                    $thisdepAct = Scheduleactivities::findOne($depRelation->dependent_activity);
+                                    if($depRelation->relation_type == 1){
+                                        $deplag = $thisdepAct->lag;
+                                        $depduration = $thisdepAct->duration + $deplag - 1;
+                                        $depend = date('Y-m-d', strtotime($thisAct->start_date. ' + '.$depduration.' days'));
+                                    }
+                                    elseif($depRelation->relation_type == 2)
+                                    {
+                                        $deplag = $dependAc->lag + 1;
+                                        $depstart = date('Y-m-d', strtotime($thisAct->end_date. ' + '.$deplag.' days'));
+                                        $depduration = $thisdepAct->duration - 1;
+                                        $depend = date('Y-m-d', strtotime($depstart. ' + '.$depduration.' days'));
+                                    }
+                                    elseif($depRelation->relation_type == 3)
+                                    {
+                                        $deplag = $dependAc->lag;
+                                        $depend = date('Y-m-d', strtotime($thisAct->end_date. ' + '.$deplag.' days'));
+                                    }
+                                    if($scheduleEnddate=='' || $depend > $scheduleEnddate){
+                                        //if($depRelation->relation_type==2){
+                                            $scheduleID = $thisAct->id;
+                                            //$scheduleEnddate = $thisAct->end_date;
+                                            $scheduleEnddate = $depend;
+                                        //}
+                                    }
+                                endforeach;
+
+                                if($scheduleID == $precAct->id){
+
+                                    $lead = $dependAc->lag;
+                                    $today = date('Y-m-d');
+                                    if($actreported && $totalQty['totalqty']>0){
+                                        //$duration = $dependAc->duration + $lead - 1;
+                                        $duration = $dependAc->duration - 1;
+                                        $oduration = $dependAc->old_duration - 1;
+                                        $end_date = date('Y-m-d', strtotime($actreported->start_date. ' + '.$duration.' days'));
+                                        $prec_end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                        //$dependAc->duration = $duration + 1;
+                                        $dependAc->start_date = $actreported->start_date;
+                                        if($end_date>$prec_end_date){
+                                            $dependAc->end_date = $end_date;
+                                            $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                           $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                           $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                        }
+                                        else{
+                                            $datediff = strtotime($prec_end_date) - strtotime($actreported->start_date);
+                                            $bduration = round($datediff / (60 * 60 * 24)) + 1;
+                                            $dependAc->duration = $bduration;
+                                            $dependAc->end_date = $prec_end_date;
+                                            $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                           $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                           $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                        }
+                                        
+                                    }
+                                    else{
+
+                                        $duration = $dependAc->duration - 1;
+                                        $oduration = $dependAc->old_duration - 1;
+                                        $end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                        $dependAc->start_date = date('Y-m-d', strtotime($end_date. ' - '.$duration.' days'));
+                                        $dependAc->end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                        $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                       $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                       $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+
+                                        /*if($today > $dependAc->start_date){
+                                            $duration = $dependAc->duration - 1;
+                                            $oduration = $dependAc->old_duration - 1;
+                                            $end_date = date('Y-m-d', strtotime($today. ' + '.$duration.' days'));
+                                            $prec_end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                            if($end_date>$prec_end_date){
+                                                $dependAc->start_date = $today;
+                                                $dependAc->end_date = $end_date;
+                                                $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                               $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                               $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                            }
+                                            else{
+                                                $datediff = strtotime($prec_end_date) - strtotime($today);
+                                                $bduration = round($datediff / (60 * 60 * 24)) + 1;
+                                                $dependAc->duration = $bduration;
+                                                $dependAc->start_date = $today;
+                                                $dependAc->end_date = $prec_end_date;
+                                                $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                               $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                               $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                            }
+                                        }
+                                        else{
+                                            $duration = $dependAc->duration - 1;
+                                            $oduration = $dependAc->old_duration - 1;
+                                            $end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                            $dependAc->start_date = date('Y-m-d', strtotime($end_date. ' - '.$duration.' days'));
+                                            $dependAc->end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                            $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                           $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                           $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                        }*/
+                                        //-----/\/\COMMENTED BY SREEJITH - To avoid the today restrictions-----/\/\------
+                                        $duration = $dependAc->duration - 1;
+                                        $oduration = $dependAc->old_duration - 1;
+                                        $end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                        $dependAc->start_date = date('Y-m-d', strtotime($end_date. ' - '.$duration.' days'));
+                                        $dependAc->end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                        $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                       $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                       $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+
+                                    }
+                                    $dependAc->save(false);
+
+                                }
+                            }
+                        //}
+                        // var_dump($dependAc);
+                    }
+
+                }
+                // exit;
+                
+            }
+        }
+        $this->GetRelationcorrectfinal($projectid);
+    }
+
+   public function GetRelationcorrectfinal($projectid)
+    {
+        // DEACTIVATED legacy — superseded by the textbook CPM engine in
+        // HelperComponent::GetRelationcorrect(). Body below is unreachable.
+        return Yii::$app->helper->GetRelationcorrect($projectid);
+
+        $connection = Yii::$app->db;
+        $sql = "SELECT a.* FROM scheduleactivities AS a INNER JOIN wbsscheduleitems AS b ON a.scheduleitem_id=b.scheduleitem_id WHERE a.projectId=".$projectid." AND a.status=0 ORDER BY b.sortorder ASC,a.sortorder ASC";
+        //echo $sql;exit;
+        $command = $connection->createCommand($sql);
+        $dataReader = $command->query();
+        $availableActivites = $dataReader->readAll();
+
+        $today = date('Y-m-d');
+
+        //if(count($availableActivites) > 0)
+        if(!empty($availableActivites))
+        {       
+            // echo $actID;exit;
+            foreach ($availableActivites as $activity) 
+            {
+                //$acId = $activity->id;
+                $acId = $activity['id'];
+                //$acId = $activity->precedent_activity;
+                $allRelations = ActivityRelations::find()->where(['precedent_activity' => $acId])->andWhere(['status' => 0])->all();
+                //if(count($allRelations) > 0)
+                if(!empty($allRelations))
+                {
+
+                    // echo "test";exit;
+                    foreach ($allRelations AS $relation)
+                    {
+
+                        $precAct = Scheduleactivities::findone($acId);
+                        $dependAc = Scheduleactivities::findOne($relation->dependent_activity);
+                        // check if already reported or not
+                        $actreported = ScheduleProgressReport::find()->where(['activity_id' => $dependAc->id])->one();
+                        $reportlog = "SELECT SUM(currentqty) AS totalqty FROM schedule_progress_report_log WHERE activity_id='".$dependAc->id."'";
+                        $command = $connection->createCommand($reportlog);
+                        $dataReader = $command->query();
+                        $totalQty = $dataReader->read();
+                        $reported = ProgressReport::find()->where(['activity_id' => $relation->dependent_activity])->andWhere(['status' => 1])->one();
+                        $precedentActual = ProgressReport::find()->where(['activity_id' => $acId])->one();
+
+                        if(!$precedentActual){  
+                            $precedentActual = $precAct;
+                            $start_date = strtotime($precedentActual->start_date);
+                            $end_date = strtotime($precedentActual->end_date);
+                            $enDateWillBe =  date('Y-m-d', $end_date);
+                        }
+
+                        if($relation->relation_type == 1)
+                            {
+
+                                $depRelations = ActivityRelations::find()->where(['dependent_activity' => $dependAc->id])->andWhere(['status' => 0])->all();
+
+                                $scheduleID = '';
+                                $scheduleEnddate = '';
+                                foreach($depRelations as $depRelation):
+                                    $thisAct = Scheduleactivities::findOne($depRelation->precedent_activity);
+                                    $thisdepAct = Scheduleactivities::findOne($depRelation->dependent_activity);
+                                    if($depRelation->relation_type == 1){
+                                        $deplag = $thisdepAct->lag;
+                                        $depduration = $thisdepAct->duration + $deplag - 1;
+                                        $depend = date('Y-m-d', strtotime($thisAct->start_date. ' + '.$depduration.' days'));
+                                    }
+                                    elseif($depRelation->relation_type == 2)
+                                    {
+                                        $deplag = $dependAc->lag + 1;
+                                        $depstart = date('Y-m-d', strtotime($thisAct->end_date. ' + '.$deplag.' days'));
+                                        $depduration = $thisdepAct->duration - 1;
+                                        $depend = date('Y-m-d', strtotime($depstart. ' + '.$depduration.' days'));
+                                    }
+                                    elseif($depRelation->relation_type == 3)
+                                    {
+                                        $deplag = $dependAc->lag;
+                                        $depend = date('Y-m-d', strtotime($thisAct->end_date. ' + '.$deplag.' days'));
+                                    }
+                                    if($scheduleEnddate=='' || $depend > $scheduleEnddate){
+                                        //if($depRelation->relation_type==2){
+                                            $scheduleID = $thisAct->id;
+                                            //$scheduleEnddate = $thisAct->end_date;
+                                            $scheduleEnddate = $depend;
+                                        //}
+                                    }
+                                endforeach;
+
+                                if($scheduleID == $precAct->id){
+
+                                    $lag = $dependAc->lag;
+                                    $depstart = date('Y-m-d', strtotime($precAct->start_date. ' + '.$lag.' days'));
+                                    if($actreported && $totalQty['totalqty']>0){
+                                        if($actreported->start_date > $depstart){
+                                            $dependAc->start_date = $actreported->start_date;
+                                            $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_start_date. ' + '.$lag.' days'));
+                                        }
+                                        else{
+                                            $dependAc->start_date = date('Y-m-d', strtotime($precAct->start_date. ' + '.$lag.' days'));
+                                            $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_start_date. ' + '.$lag.' days'));
+                                        }
+                                    }
+                                    else{
+                                        /*if($today > $depstart){
+                                            $dependAc->start_date = $today;
+                                            $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_start_date. ' + '.$lag.' days'));
+                                        }
+                                        else{
+                                            $dependAc->start_date = date('Y-m-d', strtotime($precAct->start_date. ' + '.$lag.' days'));
+                                            $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_start_date. ' + '.$lag.' days'));
+                                        }*/
+                                        //-----/\/\COMMENTED BY SREEJITH - To avoid the today restrictions-----/\/\------
+                                        $dependAc->start_date = date('Y-m-d', strtotime($precAct->start_date. ' + '.$lag.' days'));
+                                        $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_start_date. ' + '.$lag.' days'));
+                                    }
+                                    //$duration = $dependAc->duration + $lag - 1;
+                                    $duration = $dependAc->duration - 1;
+                                    $oduration = $dependAc->old_duration - 1;
+                                    $dependAc->end_date = date('Y-m-d', strtotime($dependAc->start_date. ' + '.$duration.' days'));
+                                    $dependAc->actual_end_date = date('Y-m-d', strtotime($dependAc->actual_start_date. ' + '.$oduration.' days'));
+                                    $dependAc->save(false);
+
+                                }
+
+                               // }
+                                $lag = $dependAc->lag;
+                                
+                            }
+                            elseif($relation->relation_type == 2)
+                            {
+
+                                $depRelations = ActivityRelations::find()->where(['dependent_activity' => $dependAc->id])->andWhere(['status' => 0])->all();
+
+                                $scheduleID = '';
+                                $scheduleEnddate = '';
+                                foreach($depRelations as $depRelation):
+                                    $thisAct = Scheduleactivities::findOne($depRelation->precedent_activity);
+                                    $thisdepAct = Scheduleactivities::findOne($depRelation->dependent_activity);
+                                    if($depRelation->relation_type == 1){
+                                        $deplag = $thisdepAct->lag;
+                                        $depduration = $thisdepAct->duration + $deplag - 1;
+                                        $depend = date('Y-m-d', strtotime($thisAct->start_date. ' + '.$depduration.' days'));
+                                    }
+                                    elseif($depRelation->relation_type == 2)
+                                    {
+                                        $deplag = $dependAc->lag + 1;
+                                        $depstart = date('Y-m-d', strtotime($thisAct->end_date. ' + '.$deplag.' days'));
+                                        $depduration = $thisdepAct->duration - 1;
+                                        $depend = date('Y-m-d', strtotime($depstart. ' + '.$depduration.' days'));
+                                    }
+                                    elseif($depRelation->relation_type == 3)
+                                    {
+                                        $deplag = $dependAc->lag;
+                                        $depend = date('Y-m-d', strtotime($thisAct->end_date. ' + '.$deplag.' days'));
+                                    }
+                                    if($scheduleEnddate=='' || $depend > $scheduleEnddate){
+                                        //if($depRelation->relation_type==2){
+                                            $scheduleID = $thisAct->id;
+                                            //$scheduleEnddate = $thisAct->end_date;
+                                            $scheduleEnddate = $depend;
+                                        //}
+                                    }
+                                endforeach;
+
+                                if($scheduleID == $precAct->id){
+
+                                    //if(date('Y-m-d', strtotime($precAct->end_date.' + 1 days')) != $dependAc->start_date)
+                                    //{
+                                        $lead = $dependAc->lag + 1;
+                                        $depstart = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                        if($actreported && $totalQty['totalqty']>0){
+                                            if($actreported->start_date > $depstart){
+                                                $dependAc->start_date = $actreported->start_date;
+                                                $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                            }
+                                            else{
+                                                $dependAc->start_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                                $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                            }
+                                        }
+                                        else{
+                                            /*if($today > $depstart){
+                                                $dependAc->start_date = $today;
+                                                $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                            }
+                                            else{
+                                                $dependAc->start_date = $depstart;
+                                                $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                            }*/
+                                            //-----/\/\COMMENTED BY SREEJITH - To avoid the today restrictions-----/\/\------
+                                            $dependAc->start_date = $depstart;
+                                            $dependAc->actual_start_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+
+                                        }
+                                        $start = date('Y-m-d', strtotime($precAct->end_date));
+                                        $duration = $dependAc->duration - 1;
+                                        $oduration = $dependAc->old_duration - 1;
+                                        $dependAc->end_date = date('Y-m-d', strtotime($dependAc->start_date. ' + '.$duration.' days'));
+                                        $dependAc->actual_end_date = date('Y-m-d', strtotime($dependAc->actual_start_date. ' + '.$oduration.' days'));
+                                        $dependAc->save(false);
+                                    //}  
+
+                                }
+                            }
+                            elseif($relation->relation_type == 3)
+                            {
+
+                                //$depRelations = ActivityRelations::model()->findAll(array('condition'=>'dependent_activity ='.$dependAc->id.' AND relation_type=3 AND status =0'));
+
+                                $depRelations = ActivityRelations::find()->where(['dependent_activity' => $dependAc->id])->andWhere(['status' => 0])->all();
+
+                                $scheduleID = '';
+                                $scheduleEnddate = '';
+                                foreach($depRelations as $depRelation):
+                                    $thisAct = Scheduleactivities::findOne($depRelation->precedent_activity);
+                                    $thisdepAct = Scheduleactivities::findOne($depRelation->dependent_activity);
+                                    if($depRelation->relation_type == 1){
+                                        $deplag = $thisdepAct->lag;
+                                        $depduration = $thisdepAct->duration + $deplag - 1;
+                                        $depend = date('Y-m-d', strtotime($thisAct->start_date. ' + '.$depduration.' days'));
+                                    }
+                                    elseif($depRelation->relation_type == 2)
+                                    {
+                                        $deplag = $dependAc->lag + 1;
+                                        $depstart = date('Y-m-d', strtotime($thisAct->end_date. ' + '.$deplag.' days'));
+                                        $depduration = $thisdepAct->duration - 1;
+                                        $depend = date('Y-m-d', strtotime($depstart. ' + '.$depduration.' days'));
+                                    }
+                                    elseif($depRelation->relation_type == 3)
+                                    {
+                                        $deplag = $dependAc->lag;
+                                        $depend = date('Y-m-d', strtotime($thisAct->end_date. ' + '.$deplag.' days'));
+                                    }
+                                    if($scheduleEnddate=='' || $depend > $scheduleEnddate){
+                                        //if($depRelation->relation_type==2){
+                                            $scheduleID = $thisAct->id;
+                                            //$scheduleEnddate = $thisAct->end_date;
+                                            $scheduleEnddate = $depend;
+                                        //}
+                                    }
+                                endforeach;
+
+                                if($scheduleID == $precAct->id){
+
+                                    $lead = $dependAc->lag;
+                                    $today = date('Y-m-d');
+                                    if($actreported && $totalQty['totalqty']>0){
+                                        //$duration = $dependAc->duration + $lead - 1;
+                                        $duration = $dependAc->duration - 1;
+                                        $oduration = $dependAc->old_duration - 1;
+                                        $end_date = date('Y-m-d', strtotime($actreported->start_date. ' + '.$duration.' days'));
+                                        $prec_end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                        //$dependAc->duration = $duration + 1;
+                                        $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                       $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                        $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                        $dependAc->start_date = $actreported->start_date;
+                                        if($end_date>$prec_end_date){
+                                            $dependAc->end_date = $end_date;
+                                            $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                           $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                           $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                        }
+                                        else{
+                                            $datediff = strtotime($prec_end_date) - strtotime($actreported->start_date);
+                                            $bduration = round($datediff / (60 * 60 * 24)) + 1;
+                                            $dependAc->duration = $bduration;
+                                            $dependAc->end_date = $prec_end_date;
+                                            $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                           $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                           $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                        }
+                                        
+                                    }
+                                    /*elseif(count($actreported)>0 && $totalQty['totalqty']==0){
+                                        if($dependAc->actual_start_date > $today){
+                                            $duration = $dependAc->duration - 1;
+                                            $end_date = date('Y-m-d', strtotime($today. ' + '.$duration.' days'));
+                                            $prec_end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                            if($end_date>$prec_end_date){
+                                                $dependAc->start_date = $today;
+                                                $dependAc->end_date = $end_date;
+                                            }
+                                            else{
+                                                $datediff = strtotime($prec_end_date) - strtotime($today);
+                                                $bduration = round($datediff / (60 * 60 * 24)) + 1;
+                                                $dependAc->duration = $bduration;
+                                                $dependAc->start_date = $today;
+                                                $dependAc->end_date = $prec_end_date;
+                                            }
+                                        }
+                                        else{
+                                            $duration = $dependAc->duration - 1;
+                                            $end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                            $dependAc->start_date = date('Y-m-d', strtotime($end_date. ' - '.$duration.' days'));
+                                            $dependAc->end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                        }
+                                        //echo $actreported->start_date; exit;
+                                    }*/
+                                    else{
+                                        /*$duration = $dependAc->duration - 1;
+                                        $end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                        $dependAc->start_date = date('Y-m-d', strtotime($end_date. ' - '.$duration.' days'));
+                                        $dependAc->end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));*/
+
+                                        $duration = $dependAc->duration - 1;
+                                        $oduration = $dependAc->old_duration - 1;
+                                        $end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                        $dependAc->start_date = date('Y-m-d', strtotime($end_date. ' - '.$duration.' days'));
+                                        $dependAc->end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                        $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                        $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                        $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                        
+                                        /*if($today > $dependAc->start_date){
+                                            $duration = $dependAc->duration - 1;
+                                            $end_date = date('Y-m-d', strtotime($today. ' + '.$duration.' days'));
+                                            $prec_end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                            if($end_date>$prec_end_date){
+                                                $dependAc->start_date = $today;
+                                                $dependAc->end_date = $end_date;
+                                                $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                                $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                                $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                            }
+                                            else{
+                                                $datediff = strtotime($prec_end_date) - strtotime($today);
+                                                $bduration = round($datediff / (60 * 60 * 24)) + 1;
+                                                $dependAc->duration = $bduration;
+                                                $dependAc->start_date = $today;
+                                                $dependAc->end_date = $prec_end_date;
+                                                $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                                $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                                $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                            }
+                                        }
+                                        else{
+                                            $duration = $dependAc->duration - 1;
+                                            $end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                            $dependAc->start_date = date('Y-m-d', strtotime($end_date. ' - '.$duration.' days'));
+                                            $dependAc->end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                            $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                            $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                            $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                        }*/
+                                        //-----/\/\COMMENTED BY SREEJITH - To avoid the today restrictions-----/\/\------
+                                        $duration = $dependAc->duration - 1;
+                                        $end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                        $dependAc->start_date = date('Y-m-d', strtotime($end_date. ' - '.$duration.' days'));
+                                        $dependAc->end_date = date('Y-m-d', strtotime($precAct->end_date. ' + '.$lead.' days'));
+                                        $actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+                                        $dependAc->actual_start_date = date('Y-m-d', strtotime($actual_end_date. ' - '.$oduration.' days'));
+                                        $dependAc->actual_end_date = date('Y-m-d', strtotime($precAct->actual_end_date. ' + '.$lead.' days'));
+
+                                        
+                                    }
+                                    $dependAc->save(false);
+
+                                }
+                            }
+                        //}
+                        // var_dump($dependAc);
+                    }
+
+                }
+                // exit;
+                
+            }
+        }
+    }
+
+    public function actionActivityrelation()
+    {
+        $uid = Yii::$app->user->Id; 
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if($projuser)
+        {
+            $prjct_id = $projuser->projectid;
+            //$scheduleItems = Wbsscheduleitems::find()->where(['projectId' => $prjct_id])->andWhere(['status' => 0])->all();
+
+            $connection = Yii::$app->db;
+            $sql="  SELECT a.scheduleitem_id,a.wbsid,a.name,a.projectId 
+                    FROM wbsscheduleitems AS a
+                    INNER JOIN workgroups_new AS b ON  a.wbsid=b.Workgroup_Id
+                    WHERE  a.projectId='".$prjct_id."' AND b.status=0  ORDER BY b.sortorder  ASC";
+
+
+
+
+            $command=$connection->createCommand($sql);
+            $dataReader=$command->query();
+            $scheduleItems=$dataReader->readAll();
+
+            $scheduleItemSelectBox = '<option value="">Select Schedule Item</option>';
+            foreach($scheduleItems as $key => $data) {
+                $selected = "";
+                if(isset($_POST['filter_schedule_item']) && $data['scheduleitem_id'] == $_POST['filter_schedule_item'])
+                    $selected = "selected";
+                $scheduleItemSelectBox .= '<option value="'.$data['scheduleitem_id'].'" '.$selected.'>'.$data['name'].'</option>';
+            }
+
+            $scheduleactivities =Scheduleactivities::find()->where(['projectId' => $prjct_id])->andWhere(['status' => 0])->orderBy(['id' => SORT_ASC])->all();
+            $scheduleActivitySelectBox = '<option value="">Select Activity</option>';
+            foreach($scheduleactivities as $key => $data) {
+                $selected = "";
+                if(isset($_POST['filter_schedule_activity']) && $data['id'] == $_POST['filter_schedule_activity'])
+                    $selected = "selected";
+                $scheduleActivitySelectBox .= '<option value="'.$data['id'].'" '.$selected.'>'.$data['name'].'</option>';
+            }
+
+
+            $datarows='';
+            $datarows.='<div class="row relationlist">
+    					<div class="col-md-5">
+                            <div class="card relations-card">
+                                <div class="card-header">
+                                    <h2><span class="icon-directions_run"></span> Precedent Activity</h2>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label> Item</label>
+                                            <div class="list-group">';
+                                            foreach($scheduleItems as $key => $data) {
+                                                if($key == 0){
+                                                    $selecteditemone = $data['scheduleitem_id'];
+                                                    $activeNow = 'active';
+                                                }else{
+                                                    $activeNow = '';
+                                                }
+                                                $datarows.='<a href="javascript:void(0);" class="list-group-item schedule_item_first '.$activeNow.'" id="PrecedentScheduleItem-'.$prjct_id.'" data-v="'.$data['scheduleitem_id'].'">'.$data['name'].'</a>';
+                                            }
+                                $datarows.='<span class="error" id="first_item_error" style="display: none;">Please select an Item</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label> Activity</label>
+                                            <div class="list-group" id="schedule_activity_first-data">'; 
+                                foreach($scheduleItems as $key => $data) {
+                                    if($key == 0){
+                                    $Wbsscheduleitems=Wbsscheduleitems::find()->where(['scheduleitem_id' => $data['scheduleitem_id']])->andWhere(['status' => 0])->one();
+                                    //$worktypes=Scheduleactivities::find()->where(['scheduleitem_id' => $data['scheduleitem_id']])->andWhere(['projectId' => $Wbsscheduleitems['projectId']])->andWhere(['status' => 0])->orderBy(['id' => SORT_ASC])->all();
+                                    
+                                   $sql = "SELECT a.*, b.wbs_id
+                                            FROM scheduleactivities AS a 
+                                            LEFT JOIN workgroup_activities_new AS b ON  a.activity_id=b.id 
+                                            WHERE a.scheduleitem_id='".$data['scheduleitem_id']."' 
+                                            AND a.projectId='".$Wbsscheduleitems['projectId']."' AND a.status=0  ORDER BY b.sortorder ASC";
+                                    $worktypes = $connection->createCommand($sql)->query()->readAll();
+
+
+                                    foreach($worktypes AS $worktype):
+                                        $workgroupact = WorkgroupActivitiesNew::find()->where(['id' => $worktype['reference_activityid']])->andWhere(['wbs_id' => $Wbsscheduleitems->reference_itemid])->andWhere(['schedule' => 1])->andWhere(['pricing_status' => 0])->one();
+                                        if(!empty($workgroupact)){
+                                            $datarows.='<a href="javascript:void(0);" class="list-group-item schedule_activity_first" id="PrecedentScheduleactivity" data-v="'.$worktype['id'].'">'.$worktype['name'].'</a>';
+                                        }
+                                        elseif(empty($workgroupact) && $worktype['reference_activityid']==0){
+                                            $datarows.='<a href="javascript:void(0);" class="list-group-item schedule_activity_first" id="PrecedentScheduleactivity" data-v="'.$worktype['id'].'">'.$worktype['name'].'</a>';
+                                        }
+                                    endforeach; 
+                                    }
+                                }                   
+                                $datarows.='</div>
+                                            <span class="error" id="first_activity_error" style="display: none;">Please select an Activity</span>
+                                        </div>
+                                    </div>  
+                                </div>
+                            </div>     
+                        </div>
+                        <div class="col-md-5 dependent-activity-wrpr">			
+                            <div class="card relations-card">
+                                <div class="card-header">
+                                    <h2><span class="icon-directions_run"></span> Dependent Activity</h2>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label> Item</label>
+                                            <div class="list-group">';
+                                            foreach($scheduleItems as $key => $data) {
+                                                if($key == 0){
+                                                    $selecteditemtwo = $data['scheduleitem_id'];
+                                                    $activeNow = 'active';
+                                                }else{
+                                                    $activeNow = '';
+                                                }
+                                                $datarows.='<a href="javascript:void(0);" class="list-group-item schedule_item_second '.$activeNow.'" id="DependentScheduleItem-'.$prjct_id.'" data-v="'.$data['scheduleitem_id'].'">'.$data['name'].'</a>';
+                                            }
+                                $datarows.='<span class="error" id="second_item_error" style="display: none;">Please select an Item</span></div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label> Activity</label>
+                                            <div class="list-group" id="schedule_activity_second-data">';  
+                                            foreach($scheduleItems as $key => $data) {
+                                                if($key == 0){
+                                                $Wbsscheduleitems=Wbsscheduleitems::find()->where(['scheduleitem_id' => $data['scheduleitem_id']])->andWhere(['status' => 0])->one();
+
+                                                /*$worktypes = Scheduleactivities::find()
+                                                            ->where(['scheduleitem_id' => $data['scheduleitem_id']])
+                                                            ->andWhere(['projectId' => $Wbsscheduleitems['projectId']])
+                                                            ->andWhere(['status' => 0])
+                                                            ->orderBy(['id' => SORT_ASC])
+                                                            ->all();*/
+
+                                               $sql = "SELECT a.*, b.wbs_id
+                                                        FROM scheduleactivities AS a 
+                                                        LEFT JOIN workgroup_activities_new AS b ON  a.activity_id=b.id 
+                                                        WHERE a.scheduleitem_id='".$data['scheduleitem_id']."' 
+                                                        AND a.projectId='".$Wbsscheduleitems['projectId']."' AND a.status=0  ORDER BY b.sortorder ASC";
+                                                $worktypes = $connection->createCommand($sql)->query()->readAll();
+
+                                                
+                                                foreach($worktypes AS $worktype):
+                                                    $workgroupact = WorkgroupActivitiesNew::find()->where(['id' => $worktype['reference_activityid']])->andWhere(['wbs_id' => $Wbsscheduleitems->reference_itemid])->andWhere(['schedule' => 1])->andWhere(['pricing_status' => 0])->one();
+                                                    if(!empty($workgroupact)){
+                                                        $datarows.='<a href="javascript:void(0);" class="list-group-item schedule_activity_second" id="DependentScheduleactivity" data-v="'.$worktype['id'].'">'.$worktype['name'].'</a>';
+                                                    }
+                                                    elseif(empty($workgroupact) && $worktype['reference_activityid']==0){
+                                                        $datarows.='<a href="javascript:void(0);" class="list-group-item schedule_activity_second" id="DependentScheduleactivity" data-v="'.$worktype['id'].'">'.$worktype['name'].'</a>';
+                                                    }
+                                                endforeach; 
+                                                }
+                                            } 
+                                        
+                                    $datarows.='</div>
+                                            <span class="error" id="second_activity_error" style="display: none;">Please select an Activity</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-md-2">			
+                            <div class="card relations-card">
+                                <div class="card-header">
+                                    <h2><span class="icon-link1"></span> Relation</h2>
+                                </div>
+                                <div class="card-body">
+                                    <div class="radio">
+                                        <label><input type="radio" class="relation_type" name="relation_type" value=1>SS <span style="font-size: 11px;"> (Start to Start)</span></label>
+                                    </div>
+                                    <div class="radio">
+                                        <label><input type="radio" class="relation_type" name="relation_type" value=2>FS <span style="font-size: 11px;"> (Finish to Start)</span></label>
+                                    </div>
+                                    <div class="radio">
+                                        <label><input type="radio" class="relation_type" name="relation_type" value=3>FF <span style="font-size: 11px;"> (Finish to Finish)</span></label>
+                                    </div>
+                                    <span class="error" id="relation_error" style="display: none;">Please Select a Relation</span>
+                                    <label>&nbsp;</label>
+                                    <div class="form-group">
+                                        <label>Lag/ Lead</label>
+                                        <input type="text" class="form-control lag" id="lag" name="lag" value="" placeholder="Lag/ Lead">
+                                    </div>
+                                    <div class="text-center">
+                                        <label>&nbsp;</label>
+                                        <input type="hidden" id="schedule_item_first-new" value="">
+                                        <input type="hidden" id="schedule_activity_first-new" value="">
+                                        <input type="hidden" id="schedule_item_second-new" value="">
+                                        <input type="hidden" id="schedule_activity_second-new" value="">
+                                        <input type="hidden" id="relation_type-new" value="">
+                                        <button type="button" class="btn btn-primary save_relation_new" value="'.$data['scheduleitem_id'].'" id="saverelationbutton'.$data['scheduleitem_id'].'"><span class="icon-check"></span>Save &amp; Add</button>
+                                        <button type="button" class="btn btn-danger cancel" id=""><span class="icon-close"></span> Close</button>
+                                    </div>  
+                                </div>
+                            </div> 
+                        </div>
+                    </div>';
+            if(!empty($_POST['Relactionename'])){
+                //$relations = ActivityRelations::find()->where(['projectId' => $prjct_id])->andWhere(['like','relation_type',$_POST['Relactionename']])->andWhere(['status' => 0])->orderBy(['id' => SORT_DESC])->all();
+                $relations=ActivityRelations::find()->select(['activity_relations.*'])
+                    ->innerJoin('wbsscheduleitems AS b', 'b.scheduleitem_id  = activity_relations.precedent_schedule_item')
+                    ->andwhere(['activity_relations.projectId' => $prjct_id])->andWhere(['like','b.name',$_POST['Relactionename']])
+                    ->andWhere(['activity_relations.status' => 0])->orderBy(['activity_relations.sortorder' => SORT_ASC])->all();
+            }else{
+                $relations = ActivityRelations::find()->where(['projectId' => $prjct_id])->andWhere(['status' => 0]);
+                if(!empty($_POST['filter_schedule_item'])){
+                    $relations->andWhere(['or',['precedent_schedule_item' => $_POST['filter_schedule_item']], ['dependent_schedule_item' => $_POST['filter_schedule_item']]]);
+                }
+                if(!empty($_POST['filter_schedule_activity'])){
+                    $relations->andWhere(['or',['precedent_activity' => $_POST['filter_schedule_activity']], ['dependent_activity' => $_POST['filter_schedule_activity']]]);
+                }
+                $relations = $relations->orderBy(['sortorder' => SORT_ASC])->all();
+            }
+             $html = '';
+            if(!empty($relations))
+            {
+                $sino = 1;
+                $html .='<div class="row relheads">
+                            <div class="col-md-1">
+                                <label>#</label>
+                            </div>
+                            <div class="col-md-2">
+                                <label>Schedule Item</label>
+                            </div>
+                            <div class="col-md-2">
+                                <label>Precedent Activity</label>
+                            </div>
+                            <div class="col-md-2">
+                                <label>Schedule Item</label>
+                            </div>
+                            <div class="col-md-2">
+                                <label>Dependent Activity</label>
+                            </div>
+                            <div class="col-md-1">
+                                <label class="desktoponly">Relation</label>
+                                <label class="phoneonly">Rel</label>
+                            </div>
+                            <div class="col-md-1">
+                                <label>Lag/Lead</label>
+                            </div>
+                            <div class="col-md-1">
+                            </div>
+                         </div>';
+                foreach($relations AS $key => $relation)
+                {
+                    $typesval ='';
+                    $precedentactivity ='';
+                    $dependentitem ='';
+                    $dependentactivity ='';
+                    
+                    $precedentItem = Wbsscheduleitems::findOne($relation['precedent_schedule_item'])->name;
+                    $allprecedentItems = Wbsscheduleitems::find()->where(['projectId' => $prjct_id])->andWhere(['status' => 0])->all();
+                    foreach ($allprecedentItems AS $key => $allprecedentItem):
+                        if ($precedentItem == $allprecedentItem->name):
+                            $seletedtype = 'Selected="selected"';
+                        else:
+                            $seletedtype = '';
+                        endif;
+                        $typesval .= "<option value='" . $allprecedentItem->scheduleitem_id . "' " . $seletedtype . ">" . $allprecedentItem->name . "</option>";
+                    endforeach;
+                    $precedentActivity=Scheduleactivities::findOne($relation['precedent_activity'])->name;
+                    $allprecedentActivitys = Scheduleactivities::find()->where(['projectId' => $prjct_id])->andWhere(['scheduleitem_id' => $relation->precedent_schedule_item])->andWhere(['status' => 0])->all();
+                    foreach ($allprecedentActivitys AS $key => $allprecedentActivity):
+                        if ($precedentActivity == $allprecedentActivity->name):
+                            $seletedtype = 'Selected="selected"';
+                        else:
+                            $seletedtype = '';
+                        endif;
+                        $precedentactivity .= "<option value='" . $allprecedentActivity->id . "' " . $seletedtype . ">" . $allprecedentActivity->name . "</option>";
+                    endforeach;
+                    $dependentItem = Wbsscheduleitems::findOne($relation['dependent_schedule_item'])->name;
+                    $alldependentItems = Wbsscheduleitems::find()->where(['projectId' => $prjct_id])->andWhere(['status' => 0])->all();
+                    foreach ($alldependentItems AS $key => $alldependentItem):
+                        if ($dependentItem == $alldependentItem->name):
+                            $seletedtype = 'Selected="selected"';
+                        else:
+                            $seletedtype = '';
+                        endif;
+                        $dependentitem .= "<option value='" . $alldependentItem->scheduleitem_id . "' " . $seletedtype . ">" . $alldependentItem->name . "</option>";
+                    endforeach;
+                    $dependentActivity= Scheduleactivities::findOne($relation['dependent_activity'])->name;
+                    $alldependentActivitys = Scheduleactivities::find()->where(['projectId' => $prjct_id])->andWhere(['scheduleitem_id' => $relation->dependent_schedule_item])->andWhere(['status' => 0])->all();
+                    foreach ($alldependentActivitys AS $key => $alldependentActivity):
+                        if ($dependentActivity == $alldependentActivity->name):
+                            $seletedtype = 'Selected="selected"';
+                        else:
+                            $seletedtype = '';
+                        endif;
+                        $dependentactivity .= "<option value='" . $alldependentActivity->id . "' " . $seletedtype . ">" . $alldependentActivity->name . "</option>";
+                    endforeach;
+                    $ssselected = '';
+                    $fsselected = '';
+                    $ffselected = '';
+                    if($relation['relation_type'] == 1)
+                    {
+                        $ssselected = 'selected';
+                        $reType = 'SS';
+                    }
+                    elseif($relation['relation_type'] == 2)
+                    {
+                        $fsselected = 'selected';
+                        $reType = 'FS';
+                    }
+                    elseif($relation['relation_type'] == 3)
+                    {
+                        $ffselected = 'selected';
+                        $reType = 'FF';
+                    }
+                    $Activitylag = Scheduleactivities::findOne($relation['dependent_activity'])->lag;
+                    $reported = ScheduleProgressReport::find()->where(['activity_id' => $relation['dependent_activity']])->andWhere(['!=', 'cumulated_qty', 0])->all();
+                       if(!$reported){
+                         $relationstyle = 'title="Delete Relation" ';
+                       }
+                       else{
+                         //$relationstyle = 'disabled';
+                         $relationstyle = 'disabled style="pointer-events: none; cursor: not-allowed;" title="Already Reported!"';
+                       }
+
+                    $prec_item = Wbsscheduleitems::findOne($relation['precedent_schedule_item']);
+                    $dep_item = Wbsscheduleitems::findOne($relation['dependent_schedule_item']);
+                    $prec_actvty = Scheduleactivities::findOne($relation['precedent_activity']);
+                    $dep_actvty = Scheduleactivities::findOne($relation['dependent_activity']);
+                    if($prec_item->status==0 && $dep_item->status==0 && $prec_actvty->status==0 && $dep_actvty->status==0){
+                        $html .= '
+                        <div class="row relationlist" id="relationrow'.$relation['id'].'" style="cursor: pointer;min-height: 100px;" data-id="'.$relation['id'].'">
+                                    <div class="col-md-1">
+                                        <span class="number">'.($sino++).'</span>
+                                        <input type="hidden" value="'.$relation['id'].'">
+                                    </div>
+                                    <div class="col-md-2 type">
+                                        
+                                        <span id="precedentitem'.$relation['id'].'">'.$precedentItem.'</span>
+                                        <select class="form-control editrelationprecedentitem" type="text" data-id='.$relation['id'].' id="editrelationprecedentitem'.$relation['id'].'" style="display:none;">
+                                        <option value="">Select Precedent Schedule Item</option>'.$typesval.'</select>
+                                        <span class="error" id="relationprecedentitem_error'.$relation['id'].'"></span>
+                                    </div>
+                                    <div class="col-md-2 type">
+                                        
+                                        <span id="precedentactivity'.$relation['id'].'">'.$precedentActivity.'</span>
+                                        <select class="form-control editrelationprecedentactivity" type="text" id="editrelationprecedentactivity'.$relation['id'].'" style="display:none;">
+                                        <option value="">Select Precedent Activity</option>'.$precedentactivity.'</select>
+                                        <span class="error" id="relationprecedentactivity_error'.$relation['id'].'"></span>
+                                    </div>
+                                    <div class="col-md-2 type">
+                                        
+                                        <span id="dependentitem'.$relation['id'].'">'.$dependentItem.'</span>
+                                        <select class="form-control editrelationdependentitem" type="text" data-id='.$relation['id'].' id="editrelationdependentitem'.$relation['id'].'" style="display:none;">
+                                        <option value="">Select Dependent Schedule Item</option>'.$dependentitem.'</select>
+                                        <span class="error" id="relationdependentitem_error'.$relation['id'].'"></span>
+                                    </div>
+                                    <div class="col-md-2 type">
+                                        
+                                        <span id="dependentactivity'.$relation['id'].'">'.$dependentActivity.'</span>
+                                        <select class="form-control editrelationdependentactivity" type="text" id="editrelationdependentactivity'.$relation['id'].'" style="display:none;">
+                                        <option value="">Select Dependent Activity</option>'.$dependentactivity.'</select>
+                                        <span class="error" id="relationdependentactivity_error'.$relation['id'].'"></span>
+                                    </div>
+                                    <div class="col-md-1 type">
+                                        
+                                        <span id="relationtype'.$relation['id'].'">'.$reType.'</span>
+                                        <select class="form-control editrelationrelationtype" type="text" data-id="'.$relation['id'].'" id="editrelationrelationtype'.$relation['id'].'" style="display:none;">
+                                        <option value=1 '.$ssselected.'>SS</option><option value=2 '.$fsselected.'>FS</option><option value=3 '.$ffselected.'>FF</option>
+                                        </select>
+                                        <span class="error" id="relationrelationtype_error'.$relation['id'].'"></span>
+                                    </div>
+                                    <div class="col-md-1 type">
+                                        <label class="desktoponly"></label>
+                                        <label class="phoneonly">Lg/Ld</label>
+                                        <span id="lag'.$relation['id'].'">'.$Activitylag.'</span>
+                                        <input type="text" class="form-control editlag" id="editlag'.$relation['id'].'" name="lag_'.$relation['id'].'" value="'.$Activitylag.'" style="display:none;" >
+                                    </div>
+                                    <div class="col-md-1 icon-groups" style="bottom:14px;">				
+                                       
+                                        
+                                        <a class="btn btn-primary icon-pencil editrelation" data-v="'.$relation['id'].'" value="'.$relation['id'].'" id="editrelationbutton'.$relation['id'].'" title="Edit Relation" href="javascript:void(0);"></a>
+                                        <a class="btn btn-primary icon-save saveeditrelation" data-v="'.$relation['id'].'" value="'.$relation['id'].'" id="saveeditrelationbutton'.$relation['id'].'" title="Save" style="display:none;" href="javascript:void(0);"></a>
+                                        <a class="btn btn-danger  icon-trash1 deleterelation" data-v="'.$relation['id'].'" value="'.$relation['id'].'"  id="deleterelationbutton'.$relation['id'].'" '.$relationstyle.' href="javascript:void(0);"></a>
+                                    </div>
+                                </div>
+
+                        ';
+                    }
+                }
+            }
+            else{
+                $html.='<div class="row"><div class="col-md-12"><div class="text-center">No Relations Found</div></div></div>';
+            }
+            // 
+               
+            $arr = array(   'result' => $datarows,
+                            'relationList' => $html,
+                            'error'=>'No',
+                            'selecteditemone' => $selecteditemone,
+                            'selecteditemtwo' => $selecteditemtwo,
+                            'scheduleItemSelectBox' => $scheduleItemSelectBox,
+                            'scheduleActivitySelectBox' => $scheduleActivitySelectBox
+                        );
+            return json_encode($arr);
+
+        }
+        else{
+
+            $datarows = '<div style="text-align: center;">No Project Selected</div>';
+
+            $arr = array('result' => $datarows,'error'=>'No');
+            return json_encode($arr);
+
+        }
+    }
+
+    public function actionUpdaterelationsort()
+    {
+       if(isset($_POST['datavalue']))
+        {
+
+            foreach($_POST['datavalue'] AS $data)
+            {
+                //print_r($data);exit;
+                $activities=ActivityRelations::findOne($data['rowid']);
+                $activities->sortorder=$data['rowindex'];
+                $activities->save(false);
+            }
+        } 
+    }
+
+    public function actionGetscheduleactivity()
+    {
+        $Wbsscheduleitems=Wbsscheduleitems::find()->where(['scheduleitem_id' => $_POST['scheduleItem']])->andWhere(['status' => 0])->one();
+        $worktypes=Scheduleactivities::find()->where(['scheduleitem_id' => $_POST['scheduleItem']])->andWhere(['projectId' => $Wbsscheduleitems['projectId']])->andWhere(['status' => 0])->orderBy(['sortorder' => SORT_ASC])->all();
+        $list='<option value="">Select Precedent Activity</option>';
+        foreach($worktypes AS $worktype):
+            $workgroupact = WorkgroupActivitiesNew::find()->where(['id' => $worktype['reference_activityid']])->andWhere(['wbs_id' => $Wbsscheduleitems->reference_itemid])->andWhere(['schedule' => 1])->andWhere(['pricing_status' => 0])->one();
+            if(!empty($workgroupact)){
+              $list.='<option value="'.$worktype['id'].'">'.$worktype['name'].'</option>';
+            }
+            elseif(empty($workgroupact) && $worktype['reference_activityid']==0){
+              $list.='<option value="'.$worktype['id'].'">'.$worktype['name'].'</option>';
+            }
+            //$list.='<option value="'.$worktype['id'].'">'.$worktype['name'].'</option>';
+        endforeach;
+        $arr=array('result'=>$list,'error'=>'No');
+        return json_encode($arr);
+    }
+
+    public function actionGetscheduleactivityone()
+    {
+        $Wbsscheduleitems=Wbsscheduleitems::find()->where(['scheduleitem_id' => $_POST['scheduleItem']])->andWhere(['status' => 0])->one();
+       // $worktypes=Scheduleactivities::find()->where(['scheduleitem_id' => $_POST['scheduleItem']])->andWhere(['projectId' => $Wbsscheduleitems['projectId']])->andWhere(['status' => 0])->orderBy(['id' => SORT_ASC])->all();
+
+        $connection = \Yii::$app->db;
+        $worktypesnew="SELECT a.reference_activityid,a.id,a.name FROM scheduleactivities AS a
+                INNER JOIN workgroup_activities_new AS b ON  a.activity_id=b.id
+                WHERE a.scheduleitem_id='".$_POST['scheduleItem']."' AND a.projectId='".$Wbsscheduleitems['projectId']."' AND a.status=0  ORDER BY b.sortorder ASC";
+
+ 
+
+        $command = $connection->createCommand($worktypesnew);
+        $dataReader = $command->query();
+        $worktypes = $dataReader->readAll();
+
+  
+
+        $list='';
+        foreach($worktypes AS $worktype):
+            $workgroupact = WorkgroupActivitiesNew::find()->where(['id' => $worktype['reference_activityid']])->andWhere(['wbs_id' => $Wbsscheduleitems->reference_itemid])->andWhere(['schedule' => 1])->andWhere(['pricing_status' => 0])->one();
+            if(!empty($workgroupact)){
+              $list.='<a href="javascript:void(0);" class="list-group-item schedule_activity_first" id="PrecedentScheduleactivity" data-v="'.$worktype['id'].'">'.$worktype['name'].'</a>';
+            }
+            elseif(empty($workgroupact) && $worktype['reference_activityid']==0){
+              $list.='<a href="javascript:void(0);" class="list-group-item schedule_activity_first" id="PrecedentScheduleactivity" data-v="'.$worktype['id'].'">'.$worktype['name'].'</a>';
+            }
+            //$list.='<option value="'.$worktype['id'].'">'.$worktype['name'].'</option>';
+        endforeach;
+        $arr=array('result'=>$list,'error'=>'No');
+        return json_encode($arr);
+    }
+
+    public function actionGetscheduleactivitytwo()
+    {
+        $Wbsscheduleitems=Wbsscheduleitems::find()->where(['scheduleitem_id' => $_POST['scheduleItem']])->andWhere(['status' => 0])->one();
+        //$worktypes=Scheduleactivities::find()->where(['scheduleitem_id' => $_POST['scheduleItem']])->andWhere(['projectId' => $Wbsscheduleitems['projectId']])->andWhere(['status' => 0])->orderBy(['id' => SORT_ASC])->all();
+
+
+        $connection = \Yii::$app->db;
+        $worktypesnez="SELECT a.reference_activityid,a.id,a.name FROM scheduleactivities AS a
+                INNER JOIN workgroup_activities_new AS b ON  a.activity_id=b.id
+                WHERE a.scheduleitem_id='".$_POST['scheduleItem']."' AND a.projectId='".$Wbsscheduleitems['projectId']."' AND a.status=0  ORDER BY b.sortorder ASC";
+
+ 
+
+        $command = $connection->createCommand($worktypesnez);
+        $dataReader = $command->query();
+        $worktypes = $dataReader->readAll();
+
+
+        $list='';
+        foreach($worktypes AS $worktype):
+            $workgroupact = WorkgroupActivitiesNew::find()->where(['id' => $worktype['reference_activityid']])->andWhere(['wbs_id' => $Wbsscheduleitems->reference_itemid])->andWhere(['schedule' => 1])->andWhere(['pricing_status' => 0])->one();
+            if(!empty($workgroupact)){
+              $list.='<a href="javascript:void(0);" class="list-group-item schedule_activity_second" id="DependentScheduleactivity" data-v="'.$worktype['id'].'">'.$worktype['name'].'</a>';
+            }
+            elseif(empty($workgroupact) && $worktype['reference_activityid']==0){
+              $list.='<a href="javascript:void(0);" class="list-group-item schedule_activity_second" id="DependentScheduleactivity" data-v="'.$worktype['id'].'">'.$worktype['name'].'</a>';
+            }
+            //$list.='<option value="'.$worktype['id'].'">'.$worktype['name'].'</option>';
+        endforeach;
+        $arr=array('result'=>$list,'error'=>'No');
+        return json_encode($arr);
+    }
+
+    public function actionSaverelation()
+    {
+
+        $connection = Yii::$app->db;
+        $uid = Yii::$app->user->Id; 
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        $_POST['projectId'] = $projectid = $projuser->projectid;
+
+        $sql = "SELECT * FROM scheduleactivities AS a INNER JOIN wbsscheduleitems AS b ON  a.scheduleitem_id=b.scheduleitem_id WHERE a.projectId='".$_POST['projectId']."' AND a.status=0 AND b.status=0 ORDER BY end_date DESC";
+        $command = $connection->createCommand($sql);
+        $dataReader = $command->query();
+        $activityend = $dataReader->read();
+
+        $sql = "SELECT * FROM scheduleactivities AS a INNER JOIN wbsscheduleitems AS b ON  a.scheduleitem_id=b.scheduleitem_id WHERE a.projectId='".$_POST['projectId']."' AND a.status=0 AND b.status=0 ORDER BY start_date ASC";
+        $command = $connection->createCommand($sql);
+        $dataReader = $command->query();
+        $activitystart = $dataReader->read();
+
+        $datediff = strtotime($activityend['end_date']) - strtotime($activitystart['start_date']);
+        $duration_first = round($datediff / (60 * 60 * 24)) + 1;
+
+        $project = Projects::findOne($_POST['projectId']); 
+
+        $projdur = $project->duration;
+
+        //echo $duration_first; exit;
+
+        if($projdur >= $duration_first){
+
+            $model = New ActivityRelations();
+            $model->precedent_schedule_item=$_POST['firstItem'];
+            $model->precedent_activity=$_POST['firstActivity'];
+            $model->dependent_schedule_item=$_POST['secondItem'];
+            $model->dependent_activity=$_POST['secondActivity'];
+            $model->relation_type=$_POST['relationType'];
+            // Derive projectId from the actual activity, not from user's active project selection,
+            // to prevent cross-project contamination when the user's active project doesn't match.
+            $precedentAct = Scheduleactivities::findOne((int)$_POST['firstActivity']);
+            $model->projectId = $precedentAct ? $precedentAct->projectId : $projectid;
+            if($precedentAct->start_date=='' && $precedentAct->end_date==''){
+                $getDateAfterHoliday = Yii::$app->helper->getDateAfterHoliday(date("d-m-Y"), $projectid);
+                $today               = date('Y-m-d', strtotime($getDateAfterHoliday));
+
+                $precedentAct->start_date        = $today;
+                $precedentAct->end_date          = $today;
+                $precedentAct->actual_start_date = $today;
+                $precedentAct->actual_end_date   = $today;
+                $precedentAct->duration          = 1;
+                $precedentAct->save(false);
+            }
+            $dependentAct = Scheduleactivities::findOne($_POST['secondActivity']);
+            if($_POST['lag']==''){
+                $_POST['lag'] = 0;
+            }
+            $lag = $_POST['lag'];
+            $duration                   = $dependentAct->duration + $lag - 1;
+
+
+            //$dependentAct->start_date   = date('Y-m-d', strtotime($precedentAct->start_date. ' + '.$lag.' days'));
+            //$dependentAct->end_date     = date('Y-m-d', strtotime($precedentAct->start_date. ' + '.$duration.' days'));
+
+            // Preserve original baseline before relation shifts the start date
+            if (!$dependentAct->act_start_date || $dependentAct->act_start_date == '0000-00-00') {
+                $dependentAct->act_start_date = $dependentAct->start_date ?: date('Y-m-d');
+            }
+
+            $dependentAct->start_date   = date('Y-m-d',
+                                                strtotime(
+                                                    Yii::$app->helper->getDateAfterHoliday($precedentAct->start_date, $projectid, $lag)
+                                                )
+                                              );
+            $dependentAct->end_date   = date('Y-m-d',
+                                                strtotime(
+                                                    Yii::$app->helper->getDateAfterHoliday(
+                                                        $precedentAct->start_date,
+                                                        $projectid,
+                                                        ($dependentAct->duration + $lag)
+                                                    )
+                                                )
+                                            );
+
+            $dependentAct->lag          = $_POST['lag'];
+            $dependentAct->save(false);
+            $availableActivites = Scheduleactivities::find()->where(['projectId' => $_POST['projectId']])->andWhere(['status' => 0])->orderBy(['scheduleitem_id' => SORT_ASC])->all();
+            if($precedentAct->start_date!='' && $precedentAct->end_date!='')
+            {
+                   
+                if($model->save(false))
+                {
+
+                    //correcting relation dates
+
+                    Yii::$app->helper->GetRelationcorrect($_POST['projectId']);
+
+                    $relations = ActivityRelations::find()->where(['projectId' => $_POST['projectId']])->andWhere(['status' => 0])->all();
+                    $html = '';
+                    if(count($relations) > 0)
+                    {
+                        $sino = 1;
+                        foreach($relations AS $key => $relation)
+                        {
+                            $typesval ='';
+                            $precedentactivity ='';
+                            $dependentitem ='';
+                            $dependentactivity ='';
+                            $precedentItem = Wbsscheduleitems::findOne($relation['precedent_schedule_item'])->name;
+                            $allprecedentItems = Wbsscheduleitems::find()->where(['projectId' => $_POST['projectId']])->andWhere(['status' => 0])->all();
+                            foreach ($allprecedentItems AS $key => $allprecedentItem):
+                                if ($precedentItem == $allprecedentItem->name):
+                                    $seletedtype = 'Selected="selected"';
+                                else:
+                                    $seletedtype = '';
+                                endif;
+                                $typesval .= "<option value='" . $allprecedentItem->scheduleitem_id . "' " . $seletedtype . ">" . $allprecedentItem->name . "</option>";
+                            endforeach;
+                            
+                            $precedentActivity=Scheduleactivities::findOne($relation['precedent_activity'])->name;
+                            $allprecedentActivitys = Scheduleactivities::find()->where(['projectId' => $_POST['projectId']])->andWhere(['scheduleitem_id' => $relation->precedent_schedule_item])->andWhere(['status' => 0])->all();
+                            foreach ($allprecedentActivitys AS $key => $allprecedentActivity):
+                                if ($precedentActivity == $allprecedentActivity->name):
+                                    $seletedtype = 'Selected="selected"';
+                                else:
+                                    $seletedtype = '';
+                                endif;
+                                $precedentactivity .= "<option value='" . $allprecedentActivity->id . "' " . $seletedtype . ">" . $allprecedentActivity->name . "</option>";
+                            endforeach;
+                            
+                            $dependentItem = Wbsscheduleitems::findOne($relation['dependent_schedule_item'])->name;
+                            $alldependentItems = Wbsscheduleitems::find()->where(['projectId'=>$_POST['projectId']])->andWhere(['status'=>0])->all();
+                            foreach ($alldependentItems AS $key => $alldependentItem):
+                                if ($dependentItem == $alldependentItem->name):
+                                    $seletedtype = 'Selected="selected"';
+                                else:
+                                    $seletedtype = '';
+                                endif;
+                                $dependentitem .= "<option value='" . $alldependentItem->scheduleitem_id . "' " . $seletedtype . ">" . $alldependentItem->name . "</option>";
+                            endforeach;
+
+                            $dependentActivity= Scheduleactivities::findOne($relation['dependent_activity'])->name;
+                            $alldependentActivitys = Scheduleactivities::find()->where(['projectId' => $_POST['projectId']])->andWhere(['scheduleitem_id' => $relation->dependent_schedule_item])->andWhere(['status' => 0])->all();
+                            foreach ($alldependentActivitys AS $key => $alldependentActivity):
+                                if ($dependentActivity == $alldependentActivity->name):
+                                    $seletedtype = 'Selected="selected"';
+                                else:
+                                    $seletedtype = '';
+                                endif;
+                                $dependentactivity .= "<option value='" . $alldependentActivity->id . "' " . $seletedtype . ">" . $alldependentActivity->name . "</option>";
+                            endforeach;
+                            $ssselected = '';
+                            $fsselected = '';
+                            if($relation['relation_type'] == 1)
+                            {
+                                $ssselected = 'selected';
+                                $reType = 'SS';
+                            }
+                            elseif($relation['relation_type'] == 2)
+                            {
+                                $fsselected = 'selected';
+                                $reType = 'FS';
+                            }
+                            else{
+                                $reType = '';
+                            }
+                            $Activitylag = Scheduleactivities::findOne($relation['dependent_activity'])->lag;
+                            $reported = ProgressReport::find()->where(['activity_id' => $relation['dependent_activity']])->andWhere(['status' => 1])->all();
+                               if(!$reported){
+                                 $relationstyle = '';
+                               }
+                               else{
+                                 $relationstyle = 'readonly';
+                               }
+                               $html .= '<div class="row" id="relationrow'.$relation['id'].'" style="cursor: pointer;" data-id="'.$relation['id'].'">
+                               <div class="col-md-1">
+                                   <span class="number">'.($sino++).'</span>
+                                   <input type="hidden" value="'.$relation['id'].'">
+                               </div>
+                               <div class="col-md-2 type">
+                                   <label>Schedule Item</label>
+                                   <span id="precedentitem'.$relation['id'].'">'.$precedentItem.'</span>
+                                   <select class="form-control editrelationprecedentitem" type="text" data-id='.$relation['id'].' id="editrelationprecedentitem'.$relation['id'].'" style="display:none;">
+                                   <option value="">Select Precedent Schedule Item</option>'.$typesval.'</select>
+                                   <span class="error" id="relationprecedentitem_error'.$relation['id'].'"></span>
+                               </div>
+                               <div class="col-md-2 type">
+                                   <label>Precedent Activity</label>
+                                   <span id="precedentactivity'.$relation['id'].'">'.$precedentActivity.'</span>
+                                   <select class="form-control editrelationprecedentactivity" type="text" id="editrelationprecedentactivity'.$relation['id'].'" style="display:none;">
+                                   <option value="">Select Precedent Activity</option>'.$precedentactivity.'</select>
+                                   <span class="error" id="relationprecedentactivity_error'.$relation['id'].'"></span>
+                               </div>
+
+                               <div class="col-md-2 type">
+                                   <label>	Schedule Item</label>
+                                   <span id="dependentitem'.$relation['id'].'">'.$dependentItem.'</span>
+                                   <select class="form-control editrelationdependentitem" type="text" data-id='.$relation['id'].' id="editrelationdependentitem'.$relation['id'].'" style="display:none;">
+                                   <option value="">Select Dependent Schedule Item</option>'.$dependentitem.'</select>
+                                   <span class="error" id="relationdependentitem_error'.$relation['id'].'"></span>
+                               </div>
+                               <div class="col-md-2 type">
+                                   <label>Dependent Activity</label>
+                                   <span id="dependentactivity'.$relation['id'].'">'.$dependentActivity.'</span>
+                                   <select class="form-control editrelationdependentactivity" type="text" id="editrelationdependentactivity'.$relation['id'].'" style="display:none;">
+                                   <option value="">Select Precedent Activity</option>'.$dependentactivity.'</select>
+                                   <span class="error" id="relationdependentactivity_error'.$relation['id'].'"></span>
+                               </div>
+                               <div class="col-md-1 type">
+                                   <label>Relation</label>
+                                   <span id="relationtype'.$relation['id'].'">'.$reType.'</span>
+                                   <select class="form-control editrelationrelationtype" type="text" data-id="'.$relation['id'].'" id="editrelationrelationtype'.$relation['id'].'" style="display:none;">
+                                   <option value=1 '.$ssselected.'>SS</option><option value=2 '.$fsselected.'>FS</option>
+                                   </select>
+                                   <span class="error" id="relationrelationtype_error'.$relation['id'].'"></span>
+                               </div>
+                               <div class="col-md-1 type">
+                                   <label>Lag/Lead</label>
+                                   <span id="lag'.$relation['id'].'">'.$Activitylag.'</span>
+                                   <input type="text" class="form-control editlag" id="editlag'.$relation['id'].'" name="lag_'.$relation['id'].'" value="'.$Activitylag.'" style="display:none;" '.$relationstyle.'>
+                               </div>
+                               <div class="col-md-1 icon-groups">				
+                                  
+                                   
+                                   <a class="btn btn-primary icon-pencil editrelation" data-v="'.$relation['id'].'" value="'.$relation['id'].'" id="editrelationbutton'.$relation['id'].'" title="Edit Relation" href="#"></a>
+                                   <a class="btn btn-primary icon-save saveeditrelation" data-v="'.$relation['id'].'" value="'.$relation['id'].'" id="saveeditrelationbutton'.$relation['id'].'" title="Save" style="display:none;" href="#"></a>
+                                   <a class="btn btn-danger  icon-trash1 deleterelation" data-v="'.$relation['id'].'" value="'.$relation['id'].'"  id="deleterelationbutton'.$relation['id'].'" title="Delete Relation" '.$relationstyle.' href="#"></a>
+                               </div>
+                           </div>';
+
+                        }
+                    }
+                    $arr = array('relationList' => $html, 'error' => 'No');
+                    return json_encode($arr);
+                }
+                else{
+                    $arr = array('error' => 'Yes', 'errortext'=> 'some error occured while saving');
+                    return json_encode($arr);
+                }
+            }
+            else{
+                $arr = array('error' => 'Yes', 'errortext'=> "Please provide the dates first");
+                return json_encode($arr);
+            }
+
+        }
+        else{
+
+            $model = New ActivityRelations();
+            $model->precedent_schedule_item=$_POST['firstItem'];
+            $model->precedent_activity=$_POST['firstActivity'];
+            $model->dependent_schedule_item=$_POST['secondItem'];
+            $model->dependent_activity=$_POST['secondActivity'];
+            $model->relation_type=$_POST['relationType'];
+            $model->projectId=$_POST['projectId'];
+            
+            // checking the dates
+            $precedentAct = Scheduleactivities::findOne($_POST['firstActivity']);
+            if($precedentAct->start_date=='' && $precedentAct->end_date==''){
+
+                $getDateAfterHoliday = Yii::$app->helper->getDateAfterHoliday(date("d-m-Y"), $projectid);
+                $today               = date('Y-m-d', strtotime($getDateAfterHoliday));
+
+                $precedentAct->start_date        = $today;
+                $precedentAct->end_date          = $today;
+                $precedentAct->actual_start_date = $today;
+                $precedentAct->actual_end_date   = $today;
+                $precedentAct->duration          = 1;
+                $precedentAct->save(false);
+            }
+            $dependentAct = Scheduleactivities::findOne($_POST['secondActivity']);
+            $lag = $_POST['lag'];
+
+            //$dependentAct->start_date = date('Y-m-d', strtotime($precedentAct->start_date. ' + '.$lag.' days'));
+
+            $dependentAct->start_date   = date('Y-m-d', 
+                                                strtotime(
+                                                    Yii::$app->helper->getDateAfterHoliday($precedentAct->start_date, $projectid, $lag)
+                                                )
+                                              );
+            
+
+            if(!empty($lag)){
+                $duration = $dependentAct->duration + $lag - 1;
+            }else{
+                $duration = '0';
+            }
+
+            //$dependentAct->end_date = date('Y-m-d', strtotime($precedentAct->start_date. ' + '.$duration.' days'));
+            $dependentAct->end_date   = date('Y-m-d', 
+                                                strtotime(
+                                                    Yii::$app->helper->getDateAfterHoliday(
+                                                        $precedentAct->start_date, 
+                                                        $projectid, 
+                                                        ($dependentAct->duration + $lag)
+                                                    )
+                                                )
+                                            );
+            $dependentAct->lag = $_POST['lag'];
+            $dependentAct->save(false);
+            $availableActivites = Scheduleactivities::find()->where(['projectId' => $_POST['projectId']])->andWhere(['status' => 0])->orderBy(['scheduleitem_id' => SORT_ASC])->all();
+            if($precedentAct->start_date!='' && $precedentAct->end_date!='')
+            {
+                   
+                if($model->save(false))
+                {
+
+                    //correcting relation dates
+
+                    Yii::$app->helper->GetRelationcorrect($_POST['projectId']);
+
+                    $relations = ActivityRelations::find()->where(['projectId' => $_POST['projectId']])->andWhere(['status' => 0])->all();
+                    $html = '';
+                    if(count($relations) > 0)
+                    {
+                        $sino = 1;
+                        foreach($relations AS $key => $relation)
+                        {
+                            $typesval ='';
+                            $precedentactivity ='';
+                            $dependentitem ='';
+                            $dependentactivity ='';
+                            $precedentItem = Wbsscheduleitems::findOne($relation['precedent_schedule_item'])->name;
+                            $allprecedentItems = Wbsscheduleitems::find()->where(['projectId' => $_POST['projectId']])->andWhere(['status' => 0])->all();
+                            foreach ($allprecedentItems AS $key => $allprecedentItem):
+                                if ($precedentItem == $allprecedentItem->name):
+                                    $seletedtype = 'Selected="selected"';
+                                else:
+                                    $seletedtype = '';
+                                endif;
+                                $typesval .= "<option value='" . $allprecedentItem->scheduleitem_id . "' " . $seletedtype . ">" . $allprecedentItem->name . "</option>";
+                            endforeach;
+                            $precedentActivity=Scheduleactivities::findOne($relation['precedent_activity'])->name;
+                            $allprecedentActivitys = Scheduleactivities::find()->where(['projectId' => $_POST['projectId']])->andWhere(['scheduleitem_id' => $relation->precedent_schedule_item])->andWhere(['status' => 0])->all();
+                            foreach ($allprecedentActivitys AS $key => $allprecedentActivity):
+                                if ($precedentActivity == $allprecedentActivity->name):
+                                    $seletedtype = 'Selected="selected"';
+                                else:
+                                    $seletedtype = '';
+                                endif;
+                                $precedentactivity .= "<option value='" . $allprecedentActivity->id . "' " . $seletedtype . ">" . $allprecedentActivity->name . "</option>";
+                            endforeach;
+                            $dependentItem = Wbsscheduleitems::findOne($relation['dependent_schedule_item'])->name;
+                            $alldependentItems = Wbsscheduleitems::find()->where(['projectId' => $_POST['projectId']])->andWhere(['status' => 0])->all();
+                            foreach ($alldependentItems AS $key => $alldependentItem):
+                                if ($dependentItem == $alldependentItem->name):
+                                    $seletedtype = 'Selected="selected"';
+                                else:
+                                    $seletedtype = '';
+                                endif;
+                                $dependentitem .= "<option value='" . $alldependentItem->scheduleitem_id . "' " . $seletedtype . ">" . $alldependentItem->name . "</option>";
+                            endforeach;
+                            $dependentActivity= Scheduleactivities::findOne($relation['dependent_activity'])->name;
+                            $alldependentActivitys = Scheduleactivities::find()->where(['projectId' => $_POST['projectId']])->andWhere(['scheduleitem_id' => $relation->dependent_schedule_item])->andWhere(['status' => 0])->all();
+                            foreach ($alldependentActivitys AS $key => $alldependentActivity):
+                                if ($dependentActivity == $alldependentActivity->name):
+                                    $seletedtype = 'Selected="selected"';
+                                else:
+                                    $seletedtype = '';
+                                endif;
+                                $dependentactivity .= "<option value='" . $alldependentActivity->id . "' " . $seletedtype . ">" . $alldependentActivity->name . "</option>";
+                            endforeach;
+                            $ssselected = '';
+                            $fsselected = '';
+                            $reType = '';
+                            if($relation['relation_type'] == 1)
+                            {
+                                $ssselected = 'selected';
+                                $reType = 'SS';
+                            }
+                            elseif($relation['relation_type'] == 2)
+                            {
+                                $fsselected = 'selected';
+                                $reType = 'FS';
+                            }
+                            $Activitylag = Scheduleactivities::findOne($relation['dependent_activity'])->lag;
+                            $reported = ProgressReport::find()->where(['activity_id' => $relation['dependent_activity']])->andWhere(['status' => 1])->all();
+                               if(!$reported){
+                                 $relationstyle = '';
+                               }
+                               else{
+                                 $relationstyle = 'readonly';
+                               }
+                            $html .= '<div class="row" id="relationrow'.$relation['id'].'" style="cursor: pointer;" data-id="'.$relation['id'].'">
+                               <div class="col-md-1">
+                                   <span class="number">'.($sino++).'</span>
+                                   <input type="hidden" value="'.$relation['id'].'">
+                               </div>
+                               <div class="col-md-2 type">
+                                   <label>Schedule Item</label>
+                                   <span id="precedentitem'.$relation['id'].'">'.$precedentItem.'</span>
+                                   <select class="form-control editrelationprecedentitem" type="text" data-id='.$relation['id'].' id="editrelationprecedentitem'.$relation['id'].'" style="display:none;">
+                                   <option value="">Select Precedent Schedule Item</option>'.$typesval.'</select>
+                                   <span class="error" id="relationprecedentitem_error'.$relation['id'].'"></span>
+                               </div>
+                               <div class="col-md-2 type">
+                                   <label>Precedent Activity</label>
+                                   <span id="precedentactivity'.$relation['id'].'">'.$precedentActivity.'</span>
+                                   <select class="form-control editrelationprecedentactivity" type="text" id="editrelationprecedentactivity'.$relation['id'].'" style="display:none;">
+                                   <option value="">Select Precedent Activity</option>'.$precedentactivity.'</select>
+                                   <span class="error" id="relationprecedentactivity_error'.$relation['id'].'"></span>
+                               </div>
+
+                               <div class="col-md-2 type">
+                                   <label>	Schedule Item</label>
+                                   <span id="dependentitem'.$relation['id'].'">'.$dependentItem.'</span>
+                                   <select class="form-control editrelationdependentitem" type="text" data-id='.$relation['id'].' id="editrelationdependentitem'.$relation['id'].'" style="display:none;">
+                                   <option value="">Select Dependent Schedule Item</option>'.$dependentitem.'</select>
+                                   <span class="error" id="relationdependentitem_error'.$relation['id'].'"></span>
+                               </div>
+                               <div class="col-md-2 type">
+                                   <label>Dependent Activity</label>
+                                   <span id="dependentactivity'.$relation['id'].'">'.$dependentActivity.'</span>
+                                   <select class="form-control editrelationdependentactivity" type="text" id="editrelationdependentactivity'.$relation['id'].'" style="display:none;">
+                                   <option value="">Select Precedent Activity</option>'.$dependentactivity.'</select>
+                                   <span class="error" id="relationdependentactivity_error'.$relation['id'].'"></span>
+                               </div>
+                               <div class="col-md-1 type">
+                                   <label>Relation</label>
+                                   <span id="relationtype'.$relation['id'].'">'.$reType.'</span>
+                                   <select class="form-control editrelationrelationtype" type="text" data-id="'.$relation['id'].'" id="editrelationrelationtype'.$relation['id'].'" style="display:none;">
+                                   <option value=1 '.$ssselected.'>SS</option><option value=2 '.$fsselected.'>FS</option>
+                                   </select>
+                                   <span class="error" id="relationrelationtype_error'.$relation['id'].'"></span>
+                               </div>
+                               <div class="col-md-1 type">
+                                   <label>Lag/Lead</label>
+                                   <span id="lag'.$relation['id'].'">'.$Activitylag.'</span>
+                                   <input type="text" class="form-control editlag" id="editlag'.$relation['id'].'" name="lag_'.$relation['id'].'" value="'.$Activitylag.'" style="display:none;" '.$relationstyle.'>
+                               </div>
+                               <div class="col-md-1 icon-groups">				
+                                  
+                                   
+                                   <a class="btn btn-primary icon-pencil editrelation" data-v="'.$relation['id'].'" value="'.$relation['id'].'" id="editrelationbutton'.$relation['id'].'" title="Edit Relation" href="#"></a>
+                                   <a class="btn btn-primary icon-save saveeditrelation" data-v="'.$relation['id'].'" value="'.$relation['id'].'" id="saveeditrelationbutton'.$relation['id'].'" title="Save" style="display:none;" href="#"></a>
+                                   <a class="btn btn-danger  icon-trash1 deleterelation" data-v="'.$relation['id'].'" value="'.$relation['id'].'"  id="deleterelationbutton'.$relation['id'].'" title="Delete Relation" '.$relationstyle.' href="#"></a>
+                               </div>
+                           </div>';
+                        }
+                    }
+                }
+            }
+
+            $arr = array('error' => 'Durerror', 'relationList' => $html, 'errortext'=> "The planned duration exceeds the duration of the project.");
+            return json_encode($arr);
+        }
+    }
+
+    public function actionUpdaterelation()
+    {
+        $uid = Yii::$app->user->Id; 
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        $_POST['projectId'] = $projuser->projectid;
+
+        $model = ActivityRelations::findOne($_POST['id']);
+        $model->precedent_schedule_item=$_POST['firstItem'];
+        $model->precedent_activity=$_POST['firstActivity'];
+        $model->dependent_schedule_item=$_POST['secondItem'];
+        $model->dependent_activity=$_POST['secondActivity'];
+        $model->relation_type=$_POST['relationType'];
+        $model->projectId=$_POST['projectId'];
+        $model->status=0;
+
+        $precedentAct = Scheduleactivities::findOne($_POST['firstActivity']);
+        $wbs = Wbsscheduleitems::findOne($precedentAct->scheduleitem_id);
+        $dependentAct = Scheduleactivities::findOne($_POST['secondActivity']);
+        // Preserve original baseline before relation shifts the start date
+        if (!$dependentAct->act_start_date || $dependentAct->act_start_date == '0000-00-00') {
+            $dependentAct->act_start_date = $dependentAct->start_date ?: date('Y-m-d');
+        }
+        if($_POST['relationType']==1){
+            $lag = $_POST['lag'];
+            $dependentAct->start_date = date('Y-m-d', strtotime($precedentAct->start_date. ' + '.$lag.' days'));
+            $duration = $dependentAct->duration + $lag - 1;
+            $dependentAct->end_date = date('Y-m-d', strtotime($precedentAct->start_date. ' + '.$duration.' days'));
+        }
+        elseif($_POST['relationType']==3){
+            $lead = $_POST['lag'];
+            $duration = $dependentAct->duration - 1;
+            $end_date = date('Y-m-d', strtotime($precedentAct->end_date. ' + '.$lead.' days'));
+            $dependentAct->start_date = date('Y-m-d', strtotime($end_date. ' - '.$duration.' days'));
+            $dependentAct->end_date = date('Y-m-d', strtotime($precedentAct->end_date. ' + '.$lead.' days'));
+        }
+        else{ 
+            $lead = $_POST['lag'] + 1;
+            $dependentAct->start_date = date('Y-m-d', strtotime($precedentAct->end_date. ' + '.$lead.' days'));
+            $duration = $dependentAct->duration - 1;
+            $dependentAct->end_date = date('Y-m-d', strtotime($dependentAct->start_date. ' + '.$duration.' days'));
+        }
+
+
+        $dependentAct->lag = $_POST['lag'];
+        $dependentAct->save(false);
+        
+        $availableActivites = Scheduleactivities::find()->where(['projectId' => $model->projectId])->andWhere(['status' => 0])->orderBy(['scheduleitem_id' => SORT_ASC])->all();
+        
+        if($precedentAct->start_date!='' && $precedentAct->end_date!='' && $dependentAct->start_date!='' && $dependentAct->end_date!=''){
+
+        if($model->save(false)){
+
+            //$availableActivites = ActivityRelations::model()->findAll(array('condition'=>'projectId ='.$model->projectId.' AND status =0 AND wbs_schedule_status=0','order'=>'precedent_schedule_item ASC'));
+
+            //correcting relation dates
+            
+            Yii::$app->helper->GetRelationcorrect($model->projectId);
+
+            $relations = ActivityRelations::find()->where(['projectId' => $model->projectId])->andWhere(['precedent_schedule_item' => $_POST['firstItem']])->andWhere(['dependent_schedule_item' => $_POST['firstItem']])->andWhere(['status' => 0])->all();
+            $html = '';
+            if(count($relations) > 0)
+            {
+                foreach($relations AS $key => $relation)
+                {
+                    $precedentItem = Wbsscheduleitems::findOne($relation['precedent_schedule_item'])->name;
+                    $precedentActivity=Scheduleactivities::findOne($relation['precedent_activity'])->name;
+                    $dependentItem = Wbsscheduleitems::findOne($relation['dependent_schedule_item'])->name;
+                    $dependentActivity= Scheduleactivities::findOne($relation['dependent_activity'])->name;
+                    if($relation['relation_type'] == 1)
+                        $reType = 'SS';
+                    elseif($relation['relation_type'] == 2)
+                        $reType = 'FS';
+                    elseif($relation['relation_type'] == 3)
+                        $reType = 'FF';
+                    
+                    $html .= '<div class="row" id="relationrow'.$relation['id'].'" style="cursor: pointer;" data-id="'.$relation['id'].'">
+                        <div class="col-md-1">
+                            <span class="number">'.intval($key+1).'</span>
+                        </div>
+                        <div class="col-md-2 type">
+                            <label>Schedule Item</label>
+                            <span id="precedentitem'.$relation['id'].'">'.$precedentItem.'</span>
+                        </div>
+                        <div class="col-md-2 type">
+                            <label>Precedent Activity</label>
+                            <span id="precedentactivity'.$relation['id'].'">'.$precedentActivity.'</span>
+                        </div>
+                        <div class="col-md-2 type">
+                            <label>	Schedule Item</label>
+                            <span id="dependentitem'.$relation['id'].'">'.$dependentItem.'</span>
+                        </div>
+                        <div class="col-md-2 type">
+                            <label>Dependent Activity</label>
+                            <span id="dependentactivity'.$relation['id'].'">'.$dependentActivity.'</span>
+                        </div>
+                        <div class="col-md-1 type">
+                            <label>Relation</label>
+                            <span id="relationtype'.$relation['id'].'">'.$reType.'</span>
+                        </div>
+                        <div class="col-md-1 type">
+                            <label>&nbsp</label>
+                       </div>
+                        <div class="col-md-1 icon-groups">				
+                            <a class="btn btn-primary icon-pencil editrelation" data-v="'.$relation['id'].'" value="'.$relation['id'].'" id="editrelationbutton'.$relation['id'].'" title="Edit Relation" href="#"></a>
+                            <a class="btn btn-primary icon-save saveeditrelation" data-v="'.$relation['id'].'" value="'.$relation['id'].'" id="saveeditrelationbutton'.$relation['id'].'" title="Save" style="display:none;" href="#"></a>
+                            <a class="btn btn-danger  icon-trash1 deleterelation" data-v="'.$relation['id'].'" value="'.$relation['id'].'"  id="deleterelationbutton'.$relation['id'].'" title="Delete Relation" href="#"></a>
+                        </div>
+                    </div>';
+                }
+            }
+            $arr = array('relationList' => $html, 'error' => 'No');
+        }
+        else
+            $arr = array('error' => 'Yes', 'errortext'=> 'some error occured while saving');
+        return json_encode($arr);
+      }
+      else{
+        $arr = array('error' => 'Dates', 'errortext'=> "Please provide the dates first");
+        return json_encode($arr);
+      }
+    }
+
+
+    public function actionDeleterelation()
+    {
+        $model = ActivityRelations::findOne($_POST['relationId']);
+        $model->status = 1;
+        if($model->save(false)){
+           
+           $precedentAct = Scheduleactivities::findOne($model->precedent_activity);
+           $precedentAct->critical_start = '0000-00-00';
+           $precedentAct->critical_end = '0000-00-00';
+           $precedentAct->save(false);
+
+           // Reset lag on the dependent activity so it has no residual constraint
+           $dependentAct = Scheduleactivities::findOne($model->dependent_activity);
+           $dependentAct->lag = 0;
+           $dependentAct->save(false);
+
+            
+           /*$reported_deleted = ProgressReport::model()->find(array('condition'=>'activity_id ='.$model->dependent_activity.' AND status =0'));
+            if(count($reported_deleted)>0)
+            {
+                $reported_deleted->start_date = $precedentAct->start_date;
+                $reported_deleted->save(false);
+            }*/
+
+            Yii::$app->helper->GetRelationcorrect($model->projectId);
+            
+            $arr = array('relationId'=> $_POST['relationId'] ,'error' => 'No');
+        }
+        else{
+            $arr = array('relationId'=> $_POST['relationId'] ,'error' => 'Yes', 'errortext' => 'some error occured while saving');
+        }
+            
+        return json_encode($arr);
+    }
+    public function actionListestimateitems()
+    {
+        $uid = Yii::$app->user->Id; 
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+
+        if($projuser)
+        {
+            $project = Projects::findOne($projuser->projectid); 
+            if($project->project_value!=0){
+              $projectvalue = $project->project_value;
+            }
+            else{
+              $projectvalue = '';
+            }
+            $structurerows= "<option value='0'>IOW-Wise</option>";
+            $connection = \Yii::$app->db;
+            $sqltemvals1 = "SELECT * FROM workgroups_new WHERE Project_Id=' ".$projuser->projectid." ' AND Status=0 ORDER BY sortorder ASC, Workgroup_Id ASC, Name ASC";
+            $command = $connection->createCommand($sqltemvals1);
+            $dataReader1 = $command->query();
+            $structures = $dataReader1->readAll();
+            $datarows='';
+            $pricesum=0;
+            if($structures){
+            	$sno=0;
+                foreach($structures AS $structure):
+                	$sno++;
+                     $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND wbs_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
+                     $command = $connection->createCommand($sql);
+                     $dataReader = $command->query();
+                     $wbsactivities = $dataReader->readAll();
+                     if(count($wbsactivities)>0){
+                       $datarows.="<tr id='tempprodrow' class='vendor-column'>
+                                            <td>".$sno."</td>
+                                            <td colspan='6'>IOW : <b>".$structure['Name']."</b></td>
+                                            <td colspan='2'></td></tr>";  
+                        $subtot=0;
+                        foreach($wbsactivities as $key=> $wbsactivity):
+                            
+                            /*$sqltemvals = " SELECT est_resource_amount AS Price 
+                                            FROM estactivity_resources 
+                                            WHERE estactivity_id='".$wbsactivity['activity_Id']."' ";
+                            $command = $connection->createCommand($sqltemvals);
+                            $dataReader = $command->query();
+                            $resourcesadded=$dataReader->readAll();
+                            $price=0;
+                            foreach($resourcesadded AS $key=>$data):
+                                $price=$price+$data['Price'];
+                            endforeach;*/
+
+                            if($wbsactivity['activitytype_id']==0):
+                                $processtypes=$wbsactivity['process_Id'];
+                            else:
+                                $processtypes=$wbsactivity['activitytype_id'];
+                            endif;
+                            $pricingestimate=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status'=>0])->one();
+                             $pricingestimateres=PricingEstimateResourcesNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_id'=>$wbsactivity['id']])->andWhere(['pricing_status'=>0])->andWhere(['process_Id'=>$processtypes])->all();
+                            
+                            if($pricingestimateres):
+                                $specrate = 0;
+                                foreach($pricingestimateres AS $pricingestimatere):
+                                    $specrate = $specrate + ($pricingestimatere['rate'] * $pricingestimatere['quantity']);
+                                endforeach;
+                                //$specrate=$pricingestimate['specific_rate'];
+
+                            else:
+                                $specrate = 0;
+                                //$specrate=$price;
+
+                            endif;
+                            $amount=0;
+                            if($pricingestimate){
+                                $activityqty=$pricingestimate->activity_qty;
+                                $amount=$pricingestimate->activity_qty * $specrate;
+                            }
+                            else{
+                                $activityqty='';
+                            }
+                            $processname='';
+
+                            $sql="SELECT * FROM estimateactivities WHERE activity_status=0 AND activity_id=".$wbsactivity['activity_Id']." ";
+                            $command1 = $connection->createCommand($sql);
+                            $dataReader1 = $command1->query();
+                            $est_act = $dataReader1->read();
+
+                            /*if($wbsactivity['activitytype_id']>0)
+                            {
+                            	$processname=EstimateActivityType::findOne($wbsactivity['activitytype_id'])->activitytype_name;
+                            }*/
+                            if($est_act){
+                                $processname=EstimateActivityType::findOne($est_act['activity_type'])->activitytype_name;
+                            }
+                            if($wbsactivity['primavera_id'])
+                                $processname = 'Construction Activities';
+
+                        
+                            $name='';
+                            if($est_act){
+                            $name=$est_act['activity_name'];
+                            }
+                            if($wbsactivity['activity_Name']!=''):
+                                $activityname=$wbsactivity['activity_Name'];
+                            else:
+                                $activityname=$name;
+                            endif;
+                            if($wbsactivity['activitytype_id']==0):
+                                $processtype=$wbsactivity['process_Id'];
+                            else:
+                                $processtype=$wbsactivity['activitytype_id'];
+                            endif;
+                            
+                            $datarows.='<tr  id="Estimateiowactivitiesrow' . $wbsactivity['id'] . '" data-id="' . $wbsactivity['id'] . '">
+                                            <input type="hidden" name="itemid[]" value='.$wbsactivity['id'].'>
+                                            <input type="hidden" name="activityid[]" value='.$wbsactivity['activity_Id'].'>
+                                            <input type="hidden" name="processid[]" value='.$wbsactivity['activitytype_id'].'>
+                                            <input type="hidden" value='. $specrate . ' id='.str_replace(' ','',$processname)."rate" . $wbsactivity['id'] .' data-id=' . $wbsactivity['id'] . ' name="rate[]">
+                                            <td>'.$sno.'.'.($key + 1).'</td>
+                                            <td><span id="Estimateiowprocess">'.$processname.'</span></td>
+                                            <td><span id="Estimateiowactivityname'.$wbsactivity['id'].'">'.$activityname.'</span>
+                                        <input class="form-control editEstimateiowactivityname" style="display:none;" type="text" id="editEstimateiowactivityname"'.$wbsactivity['id'].'" value="'.$activityname.'">
+                                        <span class="error"></span></td>
+                                            <td style="text-align: center"><span id="Estimateiowactivityunit'.$wbsactivity['id'].'">'.$wbsactivity['activity_Unit'].'</span>
+                                        <input class="form-control editEstimateiowactivityunit" style="display:none;" type="text" id="editEstimateiowactivityunit'.$wbsactivity['id'].'" value="'.$wbsactivity['activity_Unit'].'">
+                                        <span class="error"></span></td>
+                                            
+                                            <td><input type="number" data-type="'.$processname.'" data-iow="'.$wbsactivity['wbs_id'].'" data-id="' . $wbsactivity['id'] . '" class="form-control quantity" name="quantity[]" id="'.str_replace(' ','',$processname).'quantity' . $wbsactivity['id'] .'" value="'. $activityqty.'" >
+                                        <span class="error"></span></td>
+                                            <td><input type="text" readonly="readonly" data-type="'.$processname.'" data-id="'. $wbsactivity['id'] .'" class="form-control specrate" style="text-align: right !important;" name="specrate[]" id="'.str_replace(' ','',$processname).'rate' . $wbsactivity['id'] .'" value="'.number_format($specrate,2).'" >
+                                        <span class="error"></span></td>
+                                        <td style="text-align:right;padding-right:14px;"><span id="'.str_replace(' ','',$processname).'amount' . $wbsactivity['id'] . '">' . number_format((float)$amount,2) . '</span>
+                                         <input type="hidden" value="' . $amount . '" class="iowamount'.$wbsactivity['wbs_id'].'" id="amount' . $wbsactivity['id'] . '"></td>
+
+                                            <td colspan="2">
+                                                <div class="icon-groups">
+                                                    
+                                                    <a href="javascript:void(0);" data-project="'.$projuser->projectid.'" data-proestimate="'.$wbsactivity['id'].'" data-activity="'.$wbsactivity['activity_Id'].'" data-process="'.$processtype.'" class="estimateallocation btn btn-primary icon-dns" title="Allocate Resources"></a>
+                                                    <a  data-id="'.$wbsactivity['id'].'" title="Delete Resource" href="javascript:void(0);" class="icon-trash1 removeiowitem" id="removeiowitem'.$wbsactivity['id'].'"></a>
+                                                </div>
+                                            </td>
+                                        </tr>';
+
+                            $subtot = $subtot + $amount;
+                        endforeach;
+                        if($subtot > 0):
+                            $datarows.="<tr>
+                            <th>
+                                </th>
+                                <th colspan='4'>IOW Total</th>
+                                <th></th>
+                                <th class='iow-total-class' id='totaliowcost".$structure['Workgroup_Id']."' style='text-align: right'>" . number_format($subtot,2) . "</th>
+                                <th colspan='2'><input type='hidden' class='totaliowcost' id='totaliowcostval".$structure['Workgroup_Id']."' value='".$subtot."'></th>
+                            </tr>";
+                         endif; 
+                         $pricesum=$pricesum + $subtot; 
+                    }
+                 endforeach;
+
+            }
+            $datarows.="<tr style='font-size:16px;'>
+                        <th></th><th colspan='4' class='all-total-class'>Total Cost</th>
+                        <th></th>
+                        <th class='all-total-class' id='totalcost' style='text-align: right;font-size: 15px;'>" . number_format($pricesum,2) . "</th>
+                        <th colspan='2'></th></tr>
+                        "; 
+            $arr = array('result' => $structurerows,'projectid'=>$projuser->projectid,'items'=>$datarows,'projectvalue'=> $projectvalue, 'error'=>'No');
+            return json_encode($arr);
+
+        }
+        else{
+
+            $datarows = '<tr><td colspan="8" style="text-align: center;">No Project Selected</td></tr>';
+
+            $arr = array('result' => '','projectid'=>'','items'=>$datarows,'projectvalue'=> '', 'error'=>'No');
+            return json_encode($arr);
+
+        }
+    }
+
+    public function Proreportsemitable($Process,$activityid,$project_estimate_Id,$Project_Id)
+    {
+    	$sno=0;
+        $connection = Yii::$app->db;
+        $activityid=$activityid;
+        $itemid=$project_estimate_Id;
+        $sqltemvals="SELECT a.Vendor_Id,a.Resource_Id,a.Name AS resource,a.Unit,a.ResourceType_Id,a.Resource_Location,b.est_resource_quantity AS Quantity,b.est_resource_amount AS Price,b.est_resource_rate AS actual_price FROM resources AS a
+                INNER JOIN estactivity_resources AS b ON  a.Resource_Id=b.est_resource_id
+                WHERE b.estactivity_id='".$activityid."' ORDER BY a.Resource_Id";
+        //echo $sqltemvals;exit;
+        $estrescount=PricingEstimateResourcesNew::find()->where(['project_id'=>$Project_Id])->andWhere(['activity_id'=>$itemid])->andWhere(['est_activity_Id'=>$activityid])->andWhere(['process_Id'=>$Process])->andWhere(['pricing_status'=>0])->count();
+        //echo $estrescount;exit;
+        if($estrescount==0):
+            $command=$connection->createCommand($sqltemvals);
+            $dataReader=$command->query();
+            $resourcesadded=$dataReader->readAll();
+            $price=0;
+            $addedones='';
+            foreach($resourcesadded AS $key=>$data):
+                $price=$price+$data['Price'];
+                $res_type = Resourcetype::find()->where(['ResourceType_Id'=>$data['ResourceType_Id']])->one(); 
+                $addedones.='<tr>
+                <td>'.($key + 1).'</td>
+                <td><span>'.$data['resource'].'</span></td>
+                <td style="text-align: center"><span>'.$data['Unit'].'</span>
+                <td style="text-align: center"><span>'.$data['Quantity'].'</span>
+                <td style="text-align: center"><span>'.$data['actual_price'].'</span></td>
+                <td style="text-align: right"><span>'.number_format((float)$data['Price'], 2, '.', '').'</span></td>
+            </tr>';
+            endforeach;
+            $addedones.="<tr>
+                            <th colspan='4'>Resource Total</th>
+                            <th></th>
+                            <th colspan='2' style='text-align: right'>".number_format((float)$price, 2, '.', '')."</th>
+                        </tr>";
+        else:
+        $estimateresources=PricingEstimateResourcesNew::find()->where(['activity_id'=>$itemid])->andWhere(['est_activity_Id'=>$activityid])->andWhere(['project_id'=>$Project_Id])->andWhere(['process_Id'=>$Process])->andWhere(['pricing_status'=>0])->all();
+            $addedones='';
+            $price=0;
+            //echo count($estimateresources);exit;
+          
+            foreach($estimateresources AS $key => $estimateresource):
+			$res_type = Resourcetype::find()->where(['ResourceType_Id'=>$estimateresource['resourcetype_Id']])->one(); 
+			$res = Resources::find()->where(['Resource_Id'=>$estimateresource['resource_Id']])->one();
+
+                $price=$price + ($estimateresource['rate'] * $estimateresource['quantity']);
+                $amount=$estimateresource['quantity'] * $estimateresource['rate'];
+                $addedones.='<tr>
+                    <td>'.($key + 1).'</td>
+                    <td><span>'.$res->Name.'</span></td>
+                    <td style="text-align: center"><span>'.$res->Unit.'</span>
+                    <td style="text-align: center"><span>'.number_format((float)$estimateresource['quantity'], 3, '.', '').'</span>
+                    <td style="text-align: center"><span>'.$estimateresource['rate'].'</span></td>
+                    <td style="text-align: right"><span>'.number_format((float)$amount, 2, '.', '').'</span></td>
+                    </tr>';
+            endforeach;
+            $addedones.="<tr>
+                            <th colspan='4'>Resource Total</th>
+                            <th colspan='2' style='text-align: right'>".number_format((float)$price, 2, '.', '')."</th>    
+                        </tr>";
+        endif;
+
+        return $addedones;
+    }
+
+
+	
+
+
+
+    public function actionRemoveitem()
+    {
+
+        $activityid=$_POST['actid']; 
+        $connection = Yii::$app->db;
+        //check orders data   
+        $sts_val = array();
+        $orderids = array();
+        $jobids = array();
+        array_push($sts_val,0);
+        $jobid = Jobcard::find()->where(['app_activity'=>$activityid])->andWhere(['delete_status'=>0])->all();
+        if(!empty($jobid))
+        {
+            foreach ($jobid as $key => $value) 
+            {
+                $jobid = $value->job_id;
+                $jobids[] = $value->job_id;
+                if($jobid)
+                {
+                    $odresid = OrderedResource::find()->where(['jobcard_id'=>$jobid])->andWhere(['delete_status'=>0])->all();
+
+                    if(!empty($odresid))
+                    {
+                        foreach ($odresid as $key => $valueres) 
+                        {
+                            $orderid = $valueres->order_id;
+                            
+                            $orderids[] = $valueres->order_id;
+                            if($orderid)
+                            {
+                                $odres_id = Orders::find()->where(['order_id'=>$orderid])->andWhere(['delete_status'=>0])->one();
+                                if(!empty($odres_id))
+                                {
+                                    $order_status = $odres_id->status;
+                                    if($order_status==2)
+                                    {
+                                        array_push($sts_val,1);
+                                        //push val to array and checkk 
+                                    }
+                                    else
+                                    {
+                                        array_push($sts_val,0);
+                                        
+                                    }
+                                }
+                            }
+                            
+                        }
+                    }
+                }
+
+
+            }
+        }
+
+        if(!empty($sts_val))
+        {
+
+            if( in_array("1", $sts_val))
+            {
+                $arr = array('error'=>'Yes','result'=>'Cannot delete this item as it is already despatched.');
+                return json_encode($arr);
+            }
+        
+            else
+            {   
+                //check schedule data
+                $activityid=$_POST['actid'];
+                $connection = Yii::$app->db;
+               
+                //check data in project schedule
+                $scheduleid=Scheduleactivities::find()->where(['activity_id' => $activityid])->one();
+                if(!empty($scheduleid))
+                {
+                    // schedule data is there - alert for delete schedule
+                    $arr = array('error'=>'Yes','result'=>'For delete this activity please delete it from schedule.');
+                    return json_encode($arr);
+                }
+                else
+                {
+                    //delete from projest estimate all data..
+                    //deleted from confirm order, despatch order
+                    if(!empty($orderids))
+                    {
+                        foreach ($orderids as $key => $odrvalue) 
+                        { 
+                            $odresids = Orders::find()->where(['order_id'=>$odrvalue])->andWhere(['delete_status'=>0])->one();
+                            if($odresids){
+                                $odresids->delete_status = 1;
+                                $odresids->save(false);
+                            }
+                            
+                        }
+                    }
+
+                    //deleted from place order- cart, jobcard
+                    
+                    if(!empty($jobids))
+                    {
+                        foreach ($jobids as $key => $jobvalue) 
+                        { 
+                            $cartdata = Cart::find()->where(['Job_Id'=>$jobvalue])->one();
+                            if($cartdata){
+                                $cartdata->status = 5; //deleted
+                                $cartdata->save(false);
+                            }
+
+                            $jobdata = jobcard::findOne($jobvalue);
+                            if($jobdata){
+                                $jobdata->delete_status = 1; //deleted
+                                $jobdata->save(false);
+                            }
+                            
+                        }
+                    }
+                    
+                    
+                // $pricing=PricingEstimateNew::deleteAll(['activity_Id' => $_POST['actid']]);
+                    $pricing=PricingEstimateNew::find()->where(['activity_Id'=>$_POST['actid']])->all();
+                    foreach($pricing AS $pricings):
+                        $pricings->pricing_status=1;
+                        $pricings->save(false);
+                    endforeach;
+
+                    $pricingres=PricingEstimateResourcesNew::find()->where(['activity_id'=>$_POST['actid']])->all();
+                
+                    foreach($pricingres AS $pricingre):
+                        $pricingre->pricing_status=1;
+                        $pricingre->save(false);
+                    endforeach;
+
+                    
+                    //no schedule data- then delete all actvity form everywher
+                    $model=WorkgroupActivitiesNew::findOne($_POST['actid']);
+                    $model->delete();
+
+                    $arr = array('error'=>'No','id'=>$_POST['actid']);
+                    return json_encode($arr);
+                }
+               
+
+                
+                
+                
+            }
+        }
+
+    }
+
+    public function actionHolidays(){
+
+        $ProjectId = $_POST['projectid'];
+        $ProjectName = '';
+        if($Project = Projects::findOne($ProjectId))
+            $ProjectName = $Project->Name;
+
+        if($selectedDate = date('j-n-Y', strtotime($_POST['selectedDate']))){
+            if($holiday = Holidays::find()->where(['project_id'=>$ProjectId])->one()){
+                $datesArr = explode(',', $holiday->dates);
+                if(in_array($selectedDate, $datesArr))
+                    unset($datesArr[array_search($selectedDate, $datesArr)]);
+                else
+                    $datesArr[] = $selectedDate;
+                $holiday->dates = implode(',',array_filter($datesArr,'strlen'));
+                $holiday->save(false);
+            }
+            else{
+                $holiday = New Holidays();
+                $holiday->project_id = $ProjectId;
+                $holiday->dates = $selectedDate;
+                $holiday->save(false);
+            }
+        }
+
+        $holidayWeekSelectorVisible = 'display:none;';
+        $holidayWeekSelectorIcon    = 'icon-keyboard_arrow_down';
+
+        if(($selectedWeek = $_POST['selectedWeek']) != ''){
+
+            $holidayWeekSelectorVisible = 'display:block;';
+            $holidayWeekSelectorIcon    = 'icon-keyboard_arrow_up';
+
+            if($holiday = Holidays::find()->where(['project_id'=>$ProjectId])->one()){
+                $weeksArr = explode(',', $holiday->weeks);
+                if(in_array($selectedWeek, $weeksArr))
+                    unset($weeksArr[array_search($selectedWeek, $weeksArr)]);
+                else
+                    $weeksArr[] = $selectedWeek;
+                $holiday->weeks = implode(',',array_filter($weeksArr,'strlen'));
+                $holiday->save(false);
+            }
+            else{
+                $holiday = New Holidays();
+                $holiday->project_id = $ProjectId;
+                $holiday->weeks = $selectedWeek;
+                $holiday->save(false);
+            }
+        }
+        
+        Yii::$app->helper->GetRelationcorrect($ProjectId);
+
+        $holiday_arr = [];
+        $holiday_week_arr = [];
+        if($holiday = Holidays::find()->where(['project_id'=>$ProjectId])->one()){
+            $holiday_arr = ($holiday->dates) ? explode(',', $holiday->dates) : '';
+            $holiday_week_arr = ($holiday->weeks != '') ? explode(',', $holiday->weeks) : '';
+        }
+
+        $holidayWeekArr      = array(0 => 'Su', 1 => 'Mo', 2 => 'Tu', 3 => 'We', 4 => 'Th', 5 => 'Fr', 6 => 'Sa');
+        $holidayWeekSelector = '';
+        
+        foreach ($holidayWeekArr as $weekVal => $weekName) {
+            $weekClass = "holidayWeekGreen";
+            $weekTitle = "Add as Holiday Week";
+            $weekStyle = "";
+
+            if($holiday_week_arr && in_array($weekVal, $holiday_week_arr)){
+                $weekClass = "holidayWeekRed";
+                $weekTitle = "Remove from Holiday Week";
+            }
+
+            if($weekVal == 6) $weekStyle = 'style="margin-right:0;"';
+
+            $holidayWeekSelector .= '<div class="holidayWeekSelector '.$weekClass.'" data-week="'.$weekVal.'" data-projectid="'.$ProjectId.'" title="'.$weekTitle.'" '.$weekStyle.'>'.$weekName.'</div>';
+        }
+
+
+        $result = '
+                    <div class="holidayContainer">
+                        <div class="row">
+                            <div class="col-md-12" >
+                                <div class="row" style="text-align:center;">
+                                    <div class="col-md-12" style="  ">
+                                        <span style="font-size:15px; font-weight:bold; ">Holidays of Project - '.$ProjectName.'</span>
+                                    </div>
+                                </div>
+
+                                <div class="row" style="padding-top:25px;text-align:center; padding-bottom:10px;">
+                                    <div class="col-md-1" ></div>
+                                    <div class="col-md-10" style="padding-left:15px;">
+
+                                        <div class="row" style="border-top:1px solid #e5e5e5; border-bottom:1px solid #e5e5e5; padding:5px 0 5px 5px;">
+                                            <div class="col-md-11 no-padding text-left weekly_off_selector" style="font-weight:500; font-size:14px; cursor:pointer;" >
+                                                Select Week wise off days
+                                            </div>
+                                            <div class="col-md-1 no-padding weekly_off_selector" style="cursor:pointer;">
+                                                <span style="font-size: 20px;" class="weekly_off_arrow '.$holidayWeekSelectorIcon.'"></span>
+                                            </div>
+
+                                            <div class="col-md-12 weekly_off_container" style="'.$holidayWeekSelectorVisible.' padding: 10px 0px;">
+                                                '.$holidayWeekSelector.'
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                    <div class="col-md-1" ></div>
+                                </div>
+
+
+                                <div class="row" style="">
+                                    <div class="col-md-1"></div>
+                                    <div class="col-md-10" style="padding-left:17px;">
+                                        <div class="holidayDatepicker"></div>
+                                    </div>
+                                    <div class="col-md-1"></div>
+                                </div>
+
+                            </div>
+
+                       </div>
+                   </div>
+
+                   ';
+
+        $endDateQuery       =   ScheduleTaskReport::find()
+                                ->where(['projectid' => $ProjectId])
+                                ->orderBy(['task_enddate'=>SORT_DESC, 'end_time'=>SORT_DESC])
+                                ->one();
+        $last_reported_date = ($endDateQuery)? date("Y-m-d", strtotime($endDateQuery->task_enddate .' +1 day')) : '';
+
+        $arr = array(   'result' => $result, 
+                        'holiday_arr' => $holiday_arr,
+                        'holiday_week_arr' => $holiday_week_arr,
+                        'last_reported_date' => $last_reported_date,
+                        'error' => 'No'
+                    );
+        return json_encode($arr);
+
+    }
+
+
+    
+
+    public function actionBoqupdate()
+	{
+		$boq=Boq::findOne($_POST['boqid']);
+		$boq->item=$_POST['item'];
+		$boq->slno=$_POST['slno'];
+		$boq->unit=$_POST['unit'];
+		$boq->quantity=$_POST['quantity'];
+		$boq->rate=$_POST['rate'];
+		//$boq->activity=$_POST['activity'];
+		$boq->save(false);
+		$arr = array('result' => $_POST['boqid'], 'error' => 'No');
+		return json_encode($arr);
+	}
+
+    public function actionNewganttchart($id, $layout = 'true')
+    {
+        if ($layout === 'false') {
+            $this->layout = false;
+        }
+        Yii::$app->helper->GetRelationcorrect($id);
+        $project = Projects::findOne($id);
+        return $this->render('newganttview', ['projectId' => $id, 'project' => $project, 'embedMode' => ($layout === 'false')]);
+    }
+
+
+
+    public function actionGetcriticalpath()
+    {
+        // Textbook CPM: the engine in HelperComponent::GetRelationcorrect()
+        // computes ES/EF/LS/LF, total float and critical_status for every
+        // activity (forward pass, virtual finish, backward pass). This action
+        // just runs it and reports the zero-float activities.
+        $dependentAct1 = Scheduleactivities::findOne($_POST['activityid']);
+        if (!$dependentAct1) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Activity not found.']);
+        }
+        Yii::$app->helper->GetRelationcorrect($dependentAct1->projectId);
+
+        $criticalids = Scheduleactivities::find()
+            ->select('id')
+            ->where(['projectId' => $dependentAct1->projectId, 'status' => 0, 'critical_status' => 'Yes'])
+            ->column();
+
+        return json_encode(['error' => 'No', 'criticalIDs' => array_map('intval', $criticalids)]);
+    }
+
+    /* Legacy critical-path machinery (anchor scan, recursive zero-float walk,
+       parallel-activity hack, Getbackwardpass) removed — superseded by the
+       textbook CPM engine in HelperComponent::GetRelationcorrect(). */
+    private function getbackwardpassRemoved($dependentAct)
+    {
+        $projectid = $dependentAct->projectId;
+        $availableActivites = Scheduleactivities::find()->where(['projectId' => $projectid])->andWhere(['status' => 0])->orderBy(['end_date' => SORT_DESC])->all();
+        
+        //if(count($availableActivites) > 0)
+        if(!empty($availableActivites))
+        {
+            //$Ids = array($_POST['activityid']);
+            $Ids = array($dependentAct->id);
+            $dependentid = '';
+            foreach ($availableActivites as $activity) 
+            {          
+                  $acId = $activity->id;
+                  //$allRelations = ActivityRelations::model()->findAll(array('condition'=>'precedent_activity ='.$acId.' AND dependent_activity ='.$dependentid.' AND status =0'));
+                  $allRelations = ActivityRelations::find()->Where(['precedent_activity' => $acId])->andWhere(['projectId' => $projectid])->andWhere(['status'=>0])->all();
+
+                //if(count($allRelations) > 0)
+                if(!empty($allRelations))
+                {
+                    foreach ($allRelations AS $relation)
+                    {
+                        $depentAct = Scheduleactivities::findOne($relation->dependent_activity);
+                        $precAct = Scheduleactivities::findOne($relation->precedent_activity);
+
+                        if (!$depentAct || !$precAct) continue;
+
+                        // Use projected duration from CPM table; fall back to scheduleactivities.duration
+                        $cpmDurRow = \Yii::$app->db->createCommand(
+                            "SELECT proj_duration FROM activity_cpm_dates WHERE activity_id = :aid AND cpm_end IS NOT NULL LIMIT 1",
+                            [':aid' => $precAct->id]
+                        )->queryOne();
+                        $precProjDur = $cpmDurRow ? (int)round((float)$cpmDurRow['proj_duration']) : $precAct->duration;
+
+                        if($relation->relation_type==1){
+                            //SS — backward: prec.LateStart = dep.LateStart - lag
+                            $lag = $depentAct->lag;
+                            $duration = $precProjDur - 1;
+                            $dep_late_start = ($depentAct->critical_start && $depentAct->critical_start != '0000-00-00')
+                                ? $depentAct->critical_start : $depentAct->start_date;
+                            $backward_start = date('Y-m-d', strtotime(Yii::$app->helper->getDateAfterHoliday($dep_late_start, $projectid, $lag, 'previous')));
+                            $precAct->critical_start = $backward_start;
+                            $precAct->critical_end = date('Y-m-d', strtotime(Yii::$app->helper->getDateAfterHoliday($backward_start, $projectid, $duration, 'next')));
+                        }
+                        elseif($relation->relation_type==2){
+                            //FS — backward: prec.LateFinish = dep.LateStart - lag - 1
+                            $lag = $depentAct->lag + 1;
+                            $duration = $precProjDur - 1;
+                            $dep_late_start = ($depentAct->critical_start && $depentAct->critical_start != '0000-00-00')
+                                ? $depentAct->critical_start : $depentAct->start_date;
+                            $backward_end = date('Y-m-d', strtotime(Yii::$app->helper->getDateAfterHoliday($dep_late_start, $projectid, $lag, 'previous')));
+                            $precAct->critical_start = date('Y-m-d', strtotime(Yii::$app->helper->getDateAfterHoliday($backward_end, $projectid, $duration, 'previous')));
+                            $precAct->critical_end = $backward_end;
+                        }
+                        elseif($relation->relation_type==3){
+                            //FF
+                            $lag = $depentAct->lag;
+                            $duration = $precProjDur - 1;
+                            if($depentAct->critical_end && $depentAct->critical_end != '0000-00-00'){
+                                $backward_end = date('Y-m-d', strtotime(Yii::$app->helper->getDateAfterHoliday($depentAct->critical_end, $projectid, $lag, 'previous')));
+                            }
+                            else{
+                                $backward_end = date('Y-m-d', strtotime(Yii::$app->helper->getDateAfterHoliday($depentAct->end_date, $projectid, $lag, 'previous')));
+                            }
+                            $precAct->critical_end   = $backward_end;
+                            $precAct->critical_start = date('Y-m-d', strtotime(Yii::$app->helper->getDateAfterHoliday($backward_end, $projectid, $duration, 'previous')));
+                        }
+                        $precAct->save(false);
+                        /*if($precAct->critical_start == $precAct->start_date){
+                            array_push($Ids, $relation->precedent_activity);
+                            $dependentid = $relation->precedent_activity;
+                        } */
+                    }
+                }
+            }
+        }
+    }
+
+    // Driven from workgroups_new (every WBS/IOW node for the project),
+    // LEFT JOINed out to wbsscheduleitems and scheduleactivities — a bare
+    // IOW with no wbsscheduleitems row and no activities yet still
+    // returns a row here (scheduleitem_id/dates/duration all NULL), so
+    // it appears in the Gantt as a name-only header immediately after
+    // creation via actionWbsaddiows(). Previously this started from
+    // wbsscheduleitems with an INNER JOIN to scheduleactivities, which
+    // silently omitted any WBS node with no scheduled activity at all.
+    public function actionGanttitems()
+    {
+        $projectId = (int)$_POST['projectid'];
+        $rows = \Yii::$app->db->createCommand("
+            SELECT a.scheduleitem_id, b.Name AS name,
+                   MIN(s.actual_start_date)       AS start_date,
+                   MAX(s.actual_end_date)         AS end_date,
+                   b.iowGroupid,
+                   COALESCE(ig.name, '')          AS iow_group_name,
+                   COALESCE(b.sortorder, 999999)  AS wg_sortorder,
+                   b.Workgroup_Id,
+                   MIN(COALESCE(act_a.a_start, s.actual_start_date))      AS a_min_start,
+                   MAX(COALESCE(act_a.a_end_computed, s.actual_end_date)) AS a_max_end,
+                   CASE
+                     WHEN MIN(COALESCE(act_a.a_start, s.actual_start_date)) IS NOT NULL
+                          AND MAX(COALESCE(act_a.a_end_computed, s.actual_end_date)) IS NOT NULL
+                     THEN DATEDIFF(
+                            MAX(COALESCE(act_a.a_end_computed, s.actual_end_date)),
+                            MIN(COALESCE(act_a.a_start, s.actual_start_date))
+                          ) + 1
+                     ELSE NULL
+                   END AS a_duration
+            FROM workgroups_new AS b
+            LEFT JOIN wbsscheduleitems AS a ON a.wbsid = b.Workgroup_Id AND a.status = 0
+            LEFT JOIN iow_groups AS ig ON ig.id = b.iowGroupid AND ig.status = 0
+            LEFT JOIN scheduleactivities AS s
+                 ON s.scheduleitem_id = a.scheduleitem_id
+                 AND s.status = 0
+                 AND s.actual_start_date IS NOT NULL
+                 AND s.actual_start_date != '0000-00-00'
+            LEFT JOIN (
+                SELECT
+                    spr_i.activity_id,
+                    spr_i.start_date AS a_start,
+                    CASE
+                      WHEN rpt_i.cumulated_qty > 0 AND sa_i.quantity > 0
+                           AND spr_i.start_date IS NOT NULL
+                           AND spr_i.start_date != '0000-00-00'
+                      THEN DATE_ADD(
+                             spr_i.start_date,
+                             INTERVAL GREATEST(0, ROUND(
+                                 (DATEDIFF(rpt_i.last_report_date, spr_i.start_date) + 1)
+                                 / rpt_i.cumulated_qty * sa_i.quantity
+                             ) - 1) DAY
+                           )
+                      ELSE NULL
+                    END AS a_end_computed
+                FROM schedule_progress_report AS spr_i
+                JOIN scheduleactivities AS sa_i
+                     ON sa_i.id = spr_i.activity_id AND sa_i.status = 0
+                JOIN (
+                    SELECT activity_id,
+                           MAX(report_date) AS last_report_date,
+                           SUM(currentqty)  AS cumulated_qty
+                    FROM schedule_progress_report_log
+                    GROUP BY activity_id
+                ) AS rpt_i ON rpt_i.activity_id = spr_i.activity_id
+                WHERE spr_i.start_date IS NOT NULL AND spr_i.start_date != '0000-00-00'
+            ) AS act_a ON act_a.activity_id = s.id
+            WHERE b.Project_Id = :projectId AND b.Status = 0
+            GROUP BY b.Workgroup_Id
+            ORDER BY COALESCE(b.sortorder, 999999) ASC, b.Workgroup_Id ASC, a.scheduleitem_id ASC
+        ", [':projectId' => $projectId])->queryAll();
+        return json_encode(['result' => $rows, 'error' => 'No']);
+    }
+
+    public function actionGanttactivities()
+    {
+        $itemId = (int)$_POST['itemId'];
+        $rows = \Yii::$app->db->createCommand("
+            SELECT sa.id, sa.name,
+                   sa.activity_id AS wan_id,
+                   sa.start_date, sa.actual_start_date, sa.actual_end_date,
+                   sa.old_duration, sa.quantity,
+                   sa.scheduleitem_id, sa.critical_status,
+                   sa.completed_status,
+                   CASE
+                     WHEN rpt.cumulated_qty > 0
+                          AND sa.quantity > 0
+                          AND (
+                              (sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00')
+                              OR (spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00')
+                          )
+                     THEN ROUND(
+                            (DATEDIFF(rpt.last_report_date,
+                                CASE WHEN sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                                          AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                     THEN LEAST(sa.start_date, spr.start_date)
+                                     WHEN spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                                     THEN spr.start_date
+                                     ELSE sa.start_date END
+                            ) + 1)
+                            / rpt.cumulated_qty * sa.quantity
+                          )
+                     ELSE NULL
+                   END AS actual_duration,
+                   CASE WHEN sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
+                             AND spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                        THEN LEAST(sa.start_date, spr.start_date)
+                        WHEN spr.start_date IS NOT NULL AND spr.start_date != '0000-00-00'
+                        THEN spr.start_date
+                        ELSE sa.start_date END AS spr_start_date,
+                   rpt.last_report_date  AS spr_end_date,
+                   COALESCE(rpt.cumulated_qty, 0) AS cumulated_qty,
+                   GROUP_CONCAT(
+                       CONCAT(ar.precedent_activity,'ABC',ar.precedent_activity,
+                           CASE ar.relation_type WHEN 1 THEN 'SS' WHEN 2 THEN 'FS' WHEN 3 THEN 'FF' ELSE 'FS' END)
+                       ORDER BY ar.id SEPARATOR ','
+                   ) AS depends
+            FROM scheduleactivities AS sa
+            LEFT JOIN (
+                SELECT activity_id,
+                       MAX(report_date) AS last_report_date,
+                       SUM(currentqty)  AS cumulated_qty
+                FROM schedule_progress_report_log
+                GROUP BY activity_id
+            ) AS rpt ON rpt.activity_id = sa.id
+            LEFT JOIN schedule_progress_report AS spr ON spr.activity_id = sa.id
+            LEFT JOIN activity_relations AS ar
+                   ON ar.dependent_activity = sa.id AND ar.status = 0 AND ar.projectId = sa.projectId
+            LEFT JOIN workgroup_activities_new AS wa ON wa.id = sa.activity_id
+            WHERE sa.scheduleitem_id = :itemId AND sa.status = 0
+            GROUP BY sa.id
+            ORDER BY COALESCE(wa.sortorder, 999999) ASC, sa.id ASC
+        ", [':itemId' => $itemId])->queryAll();
+        return json_encode(['result' => $rows, 'error' => 'No']);
+    }
+
+    /* Inline edit of an activity's Start date from the Gantt name-click
+       tooltip. Both "Planned Start" and "Actual Start" write the same
+       scheduleactivities.actual_start_date column (shifting actual_end_date
+       by the same day-delta so the existing duration is preserved) — before
+       any progress is reported, "Actual Start" is only ever a mirror of the
+       planned value (see astart: aStart || act.actual_start_date in
+       newganttview.php), so there is nothing separate to edit yet.
+       Editing is blocked once progress has been reported for the activity:
+       at that point schedule_progress_report.start_date is the historical
+       record of when it actually started, and that record must not be
+       rewritten via this tooltip. Also blocked when this activity is the
+       dependent side of an active relationship, since GetRelationcorrect()
+       would just recompute the start from its precedent on the next
+       recalc. Both gates apply identically to the planned and actual
+       fields — same start value, same edit window. */
+    public function actionUpdateactivitystartdate()
+    {
+        $id    = (int)($_POST['id'] ?? 0);
+        $field = $_POST['field'] ?? '';
+        $date  = $_POST['date'] ?? '';
+        if (!$id || !in_array($field, ['planned', 'actual'], true) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Invalid request.']);
+        }
+
+        $db = \Yii::$app->db;
+
+        $hasRelation = $db->createCommand(
+            "SELECT COUNT(*) FROM activity_relations WHERE dependent_activity = :id AND status = 0",
+            [':id' => $id]
+        )->queryScalar();
+        if ($hasRelation) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'This activity\'s start is set by a relationship. Remove the relationship first to edit its start date.']);
+        }
+
+        $hasProgress = $db->createCommand(
+            "SELECT id FROM schedule_progress_report WHERE activity_id = :id",
+            [':id' => $id]
+        )->queryScalar();
+        if ($hasProgress) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Progress has already been reported for this activity — its start date can no longer be edited.']);
+        }
+
+        $sa = $db->createCommand(
+            "SELECT actual_start_date, actual_end_date FROM scheduleactivities WHERE id = :id AND status = 0",
+            [':id' => $id]
+        )->queryOne();
+        if (!$sa) return json_encode(['error' => 'Yes', 'errortext' => 'Activity not found.']);
+
+        $oldStart = $sa['actual_start_date'];
+        $newEnd = $sa['actual_end_date'];
+        if ($oldStart && $oldStart !== '0000-00-00' && $sa['actual_end_date'] && $sa['actual_end_date'] !== '0000-00-00') {
+            $deltaDays = (strtotime($date) - strtotime($oldStart)) / 86400;
+            $newEnd = date('Y-m-d', strtotime($sa['actual_end_date'] . ' + ' . $deltaDays . ' days'));
+        }
+        $db->createCommand(
+            "UPDATE scheduleactivities SET actual_start_date = :s, actual_end_date = :e WHERE id = :id",
+            [':s' => $date, ':e' => $newEnd, ':id' => $id]
+        )->execute();
+
+        return json_encode(['error' => 'No']);
+    }
+
+    /* Drag-and-drop reorder of activities within a single WBS/schedule item
+       on the Gantt chart (newganttview.php's jQuery UI sortable on the
+       list-side rows). Only workgroup_activities_new.sortorder changes —
+       no dates are touched. Scoped to one scheduleitem_id, matching the
+       existing ORDER BY in actionGanttactivities() (COALESCE(wa.sortorder,
+       999999) ASC), which is itself scoped per WBS item, not per IOW group.
+       Reordering is purely a display-order/default-sequence change — it
+       never touches any activity's dates, and activity_relations references
+       activities by id, not by list position, so inserting an unrelated
+       activity between two related ones (or reordering around an existing
+       relationship) doesn't affect that relationship at all. No
+       relationship check is needed here. */
+    public function actionReordertaskswithinwbs()
+    {
+        $scheduleitemId = (int)($_POST['scheduleitem_id'] ?? 0);
+        $wanIds = $_POST['wan_ids'] ?? [];
+        if (!$scheduleitemId || !is_array($wanIds) || !count($wanIds)) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Invalid request.']);
+        }
+        $wanIds = array_map('intval', $wanIds);
+
+        $db = \Yii::$app->db;
+
+        // Resolve each wan_id to its live scheduleactivities.id within this
+        // WBS item — reject the whole request if any wan_id doesn't
+        // resolve (stale client-side state, e.g. an activity removed from
+        // the Gantt after the page was loaded but before the drag).
+        foreach ($wanIds as $wanId) {
+            $saId = $db->createCommand(
+                "SELECT id FROM scheduleactivities WHERE activity_id = :w AND scheduleitem_id = :s AND status = 0 LIMIT 1",
+                [':w' => $wanId, ':s' => $scheduleitemId]
+            )->queryScalar();
+            if (!$saId) {
+                return json_encode(['error' => 'Yes', 'errortext' => 'Could not reorder — the activity list has changed. Please refresh and try again.']);
+            }
+        }
+
+        $sort = 1;
+        foreach ($wanIds as $wanId) {
+            $db->createCommand(
+                "UPDATE workgroup_activities_new SET sortorder = :s WHERE id = :id",
+                [':s' => $sort, ':id' => $wanId]
+            )->execute();
+            $sort++;
+        }
+
+        return json_encode(['error' => 'No']);
+    }
+
+    public function actionGanttlastactivity()
+    {
+        $projectId = (int)$_POST['projectid'];
+        $act = \Yii::$app->db->createCommand(
+            "SELECT id FROM scheduleactivities WHERE projectId = :p AND status = 0 AND actual_end_date IS NOT NULL AND actual_end_date != '0000-00-00' ORDER BY actual_end_date DESC LIMIT 1",
+            [':p' => $projectId]
+        )->queryOne();
+        return json_encode(['id' => $act ? (int)$act['id'] : null, 'error' => 'No']);
+    }
+
+
+
+    public function actionEstpurchaseorder()
+    {
+        $uid = Yii::$app->user->Id; 
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+
+        $rescount=0;
+
+        if($projuser)
+        {
+
+            $project = Projects::findOne($projuser->projectid); 
+
+            $connection = \Yii::$app->db;
+            $sqltemvals1 = "SELECT * FROM workgroups_new WHERE Project_Id=' ".$projuser->projectid." ' AND Status=0 ORDER BY sortorder ASC, Workgroup_Id ASC, Name ASC";
+            $command = $connection->createCommand($sqltemvals1);
+            $dataReader1 = $command->query();
+            $structures = $dataReader1->readAll();
+
+            if($structures){
+                $sno=0;
+                foreach($structures AS $structure):
+
+                    $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND wbs_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
+                    $command = $connection->createCommand($sql);
+                    $dataReader = $command->query();
+                    $wbsactivities = $dataReader->readAll();
+
+                    if(!empty($wbsactivities)){
+
+                        foreach($wbsactivities as $key=> $wbsactivity):
+                            $sno++;
+                            if($wbsactivity['activitytype_id']==0):
+                                $processtype=$wbsactivity['process_Id'];
+                            else:
+                                $processtype=$wbsactivity['activitytype_id'];
+                            endif;
+
+                            $estimateresources=PricingEstimateResourcesNew::find()->where(['activity_id'=>$wbsactivity['id']])->andWhere(['est_activity_Id'=>$wbsactivity['activity_Id']])->andWhere(['project_id'=>$wbsactivity['project_Id']])->andWhere(['process_Id'=>$processtype])->andWhere(['pricing_status'=>0])->andWhere(['powerstatus'=>0])->andWhere(['diesel_orderd_status'=>0])->all();
+                            $sfno=0;
+                            if(!empty($estimateresources))
+                            {
+
+                                foreach($estimateresources AS $key1 =>$estimateresource):
+                                    $sfno++;
+
+                                    if($estimateresource->resourcetype_Id == 19)
+                                    {
+                                        $resource=Resources::findOne($estimateresource->resource_Id);
+
+                                        $Jobcardd=Jobcard::find()->where(['vendor_id'=>$resource->Vendor_Id])->andWhere(['resource'=>$resource->Resource_Id])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['app_activity'=>$estimateresource->activity_id])->orderBy(['job_id'=>SORT_DESC])->one(); // activity wise
+                                    
+                                        $cart = cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>$resource->Resource_Id])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->andWhere(['rate'=>$estimateresource->rate])->one();
+
+
+                                        $editodrdata = "SELECT * FROM `cart` as c WHERE c.status=1 AND c.Vendor_Id='".$resource->Vendor_Id."' AND c.Resource_Id ='".$resource->Resource_Id."' AND c.Project='".$estimateresource->project_id."' AND c.rate ='".$estimateresource->rate."' AND c.pricing_resourceid = '".$estimateresource->pricing_resourceid."' ";
+
+                                        $command=$connection->createCommand($editodrdata);
+                                        $dataReader=$command->query();
+                                        $cartedit=$dataReader->read();
+                              
+
+                                        $odrdata = "SELECT c.status as status, c.Qnty as Qnty FROM `cart` as c INNER JOIN jobcard as j on j.job_id=c.Job_Id WHERE j.vendor_id='".$resource->Vendor_Id."' AND c.status = 0 AND j.resource ='".$resource->Resource_Id."' AND j.delete_status= 0 AND j.project_id='".$estimateresource->project_id."' AND j.app_activity ='".$estimateresource->activity_id."' ";
+
+
+
+                                        $command=$connection->createCommand($odrdata);
+                                        $dataReader=$command->query();
+                                        $pdata=$dataReader->read();
+
+                                        //calcul quanty dif aftr place odr
+                                        if(empty($pdata))
+                                        {
+  
+
+                                            $odreditdata = "SELECT * FROM `cart` as c INNER JOIN jobcard as j on j.job_id=c.Job_Id WHERE j.vendor_id='".$resource->Vendor_Id."' AND j.resource ='".$resource->Resource_Id."' AND j.delete_status= 0 AND j.project_id='".$estimateresource->project_id."' AND j.app_activity ='".$estimateresource->activity_id."'  AND c.pricing_resourceid = '".$estimateresource->pricing_resourceid."' AND c.status = 1";
+
+                                            $command=$connection->createCommand($odreditdata);
+                                            $dataReader=$command->query();
+                                            $peditdata=$dataReader->read();
+
+                                            if($peditdata){
+                                            //already orderd res, again estimated, calculate- qntyt difference    
+                                            //echo "no-cart-if-edit"; 
+                                              $estimateress=PricingEstimateResourcesNew::find()->where(['resource_Id'=>$estimateresource->resource_Id])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['activity_id'=>$estimateresource->activity_id])->andWhere(['pricing_status'=>0])->all();
+
+
+                                               $totqty= 0;
+                                               $no_mens= 0;
+                                               $no_dys= 0;
+                                               
+
+                                                foreach($estimateress as $estimateres)
+                                                {
+
+                                                   $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$estimateres->activity_id])->andWhere(['pricing_status' => 0])->one();
+
+                                                   if($estimateact['activity_qty']!=0){
+
+                                                   $wrkact_qty= $estimateact->activity_qty;
+
+                                                        }
+                                                        else{
+                                                   $wrkact_qty= 1;
+                                                        }
+
+                                                   $qty= ($estimateres->quantity) * ($wrkact_qty);
+
+                                                   $totqty=  $qty;
+
+                                                   $resourcee_rate= $estimateres->rate;
+
+                                                   $no_mens= $no_mens + $estimateres->no_of_men;
+
+                                                   $no_dys= $no_dys + $estimateres->no_of_days;
+
+
+                                                }
+
+                                                $cartqtys = cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>$resource->Resource_Id])->andWhere(['status'=>1])->andWhere(['Project'=>$estimateresource->project_id])->all();
+
+                                               
+                                               if($cartqtys)
+                                               {
+
+                                                    $odrqty=0;
+                                                    foreach($cartqtys as $cartqty)
+                                                    {
+                                                        $odrqty = $odrqty + $cartqty->Qnty;
+
+                                                    }
+
+                                                    $newqunty = $totqty - $odrqty; //Q1-Q2
+                                                }else
+                                                {
+                                                    $newqunty = $totqty;
+                                                }
+                                            //echo $newqunty;  exit;                                         
+                                                if($newqunty>0)
+                                                {
+
+                                                    $sql="SELECT name FROM jobcard ORDER BY name DESC limit 1";
+                                                    $command=$connection->createCommand($sql);
+                                                    $dataReader=$command->query();
+                                                    $no=$dataReader->read();
+                                                    if($no)
+                                                    {
+                                                    $name=$no['name'] + 1;
+                                                    }
+                                                    else
+                                                    {
+                                                        $name= 1;
+                                                    }
+                                                    
+                                                    $groupid=time();
+
+                                                    $processid = $estimateresource->process_Id;
+
+                                                    $activity = $wbsactivity['activity_Name'];
+
+                                                    $project_id = $projuser->projectid;
+
+                                                    $resource_id = $estimateresource->resource_Id;
+
+                                                    $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+
+                                                    $resource_unit = $res->Unit;
+
+                                                    $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+                                                    if($estimateact->activity_qty!=0){
+
+                                                        $wrkact_qty = $estimateact->activity_qty;
+
+                                                    }
+                                                    else{
+                                                        $wrkact_qty = 1;
+                                                    }
+                                                    
+
+                                                    $resource_qty = $newqunty;
+
+                                                    $resource_rate = $estimateresource->rate;
+
+                                                    $activity_id = $wbsactivity['id'];
+
+                                                    $iow_id = $wbsactivity['wbs_id'];
+
+                                                    $vendor_id = $res->Vendor_Id;
+                                                    
+                                                    
+                                                    $Jobcard = New Jobcard();
+                                                    $Jobcard->name= $name;
+                                                    $Jobcard->date= date('Y-m-d');
+                                                    $Jobcard->process= $processid;
+                                                    $Jobcard->activity= $activity;
+                                                    $Jobcard->groupid= $groupid;
+                                                    $Jobcard->project_id= $project_id;
+                                                    $Jobcard->resource= $resource_id;
+                                                    
+                                                    $Jobcard->res_quantity= $resource_qty;
+                                                    $Jobcard->res_rate= $resource_rate;
+                                                    $Jobcard->est_resqty= $resource_qty;
+                                                    $Jobcard->vendor_id= $vendor_id;
+                                                    $Jobcard->user_id= $uid;
+                                                    $Jobcard->app_activity= $activity_id;
+                                                    $Jobcard->iow= $iow_id;
+                                                    $Jobcard->status= 1;
+                                                    
+                                                    $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                
+                                                    $Jobcard->unit= $resource_unit;
+                                                
+                                                    if($Jobcard->save(false)):
+
+                                                        $nwgroupid = time();
+                                                        $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                        $Jobcard->save(false);
+
+                                                        $model=New Cart();
+
+                                                        $model->Job_Id= $Jobcard->job_id;
+                                                        $model->Vendor_Id= $Jobcard->vendor_id;
+                                                        $model->ResourceType_Id= $res->ResourceType_Id;
+                                                        $model->Resource_Id= $Jobcard->resource;
+                                                        
+                                                        $model->rate= $resource_rate;
+                                                        $model->Qnty= $resource_qty;
+                                                        $model->EstresQnty= $resource_qty;
+                                                        $amount = $resource_rate * $resource_qty;
+                                                        $model->amount= $amount;
+                                                        $model->Project= $Jobcard->project_id;
+                                                        $model->groupid= $Jobcard->groupid;
+                                                        if($estimateresource->no_of_men){
+                                                            $model->no_workers=$estimateresource->no_of_men;
+                                                        }
+                                                        if($estimateresource->no_of_days){
+                                                            $model->no_days=$estimateresource->no_of_days;
+                                                        }
+
+                                                        $model->fuel_status = 0;
+                                                        $model->unit= $Jobcard->unit;
+
+                                                        $model->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                        
+
+                                                        //$model->alrdy_odr_sts = 1;                    
+                                                        $model->save(false);
+
+                                                        $Jobcard->cart_status=1;
+                                                        $Jobcard->save(false);
+
+                                                    endif;
+
+                                                    $rescount=1;
+
+
+                                                }
+
+
+                                            }  
+
+                                            else  //very first time gen. new data, nothing in cart
+                                            {
+                                                
+                                                    //echo "no-cart-if-new";                                                    
+                                                    $sql="SELECT name FROM jobcard ORDER BY name DESC limit 1";
+                                                    $command=$connection->createCommand($sql);
+                                                    $dataReader=$command->query();
+                                                    $no=$dataReader->read();
+                                                    if($no)
+                                                    {
+                                                       $name=$no['name'] + 1;
+                                                    }
+                                                    else
+                                                    {
+                                                        $name= 1;
+                                                    }
+                                                    
+                                                    $groupid=time();
+
+                                                    $processid = $estimateresource->process_Id;
+
+                                                    $activity = $wbsactivity['activity_Name'];
+
+                                                    $project_id = $projuser->projectid;
+
+                                                    $resource_id = $estimateresource->resource_Id;
+
+                                                    $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+
+                                                    $resource_unit = $res->Unit;
+
+                                                     $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+                                                    if($estimateact->activity_qty!=0){
+
+                                                        $wrkact_qty = $estimateact->activity_qty;
+
+                                                    }
+                                                    else{
+                                                        $wrkact_qty = 1;
+                                                    }
+                                                    
+
+                                                    $resource_qty = $estimateresource->quantity * $wrkact_qty;
+
+                                                    $resource_rate = $estimateresource->rate;
+
+                                                    $activity_id = $wbsactivity['id'];
+
+                                                    $iow_id = $wbsactivity['wbs_id'];
+
+                                                    $vendor_id = $res->Vendor_Id;
+
+                                                    
+                                                    $Jobcard = New Jobcard();
+                                                    $Jobcard->name= $name;
+                                                    $Jobcard->date= date('Y-m-d');
+                                                    $Jobcard->process= $processid;
+                                                    $Jobcard->activity= $activity;
+                                                    $Jobcard->groupid= $groupid;
+                                                    $Jobcard->project_id= $project_id;
+                                                    $Jobcard->resource= $resource_id;
+                                                    
+                                                    $Jobcard->res_quantity= $resource_qty;
+                                                    $Jobcard->res_rate= $resource_rate;
+                                                    $Jobcard->est_resqty= $resource_qty;
+                                                    $Jobcard->vendor_id= $vendor_id;
+                                                    $Jobcard->user_id= $uid;
+                                                    $Jobcard->app_activity= $activity_id;
+                                                    $Jobcard->iow= $iow_id;
+                                                    $Jobcard->status= 1;
+                                                    
+                                                    $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                   
+                                                    $Jobcard->unit= $resource_unit;
+                                                 
+                                                    if($Jobcard->save(false)):
+
+                                                        $nwgroupid = time();
+                                                        $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                        $Jobcard->save(false);
+
+                                                        $model=New Cart();
+
+                                                        $model->Job_Id= $Jobcard->job_id;
+                                                        $model->Vendor_Id= $Jobcard->vendor_id;
+                                                        $model->ResourceType_Id= $res->ResourceType_Id;
+                                                        $model->Resource_Id= $Jobcard->resource;
+                                                        
+                                                        $model->rate= $resource_rate;
+                                                        $model->Qnty= $resource_qty;
+                                                        $model->EstresQnty= $resource_qty;
+                                                        $amount = $resource_rate * $resource_qty;
+                                                        $model->amount= $amount;
+                                                        $model->Project= $Jobcard->project_id;
+                                                        $model->groupid= $Jobcard->groupid;
+                                                        if($estimateresource->no_of_men){
+                                                            $model->no_workers=$estimateresource->no_of_men;
+                                                        }
+                                                        if($estimateresource->no_of_days){
+                                                            $model->no_days=$estimateresource->no_of_days;
+                                                        }
+
+                                                        $model->fuel_status = 0;
+                                                        $model->unit= $Jobcard->unit;
+
+                                                        $model->pricing_resourceid= $estimateresource->pricing_resourceid;                         
+                                                        $model->save(false);
+
+                                                        $Jobcard->cart_status=1;
+                                                        $Jobcard->save(false);
+
+                                                    endif;
+
+                                                    $rescount=1;
+                                                
+                                            }
+                                           
+
+                                        }
+                                        elseif(!empty($pdata))  //2nd case, aftr estimate..
+                                        { 
+          
+              
+                                            $orderstatus = $pdata['status']; 
+                                            
+                                            $cartdata = cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>$resource->Resource_Id])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->one();
+
+                                            if($orderstatus==1 && empty($cartdata))
+                                            {
+                                                // echo "*ys cart-if-sts-1empcart-*"; 
+                                                $Qnty = $pdata['Qnty']; 
+                                                $editestimateqnty = $estimateresource->quantity;
+                                                $newquntity = 0;
+                                                if($Qnty<$editestimateqnty)
+                                                {
+                                                     $newquntity = $editestimateqnty - $Qnty;
+                                                }
+                                                if($newquntity>0)
+                                                {
+
+
+ 
+                                                    $sql="SELECT name FROM jobcard ORDER BY name DESC limit 1";
+                                                    $command=$connection->createCommand($sql);
+                                                    $dataReader=$command->query();
+                                                    $no=$dataReader->read();
+                                                    if($no)
+                                                    {
+                                                       $name=$no['name'] + 1;
+                                                    }
+                                                    else
+                                                    {
+                                                        $name= 1;
+                                                    }
+                                                    
+                                                    $groupid=time();
+
+                                                    $processid = $estimateresource->process_Id;
+
+                                                    $activity = $wbsactivity['activity_Name'];
+
+                                                    $project_id = $projuser->projectid;
+
+                                                    $resource_id = $estimateresource->resource_Id;
+
+                                                    $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+
+                                                    $resource_unit = $res->Unit;
+
+                                                     $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+                                                    if($estimateact->activity_qty!=0){
+
+                                                        $wrkact_qty = $estimateact->activity_qty;
+
+                                                    }
+                                                    else{
+                                                        $wrkact_qty = 1;
+                                                    }
+                                                    
+
+                                                    $resource_qty = $newquntity * $wrkact_qty;
+
+                                                    $resource_rate = $estimateresource->rate;
+
+                                                    $activity_id = $wbsactivity['id'];
+
+                                                    $iow_id = $wbsactivity['wbs_id'];
+
+                                                    $vendor_id = $res->Vendor_Id;
+
+                                                    
+                                                    $Jobcard = New Jobcard();
+                                                    $Jobcard->name= $name;
+                                                    $Jobcard->date= date('Y-m-d');
+                                                    $Jobcard->process= $processid;
+                                                    $Jobcard->activity= $activity;
+                                                    $Jobcard->groupid= $groupid;
+                                                    $Jobcard->project_id= $project_id;
+                                                    $Jobcard->resource= $resource_id;
+                                                    
+                                                    $Jobcard->res_quantity= $resource_qty;
+                                                    $Jobcard->res_rate= $resource_rate;
+                                                    $Jobcard->est_resqty= $resource_qty;
+                                                    $Jobcard->vendor_id= $vendor_id;
+                                                    $Jobcard->user_id= $uid;
+                                                    $Jobcard->app_activity= $activity_id;
+                                                    $Jobcard->iow= $iow_id;
+                                                    $Jobcard->status= 1;
+                                                    
+                                                    $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                   
+                                                    $Jobcard->unit= $resource_unit;
+                                                    if($Jobcard->save(false)):
+
+                                                        $nwgroupid = time();
+                                                        $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                        $Jobcard->save(false);
+
+                                                        $model=New Cart();
+
+                                                        $model->Job_Id= $Jobcard->job_id;
+                                                        $model->Vendor_Id= $Jobcard->vendor_id;
+                                                        $model->ResourceType_Id= $res->ResourceType_Id;
+                                                        $model->Resource_Id= $Jobcard->resource;
+                                                        
+                                                        $model->rate= $resource_rate;
+                                                        $model->Qnty= $resource_qty;
+                                                        $model->EstresQnty= $resource_qty;
+                                                        $amount = $resource_rate * $resource_qty;
+                                                        $model->amount= $amount;
+                                                        $model->Project= $Jobcard->project_id;
+                                                        $model->groupid= $Jobcard->groupid;
+                                                        if($estimateresource->no_of_men){
+                                                            $model->no_workers=$estimateresource->no_of_men;
+                                                        }
+                                                        if($estimateresource->no_of_days){
+                                                            $model->no_days=$estimateresource->no_of_days;
+                                                        }
+
+                                                        $model->fuel_status = 0;
+                                                        $model->unit= $Jobcard->unit;
+
+                                                        $model->pricing_resourceid= $estimateresource->pricing_resourceid;                         
+                                                        $model->save(false);
+
+                                                        $Jobcard->cart_status=1;
+                                                        $Jobcard->save(false);
+
+                                                    endif;
+
+                                                    $rescount=1;
+
+                                                }
+
+
+                                            }
+
+                                            elseif($orderstatus==0 && !empty($cartdata))
+                                            {
+                                            //clubbing of quantity before place order 
+                                                    // echo "*ys cart-els-sts-0-cart-*";                                           
+                                               $catsne= cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>$resource->Resource_Id])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->andWhere(['rate'=>$estimateresource->rate])->andWhere(['Job_Id'=>$Jobcardd->job_id])->one();
+                                               $estimateress=PricingEstimateResourcesNew::find()->where(['resource_Id'=>$estimateresource->resource_Id])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['activity_id'=>$estimateresource->activity_id])->andWhere(['pricing_status'=>0])->all();
+
+                                               $totqty= 0;
+                                               $no_mens= 0;
+                                               $no_dys= 0;
+
+
+                                                foreach($estimateress as $estimateres)
+                                                {
+
+                                                   $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$estimateres->activity_id])->andWhere(['pricing_status' => 0])->one();
+
+                                                   if($estimateact['activity_qty']!=0){
+
+                                                   $wrkact_qty= $estimateact->activity_qty;
+
+                                                        }
+                                                        else{
+                                                   $wrkact_qty= 1;
+                                                        }
+
+                                                   $qty= $estimateres->quantity * $wrkact_qty;
+
+                                                   $totqty= $totqty + $qty;
+
+                                                   $resourcee_rate= $estimateres->rate;
+
+                                                   $no_mens= $no_mens + $estimateres->no_of_men;
+
+                                                   $no_dys= $no_dys + $estimateres->no_of_days;
+
+
+                                                }
+
+                                                $cartqtys = cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>$resource->Resource_Id])->andWhere(['status'=>1])->andWhere(['Project'=>$estimateresource->project_id])->all();
+                                               if($cartqtys){
+
+                                                    $odrqty=0;
+                                                    foreach($cartqtys as $cartqty)
+                                                    {
+                                                        $odrqty = $odrqty + $cartqty->Qnty;
+
+                                                    }
+
+                                                    $newqunty = $totqty - $odrqty;
+                                                }else
+                                                {
+                                                  $newqunty = $totqty;
+                                                }
+
+                                                if($newqunty>0)
+                                                {
+
+                                                    $Jobcardd->res_quantity= $newqunty;
+                                                    $Jobcardd->res_rate= $resourcee_rate;
+                                                    $Jobcardd->est_resqty= $newqunty;
+                                                    $Jobcardd->status= 1;
+
+                                                    if($Jobcardd->save(false)):
+                                                            if($catsne)
+                                                                {
+
+                                                                $catsne->rate= $Jobcardd->res_rate;
+                                                                $catsne->Qnty= $Jobcardd->res_quantity;
+                                                                $catsne->EstresQnty=$Jobcardd->res_quantity;
+                                                                $amount= $resourcee_rate * $Jobcardd->res_quantity;
+                                                                $catsne->amount= $amount;
+
+                                                                    //if($estimateresource->no_of_men){
+                                                                $catsne->no_workers=$no_mens;
+                                                                            //}
+                                                                            //if($estimateresource->no_of_days){
+                                                                $catsne->no_days=$no_dys;
+                                                                            //}
+
+                                                                        
+                                                                $catsne->fuel_status= 0;
+                                                                $catsne->save(false);
+                                                                }
+
+                                                                $Jobcardd->cart_status=1;
+                                                                $Jobcardd->save(false);
+
+
+                                                            endif;
+
+                                                        $rescount=1;
+
+                                                }
+                                               
+                                               //clubbing of quantity-edit  end
+                                            }
+                                        }
+
+                                    }
+                                   
+                                    elseif($estimateresource->resourcetype_Id == 24)
+                                    {   
+
+                                        $resource=Resources::findOne($estimateresource->resource_Id);
+
+                                        $Jobcardd=Jobcard::find()->where(['vendor_id'=>$resource->Vendor_Id])->andWhere(['resource'=>$resource->Resource_Id])->andWhere(['app_activity'=>$estimateresource->activity_id])->andWhere(['delete_status'=>0])->andWhere(['pricing_resourceid'=>$estimateresource->pricing_resourceid])->one();
+                                        //print_r($Jobcardd);exit;
+
+                                        $Jobcarddl=Jobcard::find()->andWhere(['resource'=>184])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['pricing_resourceid'=>$estimateresource->pricing_resourceid])->one(); 
+                                        $cartl = cart::find()->where(['Vendor_Id'=>9])->andWhere(['Resource_Id'=>184])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->one();
+                                       
+                                        $cart = cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>$resource->Resource_Id])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->andWhere(['pricing_resourceid'=>$estimateresource->pricing_resourceid])->andWhere(['rate'=>$estimateresource->rate])->one();
+
+                                      if(empty($Jobcardd)){
+                                        
+                                       
+                                            $sql="SELECT name FROM jobcard ORDER BY name DESC limit 1";
+                                            $command=$connection->createCommand($sql);
+                                            $dataReader=$command->query();
+                                            $no=$dataReader->read();
+                                            $name=$no['name'] + 1;
+                                            $groupid=time();
+
+                                            $processid = $estimateresource->process_Id;
+
+                                            $activity = $wbsactivity['activity_Name'];
+
+                                            $project_id = $projuser->projectid;
+
+                                            $resource_id = $estimateresource->resource_Id;
+
+                                            $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+
+                                            $resource_unit = $res->Unit;
+
+                                            $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+
+                                            if($estimateact->activity_qty!=0){
+
+                                                $wrkact_qty = $estimateact->activity_qty;
+
+                                            }
+                                            else{
+                                                $wrkact_qty = 1;
+                                            }
+
+                                            
+
+                                            $resource_rate = $estimateresource->rate;
+
+                                            $activity_id = $wbsactivity['id'];
+
+                                            $iow_id = $wbsactivity['wbs_id'];
+
+                                            $vendor_id = $res->Vendor_Id;
+
+
+                                            
+
+
+                                            $Jobcarddfuel=Jobcard::find()->where(['vendor_id'=>$resource->Vendor_Id])->andWhere(['in','resource',[183,184]])->andWhere(['app_activity'=>$estimateresource->activity_id])->andWhere(['delete_status'=>0])->andWhere(['pricing_resourceid'=>$estimateresource->pricing_resourceid])->andWhere(['project_id'=>$estimateresource->project_id])->one();
+                                            //$Jobcarddfuel1=Jobcard::find()->andWhere(['in','resource',[183,184]])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->one(); 
+                                            
+                                            if(empty($Jobcarddfuel)){
+                                                
+                                                
+                                            $jobfindfuel = Jobcard::find()->where(['resource' => 184])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->one();
+                                            
+                                            if(!$jobfindfuel)
+                                            {
+                                                
+                                                
+                                                if($estimateresource->fuel_type != null){
+
+                                                    $fuel_qty = $estimateresource->fuel_qty * $estimateresource->hours_no;
+        
+                                                    $resource_qty = $fuel_qty * $wrkact_qty;
+                                                    
+                                                    $resource_unit = 'Ltr';
+                                                    $resource_rate = $estimateresource->fuel_rate;
+        
+                                                    if($estimateresource->fuel_type == 'Petrol'){
+                                                        $resids = Resources::find()->where(['Vendor_Id' => 0])->andWhere(['LIKE','Name','Petrol'])->one();
+                                                        $resource_id = '183';
+        
+                                                    }elseif($estimateresource->fuel_type == 'Diesel'){
+                                                        $resids = Resources::find()->where(['Vendor_Id' => 0])->andWhere(['LIKE','Name','Diesel'])->one();
+                                                        $resource_id = '184';
+                                                    }
+                                                }else{
+                                                    $resource_id = $estimateresource->resource_Id;
+                                                    
+                                                    $resource_unit = $res->Unit;
+                                                    $resource_qty = $estimateresource->quantity * $wrkact_qty;
+                                                    $resource_rate = $estimateresource->rate;
+                                                }
+
+                                                $Jobcard = New Jobcard();
+                                                $Jobcard->name= $name;
+                                                $Jobcard->date= date('Y-m-d');
+                                                $Jobcard->process= $processid;
+                                                $Jobcard->activity= $activity;
+                                                $Jobcard->groupid= $groupid;
+                                                $Jobcard->project_id= $project_id;
+                                                $Jobcard->resource= $resource_id;
+                                                $Jobcard->unit= $resource_unit;
+                                                $Jobcard->res_quantity= $resource_qty;
+                                                $Jobcard->res_rate= $resource_rate;
+                                                $Jobcard->est_resqty= $resource_qty;
+
+                                            
+                                                $Jobcard->vendor_id= $vendor_id;
+                                                
+
+                                            
+                                                $Jobcard->user_id= $uid;
+                                                $Jobcard->app_activity= $activity_id;
+                                                $Jobcard->iow= $iow_id;
+                                                $Jobcard->status= 1;
+                                                //$Jobcard->save(false);
+                                                $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                if($Jobcard->save(false)):
+
+                                                    $nwgroupid = time();
+                                                    $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                    $Jobcard->save(false);
+
+                                                    $model=New Cart();
+
+                                                    $model->Job_Id= $Jobcard->job_id;
+                                                    if($estimateresource->resourcetype_Id == 24 && $estimateresource->lease_period == null){                      
+                                                        $model->Vendor_Id= '9';                                               
+                                                    }else{
+                                                        $model->Vendor_Id= $Jobcard->vendor_id;
+                                                    }
+                                                    $model->ResourceType_Id= $res->ResourceType_Id;
+                                                    $model->Resource_Id= $Jobcard->resource;
+                                                    $model->unit= $Jobcard->unit;
+                                                    $model->rate= $resource_rate;
+                                                    $model->Qnty= $resource_qty;
+                                                    $model->EstresQnty= $resource_qty;
+
+                                                    
+                                                        $amount = $resource_rate * $resource_qty;
+                                                    
+                                                    $model->amount= $amount;
+                                                    $model->Project= $Jobcard->project_id;
+                                                    $model->groupid= $Jobcard->groupid;
+                                                    if($estimateresource->no_of_men){
+                                                        $model->no_workers=$estimateresource->no_of_men;
+                                                    }
+                                                    if($estimateresource->no_of_days){
+                                                        $model->no_days=$estimateresource->no_of_days;
+                                                    }
+
+                                                    if($estimateresource->resourcetype_Id == 24 && $estimateresource->lease_period != null){
+                                                        $model->fuel_status = 1;
+                                                    }else{
+                                                        $model->fuel_status = 0;
+                                                    }
+                                                    
+                                                    $model->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                    $model->save(false);
+
+                                                    $Jobcard->cart_status=1;
+                                                    $Jobcard->save(false);
+
+                                                    if($estimateresource->fuel_type != null){
+
+                                                        $diesletabs = Pricingordereddiesel::find()->where(['pricing_res_id'=>$estimateresource->pricing_resourceid])->one();
+
+                                                        if($diesletabs){
+
+                                                        }else{
+                                                            $dieselcapturing = new Pricingordereddiesel;
+                                                            $dieselcapturing->cartid = $model->cartID;
+                                                            $dieselcapturing->pricing_res_id = $estimateresource->pricing_resourceid;
+
+                                                            $dieselcapturing->save(false);
+                                                        }
+
+                                                       
+                                                    }
+    
+                                                endif;
+
+
+                                            }elseif($estimateresource->fuel_type == ''){
+                                                
+                                               
+                                                $resource_id = $estimateresource->resource_Id;
+                                                    
+                                                $resource_unit = $res->Unit;
+                                                $resource_qty = $estimateresource->quantity * $wrkact_qty;
+                                                $resource_rate = $estimateresource->rate;
+
+                                            $Jobcard = New Jobcard();
+                                            $Jobcard->name= $name;
+                                            $Jobcard->date= date('Y-m-d');
+                                            $Jobcard->process= $processid;
+                                            $Jobcard->activity= $activity;
+                                            $Jobcard->groupid= $groupid;
+                                            $Jobcard->project_id= $project_id;
+                                            $Jobcard->resource= $resource_id;
+                                            $Jobcard->unit= $resource_unit;
+                                            $Jobcard->res_quantity= $resource_qty;
+                                            $Jobcard->res_rate= $resource_rate;
+                                            $Jobcard->est_resqty= $resource_qty;
+
+                                           
+                                            $Jobcard->vendor_id= $vendor_id;
+                                            
+
+                                           
+                                            $Jobcard->user_id= $uid;
+                                            $Jobcard->app_activity= $activity_id;
+                                            $Jobcard->iow= $iow_id;
+                                            $Jobcard->status= 1;
+                                            //$Jobcard->save(false);
+                                            $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                            if($Jobcard->save(false)):
+
+                                                $nwgroupid = time();
+                                                $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                $Jobcard->save(false);
+
+                                                $model=New Cart();
+
+                                                $model->Job_Id= $Jobcard->job_id;
+                                                /* if($estimateresource->resourcetype_Id == 24 && $estimateresource->lease_period == null){                      
+                                                    $model->Vendor_Id= '9';                                               
+                                                }else{ */
+                                                    $model->Vendor_Id= $Jobcard->vendor_id;
+                                                //}
+                                                $model->ResourceType_Id= $res->ResourceType_Id;
+                                                $model->Resource_Id= $Jobcard->resource;
+                                                $model->unit= $Jobcard->unit;
+                                                $model->rate= $resource_rate;
+                                                $model->Qnty= $resource_qty;
+                                                $model->EstresQnty= $resource_qty;
+
+                                                 
+                                                    $amount = $resource_rate * $resource_qty;
+                                                
+                                                $model->amount= $amount;
+                                                $model->Project= $Jobcard->project_id;
+                                                $model->groupid= $Jobcard->groupid;
+                                                if($estimateresource->no_of_men){
+                                                    $model->no_workers=$estimateresource->no_of_men;
+                                                }
+                                                if($estimateresource->no_of_days){
+                                                    $model->no_days=$estimateresource->no_of_days;
+                                                }
+
+                                                if($estimateresource->resourcetype_Id == 24 && $estimateresource->lease_period != null){
+                                                    $model->fuel_status = 1;
+                                                }/* else{
+                                                    $model->fuel_status = 0;
+                                                } */
+                                                
+                                                $model->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                $model->save(false);
+
+                                                $Jobcard->cart_status=1;
+                                                $Jobcard->save(false);
+ 
+                                            endif;
+
+                                            }else{
+                                                $Jobcarddf = Jobcard::find()->where(['resource'=>184])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->one();
+
+                                                $cartf = cart::find()->where(['Resource_Id'=>184])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->one();
+
+
+                                                if($cartf)
+                                                {
+                                                    $estimateress=PricingEstimateResourcesNew::find()->where(['resource_Id'=>$estimateresource->resource_Id])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['pricing_status'=>0])->andWhere(['diesel_orderd_status'=>0])->all();
+                                                    $totqty = 0;
+                                                    $resourcee_rate = 0;
+                                                    $tot_f_qty = 0;
+                                                    //$fuelrate = 0;
+
+                                                    $fuelestimateress=PricingEstimateResourcesNew::find()->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['pricing_status'=>0])->andWhere(['lease_period'=>null])->andWhere(['fuel_type' => 'Diesel'])->andWhere(['IN','resourcetype_Id',[24,26]])->andWhere(['diesel_orderd_status'=>0])->all();
+
+                                                    //print_r($fuelestimateress);exit;
+                                                    foreach($fuelestimateress as $estimateres){
+
+                                                        // $estimateres->fuel_type.'<br>';
+
+                                                        $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$estimateres->activity_id])->andWhere(['pricing_status' => 0])->one();
+
+                                                        if($estimateact['activity_qty']!=0){
+
+                                                            $wrkact_qty = $estimateact->activity_qty;
+
+                                                        }
+                                                        else{
+                                                            $wrkact_qty = 1;
+                                                        }
+
+                                                        $qty = $estimateres->quantity * $wrkact_qty;
+
+                                                        $totqty = $totqty + $qty;
+
+                                                        $resourcee_rate = $resourcee_rate + $estimateres->rate;
+
+                                                        // if($estimateres->resourcetype_Id==26 && $estimateres->fuel_type != ''){
+
+                                                            $count=PricingEstimateResourcesNew::find()->where(['resource_Id'=>$estimateresource->resource_Id])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['pricing_status'=>0])->andWhere(['resourcetype_Id'=>26])->count();                                                 
+
+                                                            $fuelqty = $estimateres->fuel_qty * $estimateres->hours_no;
+
+                                                            $f_qty = $fuelqty * $wrkact_qty;
+                                                            
+
+                                                            $tot_f_qty = $tot_f_qty + $f_qty;
+
+                                                            $fuelrate =  $estimateres->fuel_rate;
+
+                                                        //}
+
+                                                        $diesletabs = Pricingordereddiesel::find()->where(['pricing_res_id'=>$estimateres->pricing_resourceid])->one();
+
+                                                        if($diesletabs){
+
+                                                        }else{
+                                                            $dieselcapturing = new Pricingordereddiesel;
+                                                            $dieselcapturing->cartid = $cartf->cartID;
+                                                            $dieselcapturing->pricing_res_id = $estimateres->pricing_resourceid;
+
+                                                            $dieselcapturing->save(false);
+                                                        }
+
+                                                    }
+
+                                                    //$countmachine = count($estimateress);
+
+                                                    //if($countmachine !=0){
+                                                        //$resource_rate = $resourcee_rate;
+                                                    //}
+
+                                                    $Jobcarddf->res_quantity = $tot_f_qty;
+                                                    $Jobcarddf->res_rate = $fuelrate;
+                                                    $Jobcarddf->est_resqty = $tot_f_qty;
+                                                    $Jobcarddf->status = 1;
+
+
+                                                    if($Jobcarddf->save(false)):
+
+                                                        $cartf->rate= $Jobcarddf->res_rate;
+                                                        $cartf->Qnty= $tot_f_qty;
+                                                        $cartf->EstresQnty=$tot_f_qty;
+                                                        $amount = $fuelrate * $tot_f_qty;
+                                                        $cartf->amount= $amount;
+                                                        
+                                                        $cartf->save(false);
+
+                                                        $Jobcarddf->cart_status=1;
+                                                        $Jobcarddf->save(false);
+
+
+                                                    endif;
+
+                                                $rescount=1;
+
+                                                }else{
+
+                                                    $activity = $wbsactivity['activity_Name'];
+
+                                                    $project_id = $projuser->projectid;
+
+                                                    $resource_id = $estimateresource->resource_Id;
+
+                                                    $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+
+                                                    $resource_unit = $res->Unit;
+
+                                                    $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+
+                                                    if($estimateact->activity_qty!=0){
+
+                                                        $wrkact_qty = $estimateact->activity_qty;
+
+                                                    }
+                                                    else{
+                                                        $wrkact_qty = 1;
+                                                    }
+
+                                                    
+
+                                                    $resource_rate = $estimateresource->rate;
+
+                                                    $activity_id = $wbsactivity['id'];
+
+                                                    $iow_id = $wbsactivity['wbs_id'];
+
+                                                    $vendor_id = $res->Vendor_Id;
+
+
+                                                    if($estimateresource->fuel_type != null){
+
+                                                        $fuel_qty = $estimateresource->fuel_qty * $estimateresource->hours_no;
+            
+                                                        $resource_qty = $fuel_qty * $wrkact_qty;
+                                                        
+                                                        $resource_unit = 'Ltr';
+                                                        $resource_rate = $estimateresource->fuel_rate;
+            
+                                                        if($estimateresource->fuel_type == 'Petrol'){
+                                                            $resids = Resources::find()->where(['Vendor_Id' => 0])->andWhere(['LIKE','Name','Petrol'])->one();
+                                                            $resource_id = '183';
+            
+                                                        }elseif($estimateresource->fuel_type == 'Diesel'){
+                                                            $resids = Resources::find()->where(['Vendor_Id' => 0])->andWhere(['LIKE','Name','Diesel'])->one();
+                                                            $resource_id = '184';
+                                                        }
+                                                    }
+
+                                                    $Jobcard = New Jobcard();
+                                                    $Jobcard->name= $name;
+                                                    $Jobcard->date= date('Y-m-d');
+                                                    $Jobcard->process= $processid;
+                                                    $Jobcard->activity= $activity;
+                                                    $Jobcard->groupid= $groupid;
+                                                    $Jobcard->project_id= $project_id;
+                                                    $Jobcard->resource= $resource_id;
+                                                    $Jobcard->unit= $resource_unit;
+                                                    $Jobcard->res_quantity= $resource_qty;
+                                                    $Jobcard->res_rate= $resource_rate;
+                                                    $Jobcard->est_resqty= $resource_qty;
+
+                                                
+                                                    $Jobcard->vendor_id= $vendor_id;
+                                                    
+
+                                                
+                                                    $Jobcard->user_id= $uid;
+                                                    $Jobcard->app_activity= $activity_id;
+                                                    $Jobcard->iow= $iow_id;
+                                                    $Jobcard->status= 1;
+                                                    //$Jobcard->save(false);
+                                                    $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                    if($Jobcard->save(false)):
+                                                        $nwgroupid = time();
+                                                        $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                        $Jobcard->save(false);
+
+                                                        $model=New Cart();
+
+                                                        $model->Job_Id= $Jobcard->job_id;
+                                                        if($estimateresource->resourcetype_Id == 24 && $estimateresource->lease_period == null){                      
+                                                            $model->Vendor_Id= '9';                                               
+                                                        }else{
+                                                            $model->Vendor_Id= $Jobcard->vendor_id;
+                                                        }
+                                                        $model->ResourceType_Id= $res->ResourceType_Id;
+                                                        $model->Resource_Id= $Jobcard->resource;
+                                                        $model->unit= $Jobcard->unit;
+                                                        $model->rate= $resource_rate;
+                                                        $model->Qnty= $resource_qty;
+                                                        $model->EstresQnty= $resource_qty;
+
+                                                        
+                                                            $amount = $resource_rate * $resource_qty;
+                                                        
+                                                        $model->amount= $amount;
+                                                        $model->Project= $Jobcard->project_id;
+                                                        $model->groupid= $Jobcard->groupid;
+                                                        if($estimateresource->no_of_men){
+                                                            $model->no_workers=$estimateresource->no_of_men;
+                                                        }
+                                                        if($estimateresource->no_of_days){
+                                                            $model->no_days=$estimateresource->no_of_days;
+                                                        }
+
+                                                        if($estimateresource->resourcetype_Id == 24 && $estimateresource->lease_period != null){
+                                                            $model->fuel_status = 1;
+                                                        }else{
+                                                            $model->fuel_status = 0;
+                                                        }
+                                                        
+                                                        $model->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                        $model->save(false);
+
+                                                        $Jobcard->cart_status=1;
+                                                        $Jobcard->save(false);
+
+                                                        if($estimateresource->fuel_type != null){
+
+                                                            $diesletabs = Pricingordereddiesel::find()->where(['pricing_res_id'=>$estimateresource->pricing_resourceid])->one();
+
+                                                            if($diesletabs){
+
+                                                            }else{
+                                                                $dieselcapturing = new Pricingordereddiesel;
+                                                                $dieselcapturing->cartid = $model->cartID;
+                                                                $dieselcapturing->pricing_res_id = $estimateresource->pricing_resourceid;
+
+                                                                $dieselcapturing->save(false);
+                                                            }
+
+                                                        
+                                                        }
+                                                    endif;
+
+
+                                                    
+                                                }
+
+                                                
+                                        }
+
+                                            
+                                            }else{
+                                                
+                                              
+                                                $Jobcarddf = Jobcard::find()->where(['resource'=>184])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->one();
+
+                                                $cartf = cart::find()->where(['Resource_Id'=>184])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->one();
+
+                                                if($cartf)
+                                                {
+
+                                                    $estimateress=PricingEstimateResourcesNew::find()->where(['resource_Id'=>$estimateresource->resource_Id])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['pricing_status'=>0])->andWhere(['diesel_orderd_status'=>0])->all();
+                                                $totqty = 0;
+                                                $resourcee_rate = 0;
+                                                $tot_f_qty = 0;
+                                                //$fuelrate = 0;
+
+                                                $fuelestimateress=PricingEstimateResourcesNew::find()->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['pricing_status'=>0])->andWhere(['fuel_type' => 'Diesel'])->andWhere(['IN','resourcetype_Id',[24,26]])->andWhere(['diesel_orderd_status'=>0])->all();
+
+                                                foreach($fuelestimateress as $estimateres){
+
+                                                    $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$estimateres->activity_id])->andWhere(['pricing_status' => 0])->one();
+
+                                                    if($estimateact->activity_qty!=0){
+
+                                                        $wrkact_qty = $estimateact->activity_qty;
+
+                                                    }
+                                                    else{
+                                                        $wrkact_qty = 1;
+                                                    }
+
+                                                    $qty = $estimateres->quantity * $wrkact_qty;
+
+                                                    $totqty = $totqty + $qty;
+
+                                                    $resourcee_rate = $resourcee_rate + $estimateres->rate;
+
+                                                    //if($estimateres->resourcetype_Id==24 && $estimateres->fuel_type != ''){
+
+                                                        $count=PricingEstimateResourcesNew::find()->where(['resource_Id'=>$estimateresource->resource_Id])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['pricing_status'=>0])->andWhere(['resourcetype_Id'=>24])->count();                                                 
+
+                                                        $fuelqty = $estimateres->fuel_qty * $estimateres->hours_no;
+
+                                                        $f_qty = $fuelqty * $wrkact_qty;
+                                                        
+
+                                                        $tot_f_qty = $tot_f_qty + $f_qty;
+
+                                                        $fuelrate =  $estimateres->fuel_rate;
+
+                                                   // }
+
+                                                  //echo $estimateres->pricing_resourceid.'<br>';
+                                                  $diesletabs = Pricingordereddiesel::find()->where(['pricing_res_id'=>$estimateres->pricing_resourceid])->one();
+
+                                                  if($diesletabs){
+
+                                                  }else{
+                                                    $dieselcapturing = new Pricingordereddiesel;
+                                                    $dieselcapturing->cartid = $cartf->cartID;
+                                                    $dieselcapturing->pricing_res_id = $estimateres->pricing_resourceid;
+
+                                                    $dieselcapturing->save(false);
+                                                  }
+                                                   
+
+
+
+                                                }//exit;
+
+                                                //$countmachine = count($estimateress);
+
+                                                //if($countmachine !=0){
+                                                    $resource_rate = $resourcee_rate;
+                                                //}
+
+                                                $Jobcarddf->res_quantity = $tot_f_qty;
+                                                $Jobcarddf->res_rate = $fuelrate;
+                                                $Jobcarddf->est_resqty = $tot_f_qty;
+                                                $Jobcarddf->status = 1;
+
+
+                                                    if($Jobcarddf->save(false)):
+
+                                                        $cartf->rate= $Jobcarddf->res_rate;
+                                                        $cartf->Qnty= $tot_f_qty;
+                                                        $cartf->EstresQnty=$tot_f_qty;
+                                                        $amount = $fuelrate * $tot_f_qty;
+                                                        $cartf->amount= $amount;
+                                                        
+                                                        $cartf->save(false);
+
+                                                        $Jobcarddf->cart_status=1;
+                                                        $Jobcarddf->save(false);
+
+                                                    endif;
+
+                                                $rescount=1;
+
+                                                }else{
+
+                                                    $activity = $wbsactivity['activity_Name'];
+
+                                                    $project_id = $projuser->projectid;
+
+                                                    $resource_id = $estimateresource->resource_Id;
+
+                                                    $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+
+                                                    $resource_unit = $res->Unit;
+
+                                                    $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+
+                                                    if($estimateact->activity_qty!=0){
+
+                                                        $wrkact_qty = $estimateact->activity_qty;
+
+                                                    }
+                                                    else{
+                                                        $wrkact_qty = 1;
+                                                    }
+
+                                                    
+
+                                                    $resource_rate = $estimateresource->rate;
+
+                                                    $activity_id = $wbsactivity['id'];
+
+                                                    $iow_id = $wbsactivity['wbs_id'];
+
+                                                    $vendor_id = $res->Vendor_Id;
+
+
+                                                    if($estimateresource->fuel_type != null){
+
+                                                        $fuel_qty = $estimateresource->fuel_qty * $estimateresource->hours_no;
+            
+                                                        $resource_qty = $fuel_qty * $wrkact_qty;
+                                                        
+                                                        $resource_unit = 'Ltr';
+                                                        $resource_rate = $estimateresource->fuel_rate;
+            
+                                                        if($estimateresource->fuel_type == 'Petrol'){
+                                                            $resids = Resources::find()->where(['Vendor_Id' => 0])->andWhere(['LIKE','Name','Petrol'])->one();
+                                                            $resource_id = '183';
+            
+                                                        }elseif($estimateresource->fuel_type == 'Diesel'){
+                                                            $resids = Resources::find()->where(['Vendor_Id' => 0])->andWhere(['LIKE','Name','Diesel'])->one();
+                                                            $resource_id = '184';
+                                                        }
+                                                    }
+
+                                                    $Jobcard = New Jobcard();
+                                                    $Jobcard->name= $name;
+                                                    $Jobcard->date= date('Y-m-d');
+                                                    $Jobcard->process= $processid;
+                                                    $Jobcard->activity= $activity;
+                                                    $Jobcard->groupid= $groupid;
+                                                    $Jobcard->project_id= $project_id;
+                                                    $Jobcard->resource= $resource_id;
+                                                    $Jobcard->unit= $resource_unit;
+                                                    $Jobcard->res_quantity= $resource_qty;
+                                                    $Jobcard->res_rate= $resource_rate;
+                                                    $Jobcard->est_resqty= $resource_qty;
+
+                                                
+                                                    $Jobcard->vendor_id= $vendor_id;
+                                                    
+
+                                                
+                                                    $Jobcard->user_id= $uid;
+                                                    $Jobcard->app_activity= $activity_id;
+                                                    $Jobcard->iow= $iow_id;
+                                                    $Jobcard->status= 1;
+                                                    //$Jobcard->save(false);
+                                                    $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                    if($Jobcard->save(false)):
+                                                        $nwgroupid = time();
+                                                        $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                        $Jobcard->save(false);
+
+                                                        $model=New Cart();
+
+                                                        $model->Job_Id= $Jobcard->job_id;
+                                                        if($estimateresource->resourcetype_Id == 24 && $estimateresource->lease_period == null){                      
+                                                            $model->Vendor_Id= '9';                                               
+                                                        }else{
+                                                            $model->Vendor_Id= $Jobcard->vendor_id;
+                                                        }
+                                                        $model->ResourceType_Id= $res->ResourceType_Id;
+                                                        $model->Resource_Id= $Jobcard->resource;
+                                                        $model->unit= $Jobcard->unit;
+                                                        $model->rate= $resource_rate;
+                                                        $model->Qnty= $resource_qty;
+                                                        $model->EstresQnty= $resource_qty;
+
+                                                        
+                                                            $amount = $resource_rate * $resource_qty;
+                                                        
+                                                        $model->amount= $amount;
+                                                        $model->Project= $Jobcard->project_id;
+                                                        $model->groupid= $Jobcard->groupid;
+                                                        if($estimateresource->no_of_men){
+                                                            $model->no_workers=$estimateresource->no_of_men;
+                                                        }
+                                                        if($estimateresource->no_of_days){
+                                                            $model->no_days=$estimateresource->no_of_days;
+                                                        }
+
+                                                        if($estimateresource->resourcetype_Id == 24 && $estimateresource->lease_period != null){
+                                                            $model->fuel_status = 1;
+                                                        }else{
+                                                            $model->fuel_status = 0;
+                                                        }
+                                                        
+                                                        $model->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                        $model->save(false);
+
+                                                        $Jobcard->cart_status=1;
+                                                        $Jobcard->save(false);
+
+                                                        if($estimateresource->fuel_type != null){
+
+                                                            $diesletabs = Pricingordereddiesel::find()->where(['pricing_res_id'=>$estimateresource->pricing_resourceid])->one();
+
+                                                            if($diesletabs){
+
+                                                            }else{
+                                                                $dieselcapturing = new Pricingordereddiesel;
+                                                                $dieselcapturing->cartid = $model->cartID;
+                                                                $dieselcapturing->pricing_res_id = $estimateresource->pricing_resourceid;
+
+                                                                $dieselcapturing->save(false);
+                                                            }
+
+                                                        
+                                                        }
+                                                    endif;
+                                                    
+                                                }
+
+                                                
+
+                                            }
+
+                                            $rescount=1;
+
+                                        
+                                        }
+
+                                    }elseif($estimateresource->resourcetype_Id == 26)
+                                    {
+                                        $resource=Resources::findOne($estimateresource->resource_Id);
+                                        
+                                        $vendor_id = $resource->Vendor_Id;
+                                        if($estimateresource->fuel_type != null)
+                                            $vendor_id = $estimateresource->fuel_vendor_id;
+
+                                        $Jobcardd=Jobcard::find()->where(['vendor_id'=>$vendor_id])->andWhere(['resource'=>$resource->Resource_Id])->andWhere(['app_activity'=>$estimateresource->activity_id])->andWhere(['delete_status'=>0])->andWhere(['pricing_resourceid'=>$estimateresource->pricing_resourceid])->one();
+                                        //print_r($Jobcardd);exit;
+
+                                        if(empty($Jobcardd)){
+                                            
+                                       
+                                            $sql="SELECT name FROM jobcard ORDER BY name DESC limit 1";
+                                            $command=$connection->createCommand($sql);
+                                            $dataReader=$command->query();
+                                            $no=$dataReader->read();
+                                            $name=$no['name'] + 1;
+                                            $groupid=time();
+
+                                            $processid = $estimateresource->process_Id;
+                                            $activity = $wbsactivity['activity_Name'];
+                                            $project_id = $projuser->projectid;
+                                            $resource_id = $estimateresource->resource_Id;
+                                            $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+                                            $resource_unit = $res->Unit;
+                                            $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+
+                                            if($estimateact->activity_qty!=0){
+                                                $wrkact_qty = $estimateact->activity_qty;
+                                            }
+                                            else{
+                                                $wrkact_qty = 1;
+                                            }
+
+                                            
+                                            $resource_rate = $estimateresource->rate;
+                                            $activity_id = $wbsactivity['id'];
+                                            $iow_id = $wbsactivity['wbs_id'];
+                                            $vendor_id = $res->Vendor_Id;
+                                            if($estimateresource->fuel_type != null)
+                                                $vendor_id = $estimateresource->fuel_vendor_id;
+
+
+                                            $Jobcarddfuel=Jobcard::find()->where(['vendor_id'=>$vendor_id])->andWhere(['in','resource',[183,184]])->andWhere(['app_activity'=>$estimateresource->activity_id])->andWhere(['delete_status'=>0])->andWhere(['pricing_resourceid'=>$estimateresource->pricing_resourceid])->one();
+                                            
+                                            if(empty($Jobcarddfuel)){
+                                                
+                                                $jobfindfuel = '';
+                                                if($estimateresource->fuel_type != null)
+                                                {
+                                                    if($estimateresource->fuel_type == 'Petrol')
+                                                        $resource_id = '183';
+                                                    elseif($estimateresource->fuel_type == 'Diesel')
+                                                        $resource_id = '184';
+                                                    
+                                                    $jobfindfuel = Jobcard::find()->where(['resource' => $resource_id])->andWhere(['vendor_id'=>$vendor_id])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->one();
+                                                }
+
+                                                if($estimateresource->fuel_type != null && !$jobfindfuel)
+                                                {
+                                                    $fuel_qty = $estimateresource->fuel_qty * $estimateresource->hours_no;
+                                                    $resource_qty = $fuel_qty * $wrkact_qty;
+                                                    $resource_unit = 'Ltr';
+                                                    $resource_rate = $estimateresource->fuel_rate;
+
+                                                    $Jobcard = New Jobcard();
+                                                    $Jobcard->name= $name;
+                                                    $Jobcard->date= date('Y-m-d');
+                                                    $Jobcard->process= $processid;
+                                                    $Jobcard->activity= $activity;
+                                                    $Jobcard->groupid= $groupid;
+                                                    $Jobcard->project_id= $project_id;
+                                                    $Jobcard->resource= $resource_id;
+                                                    $Jobcard->unit= $resource_unit;
+                                                    $Jobcard->res_quantity= $resource_qty;
+                                                    $Jobcard->res_rate= $resource_rate;
+                                                    $Jobcard->est_resqty= $resource_qty;
+                                                
+                                                    $Jobcard->vendor_id= $estimateresource->fuel_vendor_id;
+                                                
+                                                    $Jobcard->user_id= $uid;
+                                                    $Jobcard->app_activity= $activity_id;
+                                                    $Jobcard->iow= $iow_id;
+                                                    $Jobcard->status= 1;
+                                                    //$Jobcard->save(false);
+                                                    $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                    if($Jobcard->save(false)):
+
+                                                        $nwgroupid = time();
+                                                        $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                        $Jobcard->save(false);
+
+                                                        $model=New Cart();
+
+                                                        $model->Job_Id= $Jobcard->job_id;
+                                                        $model->Vendor_Id= $estimateresource->fuel_vendor_id;   
+
+                                                        $amount = $resource_rate * $resource_qty;
+                                                        
+                                                        $model->ResourceType_Id= $res->ResourceType_Id;
+                                                        $model->Resource_Id= $Jobcard->resource;
+                                                        $model->unit= $Jobcard->unit;
+                                                        $model->rate= $resource_rate;
+                                                        $model->Qnty= $resource_qty;
+                                                        $model->EstresQnty= $resource_qty;                                                        
+                                                        $model->amount= $amount;
+                                                        $model->Project= $Jobcard->project_id;
+                                                        $model->groupid= $Jobcard->groupid;
+                                                        if($estimateresource->no_of_men){
+                                                            $model->no_workers=$estimateresource->no_of_men;
+                                                        }
+                                                        if($estimateresource->no_of_days){
+                                                            $model->no_days=$estimateresource->no_of_days;
+                                                        }
+
+                                                        $model->fuel_status = 1;
+                                                        $model->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                        $model->save(false);
+
+                                                        $Jobcard->cart_status=1;
+                                                        $Jobcard->save(false);
+
+                                                        if($estimateresource->fuel_type != null){
+
+                                                            $diesletabs = Pricingordereddiesel::find()->where(['pricing_res_id'=>$estimateresource->pricing_resourceid])->one();
+
+                                                            if($diesletabs){
+
+                                                            }else{
+                                                                $dieselcapturing = new Pricingordereddiesel;
+                                                                $dieselcapturing->cartid = $model->cartID;
+                                                                $dieselcapturing->pricing_res_id = $estimateresource->pricing_resourceid;
+
+                                                                $dieselcapturing->save(false);
+                                                            }
+                                                        }
+
+
+                                                    endif;
+
+                                                }
+
+                                                elseif($estimateresource->fuel_type == ''){
+
+                                                    $resource_id = $estimateresource->resource_Id;
+                                                    
+                                                    $resource_unit = $res->Unit;
+                                                    $resource_qty = $estimateresource->quantity * $wrkact_qty;
+                                                    $resource_rate = $estimateresource->rate;
+                                                    
+
+                                                    $resource_id = $estimateresource->resource_Id;
+                                                        
+                                                    $resource_unit = $res->Unit;
+                                                    $resource_qty = $estimateresource->quantity * $wrkact_qty;
+                                                    $resource_rate = $estimateresource->rate;
+
+                                                    $Jobcard = New Jobcard();
+                                                    $Jobcard->name= $name;
+                                                    $Jobcard->date= date('Y-m-d');
+                                                    $Jobcard->process= $processid;
+                                                    $Jobcard->activity= $activity;
+                                                    $Jobcard->groupid= $groupid;
+                                                    $Jobcard->project_id= $project_id;
+                                                    $Jobcard->resource= $resource_id;
+                                                    $Jobcard->unit= $resource_unit;
+                                                    $Jobcard->res_quantity= $resource_qty;
+                                                    $Jobcard->res_rate= $resource_rate;
+                                                    $Jobcard->est_resqty= $resource_qty;
+                                                
+                                                    $Jobcard->vendor_id= $vendor_id;
+                                                
+                                                    
+                                                    $Jobcard->user_id= $uid;
+                                                    $Jobcard->app_activity= $activity_id;
+                                                    $Jobcard->iow= $iow_id;
+                                                    $Jobcard->status= 1;
+                                                    //$Jobcard->save(false);
+                                                    $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                    if($Jobcard->save(false)):
+        
+                                                        $nwgroupid = time();
+                                                        $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                        $Jobcard->save(false);
+        
+                                                        $model=New Cart();
+        
+                                                        $model->Job_Id= $Jobcard->job_id;
+                                                        $model->Vendor_Id= $Jobcard->vendor_id;
+                                                        $model->ResourceType_Id= $res->ResourceType_Id;
+                                                        $model->Resource_Id= $Jobcard->resource;
+                                                        $model->unit= $Jobcard->unit;
+                                                        $model->rate= $resource_rate;
+                                                        $model->Qnty= $resource_qty;
+                                                        $model->EstresQnty= $resource_qty;
+                                                        
+                                                        $amount = $resource_rate * $resource_qty;
+                                                        $model->amount= $amount;
+                                                        $model->Project= $Jobcard->project_id;
+                                                        $model->groupid= $Jobcard->groupid;
+                                                        if($estimateresource->no_of_men){
+                                                            $model->no_workers=$estimateresource->no_of_men;
+                                                        }
+                                                        if($estimateresource->no_of_days){
+                                                            $model->no_days=$estimateresource->no_of_days;
+                                                        }
+        
+                                                        $model->fuel_status = 0;
+                                                        $model->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                        $model->save(false);
+        
+                                                        $Jobcard->cart_status=1;
+                                                        $Jobcard->save(false);
+        
+                                                    endif;
+                                                }
+
+                                                else{
+                                                    
+                                                    $fuel_type = $estimateresource->fuel_type;
+                                                    if($fuel_type != null)
+                                                    {
+                                                        if($estimateresource->fuel_type == 'Petrol')
+                                                            $resource_id = '183';
+                                                        elseif($estimateresource->fuel_type == 'Diesel')
+                                                            $resource_id = '184';
+                                                    }
+
+                                                    $Jobcarddf = Jobcard::find()->where(['resource'=>$resource_id])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['vendor_id'=>$vendor_id])->one();
+
+                                                    $cartf = cart::find()->where(['Resource_Id'=>$resource_id])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->andWhere(['Vendor_Id'=>$vendor_id])->one();
+
+
+                                                    if($cartf)
+                                                    {
+
+                                                        $totqty = 0;
+                                                        $resourcee_rate = 0;
+                                                        $tot_f_qty = 0;
+
+                                                        $fuelestimateress=PricingEstimateResourcesNew::find()->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['pricing_status'=>0])/*->andWhere(['lease_period'=>null])*/->andWhere(['fuel_type' => $fuel_type])->andWhere(['IN','resourcetype_Id',[24,26]])->andWhere(['diesel_orderd_status'=>0])->andWhere(['fuel_vendor_id'=>$vendor_id])->all();
+
+                                                        foreach($fuelestimateress as $estimateres){
+
+                                                            $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$estimateres->activity_id])->andWhere(['pricing_status' => 0])->one();
+
+                                                            if($estimateact['activity_qty']!=0){
+
+                                                                $wrkact_qty = $estimateact->activity_qty;
+
+                                                            }
+                                                            else{
+                                                                $wrkact_qty = 1;
+                                                            }
+
+                                                            $qty = $estimateres->quantity * $wrkact_qty;
+                                                            $totqty = $totqty + $qty;
+                                                            $resourcee_rate = $resourcee_rate + $estimateres->rate;
+
+                                                           // if($estimateres->resourcetype_Id==26 && $estimateres->fuel_type != ''){
+
+                                                                $fuelqty = $estimateres->fuel_qty * $estimateres->hours_no;
+                                                                $f_qty = $fuelqty * $wrkact_qty;
+                                                                $tot_f_qty = $tot_f_qty + $f_qty;
+                                                                $fuelrate =  $estimateres->fuel_rate;
+
+                                                            //}
+
+                                                            $diesletabs = Pricingordereddiesel::find()->where(['pricing_res_id'=>$estimateres->pricing_resourceid])->one();
+
+                                                            if($diesletabs){
+
+                                                            }else{
+                                                                $dieselcapturing = new Pricingordereddiesel;
+                                                                $dieselcapturing->cartid = $cartf->cartID;
+                                                                $dieselcapturing->pricing_res_id = $estimateres->pricing_resourceid;
+
+                                                                $dieselcapturing->save(false);
+                                                            }
+
+                                                        }
+
+
+                                                        $Jobcarddf->res_quantity = $tot_f_qty;
+                                                        $Jobcarddf->res_rate = $fuelrate;
+                                                        $Jobcarddf->est_resqty = $tot_f_qty;
+                                                        $Jobcarddf->status = 1;
+
+                                                        if($Jobcarddf->save(false)):
+
+                                                            $cartf->rate= $Jobcarddf->res_rate;
+                                                            $cartf->Qnty= $tot_f_qty;
+                                                            $cartf->EstresQnty=$tot_f_qty;
+                                                            $amount = $fuelrate * $tot_f_qty;
+                                                            $cartf->amount= $amount;
+                                                            
+                                                            $cartf->save(false);
+
+                                                            $Jobcarddf->cart_status=1;
+                                                            $Jobcarddf->save(false);
+
+                                                        endif;
+
+                                                        $rescount=1;
+
+
+                                                    }
+
+                                                    else{
+
+                                                        $activity = $wbsactivity['activity_Name'];
+                                                        $project_id = $projuser->projectid;
+                                                        $resource_id = $estimateresource->resource_Id;
+                                                        $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+                                                        $resource_unit = $res->Unit;
+                                                        $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+
+                                                        if($estimateact->activity_qty!=0){
+                                                            $wrkact_qty = $estimateact->activity_qty;
+                                                        }
+                                                        else{
+                                                            $wrkact_qty = 1;
+                                                        }
+                                                    
+
+                                                        $resource_rate = $estimateresource->rate;
+                                                        $activity_id = $wbsactivity['id'];
+                                                        $iow_id = $wbsactivity['wbs_id'];
+                                                        $vendor_id = $res->Vendor_Id;
+
+
+                                                        if($estimateresource->fuel_type != null){
+
+                                                            $fuel_qty = $estimateresource->fuel_qty * $estimateresource->hours_no;
+                
+                                                            $resource_qty = $fuel_qty * $wrkact_qty;
+                                                            
+                                                            $resource_unit = 'Ltr';
+                                                            $resource_rate = $estimateresource->fuel_rate;
+                
+                                                            $fuel_type = $estimateresource->fuel_type;
+                                                            if($fuel_type != null)
+                                                            {
+                                                                if($estimateresource->fuel_type == 'Petrol')
+                                                                    $resource_id = '183';
+                                                                elseif($estimateresource->fuel_type == 'Diesel')
+                                                                    $resource_id = '184';
+                                                            }
+                                                        }
+
+                                                        $Jobcard = New Jobcard();
+                                                        $Jobcard->name= $name;
+                                                        $Jobcard->date= date('Y-m-d');
+                                                        $Jobcard->process= $processid;
+                                                        $Jobcard->activity= $activity;
+                                                        $Jobcard->groupid= $groupid;
+                                                        $Jobcard->project_id= $project_id;
+                                                        $Jobcard->resource= $resource_id;
+                                                        $Jobcard->unit= $resource_unit;
+                                                        $Jobcard->res_quantity= $resource_qty;
+                                                        $Jobcard->res_rate= $resource_rate;
+                                                        $Jobcard->est_resqty= $resource_qty;
+
+                                                    
+                                                        $Jobcard->vendor_id= $vendor_id;
+
+                                                        $Jobcard->user_id= $uid;
+                                                        $Jobcard->app_activity= $activity_id;
+                                                        $Jobcard->iow= $iow_id;
+                                                        $Jobcard->status= 1;
+                                                        //$Jobcard->save(false);
+                                                        $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                        if($Jobcard->save(false)):
+                                                            $nwgroupid = time();
+                                                            $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                            $Jobcard->save(false);
+
+                                                            $model=New Cart();
+
+                                                            $model->Job_Id= $Jobcard->job_id;
+                                                            //if($estimateresource->resourcetype_Id == 24 /*&& $estimateresource->lease_period == null*/){
+                                                            if($estimateresource->resourcetype_Id == 26 && $estimateresource->fuel_type != null){
+                                                                $model->Vendor_Id= $estimateresource->fuel_vendor_id;                                              
+                                                            }else{
+                                                                $model->Vendor_Id= $Jobcard->vendor_id;
+                                                            }
+                                                            $model->ResourceType_Id= $res->ResourceType_Id;
+                                                            $model->Resource_Id= $Jobcard->resource;
+                                                            $model->unit= $Jobcard->unit;
+                                                            $model->rate= $resource_rate;
+                                                            $model->Qnty= $resource_qty;
+                                                            $model->EstresQnty= $resource_qty;
+                                                            
+                                                            $amount = $resource_rate * $resource_qty;
+                                                            
+                                                            $model->amount= $amount;
+                                                            $model->Project= $Jobcard->project_id;
+                                                            $model->groupid= $Jobcard->groupid;
+                                                            if($estimateresource->no_of_men){
+                                                                $model->no_workers=$estimateresource->no_of_men;
+                                                            }
+                                                            if($estimateresource->no_of_days){
+                                                                $model->no_days=$estimateresource->no_of_days;
+                                                            }
+
+                                                            //if($estimateresource->resourcetype_Id == 24 /*&& $estimateresource->lease_period != null*/){
+                                                            if($estimateresource->resourcetype_Id == 26 && $estimateresource->fuel_type != null){ 
+                                                                $model->fuel_status = 1;
+                                                            }else{
+                                                                $model->fuel_status = 0;
+                                                            }
+                                                            
+                                                            $model->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                            $model->save(false);
+
+                                                            $Jobcard->cart_status=1;
+                                                            $Jobcard->save(false);
+
+                                                            if($estimateresource->fuel_type != null){
+
+                                                                $diesletabs = Pricingordereddiesel::find()->where(['pricing_res_id'=>$estimateresource->pricing_resourceid])->one();
+
+                                                                if($diesletabs){
+
+                                                                }else{
+                                                                    $dieselcapturing = new Pricingordereddiesel;
+                                                                    $dieselcapturing->cartid = $model->cartID;
+                                                                    $dieselcapturing->pricing_res_id = $estimateresource->pricing_resourceid;
+
+                                                                    $dieselcapturing->save(false);
+                                                                }
+
+                                                            
+                                                            }
+                                                        endif;
+                                                            
+                                                    }
+                                                    
+
+                                                }
+
+                                            
+
+                                            }else{
+                                                
+                                                $resource_id = '0';
+                                                $fuel_type = $estimateresource->fuel_type;
+                                                if($fuel_type != null)
+                                                {
+                                                    if($estimateresource->fuel_type == 'Petrol')
+                                                        $resource_id = '183';
+                                                    elseif($estimateresource->fuel_type == 'Diesel')
+                                                        $resource_id = '184';
+                                                }
+
+                                                $Jobcarddf = Jobcard::find()->where(['resource'=>$resource_id])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['vendor_id'=>$vendor_id])->one();
+
+                                                $cartf = cart::find()->where(['Resource_Id'=>$resource_id])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->andWhere(['Vendor_Id'=>$vendor_id])->one();
+                                                
+                                                if($cartf)
+                                                {
+                                                    
+                                                    $totqty = 0;
+                                                    $resourcee_rate = 0;
+                                                    $tot_f_qty = 0;
+                                                    //$fuelrate = 0;
+
+                                                    $fuelestimateress=PricingEstimateResourcesNew::find()->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['pricing_status'=>0])->andWhere(['fuel_type' => $fuel_type])->andWhere(['IN','resourcetype_Id',[24,26]])->andWhere(['diesel_orderd_status'=>0])->andWhere(['fuel_vendor_id'=>$vendor_id])->all();
+
+                                                    foreach($fuelestimateress as $estimateres){
+
+                                                        $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$estimateres->activity_id])->andWhere(['pricing_status' => 0])->one();
+
+                                                        if($estimateact['activity_qty']!=0){
+
+                                                            $wrkact_qty = $estimateact->activity_qty;
+
+                                                        }
+                                                        else{
+                                                            $wrkact_qty = 1;
+                                                        }
+
+                                                        $qty = $estimateres->quantity * $wrkact_qty;
+
+                                                        $totqty = $totqty + $qty;
+
+                                                        $resourcee_rate = $resourcee_rate + $estimateres->rate;
+                                                        $fuelqty = $estimateres->fuel_qty * $estimateres->hours_no;
+                                                        $f_qty = $fuelqty * $wrkact_qty;
+                                                        $tot_f_qty = $tot_f_qty + $f_qty;
+                                                        $fuelrate =  $estimateres->fuel_rate;
+
+                                                        $diesletabs = Pricingordereddiesel::find()->where(['pricing_res_id'=>$estimateres->pricing_resourceid])->one();
+
+                                                            if($diesletabs){
+
+                                                            }else{
+                                                                $dieselcapturing = new Pricingordereddiesel;
+                                                                $dieselcapturing->cartid = $cartf->cartID;
+                                                                $dieselcapturing->pricing_res_id = $estimateres->pricing_resourceid;
+
+                                                                $dieselcapturing->save(false);
+                                                            }
+
+                                                    }
+
+                                                    //$countmachine = count($estimateress);
+
+                                                    //if($countmachine !=0){
+                                                        $resource_rate = $resourcee_rate;
+                                                    //}
+
+                                                    $Jobcarddf->res_quantity = $tot_f_qty;
+                                                    $Jobcarddf->res_rate = $fuelrate;
+                                                    $Jobcarddf->est_resqty = $tot_f_qty;
+                                                    $Jobcarddf->status = 1;
+
+
+                                                    if($Jobcarddf->save(false)):
+
+                                                        $cartf->rate= $Jobcarddf->res_rate;
+                                                        $cartf->Qnty= $tot_f_qty;
+                                                        $cartf->EstresQnty=$tot_f_qty;
+                                                        $amount = $fuelrate * $tot_f_qty;
+                                                        $cartf->amount= $amount;
+                                                        
+                                                        $cartf->save(false);
+
+                                                        $Jobcarddf->cart_status=1;
+                                                        $Jobcarddf->save(false);
+
+                                                    endif;
+
+                                                    $rescount=1;
+
+                                                }else{
+                                                    $activity = $wbsactivity['activity_Name'];
+                                                    $project_id = $projuser->projectid;
+                                                    $resource_id = $estimateresource->resource_Id;
+                                                    $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+                                                    $resource_unit = $res->Unit;
+
+                                                    $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+                                                    if($estimateact->activity_qty!=0){
+                                                        $wrkact_qty = $estimateact->activity_qty;
+                                                    }
+                                                    else{
+                                                        $wrkact_qty = 1;
+                                                    }
+
+                                                    $resource_rate = $estimateresource->rate;
+                                                    $activity_id = $wbsactivity['id'];
+                                                    $iow_id = $wbsactivity['wbs_id'];
+                                                    $vendor_id = $res->Vendor_Id;
+
+
+                                                    if($estimateresource->fuel_type != null){
+
+                                                        $fuel_qty = $estimateresource->fuel_qty * $estimateresource->hours_no;
+                                                        $resource_qty = $fuel_qty * $wrkact_qty;
+                                                        $resource_unit = 'Ltr';
+                                                        $resource_rate = $estimateresource->fuel_rate;
+            
+                                                        if($estimateresource->fuel_type == 'Petrol'){
+                                                            $resids = Resources::find()->where(['Vendor_Id' => 0])->andWhere(['LIKE','Name','Petrol'])->one();
+                                                            $resource_id = '183';
+            
+                                                        }elseif($estimateresource->fuel_type == 'Diesel'){
+                                                            $resids = Resources::find()->where(['Vendor_Id' => 0])->andWhere(['LIKE','Name','Diesel'])->one();
+                                                            $resource_id = '184';
+                                                        }
+                                                    }
+
+                                                    $Jobcard = New Jobcard();
+                                                    $Jobcard->name= $name;
+                                                    $Jobcard->date= date('Y-m-d');
+                                                    $Jobcard->process= $processid;
+                                                    $Jobcard->activity= $activity;
+                                                    $Jobcard->groupid= $groupid;
+                                                    $Jobcard->project_id= $project_id;
+                                                    $Jobcard->resource= $resource_id;
+                                                    $Jobcard->unit= $resource_unit;
+                                                    $Jobcard->res_quantity= $resource_qty;
+                                                    $Jobcard->res_rate= $resource_rate;
+                                                    $Jobcard->est_resqty= $resource_qty;
+
+                                                    $Jobcard->vendor_id= $vendor_id;
+                                                    
+                                                    $Jobcard->user_id= $uid;
+                                                    $Jobcard->app_activity= $activity_id;
+                                                    $Jobcard->iow= $iow_id;
+                                                    $Jobcard->status= 1;
+                                                    //$Jobcard->save(false);
+                                                    $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                    if($Jobcard->save(false)):
+                                                        $nwgroupid = time();
+                                                        $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                        $Jobcard->save(false);
+
+                                                        $model=New Cart();
+
+                                                        $model->Job_Id= $Jobcard->job_id;
+                                                        //if($estimateresource->resourcetype_Id == 24 /*&& $estimateresource->lease_period == null*/){
+                                                        if($estimateresource->resourcetype_Id == 26 && $estimateresource->fuel_type != null){                       
+                                                            $model->Vendor_Id= $estimateresource->fuel_vendor_id;                                               
+                                                        }else{
+                                                            $model->Vendor_Id= $Jobcard->vendor_id;
+                                                        }
+                                                        $model->ResourceType_Id= $res->ResourceType_Id;
+                                                        $model->Resource_Id= $Jobcard->resource;
+                                                        $model->unit= $Jobcard->unit;
+                                                        $model->rate= $resource_rate;
+                                                        $model->Qnty= $resource_qty;
+                                                        $model->EstresQnty= $resource_qty;
+
+                                                        
+                                                            $amount = $resource_rate * $resource_qty;
+                                                        
+                                                        $model->amount= $amount;
+                                                        $model->Project= $Jobcard->project_id;
+                                                        $model->groupid= $Jobcard->groupid;
+                                                        if($estimateresource->no_of_men){
+                                                            $model->no_workers=$estimateresource->no_of_men;
+                                                        }
+                                                        if($estimateresource->no_of_days){
+                                                            $model->no_days=$estimateresource->no_of_days;
+                                                        }
+
+                                                        //if($estimateresource->resourcetype_Id == 24/* && $estimateresource->lease_period != null*/){
+                                                        if($estimateresource->resourcetype_Id == 26 && $estimateresource->fuel_type != null){ 
+                                                            $model->fuel_status = 1;
+                                                        }else{
+                                                            $model->fuel_status = 0;
+                                                        }
+                                                        
+                                                        $model->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                        $model->save(false);
+
+                                                        $Jobcard->cart_status=1;
+                                                        $Jobcard->save(false);
+
+                                                        if($estimateresource->fuel_type != null){
+
+                                                            $diesletabs = Pricingordereddiesel::find()->where(['pricing_res_id'=>$estimateresource->pricing_resourceid])->one();
+
+                                                            if($diesletabs){
+
+                                                            }else{
+                                                                $dieselcapturing = new Pricingordereddiesel;
+                                                                $dieselcapturing->cartid = $model->cartID;
+                                                                $dieselcapturing->pricing_res_id = $estimateresource->pricing_resourceid;
+
+                                                                $dieselcapturing->save(false);
+                                                            }
+
+                                                        
+                                                        }
+                                                    endif;
+
+                                                }
+                                                
+                                            }
+
+                                            $rescount=1;
+
+                                        
+                                        }
+
+
+                                    }
+
+                                    elseif($estimateresource->resourcetype_Id == 33)
+                                    { 
+                                        //----- New Calculation added Sreejith 0n 27/02/23 Picking the data from Master--------
+                                        //if(!$estimateresource->no_of_men || !$estimateresource->no_of_days){
+
+                                            $scheduleActivity = Scheduleactivities::find()->where(['activity_id' => $estimateresource->activity_id])->one();
+
+                                            if($scheduleActivity){
+                                                    //$man_qty = ($resource['est_resource_quantity']);
+                                                    $man_qty = $estimateresource->quantity;
+                                                    $act_qty = $scheduleActivity->quantity;
+                                                    $duration = $scheduleActivity->duration;
+                                                    $no_of_men = ceil(($man_qty * $act_qty) / $duration);
+                                                    //$no_of_days = $duration;    
+                                                if($no_of_men){
+                                                    $no_of_days = floor(($man_qty * $act_qty) / $no_of_men);
+                                                    $estimateresource->no_of_men  = $no_of_men;
+                                                    $estimateresource->no_of_days = $no_of_days;
+                                                    $estimateresource->save(false);
+                                                }
+                                            }
+                                        //--------------------------------------------------
+
+
+                                        $resource=Resources::findOne($estimateresource->resource_Id);
+
+                                        $Jobcardd=Jobcard::find()->where(['vendor_id'=>$resource->Vendor_Id])->andWhere(['resource'=>$resource->Resource_Id])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['app_activity'=>$estimateresource->activity_id])->orderBy(['job_id'=>SORT_DESC])->one(); // activity wise
+                                    
+                                        $cart = cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>$resource->Resource_Id])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->andWhere(['rate'=>$estimateresource->rate])->one();
+
+
+                                        $editodrdata = "SELECT * FROM `cart` as c WHERE c.status=1 AND c.Vendor_Id='".$resource->Vendor_Id."' AND c.Resource_Id ='".$resource->Resource_Id."' AND c.Project='".$estimateresource->project_id."' AND c.rate ='".$estimateresource->rate."' AND c.pricing_resourceid = '".$estimateresource->pricing_resourceid."' ";
+
+                                        $command=$connection->createCommand($editodrdata);
+                                        $dataReader=$command->query();
+                                        $cartedit=$dataReader->read();
+                              
+
+                                        $odrdata = "SELECT c.status as status, c.Qnty as Qnty FROM `cart` as c INNER JOIN jobcard as j on j.job_id=c.Job_Id WHERE j.vendor_id='".$resource->Vendor_Id."' AND c.status = 0 AND j.resource ='".$resource->Resource_Id."' AND j.delete_status= 0 AND j.project_id='".$estimateresource->project_id."' AND j.app_activity ='".$estimateresource->activity_id."' ";
+
+                                        $command=$connection->createCommand($odrdata);
+                                        $dataReader=$command->query();
+                                        $pdata=$dataReader->read();
+
+                                        //calcul quanty dif aftr place odr
+                                        if(empty($pdata))
+                                        {
+                        
+
+                                            $odreditdata = "SELECT * FROM `cart` as c INNER JOIN jobcard as j on j.job_id=c.Job_Id WHERE j.vendor_id='".$resource->Vendor_Id."' AND j.resource ='".$resource->Resource_Id."' AND j.delete_status= 0 AND j.project_id='".$estimateresource->project_id."' AND j.app_activity ='".$estimateresource->activity_id."'  AND c.pricing_resourceid = '".$estimateresource->pricing_resourceid."' AND c.status = 1 ";
+
+                                            $command=$connection->createCommand($odreditdata);
+                                            $dataReader=$command->query();
+                                            $peditdata=$dataReader->read();
+
+                                            if($peditdata){
+                                                
+
+                                                $estimateress=PricingEstimateResourcesNew::find()->where(['resource_Id'=>$estimateresource->resource_Id])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['activity_id'=>$estimateresource->activity_id])->andWhere(['pricing_status'=>0])->all();
+
+                                               $totqty= 0;
+                                               $no_mens= 0;
+                                               $no_dys= 0;
+                                               
+                                                foreach($estimateress as $estimateres)
+                                                {
+
+                                                   $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$estimateres->activity_id])->andWhere(['pricing_status' => 0])->one();
+
+                                                   if($estimateact['activity_qty']!=0){
+
+                                                   $wrkact_qty= $estimateact->activity_qty;
+
+                                                        }
+                                                        else{
+                                                   $wrkact_qty= 1;
+                                                        }
+
+                                                   $qty= $estimateres->quantity * $wrkact_qty;
+                                                   $totqty= $totqty + $qty;
+                                                   $resourcee_rate= $estimateres->rate;
+                                                   $no_mens= $no_mens + $estimateres->no_of_men;
+                                                   $no_dys= $no_dys + $estimateres->no_of_days;
+                                                }
+
+                                                $cartqtys = cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>$resource->Resource_Id])->andWhere(['status'=>1])->andWhere(['Project'=>$estimateresource->project_id])->all();
+
+                                               if($cartqtys){
+                                                    $odrqty=0;
+                                                    foreach($cartqtys as $cartqty)
+                                                    {
+                                                        $odrqty = $odrqty + $cartqty->Qnty;
+                                                    }
+                                                    $newqunty = $totqty - $odrqty;
+                                                }else
+                                                {
+                                                    $newqunty = $totqty;
+                                                }
+                                                
+                                                if($newqunty>0)
+                                                {
+
+                                                    $sql="SELECT name FROM jobcard ORDER BY name DESC limit 1";
+                                                    $command=$connection->createCommand($sql);
+                                                    $dataReader=$command->query();
+                                                    $no=$dataReader->read();
+                                                    if($no)
+                                                    {
+                                                    $name=$no['name'] + 1;
+                                                    }
+                                                    else
+                                                    {
+                                                        $name= 1;
+                                                    }
+                                                    
+                                                    $groupid=time();
+
+                                                    $processid = $estimateresource->process_Id;
+
+                                                    $activity = $wbsactivity['activity_Name'];
+
+                                                    $project_id = $projuser->projectid;
+
+                                                    $resource_id = $estimateresource->resource_Id;
+
+                                                    $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+
+                                                    $resource_unit = $res->Unit;
+
+                                                    $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+                                                    if($estimateact->activity_qty!=0){
+
+                                                        $wrkact_qty = $estimateact->activity_qty;
+
+                                                    }
+                                                    else{
+                                                        $wrkact_qty = 1;
+                                                    }
+                                                    
+
+                                                    $resource_qty = $newqunty;
+
+                                                    $resource_rate = $estimateresource->rate;
+
+                                                    $activity_id = $wbsactivity['id'];
+
+                                                    $iow_id = $wbsactivity['wbs_id'];
+
+                                                    $vendor_id = $res->Vendor_Id;
+                                                    
+                                                    
+                                                    $Jobcard = New Jobcard();
+                                                    $Jobcard->name= $name;
+                                                    $Jobcard->date= date('Y-m-d');
+                                                    $Jobcard->process= $processid;
+                                                    $Jobcard->activity= $activity;
+                                                    $Jobcard->groupid= $groupid;
+                                                    $Jobcard->project_id= $project_id;
+                                                    $Jobcard->resource= $resource_id;
+                                                    
+                                                    $Jobcard->res_quantity= $resource_qty;
+                                                    $Jobcard->res_rate= $resource_rate;
+                                                    $Jobcard->est_resqty= $resource_qty;
+                                                    $Jobcard->vendor_id= $vendor_id;
+                                                    $Jobcard->user_id= $uid;
+                                                    $Jobcard->app_activity= $activity_id;
+                                                    $Jobcard->iow= $iow_id;
+                                                    $Jobcard->status= 1;
+                                                    
+                                                    $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                
+                                                    $Jobcard->unit= $resource_unit;
+                                                
+                                                    if($Jobcard->save(false)):
+
+                                                        $nwgroupid = time();
+                                                        $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                        $Jobcard->save(false);
+
+                                                        $model=New Cart();
+
+                                                        $model->Job_Id= $Jobcard->job_id;
+                                                        $model->Vendor_Id= $Jobcard->vendor_id;
+                                                        $model->ResourceType_Id= $res->ResourceType_Id;
+                                                        $model->Resource_Id= $Jobcard->resource;
+                                                        
+                                                        $model->rate= $resource_rate;
+                                                        $model->Qnty= $resource_qty;
+                                                        $model->EstresQnty= $resource_qty;
+                                                        $amount = $resource_rate * $resource_qty;
+                                                        $model->amount= $amount;
+                                                        $model->Project= $Jobcard->project_id;
+                                                        $model->groupid= $Jobcard->groupid;
+                                                        if($estimateresource->no_of_men){
+                                                            $model->no_workers=$estimateresource->no_of_men;
+                                                        }
+                                                        if($estimateresource->no_of_days){
+                                                            $model->no_days=$estimateresource->no_of_days;
+                                                        }
+
+                                                        $model->fuel_status = 0;
+                                                        $model->unit= $Jobcard->unit;
+
+                                                        $model->pricing_resourceid= $estimateresource->pricing_resourceid;                         
+                                                        $model->save(false);
+
+                                                        $Jobcard->cart_status=1;
+                                                        $Jobcard->save(false);
+
+                                                    endif;
+
+                                                    $rescount=1;
+
+
+                                                }
+
+
+                                            }
+                                            else
+                                            {
+
+                                                $sql="SELECT name FROM jobcard ORDER BY name DESC limit 1";
+                                                $command=$connection->createCommand($sql);
+                                                $dataReader=$command->query();
+                                                $no=$dataReader->read();
+                                                if($no)
+                                                {
+                                                   $name=$no['name'] + 1;
+                                                }
+                                                else
+                                                {
+                                                    $name= 1;
+                                                }
+                                                
+                                                $groupid=time();
+
+                                                $processid = $estimateresource->process_Id;
+
+                                                $activity = $wbsactivity['activity_Name'];
+
+                                                $project_id = $projuser->projectid;
+
+                                                $resource_id = $estimateresource->resource_Id;
+
+                                                $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+
+                                                $resource_unit = $res->Unit;
+
+                                                 $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+                                                if($estimateact->activity_qty!=0){
+
+                                                    $wrkact_qty = $estimateact->activity_qty;
+
+                                                }
+                                                else{
+                                                    $wrkact_qty = 1;
+                                                }
+                                                
+
+                                                $resource_qty = $estimateresource->quantity * $wrkact_qty;
+
+                                                $resource_rate = $estimateresource->rate;
+
+                                                $activity_id = $wbsactivity['id'];
+
+                                                $iow_id = $wbsactivity['wbs_id'];
+
+                                                $vendor_id = $res->Vendor_Id;
+
+                                                
+                                                $Jobcard = New Jobcard();
+                                                $Jobcard->name= $name;
+                                                $Jobcard->date= date('Y-m-d');
+                                                $Jobcard->process= $processid;
+                                                $Jobcard->activity= $activity;
+                                                $Jobcard->groupid= $groupid;
+                                                $Jobcard->project_id= $project_id;
+                                                $Jobcard->resource= $resource_id;
+                                                
+                                                $Jobcard->res_quantity= $resource_qty;
+                                                $Jobcard->res_rate= $resource_rate;
+                                                $Jobcard->est_resqty= $resource_qty;
+                                                $Jobcard->vendor_id= $vendor_id;
+                                                $Jobcard->user_id= $uid;
+                                                $Jobcard->app_activity= $activity_id;
+                                                $Jobcard->iow= $iow_id;
+                                                $Jobcard->status= 1;
+                                                
+                                                $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                               
+                                                $Jobcard->unit= $resource_unit;
+                                             
+                                                if($Jobcard->save(false)):
+
+                                                    $nwgroupid = time();
+                                                    $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                    $Jobcard->save(false);
+
+                                                    $model=New Cart();
+
+                                                    $model->Job_Id= $Jobcard->job_id;
+                                                    $model->Vendor_Id= $Jobcard->vendor_id;
+                                                    $model->ResourceType_Id= $res->ResourceType_Id;
+                                                    $model->Resource_Id= $Jobcard->resource;
+                                                    
+                                                    $model->rate= $resource_rate;
+                                                    $model->Qnty= $resource_qty;
+                                                    $model->EstresQnty= $resource_qty;
+                                                    $amount = $resource_rate * $resource_qty;
+                                                    $model->amount= $amount;
+                                                    $model->Project= $Jobcard->project_id;
+                                                    $model->groupid= $Jobcard->groupid;
+                                                    if($estimateresource->no_of_men){
+                                                        $model->no_workers=$estimateresource->no_of_men;
+                                                    }
+                                                    if($estimateresource->no_of_days){
+                                                        $model->no_days=$estimateresource->no_of_days;
+                                                    }
+
+                                                    $model->fuel_status = 0;
+                                                    $model->unit= $Jobcard->unit;
+
+                                                    $model->pricing_resourceid= $estimateresource->pricing_resourceid;                         
+                                                    $model->save(false);
+
+                                                    $Jobcard->cart_status=1;
+                                                    $Jobcard->save(false);
+
+                                                endif;
+
+                                                $rescount=1;
+                                            }
+                                           
+
+                                        }
+                                        elseif(!empty($pdata))
+                                        { 
+                       
+                                            $orderstatus = $pdata['status']; 
+                                            
+                                            $cartdata = cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>$resource->Resource_Id])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->one();
+
+                                            if($orderstatus==1 && empty($cartdata))
+                                            {
+                
+                                                $Qnty = $pdata['Qnty']; 
+                                                $editestimateqnty = $estimateresource->quantity;
+                                                $newquntity = 0;
+                                                if($Qnty<$editestimateqnty)
+                                                {
+                                                     $newquntity = $editestimateqnty - $Qnty;
+                                                }
+                                                if($newquntity>0)
+                                                {
+
+
+ 
+                                                    $sql="SELECT name FROM jobcard ORDER BY name DESC limit 1";
+                                                    $command=$connection->createCommand($sql);
+                                                    $dataReader=$command->query();
+                                                    $no=$dataReader->read();
+                                                    if($no)
+                                                    {
+                                                       $name=$no['name'] + 1;
+                                                    }
+                                                    else
+                                                    {
+                                                        $name= 1;
+                                                    }
+                                                    
+                                                    $groupid=time();
+
+                                                    $processid = $estimateresource->process_Id;
+
+                                                    $activity = $wbsactivity['activity_Name'];
+
+                                                    $project_id = $projuser->projectid;
+
+                                                    $resource_id = $estimateresource->resource_Id;
+
+                                                    $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+
+                                                    $resource_unit = $res->Unit;
+
+                                                     $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+                                                    if($estimateact->activity_qty!=0){
+
+                                                        $wrkact_qty = $estimateact->activity_qty;
+
+                                                    }
+                                                    else{
+                                                        $wrkact_qty = 1;
+                                                    }
+                                                    
+
+                                                    $resource_qty = $newquntity * $wrkact_qty;
+
+                                                    $resource_rate = $estimateresource->rate;
+
+                                                    $activity_id = $wbsactivity['id'];
+
+                                                    $iow_id = $wbsactivity['wbs_id'];
+
+                                                    $vendor_id = $res->Vendor_Id;
+
+                                                    
+                                                    $Jobcard = New Jobcard();
+                                                    $Jobcard->name= $name;
+                                                    $Jobcard->date= date('Y-m-d');
+                                                    $Jobcard->process= $processid;
+                                                    $Jobcard->activity= $activity;
+                                                    $Jobcard->groupid= $groupid;
+                                                    $Jobcard->project_id= $project_id;
+                                                    $Jobcard->resource= $resource_id;
+                                                    
+                                                    $Jobcard->res_quantity= $resource_qty;
+                                                    $Jobcard->res_rate= $resource_rate;
+                                                    $Jobcard->est_resqty= $resource_qty;
+                                                    $Jobcard->vendor_id= $vendor_id;
+                                                    $Jobcard->user_id= $uid;
+                                                    $Jobcard->app_activity= $activity_id;
+                                                    $Jobcard->iow= $iow_id;
+                                                    $Jobcard->status= 1;
+                                                    
+                                                    $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                   
+                                                    $Jobcard->unit= $resource_unit;
+                                                    if($Jobcard->save(false)):
+
+                                                        $nwgroupid = time();
+                                                        $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                        $Jobcard->save(false);
+
+                                                        $model=New Cart();
+
+                                                        $model->Job_Id= $Jobcard->job_id;
+                                                        $model->Vendor_Id= $Jobcard->vendor_id;
+                                                        $model->ResourceType_Id= $res->ResourceType_Id;
+                                                        $model->Resource_Id= $Jobcard->resource;
+                                                        
+                                                        $model->rate= $resource_rate;
+                                                        $model->Qnty= $resource_qty;
+                                                        $model->EstresQnty= $resource_qty;
+                                                        $amount = $resource_rate * $resource_qty;
+                                                        $model->amount= $amount;
+                                                        $model->Project= $Jobcard->project_id;
+                                                        $model->groupid= $Jobcard->groupid;
+                                                        if($estimateresource->no_of_men){
+                                                            $model->no_workers=$estimateresource->no_of_men;
+                                                        }
+                                                        if($estimateresource->no_of_days){
+                                                            $model->no_days=$estimateresource->no_of_days;
+                                                        }
+
+                                                        $model->fuel_status = 0;
+                                                        $model->unit= $Jobcard->unit;
+
+                                                        $model->pricing_resourceid= $estimateresource->pricing_resourceid;                         
+                                                        $model->save(false);
+
+                                                        $Jobcard->cart_status=1;
+                                                        $Jobcard->save(false);
+
+                                                    endif;
+
+                                                    $rescount=1;
+
+                                                }
+
+
+                                            }
+                                            else
+                                            {
+                                                
+                                                 //clubbing of quantity  
+      
+                                               $catsne= cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>$resource->Resource_Id])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->andWhere(['rate'=>$estimateresource->rate])->andWhere(['Job_Id'=>$Jobcardd->job_id])->one();
+                                               $estimateress=PricingEstimateResourcesNew::find()->where(['resource_Id'=>$estimateresource->resource_Id])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['activity_id'=>$estimateresource->activity_id])->andWhere(['pricing_status'=>0])->all();
+
+                                               $totqty= 0;
+                                               $no_mens= 0;
+                                               $no_dys= 0;
+
+
+                                                foreach($estimateress as $estimateres)
+                                                {
+
+                                                   $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$estimateres->activity_id])->andWhere(['pricing_status' => 0])->one();
+
+                                                   if($estimateact['activity_qty']!=0){
+
+                                                   $wrkact_qty= $estimateact->activity_qty;
+
+                                                        }
+                                                        else{
+                                                   $wrkact_qty= 1;
+                                                        }
+
+                                                   $qty= $estimateres->quantity * $wrkact_qty;
+
+                                                   $totqty= $totqty + $qty;
+
+                                                   $resourcee_rate= $estimateres->rate;
+
+                                                   $no_mens= $no_mens + $estimateres->no_of_men;
+
+                                                   $no_dys= $no_dys + $estimateres->no_of_days;
+
+
+                                                }
+
+                                                $cartqtys = cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>$resource->Resource_Id])->andWhere(['status'=>1])->andWhere(['Project'=>$estimateresource->project_id])->all();
+                                               if($cartqtys){
+
+                                                    $odrqty=0;
+                                                    foreach($cartqtys as $cartqty)
+                                                    {
+                                                        $odrqty = $odrqty + $cartqty->Qnty;
+
+                                                    }
+
+                                                    $newqunty = $totqty - $odrqty;
+                                                }else
+                                                {
+                                                  $newqunty = $totqty;
+                                                }
+
+                                                if($newqunty>0)
+                                                {
+
+                                                    $Jobcardd->res_quantity= $newqunty;
+                                                    $Jobcardd->res_rate= $resourcee_rate;
+                                                    $Jobcardd->est_resqty= $newqunty;
+                                                    $Jobcardd->status= 1;
+
+                                                    if($Jobcardd->save(false)):
+                                                            if($catsne)
+                                                                {
+
+                                                                $catsne->rate= $Jobcardd->res_rate;
+                                                                $catsne->Qnty= $Jobcardd->res_quantity;
+                                                                $catsne->EstresQnty=$Jobcardd->res_quantity;
+                                                                $amount= $resourcee_rate * $Jobcardd->res_quantity;
+                                                                $catsne->amount= $amount;
+
+                                                                    //if($estimateresource->no_of_men){
+                                                                $catsne->no_workers=$no_mens;
+                                                                            //}
+                                                                            //if($estimateresource->no_of_days){
+                                                                $catsne->no_days=$no_dys;
+                                                                            //}
+
+                                                                        
+                                                                $catsne->fuel_status= 0;
+                                                                $catsne->save(false);
+                                                                }
+
+                                                                $Jobcardd->cart_status=1;
+                                                                $Jobcardd->save(false);
+
+
+                                                            endif;
+
+                                                        $rescount=1;
+
+                                                }
+                                               
+                                               //clubbing of quantity  end
+                                            }
+                                        }
+                                    }
+
+
+                                    //other cases
+                                    else
+                                    {
+
+                                        $resource=Resources::findOne($estimateresource->resource_Id);
+
+                                       // $Jobcardd=Jobcard::find()->where(['vendor_id'=>$resource->Vendor_Id])->andWhere(['resource'=>$resource->Resource_Id])->andWhere(['app_activity'=>$estimateresource->activity_id])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['pricing_resourceid'=>$estimateresource->pricing_resourceid])->one(); //chnges in 22/12/2021
+                                        
+                                        // print_r($Jobcardd);exit;
+                                        
+                                        $Jobcardd=Jobcard::find()->where(['vendor_id'=>$resource->Vendor_Id])->andWhere(['resource'=>$resource->Resource_Id])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->orderBy(['job_id'=>SORT_DESC])->one(); 
+                                        //$Jobcardd=Jobcard::find()->where(['vendor_id'=>$resource->Vendor_Id])->andWhere(['resource'=>$resource->Resource_Id])->andWhere(['app_activity'=>$estimateresource->activity_id])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->one(); //activity wise 
+                                        $cart = cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>147])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->andWhere(['rate'=>$estimateresource->rate])->andWhere(['reorder_cart'=> NULL])->one();
+
+                                        $Jobcardd_1=Jobcard::find()->where(['vendor_id'=>$resource->Vendor_Id])->andWhere(['resource'=>$resource->Resource_Id])->andWhere(['app_activity'=>$estimateresource->activity_id])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->one();
+
+                                        $cart_1 = cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>$resource->Resource_Id])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->one();
+
+                                        // If we edit resource after receiving
+                                        
+                                        $jobcardeditres = Jobcard::find()->where(['vendor_id'=>$resource->Vendor_Id])->andWhere(['resource'=>$resource->Resource_Id])->andWhere(['delete_status'=>0])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['cart_status'=>1])->one(); 
+                                        $carteditres = cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>$resource->Resource_Id])->andWhere(['status'=>1])->andWhere(['Project'=>$estimateresource->project_id])->one();
+                                       
+                                       
+                                        if(empty($Jobcardd))
+                                        {
+                                            
+                                            $sql="SELECT name FROM jobcard ORDER BY name DESC limit 1";
+                                            $command=$connection->createCommand($sql);
+                                            $dataReader=$command->query();
+                                            $no=$dataReader->read();
+                                            $name=$no['name'] + 1;
+                                            $groupid=time();
+
+                                            $processid = $estimateresource->process_Id;
+
+                                            $activity = $wbsactivity['activity_Name'];
+
+                                            $project_id = $projuser->projectid;
+
+                                            $resource_id = $estimateresource->resource_Id;
+
+                                            $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+
+                                            $resource_unit = $res->Unit;
+
+                                            $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+
+                                            if($estimateact->activity_qty!=0){
+
+                                                $wrkact_qty = $estimateact->activity_qty;
+
+                                            }
+                                            else{
+                                                $wrkact_qty = 1;
+                                            }
+
+                                            $resource_qty = $estimateresource->quantity * $wrkact_qty;
+
+                                            $resource_rate = $estimateresource->rate;
+
+                                            $activity_id = $wbsactivity['id'];
+
+                                            $iow_id = $wbsactivity['wbs_id'];
+
+                                            $vendor_id = $res->Vendor_Id;
+
+                                            $Jobcard = New Jobcard();
+                                            $Jobcard->name= $name;
+                                            $Jobcard->date= date('Y-m-d');
+                                            $Jobcard->process= $processid;
+                                            $Jobcard->activity= $activity;
+                                            $Jobcard->groupid= $groupid;
+                                            $Jobcard->project_id= $project_id;
+                                            $Jobcard->resource= $resource_id;
+                                            
+                                            $Jobcard->res_quantity= $resource_qty;
+                                            $Jobcard->res_rate= $resource_rate;
+                                            $Jobcard->est_resqty= $resource_qty;
+                                            $Jobcard->vendor_id= $vendor_id;
+                                            $Jobcard->user_id= $uid;
+                                            $Jobcard->app_activity= $activity_id;
+                                            $Jobcard->iow= $iow_id;
+                                            $Jobcard->status= 1;
+                                            //$Jobcard->save(false);
+                                            $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                            /* if($estimateresource->resourcetype_Id == 26){
+                                                $Jobcard->unit = 'Nos';
+                                            }else{ */
+                                                $Jobcard->unit= $resource_unit;
+                                           // }
+
+                                            //if($estimateresource->resourcetype_Id != 24 && $estimateresource->resourcetype_Id != 26)
+                                            /* if($estimateresource->resourcetype_Id != 26)
+                                            { */
+                                                if($Jobcard->save(false)):
+                                                $nwgroupid = time();
+                                                $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                $Jobcard->save(false);
+
+                                                $model=New Cart();
+
+                                                $model->Job_Id= $Jobcard->job_id;
+                                                $model->Vendor_Id= $Jobcard->vendor_id;
+                                                $model->ResourceType_Id= $res->ResourceType_Id;
+                                                $model->Resource_Id= $Jobcard->resource;
+                                                
+                                                $model->rate= $resource_rate;
+                                                $model->Qnty= $resource_qty;
+                                                $model->EstresQnty= $resource_qty;
+                                                $amount = $resource_rate * $resource_qty;
+                                                $model->amount= $amount;
+                                                $model->Project= $Jobcard->project_id;
+                                                $model->groupid= $Jobcard->groupid;
+                                                if($estimateresource->no_of_men){
+                                                    $model->no_workers=$estimateresource->no_of_men;
+                                                }
+                                                if($estimateresource->no_of_days){
+                                                    $model->no_days=$estimateresource->no_of_days;
+                                                }
+
+                                                if($estimateresource->resourcetype_Id == 26){
+                                                    $model->fuel_status = 1;
+                                                    $model->unit= 'Nos';
+
+                                                }else{
+                                                    $model->fuel_status = 0;
+                                                    $model->unit= $Jobcard->unit;
+                                                }
+
+                                                $model->pricing_resourceid= $estimateresource->pricing_resourceid;                         
+                                                $model->save(false);
+
+                                                $Jobcard->cart_status=1;
+                                                $Jobcard->save(false);
+
+                                            endif;
+
+                                            $rescount=1;
+
+                                        }
+                                        elseif(!empty($Jobcardd) && !empty($cart)){
+                                           
+                                            $cart = cart::find()->where(['Vendor_Id'=>$resource->Vendor_Id])->andWhere(['Resource_Id'=>$resource->Resource_Id])->andWhere(['status'=>0])->andWhere(['Project'=>$estimateresource->project_id])->andWhere(['rate'=>$estimateresource->rate])->andWhere(['Job_Id'=>$Jobcardd->job_id])->one();
+                                            
+                                            $estimateress=PricingEstimateResourcesNew::find()->where(['resource_Id'=>$estimateresource->resource_Id])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['pricing_status'=>0])->all();
+                                            //$estimateress=PricingEstimateResourcesNew::find()->where(['resource_Id'=>$estimateresource->resource_Id])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['activity_id'=>$estimateresource->activity_id])->andWhere(['pricing_status'=>0])->all();//activity wise
+                                           //$estimateress=PricingEstimateResourcesNew::find()->where(['resource_Id'=>$estimateresource->resource_Id])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['pricing_status'=>0])->all();
+                                            $totqty = 0;
+                                           // $resourcee_rate = 0;
+                                            $tot_f_qty = 0;
+                                           // $fuelrate = 0;
+
+                                            foreach($estimateress as $estimateres){
+
+                                                $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$estimateres->activity_id])->andWhere(['pricing_status' => 0])->one();
+
+                                                if($estimateact['activity_qty']!=0){
+
+                                                    $wrkact_qty = $estimateact->activity_qty;
+
+                                                }
+                                                else{
+                                                    $wrkact_qty = 1;
+                                                }
+
+                                                $qty = $estimateres->quantity * $wrkact_qty;
+
+                                                $totqty = $totqty + $qty;
+
+                                                //$resourcee_rate = $resourcee_rate + $estimateres->rate;
+                                                $resourcee_rate =$estimateres->rate;
+
+                                            }
+
+                                            $countmachine = count($estimateress);
+
+                                            //if($countmachine !=0){
+                                                //$resource_rate = $resourcee_rate/$countmachine;
+                                                $resource_rate = $resourcee_rate;
+                                            //}
+                                            
+                                       
+                                            $Jobcardd->res_quantity = $totqty;
+                                            $Jobcardd->res_rate = $resource_rate;
+                                            $Jobcardd->est_resqty = $totqty;
+                                            $Jobcardd->status = 1;
+
+                                            //if($estimateresource->resourcetype_Id != 24 && $estimateresource->resourcetype_Id != 26)
+                                           // if($estimateresource->resourcetype_Id != 26)
+                                             //{
+                                                if($Jobcardd->save(false)):
+                                                    
+                                                    if($cart)
+                                                    {
+                                                        $cart->rate= $resource_rate;
+                                                        $cart->Qnty= $totqty;
+                                                        $cart->EstresQnty=$totqty;
+                                                        $amount = $resource_rate * $totqty;
+                                                        $cart->amount= $amount;
+                                                        
+                                                        if($estimateresource->no_of_men){
+                                                            $cart->no_workers=$estimateresource->no_of_men;
+                                                        }
+                                                        if($estimateresource->no_of_days){
+                                                            $cart->no_days=$estimateresource->no_of_days;
+                                                        }
+
+                                                        if($estimateresource->resourcetype_Id == 26){
+                                                            $cart->fuel_status = 1;
+                                                        }else{
+                                                            $cart->fuel_status = 0;
+                                                        }
+
+                                                        $cart->save(false);
+
+                                                        $Jobcardd->cart_status=1;
+                                                        $Jobcardd->save(false);
+                                                        
+                                                    }
+                                             
+                                                    
+
+                                                endif;
+
+                                             //}
+
+                                            $rescount=1;
+                                        }elseif(!empty($jobcardeditres) && !empty($carteditres))   // editing resource of received partially or fully
+                                        { 
+                                           
+                                            /* if($estimateresource->quantity > $estimateresource->actual_qty)
+                                            { */
+                                               
+                                                $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$estimateresource->activity_id])->andWhere(['pricing_status' => 0])->one();
+
+                                                if($estimateact['activity_qty']!=0){
+
+                                                    $wrkact_qty = $estimateact->activity_qty;
+
+                                                }
+                                                else{
+                                                    $wrkact_qty = 1;
+                                                }
+
+                                                
+                                                
+                                                $sqle = "SELECT a.status as status,a.qnty as qnty,a.order_id as order_id,a.order_res_id as order_res_id  FROM `ordered_resource` as a INNER JOIN `orders` as b ON a.order_id=b.order_id WHERE a.order_res_id=".$jobcardeditres->order_resid." AND b.project_id=".$projuser->projectid." ";
+                                                $command = $connection->createCommand($sqle);
+                                                $dataReader1 = $command->query();
+                                                $order_res = $dataReader1->read();
+                                                
+                                                if($order_res)
+                                                {
+                                                   
+                                                    //if($order_res['status'] == 2)
+                                                    if($order_res['status'] == 2 || $order_res['status'] == 3)
+                                                    {
+                                                        
+                                                        
+                                                        $orderdqnty = $order_res['qnty'];
+
+                                                        $invoices = InvoiceResources::find()->where(['order_id'=>$order_res['order_id']])->all();
+                                                        
+                                                        if($invoices) 
+                                                        {
+
+                                                            $receive_qty = 0;
+                                                            foreach($invoices as $invoice)
+                                                            {
+                                                                $receive_qty = $receive_qty + $invoice->resource_qty;
+                                                            }
+                                                        
+                                                            
+                                                            $newpricingestimate_qnty = $wrkact_qty * $estimateresource->quantity;
+
+                                                            $alljobcards = Jobcard::find()->where(['resource' => $jobcardeditres->resource])->andWhere(['cart_status' => 1])->andWhere(['delete_status' => 0])->andWhere(['project_id' =>$estimateresource->project_id])->all();
+
+
+                                                            $oldissueslipstotal = 0;
+
+                                                            foreach($alljobcards as $alljobcard):
+
+                                                                $jobplaceorderes = PlaceorderRes::find()->where(['Job_Id' => $alljobcard->job_id])->andwhere(['Resource_Id' =>$alljobcard->resource])->andWhere(['Project' =>$alljobcard->project_id])->one();
+
+                                                                if($jobplaceorderes){
+
+                                                                    $oldissueslipstotal = $oldissueslipstotal + $jobplaceorderes->req_qty;
+
+                                                                }
+
+                                                            endforeach;
+
+                                                            //echo $carteditres->EstresQnty.'<br>'.$oldissueslipstotal;
+                                                            $balance1 = $carteditres->EstresQnty - $oldissueslipstotal;
+                                                            
+                                                            $balance = round($balance1, 2);
+
+                                                            //echo $balance;exit;
+                                                            $estimateress=PricingEstimateResourcesNew::find()->where(['resource_Id'=>$estimateresource->resource_Id])->andWhere(['project_id'=>$estimateresource->project_id])->andWhere(['pricing_status'=>0])->all();
+                                                            $totqty = 0;
+                                                            foreach($estimateress as $estimateres){
+                                                                $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$estimateres->activity_id])->andWhere(['pricing_status' => 0])->one();
+
+                                                                if($estimateact['activity_qty']!=0){
+
+                                                                    $wrkact_qty = $estimateact->activity_qty;
+
+                                                                }
+                                                                else{
+                                                                    $wrkact_qty = 1;
+                                                                }
+
+                                                                $qty = $estimateres->quantity * $wrkact_qty;
+
+                                                                $totqty = $totqty + $qty;
+                                                            }  
+
+
+                                                            //$pricingresource = PlaceorderRes::find()->where(['Job_Id'=>$jobcardeditres->job_id])->one();
+                                                           
+
+                                                            $connection = Yii::$app->db;
+                                                            $sqlre = "SELECT a.*,b.status FROM jobcard as a INNER JOIN cart as b ON a.job_id = b.Job_Id WHERE b.reorder_cart=1 AND a.resource=".$jobcardeditres->resource." AND a.project_id=".$projuser->projectid." AND b.status=0 ORDER BY a.job_id DESC";
+                                                            $command = $connection->createCommand($sqlre);
+                                                            $dataReader = $command->query();
+                                                            $repetedjobs = $dataReader->read();
+                                                                
+
+                                                            //echo '<br>'.$balance;
+                                                            //if(($balance != 0 && $balance>0) || ($balance == 0 && $repetedjobs['status']==0) )
+                                                        if($repetedjobs)
+                                                        {  
+                                                            if(($balance != 0) || ($balance == 0 && $repetedjobs['status']==0) )
+                                                            {
+                                                                
+                                                                $jobcardeditres->est_resqty = $totqty;
+                                                                $jobcardeditres->save(false);
+
+                                                                
+                                                                $carteditres->EstresQnty = $totqty;
+
+                                                                
+                                                                $carteditres->save(false);
+
+
+
+                                                                
+    
+                                                                if($repetedjobs)
+                                                                { 
+
+                                                                    //$newbalqty = $estimateresource->quantity - $estimateresource->actual_qty;
+
+                                                                    $jobcardre = Jobcard::findOne($repetedjobs['job_id']);
+                                                                    $jobcardre->est_resqty = $totqty;
+                                                                    $jobcardre->save(false);
+    
+                                                                    $cartrep = Cart::find()->where(['Job_Id'=>$repetedjobs['job_id']])->one();
+                                                                    $cartrep->EstresQnty = $totqty;
+    
+                                                                    $amount = $cartrep->Qnty * $cartrep->rate;
+    
+                                                                    $cartrep->amount = $amount;
+                                                                    $cartrep->save(false);
+    
+                                                                }
+                                                            
+                                                                
+
+
+                                                                
+                                                            }else{
+                                                               // echo $totqty-$jobcardeditres->est_resqty;exit;
+                                                               
+                                                               if($sfno == 1 && $sno==1)
+                                                               {echo $jobcardeditres->resource;
+                                                                $sql="SELECT name FROM jobcard ORDER BY name DESC limit 1";
+                                                                $command=$connection->createCommand($sql);
+                                                                $dataReader=$command->query();
+                                                                $no=$dataReader->read();
+                                                                $name=$no['name'] + 1;
+                                                                $groupid=time();
+
+                                                                $processid = $estimateresource->process_Id;
+
+                                                                $activity = $wbsactivity['activity_Name'];
+
+                                                                $project_id = $projuser->projectid;
+
+                                                                $resource_id = $estimateresource->resource_Id;
+
+                                                                $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+
+                                                                $resource_unit = $res->Unit;
+
+                                                                $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+
+                                                                if($estimateact->activity_qty!=0){
+
+                                                                    $wrkact_qty = $estimateact->activity_qty;
+
+                                                                }
+                                                                else{
+                                                                    $wrkact_qty = 1;
+                                                                }
+
+                                                                
+
+                                                                $resource_rate = $estimateresource->rate;
+
+                                                                $activity_id = $wbsactivity['id'];
+
+                                                                $iow_id = $wbsactivity['wbs_id'];
+
+                                                                $vendor_id = $res->Vendor_Id;
+                                                            
+                                                                $newpricingestimate_qnty = $wrkact_qty * $estimateresource->quantity;
+                                                                
+                                                               /*  if($receive_qty < $estimateresource->quantity)
+                                                                { */
+                                                                    
+                                                                        //echo $totqty.'<br>'.$repetedjobs['est_resqty'];exit;
+                                                                        $remaining_qty =  ($totqty-$repetedjobs['est_resqty']);
+                                                                    
+                                                                        $Jobcard = New Jobcard();
+                                                                        $Jobcard->name= $name;
+                                                                        $Jobcard->date= date('Y-m-d');
+                                                                        $Jobcard->process= $processid;
+                                                                        $Jobcard->activity= $activity;
+                                                                        $Jobcard->groupid= $groupid;
+                                                                        $Jobcard->project_id= $project_id;
+                                                                        $Jobcard->resource= $resource_id;
+                                                                        
+                                                                        $Jobcard->res_quantity= $remaining_qty;
+                                                                        $Jobcard->res_rate= $resource_rate;
+                                                                        $Jobcard->est_resqty= $remaining_qty;
+                                                                        $Jobcard->vendor_id= $vendor_id;
+                                                                        $Jobcard->user_id= $uid;
+                                                                        $Jobcard->app_activity= $activity_id;
+                                                                        $Jobcard->iow= $iow_id;
+                                                                        $Jobcard->status= 1;
+                                                                        $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                                        $Jobcard->unit= $resource_unit;
+                                                                        
+                                                                        if($Jobcard->save(false)):
+                                                                        
+                                                                            $nwgroupid = time();
+                                                                            $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                                            $Jobcard->save(false);
+
+                                                                            $model1= New Cart();
+
+                                                                            $model1->Job_Id= $Jobcard->job_id;
+                                                                            $model1->Vendor_Id= $Jobcard->vendor_id;
+                                                                            $model1->ResourceType_Id= $res->ResourceType_Id;
+                                                                            $model1->Resource_Id= $Jobcard->resource;
+                                                                            
+                                                                            $model1->rate= $resource_rate;
+                                                                            $model1->Qnty= $Jobcard->res_quantity;
+                                                                            $model1->EstresQnty= $Jobcard->res_quantity;
+                                                                            $amount = $resource_rate * $Jobcard->res_quantity;
+                                                                            $model1->amount= $amount;
+                                                                            $model1->Project= $Jobcard->project_id;
+                                                                            $model1->groupid= $Jobcard->groupid;
+                                                                            if($estimateresource->no_of_men){
+                                                                                $model1->no_workers=$estimateresource->no_of_men;
+                                                                            }
+                                                                            if($estimateresource->no_of_days){
+                                                                                $model1->no_days=$estimateresource->no_of_days;
+                                                                            }
+
+                                                                            if($estimateresource->resourcetype_Id == 26){
+                                                                                $model1->fuel_status = 1;
+                                                                                $model1->unit= 'Nos';
+
+                                                                            }else{
+                                                                                $model1->fuel_status = 0;
+                                                                                $model1->unit= $Jobcard->unit;
+                                                                            }
+
+                                                                            $model1->pricing_resourceid= $estimateresource->pricing_resourceid;                         
+                                                                            $model1->save(false);
+
+                                                                            $Jobcard->cart_status=1;
+                                                                            $Jobcard->save(false);
+
+                                                                        endif;
+                                                                    }
+ 
+                                                                //}
+                                                               
+                                                            }
+                                                        }
+                                                        // else{
+                                                             
+                                                            
+                                                           
+                                                        //     //   if($sfno == 1 && $sno==1)
+                                                        //     //   {//echo $jobcardeditres->resource.'</br>';
+                                                        //         $sql="SELECT name FROM jobcard ORDER BY name DESC limit 1";
+                                                        //         $command=$connection->createCommand($sql);
+                                                        //         $dataReader=$command->query();
+                                                        //         $no=$dataReader->read();
+                                                        //         $name=$no['name'] + 1;
+                                                        //         $groupid=time();
+
+                                                        //         $processid = $estimateresource->process_Id;
+
+                                                        //         $activity = $wbsactivity['activity_Name'];
+
+                                                        //         $project_id = $projuser->projectid;
+
+                                                        //         $resource_id = $estimateresource->resource_Id;
+
+                                                        //         $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+
+                                                        //         $resource_unit = $res->Unit;
+
+                                                        //         $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+
+                                                        //         if($estimateact->activity_qty!=0){
+
+                                                        //             $wrkact_qty = $estimateact->activity_qty;
+
+                                                        //         }
+                                                        //         else{
+                                                        //             $wrkact_qty = 1;
+                                                        //         }
+
+                                                                
+
+                                                        //         $resource_rate = $estimateresource->rate;
+
+                                                        //         $activity_id = $wbsactivity['id'];
+
+                                                        //         $iow_id = $wbsactivity['wbs_id'];
+
+                                                        //         $vendor_id = $res->Vendor_Id;
+                                                            
+                                                        //         $newpricingestimate_qnty = $wrkact_qty * $estimateresource->quantity;
+                                                                
+                                                        //       /*  if($receive_qty < $estimateresource->quantity)
+                                                        //         { */
+                                                                    
+                                                        //                 //echo $totqty.'<br>'.$repetedjobs['est_resqty'];exit;
+                                                        //                 $remaining_qty =  ($totqty-$repetedjobs['est_resqty']);
+                                                                    
+                                                        //                 $Jobcard = New Jobcard();
+                                                        //                 $Jobcard->name= $name;
+                                                        //                 $Jobcard->date= date('Y-m-d');
+                                                        //                 $Jobcard->process= $processid;
+                                                        //                 $Jobcard->activity= $activity;
+                                                        //                 $Jobcard->groupid= $groupid;
+                                                        //                 $Jobcard->project_id= $project_id;
+                                                        //                 $Jobcard->resource= $resource_id;
+                                                                        
+                                                        //                 $Jobcard->res_quantity= $remaining_qty;
+                                                        //                 $Jobcard->res_rate= $resource_rate;
+                                                        //                 $Jobcard->est_resqty= $remaining_qty;
+                                                        //                 $Jobcard->vendor_id= $vendor_id;
+                                                        //                 $Jobcard->user_id= $uid;
+                                                        //                 $Jobcard->app_activity= $activity_id;
+                                                        //                 $Jobcard->iow= $iow_id;
+                                                        //                 $Jobcard->status= 1;
+                                                        //                 $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                        //                 $Jobcard->unit= $resource_unit;
+                                                                        
+                                                        //                 if($Jobcard->save(false)):
+                                                                        
+                                                        //                     $nwgroupid = time();
+                                                        //                     $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                        //                     $Jobcard->save(false);
+
+                                                        //                     $model1= New Cart();
+
+                                                        //                     $model1->Job_Id= $Jobcard->job_id;
+                                                        //                     $model1->Vendor_Id= $Jobcard->vendor_id;
+                                                        //                     $model1->ResourceType_Id= $res->ResourceType_Id;
+                                                        //                     $model1->Resource_Id= $Jobcard->resource;
+                                                                            
+                                                        //                     $model1->rate= $resource_rate;
+                                                        //                     $model1->Qnty= $Jobcard->res_quantity;
+                                                        //                     $model1->EstresQnty= $Jobcard->res_quantity;
+                                                        //                     $amount = $resource_rate * $Jobcard->res_quantity;
+                                                        //                     $model1->amount= $amount;
+                                                        //                     $model1->Project= $Jobcard->project_id;
+                                                        //                     $model1->groupid= $Jobcard->groupid;
+                                                        //                     if($estimateresource->no_of_men){
+                                                        //                         $model1->no_workers=$estimateresource->no_of_men;
+                                                        //                     }
+                                                        //                     if($estimateresource->no_of_days){
+                                                        //                         $model1->no_days=$estimateresource->no_of_days;
+                                                        //                     }
+
+                                                        //                     if($estimateresource->resourcetype_Id == 26){
+                                                        //                         $model1->fuel_status = 1;
+                                                        //                         $model1->unit= 'Nos';
+
+                                                        //                     }else{
+                                                        //                         $model1->fuel_status = 0;
+                                                        //                         $model1->unit= $Jobcard->unit;
+                                                        //                     }
+
+                                                        //                     $model1->pricing_resourceid= $estimateresource->pricing_resourceid;                         
+                                                        //                     $model1->save(false);
+
+                                                        //                     $Jobcard->cart_status=1;
+                                                        //                     $Jobcard->save(false);
+
+                                                        //                 endif;
+                                                        //             //}
+                                                        // }
+                                                            
+
+                                                        }
+                                                        $rescount=1;
+                                                    
+        
+                                                    }elseif($order_res['status'] == 3)  // if completely received new order will be generated
+                                                    { 
+                                                        
+                                                        $sql="SELECT name FROM jobcard ORDER BY name DESC limit 1";
+                                                        $command=$connection->createCommand($sql);
+                                                        $dataReader=$command->query();
+                                                        $no=$dataReader->read();
+                                                        $name=$no['name'] + 1;
+                                                        $groupid=time();
+
+                                                        $processid = $estimateresource->process_Id;
+
+                                                        $activity = $wbsactivity['activity_Name'];
+
+                                                        $project_id = $projuser->projectid;
+
+                                                        $resource_id = $estimateresource->resource_Id;
+
+                                                        $res = Resources::find()->where(['Resource_Id'=>$resource_id])->one();
+
+                                                        $resource_unit = $res->Unit;
+
+                                                        $estimateact=PricingEstimateNew::find()->where(['project_Id'=>$projuser->projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status' => 0])->one();
+
+
+                                                        if($estimateact->activity_qty!=0){
+
+                                                            $wrkact_qty = $estimateact->activity_qty;
+
+                                                        }
+                                                        else{
+                                                            $wrkact_qty = 1;
+                                                        }
+
+                                                        
+
+                                                        $resource_rate = $estimateresource->rate;
+
+                                                        $activity_id = $wbsactivity['id'];
+
+                                                        $iow_id = $wbsactivity['wbs_id'];
+
+                                                        $vendor_id = $res->Vendor_Id;
+                                                       
+                                                        $newpricingestimate_qnty = $wrkact_qty * $estimateresource->quantity;
+
+                                                        $cinvoices = InvoiceResources::find()->where(['order_id'=>$order_res['order_id']])->all();
+                                                        $receive_qty = 0;
+                                                        if($cinvoices)
+                                                        {
+                                                            foreach($cinvoices as $invoice)
+                                                            {
+                                                                $receive_qty = $receive_qty+$invoice->resource_qty;  // received qty
+
+                                                            }
+                                                                
+                                                            $remqty = $newpricingestimate_qnty - $receive_qty;echo $newpricingestimate_qnty.'<br>';
+                                                        }
+
+                                                        // $Jobcard = New Jobcard();
+                                                        // $Jobcard->name= $name;
+                                                        // $Jobcard->date= date('Y-m-d');
+                                                        // $Jobcard->process= $processid;
+                                                        // $Jobcard->activity= $activity;
+                                                        // $Jobcard->groupid= $groupid;
+                                                        // $Jobcard->project_id= $project_id;
+                                                        // $Jobcard->resource= $resource_id;
+                                                        
+                                                        // $Jobcard->res_quantity= $remqty;
+                                                        // $Jobcard->res_rate= $resource_rate;
+                                                        // $Jobcard->est_resqty= $remqty;
+                                                        // $Jobcard->vendor_id= $vendor_id;
+                                                        // $Jobcard->user_id= $uid;
+                                                        // $Jobcard->app_activity= $activity_id;
+                                                        // $Jobcard->iow= $iow_id;
+                                                        // $Jobcard->status= 1;
+                                                        // $Jobcard->pricing_resourceid= $estimateresource->pricing_resourceid;
+                                                        // $Jobcard->unit= $resource_unit;
+                                                        
+                                                        // if($Jobcard->save(false)):
+
+                                                        //     $nwgroupid = time();
+                                                        //     $Jobcard->groupid= $Jobcard->job_id.$Jobcard->job_id;
+                                                        //     $Jobcard->save(false);
+
+                                                        //     $model=New Cart();
+
+                                                        //     $model->Job_Id= $Jobcard->job_id;
+                                                        //     $model->Vendor_Id= $Jobcard->vendor_id;
+                                                        //     $model->ResourceType_Id= $res->ResourceType_Id;
+                                                        //     $model->Resource_Id= $Jobcard->resource;
+                                                            
+                                                        //     $model->rate= $resource_rate;
+                                                        //     $model->Qnty= $remqty;
+                                                        //     $model->EstresQnty= $remqty;
+                                                        //     $amount = $resource_rate * $remqty;
+                                                        //     $model->amount= $amount;
+                                                        //     $model->Project= $Jobcard->project_id;
+                                                        //     $model->groupid= $Jobcard->groupid;
+                                                        //     if($estimateresource->no_of_men){
+                                                        //         $model->no_workers=$estimateresource->no_of_men;
+                                                        //     }
+                                                        //     if($estimateresource->no_of_days){
+                                                        //         $model->no_days=$estimateresource->no_of_days;
+                                                        //     }
+
+                                                        //     if($estimateresource->resourcetype_Id == 26){
+                                                        //         $model->fuel_status = 1;
+                                                        //         $model->unit= 'Nos';
+
+                                                        //     }else{
+                                                        //         $model->fuel_status = 0;
+                                                        //         $model->unit= $Jobcard->unit;
+                                                        //     }
+
+                                                        //     $model->pricing_resourceid= $estimateresource->pricing_resourceid;                         
+                                                        //     $model->save(false);
+
+                                                        //     $Jobcard->cart_status=1;
+                                                        //     $Jobcard->save(false);
+
+                                                        // endif;
+
+
+                                                        $rescount=1;
+
+                                                    }
+
+                                                }
+                                            //}
+
+                                        }
+                                    }
+                                    
+
+                                endforeach;
+
+                            }
+
+                        endforeach;
+
+                    }
+
+                endforeach;
+
+            }
+
+        }
+
+        if($rescount==1){
+            $arr = array('error' => 'No');
+        }
+        else{
+            $arr = array('error' => 'Yes');
+        }
+        
+        return json_encode($arr);
+
+
+    }
+
+
+
+    public function actionReceivepurchaseordercheck()
+    {
+        
+
+        $connection = \Yii::$app->db;
+
+        $estres = $_POST['estres'];
+
+        $pricingestimateres=PricingEstimateResourcesNew::findOne($estres);
+
+        $resource = Resources::findOne($pricingestimateres->resource_Id);
+
+        $vendorid = $resource->Vendor_Id;
+
+        $sql = "SELECT *  FROM `resources` WHERE Vendor_Id ='".$vendorid."' AND pricing_status=0";
+        $command = $connection->createCommand($sql);
+        $dataReader = $command->query();
+        $stockresitems = $dataReader->readAll();
+        $stresids='';
+        if(count($stockresitems)>0):
+            foreach ($stockresitems as $key2 => $stockresitem) {
+                if($key2==0):
+                    $stresids.=$stockresitem['Resource_Id'];
+                else:
+                    $stresids.=",".$stockresitem['Resource_Id'];
+                endif;
+            }
+        endif;
+
+        $sql2 = "SELECT *  FROM `resources` WHERE `Name` LIKE '".$resource->Name."' AND pricing_status=0";
+        $command = $connection->createCommand($sql2);
+        $dataReader = $command->query();
+        $resnames = $dataReader->readAll();
+        $resnameids='';
+        if(count($resnames)>0):
+            foreach ($resnames as $key3 => $resname) {
+                if($key3==0):
+                    $resnameids.=$resname['Resource_Id'];
+                else:
+                    $resnameids.=",".$resname['Resource_Id'];
+                endif;
+            }
+        endif;
+        $type =0;
+        $invoices=Invoice::find()->where(['project_id' => $pricingestimateres->project_id])->all();
+
+        $receivedres = 0; 
+
+        foreach($invoices as $invoice):
+
+            $invoiceres=InvoiceResources::find()->where(['invoice_id' => $invoice->invoice_id])->andWhere('resource_id IN('.$stresids.')')->all();
+
+            //$invoiceres2=InvoiceResources::find()->where(['invoice_id' => $invoice->invoice_id])->andWhere('resource_id IN('.$resnameids.')')->all();
+
+            $invoiceres2=InvoiceResources::find()->where(['invoice_id' => $invoice->invoice_id])->andWhere(['resource_id' =>$pricingestimateres->resource_Id])->all();
+
+          /*  if($invoiceres){
+                $receivedres++; 
+
+            }
+            else{*/
+                
+                if($invoiceres2){
+
+                    foreach($invoiceres2 as $invoiceres):
+
+                        $orderresmodel=OrderedResource::find()->Where(['order_id'=> $invoiceres->order_id])->andWhere(['resource_id'=> $invoiceres->resource_id])->one();
+
+                        $jobcard=Jobcard::findOne($orderresmodel->jobcard_id); 
+                        $orders = Orders::findOne($orderresmodel->order_id);
+                        $type = $orders->order_type;
+
+                        //if($jobcard->app_activity==$pricingestimateres->activity_id){
+                        if($jobcard->pricing_resourceid == $pricingestimateres->pricing_resourceid){
+                            $receivedres++;
+                        }
+
+
+                    endforeach;
+
+                }
+            //}
+
+        endforeach;
+
+        $arr = array('error' => 'No', 'receivedres'=>$receivedres,'type'=>$type);      
+        return json_encode($arr);
+
+
+    }
+
+    public function actionResourceauditlog()
+    {
+
+        $allaudits=PlaceorderResAudit::find()->all();
+        $counts = count($allaudits);
+        $scndcount = $counts+1;
+
+        $datarows='';
+
+        foreach($allaudits as $key => $allaudit):
+
+            $estimateres =PricingEstimateResourcesNew::findOne($allaudit->pricing_resourceid);
+
+
+            $resource=Resources::findOne($estimateres->resource_Id);
+            
+
+            $restype =Resourcetype::findOne($resource->ResourceType_Id);
+
+            if($restype->Project_Type == 1){
+                $order_type = "Purchase Order";
+            }elseif($restype->Project_Type == 2){
+                $order_type = "Work Order";
+            }elseif($restype->Project_Type == 3){
+                $order_type = "Direct Workers-Order";
+            }elseif($restype->Project_Type == 4){
+                $order_type = "Lease Order";
+            }else{
+                $order_type = "Despatch Order";
+            }
+
+            if($allaudit->added_by!=''){
+
+                $action= 'Added';
+
+                $date= date('d-m-Y',strtotime($allaudit->added_date));
+
+                $userid= $allaudit->added_by;
+
+            }
+
+            if($allaudit->edited_by!=''){
+
+                $action= 'Edited';
+
+                $date= date('d-m-Y',strtotime($allaudit->edited_date));
+
+                $userid= $allaudit->edited_by;
+
+            }
+
+            if($allaudit->deleted_by!=''){
+
+                $action= 'Deleted';
+
+                $date= date('d-m-Y',strtotime($allaudit->deleted_date));
+
+                $userid= $allaudit->deleted_by;
+
+            }
+            
+            $user=User::findOne($userid);
+
+            $datarows.='<div>
+                            <div style="margin-bottom:10px">'.($key+1).'.&nbsp;&nbsp;The&nbsp;&nbsp;'.$order_type.'&nbsp;&nbsp;of resource name&nbsp;&nbsp;'.$resource->Name.'&nbsp;&nbsp;has been '.$action.'&nbsp;&nbsp; by the user&nbsp;&nbsp;'.$user->username.'&nbsp;&nbsp; on &nbsp;&nbsp;'.$date.'</div>
+                                                    
+                        </div>';
+
+        endforeach;
+
+        $canclld_audits = PlaceorderStatus::find()->all();
+
+        foreach($canclld_audits as $canclld_audit):
+             $placrorderres =OrderedResource::find()->where(['order_id' => $canclld_audit->order_id])->one();
+             
+
+
+            $resourcename=Resources::findOne($placrorderres['resource_id']);
+
+            $restypes =Resourcetype::findOne($resourcename['ResourceType_Id']);
+
+            if($restypes['Project_Type'] == 1){
+                $order_types = "Purchase Order";
+            }elseif($restypes['Project_Type'] == 2){
+                $order_types = "Work Order";
+            }elseif($restypes['Project_Type'] == 3){
+                $order_types = "Direct Workers-Order";
+            }elseif($restypes['Project_Type'] == 4){
+                $order_types = "Lease Order";
+            }else{
+                $order_types = "Despatch Order";
+            }
+
+             if($canclld_audit->cancelled_by!=''){
+
+                $actions= 'Cancelled';
+
+                $datec= date('d-m-Y',strtotime($canclld_audit->cancelled_date));
+
+                $userid= $canclld_audit->cancelled_by;
+
+            }
+            if($canclld_audit->deleted_by!=''){
+
+                $actions= 'Deleted';
+
+                $datec= date('d-m-Y',strtotime($canclld_audit->deleted_date));
+
+                $userid= $canclld_audit->deleted_by;
+
+            }
+
+                $users=User::findOne($userid);
+
+                $datarows.='<div>
+
+                                <div style="margin-bottom:10px">'.($scndcount++).'.&nbsp;&nbsp;The&nbsp;&nbsp;'.$order_types.'&nbsp;&nbsp;of resource name&nbsp;&nbsp;'.$resourcename['Name'].'&nbsp;&nbsp;has been '.$actions.'&nbsp;&nbsp; by the user&nbsp;&nbsp;'.$users->username.'&nbsp;&nbsp; on &nbsp;&nbsp;'.$datec.'</div>
+                                                        
+                            </div>';
+
+        endforeach;
+
+        $arr = array('error' => 'No', 'result'=>$datarows);
+        return json_encode($arr);
+
+    }
+
+    public function actionUploadprojectfiles()
+    {
+        try {
+            $projectId = (int)($_POST['project_id'] ?? 0);
+            if (!$projectId) {
+                return json_encode(['error' => 'Yes', 'errortext' => 'No project selected']);
+            }
+            $uploadDir = Yii::getAlias('@webroot') . '/uploads/projects/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+            $allowed = ['pdf','doc','docx','xls','xlsx','jpg','jpeg','png'];
+            if (!empty($_FILES['pf_documents']['name'][0])) {
+                foreach ($_FILES['pf_documents']['name'] as $i => $origName) {
+                    $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+                    if (!in_array($ext, $allowed)) continue;
+                    $storedName = uniqid('pf_') . '.' . $ext;
+                    if (move_uploaded_file($_FILES['pf_documents']['tmp_name'][$i], $uploadDir . $storedName)) {
+                        \Yii::$app->db->createCommand()->insert('project_files', [
+                            'project_id'    => $projectId,
+                            'file_type'     => 'documents',
+                            'filename'      => $storedName,
+                            'original_name' => $origName,
+                            'uploaded_at'   => date('Y-m-d H:i:s'),
+                        ])->execute();
+                    }
+                }
+            }
+            return json_encode(['error' => 'No']);
+        } catch (\Exception $e) {
+            return json_encode(['error' => 'Yes', 'errortext' => $e->getMessage()]);
+        }
+    }
+
+}
+ 
+
