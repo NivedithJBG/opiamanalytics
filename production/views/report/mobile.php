@@ -399,7 +399,7 @@ function buildCards(activities){
     html += '</div></div>';
     html += '</div>';
     html += '<div class="mob-form-row">';
-    html += '<div class="mob-form-field"><label>Break Hours</label><input type="number" id="fbd-'+act.id+'" placeholder="0" step="0.5" min="0" inputmode="decimal"></div>';
+    html += '<div class="mob-form-field"><label>No Work / Hours</label><input type="number" id="fbd-'+act.id+'" placeholder="0" step="0.5" min="0" inputmode="decimal"></div>';
     html += '<div class="mob-form-field"><label>Unit</label><input type="text" value="'+escHtml(act.unit||'—')+'" readonly></div>';
     html += '</div>';
     html += '<div class="mob-form-row">';
@@ -409,6 +409,7 @@ function buildCards(activities){
 
     html += '<div class="mob-form-actions">';
     html += '<button class="mob-btn mob-btn-resource" data-id="'+act.id+'" data-name="'+escHtml(act.name)+'">Report Resource</button>';
+    html += '<button class="mob-btn mob-btn-complete" data-id="'+act.id+'" data-name="'+escHtml(act.name)+'">&#10003; Mark Complete</button>';
     html += '<button class="mob-btn mob-btn-cancel" data-id="'+act.id+'">Cancel</button>';
     html += '<button class="mob-btn mob-btn-report" data-id="'+act.id+'">Submit Report</button>';
     html += '</div>';
@@ -622,6 +623,41 @@ $(document).on('click','.mob-btn-cancel',function(){
   var id = $(this).data('id');
   $('#form-'+id).removeClass('open');
   _openActId = null;
+});
+
+// Mark Complete — same endpoint the desktop Progress Report screen uses
+// (ReportController::actionCompleteactivtiyreport). Completed activities
+// are excluded from mobileactivities' own list (sa.completed_status = 0
+// filter), so on success the card is simply removed rather than reloading
+// the whole list — one less round trip on a mobile connection.
+$(document).on('click','.mob-btn-complete',function(){
+  var $btn = $(this);
+  var id   = $btn.data('id');
+  var name = $btn.data('name') || 'this activity';
+  if(!window.confirm('Mark "'+name+'" as complete?')) return;
+
+  var origText = $btn.text();
+  $btn.text('Saving…').attr('disabled', true);
+
+  $.ajax({
+    type:'POST', url:'../report/completeactivtiyreport',
+    dataType:'json', data:{ id: id },
+    success: function(r){
+      if(r.error === 'No'){
+        closeCdpPortal();
+        toast('Activity marked complete!');
+        $('.mob-act-card[data-id="'+id+'"]').slideUp(200, function(){ $(this).remove(); });
+        if(_openActId == id) _openActId = null;
+      } else {
+        $btn.text(origText).removeAttr('disabled');
+        toast('Could not mark complete. Please try again.');
+      }
+    },
+    error: function(){
+      $btn.text(origText).removeAttr('disabled');
+      toast('Network error. Please try again.');
+    }
+  });
 });
 
 // ── Report Resources at Site (slide-up sheet) ───────────────────────────

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use app\models\EstimateWorkType;
 use app\models\EstimateActivityType;
@@ -8,6 +8,26 @@ use app\models\Resources;
 <div class="activities-masters-tab allocate-resource-tabss" id="estactivity">
     <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/masters/estactivity.js?v=<?php echo time(); ?>" type="text/javascript"></script>
     <script type="text/javascript">
+        (function(){
+          if(typeof window.bindDragTouch !== 'function'){
+            // Standalone fallback in case this partial is ever rendered
+            // outside layouts/main.php, where the shared shim normally comes
+            // from. Without it, drag here only ever bound mousedown, so
+            // dragging never worked on touch devices (iPad).
+            var _touchTypeFor = { mousedown: 'touchstart', mousemove: 'touchmove', mouseup: 'touchend' };
+            window.bindDragTouch = function(el, mouseType, handler, opts){
+              if(!el) return;
+              el.addEventListener(mouseType, handler, opts);
+              var touchType = _touchTypeFor[mouseType];
+              if(!touchType) return;
+              el.addEventListener(touchType, function(e){
+                var t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+                if(t){ e.clientX = t.clientX; e.clientY = t.clientY; }
+                handler(e);
+              }, opts);
+            };
+          }
+        })();
         $(document).ready(function() {
             var max_fields      = 11; //maximum input boxes allowed
             var wrapper         = $(".add-activity-form"); //Fields wrapper
@@ -565,9 +585,9 @@ _alIds.forEach(function(id){
     window.bindDragTouch(document, 'mousemove', move, { passive: false });
     window.bindDragTouch(document, 'mouseup', end);
   } else {
-    hdr.addEventListener('mousedown', start);
-    document.addEventListener('mousemove', move);
-    document.addEventListener('mouseup', end);
+    bindDragTouch(hdr, 'mousedown', start);
+    bindDragTouch(document, 'mousemove', move);
+    bindDragTouch(document, 'mouseup', end);
   }
 
   /* Position explicitly below Activity Library's own header on open,
@@ -607,7 +627,7 @@ _alIds.forEach(function(id){
   if(typeof window.bindDragTouch === 'function'){
     window.bindDragTouch(dialog, 'mousedown', raiseOnClick, true);
   } else {
-    dialog.addEventListener('mousedown', raiseOnClick, true);
+    bindDragTouch(dialog, 'mousedown', raiseOnClick, true);
   }
   $(modal).on('show.bs.modal', reCenter);
   $(document).on('click', '[data-target="#' + id + '"]', reCenter);

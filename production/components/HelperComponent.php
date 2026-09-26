@@ -316,6 +316,17 @@ class HelperComponent extends Component
         return ($elapsed / (float)$row['cumulated_qty']) * (float)$quantity;
     }
 
+    /**
+     * ACTUAL-date CPM engine. Runs on every Gantt page load. System-only —
+     * never triggered by, or responsive to, direct user edits to Planned
+     * dates. Measures each activity's real-world position (reported
+     * progress pace, or start-delay against whatever Planned currently is)
+     * and writes start_date, actual_start_date, actual_end_date,
+     * critical_start, critical_end, and float_duration. Never writes
+     * act_start_date (Planned) — see RecalculatePlannedDates() below for
+     * that, which only runs from explicit user actions (date edit,
+     * relationship add/edit/delete, duration/quantity change).
+     */
     public function GetRelationcorrect($projectid)
     {
         // ─── Textbook CPM engine ──────────────────────────────────────────────
@@ -335,31 +346,16 @@ class HelperComponent extends Component
         if (empty($activities)) return;
 
         // ── 1. Build the network ─────────────────────────────────────────────
-        $ids = []; $dur = []; $anchor = []; $lag = [];
-        foreach ($activities as $act) {
-            $ids[] = $act->id;
-            $dur[$act->id] = max(1, (int)round((float)$this->getCpmProjDays($act->id, $act->quantity)));
-            $lag[$act->id] = (int)$act->lag;
-
-            $sprRow = $connection->createCommand(
-                "SELECT start_date FROM schedule_progress_report WHERE activity_id = :aid LIMIT 1",
-                [':aid' => $act->id]
-            )->queryOne();
-            if ($sprRow && $sprRow['start_date'] && $sprRow['start_date'] != '0000-00-00') {
-                $anchor[$act->id] = $sprRow['start_date'];          // actual reported start
-            } elseif ($act->act_start_date && $act->act_start_date != '0000-00-00') {
-                $anchor[$act->id] = $act->act_start_date;           // immutable baseline
-            } elseif ($act->start_date && $act->start_date != '0000-00-00') {
-                $anchor[$act->id] = $act->start_date;
-                // Capture baseline on first run so future runs use the original date
-                $connection->createCommand(
-                    "UPDATE scheduleactivities SET act_start_date = :d WHERE id = :id AND (act_start_date IS NULL OR act_start_date = '0000-00-00')",
-                    [':d' => $act->start_date, ':id' => $act->id]
-                )->execute();
-            } else {
-                $anchor[$act->id] = date('Y-m-d');
-            }
-        }
+        // Every activity anchors off act_start_date (Planned — the live,
+        // user-controlled baseline; never written by this pass) or the real
+        // reported start where progress exists. A start delay (Planned start
+        // already passed, nothing reported yet) is absorbed by EXTENDING the
+        // duration for THIS pass only (never persisted back into Planned),
+        // so Early Finish = Planned start + (planned duration + overdue
+        // days) - 1 — that inflated EF is what makes the red delay segment
+        // and what correctly cascades to dependents via FS/SS/FF.
+        $ids = [];
+        foreach ($activities as $act) { $ids[] = $act->id; }
 
         $relations = ActivityRelations::find()
             ->where(['projectId' => $projectid, 'status' => 0])
@@ -374,6 +370,42 @@ class HelperComponent extends Component
             $succs[$rel->precedent_activity][] = $rel;
         }
 
+        // Each activity's own baseline anchor + planned/performance duration,
+        // with NO overdue-extension yet — a dependent's real start delay can
+        // only be known once its relationship-derived start is computed, so
+        // that check happens in a second pass below, after dates exist.
+        $dur = []; $anchor = []; $hasStartedMap = [];
+        $today = date('Y-m-d');
+        foreach ($activities as $act) {
+            $plannedDur = max(1, (int)round((float)$this->getCpmProjDays($act->id, $act->quantity)));
+
+            $sprRow = $connection->createCommand(
+                "SELECT start_date FROM schedule_progress_report WHERE activity_id = :aid LIMIT 1",
+                [':aid' => $act->id]
+            )->queryOne();
+            $hasStarted = ($sprRow && $sprRow['start_date'] && $sprRow['start_date'] != '0000-00-00');
+            $hasStartedMap[$act->id] = $hasStarted;
+
+            if ($hasStarted) {
+                $anchor[$act->id] = $sprRow['start_date'];          // actual reported start
+                $dur[$act->id]    = $plannedDur;                    // performance-projected, already delay-inclusive
+            } elseif ($act->act_start_date && $act->act_start_date != '0000-00-00') {
+                $anchor[$act->id] = $act->act_start_date;           // baseline (or last relationship-derived start)
+                $dur[$act->id]    = $plannedDur;
+            } elseif ($act->start_date && $act->start_date != '0000-00-00') {
+                // Capture baseline on first run so future runs use the original date
+                $connection->createCommand(
+                    "UPDATE scheduleactivities SET act_start_date = :d WHERE id = :id AND (act_start_date IS NULL OR act_start_date = '0000-00-00')",
+                    [':d' => $act->start_date, ':id' => $act->id]
+                )->execute();
+                $anchor[$act->id] = $act->start_date;
+                $dur[$act->id]    = $plannedDur;
+            } else {
+                $anchor[$act->id] = $today;
+                $dur[$act->id]    = $plannedDur;
+            }
+        }
+
         // Working-day date arithmetic (holiday/week-off aware)
         $wd = function($date, $n, $direction) use ($projectid) {
             return date('Y-m-d', strtotime(
@@ -382,51 +414,84 @@ class HelperComponent extends Component
         };
 
         // ── 2. Forward pass: ES/EF (iterative relaxation = topological order) ─
-        $ES = []; $EF = [];
-        $maxPasses = count($ids) + 1;
-        for ($pass = 0; $pass < $maxPasses; $pass++) {
-            $progress = false;
-            foreach ($ids as $id) {
-                if (isset($EF[$id])) continue;
+        // Run TWICE. Pass 1 computes each activity's relationship-derived
+        // Early Start from the plain anchors/durations above. Any activity
+        // (unlinked OR dependent) whose resulting ES has already passed with
+        // nothing reported and not complete is genuinely overdue against
+        // that arrived date — its duration is extended by the gap and Pass 2
+        // re-runs so the extension correctly cascades to ITS OWN dependents,
+        // the same way a precedent's delay always has.
+        $runForwardPass = function() use (&$ids, &$preds, &$anchor, &$dur, $wd) {
+            $ES = []; $EF = [];
+            $maxPasses = count($ids) + 1;
+            for ($pass = 0; $pass < $maxPasses; $pass++) {
+                $progress = false;
+                foreach ($ids as $id) {
+                    if (isset($EF[$id])) continue;
 
-                $es = $anchor[$id];
-                $efFloor = null;                       // FF constrains EF directly
-                $ready = true;
-                foreach ($preds[$id] ?? [] as $rel) {
-                    $p = $rel->precedent_activity;
-                    if (!isset($EF[$p])) { $ready = false; break; }
-                    $l = $lag[$id];                    // lag is stored on the dependent
-                    if ($rel->relation_type == 2) {        // FS: ES ≥ pred.EF + lag + 1
-                        $c = $wd($EF[$p], $l + 1, 'next');
-                        if ($c > $es) $es = $c;
-                    } elseif ($rel->relation_type == 1) {  // SS: ES ≥ pred.ES + lag
-                        $c = $wd($ES[$p], $l, 'next');
-                        if ($c > $es) $es = $c;
-                    } elseif ($rel->relation_type == 3) {  // FF: EF ≥ pred.EF + lag
-                        $c = $wd($EF[$p], $l, 'next');
-                        if ($efFloor === null || $c > $efFloor) $efFloor = $c;
+                    $es = $anchor[$id];
+                    $efFloor = null;                       // FF constrains EF directly
+                    $ready = true;
+                    foreach ($preds[$id] ?? [] as $rel) {
+                        $p = $rel->precedent_activity;
+                        if (!isset($EF[$p])) { $ready = false; break; }
+                        $l = (int)$rel->lag_days;          // lag belongs to THIS relation, not the dependent activity's own row
+                        if ($rel->relation_type == 2) {        // FS: ES ≥ pred.EF + lag + 1
+                            $c = $wd($EF[$p], $l + 1, 'next');
+                            if ($c > $es) $es = $c;
+                        } elseif ($rel->relation_type == 1) {  // SS: ES ≥ pred.ES + lag
+                            $c = $wd($ES[$p], $l, 'next');
+                            if ($c > $es) $es = $c;
+                        } elseif ($rel->relation_type == 3) {  // FF: EF ≥ pred.EF + lag
+                            $c = $wd($EF[$p], $l, 'next');
+                            if ($efFloor === null || $c > $efFloor) $efFloor = $c;
+                        }
                     }
-                }
-                if (!$ready) continue;
+                    if (!$ready) continue;
 
-                $es = $wd($es, 0, 'next');                        // never start on a holiday
-                $ef = $wd($es, $dur[$id] - 1, 'next');
-                if ($efFloor !== null && $efFloor > $ef) {        // FF pushes the activity later
-                    $ef = $efFloor;
-                    $es = $wd($ef, $dur[$id] - 1, 'previous');
+                    $es = $wd($es, 0, 'next');                        // never start on a holiday
+                    $ef = $wd($es, $dur[$id] - 1, 'next');
+                    if ($efFloor !== null && $efFloor > $ef) {        // FF pushes the activity later
+                        $ef = $efFloor;
+                        $es = $wd($ef, $dur[$id] - 1, 'previous');
+                    }
+                    $ES[$id] = $es;
+                    $EF[$id] = $ef;
+                    $progress = true;
                 }
-                $ES[$id] = $es;
-                $EF[$id] = $ef;
-                $progress = true;
+                if (!$progress) break;
             }
-            if (!$progress) break;
-        }
-        // Cyclic leftovers: schedule at anchor so the run never fails
+            // Cyclic leftovers: schedule at anchor so the run never fails
+            foreach ($ids as $id) {
+                if (!isset($EF[$id])) {
+                    $ES[$id] = $wd($anchor[$id], 0, 'next');
+                    $EF[$id] = $wd($ES[$id], $dur[$id] - 1, 'next');
+                }
+            }
+            return [$ES, $EF];
+        };
+
+        list($ES, $EF) = $runForwardPass();
+
+        // ── Overdue check against the relationship-derived start ──────────
+        $actById = [];
+        foreach ($activities as $act) { $actById[$act->id] = $act; }
+        $needsRerun = false;
         foreach ($ids as $id) {
-            if (!isset($EF[$id])) {
-                $ES[$id] = $wd($anchor[$id], 0, 'next');
-                $EF[$id] = $wd($ES[$id], $dur[$id] - 1, 'next');
-            }
+            if ($hasStartedMap[$id]) continue;                 // already started — performance formula governs, not this
+            $act = $actById[$id];
+            if ((int)$act->completed_status === 1) continue;
+            if (!isset($ES[$id]) || $ES[$id] >= $today) continue;
+            $overdueDays = (int)floor((strtotime($today) - strtotime($ES[$id])) / 86400);
+            if ($overdueDays <= 0) continue;
+            $dur[$id] += $overdueDays;
+            $needsRerun = true;
+        }
+        if ($needsRerun) {
+            // Pass 2 is the fully-settled network: every activity's own
+            // overdue-extension AND every precedent's own extension (via the
+            // inflated $dur feeding FS/SS/FF propagation) are both folded in.
+            list($ES, $EF) = $runForwardPass();
         }
 
         // ── 3. Virtual finish ────────────────────────────────────────────────
@@ -434,6 +499,7 @@ class HelperComponent extends Component
 
         // ── 4. Backward pass: LS/LF from the virtual finish ──────────────────
         $LS = []; $LF = [];
+        $maxPasses = count($ids) + 1;
         for ($pass = 0; $pass < $maxPasses; $pass++) {
             $progress = false;
             foreach ($ids as $id) {
@@ -446,7 +512,7 @@ class HelperComponent extends Component
                     foreach ($succs[$id] as $rel) {
                         $s = $rel->dependent_activity;
                         if (!isset($LS[$s])) { $ready = false; break; }
-                        $l = $lag[$s];
+                        $l = (int)$rel->lag_days;       // same fix as the forward pass — must match the lag actually used to compute ES/EF for this relation, or LS/LF drift out of sync with the forward pass
                         if ($rel->relation_type == 2) {        // FS: LF ≤ succ.LS − lag − 1
                             $c = $wd($LS[$s], $l + 1, 'previous');
                         } elseif ($rel->relation_type == 1) {  // SS: LS ≤ succ.LS − lag
@@ -479,6 +545,13 @@ class HelperComponent extends Component
             $act->critical_end    = $LF[$id];
             $act->float_duration  = $float;
             $act->critical_status = ($float <= 0) ? 'Yes' : 'No';
+            // act_start_date (Planned) is NEVER written by this pass. Planned
+            // only moves on an explicit user action (edit a date, add/edit/
+            // delete a relationship, change duration/quantity) via
+            // RecalculatePlannedDates() below — never as a side effect of
+            // simply opening the Gantt page. This pass is Actual-only: it
+            // measures today's real delay against whatever Planned currently
+            // is, via start_date/actual_start_date/actual_end_date.
             $act->save(false);
 
             $connection->createCommand("
@@ -501,6 +574,141 @@ class HelperComponent extends Component
             WHERE sa.projectId = :pid AND sa.status = 0
               AND sprl.activity_id IS NULL
         ", [':pid' => $projectid])->execute();
+    }
+
+    /**
+     * PLANNED-date CPM engine. The baseline — user-controlled, never touched
+     * by GetRelationcorrect()'s routine Actual-date recalculation. Call this
+     * ONLY from an explicit user action: adding/editing/deleting a
+     * relationship, editing an activity's Planned Start directly, or
+     * changing a duration/quantity that affects the schedule. Never call it
+     * from a page-load handler.
+     *
+     * Pure schedule-as-planned: no progress projection, no start-delay
+     * extension — just old_duration propagated through FS/SS/FF/lag from
+     * each activity's own act_start_date. An activity whose precedent has
+     * real progress/delay still anchors off that precedent's CURRENT actual
+     * position (start_date), per the agreed rule that re-planning after
+     * progress has occurred should plan forward from where things really
+     * stand — Planned is not required to stay pinned to a stale pre-progress
+     * plan once the user deliberately revisits the network.
+     *
+     * An activity with completed_status = 1 is frozen: its own
+     * act_start_date/old_duration are left untouched, and it is excluded
+     * from acting as a "movable" node — its own Planned variance stays fixed
+     * forever once the work is done. It can still anchor a successor via its
+     * own (frozen) act_start_date/old_duration.
+     */
+    public function RecalculatePlannedDates($projectid)
+    {
+        $connection = Yii::$app->db;
+
+        $activities = Scheduleactivities::find()
+            ->where(['projectId' => $projectid, 'status' => 0])
+            ->all();
+        if (empty($activities)) return;
+
+        $ids = [];
+        foreach ($activities as $act) { $ids[] = $act->id; }
+
+        $relations = ActivityRelations::find()
+            ->where(['projectId' => $projectid, 'status' => 0])
+            ->andWhere(['in', 'precedent_activity', $ids])
+            ->andWhere(['in', 'dependent_activity', $ids])
+            ->all();
+
+        $preds = []; $succs = [];
+        foreach ($relations as $rel) {
+            if ($rel->precedent_activity == $rel->dependent_activity) continue;
+            $preds[$rel->dependent_activity][] = $rel;
+            $succs[$rel->precedent_activity][] = $rel;
+        }
+
+        $dur = []; $anchor = []; $isCompleted = [];
+        foreach ($activities as $act) {
+            $isCompleted[$act->id] = ((int)$act->completed_status === 1);
+            $dur[$act->id] = max(1, (int)$act->old_duration);
+            if ($isCompleted[$act->id] && $act->act_start_date && $act->act_start_date != '0000-00-00') {
+                $anchor[$act->id] = $act->act_start_date;           // frozen — never recomputed below
+            } elseif (!empty($preds[$act->id])) {
+                // Dependent: anchor off the precedent's CURRENT ACTUAL position
+                // (start_date), not Planned — re-planning forward from a
+                // precedent takes its real, current state into account.
+                $anchor[$act->id] = ($act->start_date && $act->start_date != '0000-00-00')
+                    ? $act->start_date
+                    : (($act->act_start_date && $act->act_start_date != '0000-00-00') ? $act->act_start_date : date('Y-m-d'));
+            } elseif ($act->act_start_date && $act->act_start_date != '0000-00-00') {
+                $anchor[$act->id] = $act->act_start_date;
+            } else {
+                $anchor[$act->id] = date('Y-m-d');
+            }
+        }
+
+        $wd = function($date, $n, $direction) use ($projectid) {
+            return date('Y-m-d', strtotime(
+                $this->getDateAfterHoliday($date, $projectid, max(0, (int)$n), $direction)
+            ));
+        };
+
+        $ES = []; $EF = [];
+        $maxPasses = count($ids) + 1;
+        for ($pass = 0; $pass < $maxPasses; $pass++) {
+            $progress = false;
+            foreach ($ids as $id) {
+                if (isset($EF[$id])) continue;
+
+                if ($isCompleted[$id]) {
+                    // Frozen — Planned never recomputed for a completed activity.
+                    $ES[$id] = $anchor[$id];
+                    $EF[$id] = $wd($anchor[$id], $dur[$id] - 1, 'next');
+                    $progress = true;
+                    continue;
+                }
+
+                $es = $anchor[$id];
+                $efFloor = null;
+                $ready = true;
+                foreach ($preds[$id] ?? [] as $rel) {
+                    $p = $rel->precedent_activity;
+                    if (!isset($EF[$p])) { $ready = false; break; }
+                    $l = (int)$rel->lag_days;
+                    if ($rel->relation_type == 2) {        // FS
+                        $c = $wd($EF[$p], $l + 1, 'next');
+                        if ($c > $es) $es = $c;
+                    } elseif ($rel->relation_type == 1) {  // SS
+                        $c = $wd($ES[$p], $l, 'next');
+                        if ($c > $es) $es = $c;
+                    } elseif ($rel->relation_type == 3) {  // FF
+                        $c = $wd($EF[$p], $l, 'next');
+                        if ($efFloor === null || $c > $efFloor) $efFloor = $c;
+                    }
+                }
+                if (!$ready) continue;
+
+                $es = $wd($es, 0, 'next');
+                $ef = $wd($es, $dur[$id] - 1, 'next');
+                if ($efFloor !== null && $efFloor > $ef) {
+                    $ef = $efFloor;
+                    $es = $wd($ef, $dur[$id] - 1, 'previous');
+                }
+                $ES[$id] = $es;
+                $EF[$id] = $ef;
+                $progress = true;
+            }
+            if (!$progress) break;
+        }
+        foreach ($ids as $id) {
+            if (!isset($EF[$id])) {
+                $ES[$id] = $wd($anchor[$id], 0, 'next');
+                $EF[$id] = $wd($ES[$id], $dur[$id] - 1, 'next');
+            }
+        }
+
+        foreach ($activities as $act) {
+            if ($isCompleted[$act->id]) continue;   // frozen — never write Planned back
+            $act->act_start_date = $ES[$act->id];
+            $act->save(false);
+        }
     }
 
     // Working days between $from (exclusive) and $to (inclusive) — the number of

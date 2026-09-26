@@ -85,11 +85,32 @@ $(function() {
 
     $(document).on('click', '#saveestactivity', function(){
         var error=0;
+        // Clear every field-level error message up front, INCLUDING the
+        // ones with no .error class (Project Type/IOW Group/Activity Type/
+        // Name/Unit all use a plain `<span style="color:red;">`, not
+        // class="error") — .error alone never matched them, so a message
+        // shown on one failed attempt was never cleared on a later
+        // successful one; it just sat there permanently once triggered.
         $('.error').hide();
-        $('#estactivitytypeid').next('span').hide();
-        var acttype = $('#estactivitytypeid').val();
-        if (!acttype || acttype === '0') {
-            $('#estactivitytypeid').next('span').html('Select activity type').show('slow');
+        $('#estworktypelistss1, #actIowGroupId, #estactivitytypeid, .estactivityname, .estactivityunit').each(function(){
+            $(this).next('span').hide().html('');
+        });
+
+        // All fields on this form are required — Project Type, IOW Group
+        // and Activity Type were previously optional (see removed comments
+        // below), but per explicit direction every field must be filled
+        // before an activity can be added, so those three are validated
+        // the same way Activity Name/Unit already were.
+        if(!$('#estworktypelistss1').val() || $('#estworktypelistss1').val() === '0'){
+            $('#estworktypelistss1').next('span').html('Select Project Type').show('slow');
+            error = 1;
+        }
+        if(!$('#actIowGroupId').val()){
+            $('#actIowGroupId').next('span').html('Select IOW Group').show('slow');
+            error = 1;
+        }
+        if(!$('#estactivitytypeid').val() || $('#estactivitytypeid').val() === '0'){
+            $('#estactivitytypeid').next('span').html('Select Activity Type').show('slow');
             error = 1;
         }
         $('.estactivityname').each(function(){
@@ -108,7 +129,28 @@ $(function() {
                 error=1;
             }
         });
-        // Project Type is optional — activities without one list under all types
+
+        // Every task row currently on the form must be fully filled in
+        // (Task Name, Unit, Productivity/day) — a half-filled row (e.g.
+        // productivity left blank) silently saved as 0 before, which is
+        // exactly the "productivity not saving" confusion from earlier;
+        // now it's caught here instead.
+        $('#task-rows-container .task-row').each(function(){
+            var $row = $(this);
+            var $name = $row.find('.task-name');
+            var $unit = $row.find('.task-unit');
+            var $prod = $row.find('.task-productivity');
+            if($name.val() === '' || $unit.val() === '' || $prod.val() === ''){
+                $row.find('.task-name, .task-unit, .task-productivity').css('border-color', '#d9534f');
+                error = 1;
+            } else {
+                $row.find('.task-name, .task-unit, .task-productivity').css('border-color', '');
+            }
+        });
+        if(error && $('#task-rows-container .task-row').length && !$('#task-rows-error').length){
+            $('#task-rows-container').after('<div id="task-rows-error" style="color:red;font-size:12px;margin-top:4px;">Please fill in Task Name, Unit and Productivity/day for every task row (or remove the empty row).</div>');
+        }
+        if(!error){ $('#task-rows-error').remove(); }
 
         if(error==0){
             var editingId = $('#editingActivityId').val();
@@ -148,29 +190,15 @@ $(function() {
                     {
                         $('#saveestactivity').attr("disabled", false);
 
-                        if(editingId){
-                            // Edit mode — save and close, same as before
-                            $(".search-and-actions-wrpr").show();
-                            $('#estactivityform')[0].reset();
-                            $('#task-rows-container .task-row:not(#task-row-1)').remove();
-                            taskRowCount = 1;
-                            $(".add-activity-form").hide();
-                            $("#estactivityitems").show();
-                            $('#listestactivity').trigger('click');
-                            $('.panel-default').removeClass('add-form-active');
-                            $('#editingActivityId').val('');
-                            $('#saveestactivity').html('<span class="icon-check"></span> Add Activity');
-                        } else {
-                            // Add mode — keep Project Type / IOW Group / Activity Type /
-                            // Working Hours as-is, clear only Name/Unit/Tasks, stay open
-                            // so the next activity can be entered right away.
-                            $('.estactivityname, .estactivityunit').val('');
-                            $('#estactivityname1').focus();
-                            $('#task-rows-container .task-row:not(#task-row-1)').remove();
-                            $('#task-rows-container .task-row:first .task-name, #task-rows-container .task-row:first .task-unit, #task-rows-container .task-row:first .task-productivity').val('');
-                            taskRowCount = 1;
-                            $('.error').hide();
-                        }
+                        // Both Add and Edit now close the modal on success
+                        // (closeAlAddActivityModal — same teardown/reset for
+                        // both, not the old inline panel's elements which
+                        // don't apply here) and refresh the list behind it
+                        // so the new/updated activity is visible immediately.
+                        $(".search-and-actions-wrpr").show();
+                        closeAlAddActivityModal();
+                        $('#listestactivity').trigger('click');
+                        $('.panel-default').removeClass('add-form-active');
                     } else {
                         alert('Save failed: ' + (data.msg || 'Unknown error'));
                         $('#saveestactivity').attr("disabled", false);
@@ -344,8 +372,13 @@ $(document).on('click', '.al-edit-activity-btn', function(){
     });
 });
 
-/* close manually-opened modal */
-$(document).on('click', '[data-dismiss="modal"], .cancelactivity', function(){
+/* close manually-opened modal — shared by the dismiss/cancel buttons and
+   by the Update Activity save-success handler above (editingId branch),
+   which previously toggled the OLD inline-panel's .add-activity-form/
+   #estactivityitems elements instead of actually closing this Bootstrap
+   modal — the modal stayed open showing its pre-save (now stale) input
+   values, making a successful save look like it hadn't taken effect. */
+function closeAlAddActivityModal(){
     $('#alAddActivityPopup').css('display','none').removeClass('in').attr('aria-hidden','true');
     $('body').removeClass('modal-open');
     $('.modal-backdrop').remove();
@@ -364,7 +397,8 @@ $(document).on('click', '[data-dismiss="modal"], .cancelactivity', function(){
     $('#estworktypelistss1').val('0');
     $('#saveestactivity').html('<span class="icon-check"></span> Add Activity');
     $('.error').hide();
-});
+}
+$(document).on('click', '[data-dismiss="modal"], .cancelactivity', closeAlAddActivityModal);
 
 $(document).on( "click", "#addestactivity", function(){
     $(".estactivityname").val('');

@@ -100,18 +100,12 @@ class ResourcetypeController extends Controller
                 $model->sortorder=$model->ResourceType_Id;
                 $model->save();
 
-                $accmodel=new AccountsSub();
-                //$accmodel->master_id=1;
-                $accmodel->master_id=$_POST['addacntgrp'];
-                $accmodel->sortorder= 0;
-                $accmodel->name=$_POST['restypename'];
-                $accmodel->ResourceType_Id=$model->ResourceType_Id;
-                $accmodel->save(false);
-                $accmodel->sortorder= $accmodel->id;
-                $accmodel->save(false);
-
-                $model->accountsub_id=$accmodel->id;
-                $model->save();
+                // Resource Type no longer auto-creates a linked accounts_sub
+                // (Finance expense sub-group) row on save — that mechanism
+                // produced duplicate-named sub-groups every time a Resource
+                // Type shared a name with an existing manually-created
+                // Finance sub-group, with no way to reuse or merge them.
+                // Finance sub-groups are now managed independently.
 
                 $arr = array('Id' => $model->ResourceType_Id, 'Name' => $model->Name,'error'=>'No');
                 return json_encode($arr);

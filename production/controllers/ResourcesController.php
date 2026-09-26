@@ -19,7 +19,7 @@ class ResourcesController extends Controller
         $search   = isset($_POST['resourcename']) ? trim($_POST['resourcename']) : '';
         $typeId   = isset($_POST['restypeid'])    ? (int)$_POST['restypeid']   : 0;
         $groupId  = isset($_POST['resgroupid'])   ? (int)$_POST['resgroupid']  : 0;
-        $sql = "SELECT r.Resource_Id, r.Name, r.Unit, r.ResourceType_Id, r.Resource_group_Id, r.sortorder,
+        $sql = "SELECT r.Resource_Id, r.Name, r.Unit, r.Price, r.ResourceType_Id, r.Resource_group_Id, r.sortorder,
                        rt.Name AS TypeName, rg.Resource_group_Name AS GroupName
                 FROM resources r
                 LEFT JOIN resourcetype rt ON rt.ResourceType_Id = r.ResourceType_Id
@@ -53,28 +53,25 @@ class ResourcesController extends Controller
         $resource = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
                   . '<thead><tr>'
                   . '<th style="background:#555;color:#fff;font-weight:bold;padding:7px 10px;border:1px solid #444;text-align:center;width:36px;">#</th>'
-                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:7px 10px;border:1px solid #444;">Resource</th>'
+                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:7px 10px;border:1px solid #444;">Resource Name</th>'
+                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:7px 10px;border:1px solid #444;">Resource Type</th>'
+                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:7px 10px;border:1px solid #444;">Resource Group</th>'
                   . '<th style="background:#555;color:#fff;font-weight:bold;padding:7px 10px;border:1px solid #444;width:80px;">Unit</th>'
+                  . '<th style="background:#555;color:#fff;font-weight:bold;padding:7px 10px;border:1px solid #444;width:90px;text-align:right;">Rate</th>'
                   . '<th style="background:#555;color:#fff;font-weight:bold;padding:7px 10px;border:1px solid #444;text-align:center;width:90px;"></th>'
-                  . '</tr></thead>';
+                  . '</tr></thead><tbody>';
 
         $rowIndex = 1;
         foreach ($grouped as $typeName => $groups) {
             $safeType = htmlspecialchars($typeName, ENT_QUOTES);
-            $resource .= '<tbody>'
-                       . '<tr><td colspan="4" style="background:#e8e8e8;color:#444;font-weight:bold;padding:8px 12px;border:1px solid #ccc;font-size:12px;letter-spacing:0.5px;">'
-                       . '<span class="icon-settings" style="margin-right:6px;"></span>' . $safeType
-                       . '</td></tr>';
 
             foreach ($groups as $groupName => $rows) {
                 $safeGroup = htmlspecialchars($groupName, ENT_QUOTES);
-                $resource .= '<tr><td colspan="4" style="background:#e8f0f7;color:#2c3e50;font-weight:600;padding:6px 12px 6px 28px;border:1px solid #ccd9e8;font-size:12px;">'
-                           . '<span class="icon-folder" style="margin-right:5px;color:#5b8ab5;"></span>' . $safeGroup
-                           . '</td></tr>';
 
                 foreach ($rows as $data) {
                     $safeName  = htmlspecialchars($data['Name'], ENT_QUOTES);
                     $safeUnit  = htmlspecialchars($data['Unit'] ?? '', ENT_QUOTES);
+                    $rate      = (float)($data['Price'] ?? 0);
 
                     $resource .= '<tr class="resourcesort resource' . $data['Resource_Id'] . '" '
                                .     'data-id="' . $data['Resource_Id'] . '" '
@@ -86,12 +83,16 @@ class ResourcesController extends Controller
                                .     '<input type="hidden" id="restypeidx'  . $data['Resource_Id'] . '" value="' . (int)$data['ResourceType_Id'] . '">'
                                .     '<input type="hidden" id="resgroupidx' . $data['Resource_Id'] . '" value="' . (int)$data['Resource_group_Id'] . '">'
                                . '</td>'
+                               . '<td style="padding:6px 10px;border:1px solid #ddd;color:#555;">' . $safeType . '</td>'
+                               . '<td style="padding:6px 10px;border:1px solid #ddd;color:#555;">' . $safeGroup . '</td>'
                                . '<td style="padding:6px 10px;border:1px solid #ddd;color:#555;">' . $safeUnit . '</td>'
+                               . '<td style="padding:6px 10px;border:1px solid #ddd;color:#555;text-align:right;">' . number_format($rate, 2) . '</td>'
                                . '<td style="padding:4px 8px;border:1px solid #ddd;text-align:center;white-space:nowrap;">'
                                .     '<button type="button" class="btn btn-default btn-xs" '
                                .         'data-id="' . $data['Resource_Id'] . '" '
                                .         'data-name="' . $safeName . '" '
                                .         'data-unit="' . $safeUnit . '" '
+                               .         'data-rate="' . $rate . '" '
                                .         'data-typeid="' . (int)$data['ResourceType_Id'] . '" '
                                .         'data-groupid="' . (int)$data['Resource_group_Id'] . '" '
                                .         'onclick="openEditResource(this)" '
@@ -105,10 +106,9 @@ class ResourcesController extends Controller
                     $rowIndex++;
                 }
             }
-            $resource .= '</tbody>';
         }
 
-        $resource .= '</table>';
+        $resource .= '</tbody></table>';
         return json_encode(['error' => 'No', 'resource' => $resource]);
     }
 
@@ -125,7 +125,7 @@ class ResourcesController extends Controller
             $model->Status            = 0;
             $model->Unit              = isset($_POST['unit']) ? trim($_POST['unit']) : '';
             $model->fuel_unit         = '';
-            $model->Price             = 0;
+            $model->Price             = isset($_POST['rate']) && $_POST['rate'] !== '' ? (float)$_POST['rate'] : 0;
             $model->Vendor_Id         = 0;
             $model->lead_time         = 0;
             $model->credit_period     = 0;
@@ -157,6 +157,7 @@ class ResourcesController extends Controller
             if ($model) {
                 $model->Name = $_POST['name'];
                 $model->Unit = isset($_POST['unit']) ? trim($_POST['unit']) : $model->Unit;
+                if (isset($_POST['rate']) && $_POST['rate'] !== '') $model->Price = (float)$_POST['rate'];
                 if (isset($_POST['restypeid'])  && $_POST['restypeid']  != '') $model->ResourceType_Id   = (int)$_POST['restypeid'];
                 if (isset($_POST['resgroupid']) && $_POST['resgroupid'] != '') $model->Resource_group_Id = (int)$_POST['resgroupid'];
                 if ($model->save(false)) {

@@ -1,5 +1,17 @@
 $(function(){
 
+    // Rate is a plain text input (not type="number") so entry isn't
+    // subject to the browser's native number-input quirks — filtered
+    // here instead to digits + a single decimal point.
+    $(document).on('input', '#resourcerate1, #editresourcerate', function(){
+        var v = $(this).val().replace(/[^0-9.]/g, '');
+        var firstDot = v.indexOf('.');
+        if (firstDot !== -1) {
+            v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, '');
+        }
+        $(this).val(v);
+    });
+
     // ------ List / Search ------
     $('#listresource').on('click', function(){
         $('.add-resource-form').hide();
@@ -131,6 +143,7 @@ $(function(){
                 resourceid: $('#saveresourceval').val(),
                 name:       name,
                 unit:       $('#editresourceunit').val().trim(),
+                rate:       $('#editresourcerate').val(),
                 restypeid:  $('#editresourcetype').val(),
                 resgroupid: $('#editresourcegroup').val()
             },
@@ -177,11 +190,13 @@ function openEditResource(btn) {
     var id      = $btn.data('id');
     var name    = $btn.data('name');
     var unit    = $btn.data('unit') || '';
+    var rate    = $btn.data('rate') || 0;
     var typeId  = $btn.data('typeid');
     var groupId = $btn.data('groupid');
 
     $('#editresourcename').val(name);
     $('#editresourceunit').val(unit);
+    $('#editresourcerate').val(rate);
     $('#saveresourceval').val(id);
     $('#editresourcetype').val(typeId);
 

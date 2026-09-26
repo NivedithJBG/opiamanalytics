@@ -13,9 +13,9 @@
 /* ── Main relations window ────────────────────────────────────── */
 #rel-win {
   display:none; position:fixed;
-  top:90px; left:calc(50% - 320px);
-  width:640px; height:320px;
-  min-width:400px; min-height:200px;
+  top:80px; left:calc(50% - 380px);
+  width:760px; height:460px;
+  min-width:560px; min-height:280px;
   background:#fff; border-radius:8px;
   box-shadow:0 8px 32px rgba(0,0,0,.35);
   z-index:10004; flex-direction:column; overflow:hidden;
@@ -35,19 +35,17 @@
 }
 #rel-win-hdr-btns button:hover { opacity:1; }
 
-#rel-action-bar {
-  display:flex; align-items:center; gap:8px;
-  padding:10px 15px; border-bottom:1px solid #e8e0f5; flex-shrink:0;
-  background:#f9f5ff;
+/* ── Tab strip (Add / List) inside the main window ──────────────── */
+#rel-tabs { display:flex; background:#f9f5ff; flex-shrink:0; border-bottom:1px solid #e8e0f5; }
+.rel-tab {
+  flex:1; background:#f9f5ff; border:none; padding:10px 10px; font-size:13px; font-weight:700;
+  color:#7a6a99; cursor:pointer; text-transform:uppercase; letter-spacing:.3px;
+  border-bottom:3px solid transparent;
 }
-#rel-action-bar button {
-  border-radius:20px; padding:6px 18px; font-size:13px; font-weight:600;
-  cursor:pointer; border:none;
-}
-#rel-btn-add  { background:#5c3d8f; color:#fff; }
-#rel-btn-add:hover  { background:#4a2f75; }
-#rel-btn-list { background:#00796b; color:#fff; }
-#rel-btn-list:hover { background:#00695c; }
+.rel-tab:hover { background:#f0e9fb; }
+.rel-tab.active { background:#fff; color:#3d2060; border-bottom-color:#5c3d8f; }
+.rel-tab-pane { display:none; flex-direction:column; flex:1; min-height:0; }
+.rel-tab-pane.active { display:flex; }
 
 #rel-body { flex:1; min-height:0; overflow-y:auto; padding:12px 16px; font-size:13px; color:#555; }
 
@@ -164,115 +162,117 @@
     </div>
   </div>
 
-  <div id="rel-action-bar">
-    <button id="rel-btn-add">+ Add Relationship</button>
-    <button id="rel-btn-list">&#x2630; List</button>
+  <div id="rel-tabs">
+    <button type="button" class="rel-tab active" data-tab="add">Add Relationship</button>
+    <button type="button" class="rel-tab" data-tab="list">&#x2630; List</button>
   </div>
 
-  <div id="rel-body">
-    <p style="color:#aaa;text-align:center;padding:20px 0;">Click <strong>+ Add Relationship</strong> to define a new dependency,<br>or <strong>List</strong> to view existing relationships.</p>
-  </div>
-</div>
-
-
-<!-- ══ ADD RELATIONSHIP SUB-POPUP ═══════════════════════════════ -->
-<div id="rel-add-popup" class="rl2-subwin" style="top:80px;left:calc(50% - 380px);width:760px;height:400px;">
-  <div class="rl2-rs rl2-rs-n" data-dir="n"></div><div class="rl2-rs rl2-rs-s" data-dir="s"></div>
-  <div class="rl2-rs rl2-rs-e" data-dir="e"></div><div class="rl2-rs rl2-rs-w" data-dir="w"></div>
-  <div class="rl2-rs rl2-rs-ne" data-dir="ne"></div><div class="rl2-rs rl2-rs-nw" data-dir="nw"></div>
-  <div class="rl2-rs rl2-rs-se" data-dir="se"></div><div class="rl2-rs rl2-rs-sw" data-dir="sw"></div>
-  <div class="rl2-sw-hdr">
-    <h4>Add Relationship</h4>
-    <div class="rl2-sw-hdr-btns"><button id="rel-add-close">&times;</button></div>
-  </div>
-  <div class="rl2-sw-body">
-    <div class="rl2-add-grid">
-
-      <!-- PRECEDENT -->
-      <div>
-        <div class="rl2-col-hdr">&#9664; Precedent (Predecessor)</div>
-        <div class="form-group">
-          <label style="font-size:12px;color:#666;">Select IOW</label>
-          <select id="rel-prec-iow" class="form-control input-sm">
-            <option value="">-- Select IOW --</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label style="font-size:12px;color:#666;">Select Activity</label>
-          <select id="rel-prec-act" class="form-control input-sm">
-            <option value="">-- Select Activity --</option>
-          </select>
-        </div>
+  <!-- ── TAB: Add Relationship ────────────────────────────────── -->
+  <div class="rel-tab-pane active" id="rel-tab-add">
+    <div id="rel-body">
+      <div id="rel-pick-hint" style="padding:6px 4px 10px;font-size:12px;color:#5c3d8f;font-weight:600;">
+        Tip: instead of using the dropdowns below, click an activity directly on the Gantt chart — the first click sets Precedent, the next sets Dependent.
       </div>
+      <div class="rl2-add-grid">
 
-      <!-- TYPE BADGE -->
-      <div class="rl2-arrow-col">
-        <span id="rel-type-badge">FS</span>
-      </div>
-
-      <!-- DEPENDENT -->
-      <div>
-        <div class="rl2-col-hdr">Dependent (Successor) &#9654;</div>
-        <div class="form-group">
-          <label style="font-size:12px;color:#666;">Select IOW</label>
-          <select id="rel-dep-iow" class="form-control input-sm">
-            <option value="">-- Select IOW --</option>
-          </select>
+        <!-- PRECEDENT -->
+        <div>
+          <div class="rl2-col-hdr">&#9664; Precedent (Predecessor)</div>
+          <div class="form-group">
+            <label style="font-size:12px;color:#666;">Select IOW</label>
+            <select id="rel-prec-iow" class="form-control input-sm">
+              <option value="">-- Select IOW --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size:12px;color:#666;">Select Activity</label>
+            <select id="rel-prec-act" class="form-control input-sm">
+              <option value="">-- Select Activity --</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group">
-          <label style="font-size:12px;color:#666;">Select Activity</label>
-          <select id="rel-dep-act" class="form-control input-sm">
-            <option value="">-- Select Activity --</option>
-          </select>
+
+        <!-- TYPE BADGE -->
+        <div class="rl2-arrow-col">
+          <span id="rel-type-badge">FS</span>
         </div>
-      </div>
 
-      <!-- BOTTOM ROW: Type + Lag/Lead -->
-      <div class="rl2-bottom-row">
-        <span class="rl2-section-lbl">Type:</span>
-        <button class="rl2-type-btn active" data-type="2">FS</button>
-        <button class="rl2-type-btn" data-type="1">SS</button>
-        <button class="rl2-type-btn" data-type="3">FF</button>
-        <span class="rl2-section-lbl" style="margin-left:16px;">Lag / Lead:</span>
-        <div class="rl2-lag-wrap">
-          <button class="rl2-lag-toggle lag" id="rel-lag-toggle" title="Toggle Lag/Lead">+</button>
-          <input type="number" id="rel-lag-days" value="0" min="0">
-          <span id="rel-lag-label">Lag days</span>
+        <!-- DEPENDENT -->
+        <div>
+          <div class="rl2-col-hdr">Dependent (Successor) &#9654;</div>
+          <div class="form-group">
+            <label style="font-size:12px;color:#666;">Select IOW</label>
+            <select id="rel-dep-iow" class="form-control input-sm">
+              <option value="">-- Select IOW --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size:12px;color:#666;">Select Activity</label>
+            <select id="rel-dep-act" class="form-control input-sm">
+              <option value="">-- Select Activity --</option>
+            </select>
+          </div>
         </div>
-      </div>
 
-    </div><!-- /.rl2-add-grid -->
-  </div>
-  <div class="rl2-sw-footer">
-    <button id="rel-add-cancel" class="btn" style="background:#aaa;color:#fff;border-radius:20px;">Cancel</button>
-    <button id="rel-add-to-list" class="btn" style="background:#5c3d8f;color:#fff;border-radius:20px;font-weight:600;">Add to List &#9654;</button>
-  </div>
-</div>
+        <!-- BOTTOM ROW: Type + Lag/Lead -->
+        <div class="rl2-bottom-row">
+          <span class="rl2-section-lbl">Type:</span>
+          <button class="rl2-type-btn active" data-type="2">FS</button>
+          <button class="rl2-type-btn" data-type="1">SS</button>
+          <button class="rl2-type-btn" data-type="3">FF</button>
+          <span class="rl2-section-lbl" style="margin-left:16px;">Lag / Lead:</span>
+          <div class="rl2-lag-wrap">
+            <button class="rl2-lag-toggle lag" id="rel-lag-toggle" title="Toggle Lag/Lead">+</button>
+            <input type="number" id="rel-lag-days" value="0" min="0">
+            <span id="rel-lag-label">Lag days</span>
+          </div>
+        </div>
 
+      </div><!-- /.rl2-add-grid -->
 
-<!-- ══ LIST SUB-POPUP ═══════════════════════════════════════════ -->
-<div id="rel-list-popup" class="rl2-subwin" style="top:110px;left:calc(50% - 500px);width:1000px;height:480px;">
-  <div class="rl2-rs rl2-rs-n" data-dir="n"></div><div class="rl2-rs rl2-rs-s" data-dir="s"></div>
-  <div class="rl2-rs rl2-rs-e" data-dir="e"></div><div class="rl2-rs rl2-rs-w" data-dir="w"></div>
-  <div class="rl2-rs rl2-rs-ne" data-dir="ne"></div><div class="rl2-rs rl2-rs-nw" data-dir="nw"></div>
-  <div class="rl2-rs rl2-rs-se" data-dir="se"></div><div class="rl2-rs rl2-rs-sw" data-dir="sw"></div>
-  <div class="rl2-sw-hdr">
-    <h4>&#x2630; Relationships List</h4>
-    <div class="rl2-sw-hdr-btns"><button id="rel-list-close">&times;</button></div>
+      <!-- Relationships added in THIS session — grows below the form as
+           each tick saves one to the Gantt. The form stays open the whole
+           time (IOW/Activity selections stay put too); this is just a
+           running confirmation list, not a separate screen. -->
+      <div id="rel-session-added" style="margin-top:14px;"></div>
+    </div>
+    <div class="rl2-sw-footer">
+      <button id="rel-add-to-list" class="btn" title="Add Relationship" style="background:#27ae60;color:#fff;border-radius:50%;width:36px;height:36px;padding:0;font-size:16px;font-weight:700;">&#10003;</button>
+      <button id="rel-win-close-2" class="btn" style="background:#aaa;color:#fff;border-radius:20px;">Close</button>
+    </div>
   </div>
-  <div class="rl2-sw-body" style="padding:10px 14px;">
-    <div id="rel-list-content">
+
+  <!-- ── TAB: List ────────────────────────────────────────────── -->
+  <div class="rel-tab-pane" id="rel-tab-list">
+    <div style="padding:10px 14px;flex-shrink:0;">
+      <input type="text" id="rel-tpl-search" placeholder="Search activity…" style="width:280px;height:32px;border:1px solid #ccc;border-radius:20px;padding:0 14px;font-size:13px;">
+    </div>
+    <div id="rel-list-content" style="flex:1;overflow-y:auto;padding:0 14px 14px;">
       <p style="color:#aaa;text-align:center;padding:20px;">Loading…</p>
     </div>
   </div>
-  <div class="rl2-sw-footer">
-    <label style="font-size:12px;color:#666;margin-right:auto;margin-bottom:0;">
-      <input type="checkbox" id="rel-chk-all" style="margin-right:4px;"> Select all
-    </label>
-    <button id="rel-list-refresh" class="btn btn-default btn-sm" style="border-radius:20px;">&#x21BB; Refresh</button>
-    <button id="rel-create-btn" class="btn" style="background:#5c3d8f;color:#fff;border-radius:20px;font-weight:600;padding:7px 22px;">
-      &#x2714; Create Selected
-    </button>
+</div>
+
+
+<!-- ══ LIVE RELATIONSHIPS SUB-POPUP ═════════════════════════════
+     Opened by clicking the project row/bar on the Gantt — shows only
+     the relationships ALREADY on THIS project's Gantt right now, with
+     Edit (change Type/Lag/which activities) and Delete. Distinct from
+     the List tab inside #rel-win (the historical search+tick template
+     catalog, reachable via the tab strip's "List" tab). ═══════════════ -->
+<div id="rel-live-popup" class="rl2-subwin" style="top:110px;left:calc(50% - 500px);width:1000px;height:480px;">
+  <div class="rl2-rs rl2-rs-n" data-dir="n"></div><div class="rl2-rs rl2-rs-s" data-dir="s"></div>
+  <div class="rl2-rs rl2-rs-e" data-dir="e"></div><div class="rl2-rs rl2-rs-w" data-dir="w"></div>
+  <div class="rl2-rs rl2-rs-ne" data-dir="ne"></div><div class="rl2-rs rl2-rs-nw" data-dir="nw"></div>
+  <div class="rl2-rs rl2-rs-se" data-dir="se"></div><div class="rl2-rs rl2-rs-sw" data-dir="sw"></div>
+  <div class="rl2-sw-hdr">
+    <h4>&#x2630; Relationships in this Gantt Chart</h4>
+    <div class="rl2-sw-hdr-btns"><button id="rel-live-close">&times;</button></div>
+  </div>
+  <div class="rl2-sw-body" style="padding:10px 14px;">
+    <div id="rel-live-content">
+      <p style="color:#aaa;text-align:center;padding:20px;">Loading…</p>
+    </div>
   </div>
 </div>
 
@@ -409,16 +409,52 @@
     relWin.classList.add('rl2-open');
     if(typeof window.popupBringToFront === 'function') window.popupBringToFront('rel-win');
     document.dispatchEvent(new Event('rel:open'));
-    loadGanttActivities();
+    /* Opens straight into the Add Relationship tab (no chooser screen) —
+       loads the IOW/Activity options fresh each time the window opens,
+       but does NOT reset a selection the user already made mid-session;
+       that only happens the first time (options are empty anyway). */
+    loadGanttActivities(function(){
+      var iowOpts = _buildIowOptions();
+      var precWasEmpty = !document.getElementById('rel-prec-iow').value;
+      var depWasEmpty  = !document.getElementById('rel-dep-iow').value;
+      var precVal = document.getElementById('rel-prec-iow').value;
+      var depVal  = document.getElementById('rel-dep-iow').value;
+      document.getElementById('rel-prec-iow').innerHTML = iowOpts;
+      document.getElementById('rel-dep-iow').innerHTML  = iowOpts;
+      if(!precWasEmpty){
+        document.getElementById('rel-prec-iow').value = precVal;
+        document.getElementById('rel-prec-act').innerHTML = _buildActOptions(precVal);
+      }
+      if(!depWasEmpty){
+        document.getElementById('rel-dep-iow').value = depVal;
+        document.getElementById('rel-dep-act').innerHTML = _buildActOptions(depVal);
+      }
+    });
   });
   document.getElementById('rel-win-close').addEventListener('click', function(){
     relWin.classList.remove('rl2-open');
   });
+  document.getElementById('rel-win-close-2').addEventListener('click', function(){
+    relWin.classList.remove('rl2-open');
+  });
+
+  /* ── Tab switching (Add / List) — independent of the old sub-popup
+     open/close helpers below, which now only serve rel-live-popup. ── */
+  document.querySelectorAll('.rel-tab').forEach(function(tabBtn){
+    tabBtn.addEventListener('click', function(){
+      document.querySelectorAll('.rel-tab').forEach(function(b){ b.classList.remove('active'); });
+      document.querySelectorAll('.rel-tab-pane').forEach(function(p){ p.classList.remove('active'); });
+      tabBtn.classList.add('active');
+      var tabName = tabBtn.getAttribute('data-tab');
+      document.getElementById('rel-tab-' + tabName).classList.add('active');
+      if(tabName === 'list') loadTemplateList();
+    });
+  });
 
   /* ═══════════════════════════════════════════════════════════════
-     Sub-popup open helpers
+     Sub-popup open helpers — only rel-live-popup uses these now
   ═══════════════════════════════════════════════════════════════ */
-  var _rel2SubIds = ['rel-add-popup','rel-list-popup'];
+  var _rel2SubIds = ['rel-live-popup'];
   if(typeof window.registerSubPopupReraise === 'function'){
     window.registerSubPopupReraise('rel-win', function(){
       _rel2SubIds.forEach(function(id){
@@ -433,33 +469,15 @@
   }
   function closeSub(id){ document.getElementById(id).classList.remove('rl2-sw-open'); }
 
-  ['rel-add-popup','rel-list-popup'].forEach(function(id){
+  _rel2SubIds.forEach(function(id){
     var el=document.getElementById(id);
     bindDragTouch(el, 'mousedown', function(){ _bringToFront(el); }, true);
   });
 
   /* ═══════════════════════════════════════════════════════════════
-     ADD RELATIONSHIP popup
+     ADD RELATIONSHIP tab — form is always present in #rel-tab-add now;
+     no open/close plumbing needed, just the field wiring below.
   ═══════════════════════════════════════════════════════════════ */
-  rl2BindDragResize(document.getElementById('rel-add-popup'), '.rl2-sw-hdr', 560, 240);
-
-  document.getElementById('rel-btn-add').addEventListener('click', function(){
-    loadGanttActivities(function(){
-      var iowOpts = _buildIowOptions();
-      document.getElementById('rel-prec-iow').innerHTML = iowOpts;
-      document.getElementById('rel-dep-iow').innerHTML  = iowOpts;
-      document.getElementById('rel-prec-act').innerHTML = '<option value="">-- Select Activity --</option>';
-      document.getElementById('rel-dep-act').innerHTML  = '<option value="">-- Select Activity --</option>';
-      document.getElementById('rel-lag-days').value = '0';
-      /* reset type to FS */
-      document.querySelectorAll('.rl2-type-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.type==='2'); });
-      document.getElementById('rel-type-badge').textContent = 'FS';
-      openSub('rel-add-popup');
-    });
-  });
-
-  document.getElementById('rel-add-close').addEventListener('click', function(){ closeSub('rel-add-popup'); });
-  document.getElementById('rel-add-cancel').addEventListener('click', function(){ closeSub('rel-add-popup'); });
 
   /* IOW → Activity cascade */
   $(document).on('change','#rel-prec-iow', function(){
@@ -468,6 +486,57 @@
   $(document).on('change','#rel-dep-iow', function(){
     $('#rel-dep-act').html(_buildActOptions($(this).val()));
   });
+
+  /* Pick Precedent/Dependent by clicking activities directly on the
+     Gantt chart instead of using the dropdowns — called from
+     newganttview.php's own activity row/bar click handler. Only takes
+     effect while the Add Relationship tab is actually open and showing
+     (checked here, not by the caller, so the Gantt's click logic stays
+     simple); otherwise a stray click elsewhere in the app could
+     silently overwrite a form the user isn't even looking at.
+     Alternates PRECEDENT → DEPENDENT → PRECEDENT... each call, so
+     clicking two activities in sequence fills both sides in the order
+     clicked, same as manually picking IOW then Activity in each column.
+     Needs loadGanttActivities's _acts (id → name/scheduleitem_id) to
+     already be loaded — same data source the manual dropdowns use — so
+     it's loaded on demand if this is the very first pick of the
+     session. */
+  var _relPickSide = 'prec';
+  // Cheap "is the picker actually live right now" check — used by
+  // newganttview.php's KPI-popup click handler to bail out WITHOUT
+  // consuming/filling a field (that's what the full _relPickFromGantt
+  // call further below in that same file does); this one only answers
+  // the question so the KPI popup doesn't also fire on the same click.
+  window._relPickIsActive = function(){
+    var relWin = document.getElementById('rel-win');
+    var addTab = document.querySelector('.rel-tab.active[data-tab="add"]');
+    return !!(relWin && relWin.classList.contains('rl2-open') && addTab);
+  };
+  window._relPickFromGantt = function(actId){
+    if(!window._relPickIsActive()) return false;
+
+    function fill(){
+      var act = _acts.filter(function(a){ return String(a.id) === String(actId); })[0];
+      if(!act) return;
+      var iowSel  = _relPickSide === 'prec' ? '#rel-prec-iow' : '#rel-dep-iow';
+      var actSel  = _relPickSide === 'prec' ? '#rel-prec-act' : '#rel-dep-act';
+      $(iowSel).val(act.scheduleitem_id);
+      $(actSel).html(_buildActOptions(act.scheduleitem_id)).val(act.id);
+      _relPickSide = (_relPickSide === 'prec') ? 'dep' : 'prec';
+      _updatePickHint();
+    }
+    if(_acts.length){ fill(); } else { loadGanttActivities(fill); }
+    return true;
+  };
+
+  function _updatePickHint(){
+    var el = document.getElementById('rel-pick-hint');
+    if(!el) return;
+    el.textContent = _relPickSide === 'prec'
+      ? 'Click an activity on the Gantt chart to set it as PRECEDENT.'
+      : 'Precedent set — now click an activity on the Gantt chart to set it as DEPENDENT.';
+  }
+  _updatePickHint();
 
   /* Relation type toggle */
   $(document).on('click','.rl2-type-btn', function(){
@@ -503,7 +572,7 @@
     var relType = typeBtn ? parseInt(typeBtn.dataset.type) : 2;
     var typeName = {1:'SS',2:'FS',3:'FF'}[relType] || 'FS';
 
-    _staged.push({
+    var row = {
       precedent_activity:      precActEl.value,
       precedent_name:          precActEl.options[precActEl.selectedIndex].getAttribute('data-name') || precActEl.options[precActEl.selectedIndex].text,
       precedent_iow:           precIowEl.options[precIowEl.selectedIndex].text,
@@ -514,179 +583,556 @@
       dependent_schedule_item: depIowEl.value,
       relation_type:           relType,
       type_name:               typeName,
-      lag_days:                lagDays,
-      staged:                  true
+      lag_days:                lagDays
+    };
+
+    /* Saves THIS one relationship immediately — no staging, no switch to
+       the List popup. The form stays open; a running list of what's been
+       added in this session grows below it (#rel-session-added). */
+    _pid = _getPid();
+    var $tick = $(this).prop('disabled', true);
+    $.ajax({ type:'POST', url:'../relation/save', dataType:'json',
+      data:{ projectid:_pid, rows:[row] },
+      success:function(d){
+        $tick.prop('disabled', false);
+        if(d && d.error==='No' && d.inserted > 0){
+          _sessionAdded.push(row);
+          renderSessionAdded();
+          if(typeof window.reloadGantt === 'function') window.reloadGantt();
+
+          /* Reset only the Activity pickers + lag for the next entry —
+             IOW selections on both sides stay put (per user request: keep
+             adding relationships under the same IOWs without reselecting
+             them every time). */
+          document.getElementById('rel-prec-act').value = '';
+          document.getElementById('rel-dep-act').value  = '';
+          document.getElementById('rel-lag-days').value = '0';
+        } else if(d && d.inserted === 0){
+          alert('This relationship already exists.');
+        } else {
+          alert((d && d.errortext) || 'Could not save.');
+        }
+      },
+      error:function(){ $tick.prop('disabled', false); alert('Server error.'); }
     });
-
-    /* Reset fields for next entry */
-    document.getElementById('rel-prec-act').innerHTML = '<option value="">-- Select Activity --</option>';
-    document.getElementById('rel-dep-iow').value = '';
-    document.getElementById('rel-dep-act').innerHTML  = '<option value="">-- Select Activity --</option>';
-    document.getElementById('rel-lag-days').value = '0';
-
-    /* Open list to show what was added */
-    closeSub('rel-add-popup');
-    openSub('rel-list-popup');
-    renderList();
   });
+
+  /* Running list of relationships added in this Add-form session —
+     purely a confirmation display, not the historical List popup. */
+  var _sessionAdded = [];
+  function renderSessionAdded(){
+    var target = document.getElementById('rel-session-added');
+    if(!_sessionAdded.length){ target.innerHTML = ''; return; }
+    var html = '<div style="font-size:11px;font-weight:700;color:#5c3d8f;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Added this session</div>'
+      + '<table class="rl2-list-table"><thead><tr>'
+      + '<th>Precedent</th><th style="text-align:center;">Type</th><th>Dependent</th><th style="text-align:center;">Lag</th>'
+      + '</tr></thead><tbody>';
+    _sessionAdded.forEach(function(r){
+      var lag = r.lag_days > 0 ? '+'+r.lag_days+'d' : (r.lag_days < 0 ? r.lag_days+'d (lead)' : '—');
+      html += '<tr>'
+        + '<td>'+esc(r.precedent_iow)+' — '+esc(r.precedent_name)+'</td>'
+        + '<td style="text-align:center;"><span class="rl2-badge">'+esc(r.type_name)+'</span></td>'
+        + '<td>'+esc(r.dependent_iow)+' — '+esc(r.dependent_name)+'</td>'
+        + '<td style="text-align:center;font-size:11px;">'+lag+'</td>'
+        + '</tr>';
+    });
+    html += '</tbody></table>';
+    target.innerHTML = html;
+  }
 
 
   /* ═══════════════════════════════════════════════════════════════
-     LIST popup
+     LIST tab — content lives in #rel-tab-list inside the same window;
+     tab click handler above calls loadTemplateList() on activation.
   ═══════════════════════════════════════════════════════════════ */
-  rl2BindDragResize(document.getElementById('rel-list-popup'), '.rl2-sw-hdr', 600, 300);
 
-  document.getElementById('rel-btn-list').addEventListener('click', function(){
-    openSub('rel-list-popup');
-    loadSavedList();
-  });
-  document.getElementById('rel-list-close').addEventListener('click', function(){ closeSub('rel-list-popup'); });
-  document.getElementById('rel-list-refresh').addEventListener('click', function(){ loadSavedList(); });
-
-  /* Select all checkbox */
-  document.getElementById('rel-chk-all').addEventListener('change', function(){
-    var checked = this.checked;
-    document.querySelectorAll('.rl2-row-chk').forEach(function(chk){ chk.checked = checked; });
+  /* Search box — debounced re-query against relation/listtemplates. */
+  var _tplSearchTimer = null;
+  document.getElementById('rel-tpl-search').addEventListener('input', function(){
+    clearTimeout(_tplSearchTimer);
+    _tplSearchTimer = setTimeout(loadTemplateList, 300);
   });
 
-  /* Load saved relationships from DB */
-  function loadSavedList(){
+  /* Loads the historical relationship catalog — every distinct
+     (precedent library activity, dependent library activity, type)
+     combination ever created across ALL projects, optionally filtered
+     by the search box. Ticking a row recreates it for THIS project. */
+  function loadTemplateList(){
     _pid = _getPid();
     $('#rel-list-content').html('<p style="color:#aaa;text-align:center;padding:20px;">Loading…</p>');
     if(!_pid){ $('#rel-list-content').html('<p style="color:#e57373;text-align:center;padding:20px;">No project selected.</p>'); return; }
-    $.ajax({ type:'POST', url:'../relation/list', dataType:'json',
-      data:{ projectid: _pid },
+    var search = document.getElementById('rel-tpl-search').value.trim();
+    $.ajax({ type:'POST', url:'../relation/listtemplates', dataType:'json',
+      data:{ search: search },
       success:function(d){
-        renderList(d && d.error==='No' ? d.rows : []);
+        renderTemplateList(d && d.error==='No' ? d.rows : []);
       },
       error:function(){ $('#rel-list-content').html('<p style="color:#e57373;text-align:center;padding:20px;">Could not load.</p>'); }
     });
   }
 
-  /* Render combined staged + saved rows */
-  function renderList(savedRows){
-    savedRows = savedRows || [];
+  function renderTemplateList(rows){
+    rows = rows || [];
     var typeLabel = {1:'SS',2:'FS',3:'FF'};
     var html = '<table class="rl2-list-table">'
       + '<thead><tr>'
+      + '<th>Precedent Activity</th>'
+      + '<th style="text-align:center;">Type</th>'
+      + '<th>Dependent Activity</th>'
+      + '<th style="text-align:center;">Lag</th>'
+      + '<th style="text-align:center;width:44px;"></th>'
+      + '<th style="text-align:center;width:40px;">&#x2714;</th>'
+      + '</tr></thead><tbody>';
+
+    rows.forEach(function(r){
+      var lag = parseInt(r.lag_days) || 0;
+      var lagStr = lag > 0 ? '+'+lag+'d' : (lag < 0 ? lag+'d (lead)' : '—');
+      html += '<tr data-preclib="'+r.prec_lib_id+'" data-deplib="'+r.dep_lib_id+'" data-reltype="'+r.relation_type+'" data-lag="'+lag+'">'
+        + '<td class="rl2-col-precname">'+esc(r.prec_name||'')+'</td>'
+        + '<td class="rl2-col-type" style="text-align:center;"><span class="rl2-badge" style="background:#00796b;">'+esc(typeLabel[r.relation_type]||'FS')+'</span></td>'
+        + '<td class="rl2-col-depname">'+esc(r.dep_name||'')+'</td>'
+        + '<td class="rl2-col-lag" style="text-align:center;font-size:11px;">'+lagStr+'</td>'
+        + '<td style="text-align:center;"><button class="rl2-tpl-edit-btn btn btn-xs" title="Edit" style="background:#5c3d8f;color:#fff;border:none;border-radius:50%;width:22px;height:22px;padding:0;font-size:11px;">&#9998;</button></td>'
+        + '<td style="text-align:center;"><button class="rl2-tpl-tick-btn btn btn-xs" title="Add to Gantt" style="background:#27ae60;color:#fff;border:none;border-radius:50%;width:22px;height:22px;padding:0;font-size:12px;">&#10003;</button></td>'
+        + '</tr>';
+    });
+
+    if(!rows.length){
+      html += '<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px;">No matching relationships found.</td></tr>';
+    }
+
+    html += '</tbody></table>';
+    $('#rel-list-content').html(html);
+  }
+
+  /* Edit (pencil) on a template row — unlocks Type/Lag only, NOT which
+     activities are paired (that's the template's own identity). Second
+     click re-locks the row; it does not save anything by itself — the
+     new Type/Lag values are only used when the tick is clicked. */
+  $(document).on('click', '.rl2-tpl-edit-btn', function(){
+    var btn = this;
+    var $row = $(btn).closest('tr');
+    var isEditing = $(btn).hasClass('rl2-editing');
+
+    if(!isEditing){
+      var relType = parseInt($row.data('reltype')) || 2;
+      var lag = parseInt($row.data('lag')) || 0;
+      $row.find('.rl2-col-type').html(
+        '<select class="rl2-tpl-type-edit form-control input-sm" style="width:60px;">'
+        + '<option value="2"'+(relType===2?' selected':'')+'>FS</option>'
+        + '<option value="1"'+(relType===1?' selected':'')+'>SS</option>'
+        + '<option value="3"'+(relType===3?' selected':'')+'>FF</option>'
+        + '</select>'
+      );
+      $row.find('.rl2-col-lag').html('<input type="number" class="rl2-tpl-lag-edit form-control input-sm" style="width:60px;" value="'+lag+'">');
+      $(btn).addClass('rl2-editing').css('background','#27ae60');
+      return;
+    }
+
+    var newType = parseInt($row.find('.rl2-tpl-type-edit').val()) || 2;
+    var newLag  = parseInt($row.find('.rl2-tpl-lag-edit').val()) || 0;
+    $row.data('reltype', newType);
+    $row.data('lag', newLag);
+    var typeLabel = {1:'SS',2:'FS',3:'FF'};
+    $row.find('.rl2-col-type').html('<span class="rl2-badge" style="background:#00796b;">'+esc(typeLabel[newType])+'</span>');
+    var lagStr = newLag > 0 ? '+'+newLag+'d' : (newLag < 0 ? newLag+'d (lead)' : '—');
+    $row.find('.rl2-col-lag').text(lagStr);
+    $(btn).removeClass('rl2-editing').css('background','');
+  });
+
+  /* Tick — recreates this template's relationship for the CURRENT
+     project via relation/createfromtemplate, which resolves both
+     library activities to their live scheduleactivities row in this
+     project (blocking with a clear message if either isn't scheduled
+     here yet) and saves exactly like the Add form's single-row save. */
+  $(document).on('click', '.rl2-tpl-tick-btn', function(){
+    var btn = this;
+    var $row = $(btn).closest('tr');
+    _pid = _getPid();
+    if(!_pid){ alert('No project selected.'); return; }
+
+    $(btn).prop('disabled', true);
+    $.ajax({ type:'POST', url:'../relation/createfromtemplate', dataType:'json',
+      data:{
+        projectid: _pid,
+        prec_lib_id: $row.data('preclib'),
+        dep_lib_id: $row.data('deplib'),
+        relation_type: $row.data('reltype'),
+        lag_days: $row.data('lag')
+      },
+      success:function(d){
+        $(btn).prop('disabled', false);
+        if(d && d.error==='No'){
+          if(typeof window.reloadGantt === 'function') window.reloadGantt();
+          $(btn).css('background','#1e8449').html('&#10003;');
+        } else {
+          alert((d && d.errortext) || 'Could not add.');
+        }
+      },
+      error:function(){ $(btn).prop('disabled', false); alert('Server error.'); }
+    });
+  });
+
+  function esc(s){ return $('<span>').text(s).html(); }
+
+  /* ═══════════════════════════════════════════════════════════════
+     LIVE RELATIONSHIPS popup — entry point for clicking the project
+     row/bar on the Gantt. Shows only relationships already saved and
+     live on THIS project's Gantt (actionList — unlike the template
+     catalog above, this is scoped strictly to _pid), with Edit
+     (change which activities/type/lag) and Delete.
+  ═══════════════════════════════════════════════════════════════ */
+  // pTarget (optional): {precAct, depAct} — the exact relationship to
+  // jump straight into edit mode for, e.g. when the user clicked a
+  // specific dependency line/arrow on the Gantt rather than the project
+  // row/bar (which opens the plain unscoped list). Matched against each
+  // row's own data-precact/data-depact once the list has loaded — see
+  // the click handler on .gDep* elements in newganttview.php, which
+  // reads the same precedent/successor activity ids straight off the
+  // line's own gDepDataId/gDepNextDataId CSS classes (no extra lookup
+  // needed, since JSGantt already embeds them there for the critical-
+  // path check).
+  window.openProjectRelationsList = function(pTarget){
+    openSub('rel-live-popup');
+    loadLiveList(pTarget || null);
+  };
+  document.getElementById('rel-live-close').addEventListener('click', function(){ closeSub('rel-live-popup'); });
+
+  function loadLiveList(pTarget){
+    _pid = _getPid();
+    $('#rel-live-content').html('<p style="color:#aaa;text-align:center;padding:20px;">Loading…</p>');
+    if(!_pid){ $('#rel-live-content').html('<p style="color:#e57373;text-align:center;padding:20px;">No project selected.</p>'); return; }
+    $.ajax({ type:'POST', url:'../relation/list', dataType:'json',
+      data:{ projectid: _pid },
+      success:function(d){
+        renderLiveList(d && d.error==='No' ? d.rows : []);
+        if(pTarget) _jumpToEdit(pTarget);
+      },
+      error:function(){ $('#rel-live-content').html('<p style="color:#e57373;text-align:center;padding:20px;">Could not load.</p>'); }
+    });
+  }
+
+  // Finds the row(s) matching pTarget and clicks Edit, same as a user
+  // would — no separate code path, so it stays in sync with whatever
+  // the manual edit flow does. Two match modes:
+  //  - pTarget.precAct + pTarget.depAct: the exact relationship (both
+  //    real scheduleactivities ids) — used when a specific dependency
+  //    line/arrow was clicked, unambiguous, always exactly one row.
+  //  - pTarget.actId alone: any row where this activity is EITHER the
+  //    precedent or the dependent — used when the click only identified
+  //    an activity (e.g. clicking anywhere in its row), not a specific
+  //    line. If the activity has exactly one relationship, jumps straight
+  //    into editing it, same as the exact-pair case. If it has more than
+  //    one, opens all of them into edit mode at once and scrolls to the
+  //    first — editing multiple relationships for the same activity
+  //    side-by-side is exactly what "show that activity's relationship"
+  //    means once there's more than one to show.
+  // When pTarget.actId has NO existing relationship at all (neither as
+  // precedent nor dependent), falls through to _openAddWithPrecedent
+  // instead of leaving the (now-empty) live list showing — see there.
+  function _jumpToEdit(pTarget){
+    var $all = $('#rel-live-content tr[data-id]');
+    var $rows;
+    if(pTarget.precAct !== undefined && pTarget.depAct !== undefined){
+      $rows = $all.filter(function(){
+        return String($(this).data('precact')) === String(pTarget.precAct)
+            && String($(this).data('depact'))  === String(pTarget.depAct);
+      });
+    } else if(pTarget.actId !== undefined){
+      $rows = $all.filter(function(){
+        return String($(this).data('precact')) === String(pTarget.actId)
+            || String($(this).data('depact'))  === String(pTarget.actId);
+      });
+    } else {
+      return;
+    }
+    if(!$rows.length){
+      if(pTarget.actId !== undefined) _openAddWithPrecedent(pTarget.actId);
+      return;
+    }
+    // Hide every non-matching row so the popup reads as "this activity's
+    // relationship(s)" rather than the full unscoped list with a couple
+    // of rows quietly switched into edit mode — that's what originally
+    // read as "all relationships popping up" even though the match
+    // itself was already correct. A "Show all" link (prepended once,
+    // above the table) brings the full list back on demand.
+    $all.not($rows).hide();
+    $rows.show().each(function(){ $(this).find('.rl2-live-edit-btn').trigger('click'); });
+    $rows[0].scrollIntoView({ block: 'center' });
+
+    if(!$('#rel-live-showall').length){
+      $('<div id="rel-live-showall" style="padding:8px 4px;"><a href="#" style="font-size:13px;color:#5c3d8f;">&#8592; Show all relationships</a></div>')
+        .insertBefore('#rel-live-content table')
+        .on('click', 'a', function(e){
+          e.preventDefault();
+          $all.show();
+          $('#rel-live-showall').remove();
+        });
+    }
+  }
+
+  // Clicking an activity's row when it has NO relationship at all (see
+  // _jumpToEdit above) inserts a new, blank row at the top of THIS
+  // same live-relationships table (rel-live-popup) — same
+  // dropdown/Type/Lag layout as editing an existing relationship, just
+  // pre-filled with this activity as PRECEDENT and Dependent left
+  // empty, already in edit mode. Saves via relation/save (a genuine
+  // INSERT — relation/update, what an existing row's Save button
+  // calls, requires an id and errors without one).
+  function _openAddWithPrecedent(actId){
+    function build(){
+      var act = _acts.filter(function(a){ return String(a.id) === String(actId); })[0];
+      var iowOpts = _buildIowOptions();
+      var precActOpts = act ? _buildActOptions(act.scheduleitem_id) : '<option value="">-- Select Activity --</option>';
+
+      var $row = $(
+        '<tr class="rl2-new-row">'
+        + '<td><select class="rl2-new-preciow form-control input-sm">' + iowOpts + '</select></td>'
+        + '<td><select class="rl2-new-precact form-control input-sm">' + precActOpts + '</select></td>'
+        + '<td style="text-align:center;"><select class="rl2-new-type form-control input-sm" style="width:60px;">'
+          + '<option value="2" selected>FS</option><option value="1">SS</option><option value="3">FF</option>'
+          + '</select></td>'
+        + '<td><select class="rl2-new-depiow form-control input-sm">' + iowOpts + '</select></td>'
+        + '<td><select class="rl2-new-depact form-control input-sm"><option value="">-- Select Activity --</option></select></td>'
+        + '<td><input type="number" class="rl2-new-lag form-control input-sm" style="width:60px;" value="0"></td>'
+        + '<td style="text-align:center;white-space:nowrap;">'
+          + '<button class="rl2-new-save-btn btn btn-xs" title="Save" style="background:#27ae60;color:#fff;border:none;border-radius:50%;width:22px;height:22px;padding:0;font-size:11px;margin-right:3px;">&#10003;</button>'
+          + '<button class="rl2-new-cancel-btn btn btn-xs" title="Cancel" style="background:#e57373;color:#fff;border:none;border-radius:50%;width:22px;height:22px;padding:0;font-size:12px;">&#x2715;</button>'
+          + '</td>'
+        + '</tr>'
+      );
+      if(act){
+        $row.find('.rl2-new-preciow').val(act.scheduleitem_id);
+        $row.find('.rl2-new-precact').val(act.id);
+      }
+
+      $row.find('.rl2-new-preciow').on('change', function(){
+        $row.find('.rl2-new-precact').html(_buildActOptions($(this).val()));
+      });
+      $row.find('.rl2-new-depiow').on('change', function(){
+        $row.find('.rl2-new-depact').html(_buildActOptions($(this).val()));
+      });
+
+      var $table = $('#rel-live-content table');
+      if(!$table.length){
+        renderLiveList([]);
+        $table = $('#rel-live-content table');
+      }
+      // Same "only this activity" framing as the has-relationship case
+      // (_jumpToEdit) — hide every existing relationship row so the new
+      // blank row isn't buried in the full unfiltered list. The "Show
+      // all relationships" link (added once, same as _jumpToEdit's)
+      // brings them back on demand.
+      var $existing = $table.find('tbody tr[data-id]');
+      $existing.hide();
+      $table.find('tbody tr td[colspan]').closest('tr').remove();
+      $table.find('tbody').prepend($row);
+      $row[0].scrollIntoView({ block: 'center' });
+
+      if(!$('#rel-live-showall').length){
+        $('<div id="rel-live-showall" style="padding:8px 4px;"><a href="#" style="font-size:13px;color:#5c3d8f;">&#8592; Show all relationships</a></div>')
+          .insertBefore('#rel-live-content table')
+          .on('click', 'a', function(e){
+            e.preventDefault();
+            $existing.show();
+            $('#rel-live-showall').remove();
+          });
+      }
+    }
+    if(_acts.length){ build(); } else { loadGanttActivities(build); }
+  }
+
+  $(document).on('click', '.rl2-new-save-btn', function(){
+    var btn = this;
+    var $row = $(btn).closest('tr');
+    var precAct = $row.find('.rl2-new-precact').val();
+    var depAct  = $row.find('.rl2-new-depact').val();
+    var precIow = $row.find('.rl2-new-preciow').val();
+    var depIow  = $row.find('.rl2-new-depiow').val();
+    var relType = parseInt($row.find('.rl2-new-type').val()) || 2;
+    var lagDays = parseInt($row.find('.rl2-new-lag').val()) || 0;
+
+    if(!precAct){ alert('Please select the Precedent Activity.'); return; }
+    if(!depAct){ alert('Please select the Dependent Activity.'); return; }
+    if(precAct === depAct){ alert('Precedent and Dependent cannot be the same activity.'); return; }
+
+    $(btn).prop('disabled', true);
+    $.ajax({ type:'POST', url:'../relation/save', dataType:'json',
+      data:{
+        projectid: _getPid(),
+        rows: [{
+          precedent_activity: precAct, dependent_activity: depAct,
+          precedent_schedule_item: precIow, dependent_schedule_item: depIow,
+          relation_type: relType, lag_days: lagDays
+        }]
+      },
+      success:function(d){
+        $(btn).prop('disabled', false);
+        if(d && d.error==='No' && d.inserted > 0){
+          if(typeof window.reloadGantt === 'function') window.reloadGantt();
+          loadLiveList();
+        } else {
+          alert((d && d.errortext) || 'Could not save — check that both activities are valid and this relationship doesn\'t already exist.');
+        }
+      },
+      error:function(){ $(btn).prop('disabled', false); alert('Server error.'); }
+    });
+  });
+
+  $(document).on('click', '.rl2-new-cancel-btn', function(){
+    $(this).closest('tr').remove();
+  });
+
+  function renderLiveList(rows){
+    rows = rows || [];
+    var typeLabel = {1:'SS',2:'FS',3:'FF'};
+    var html = '<table class="rl2-list-table"><thead><tr>'
       + '<th>Precedent IOW</th><th>Precedent Activity</th>'
       + '<th style="text-align:center;">Type</th>'
       + '<th>Dependent IOW</th><th>Dependent Activity</th>'
       + '<th style="text-align:center;">Lag</th>'
-      + '<th style="text-align:center;width:36px;">&#x2714;</th>'
+      + '<th style="text-align:center;width:60px;"></th>'
       + '</tr></thead><tbody>';
 
-    /* Staged rows first (green tint, data-staged) */
-    _staged.forEach(function(r, i){
-      var lag = r.lag_days > 0 ? '+'+r.lag_days+'d' : (r.lag_days < 0 ? r.lag_days+'d (lead)' : '—');
-      html += '<tr class="rl2-staged" data-staged="'+i+'">'
-        + '<td>'+esc(r.precedent_iow)+'</td>'
-        + '<td>'+esc(r.precedent_name)+'</td>'
-        + '<td style="text-align:center;"><span class="rl2-badge">'+esc(r.type_name)+'</span></td>'
-        + '<td>'+esc(r.dependent_iow)+'</td>'
-        + '<td>'+esc(r.dependent_name)+'</td>'
-        + '<td style="text-align:center;font-size:11px;">'+lag+'</td>'
-        + '<td style="text-align:center;"><input type="checkbox" class="rl2-row-chk" data-staged="'+i+'" checked></td>'
-        + '</tr>';
-    });
-
-    /* Saved rows from DB */
-    savedRows.forEach(function(r){
+    rows.forEach(function(r){
       var lag = parseInt(r.lag_days);
       var lagStr = lag > 0 ? '+'+lag+'d' : (lag < 0 ? lag+'d (lead)' : '—');
-      html += '<tr data-id="'+r.id+'">'
+      html += '<tr data-id="'+r.id+'" data-precact="'+r.precedent_activity+'" data-preciow="'+(r.precedent_schedule_item||'')+'" data-depact="'+r.dependent_activity+'" data-depiow="'+(r.dependent_schedule_item||'')+'" data-reltype="'+r.relation_type+'" data-lag="'+r.lag_days+'">'
         + '<td>'+esc(r.prec_iow||'')+'</td>'
         + '<td>'+esc(r.prec_name||'')+'</td>'
         + '<td style="text-align:center;"><span class="rl2-badge" style="background:#00796b;">'+esc(typeLabel[r.relation_type]||'FS')+'</span></td>'
         + '<td>'+esc(r.dep_iow||'')+'</td>'
         + '<td>'+esc(r.dep_name||'')+'</td>'
         + '<td style="text-align:center;font-size:11px;">'+lagStr+'</td>'
-        + '<td style="text-align:center;">'
-        +   '<button class="rl2-del-btn btn btn-xs" data-id="'+r.id+'" title="Delete" style="background:#e57373;color:#fff;border:none;border-radius:50%;width:22px;height:22px;padding:0;font-size:12px;">&#x2715;</button>'
+        + '<td style="text-align:center;white-space:nowrap;">'
+        +   '<button class="rl2-live-edit-btn btn btn-xs" title="Edit" style="background:#5c3d8f;color:#fff;border:none;border-radius:50%;width:22px;height:22px;padding:0;font-size:11px;margin-right:3px;">&#9998;</button>'
+        +   '<button class="rl2-live-del-btn btn btn-xs" title="Delete" style="background:#e57373;color:#fff;border:none;border-radius:50%;width:22px;height:22px;padding:0;font-size:12px;">&#x2715;</button>'
         + '</td>'
         + '</tr>';
     });
 
-    if(!_staged.length && !savedRows.length){
-      html += '<tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px;">No relationships defined yet.</td></tr>';
+    if(!rows.length){
+      html += '<tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px;">No relationships added to this Gantt chart yet.</td></tr>';
     }
 
     html += '</tbody></table>';
-    if(_staged.length){
-      html = '<div style="font-size:11px;color:#4caf50;font-weight:600;margin-bottom:6px;">&#x25CF; Green rows are staged (not yet saved). Select and click <em>Create Selected</em>.</div>' + html;
-    }
-    $('#rel-list-content').html(html);
-    document.getElementById('rel-chk-all').checked = false;
+    $('#rel-live-content').html(html);
   }
 
-  function esc(s){ return $('<span>').text(s).html(); }
-
-  /* Delete saved row */
-  $(document).on('click','.rl2-del-btn', function(){
-    var id = $(this).data('id');
+  /* Delete a live relationship */
+  $(document).on('click', '.rl2-live-del-btn', function(){
+    var $row = $(this).closest('tr');
+    var id = $row.data('id');
     if(!confirm('Delete this relationship?')) return;
     $.ajax({ type:'POST', url:'../relation/delete', dataType:'json',
-      data:{ id:id, projectid:_pid },
+      data:{ id:id, projectid:_getPid() },
       success:function(d){
-        if(d && d.error==='No'){ loadSavedList(); }
-        else { alert('Could not delete.'); }
+        if(d && d.error==='No'){
+          if(typeof window.reloadGantt === 'function') window.reloadGantt();
+          loadLiveList();
+        } else { alert('Could not delete.'); }
       }
     });
   });
 
-  /* ── Create Selected ─────────────────────────────────────────── */
-  document.getElementById('rel-create-btn').addEventListener('click', function(){
-    _pid = _getPid();
-    if(!_pid){ alert('No project selected.'); return; }
+  /* Edit a live relationship — toggle between view (plain text) and
+     edit (the same IOW/Activity/Type/Lag pickers the Add form uses,
+     rendered inline in the row). First click swaps cells 0-5 to
+     inputs; second click reads them back, saves via relation/update. */
+  $(document).on('click', '.rl2-live-edit-btn', function(){
+    var btn = this;
+    var $row = $(btn).closest('tr');
+    var isEditing = $(btn).hasClass('rl2-editing');
 
-    /* Collect checked staged rows */
-    var toSave = [];
-    document.querySelectorAll('.rl2-row-chk[data-staged]').forEach(function(chk){
-      if(!chk.checked) return;
-      var idx = parseInt(chk.dataset.staged);
-      var r = _staged[idx];
-      if(r) toSave.push({
-        precedent_activity:      r.precedent_activity,
-        dependent_activity:      r.dependent_activity,
-        precedent_schedule_item: r.precedent_schedule_item,
-        dependent_schedule_item: r.dependent_schedule_item,
-        relation_type:           r.relation_type,
-        lag_days:                r.lag_days
+    if(!isEditing){
+      loadGanttActivities(function(){
+        var precIow = $row.data('preciow');
+        var depIow  = $row.data('depiow');
+        var precAct = $row.data('precact');
+        var depAct  = $row.data('depact');
+        var relType = parseInt($row.data('reltype')) || 2;
+        var lag     = parseInt($row.data('lag')) || 0;
+
+        var iowOpts = _buildIowOptions();
+        var precActOpts = _buildActOptions(precIow);
+        var depActOpts  = _buildActOptions(depIow);
+
+        $row.find('td').eq(0).html('<select class="rl2-live-edit-preciow form-control input-sm">'+iowOpts+'</select>');
+        $row.find('td').eq(1).html('<select class="rl2-live-edit-precact form-control input-sm">'+precActOpts+'</select>');
+        $row.find('td').eq(2).html(
+          '<select class="rl2-live-edit-type form-control input-sm" style="width:60px;">'
+          + '<option value="2"'+(relType===2?' selected':'')+'>FS</option>'
+          + '<option value="1"'+(relType===1?' selected':'')+'>SS</option>'
+          + '<option value="3"'+(relType===3?' selected':'')+'>FF</option>'
+          + '</select>'
+        );
+        $row.find('td').eq(3).html('<select class="rl2-live-edit-depiow form-control input-sm">'+iowOpts+'</select>');
+        $row.find('td').eq(4).html('<select class="rl2-live-edit-depact form-control input-sm">'+depActOpts+'</select>');
+        $row.find('td').eq(5).html('<input type="number" class="rl2-live-edit-lag form-control input-sm" style="width:60px;" value="'+lag+'">');
+
+        $row.find('.rl2-live-edit-preciow').val(precIow);
+        $row.find('.rl2-live-edit-depiow').val(depIow);
+        $row.find('.rl2-live-edit-precact').val(precAct);
+        $row.find('.rl2-live-edit-depact').val(depAct);
+
+        $row.find('.rl2-live-edit-preciow').on('change', function(){
+          $row.find('.rl2-live-edit-precact').html(_buildActOptions($(this).val()));
+        });
+        $row.find('.rl2-live-edit-depiow').on('change', function(){
+          $row.find('.rl2-live-edit-depact').html(_buildActOptions($(this).val()));
+        });
+
+        $(btn).addClass('rl2-editing').html('&#10003;').attr('title','Save').css('background','#4caf50');
       });
-    });
+      return;
+    }
 
-    if(!toSave.length){ alert('No staged relationships selected. Tick the checkboxes next to the green rows.'); return; }
+    var newPrecAct = $row.find('.rl2-live-edit-precact').val();
+    var newDepAct  = $row.find('.rl2-live-edit-depact').val();
+    var newPrecIow = $row.find('.rl2-live-edit-preciow').val();
+    var newDepIow  = $row.find('.rl2-live-edit-depiow').val();
+    var newType    = parseInt($row.find('.rl2-live-edit-type').val()) || 2;
+    var newLag     = parseInt($row.find('.rl2-live-edit-lag').val()) || 0;
 
-    var $btn = $(this).attr('disabled',true).text('Saving…');
-    $.ajax({ type:'POST', url:'../relation/save', dataType:'json',
-      data:{ projectid:_pid, rows:toSave },
-      success:function(d){
-        $btn.attr('disabled',false).html('&#x2714; Create Selected');
-        if(d && d.error==='No'){
-          /* Remove saved staged rows from memory */
-          var savedIndices = [];
-          document.querySelectorAll('.rl2-row-chk[data-staged]').forEach(function(chk){
-            if(chk.checked) savedIndices.push(parseInt(chk.dataset.staged));
-          });
-          savedIndices.sort(function(a,b){return b-a;}).forEach(function(i){ _staged.splice(i,1); });
+    if(!newPrecAct){ alert('Please select the Precedent Activity.'); return; }
+    if(!newDepAct){ alert('Please select the Dependent Activity.'); return; }
+    if(newPrecAct === newDepAct){ alert('Precedent and Dependent cannot be the same activity.'); return; }
 
-          /* Reload Gantt to show new dependency arrows */
-          if(typeof window.reloadGantt === 'function') window.reloadGantt();
-
-          /* Refresh list */
-          loadSavedList();
-        } else { alert((d && d.errortext) || 'Could not save.'); }
+    var id = $row.data('id');
+    $(btn).prop('disabled', true);
+    $.ajax({ type:'POST', url:'../relation/update', dataType:'json',
+      data:{
+        id: id, projectid: _getPid(),
+        precedent_activity: newPrecAct, dependent_activity: newDepAct,
+        precedent_schedule_item: newPrecIow, dependent_schedule_item: newDepIow,
+        relation_type: newType, lag_days: newLag
       },
-      error:function(){ $btn.attr('disabled',false).html('&#x2714; Create Selected'); alert('Server error.'); }
+      success:function(d){
+        $(btn).prop('disabled', false);
+        if(d && d.error==='No'){
+          if(typeof window.reloadGantt === 'function') window.reloadGantt();
+          loadLiveList();
+        } else {
+          alert((d && d.errortext) || 'Could not save.');
+        }
+      },
+      error:function(){ $(btn).prop('disabled', false); alert('Server error.'); }
     });
   });
+
+  /* NOTE: "Create Selected" (bulk-save of staged/checked rows) was
+     removed along with the List popup's footer buttons — staged rows
+     from the Add form currently have no save path. This is a known gap,
+     to be addressed separately when the Add flow is reworked to save
+     directly instead of staging. The List popup itself no longer shows
+     already-saved relationships (Edit/Delete on a specific saved row) —
+     it's now the historical-template search+tick catalog above. */
 
   /* ═══════════════════════════════════════════════════════════════
      Init drag+resize bindings
   ═══════════════════════════════════════════════════════════════ */
   $(function(){
-    rl2BindDragResize(document.getElementById('rel-add-popup'),  '.rl2-sw-hdr', 600, 280);
-    rl2BindDragResize(document.getElementById('rel-list-popup'), '.rl2-sw-hdr', 600, 300);
+    rl2BindDragResize(document.getElementById('rel-live-popup'), '.rl2-sw-hdr', 600, 300);
   });
 
 })();

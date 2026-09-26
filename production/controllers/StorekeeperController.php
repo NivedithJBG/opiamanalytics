@@ -39,7 +39,15 @@ class StorekeeperController extends Controller
     public function actionMobilegrn()
     {
         $this->layout = '@app/views/layouts/mobile';
-        return $this->render('mobile_comingsoon', ['pageTitle' => 'Receive Materials']);
+        $uid = Yii::$app->user->id;
+        $projectName = 'No Project Selected';
+        if ($projuser = ProjuserSelection::find()->where(['userid' => $uid])->one()) {
+            $proj = Yii::$app->db->createCommand(
+                "SELECT Name FROM projects WHERE Project_Id=:pid", [':pid' => $projuser->projectid]
+            )->queryOne();
+            if ($proj) $projectName = $proj['Name'];
+        }
+        return $this->render('mobile_grn', ['projectName' => $projectName]);
     }
 
     public function actionMobilebilling()

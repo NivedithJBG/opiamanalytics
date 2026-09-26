@@ -443,6 +443,13 @@ class ProjectsController extends Controller
                 $projectsmainCtrl = new \app\controllers\ProjectsmainController('projectsmain', Yii::$app);
                 $projectsmainCtrl->computeRoiThresholds($model->Project_Id);
 
+                // Every new project gets a "Project Overhead" activity seeded
+                // automatically as its first Gantt bar, under IOW Group
+                // "Support Activities" / IOW "Overhead" — see
+                // _seedProjectOverheadActivity for the fixed activity/IOW
+                // IDs and the (deliberately trivial) duration rule.
+                $this->_seedProjectOverheadActivity($model->Project_Id, $model->start_date, $model->end_date);
+
                 $arr = array('Id' => $model->Project_Id, 'Name' => $model->Name, 'error' => 'No');
                 return json_encode($arr);
             else:
@@ -450,6 +457,222 @@ class ProjectsController extends Controller
                 return json_encode($arr);
             endif;
         }
+    }
+
+    /**
+     * Seeds the fixed "Project Overhead" and "Project General Expenses"
+     * activities (Activity Library activity_id=87 and 89 respectively) as
+     * Estimate-only line items of a newly created project, under the
+     * global IOW Group "Support Activities" (iow_groups.id=17) and a
+     * single shared per-project IOW named "Overhead" (workgroups_new is
+     * always project-scoped, so this IOW is created fresh for every
+     * project even though the Group/Activities above are shared library
+     * entries). Both library rows use activity_status=1 (the same soft-
+     * delete flag used everywhere else in estimateactivities), which is
+     * exactly why neither ever shows up in the normal Activity Library
+     * screen (actionListestactivity filters activity_status=0) — they are
+     * intentionally Estimate-only, never meant to be picked/edited like a
+     * normal library activity.
+     *
+     * Per explicit spec: no resource allocation, no quantity/rate
+     * calculation, no Gantt bar — duration/quantity is simply the
+     * project's own planned duration (end_date - start_date + 1 days),
+     * and that's the end of it. (An earlier version of this function did
+     * also insert a scheduleactivities row per activity — confirmed via
+     * live DB audit that step never actually produced a visible Gantt
+     * bar in practice, and explicit direction is these activities must
+     * never appear in the Gantt or Activity Library, Estimate only — so
+     * that step is not present here.)
+     */
+    private function _seedProjectOverheadActivity($pid, $startDate, $endDate)
+    {
+        $db = \Yii::$app->db;
+        $pid = (int)$pid;
+        if (!$pid) return;
+
+        $overheadIowGroupId = 17;   // "Support Activities" (global)
+        $overheadIowName    = 'Overhead';
+        // Very high fixed sortorder so this IOW always sorts LAST in the
+        // Project Estimate report, regardless of how many real IOW groups
+        // get added to the project afterward (those use
+        // MAX(sortorder)+1 — see actionWbsaddiows — so they'll never
+        // reach this value in practice). Per explicit direction: Overhead
+        // must appear as the last IOW/activities section in the Estimate.
+        $overheadSortorder = 999999;
+
+        $s = strtotime($startDate);
+        $e = strtotime($endDate);
+        $projectDuration = ($s && $e && $e >= $s) ? (int)round(($e - $s) / 86400) + 1 : 1;
+        $projectDuration = max(1, $projectDuration);
+
+        // Each: [library activity_id, display name for workgroup_activities_new.activity_Name,
+        //        sortorder, quantity, unit]. "Project Overhead" quantifies
+        // as the project's own planned duration, Unit=Days ("the whole
+        // project runs this many days"). "Project General Expenses" is a
+        // fixed default quantity of 1, not duration-linked — per explicit
+        // direction, it is a flat lump-sum-style line item — and its Unit
+        // is "L.S" (Lump Sum) accordingly, not Days.
+        $seedActivities = [
+            [87, 'Project Overhead',          0, $projectDuration, 'Days'],
+            [89, 'Project General Expenses',  1, 1,                'L.S'],
+        ];
+
+        $now = date('Y-m-d H:i:s');
+
+        // 1. Per-project IOW "Overhead" under the global "Support Activities" group — shared by both activities.
+        $wgId = $db->createCommand(
+            "SELECT Workgroup_Id FROM workgroups_new WHERE Project_Id=:p AND iowGroupid=:g AND Name=:n AND Status=0 LIMIT 1",
+            [':p' => $pid, ':g' => $overheadIowGroupId, ':n' => $overheadIowName]
+        )->queryScalar();
+        if (!$wgId) {
+            $db->createCommand(
+                "INSERT INTO workgroups_new
+                 (Project_Id, Name, iowGroupid, Status, sortorder, Added_On, Updated_On, Added_By,
+                  start_date, end_date, duration, progress, open, parent, itemtype, worktype, worktypegroup,
+                  wbs_estimate_id, pricing_status, notes, primavera_id)
+                 VALUES (:p, :n, :g, 0, :so, :t, :t, 0,
+                  :t, :t, 0, 0, 0, 0, '', 0, 0, 0, 0, '', 0)",
+                [':p' => $pid, ':n' => $overheadIowName, ':g' => $overheadIowGroupId, ':so' => $overheadSortorder, ':t' => $now]
+            )->execute();
+            $wgId = (int)$db->lastInsertID;
+        }
+
+        // 2. Project-instance activity row (workgroup_activities_new) per
+        // seed activity, plus its pricing_estimate_new row — the Project
+        // Estimate report (EstimatereportController::actionGet) reads
+        // Quantity from pricing_estimate_new.activity_qty, NOT from
+        // workgroup_activities_new.estimate/cycle_Quantity, so without this
+        // second insert the activity would show in the report with
+        // Quantity stuck at 0 regardless of the project's real duration.
+        foreach ($seedActivities as [$overheadActivityId, $displayName, $sortOrder, $qty, $unit]) {
+            $wanId = $db->createCommand(
+                "SELECT id FROM workgroup_activities_new WHERE project_Id=:p AND activity_Id=:a AND wbs_id=:w LIMIT 1",
+                [':p' => $pid, ':a' => $overheadActivityId, ':w' => $wgId]
+            )->queryScalar();
+            if (!$wanId) {
+                $db->createCommand(
+                    "INSERT INTO workgroup_activities_new
+                     (project_Id, wbs_id, worktype_Id, activitytype_id, activity_Id, activity_Unit,
+                      estimate, amount, sortorder, type, activity_Name, process_Id, schedule, duration,
+                      cycle_Unit, cycle_Quantity, pr_status, pricing_status, operations_status, wbs_estimate_id)
+                     VALUES (:p, :w, 0, 0, :a, :u, :q, 0, :so, 0, :n, 0, 1, :q, :u, :q, 0, 0, 0, 0)",
+                    [':p' => $pid, ':w' => $wgId, ':a' => $overheadActivityId, ':so' => $sortOrder, ':n' => $displayName, ':q' => $qty, ':u' => $unit]
+                )->execute();
+                $wanId = (int)$db->lastInsertID;
+            }
+
+            $peExists = $db->createCommand(
+                "SELECT pricing_estimate_Id FROM pricing_estimate_new WHERE project_Id=:p AND activity_Id=:w LIMIT 1",
+                [':p' => $pid, ':w' => $wanId]
+            )->queryScalar();
+            if (!$peExists) {
+                $db->createCommand()->insert('pricing_estimate_new', [
+                    'project_Id'        => $pid,
+                    'activity_Id'       => $wanId,
+                    'activity_qty'      => $qty,
+                    'specific_rate'     => 0,
+                    'est_activity_Id'   => $overheadActivityId,
+                    'pricing_status'    => 0,
+                    'operations_status' => 0,
+                    'primavera_id'      => 0,
+                ])->execute();
+            }
+        }
+    }
+
+    /**
+     * One-off backfill: runs _seedProjectOverheadActivity for a project
+     * that already existed before that auto-seeding was added to
+     * actionCreate(), so it doesn't have to be recreated. Safe to call
+     * repeatedly (the seeding logic itself is idempotent, check-then-
+     * insert at every step).
+     */
+    public function actionBackfillprojectoverhead()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = (int)($_POST['project_id'] ?? 0);
+        if (!$pid) return ['error' => 'Yes', 'errortext' => 'project_id required'];
+        $p = Projects::findOne($pid);
+        if (!$p) return ['error' => 'Yes', 'errortext' => 'Project not found'];
+        $this->_seedProjectOverheadActivity($pid, $p->start_date, $p->end_date);
+        return ['error' => 'No'];
+    }
+
+    /**
+     * One-off backfill: mirrors resources already allocated (via
+     * estactivity_resources) to the "Project Overhead"/"Project General
+     * Expenses" library activities (activity_id 87/89 — see
+     * _seedProjectOverheadActivity) into pricing_estimate_resources_new
+     * for every project using them, keyed by that project's own wan_id
+     * (workgroup_activities_new.id).
+     *
+     * Needed because estactivity_resources is the shared library
+     * template — not project-scoped — so an allocation made against it
+     * before actionAddactivityresource's wan_id-mirroring existed (or
+     * made through any path that didn't pass wan_id) never reached the
+     * per-project table the Cost Dashboard
+     * (ProjectsmainController::actionCostdashboardactivity) and
+     * Procurement's Purchase Order tab both read from. Safe to call
+     * repeatedly — same check-then-write idempotency as the live sync.
+     */
+    public function actionBackfilloverheadresourceallocations()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $db = \Yii::$app->db;
+
+        $allocs = $db->createCommand(
+            "SELECT ear.estactivity_id, ear.est_resource_id, ear.est_resource_rate, ear.est_resource_quantity
+             FROM estactivity_resources ear
+             WHERE ear.estactivity_id IN (87, 89) AND ear.est_resource_status = 0"
+        )->queryAll();
+        if (!$allocs) return ['error' => 'No', 'created' => 0, 'skipped' => 0];
+
+        $created = 0;
+        $skipped = 0;
+        foreach ($allocs as $a) {
+            $libActId = (int)$a['estactivity_id'];
+            $resId    = (int)$a['est_resource_id'];
+            $rate     = (float)$a['est_resource_rate'];
+            $qty      = (float)$a['est_resource_quantity'];
+
+            $typeId = (int)($db->createCommand(
+                "SELECT ResourceType_Id FROM resources WHERE Resource_Id=:r LIMIT 1",
+                [':r' => $resId]
+            )->queryScalar() ?: 0);
+
+            $wans = $db->createCommand(
+                "SELECT id, Project_Id FROM workgroup_activities_new WHERE activity_Id=:a AND pr_status=0",
+                [':a' => $libActId]
+            )->queryAll();
+
+            foreach ($wans as $w) {
+                $wanId = (int)$w['id'];
+                $pid   = (int)$w['Project_Id'];
+
+                $exists = $db->createCommand(
+                    "SELECT pricing_resourceid FROM pricing_estimate_resources_new
+                     WHERE activity_id=:a AND project_id=:p AND resource_Id=:r LIMIT 1",
+                    [':a' => $wanId, ':p' => $pid, ':r' => $resId]
+                )->queryScalar();
+                if ($exists) { $skipped++; continue; }
+
+                $db->createCommand()->insert('pricing_estimate_resources_new', [
+                    'activity_id'       => $wanId,
+                    'resource_Id'       => $resId,
+                    'resourcetype_Id'   => $typeId,
+                    'quantity'          => $qty,
+                    'rate'              => $rate,
+                    'project_id'        => $pid,
+                    'est_activity_Id'   => $libActId,
+                    'process_Id'        => 0,
+                    'pricing_status'    => 0,
+                    'operations_status' => 0,
+                ])->execute();
+                $created++;
+            }
+        }
+
+        return ['error' => 'No', 'created' => $created, 'skipped' => $skipped];
     }
 
     /* Global popup: get one project for editing */
@@ -20994,9 +21217,9 @@ public function actionActivitymusterprocess()
             $iowGroupId   = intval(isset($_POST['iow_group_id'])   ? $_POST['iow_group_id']   : 0);
             $names = isset($_POST['estactivityname']) ? (array)$_POST['estactivityname'] : [];
 
-            if ($activityType <= 0) {
-                return json_encode(['error' => 'Yes', 'msg' => 'Please select an Activity Type.']);
-            }
+            // Activity Type is optional (same as Project Type/work_type
+            // above) — it's a classification tag only, not a dependency
+            // of the activity or its tasks, so it must not block saving.
 
             for ($i = 0; $i < count($names); $i++) {
                 // Guard against duplicate creation (double-click, retry, etc.) —
@@ -21058,6 +21281,12 @@ public function actionActivitymusterprocess()
         $actTypeId   = (int)($_POST['estactivitytype'] ?? 0);
         $searchName  = isset($_POST['estactivityname']) ? trim($_POST['estactivityname']) : '';
         $workType    = isset($_POST['estworktype']) ? (int)$_POST['estworktype'] : 0;
+        // Optional, additive filter — only sent by the Gantt's Activity
+        // Picker popup (never by the real Activity Library screen, which
+        // never passes this param and is therefore completely unaffected)
+        // to narrow the list to activities already tagged with the
+        // clicked IOW's parent IOW Group.
+        $iowGroupId  = isset($_POST['iow_group_id']) ? (int)$_POST['iow_group_id'] : 0;
 
         $displaywt     = 'hide';
         $estactypename = '';
@@ -21084,6 +21313,9 @@ public function actionActivitymusterprocess()
         }
         if ($workType > 0) {
             $sql .= " AND ea.work_type = " . $workType;
+        }
+        if ($iowGroupId > 0) {
+            $sql .= " AND ea.iow_group_id = " . $iowGroupId;
         }
         $sql .= " ORDER BY ea.sortorder ASC, ea.activity_id ASC";
 
@@ -21173,13 +21405,32 @@ public function actionActivitymusterprocess()
                 if (trim($taskName) === '') continue;
                 $existingId = (int)($_POST['task_id'][$j] ?? 0);
                 if ($existingId > 0) {
+                    $newUnit = $_POST['task_unit'][$j] ?? '';
+                    $newProd = (float)($_POST['task_productivity'][$j] ?? 0);
                     $connection->createCommand()->update('activity_tasks', [
                         'task_name'    => $taskName,
-                        'task_unit'    => $_POST['task_unit'][$j] ?? '',
-                        'productivity' => $_POST['task_productivity'][$j] ?? 0,
+                        'task_unit'    => $newUnit,
+                        'productivity' => $newProd,
                         'sort_order'   => $j,
                     ], 'id = ' . $existingId)->execute();
                     $submittedIds[] = $existingId;
+
+                    // Two-way sync with the Gantt's per-project "Tasks" popup
+                    // (ProjectsmainController::actionWbsactivityupdate), which
+                    // edits its own project-scoped copy in schedule_task_new —
+                    // without this, a Library edit here never reaches any
+                    // project already using this task, and the two screens
+                    // silently drift apart (see actionWbsactivityupdate's own
+                    // sync back into activity_tasks for the reverse direction).
+                    // Budgeted_Duration is recomputed with the same formula
+                    // actionWbsactivityupdate uses when it writes this table.
+                    $connection->createCommand(
+                        "UPDATE schedule_task_new
+                         SET activity_name=:n, task_productivity=:pr,
+                             Budgeted_Duration = CASE WHEN task_qty > 0 AND :pr2 > 0 THEN ROUND(task_qty / :pr3, 4) ELSE 0 END
+                         WHERE task_Id=:tid",
+                        [':n' => $taskName, ':pr' => $newProd, ':pr2' => $newProd, ':pr3' => $newProd, ':tid' => $existingId]
+                    )->execute();
                 } else {
                     $connection->createCommand()->insert('activity_tasks', [
                         'activity_id'  => $activityId,
@@ -21431,6 +21682,7 @@ public function actionActivitymusterprocess()
                                             <a href="javascript:void(0);" class="btn btn-primary updatesallocateresourceunit icon-edit" data-v="'.$data['estactres_id'].'" id="updatesallocateresourceunit'.$data['estactres_id'].'" title="Edit Resource"></a>
                                             <a href="javascript:void(0);" style="display:none;" class="btn btn-primary savesallocateresourceunit icon-save" data-v="'.$data['estactres_id'].'" data-activity="'.$data['estactivity_id'].'" id="savesallocateresourceunit'.$data['estactres_id'].'" title="Save"></a>
                                             <a id="removeresourceitem'.$data['estactres_id'].'" data-id="'.$data['estactres_id'].'" href="javascript:void(0)" class="btn btn-primary icon-trash1 removeresourceitem" title="Delete Resource"></a>
+                                            <a href="javascript:void(0);" class="btn btn-primary erra-task-btn icon-list" data-resid="'.$data['Resource_Id'].'" data-v="'.$data['estactres_id'].'" title="Map to Task"></a>
                                         </div>
                                     </div>';
 
@@ -21449,8 +21701,14 @@ public function actionActivitymusterprocess()
         $activityId = (int)($_POST['activity_id'] ?? 0);
         $restypeId  = (int)($_POST['restypeid'] ?? 0);
         $search     = isset($_POST['resgroup']) ? trim($_POST['resgroup']) : '';
+        // Which on-page element the returned panels' data-parent should
+        // point at, so Bootstrap's collapse accordion (only one group open
+        // at a time) works regardless of which container this HTML is
+        // dropped into — the real Activity Library screen uses
+        // #accordionmast; the Estimate popup uses its own #erra-accordion.
+        $accordionParent = preg_replace('/[^a-zA-Z0-9_-]/', '', $_POST['accordion_parent'] ?? 'accordionmast');
 
-        $sql = "SELECT r.Resource_Id, r.Name, r.Unit, r.ResourceType_Id, r.Resource_group_Id,
+        $sql = "SELECT r.Resource_Id, r.Name, r.Unit, r.Price, r.ResourceType_Id, r.Resource_group_Id,
                        rg.Resource_group_Name AS GroupName, rt.Name AS TypeName
                 FROM resources r
                 LEFT JOIN resource_group rg ON rg.Resource_group_Id = r.Resource_group_Id
@@ -21465,13 +21723,9 @@ public function actionActivitymusterprocess()
             $sql .= " AND r.Name LIKE :search";
             $params[':search'] = '%' . $search . '%';
         }
-        if ($activityId > 0) {
-            $sql .= " AND r.Resource_Id NOT IN (
-                        SELECT est_resource_id FROM estactivity_resources
-                        WHERE estactivity_id = :activityid AND est_resource_status = 0
-                      )";
-            $params[':activityid'] = $activityId;
-        }
+        // Already-allocated resources are intentionally still listed here
+        // (not excluded) so they remain visible/re-addable from the picker
+        // regardless of allocation state.
         $sql .= " ORDER BY rt.Name ASC, rg.Resource_group_Name ASC, r.Name ASC";
 
         $rows = $connection->createCommand($sql, $params)->queryAll();
@@ -21489,41 +21743,53 @@ public function actionActivitymusterprocess()
             $grouped[$type][$group][] = $row;
         }
 
+        // Resource Group is the collapsible unit here (not Resource Type —
+        // this endpoint is already scoped to one type via $restypeId, so a
+        // type-level panel would always be a single always-open wrapper).
+        // Each group starts collapsed; clicking its header drops its
+        // resources down, same accordion behaviour as the Activity Type
+        // panels elsewhere in this screen.
         $datarows = '';
-        $first = true;
+        $groupIndex = 0;
         foreach ($grouped as $typeName => $groups) {
-            $safeType = htmlspecialchars($typeName, ENT_QUOTES);
-            $collapseId = 'restype-collapse-' . preg_replace('/[^a-zA-Z0-9]/', '', $typeName);
-            $datarows .= '<div class="panel panel-default">'
-                       . '<div class="panel-heading">'
-                       . '<h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordionmast" href="#' . $collapseId . '">' . $safeType . '</a></h4>'
-                       . '</div>'
-                       . '<div id="' . $collapseId . '" class="panel-collapse collapse' . ($first ? ' in' : '') . '">'
-                       . '<div class="panel-body">';
-            $first = false;
-
             foreach ($groups as $groupName => $groupRows) {
+                $groupIndex++;
                 $safeGroup = htmlspecialchars($groupName, ENT_QUOTES);
-                $datarows .= '<div class="row resource-group-hdr" style="background:#e8f0f7;color:#2c3e50;font-weight:600;padding:6px 12px;margin:0;">'
-                           . '<span class="icon-folder" style="margin-right:5px;color:#5b8ab5;"></span>' . $safeGroup
+                $collapseId = 'resgroup-collapse-' . $groupIndex . '-' . preg_replace('/[^a-zA-Z0-9]/', '', $groupName);
+                $datarows .= '<div class="panel panel-default">'
+                           . '<div class="panel-heading resource-group-hdr" style="padding:0;">'
+                           . '<h4 class="panel-title"><a data-toggle="collapse" data-parent="#' . $accordionParent . '" href="#' . $collapseId . '" style="display:block;padding:8px 12px;">'
+                           .     '<span class="icon-folder" style="margin-right:5px;color:#5b8ab5;"></span>' . $safeGroup
+                           . '</a></h4>'
+                           . '</div>'
+                           . '<div id="' . $collapseId . '" class="panel-collapse collapse">'
+                           . '<div class="panel-body" style="padding:0;">';
+
+                $datarows .= '<div class="row" style="align-items:center;padding:5px 12px;margin:0;background:#f5f7fa;font-weight:600;font-size:12px;color:#5a6472;">'
+                           . '<div class="col-md-4"></div>'
+                           . '<div class="col-md-2">Unit</div>'
+                           . '<div class="col-md-2">Qty</div>'
+                           . '<div class="col-md-2">Rate</div>'
+                           . '<div class="col-md-2"></div>'
                            . '</div>';
 
                 foreach ($groupRows as $data) {
                     $safeName = htmlspecialchars($data['Name'], ENT_QUOTES);
                     $safeUnit = htmlspecialchars($data['Unit'] ?? '', ENT_QUOTES);
+                    $safeRate = (float)($data['Price'] ?? 0);
                     $datarows .= '<div class="row resourcetype' . $data['ResourceType_Id'] . '" id="allocsearchrow' . $data['Resource_Id'] . '" style="align-items:center;padding:5px 12px;border-bottom:1px solid #eee;margin:0;">'
                                . '<div class="col-md-4">' . $safeName . '</div>'
                                . '<div class="col-md-2">' . $safeUnit . '</div>'
-                               . '<div class="col-md-2"><input type="text" class="form-control" id="quantity' . $data['Resource_Id'] . '" placeholder="Qty"></div>'
-                               . '<div class="col-md-2"><input type="text" class="form-control" id="srate' . $data['Resource_Id'] . '" placeholder="Rate"></div>'
+                               . '<div class="col-md-2"><input type="text" class="form-control" id="quantity' . $data['Resource_Id'] . '" placeholder="Qty" style="height:26px;padding:2px 6px;"></div>'
+                               . '<div class="col-md-2"><input type="text" class="form-control" id="srate' . $data['Resource_Id'] . '" placeholder="Rate" value="' . ($safeRate ?: '') . '" style="height:26px;padding:2px 6px;"></div>'
                                . '<div class="col-md-2" style="text-align:right;">'
                                .     '<button type="button" class="btn btn-primary resource-add-btn" data-resid="' . $data['Resource_Id'] . '" data-restype="' . $data['ResourceType_Id'] . '" data-type="" title="Add"><span class="icon-add"></span></button>'
                                . '</div>'
                                . '</div>';
                 }
-            }
 
-            $datarows .= '</div></div></div>';
+                $datarows .= '</div></div></div>';
+            }
         }
 
         return json_encode(['result' => $datarows, 'error' => 'No']);
@@ -21654,9 +21920,69 @@ public function actionActivitymusterprocess()
             $command=$connection->createCommand($sql);
             $dataReader=$command->query();
 
-            $sql1="UPDATE estimateactivities SET activity_rate=activity_rate+".$rate."  WHERE activity_id='".$_POST['EstActivity_Id']."'";
+            // activity_rate is always recomputed as the SUM of every
+            // allocated resource's amount (same convention
+            // updateallocaterrated/deleteactivityresource already use)
+            // rather than incremented by this one add — incrementing
+            // would let activity_rate drift from the real total if it
+            // ever fell out of sync.
+            $sumRow = $connection->createCommand(
+                "SELECT COALESCE(SUM(est_resource_amount),0) AS total FROM estactivity_resources WHERE estactivity_id=:aid AND est_resource_status=0",
+                [':aid' => $_POST['EstActivity_Id']]
+            )->queryOne();
+            $sql1="UPDATE estimateactivities SET activity_rate=".(float)$sumRow['total']." WHERE activity_id='".$_POST['EstActivity_Id']."'";
             $command=$connection->createCommand($sql1);
             $dataReader=$command->query();
+
+            // When this allocation was made from a project-scoped screen
+            // (Estimate Report's Resource Allocation popup passes wan_id;
+            // the pure Activity Library screen does not), also mirror the
+            // resource into pricing_estimate_resources_new — Procurement's
+            // Purchase Order tab (ProcurementController::actionPurchaseorders)
+            // reads exclusively from that project-level table, never from
+            // estactivity_resources, so without this the allocation is saved
+            // but never reaches Procurement. Same check-then-write pattern
+            // ProjectsmainController already uses for its own writer.
+            $wanId = (int)($_POST['wan_id'] ?? 0);
+            if ($wanId) {
+                $wa = $connection->createCommand(
+                    "SELECT project_Id FROM workgroup_activities_new WHERE id=:id LIMIT 1",
+                    [':id' => $wanId]
+                )->queryOne();
+                if ($wa) {
+                    $pid = (int)$wa['project_Id'];
+                    $resId  = (int)$_POST['resid'];
+                    $typeId = (int)$_POST['restype'];
+                    $qty    = (float)$_POST['quantity'];
+                    $rate   = (float)$_POST['srate'];
+                    $perExists = $connection->createCommand(
+                        "SELECT pricing_resourceid FROM pricing_estimate_resources_new
+                         WHERE activity_id=:a AND project_id=:p AND resource_Id=:r LIMIT 1",
+                        [':a' => $wanId, ':p' => $pid, ':r' => $resId]
+                    )->queryScalar();
+                    if ($perExists) {
+                        $connection->createCommand(
+                            "UPDATE pricing_estimate_resources_new
+                             SET quantity=:q, rate=:rt, resourcetype_Id=:t, est_activity_Id=:ea, pricing_status=0
+                             WHERE pricing_resourceid=:id",
+                            [':q' => $qty, ':rt' => $rate, ':t' => $typeId, ':ea' => $_POST['EstActivity_Id'], ':id' => $perExists]
+                        )->execute();
+                    } else {
+                        $connection->createCommand()->insert('pricing_estimate_resources_new', [
+                            'activity_id'       => $wanId,
+                            'resource_Id'       => $resId,
+                            'resourcetype_Id'   => $typeId,
+                            'quantity'          => $qty,
+                            'rate'              => $rate,
+                            'project_id'        => $pid,
+                            'est_activity_Id'   => $_POST['EstActivity_Id'],
+                            'process_Id'        => 0,
+                            'pricing_status'    => 0,
+                            'operations_status' => 0,
+                        ])->execute();
+                    }
+                }
+            }
 
 
            /*  $rate=$_POST['quantity']*$_POST['srate'];
@@ -21726,6 +22052,19 @@ public function actionActivitymusterprocess()
             $command=$connection->createCommand($sql);
             $dataReader=$command->query();
 
+            // Mirror the delete into pricing_estimate_resources_new when
+            // this came from a project-scoped screen (wan_id present) —
+            // same reasoning as the addactivityresource sync above, so a
+            // removed allocation actually disappears from Procurement's
+            // Purchase Order tab instead of lingering there forever.
+            $wanId = (int)($_POST['wan_id'] ?? 0);
+            if ($wanId && $overheads) {
+                $connection->createCommand()->delete('pricing_estimate_resources_new', [
+                    'activity_id' => $wanId,
+                    'resource_Id' => (int)$overheads['est_resource_id'],
+                ])->execute();
+            }
+
             $sqltemvals="SELECT a.*,b.* FROM resources AS a
                     INNER JOIN estactivity_resources AS b ON  a.Resource_Id=b.est_resource_id
                     WHERE b.estactivity_id='".$_POST['activityid']."' ORDER BY a.Resource_Id";
@@ -21753,6 +22092,65 @@ public function actionActivitymusterprocess()
             $arr = array('result' => $datarows,'activityhead'=>$activitynameval,'price'=>$price,'error'=>'No');
             return json_encode($arr);
         endif;
+    }
+
+    /* Map-to-Task support for the project-scoped Resource Allocation popup
+       (overrelay-estimatereport.php). Tasks are activity_tasks rows, keyed
+       by the LIBRARY activity id (estimateactivities.activity_id — despite
+       ProjectsmainController::actionWbsget's local variable being named
+       $iowActId, that's what it actually holds; confirmed against live data,
+       activity_tasks.activity_id values match estimateactivities.activity_id,
+       not workgroup_activities_new.id). The mapping itself is stored as a
+       comma-separated list of activity_tasks.id in pricing_estimate_resources_new.
+       task_ids (keyed by wan_id there, a separate/project-scoped id) — the
+       same column ProcurementController already requires to be non-empty
+       before a PO/WO can be raised against this resource; there was
+       previously no UI anywhere that actually wrote to it. */
+    public function actionGetresourcetasks()
+    {
+        $wanId    = (int)($_POST['wan_id'] ?? 0);
+        $libActId = (int)($_POST['lib_activity_id'] ?? 0);
+        $resId    = (int)($_POST['resource_id'] ?? 0);
+        if (!$wanId || !$libActId || !$resId) return json_encode(['error' => 'Yes', 'errortext' => 'Missing activity or resource.']);
+
+        $db = \Yii::$app->db;
+
+        $tasks = $db->createCommand(
+            "SELECT id, task_name, task_unit FROM activity_tasks WHERE activity_id=:a ORDER BY sort_order ASC, id ASC",
+            [':a' => $libActId]
+        )->queryAll();
+
+        $taskIds = $db->createCommand(
+            "SELECT task_ids FROM pricing_estimate_resources_new WHERE activity_id=:a AND resource_Id=:r LIMIT 1",
+            [':a' => $wanId, ':r' => $resId]
+        )->queryScalar();
+        $mapped = $taskIds ? array_filter(array_map('intval', explode(',', $taskIds))) : [];
+
+        return json_encode(['error' => 'No', 'tasks' => $tasks, 'mapped' => array_values($mapped)]);
+    }
+
+    public function actionSaveresourcetasks()
+    {
+        $wanId   = (int)($_POST['wan_id'] ?? 0);
+        $resId   = (int)($_POST['resource_id'] ?? 0);
+        $taskIds = $_POST['task_ids'] ?? []; // array of activity_tasks.id
+        if (!$wanId || !$resId) return json_encode(['error' => 'Yes', 'errortext' => 'Missing activity or resource.']);
+
+        $taskIds = array_values(array_unique(array_filter(array_map('intval', (array)$taskIds))));
+        $db = \Yii::$app->db;
+
+        $perId = $db->createCommand(
+            "SELECT pricing_resourceid FROM pricing_estimate_resources_new WHERE activity_id=:a AND resource_Id=:r LIMIT 1",
+            [':a' => $wanId, ':r' => $resId]
+        )->queryScalar();
+        if (!$perId) return json_encode(['error' => 'Yes', 'errortext' => 'This resource is not allocated to this activity yet.']);
+
+        $db->createCommand(
+            "UPDATE pricing_estimate_resources_new SET task_ids=:t WHERE pricing_resourceid=:id",
+            [':t' => implode(',', $taskIds), ':id' => $perId]
+        )->execute();
+
+        return json_encode(['error' => 'No']);
     }
 //status active
 
@@ -24682,8 +25080,12 @@ public function actionActivitymusterprocess()
             )->execute();
             $iowId = (int)$db->lastInsertID;
             if ($pid) {
+                // Excludes the Overhead IOW group (17/18, pinned at
+                // sortorder 999999 to always sort last — see
+                // _seedProjectOverheadActivity) so real IOW groups keep a
+                // normal small sortorder range.
                 $nextSort = (int)($db->createCommand(
-                    "SELECT COALESCE(MAX(sortorder),0)+1 FROM workgroups_new WHERE Project_Id=:p", [':p' => $pid]
+                    "SELECT COALESCE(MAX(sortorder),0)+1 FROM workgroups_new WHERE Project_Id=:p AND iowGroupid NOT IN (17, 18)", [':p' => $pid]
                 )->queryScalar() ?? 1);
                 $db->createCommand(
                     "INSERT INTO workgroups_new

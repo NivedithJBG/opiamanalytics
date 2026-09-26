@@ -24,8 +24,8 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 /* ── Resource Library main popup ──────────────────────────── */
 #reslib-win {
   display:none; position:fixed;
-  top:80px; left:calc(50% - 480px);
-  width:960px; height:calc(100vh - 110px);
+  top:80px; left:calc(50% - 560px);
+  width:1120px; height:calc(100vh - 110px);
   min-width:480px; min-height:280px;
   background:#fff; border-radius:8px;
   box-shadow:0 8px 32px rgba(0,0,0,.35);
@@ -171,12 +171,10 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     </div>
 
     <div class="edit-form edit-resource-form">
-      <div class="row"><div class="col-md-1"></div>
+      <div class="row">
         <div class="col-md-2"><div class="form-group"><label>Resource Name</label>
           <input class="form-control" id="editresourcename" placeholder="Enter resource name" type="text">
           <span class="error" style="display:none;color:red;"></span></div></div>
-        <div class="col-md-2"><div class="form-group"><label>Unit</label>
-          <input class="form-control" id="editresourceunit" placeholder="e.g. kg, m, nos" type="text"></div></div>
         <div class="col-md-2"><div class="form-group"><label>Resource Type</label>
           <select id="editresourcetype" class="form-control"><option value="0">-- Select Type --</option>
             <?php foreach ($resourceTypes as $rt): ?>
@@ -189,6 +187,10 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
             <option value="<?php echo $rg->Resource_group_Id; ?>"><?php echo htmlspecialchars($rg->Resource_group_Name, ENT_QUOTES); ?></option>
             <?php endforeach; ?>
           </select></div></div>
+        <div class="col-md-1"><div class="form-group"><label>Unit</label>
+          <input class="form-control" id="editresourceunit" placeholder="e.g. kg, m, nos" type="text"></div></div>
+        <div class="col-md-2"><div class="form-group"><label>Rate</label>
+          <input class="form-control" id="editresourcerate" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"></div></div>
         <div class="col-md-3 text-left"><label>&nbsp;</label><br>
           <button type="button" class="btn btn-danger" id="cancelresources"><span class="icon-close"></span> Cancel</button>
           <button type="button" class="btn btn-primary" id="saveresourcebutton"><span class="icon-check"></span> Save</button>
@@ -251,7 +253,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     <div class="rl-sw-hdr-btns"><button class="rl-sw-close" data-target="rlResGroupPopup">&times;</button></div>
   </div>
   <div class="rl-sw-body">
-    <div class="row">
+    <div class="row rl-resgroup-add-row">
       <div class="col-md-4">
         <label>Resource Group Name</label>
         <input type="text" class="form-control" id="resgroupname1" placeholder="Group name">
@@ -291,23 +293,28 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
   <div class="rl-sw-body">
     <form id="addresourceform">
       <div class="row">
-        <div class="col-md-3"><div class="form-group"><label>Resource Type</label>
+        <div class="col-md-4"><div class="form-group"><label>Resource Name</label>
+          <input id="resourcename1" type="text" class="form-control" placeholder="Resource Name">
+          <span class="error" style="display:none;color:red;"></span></div></div>
+        <div class="col-md-4"><div class="form-group"><label>Resource Type</label>
           <select id="addresourcetype" class="form-control"><option value="0">-- Select Type --</option>
             <?php foreach ($resourceTypes as $rt): ?>
             <option value="<?php echo $rt->ResourceType_Id; ?>"><?php echo htmlspecialchars($rt->Name, ENT_QUOTES); ?></option>
             <?php endforeach; ?>
           </select></div></div>
-        <div class="col-md-3"><div class="form-group"><label>Resource Group</label>
+        <div class="col-md-4"><div class="form-group"><label>Resource Group</label>
           <select id="addresourcegroup" class="form-control"><option value="0">-- Select Group --</option>
             <?php foreach ($resourceGroups as $rg): ?>
             <option value="<?php echo $rg->Resource_group_Id; ?>"><?php echo htmlspecialchars($rg->Resource_group_Name, ENT_QUOTES); ?></option>
             <?php endforeach; ?>
           </select></div></div>
-        <div class="col-md-3"><div class="form-group"><label>Resource Name</label>
-          <input id="resourcename1" type="text" class="form-control" placeholder="Resource Name">
-          <span class="error" style="display:none;color:red;"></span></div></div>
-        <div class="col-md-3"><div class="form-group"><label>Unit</label>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <div class="col-md-6"><div class="form-group"><label>Unit</label>
           <input id="resourceunit1" type="text" class="form-control" placeholder="e.g. kg, m, nos">
+          </div></div>
+        <div class="col-md-6"><div class="form-group"><label>Rate</label>
+          <input id="resourcerate1" type="text" inputmode="decimal" autocomplete="off" class="form-control" placeholder="0.00">
           </div></div>
       </div>
     </form>
@@ -620,6 +627,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
         data:{
           resourcename: name,
           unit:         $('#resourceunit1').val().trim(),
+          rate:         $('#resourcerate1').val(),
           restypeid:    $('#addresourcetype').val(),
           resgroupid:   $('#addresourcegroup').val()
         },
@@ -628,6 +636,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
           if(d && d.error === 'No'){
             $('#resourcename1').val('').focus();
             $('#resourceunit1').val('');
+            $('#resourcerate1').val('');
             $('#addresourcetype').val('0');
             $('#addresourcegroup').html('<option value="0">-- Select Group --</option>');
             if($('#resourcelistsection').html().trim()){
@@ -708,7 +717,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
         var $sf = $('#searchresourcetype');
         var sfVal = $sf.val();
         $sf.html(allOpts).val(sfVal || '0');
-        /* sub-popup: Resource Group add form */
+        /* sub-popup: Resource Group/Resource add forms */
         ['addresgrouptype','addresourcetype'].forEach(function(id){
           $('#'+id).html(opts);
         });
@@ -718,6 +727,75 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
           if(sel){ var cur = sel.value; sel.innerHTML = opts; sel.value = cur; }
         });
       }
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     Resource Group sub-popup: true in-row editing — click the pencil,
+     the row's own Name cell becomes a text input and a Type <select>
+     appears in place, click the button again (now a checkmark) to save.
+     No separate form/section, no other window — the row itself is the
+     editor. Overrides the pencil's default onclick="openEditResGroup(this)"
+     (which targets a form in the main popup, hidden behind this
+     sub-popup's higher z-index) only inside this sub-popup.
+  ═══════════════════════════════════════════════════════════════ */
+  document.getElementById('rlResGroupPopup').addEventListener('click', function(e){
+    var editBtn = e.target.closest('button[onclick^="openEditResGroup"]');
+    var $row;
+    if (editBtn) {
+      e.stopPropagation(); e.stopImmediatePropagation(); e.preventDefault();
+      $row = $(editBtn).closest('tr');
+      if ($row.data('editing')) return; // already in edit mode
+      _rlEnterRowEdit($row, editBtn);
+      return;
+    }
+    var saveBtn = e.target.closest('.rl-resgroup-row-save');
+    if (saveBtn) {
+      e.stopPropagation(); e.preventDefault();
+      _rlSaveRowEdit($(saveBtn).closest('tr'));
+    }
+  }, true);
+
+  function _rlEnterRowEdit($row, editBtn){
+    var $btn = $(editBtn);
+    var id = $btn.data('id'), name = $btn.data('name'), typeId = $btn.data('typeid');
+    var $nameTd = $row.find('td').eq(1);
+    $row.data('editing', true).data('orig-name-html', $nameTd.html());
+    // Reuse the already-rendered "Add Resource Group" Type dropdown's
+    // options rather than a cached copy — always in sync, no load-order
+    // dependency on when the type list was last fetched.
+    var typeOptions = document.getElementById('addresgrouptype').innerHTML;
+    $nameTd.html(
+      '<input type="text" class="form-control input-sm rl-resgroup-row-name" style="display:inline-block;width:55%;" value="' + $('<div>').text(name).html() + '">'
+      + ' <select class="form-control input-sm rl-resgroup-row-type" style="display:inline-block;width:40%;">' + typeOptions + '</select>'
+    );
+    $nameTd.find('.rl-resgroup-row-type').val(typeId);
+    $btn.data('mode', 'save').removeClass('btn-default').addClass('btn-success rl-resgroup-row-save')
+        .html('<span class="icon-check"></span>')
+        .attr('onclick', null);
+    $nameTd.find('.rl-resgroup-row-name').trigger('focus');
+  }
+
+  function _rlSaveRowEdit($row){
+    var id = $row.data('id');
+    var name = $row.find('.rl-resgroup-row-name').val().trim();
+    var typeId = $row.find('.rl-resgroup-row-type').val();
+    if (name === '') { $row.find('.rl-resgroup-row-name').trigger('focus'); return; }
+    var $btn = $row.find('.rl-resgroup-row-save');
+    $.ajax({
+      type: 'POST', url: '../resourcegroup/update', dataType: 'json',
+      data: { resgrpid: id, name: name, restypeid: typeId },
+      beforeSend: function(){ $btn.attr('disabled', true); },
+      success: function(data){
+        $btn.attr('disabled', false);
+        if (data.error === 'No') {
+          rlLoadResGroupList();
+          rlRefreshTypeDropdownsFromDB();
+        } else {
+          alert(data.errortext);
+        }
+      },
+      error: function(){ $btn.attr('disabled', false); alert('Could not save changes.'); }
     });
   }
 

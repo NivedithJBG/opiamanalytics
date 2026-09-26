@@ -1,4 +1,4 @@
-$(document).on( "click", "#acc-heads", function(){   
+$(document).on( "click", "#acc-heads", function(){
 
     if(!$(this).next().is(':hidden') ) { //If immediate next container is closed...
 
@@ -182,7 +182,7 @@ $(document).on( "change","#accountgrpsupdate", function(){
 
 });
 
-$(document).on( "click", "#saveaccounts", function(){ 
+$(document).on( "click", "#saveaccounts", function(){
 
     var error=0;
 
@@ -193,16 +193,6 @@ $(document).on( "click", "#saveaccounts", function(){
     {
 
         $("#accountsname").next("span").html('Enter Account Name').show('slow');
-
-        error=1;
-
-    }
-
-    if(AccountName($('#accountsname').val())=='Yes')
-
-    {
-
-        $('#accountsname').next("span").html('Account Name Exists').show('slow');
 
         error=1;
 
@@ -228,84 +218,113 @@ $(document).on( "click", "#saveaccounts", function(){
 
     }
 
-    if(error==0){
+    if(error!=0) return;
 
-        if ($('#cash').is(':checked')) {
-
-          var  account_type=1;
-
-        }
-
-        if ($('#bank').is(':checked')) {
-
-            var  account_type=2;
-
-        }
-
-        if ($('#schedule').is(':checked')) {
-
-            var  schedule=3;
-
-        }
-
-        $.ajax({
-
-            type:'POST',
-
-            url:'../accountsitem/create',
-
-            beforeSend:function(){
-
-                $('#saveaccounts').attr("disabled", true);
-
-            },
-
-            dataType:'json',
-
-            data: $("#accountsform" ).serialize(),
-            success:function(data){
-
-                if(data.error=='No')
-
-                {
-
-                    $('#accountsform')[0].reset();
-
-                    $('.accountheads-tab').removeClass('addAccountHeadsForm-active');
-             
-                    $('#accountsitems').show();
-
-                    $('#listaccounts').trigger('click');
-
-                    $('#saveaccounts').attr("disabled", false);
-
-                    $('#searcselecttype').append($('<option>', {
-
-                     value: data.Id,
-
-                     text: data.Name
-
-                     }));
-
-                }
-
-                else
-
-                {
-
-                    alert(data.errortext);
-
-                }
-
+    // Duplicate-name check is async (the old synchronous XHR here could
+    // hang the whole tab indefinitely on any network hiccup — the actual
+    // save request would never even fire, which is what made this look
+    // like it was stuck "revolving" with no server request ever logged).
+    $('#saveaccounts').attr("disabled", true);
+    $.ajax({
+        type: 'POST',
+        url: '../accountsitem/checkname',
+        data: {name: $('#accountsname').val()},
+        success: function(nameCheck){
+            if(nameCheck=='Yes'){
+                $('#accountsname').next("span").html('Account Name Exists').show('slow');
                 $('#saveaccounts').attr("disabled", false);
-
+                return;
             }
+            _saveAccountHead();
+        },
+        error: function(){
+            $('#saveaccounts').attr("disabled", false);
+            alert('Could not verify account name. Please try again.');
+        }
+    });
 
-        });
+});
+
+function _saveAccountHead(){
+
+    if ($('#cash').is(':checked')) {
+
+      var  account_type=1;
 
     }
 
-});
+    if ($('#bank').is(':checked')) {
+
+        var  account_type=2;
+
+    }
+
+    if ($('#schedule').is(':checked')) {
+
+        var  schedule=3;
+
+    }
+
+    $.ajax({
+
+        type:'POST',
+
+        url:'../accountsitem/create',
+
+        dataType:'json',
+
+        data: $("#accountsform" ).serialize(),
+        success:function(data){
+
+            if(data.error=='No')
+
+            {
+
+                $('#accountsform')[0].reset();
+
+                $('.accountheads-tab').removeClass('addAccountHeadsForm-active');
+
+                $('#accountsitems').show();
+
+                $('#listaccounts').trigger('click');
+
+                $('#searcselecttype').append($('<option>', {
+
+                 value: data.Id,
+
+                 text: data.Name
+
+                 }));
+
+                // Collapse the Account Heads accordion panel back closed —
+                // this popup has no separate add-form/list-view toggle (the
+                // #accountsaddsection/#accountslistsection IDs the code above
+                // targets don't exist here), so without this the form just
+                // stayed open after a successful save.
+                $('.acc_trigger').removeClass('active').next().slideUp();
+
+            }
+
+            else
+
+            {
+
+                alert(data.errortext);
+
+            }
+
+            $('#saveaccounts').attr("disabled", false);
+
+        },
+
+        error: function(){
+            $('#saveaccounts').attr("disabled", false);
+            alert('Save failed. Please try again.');
+        }
+
+    });
+
+}
 
 $('.accountype').change(function() {
 

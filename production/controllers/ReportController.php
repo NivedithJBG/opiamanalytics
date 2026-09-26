@@ -417,7 +417,7 @@ class ReportController extends Controller
 
         $html .= '<div style="flex:0 0 110px;">';
         $html .= '<label style="' . $labelStyle . '">Report Date</label>';
-        $html .= '<input type="text" name="reportdate" class="form-control datepicker" value="' . $todayDisp . '" autocomplete="off"'
+        $html .= '<input type="text" name="reportdate" class="form-control datepicker-nomax" value="' . $todayDisp . '" autocomplete="off"'
             . ' style="' . $inputStyle . 'width:100%;">';
         $html .= '</div>';
 

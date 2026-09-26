@@ -23,7 +23,7 @@ use app\models\AccountTypes;
 
                     
                         <div class="panel panel-default acco-one accounttype-tab tab tab-wrapper">
-                            <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/masters/accounttypes.js" type="text/javascript"></script>
+                            <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/masters/accounttypes.js?v=<?php echo time(); ?>" type="text/javascript"></script>
                             <input type="radio" id="rd3" class="acc-types" name="rd">
                                     
                             <div class="panel-heading" >
@@ -283,7 +283,7 @@ use app\models\AccountTypes;
                         <div class="panel panel-default accountheads-tab tab acco-four">
                             <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 
-                            <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/masters/accounts.js" type="text/javascript"></script>
+                            <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/masters/accounts.js?v=<?php echo time(); ?>" type="text/javascript"></script>
                             <input type="radio" id="rd5" class="acc-heads" name="rd">
                                             
                             <div class="panel-heading">
@@ -394,7 +394,7 @@ use app\models\AccountTypes;
                                                     <th><span class="headings">&nbsp;</span></th>-->
                                                 </tr>                                            
                                                 <?php 
-                                                $groups=Accountsmaster::find()->Where(['NOT LIKE', 'name', 'Project Expenditure'])->andWhere(['NOT LIKE', 'name', 'Corporate Expenditure'])->andWhere(['Status'=>0])->all();
+                                                $groups=Accountsmaster::find()->Where(['NOT LIKE', 'name', 'Corporate Expenditure'])->andWhere(['Status'=>0])->all();
                                                 foreach($groups AS $group): 
                                                     if($group->id==1){
                                                 ?>      

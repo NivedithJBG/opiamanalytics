@@ -444,20 +444,22 @@ span.gfoldercollapse {
 /*  END Task bar styles */
 
 .glinev {
-  border-left: 1px solid;
+  border-left: 2px solid;
   width: 0px;
+  cursor: pointer;
 }
 
 .glineh {
-  border-top: 1px solid;
+  border-top: 2px solid;
   height: 0px;
+  cursor: pointer;
 }
 
 .gDepFS,
 .gDepSS,
 .gDepSF,
 .gDepFF {
-  border-color: #ff0000;
+  border-color: #4B0082;
 }
 
 .gDepFSArw,
@@ -465,10 +467,10 @@ span.gfoldercollapse {
   overflow: hidden;
   width: 0px;
   height: 0px;
-  border-bottom: 4px solid transparent;
-  border-left: 4px solid #ff0000;
-  border-top: 4px solid transparent;
-  border-right: 4px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 7px solid #4B0082;
+  border-top: 7px solid transparent;
+  border-right: 7px solid transparent;
 }
 
 .gDepFFArw,
@@ -476,10 +478,10 @@ span.gfoldercollapse {
   overflow: hidden;
   width: 0px;
   height: 0px;
-  border-bottom: 4px solid transparent;
-  border-left: 4px solid transparent;
-  border-top: 4px solid transparent;
-  border-right: 4px solid #ff0000;
+  border-bottom: 7px solid transparent;
+  border-left: 7px solid transparent;
+  border-top: 7px solid transparent;
+  border-right: 7px solid #4B0082;
 }
 
 .gCurDate {

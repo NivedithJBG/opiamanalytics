@@ -306,7 +306,20 @@ class AccountsitemController extends Controller
                     $command=$connection->createCommand($sql);
                     $dataReader=$command->query();
 
-                    $subgroup=Accountsmaster::findOne($groups[$i]); 
+                    // Account Heads filed under "Project General Expenses"
+                    // (accounts_sub.id=112) or " Support Expenses" (id=124,
+                    // leading space is real data, not a typo) automatically
+                    // become Resource Library entries under Resource Type
+                    // "Support Resources" (ResourceType_Id=22) / Resource
+                    // Group "Site Overhead" (Resource_group_Id=23), Unit=
+                    // Days, rate defaulted to 1 (edited manually per
+                    // project as needed) — see
+                    // _syncOverheadResourceForAccountHead for the idempotent
+                    // create-if-missing logic (keyed by resources.
+                    // Resource_Acc_Id, unused anywhere else in this app).
+                    $this->_syncOverheadResourceForAccountHead((int)$model->id, (int)$_POST['accountsubgrps'.$groups[$i]]);
+
+                    $subgroup=Accountsmaster::findOne($groups[$i]);
 
                     if($subgroup->name=='Project Expenditure'){
 
@@ -502,7 +515,96 @@ class AccountsitemController extends Controller
 
     }
 
-    public function actionCreateaccountype()  
+    /**
+     * Creates a Resource Library entry for an Account Head filed under
+     * either of the two Overhead-tracking sub-groups (see actionCreate's
+     * call site and actionBackfilloverheadresources below for the
+     * project-wide backfill). Idempotent — checked by resources.
+     * Resource_Acc_Id, which is otherwise unused in this app (confirmed
+     * via DB audit before wiring this up), so it's safe to repurpose as
+     * this link. No-op for any other sub-group id.
+     *
+     * Both sub-groups map to Resource Type "Support Resources"
+     * (ResourceType_Id=22), but each gets its OWN Resource Group AND Unit
+     * so the two stay separated in the Resource Library, not combined:
+     *   - sub-group 124 (" Support Expenses")   -> Resource Group 23 "Site Overhead", Unit=Days
+     *   - sub-group 112 ("Project General Expenses") -> Resource Group 25 "Project General expenses", Unit=L.S
+     */
+    private function _syncOverheadResourceForAccountHead($accountHeadId, $subgrpId)
+    {
+        $resourceGroupBySubgrp = [124 => 23, 112 => 25];
+        $unitBySubgrp          = [124 => 'Days', 112 => 'L.S'];
+        if (!$accountHeadId || !isset($resourceGroupBySubgrp[$subgrpId])) return;
+
+        $db = \Yii::$app->db;
+        $exists = $db->createCommand(
+            "SELECT Resource_Id FROM resources WHERE Resource_Acc_Id=:id LIMIT 1",
+            [':id' => $accountHeadId]
+        )->queryScalar();
+        if ($exists) return;
+
+        $head = $db->createCommand(
+            "SELECT name FROM accounts_item WHERE id=:id LIMIT 1",
+            [':id' => $accountHeadId]
+        )->queryOne();
+        if (!$head) return;
+
+        $db->createCommand()->insert('resources', [
+            'Name'             => $head['name'],
+            'Unit'             => $unitBySubgrp[$subgrpId],
+            'Price'            => 1, // default rate — edited manually per project as needed
+            'ResourceType_Id'  => 22, // Support Resources
+            'Resource_group_Id'=> $resourceGroupBySubgrp[$subgrpId],
+            'Vendor_Id'        => 0,
+            'lead_time'        => 0,
+            'credit_period'    => 0,
+            'Project_Id'       => 0,
+            'Status'           => 0,
+            'Added_On'         => date('Y-m-d H:i:s'),
+            'Added_By'         => \Yii::$app->user->id ?: 0,
+            'sortorder'        => 0,
+            'Resource_Acc_Id'  => $accountHeadId,
+            'Resource_Location'=> '',
+            'pricing_status'   => 0,
+            'log_check'        => 0,
+            'Quantity'         => 0,
+            'reg_number'       => '',
+            'id_number'        => '',
+            'capacity'         => '',
+            'current_project'  => 0,
+        ])->execute();
+    }
+
+    /**
+     * One-off backfill: creates the missing Resource Library entry for
+     * every Account Head already sitting under the two Overhead sub-groups
+     * (112, 124) from before this auto-sync existed. Safe to call
+     * repeatedly — reuses the same idempotent check as the live hook in
+     * actionCreate(). Same convention as ProjectsController::
+     * actionBackfillprojectoverhead().
+     */
+    public function actionBackfilloverheadresources()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $db = \Yii::$app->db;
+        $rows = $db->createCommand(
+            "SELECT sa.account_id, sa.subgrp_id
+             FROM subgroup_accounts sa
+             WHERE sa.subgrp_id IN (112, 124)"
+        )->queryAll();
+        $created = 0;
+        foreach ($rows as $r) {
+            $before = $db->createCommand(
+                "SELECT Resource_Id FROM resources WHERE Resource_Acc_Id=:id LIMIT 1",
+                [':id' => (int)$r['account_id']]
+            )->queryScalar();
+            $this->_syncOverheadResourceForAccountHead((int)$r['account_id'], (int)$r['subgrp_id']);
+            if (!$before) $created++;
+        }
+        return ['error' => 'No', 'created' => $created, 'checked' => count($rows)];
+    }
+
+    public function actionCreateaccountype()
     {
         $model=New AccountTypes();
         $model->name=$_POST['accounttypename'];
@@ -619,10 +721,17 @@ class AccountsitemController extends Controller
             $dataProvider = $dataReader->readAll();
         }
         elseif($_POST['type'] != 'none') {
+            // Filtering by Account Type alone should show every account
+            // head of that type, whether or not it's been assigned to a
+            // sub-group — most Liabilities accounts (individual vendor/
+            // supplier heads) never get mapped to a sub-group at all, so
+            // requiring c.Status=0 (a match in accounts_sub) silently
+            // excluded the vast majority of them. Only exclude a head
+            // whose sub-group mapping exists but is itself INACTIVE.
             $sql = "SELECT a.id,a.Status,a.name,a.tds,a.servicetax,a.account_type,a.resource_id,a.schedule,a.favourite,c.name AS subname,a.resource_group FROM accounts_item AS a LEFT JOIN subgroup_accounts AS b  on a.id=b.account_id LEFT JOIN accounts_sub AS c on b.subgrp_id=c.id WHERE a.account_type ='" . $_POST['type'] . "' ";
             if ($_POST['accounts'] != '')
                 $sql .= " AND a.name LIKE '%" . $_POST['accounts'] . "%' ";
-            $sql .= "AND a.Status=0 AND c.Status=0 GROUP BY a.id ORDER BY a.name ASC";
+            $sql .= "AND a.Status=0 AND (c.Status=0 OR c.Status IS NULL) GROUP BY a.id ORDER BY a.name ASC";
             //echo $sql;exit;
             $command = $connection->createCommand($sql);
             $dataReader = $command->query();
@@ -759,7 +868,15 @@ class AccountsitemController extends Controller
                 $types=AccountTypes::findOne($data['account_type']);
                 if(!$types){ $types=['name'=>'']; }
                 if($data['resource_id']!=0){
-                    $resunits=Resources::find($data['resource_id'])->one()->Name; 
+                    // Several Expense account heads carry a resource_id that
+                    // no longer matches any row in resources (dangling
+                    // reference) — ->one() then returns null and ->Name
+                    // fataled the whole request. Fall back to blank, same
+                    // pattern already used above for a missing AccountTypes
+                    // match, instead of crashing the list for every account
+                    // after the bad one.
+                    $resModel = Resources::find($data['resource_id'])->one();
+                    $resunits = $resModel ? $resModel->Name : '';
                 }
                 else{
                     $resunits='';
@@ -1479,9 +1596,17 @@ class AccountsitemController extends Controller
                         $sql="INSERT INTO subgroup_accounts (group_id,subgrp_id,accountschedule_id,account_id,bsitem_id) VALUES ('".$groups[$i]."','".$_POST['accountsubgrps'.$groups[$i]]."','','".$model->id."','".$bsitems."')";
                         $command=$connection->createCommand($sql);
                         $dataReader=$command->query();
+
+                        // Same auto-add-to-Resource-Library sync as
+                        // actionCreate() (see
+                        // _syncOverheadResourceForAccountHead) — an
+                        // existing Account Head re-grouped under
+                        // "Support Expenses"/"Project General Expenses"
+                        // during an edit must sync just like a new one.
+                        $this->_syncOverheadResourceForAccountHead((int)$model->id, (int)$_POST['accountsubgrps'.$groups[$i]]);
                     }
                 }
-            endif;                        
+            endif;
 
             $arr = array('Id' => $model->id,'error'=>'No');
             return json_encode($arr);
@@ -1581,6 +1706,19 @@ class AccountsitemController extends Controller
                 $model = $this->findModel($_POST['accountid']);
                 $model->Status = 1;
                 $model->save(false);
+
+                // Deactivate (same soft-delete convention, Status=1 —
+                // never hard-DELETE, so it stays visible/traceable in
+                // reports referencing it) the Resource Library entry this
+                // Account Head auto-created, if any (Support Resources /
+                // Site Overhead sync, see _syncOverheadResourceForAccountHead).
+                // Without this, deleting an Account Head left its resource
+                // behind with no indication the source was gone.
+                $connection->createCommand(
+                    "UPDATE resources SET Status=1 WHERE Resource_Acc_Id=:id",
+                    [':id' => $_POST['accountid']]
+                )->execute();
+
                 $arr = array('Id' => $_POST['accountid'],'error'=>'No');
                 return json_encode($arr);
             endif;
