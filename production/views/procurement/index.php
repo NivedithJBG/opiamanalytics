@@ -500,7 +500,8 @@
         <div id="wo-body"></div>
     </div>
     <div id="procu-tab-LO" class="procu-tab-content">
-        <p class="procu-empty">No lease orders found.</p>
+        <div id="lo-loader" class="procu-loader">Loading...</div>
+        <div id="lo-body"></div>
     </div>
 
 </div>
@@ -643,7 +644,7 @@
 </div>
 
 <!-- Work Orders Task Modal -->
-<div id="wo-task-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;overflow-y:auto;">
+<div id="wo-task-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;background:transparent;z-index:9999;overflow-y:auto;">
     <div style="background:#fff;margin:40px auto;max-width:860px;border-radius:6px;padding:26px 30px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
         <button id="wo-task-modal-close" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;color:#888;cursor:pointer;line-height:1;" title="Close">&times;</button>
         <h4 id="wo-task-modal-title" style="margin:0 0 18px;font-size:15px;font-weight:700;color:#333;padding-right:30px;"></h4>
@@ -655,61 +656,104 @@
 (function(){
     var _poAllRows = [];
 
-    /* This whole view is loaded via $('#procurement-win-body').html(html)
-       (see main.php's #procurement-win), so every popup declared as static
-       markup below — po-bulk-popup, po-raisepo-popup, po-param-popup and
-       their overlays — is a DOM descendant of #procurement-win, not of
-       <body>. #procurement-win is position:fixed with an explicit z-index,
-       which makes it a stacking context: no z-index we set on a popup
-       trapped inside it can ever paint above a body-level sibling like
-       #procu-win-PO, no matter how high the number is. Move them out to
-       <body> immediately (same escape main.php already does for the other
-       floaters at its "Ensure all floating popups are direct children of
-       body" script), so their z-index is compared globally instead.       */
-    ['po-bulk-overlay','po-bulk-popup','po-raisepo-overlay','po-raisepo-popup','po-param-overlay','po-param-popup'].forEach(function(id){
-        var el = document.getElementById(id);
-        if (el && el.parentNode !== document.body) document.body.appendChild(el);
+    /* ═══════════════════════════════════════════════════════════════════
+       PROCUREMENT WINDOW STACKING — single source of truth
+       ═══════════════════════════════════════════════════════════════════
+       The Procurement screen is three levels deep:
+         Order Management (#procurement-win, outer floater)
+           -> PO / WO / LO tab window (#procu-win-PO / -WO / -LO, its own
+              floater, created on demand, appended straight to <body>)
+             -> small popups opened from inside a tab window (Raise PO,
+                Bulk PO, Parameters, Tasks, Compose email, Cancellation
+                mail...)
+
+       Two rules make this work everywhere, always:
+
+       1. EVERY popup must be a direct child of <body> before it's ever
+          shown. This whole view's markup — including every popup declared
+          below — arrives via $('#procurement-win-body').html(html), so by
+          default it's nested inside #procurement-win. #procurement-win is
+          position:fixed with its own z-index, which makes it a CSS
+          stacking context: a descendant's z-index can NEVER out-rank a
+          body-level sibling floater (like a tab window), no matter the
+          number. Run once, up front, for every popup in PROCU_POPUPS.
+
+       2. A popup's z-index is always computed live from its actual
+          ancestor chain at the moment it's shown or re-raised — never
+          cached, never assumed. _procuStackZ(tabWinId) returns a value
+          guaranteed above both #procurement-win's and the tab window's
+          current z-index (either can be re-raised independently by the
+          user clicking it), building on the shared app-wide counter
+          (window.popupSubZBase()) as a floor.
+       ═══════════════════════════════════════════════════════════════════ */
+
+    /* [overlayId, popupId, tabWinId] for every overlay+popup pair, plus
+       [null, popupId, tabWinId] for popups with no separate overlay
+       element (wo-task-modal is itself the full-screen dim backdrop).
+       tabWinId is which tab window this popup belongs to, so its z-index
+       is always measured against the right ancestor. */
+    var PROCU_POPUPS = [
+        ['po-param-overlay',       'po-param-popup',       'procu-win-PO'],
+        ['po-bulk-overlay',        'po-bulk-popup',        'procu-win-PO'],
+        ['po-raisepo-overlay',     'po-raisepo-popup',     'procu-win-PO'],
+        ['po-compose-overlay',     'po-compose-popup',     'procu-win-PO'],
+        ['po-cancel-mail-overlay', 'po-cancel-mail-popup', 'procu-win-PO'],
+        [null,                     'wo-task-modal',        'procu-win-WO'],
+        ['wo-raise-overlay',       'wo-raise-popup',       'procu-win-WO'],
+        ['wo-compose-overlay',     'wo-compose-popup',     'procu-win-WO'],
+        ['wo-cancel-mail-overlay', 'wo-cancel-mail-popup', 'procu-win-WO']
+    ];
+
+    PROCU_POPUPS.forEach(function(row){
+        [row[0], row[1]].forEach(function(id){
+            var el = id && document.getElementById(id);
+            if (el && el.parentNode !== document.body) document.body.appendChild(el);
+        });
     });
 
-    /* Sub-popups (Parameters / Raise Purchase Order / Raise Purchase Orders
-       bulk) are opened from inside the PO tab's own cascading window
-       (#procu-win-PO), whose z-index rises independently of the outer
-       Procurement floater (it's not in main.php's shared `floaters` list —
-       see _procuNextZ() below). window.popupSubZBase() only tracks the
-       outer floater's ceiling, so once #procu-win-PO has been clicked/
-       dragged even once, its z-index overtakes popupSubZBase() and these
-       popups render behind it. Always build on whichever ceiling is
-       actually highest right now. */
-    function _procuPopupZ(){
+    /* Always-current z-index floor for a popup that belongs to tabWinId:
+       above the shared app-wide counter AND above both #procurement-win
+       and the tab window's live z-index right now (not a stale snapshot
+       from whenever the popup first opened). */
+    function _procuStackZ(tabWinId){
         var base = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 9998;
-        var tabWin = document.getElementById('procu-win-PO');
-        if (tabWin) {
-            var tabZ = parseInt(getComputedStyle(tabWin).zIndex, 10) || 0;
-            if (tabZ + 2 > base) base = tabZ + 2;
-        }
-        if (window.__procuDebug) console.log('[procu-z] _procuPopupZ ->', base, 'tabWinZ=', tabWin && getComputedStyle(tabWin).zIndex, 'subZBase=', (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : null);
+        ['procurement-win', tabWinId].forEach(function(id){
+            var el = id && document.getElementById(id);
+            if (el) {
+                var z = parseInt(getComputedStyle(el).zIndex, 10) || 0;
+                if (z + 2 > base) base = z + 2;
+            }
+        });
         return base;
     }
 
-    /* Called by #procu-win-PO's own raise() (see _procuBuildWin below) every
-       time that window is clicked/dragged, so whichever of these sub-popups
-       is currently open gets pushed back above it instead of being buried
-       by the window's own re-raise. */
-    window._procuReraiseOpenSubPopups = function(){
-        var overlayPopupPairs = [
-            ['po-param-overlay', 'po-param-popup'],
-            ['po-bulk-overlay', 'po-bulk-popup'],
-            ['po-raisepo-overlay', 'po-raisepo-popup']
-        ];
-        overlayPopupPairs.forEach(function(pair){
-            var popup = document.getElementById(pair[1]);
-            if (popup && getComputedStyle(popup).display !== 'none') {
-                var z = _procuPopupZ();
-                document.getElementById(pair[0]).style.zIndex = z;
-                popup.style.zIndex = z + 1;
-            }
+    /* Raises whichever popups are currently open (display !== 'none') for
+       a given tab window, above that window's live z-index. Called both
+       right after a popup is shown, and every time its tab window (or
+       Order Management) is re-raised, via registerSubPopupReraise below —
+       so a popup that's already open never gets silently buried by a
+       later click on its own ancestor window. */
+    function _procuRaiseOpenPopups(tabWinId){
+        PROCU_POPUPS.forEach(function(row){
+            var overlayId = row[0], popupId = row[1], winId = row[2];
+            if (winId !== tabWinId) return;
+            var popup = document.getElementById(popupId);
+            if (!popup || getComputedStyle(popup).display === 'none') return;
+            var z = _procuStackZ(tabWinId);
+            if (overlayId) document.getElementById(overlayId).style.zIndex = z;
+            popup.style.zIndex = overlayId ? z + 1 : z;
         });
-    };
+    }
+
+    /* Back-compat wrappers: the rest of this file calls _procuPopupZ()/
+       _woPopupZ() directly at the moment a popup is opened (before it's
+       visible, so _procuRaiseOpenPopups can't find it yet), and registers
+       _procuReraiseOpenSubPopups/_woReraiseOpenSubPopups against each tab
+       window's own raise(). Both tabs now share one real implementation. */
+    function _procuPopupZ(){ return _procuStackZ('procu-win-PO'); }
+    function _woPopupZ(){ return _procuStackZ('procu-win-WO'); }
+    window._procuReraiseOpenSubPopups = function(){ _procuRaiseOpenPopups('procu-win-PO'); };
+    window._woReraiseOpenSubPopups    = function(){ _procuRaiseOpenPopups('procu-win-WO'); };
 
     function loadPurchaseOrders() {
         $('#po-loader').show();
@@ -846,7 +890,7 @@
                 + '<button type="button" class="btn btn-xs po-btn-params" data-id="' + rid + '" style="background:#465365;color:#fff;border-radius:20px;padding:6px 16px;margin:2px 2px;font-size:12px;">Parameters</button>'
                 + '</td>'
                 + '<td style="text-align:center;padding:4px 8px;">'
-                + '<input type="checkbox" class="po-cb" value="' + rid + '" data-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-unit="' + String(r.unit || '').replace(/"/g, '&quot;') + '" data-allocation-id="' + (r.allocation_id || '') + '" data-task-ids="' + (r.task_ids || '') + '" style="width:16px;height:16px;cursor:pointer;accent-color:#072c47;">'
+                + '<input type="checkbox" class="po-cb" value="' + rid + '" data-name="' + String(r.resource_name || '').replace(/"/g, '&quot;') + '" data-unit="' + String(r.unit || '').replace(/"/g, '&quot;') + '" data-allocation-id="' + (r.allocation_id || '') + '" data-activity-id="' + (r.activity_id || '') + '" data-task-ids="' + (r.task_ids || '') + '" style="width:16px;height:16px;cursor:pointer;accent-color:#072c47;">'
                 + '</td>'
                 + '</tr>';
         });
@@ -866,6 +910,100 @@
         clearTimeout(window._poFilterTimer);
         window._poFilterTimer = setTimeout(applyPoFilters, 250);
     });
+
+    // ── Lease Orders tab — read-only list (no raise/email/cancel workflow
+    // yet). Modeled on loadPurchaseOrders()/renderPoTable() above, but
+    // simplified: no filter bar, no checkboxes, no editable rate/qty
+    // inputs, no Stock-at-Site/Re-Order columns (those come from
+    // store_indents, which the LO backend query doesn't join — that's a
+    // Materials/Indents-specific concept with no equivalent for leased
+    // equipment).
+    var _loAllRows = [];
+    function loadLeaseOrders() {
+        $('#lo-loader').show();
+        $('#lo-body').html('');
+        $.ajax({
+            type: 'POST',
+            url: '../procurement/leaseorders',
+            dataType: 'json',
+            success: function(data) {
+                $('#lo-loader').hide();
+                if (data.error !== 'No') {
+                    $('#lo-body').html('<p class="procu-empty">' + (data.errortext || 'Error loading data.') + '</p>');
+                    return;
+                }
+                if (!data.rows || data.rows.length === 0) {
+                    $('#lo-body').html('<p class="procu-empty">No Leased Equipment allocated in Estimate.</p>');
+                    return;
+                }
+                _loAllRows = data.rows;
+                window._loProjectName     = data.project_name     || '';
+                window._loProjectLocation = data.project_location || '';
+                renderLoTable(_loAllRows);
+            },
+            error: function() {
+                $('#lo-loader').hide();
+                $('#lo-body').html('<p class="procu-empty">Failed to load data. Please try again.</p>');
+            }
+        });
+    }
+
+    function renderLoTable(rows) {
+        if (!rows.length) {
+            $('#lo-body').html('<p class="procu-empty">No matching resources found.</p>');
+            return;
+        }
+        var projLabel = '';
+        if (window._loProjectName) {
+            var projText = window._loProjectName;
+            if (window._loProjectLocation) projText += ' — ' + window._loProjectLocation;
+            projLabel = '<div style="padding:10px 20px 0;font-size:12px;font-weight:600;color:#465365;letter-spacing:0.3px;">'
+                + '<span style="background:#e8edf3;border-radius:4px;padding:3px 10px;">'
+                + '<span style="color:#888;font-weight:400;">Project: </span>' + projText
+                + '</span></div>';
+        }
+        var html = projLabel + '<table class="table table-bordered procu-table" style="margin-top:14px;">'
+            + '<thead><tr>'
+            + '<th>#</th>'
+            + '<th>Resource</th>'
+            + '<th>Unit</th>'
+            + '<th style="text-align:right;">E.Qty</th>'
+            + '<th style="text-align:right;">Rate</th>'
+            + '<th style="text-align:right;">Amount</th>'
+            + '</tr></thead><tbody>';
+        var rowNum = 0;
+        var currentType = null;
+        var totalAmount = 0;
+        $.each(rows, function(i, r) {
+            if (r.resource_type !== currentType) {
+                currentType = r.resource_type;
+                html += '<tr><td colspan="6" style="border:none;padding:0;height:7px;background:#fff;"></td></tr>'
+                    + '<tr style="background:#c8c8c8;">'
+                    + '<td colspan="6" style="padding:6px 10px;font-weight:700;font-size:11px;color:#000;border:1px solid #bbb;letter-spacing:0.3px;">'
+                    + currentType
+                    + '</td></tr>';
+            }
+            rowNum++;
+            var amount = parseFloat(r.amount) || 0;
+            totalAmount += amount;
+            html += '<tr class="' + (rowNum % 2 === 0 ? 'procu-even' : '') + '">'
+                + '<td>' + rowNum + '</td>'
+                + '<td>' + r.resource_name
+                    + (r.activity_name ? '<div style="font-size:10px;color:#7a8a9a;margin-top:1px;">' + r.activity_name + '</div>' : '')
+                    + '</td>'
+                + '<td>' + (r.unit || '') + '</td>'
+                + '<td class="num" style="background:#e6e6e6;color:#333;">' + parseFloat(r.estimated_quantity).toLocaleString(undefined, {maximumFractionDigits:2}) + '</td>'
+                + '<td class="num">' + (parseFloat(r.rate) || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>'
+                + '<td class="num">' + amount.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>'
+                + '</tr>';
+        });
+        html += '<tr style="background:#d0d8e8;font-weight:700;font-size:13px;">'
+            + '<td colspan="5" style="text-align:right;padding:7px 10px;border:1px solid #b0b8c8;letter-spacing:0.3px;">Total</td>'
+            + '<td class="num" style="background:#c4cfe0;color:#1a2540;border:1px solid #b0b8c8;">' + totalAmount.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + '</td>'
+            + '</tr>';
+        html += '</tbody></table>';
+        $('#lo-body').html(html);
+    }
 
     function recalcAmount(rid) {
         var qty  = parseFloat($('.po-reorder-input[data-id="' + rid + '"]').val()) || 0;
@@ -1075,6 +1213,7 @@
             resources.push({
                 resource_id:   rid,
                 allocation_id: $(this).data('allocation-id') || '',
+                activity_id:   $(this).data('activity-id') || '',
                 resource_name: $(this).data('name') || '',
                 unit:          $(this).data('unit') || '',
                 qty:           qty,
@@ -2093,6 +2232,7 @@
         $('#wo-task-modal-title').text(name);
         $('#wo-task-modal-body').html('<p style="text-align:center;padding:30px;color:#888;">Loading...</p>');
         $('#wo-task-modal').show();
+        if (typeof window._woReraiseOpenSubPopups === 'function') window._woReraiseOpenSubPopups();
         $.ajax({
             type: 'POST',
             url: '../procurement/wotasks',
@@ -2308,14 +2448,8 @@
     var _procuTabWins = {};   // tab -> window element
     var _procuTabLoaded = {}; // tab -> bool, has its data-load fired yet
     var _procuTabIds = ['PO', 'WO', 'LO'];
-    var _procuWinZ = 999999;
     var _procuSeqState = { n: 0 };
 
-    function _procuNextZ(){
-        var base = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 999999;
-        if (base >= _procuWinZ) _procuWinZ = base;
-        return ++_procuWinZ;
-    }
     function _procuOpenSeq(){
         var anyOpen = _procuTabIds.some(function(t){
             var w = _procuTabWins[t];
@@ -2336,6 +2470,7 @@
         var win = document.createElement('div');
         win.className = 'procu-tab-win';
         win.id = 'procu-win-' + tab;
+        if (tab === 'WO') win.style.width = '92vw';
 
         var hdr = document.createElement('div');
         hdr.className = 'procu-tab-win-hdr';
@@ -2403,18 +2538,20 @@
         bdt(document, 'mouseup', function(){ _action = null; });
 
         function raise(){
-            win.style.setProperty('z-index', _procuNextZ(), 'important');
-            if (window.__procuDebug) console.log('[procu-z] raise() tab=', tab, 'newZ=', win.style.zIndex);
-            /* This window's own mousedown-raise (below) fires on every click
-               inside it — including the click that opens a sub-popup like
-               Parameters/Raise PO — so if the sub-popup is already open and
-               the user clicks the window again, this would otherwise push
-               #procu-win-PO back above it. Re-raise any open sub-popup so it
-               always stays on top of this window, same pattern as
-               registerSubPopupReraise() in main.php for the other floaters. */
-            if (tab === 'PO' && typeof window._procuReraiseOpenSubPopups === 'function') {
-                window._procuReraiseOpenSubPopups();
+            /* Delegates to the app-wide floater authority (main.php) instead
+               of a locally-hardcoded counter, so this window's stacking
+               order interleaves correctly by actual click order with every
+               other floating window in the app — not just within
+               Procurement. popupBringToFront also re-raises this window's
+               own registered sub-popups (Parameters/Raise PO/Bulk, see the
+               registerSubPopupReraise call below), so the old manual
+               _procuReraiseOpenSubPopups() call here is no longer needed. */
+            if (typeof window.popupBringToFront === 'function') {
+                window.popupBringToFront(win.id);
+            } else {
+                win.style.setProperty('z-index', 999999, 'important');
             }
+            if (window.__procuDebug) console.log('[procu-z] raise() tab=', tab, 'newZ=', win.style.zIndex);
         }
         bdt(win, 'mousedown', raise, true);
 
@@ -2440,6 +2577,21 @@
 
         win.__raise = raise;
         win.__anchor = anchor;
+
+        /* PO and WO each have their own sub-popup family — register once so
+           popupBringToFront automatically re-raises them whenever this
+           tab-window is brought to front (including on the mousedown that
+           precedes a click on a button like "Tasks" inside it), instead of
+           the sub-popup being silently buried by the window's own re-raise. */
+        if (tab === 'PO' && typeof window.registerSubPopupReraise === 'function'
+            && typeof window._procuReraiseOpenSubPopups === 'function') {
+            window.registerSubPopupReraise(win.id, window._procuReraiseOpenSubPopups);
+        }
+        if (tab === 'WO' && typeof window.registerSubPopupReraise === 'function'
+            && typeof window._woReraiseOpenSubPopups === 'function') {
+            window.registerSubPopupReraise(win.id, window._woReraiseOpenSubPopups);
+        }
+
         return win;
     }
 
@@ -2452,13 +2604,21 @@
                window; subsequent opens (while another tab window is still
                open) cascade diagonally, same step pattern as Activity
                Library's sub-popups. */
-            var parentWin = document.getElementById('procurement-win');
-            var base = parentWin ? parentWin.getBoundingClientRect() : { top: 90, left: (window.innerWidth - 980) / 2 };
-            var step = _procuOpenSeq() * 30;
-            var top  = Math.min(window.innerHeight - 160, base.top + 40 + step);
-            var left = Math.min(window.innerWidth  - 500, Math.max(10, base.left + 30 + step));
-            win.style.left = left + 'px';
-            win.style.top  = top + 'px';
+            if (tab === 'WO') {
+                /* wide window: center horizontally with equal blank margins
+                   instead of cascading off the parent window's left edge. */
+                var winW = win.getBoundingClientRect().width || (window.innerWidth * 0.92);
+                win.style.left = Math.max(10, (window.innerWidth - winW) / 2) + 'px';
+                win.style.top  = '40px';
+            } else {
+                var parentWin = document.getElementById('procurement-win');
+                var base = parentWin ? parentWin.getBoundingClientRect() : { top: 90, left: (window.innerWidth - 980) / 2 };
+                var step = _procuOpenSeq() * 30;
+                var top  = Math.min(window.innerHeight - 160, base.top + 40 + step);
+                var left = Math.min(window.innerWidth  - 500, Math.max(10, base.left + 30 + step));
+                win.style.left = left + 'px';
+                win.style.top  = top + 'px';
+            }
         }
         win.classList.add('pw2-open');
         win.__raise();
@@ -2469,6 +2629,7 @@
             _procuTabLoaded[tab] = true;
             if(tab === 'PO') loadPurchaseOrders();
             else if(tab === 'WO') loadWorkOrders();
+            else if(tab === 'LO') loadLeaseOrders();
         }
     }
 

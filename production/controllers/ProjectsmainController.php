@@ -118,26 +118,42 @@ class ProjectsmainController extends Controller
             $this->redirect(array('projectsmain/projectperformance'));
         }
 
-        if(Yii::$app->helper->isMobile() && ($user->account_type == 'perfm_pad_reporting_only') ){
-            $this->layout = '@app/views/layouts/main_mobile';
+        return $this->render('index');
 
-            $connection = Yii::$app->db;
-            $sql        = "SELECT * FROM projects WHERE status='0' AND Project_Delete_Status='0' AND favourite=1";
-            if (isset($_POST['projectname'])  && $_POST['projectname'] != '')
-                $sql    .= "AND Name LIKE '%" . $_POST['projectname'] . "%'";
-            $sql        .= " ORDER BY Project_Id ASC, Name ASC";
-            $command    = $connection->createCommand($sql);
-            $projects   = $command->query()->readAll();
+    }
 
-            $seleted_project_id = '';
-            if($projuser = ProjuserSelection::find()->where(['userid' => $user_id])->one())
-                $seleted_project_id = $projuser->projectid;
+    // Direct entry point for the unified site-engineer mobile app, independent
+    // of device/account-type auto-detection (used for testing and can be
+    // bookmarked/added-to-home-screen directly).
+    public function actionSiteapp()
+    {
+        $this->layout = '@app/views/layouts/mobile';
+        $user_id = Yii::$app->user->id;
 
-            return $this->render('index_mobile', compact('projects', 'seleted_project_id'));
+        $projectName = 'No Project Selected';
+        if($projuser = ProjuserSelection::find()->where(['userid' => $user_id])->one()){
+            if($proj = Projects::findOne($projuser->projectid))
+                $projectName = $proj->Name;
         }
-        else
-            return $this->render('index');
 
+        return $this->render('siteapp_home', ['projectName' => $projectName]);
+    }
+
+    // Standalone storekeeper-only mobile app — same shell as actionSiteapp()
+    // but scoped to just Indents + GRN, for a separate home-screen bookmark
+    // that doesn't expose M.Book/Report Progress.
+    public function actionStorekeeperapp()
+    {
+        $this->layout = '@app/views/layouts/mobile';
+        $user_id = Yii::$app->user->id;
+
+        $projectName = 'No Project Selected';
+        if($projuser = ProjuserSelection::find()->where(['userid' => $user_id])->one()){
+            if($proj = Projects::findOne($projuser->projectid))
+                $projectName = $proj->Name;
+        }
+
+        return $this->render('storekeeperapp_home', ['projectName' => $projectName]);
     }
 
     public function actionDashboard()
@@ -204,7 +220,7 @@ class ProjectsmainController extends Controller
         )->bindValue(':aid', $activityId)->queryAll();
 
         $tasks = $db->createCommand(
-            "SELECT id, task_name, task_unit, task_qty, productivity FROM activity_tasks WHERE activity_id = :aid ORDER BY sort_order ASC, id ASC"
+            "SELECT id, task_name, task_unit, task_qty, productivity, resource_units AS resunits FROM activity_tasks WHERE activity_id = :aid ORDER BY sort_order ASC, id ASC"
         )->bindValue(':aid', $activityId)->queryAll();
 
         // estimate qty + schedule unit/qty for this project
@@ -293,6 +309,314 @@ class ProjectsmainController extends Controller
     }
 
     /**
+     * actionWbsaddiows — creates one or more bare IOWs (workgroups_new
+     * rows) under a single IOW Group, with no activity/estimate/schedule
+     * bar attached. This is the entry point for the simplified "Add
+     * IOWs" popup that replaces the old WBS Quick Entry form — adding an
+     * activity under an IOW is a separate, later step, not part of this
+     * action.
+     *
+     * Reuses the exact same IOW-Group-resolve + workgroups_new-resolve-
+     * or-create logic as actionWbssave() (see lines ~330-388), just
+     * looped once per IOW name and with no activity-library step
+     * following it.
+     */
+    public function actionWbsaddiows()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid      = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return ['error' => 'No project selected'];
+        $pid = (int)$projuser->projectid;
+        $db  = \Yii::$app->db;
+
+        $raw = \Yii::$app->request->post('payload');
+        if (!$raw) return ['error' => 'No payload'];
+        $p = json_decode($raw, true);
+        if (!$p) return ['error' => 'Bad payload'];
+
+        $iowGroupId   = (int)($p['iow_group_id']   ?? 0);
+        $iowGroupName = trim($p['iow_group_name'] ?? '');
+        $iowNames     = array_values(array_filter(array_map('trim', $p['iow_names'] ?? []), function ($n) {
+            return $n !== '';
+        }));
+
+        if (!$iowGroupId && $iowGroupName === '') return ['error' => 'IOW Group is required'];
+        if (empty($iowNames)) return ['error' => 'At least one IOW name is required'];
+
+        // Resolve IOW group by ID (from dropdown) or fall back to creating one from name
+        if (!$iowGroupId) {
+            $igRow = $db->createCommand(
+                "SELECT id FROM iow_groups WHERE name=:n AND project_id=:p AND status=0 LIMIT 1",
+                [':n' => $iowGroupName, ':p' => $pid]
+            )->queryOne();
+            if ($igRow) {
+                $iowGroupId = (int)$igRow['id'];
+            } else {
+                $db->createCommand(
+                    "INSERT INTO iow_groups (name, project_id, status, primavera_id) VALUES (:n, :p, 0, 0)",
+                    [':n' => $iowGroupName, ':p' => $pid]
+                )->execute();
+                $iowGroupId = (int)$db->lastInsertID;
+            }
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $created = [];
+        $skipped = [];
+
+        foreach ($iowNames as $iowName) {
+            $wgRow = $db->createCommand(
+                "SELECT Workgroup_Id FROM workgroups_new WHERE Project_Id=:p AND iowGroupid=:g AND Name=:n AND Status=0 LIMIT 1",
+                [':p' => $pid, ':g' => $iowGroupId, ':n' => $iowName]
+            )->queryOne();
+            if ($wgRow) {
+                // Already exists under this IOW Group — skip rather than duplicate,
+                // but still report its id/name so the caller can open it directly.
+                $skipped[] = ['id' => (int)$wgRow['Workgroup_Id'], 'name' => $iowName];
+                continue;
+            }
+            // Excludes the Overhead IOW group (17/18, pinned at sortorder
+            // 999999 so it always sorts last in the Estimate report — see
+            // ProjectsController::_seedProjectOverheadActivity) from this
+            // MAX so real IOW groups keep growing sortorder from a normal
+            // small range instead of jumping past 999999 forever.
+            $nextSort = (int)($db->createCommand(
+                "SELECT COALESCE(MAX(sortorder),0)+1 AS s FROM workgroups_new WHERE Project_Id=:p AND iowGroupid NOT IN (17, 18)", [':p' => $pid]
+            )->queryOne()['s'] ?? 0);
+            $db->createCommand(
+                "INSERT INTO workgroups_new
+                 (Project_Id, Name, iowGroupid, Status, sortorder, Added_On, Updated_On, Added_By,
+                  start_date, end_date, duration, progress, open, parent, itemtype, worktype, worktypegroup,
+                  wbs_estimate_id, pricing_status, notes, primavera_id)
+                 VALUES (:p, :n, :g, 0, :s, :t, :t, :uid,
+                  :t, :t, 0, 0, 0, 0, '', 0, 0, 0, 0, '', 0)",
+                [':p' => $pid, ':n' => $iowName, ':g' => $iowGroupId, ':s' => $nextSort, ':t' => $now, ':uid' => $uid]
+            )->execute();
+            $created[] = ['id' => (int)$db->lastInsertID, 'name' => $iowName];
+        }
+
+        return ['error' => 'No', 'created' => $created, 'skipped' => $skipped];
+    }
+
+    /**
+     * actionListiowbygroup — lists existing IOWs (workgroups_new rows) for
+     * the current project, optionally filtered to one IOW Group. Feeds the
+     * "Add Activity" tab's IOW dropdown — that tab only attaches activities
+     * to IOWs that already exist, never creates new ones.
+     */
+    public function actionListiowbygroup()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid      = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return ['error' => 'No project selected', 'items' => []];
+        $pid = (int)$projuser->projectid;
+        $db  = \Yii::$app->db;
+
+        $iowGroupId = (int)(\Yii::$app->request->post('iow_group_id', 0));
+
+        $sql = "SELECT Workgroup_Id AS id, Name AS name, iowGroupid FROM workgroups_new WHERE Project_Id=:p AND Status=0";
+        $params = [':p' => $pid];
+        if ($iowGroupId > 0) {
+            $sql .= " AND iowGroupid=:g";
+            $params[':g'] = $iowGroupId;
+        }
+        $sql .= " ORDER BY Name ASC";
+
+        $rows = $db->createCommand($sql, $params)->queryAll();
+        $items = array_map(function ($r) {
+            return ['id' => (int)$r['id'], 'name' => $r['name'], 'iow_group_id' => (int)$r['iowGroupid']];
+        }, $rows);
+
+        return ['error' => 'No', 'items' => $items];
+    }
+
+    /**
+     * actionWbsactivitiesbyiow — lists the activities already attached to
+     * one IOW (scheduleactivities rows under it), each with its tasks, for
+     * the "edit attached activities" popup opened by clicking an existing
+     * IOW row/bar. Purpose-built read-only endpoint — actionGanttactivities
+     * exists but is keyed by scheduleitem_id (not wg_id) and is shaped for
+     * Gantt-bar rendering (progress/critical-path fields this popup has no
+     * use for), so a lighter query is clearer than reusing/extending it.
+     */
+    public function actionWbsactivitiesbyiow()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid      = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return ['error' => 'No project selected', 'items' => []];
+        $pid  = (int)$projuser->projectid;
+        $wgId = (int)(\Yii::$app->request->post('wg_id', 0));
+        if (!$wgId) return ['error' => 'No wg_id', 'items' => []];
+        $db = \Yii::$app->db;
+
+        $scheduleItemId = $db->createCommand(
+            "SELECT scheduleitem_id FROM wbsscheduleitems WHERE wbsid=:w AND projectId=:p AND status=0 LIMIT 1",
+            [':w' => $wgId, ':p' => $pid]
+        )->queryScalar();
+        if (!$scheduleItemId) return ['error' => 'No', 'items' => []];
+
+        $rows = $db->createCommand(
+            "SELECT sa.id, sa.name, sa.unit, sa.quantity, sa.duration, sa.activity_id AS wan_id
+             FROM scheduleactivities sa
+             WHERE sa.scheduleitem_id=:si AND sa.status=0
+             ORDER BY sa.sortorder ASC, sa.id ASC",
+            [':si' => $scheduleItemId]
+        )->queryAll();
+
+        $items = [];
+        foreach ($rows as $r) {
+            $tasks = $db->createCommand(
+                "SELECT stn.task_Id AS id, at.task_name AS name, stn.task_qty AS qty,
+                        stn.task_productivity AS productivity, stn.task_resource_units AS resunits
+                 FROM schedule_task_new stn
+                 LEFT JOIN activity_tasks at ON at.id = stn.task_Id
+                 WHERE stn.activity_Id=:sa AND stn.status=0
+                 ORDER BY stn.id ASC",
+                [':sa' => $r['id']]
+            )->queryAll();
+            $items[] = [
+                'sa_id'    => (int)$r['id'],
+                'name'     => $r['name'],
+                'unit'     => $r['unit'],
+                'quantity' => (float)$r['quantity'],
+                'duration' => (int)$r['duration'],
+                'wan_id'   => (int)$r['wan_id'],
+                'tasks'    => array_map(function ($t) {
+                    return [
+                        'id' => (int)$t['id'], 'name' => $t['name'], 'qty' => (float)$t['qty'],
+                        'productivity' => (float)$t['productivity'], 'resunits' => (float)$t['resunits'],
+                    ];
+                }, $tasks),
+            ];
+        }
+
+        return ['error' => 'No', 'items' => $items];
+    }
+
+    /**
+     * actionWbsactivityupdate — edits Qty/Task on an activity ALREADY
+     * attached to an IOW (a live scheduleactivities row). actionWbsadd()
+     * cannot be reused for this: it no-ops on scheduleactivities whenever
+     * a bar already exists for the wan_id (see the already_exists early
+     * return there) — this action is the direct, targeted update that
+     * path is missing. Same schedule_task_new delete+reinsert mirroring
+     * convention actionWbssave() already uses when editing an activity's
+     * WBS values (kept in sync with the Progress Report screen, which
+     * reads tasks from schedule_task_new, not activity_tasks).
+     */
+    public function actionWbsactivityupdate()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid      = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return ['error' => 'No project selected'];
+        $pid = (int)$projuser->projectid;
+        $db  = \Yii::$app->db;
+
+        $raw = \Yii::$app->request->post('payload');
+        if (!$raw) return ['error' => 'No payload'];
+        $p = json_decode($raw, true);
+        if (!$p) return ['error' => 'Bad payload'];
+
+        $saId  = (int)($p['sa_id'] ?? 0);
+        $qty   = (float)($p['qty'] ?? 0);
+        $name  = trim($p['name'] ?? '');
+        $unit  = trim($p['unit'] ?? '');
+        $tasks = $p['tasks'] ?? [];
+        if (!$saId) return ['error' => 'No sa_id'];
+        if (!$qty)  return ['error' => 'Qty is required'];
+        if ($name === '') return ['error' => 'Activity name is required'];
+
+        // Ownership check — the row must belong to the current project,
+        // via scheduleitem_id -> wbsscheduleitems.wbsid -> workgroups_new,
+        // same chain every other WBS action in this controller scopes by.
+        $sa = $db->createCommand(
+            "SELECT sa.id, sa.start_date, sa.activity_id AS wan_id FROM scheduleactivities sa WHERE sa.id=:id AND sa.projectId=:p AND sa.status=0 LIMIT 1",
+            [':id' => $saId, ':p' => $pid]
+        )->queryOne();
+        if (!$sa) return ['error' => 'Activity not found'];
+
+        // Same duration formula addActivityToGantt() uses on the add side:
+        // duration = ceil(qty * sum(task durPerUnit)), durPerUnit = (task.qty / task.productivity) / task.resunits.
+        $sumDurPerUnit = 0.0;
+        foreach ($tasks as $t) {
+            $tProd = (float)($t['productivity'] ?? 0);
+            $tQty  = (float)($t['qty'] ?? 0);
+            $tRes  = (float)($t['resunits'] ?? 1) ?: 1;
+            if ($tProd > 0) $sumDurPerUnit += ($tQty / $tProd) / $tRes;
+        }
+        $duration = ($qty > 0 && $sumDurPerUnit > 0) ? (int)ceil($qty * $sumDurPerUnit) : 1;
+
+        $saStart = $sa['start_date'] ?: date('Y-m-d');
+        $saEnd   = date('Y-m-d', strtotime($saStart . ' + ' . ($duration - 1) . ' days'));
+
+        // Renaming/re-unit-ing here is scoped strictly to this one
+        // project-instance row (scheduleactivities + its
+        // workgroup_activities_new mirror) — never estimateactivities,
+        // so the shared Activity Library / "+" icon's picker are
+        // unaffected. Matches the user's explicit ask: a project-specific
+        // display name for this Gantt activity, not a library rename.
+        $db->createCommand(
+            "UPDATE scheduleactivities SET name=:n, unit=:u, quantity=:q, duration=:d, old_duration=:d, end_date=:ed WHERE id=:id",
+            [':n' => $name, ':u' => $unit, ':q' => $qty, ':d' => $duration, ':ed' => $saEnd, ':id' => $saId]
+        )->execute();
+
+        $wanId = (int)$sa['wan_id'];
+        if ($wanId) {
+            $db->createCommand(
+                "UPDATE workgroup_activities_new SET activity_Name=:n, activity_Unit=:u, cycle_Unit=:u, cycle_Quantity=:q, duration=:d WHERE id=:id",
+                [':n' => $name, ':u' => $unit, ':q' => $qty, ':d' => $duration, ':id' => $wanId]
+            )->execute();
+        }
+
+        $db->createCommand("DELETE FROM schedule_task_new WHERE activity_Id=:id", [':id' => $saId])->execute();
+        foreach ($tasks as $t) {
+            $tname = trim($t['name'] ?? '');
+            if ($tname === '') continue;
+            $tQty  = (float)($t['qty'] ?? 0);
+            $tProd = (float)($t['productivity'] ?? 0);
+            $budgetedDuration = ($tQty > 0 && $tProd > 0) ? round($tQty / $tProd, 4) : 0;
+            $taskLibId = (int)($t['id'] ?? 0);
+            $db->createCommand()->insert('schedule_task_new', [
+                'wbs_id'              => 0,
+                'activity_Id'         => $saId,
+                'process_Id'          => 0,
+                'task_Id'             => $taskLibId,
+                'Budgeted_Duration'   => $budgetedDuration,
+                'End_Duration'        => 0,
+                'status'              => 0,
+                'wbs_activity_Id'     => 0,
+                'activity_name'       => $tname,
+                'primavera_id'        => 0,
+                'task_qty'            => $tQty,
+                'task_productivity'   => $tProd,
+                'task_resource_units' => (float)($t['resunits'] ?? 1) ?: 1,
+            ])->execute();
+
+            // Two-way sync with the Activity Library's Edit Activity popup
+            // (ProjectsController::actionUpdateactivitywithtasks), which
+            // owns the master copy in activity_tasks — without this, a
+            // Productivity/Name/Unit edit made here (from the Gantt) never
+            // reaches the Library, and the two screens silently drift apart
+            // (see actionUpdateactivitywithtasks's own sync back into
+            // schedule_task_new for the reverse direction). Only real
+            // library tasks (taskLibId > 0) have a row to update — an
+            // ad-hoc task added here with no library link has none.
+            if ($taskLibId > 0) {
+                $db->createCommand(
+                    "UPDATE activity_tasks SET task_name=:n, productivity=:pr WHERE id=:id",
+                    [':n' => $tname, ':pr' => $tProd, ':id' => $taskLibId]
+                )->execute();
+            }
+        }
+
+        return ['error' => 'No', 'sa_id' => $saId, 'duration' => $duration];
+    }
+
+    /**
      * actionWbssave — saves all WBS data to DB (does NOT create Gantt bar).
      * Returns wan_id so the frontend can pass it to actionWbsadd.
      */
@@ -371,8 +695,12 @@ class ProjectsmainController extends Controller
                 [':p' => $pid, ':g' => $iowGroupId, ':n' => $iowName]
             )->queryOne();
             if (!$wgRow) {
+                // Excludes the Overhead IOW group (17/18, pinned at
+                // sortorder 999999 to always sort last — see
+                // ProjectsController::_seedProjectOverheadActivity) so
+                // real IOW groups keep a normal small sortorder range.
                 $nextSort = (int)($db->createCommand(
-                    "SELECT COALESCE(MAX(sortorder),0)+1 AS s FROM workgroups_new WHERE Project_Id=:p", [':p'=>$pid]
+                    "SELECT COALESCE(MAX(sortorder),0)+1 AS s FROM workgroups_new WHERE Project_Id=:p AND iowGroupid NOT IN (17, 18)", [':p'=>$pid]
                 )->queryOne()['s'] ?? 0);
                 $db->createCommand(
                     "INSERT INTO workgroups_new
@@ -436,44 +764,17 @@ class ProjectsmainController extends Controller
                 $tname = trim($task['name'] ?? '');
                 if (!$tname) continue;
                 $db->createCommand(
-                    "INSERT INTO activity_tasks (activity_id, task_name, task_unit, task_qty, productivity, sort_order)
-                     VALUES (:a, :n, :u, :q, :p, :s)",
+                    "INSERT INTO activity_tasks (activity_id, task_name, task_unit, task_qty, productivity, resource_units, sort_order)
+                     VALUES (:a, :n, :u, :q, :p, :ru, :s)",
                     [':a' => $iowActId, ':n' => $tname,
                      ':u' => trim($task['unit'] ?? ''),
                      ':q' => (float)($task['qty'] ?? 0),
                      ':p' => (float)($task['prod'] ?? 0),
+                     ':ru' => max(1, (float)($task['resunits'] ?? 1)),
                      ':s' => $sort]
                 )->execute();
                 $taskOrdinalToId[$sort] = (int)$db->lastInsertID;
                 $sort++;
-            }
-        }
-
-        // 4. Save resources to estactivity_resources
-        if (!empty($resources)) {
-            $db->createCommand(
-                "UPDATE estactivity_resources SET est_resource_status=1 WHERE estactivity_id=:id",
-                [':id' => $iowActId]
-            )->execute();
-            foreach ($resources as $res) {
-                $resId  = (int)($res['resource_id'] ?? 0);
-                $resQty = (float)($res['qty']  ?? 0);
-                $resRate= (float)($res['rate'] ?? 0);
-                $resAmt = round($resQty * $resRate, 2);
-                if (!$resId) continue;
-                $db->createCommand(
-                    "INSERT INTO estactivity_resources
-                     (estactivity_id, est_resource_id, est_resource_quantity, est_resource_rate,
-                      est_resource_amount, est_resource_status, fuel_vendor_id, powerstatus)
-                     VALUES (:act, :res, :qty, :rate, :amt, 0, 0, 0)
-                     ON DUPLICATE KEY UPDATE
-                       est_resource_quantity = VALUES(est_resource_quantity),
-                       est_resource_rate     = VALUES(est_resource_rate),
-                       est_resource_amount   = VALUES(est_resource_amount),
-                       est_resource_status   = 0",
-                    [':act' => $iowActId, ':res' => $resId,
-                     ':qty' => $resQty, ':rate' => $resRate, ':amt' => $resAmt]
-                )->execute();
             }
         }
 
@@ -519,6 +820,70 @@ class ProjectsmainController extends Controller
                      ':d' => $duration, ':cu' => $schUnit, ':cq' => $schQty]
                 )->execute();
                 $wanId = (int)$db->lastInsertID;
+            }
+        }
+
+        // 5b. If this activity already has a live Gantt bar, propagate the
+        //     edited Quantity/Duration into scheduleactivities too — this is
+        //     the table the Gantt chart itself reads, and it was previously
+        //     only ever written once at bar creation (actionWbsadd), so
+        //     editing an existing activity's WBS values here never used to
+        //     reach it. End date is recomputed from the (unchanged) start
+        //     date + the new duration, mirroring actionWbsadd's own formula.
+        if ($wanId) {
+            $saRow = $db->createCommand(
+                "SELECT id, start_date FROM scheduleactivities WHERE activity_id=:w AND projectId=:p AND status=0 LIMIT 1",
+                [':w' => $wanId, ':p' => $pid]
+            )->queryOne();
+            if ($saRow) {
+                $saId = (int)$saRow['id'];
+                $saStart = $saRow['start_date'] ?: date('Y-m-d');
+                $saEnd   = date('Y-m-d', strtotime($saStart . ' + ' . ($duration - 1) . ' days'));
+                $db->createCommand(
+                    "UPDATE scheduleactivities
+                     SET name=:n, unit=:u, quantity=:q, duration=:d, old_duration=:d, end_date=:ed
+                     WHERE id=:id",
+                    [':n' => $actNameInput, ':u' => $schUnit ?: $unit, ':q' => $schQty ?: $qty,
+                     ':d' => $duration, ':ed' => $saEnd, ':id' => $saId]
+                )->execute();
+
+                // Re-mirror this activity's tasks into schedule_task_new,
+                // keyed by this live scheduleactivities row — the Progress
+                // Report screen (ReportController::actionScheduletaskreporting)
+                // reads tasks from schedule_task_new, not activity_tasks
+                // directly, so edits made here (step 3 above, which only
+                // touches activity_tasks) never reached Progress Report
+                // until this re-sync existed. Delete+re-insert, same
+                // convention actionWbsadd() already uses for the initial
+                // mirror when a bar is first created.
+                $db->createCommand(
+                    "DELETE FROM schedule_task_new WHERE activity_Id=:id",
+                    [':id' => $saId]
+                )->execute();
+                $wanTasks = $db->createCommand(
+                    "SELECT id, task_name, task_qty, productivity FROM activity_tasks WHERE activity_id=:id",
+                    [':id' => $iowActId]
+                )->queryAll();
+                foreach ($wanTasks as $wt) {
+                    $tQty  = (float)$wt['task_qty'];
+                    $tProd = (float)$wt['productivity'];
+                    $budgetedDuration = ($tQty > 0 && $tProd > 0) ? round($tQty / $tProd, 4) : 0;
+                    $db->createCommand()->insert('schedule_task_new', [
+                        'wbs_id'              => 0,
+                        'activity_Id'         => $saId,
+                        'process_Id'          => 0,
+                        'task_Id'             => (int)$wt['id'],
+                        'Budgeted_Duration'   => $budgetedDuration,
+                        'End_Duration'        => 0,
+                        'status'              => 0,
+                        'wbs_activity_Id'     => 0,
+                        'activity_name'       => $actNameInput,
+                        'primavera_id'        => 0,
+                        'task_qty'            => $tQty,
+                        'task_productivity'   => $tProd,
+                        'task_resource_units' => 1,
+                    ])->execute();
+                }
             }
         }
 
@@ -607,9 +972,41 @@ class ProjectsmainController extends Controller
                         'task_ids'          => $taskIds,
                     ])->execute();
                 }
+
+                // Two-way sync: mirror this resource back into the shared
+                // Activity Library (estactivity_resources), so it becomes
+                // visible to every other project using this same library
+                // activity too — see ProjectsController::actionAddactivityresource
+                // etc. for the reverse direction. Keyed by
+                // (estactivity_id=$iowActId, est_resource_id), same
+                // check-then-write convention, since neither table has a
+                // unique constraint to upsert against.
+                if ($iowActId) {
+                    $libExists = $db->createCommand(
+                        "SELECT estactres_id FROM estactivity_resources WHERE estactivity_id=:a AND est_resource_id=:r LIMIT 1",
+                        [':a' => $iowActId, ':r' => $resId]
+                    )->queryScalar();
+                    $resAmount = round($resQty * $resRate, 2);
+                    if ($libExists) {
+                        $db->createCommand(
+                            "UPDATE estactivity_resources
+                             SET est_resource_quantity=:q, est_resource_rate=:rt, est_resource_amount=:amt, est_resource_status=0
+                             WHERE estactres_id=:id",
+                            [':q' => $resQty, ':rt' => $resRate, ':amt' => $resAmount, ':id' => $libExists]
+                        )->execute();
+                    } else {
+                        $db->createCommand()->insert('estactivity_resources', [
+                            'estactivity_id'        => $iowActId,
+                            'est_resource_id'       => $resId,
+                            'est_resource_quantity' => $resQty,
+                            'est_resource_rate'     => $resRate,
+                            'est_resource_amount'   => $resAmount,
+                            'est_resource_status'   => 0,
+                        ])->execute();
+                    }
+                }
             }
-            // Soft-remove allocations for resources no longer in the payload
-            // (mirrors the estactivity_resources handling above).
+            // Soft-remove allocations for resources no longer in the payload.
             if (!empty($keptResIds)) {
                 $params = [':a' => $wanId, ':p' => $pid];
                 $placeholders = [];
@@ -624,6 +1021,23 @@ class ProjectsmainController extends Controller
                      WHERE activity_id = :a AND project_id = :p AND resource_Id NOT IN (" . implode(',', $placeholders) . ")",
                     $params
                 )->execute();
+
+                // Mirror the removal into the Library too.
+                if ($iowActId) {
+                    $libParams = [':a' => $iowActId];
+                    $libPlaceholders = [];
+                    foreach (array_values($keptResIds) as $i => $rid) {
+                        $key = ":r$i";
+                        $libPlaceholders[] = $key;
+                        $libParams[$key] = $rid;
+                    }
+                    $db->createCommand(
+                        "UPDATE estactivity_resources
+                         SET est_resource_status = 1
+                         WHERE estactivity_id = :a AND est_resource_id NOT IN (" . implode(',', $libPlaceholders) . ")",
+                        $libParams
+                    )->execute();
+                }
             }
         }
 
@@ -695,8 +1109,6 @@ class ProjectsmainController extends Controller
                     $iowGroupId = (int)$db->lastInsertID;
                 }
             }
-            if ($iowName === '') $iowName = $actNameInput;
-
             $now = date('Y-m-d H:i:s');
             $wgId = 0;
             if ($wgIdInput) {
@@ -706,20 +1118,45 @@ class ProjectsmainController extends Controller
                 )->queryScalar();
                 if ($wgExists) {
                     $wgId = (int)$wgExists;
-                    $db->createCommand(
-                        "UPDATE workgroups_new SET Name=:n, iowGroupid=:g, Updated_On=:t WHERE Workgroup_Id=:id",
-                        [':n' => $iowName, ':g' => $iowGroupId ?: null, ':t' => $now, ':id' => $wgId]
-                    )->execute();
+                    // Only rename/re-group an EXISTING IOW if the caller
+                    // actually supplied a real iow_name — never fall back
+                    // to the activity name here. That fallback is only
+                    // valid for a brand-new IOW (below), where a blank
+                    // name genuinely means "name it after the activity".
+                    // Silently renaming an EXISTING IOW to whatever
+                    // activity happens to be added under it next
+                    // corrupted the WBS tree every time a caller (e.g.
+                    // the Gantt's Activity Picker) omitted iow_name —
+                    // see docs/... this comment marks the fix.
+                    if ($iowName !== '') {
+                        $db->createCommand(
+                            "UPDATE workgroups_new SET Name=:n, iowGroupid=:g, Updated_On=:t WHERE Workgroup_Id=:id",
+                            [':n' => $iowName, ':g' => $iowGroupId ?: null, ':t' => $now, ':id' => $wgId]
+                        )->execute();
+                    } elseif ($iowGroupId) {
+                        // Name not supplied, but a group was — still
+                        // safe to update just the group, name untouched.
+                        $db->createCommand(
+                            "UPDATE workgroups_new SET iowGroupid=:g, Updated_On=:t WHERE Workgroup_Id=:id",
+                            [':g' => $iowGroupId, ':t' => $now, ':id' => $wgId]
+                        )->execute();
+                    }
                 }
             }
+            if ($iowName === '') $iowName = $actNameInput;
             if (!$wgId && $iowGroupId) {
                 $wgRow = $db->createCommand(
                     "SELECT Workgroup_Id FROM workgroups_new WHERE Project_Id=:p AND iowGroupid=:g AND Name=:n AND Status=0 LIMIT 1",
                     [':p' => $pid, ':g' => $iowGroupId, ':n' => $iowName]
                 )->queryOne();
                 if (!$wgRow) {
+                    // Excludes the Overhead IOW group (17/18, pinned at
+                    // sortorder 999999 to always sort last — see
+                    // ProjectsController::_seedProjectOverheadActivity)
+                    // so real IOW groups keep a normal small sortorder
+                    // range.
                     $nextSort = (int)($db->createCommand(
-                        "SELECT COALESCE(MAX(sortorder),0)+1 AS s FROM workgroups_new WHERE Project_Id=:p", [':p'=>$pid]
+                        "SELECT COALESCE(MAX(sortorder),0)+1 AS s FROM workgroups_new WHERE Project_Id=:p AND iowGroupid NOT IN (17, 18)", [':p'=>$pid]
                     )->queryOne()['s'] ?? 0);
                     $db->createCommand(
                         "INSERT INTO workgroups_new
@@ -754,9 +1191,29 @@ class ProjectsmainController extends Controller
                     $iowActId = (int)$db->lastInsertID;
                 }
             } else {
+                // iow_group_id / work_type / activity_type intentionally
+                // NOT unconditionally overwritten here — they're the
+                // library activity's OWN categorization, set once when
+                // the activity is first created (see the INSERT branch
+                // above) or edited via the real Activity Library screen.
+                // Adding an EXISTING library activity under a WBS/IOW
+                // (e.g. via the Gantt's Activity Picker, which has no
+                // Project Type / Activity Type / IOW Group fields of its
+                // own to submit) must never silently blank out that
+                // activity's real categorization — this previously
+                // corrupted the Activity Library's own data every time
+                // the Activity Picker added an existing activity. Only
+                // write a field here if the caller actually supplied a
+                // non-zero value for it (the old WBS form, which DOES
+                // have these fields, still updates them as before).
+                $setSql = ['activity_unit=:u'];
+                $params = [':u' => $unit, ':id' => $iowActId];
+                if ($projTypeId > 0) { $setSql[] = 'work_type=:wt'; $params[':wt'] = $projTypeId; }
+                if ($actTypeId  > 0) { $setSql[] = 'activity_type=:at'; $params[':at'] = $actTypeId; }
+                if ($iowGroupId > 0) { $setSql[] = 'iow_group_id=:g'; $params[':g'] = $iowGroupId; }
                 $db->createCommand(
-                    "UPDATE estimateactivities SET activity_unit=:u, work_type=:wt, activity_type=:at, iow_group_id=:g WHERE activity_id=:id",
-                    [':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId, ':g' => $iowGroupId, ':id' => $iowActId]
+                    "UPDATE estimateactivities SET " . implode(', ', $setSql) . " WHERE activity_id=:id",
+                    $params
                 )->execute();
             }
 
@@ -772,11 +1229,13 @@ class ProjectsmainController extends Controller
                     $tname = trim($task['name'] ?? '');
                     if (!$tname) continue;
                     $db->createCommand(
-                        "INSERT INTO activity_tasks (activity_id, task_name, task_unit, task_qty, productivity, sort_order)
-                         VALUES (:a, :n, :u, :q, :p, :s)",
+                        "INSERT INTO activity_tasks (activity_id, task_name, task_unit, task_qty, productivity, resource_units, sort_order)
+                         VALUES (:a, :n, :u, :q, :p, :ru, :s)",
                         [':a' => $iowActId, ':n' => $tname, ':u' => trim($task['unit'] ?? ''),
                          ':q' => (float)($task['qty'] ?? 0),
-                         ':p' => (float)($task['prod'] ?? 0), ':s' => $sort]
+                         ':p' => (float)($task['prod'] ?? 0),
+                         ':ru' => max(1, (float)($task['resunits'] ?? 1)),
+                         ':s' => $sort]
                     )->execute();
                     $taskOrdinalToId[$sort] = (int)$db->lastInsertID;
                     $sort++;
@@ -785,29 +1244,6 @@ class ProjectsmainController extends Controller
 
             $calcRate = 0.0;
             foreach ($resources as $res) { $calcRate += (float)($res['rate'] ?? 0) * (float)($res['qty'] ?? 0); }
-
-            if (!empty($resources)) {
-                $db->createCommand("UPDATE estactivity_resources SET est_resource_status=1 WHERE estactivity_id=:id", [':id' => $iowActId])->execute();
-                foreach ($resources as $res) {
-                    $resId  = (int)($res['resource_id'] ?? 0);
-                    $resQty = (float)($res['qty'] ?? 0);
-                    $resRate= (float)($res['rate'] ?? 0);
-                    if (!$resId) continue;
-                    $db->createCommand(
-                        "INSERT INTO estactivity_resources
-                         (estactivity_id, est_resource_id, est_resource_quantity, est_resource_rate,
-                          est_resource_amount, est_resource_status, fuel_vendor_id, powerstatus)
-                         VALUES (:act, :res, :qty, :rate, :amt, 0, 0, 0)
-                         ON DUPLICATE KEY UPDATE
-                           est_resource_quantity = VALUES(est_resource_quantity),
-                           est_resource_rate     = VALUES(est_resource_rate),
-                           est_resource_amount   = VALUES(est_resource_amount),
-                           est_resource_status   = 0",
-                        [':act' => $iowActId, ':res' => $resId, ':qty' => $resQty, ':rate' => $resRate,
-                         ':amt' => round($resQty * $resRate, 2)]
-                    )->execute();
-                }
-            }
 
             // pricing_estimate_new is written AFTER wan_id is resolved below (its
             // activity_Id column must hold wan_id, not iowActId — see the note on
@@ -890,6 +1326,52 @@ class ProjectsmainController extends Controller
             [':w' => $wanId, ':p' => $pid]
         )->queryScalar();
         if ($existingSa) {
+            // The Gantt bar already exists, so we never re-create it — but the
+            // caller (the Add Activity picker's Task popup) may still have
+            // submitted edited Task Name/Unit/Productivity/Qty for this same
+            // activity, e.g. the user reopened the Task popup on an
+            // already-added row to fix a value. Previously this branch
+            // returned immediately with zero writes, so any such edit looked
+            // like it saved (no error shown) but silently never reached
+            // activity_tasks or schedule_task_new. Sync them here the same
+            // way a fresh add would, keyed off the existing sa_id/wan_id.
+            if (!empty($tasks)) {
+                $db->createCommand("DELETE FROM activity_tasks WHERE activity_id=:id", [':id' => $iowActId])->execute();
+                $db->createCommand("DELETE FROM schedule_task_new WHERE activity_Id=:id", [':id' => $existingSa])->execute();
+                $sort = 0;
+                foreach ($tasks as $task) {
+                    $tname = trim($task['name'] ?? '');
+                    if (!$tname) continue;
+                    $tQty  = (float)($task['qty']  ?? 0);
+                    $tProd = (float)($task['prod'] ?? 0);
+                    $tRes  = max(1, (float)($task['resunits'] ?? 1));
+                    $db->createCommand(
+                        "INSERT INTO activity_tasks (activity_id, task_name, task_unit, task_qty, productivity, resource_units, sort_order)
+                         VALUES (:a, :n, :u, :q, :p, :ru, :s)",
+                        [':a' => $iowActId, ':n' => $tname, ':u' => trim($task['unit'] ?? ''),
+                         ':q' => $tQty, ':p' => $tProd, ':ru' => $tRes, ':s' => $sort]
+                    )->execute();
+                    $newTaskId = (int)$db->lastInsertID;
+                    $budgetedDuration = ($tQty > 0 && $tProd > 0) ? round($tQty / $tProd, 4) : 0;
+                    $db->createCommand()->insert('schedule_task_new', [
+                        'wbs_id' => 0, 'activity_Id' => $existingSa, 'process_Id' => 0, 'task_Id' => $newTaskId,
+                        'Budgeted_Duration' => $budgetedDuration, 'End_Duration' => 0, 'status' => 0,
+                        'wbs_activity_Id' => 0, 'activity_name' => $tname, 'primavera_id' => 0,
+                        'task_qty' => $tQty, 'task_productivity' => $tProd, 'task_resource_units' => $tRes,
+                    ])->execute();
+                    $sort++;
+                }
+            }
+            if ($unit || $schUnit || $schQty) {
+                $db->createCommand(
+                    "UPDATE workgroup_activities_new SET activity_Unit=:u, cycle_Unit=:cu, cycle_Quantity=:cq WHERE id=:id",
+                    [':u' => $unit ?: $schUnit, ':cu' => $schUnit, ':cq' => $schQty ?: null, ':id' => $wanId]
+                )->execute();
+                $db->createCommand(
+                    "UPDATE scheduleactivities SET unit=:u WHERE id=:id",
+                    [':u' => $unit ?: $schUnit, ':id' => $existingSa]
+                )->execute();
+            }
             return ['error' => 'No', 'sa_id' => (int)$existingSa, 'already_exists' => true];
         }
 
@@ -986,34 +1468,78 @@ class ProjectsmainController extends Controller
                     'operations_status' => 0,
                     'task_ids'          => $taskIds,
                 ])->execute();
+
+                // Two-way sync — mirror into the shared Activity Library too
+                // (same convention as actionWbssave(); see that function for
+                // the full rationale). Only need the insert-if-missing branch
+                // here since this whole block already only runs when no row
+                // existed yet for this resource.
+                if ($iowActId) {
+                    $libExists = $db->createCommand(
+                        "SELECT estactres_id FROM estactivity_resources WHERE estactivity_id=:a AND est_resource_id=:r LIMIT 1",
+                        [':a' => $iowActId, ':r' => $resId]
+                    )->queryScalar();
+                    if (!$libExists) {
+                        $db->createCommand()->insert('estactivity_resources', [
+                            'estactivity_id'        => $iowActId,
+                            'est_resource_id'       => $resId,
+                            'est_resource_quantity' => $resQty,
+                            'est_resource_rate'     => $resRate,
+                            'est_resource_amount'   => round($resQty * $resRate, 2),
+                            'est_resource_status'   => 0,
+                        ])->execute();
+                    }
+                }
             }
         }
 
         // Mirror this activity's tasks into schedule_task_new, keyed by the
         // scheduleactivities row just created (matches how Storekeeper/
         // Procurement already read task_Id → activity_tasks.id elsewhere).
-        $wanTasks = $db->createCommand(
+        //
+        // Sourced from the SUBMITTED $tasks payload (what the client's Task
+        // popup actually showed and what $duration above was computed
+        // from) rather than re-reading activity_tasks fresh from the DB —
+        // the Task popup (main.php's openTaskPopupFor/closeTaskPopup) only
+        // ever edits an in-memory copy and never saves back to
+        // activity_tasks, so a task's Qty/Productivity typed into that
+        // popup right before clicking the tick-to-add button was
+        // previously invisible to this mirror: it would silently re-read
+        // whatever activity_tasks still held (often 0/blank defaults),
+        // writing a 0-duration or missing task row while the Gantt bar
+        // itself got the correct client-computed duration — the two fell
+        // out of sync with no error, until a later Edit Activities save
+        // happened to re-derive and overwrite the real duration. If the
+        // client sent no tasks at all (an integration that never builds a
+        // task list), fall back to activity_tasks so those callers keep
+        // working exactly as before.
+        $taskSource = !empty($tasks) ? $tasks : array_map(function($wt){
+            return ['id' => (int)$wt['id'], 'name' => $wt['task_name'], 'qty' => (float)$wt['task_qty'], 'prod' => (float)$wt['productivity'], 'resunits' => 1];
+        }, $db->createCommand(
             "SELECT id, task_name, task_qty, productivity FROM activity_tasks WHERE activity_id=:id",
             [':id' => $iowActId]
-        )->queryAll();
-        foreach ($wanTasks as $wt) {
-            $tQty  = (float)$wt['task_qty'];
-            $tProd = (float)$wt['productivity'];
+        )->queryAll());
+        foreach ($taskSource as $wt) {
+            $tName = trim($wt['name'] ?? '');
+            if ($tName === '') continue;
+            $tQty  = (float)($wt['qty']  ?? 0);
+            $tProd = (float)($wt['prod'] ?? 0);
+            $tRes  = (float)($wt['resunits'] ?? 1) ?: 1;
             $budgetedDuration = ($tQty > 0 && $tProd > 0) ? round($tQty / $tProd, 4) : 0;
             $db->createCommand()->insert('schedule_task_new', [
                 'wbs_id'           => 0,
                 'activity_Id'      => $saId,
                 'process_Id'       => 0,
-                'task_Id'          => (int)$wt['id'],
+                'task_Id'          => (int)($wt['id'] ?? 0),
                 'Budgeted_Duration'=> $budgetedDuration,
                 'End_Duration'     => 0,
                 'status'           => 0,
                 'wbs_activity_Id'  => 0,
-                'activity_name'    => $savedName,
+                'activity_name'    => $tName,
                 'primavera_id'     => 0,
                 'task_qty'         => $tQty,
                 'task_productivity'=> $tProd,
-                'task_resource_units' => 1,
+                'task_resource_units' => $tRes,
             ])->execute();
         }
 
@@ -1095,45 +1621,34 @@ class ProjectsmainController extends Controller
         $projuser = \app\models\ProjuserSelection::find()->where(['userid' => $uid])->one();
         $pid      = $projuser ? (int)$projuser->projectid : 0;
 
-        // tasks — from activity_tasks, the table actionWbssave/actionWbsadd actually write to
+        // tasks — from activity_tasks, the table actionWbssave/actionWbsadd actually write to.
+        // resource_units aliased to resunits to match the key name the WBS
+        // form's prefill code (main.php _prefillModal) already reads.
         $tasks = $db->createCommand(
-            "SELECT id, task_name, task_unit, task_qty, productivity FROM activity_tasks WHERE activity_id = :id ORDER BY sort_order ASC, id ASC",
+            "SELECT id, task_name, task_unit, task_qty, productivity, resource_units AS resunits FROM activity_tasks WHERE activity_id = :id ORDER BY sort_order ASC, id ASC",
             [':id' => $iowActId]
         )->queryAll();
 
-        // resources — from estactivity_resources (the real allocation table)
+        // resources — from pricing_estimate_resources_new, the project-scoped
+        // allocation table Procurement/Storekeeper already read. estactivity_resources
+        // is a library-wide table (no project_id column) and its save path wipes
+        // and re-inserts all rows for the shared activity on every save, which can
+        // silently drop resources — pricing_estimate_resources_new is upserted
+        // per-resource instead, so it stays accurate per project.
         $resources = [];
-        if ($iowActId) {
+        $wanIdForRes = (int)($sa['wan_id'] ?? 0) ?: $wanId;
+        if ($wanIdForRes) {
             $resRows = $db->createCommand(
-                "SELECT er.estactres_id, er.est_resource_id AS resource_id,
+                "SELECT pern.pricing_resourceid, pern.resource_Id AS resource_id,
                         r.Name AS resource_name, r.Unit AS resource_unit,
-                        r.ResourceType_Id AS type_id, r.Resource_group_Id AS group_id,
-                        er.est_resource_rate AS rate, er.est_resource_quantity AS qty,
-                        er.est_resource_amount AS amount
-                 FROM estactivity_resources er
-                 JOIN resources r ON r.Resource_Id = er.est_resource_id
-                 WHERE er.estactivity_id = :id AND er.est_resource_status = 0
-                 ORDER BY er.estactres_id ASC",
-                [':id' => $iowActId]
+                        pern.resourcetype_Id AS type_id, r.Resource_group_Id AS group_id,
+                        pern.rate, pern.quantity, pern.task_ids
+                 FROM pricing_estimate_resources_new pern
+                 JOIN resources r ON r.Resource_Id = pern.resource_Id
+                 WHERE pern.activity_id = :a AND pern.project_id = :p AND pern.pricing_status = 0
+                 ORDER BY pern.pricing_resourceid ASC",
+                [':a' => $wanIdForRes, ':p' => $pid]
             )->queryAll();
-
-            // task_ids per resource — from pricing_estimate_resources_new, the
-            // project-instance table Procurement reads. Only meaningful once
-            // wan_id is known (this activity has actually been added to a WBS/
-            // Gantt); keyed by resource_Id so it can be matched to the rows
-            // above even though the two tables use different id spaces.
-            $wanIdForTasks = (int)($sa['wan_id'] ?? 0) ?: $wanId;
-            $taskIdsByResource = [];
-            if ($wanIdForTasks) {
-                $perRows = $db->createCommand(
-                    "SELECT resource_Id, task_ids FROM pricing_estimate_resources_new
-                     WHERE activity_id = :a AND pricing_status = 0",
-                    [':a' => $wanIdForTasks]
-                )->queryAll();
-                foreach ($perRows as $pr) {
-                    $taskIdsByResource[(int)$pr['resource_Id']] = $pr['task_ids'] ?? '';
-                }
-            }
 
             // ordinal position of each task's real id, in the same order the
             // tasks array above is returned — task_map sent to the frontend
@@ -1143,23 +1658,22 @@ class ProjectsmainController extends Controller
             foreach ($tasks as $ord => $t) { $taskOrdinalById[(int)$t['id']] = $ord; }
 
             foreach ($resRows as $r) {
-                $resId = (int)$r['resource_id'];
                 $taskMap = [];
-                if (isset($taskIdsByResource[$resId]) && $taskIdsByResource[$resId] !== '') {
-                    foreach (explode(',', $taskIdsByResource[$resId]) as $tid) {
+                if (!empty($r['task_ids'])) {
+                    foreach (explode(',', $r['task_ids']) as $tid) {
                         $tid = (int)$tid;
                         if (isset($taskOrdinalById[$tid])) $taskMap[] = $taskOrdinalById[$tid];
                     }
                 }
                 $resources[] = [
-                    'estactres_id' => (int)$r['estactres_id'],
-                    'resource_id'  => $resId,
+                    'estactres_id' => (int)$r['pricing_resourceid'],
+                    'resource_id'  => (int)$r['resource_id'],
                     'type_id'      => (int)$r['type_id'],
                     'group_id'     => (int)$r['group_id'],
                     'unit'         => $r['resource_unit'] ?? '',
                     'rate'         => (float)$r['rate'],
-                    'qty'          => (float)$r['qty'],
-                    'amount'       => (float)$r['amount'],
+                    'qty'          => (float)$r['quantity'],
+                    'amount'       => round((float)$r['rate'] * (float)$r['quantity'], 2),
                     'task_map'     => $taskMap,
                 ];
             }
@@ -1182,13 +1696,22 @@ class ProjectsmainController extends Controller
             }
         }
 
-        // estimate quantity — from pricing_estimate_new for this project + activity
+        // Estimate quantity — from pricing_estimate_new, keyed by wan_id
+        // (workgroup_activities_new.id, the project-specific activity
+        // instance) — NOT iowActId (the shared library activity id). This
+        // matches the exact convention actionWbssave()/actionWbsadd() write
+        // under: 'activity_Id' => wan_id, 'est_activity_Id' => iowActId.
+        // Querying by iowActId here (the previous bug) meant this lookup
+        // essentially never matched, so the field silently fell through to
+        // workgroup_activities_new.estimate, which actionWbssave() writes as
+        // a hardcoded 1 (a legacy has-estimate flag, not a real quantity) —
+        // that's why Estimate Quantity showed blank/wrong when editing.
         $estQty = 0.0;
-        if ($iowActId && $pid) {
+        if ($wanIdForRes && $pid) {
             $peRow = $db->createCommand(
                 "SELECT activity_qty FROM pricing_estimate_new
                  WHERE activity_Id = :a AND project_Id = :p AND pricing_status = 0 LIMIT 1",
-                [':a' => $iowActId, ':p' => $pid]
+                [':a' => $wanIdForRes, ':p' => $pid]
             )->queryOne();
             if ($peRow) $estQty = (float)$peRow['activity_qty'];
         }
@@ -1213,7 +1736,7 @@ class ProjectsmainController extends Controller
             'iow_group_name' => $sa['iow_group_name'] ?? '',
             'iow_name'       => $sa['iow_name'] ?? '',
             'iow_act_id'     => $iowActId,
-            'act_name'       => $sa['name'] ?? '',
+            'act_name'       => $sa['name'] ?: ($sa['activity_name'] ?? ''),
             'est_unit'       => $estUnit ?: ($sa['est_unit'] ?? $sa['activity_unit'] ?? ''),
             'est_qty'        => $estQty,
             'est_rate'       => round($calcRate, 2),
@@ -1229,14 +1752,15 @@ class ProjectsmainController extends Controller
     public function actionWbsdelete()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $saId = (int)\Yii::$app->request->post('sa_id', 0);
-        $wgId = (int)\Yii::$app->request->post('wg_id', 0);
+        $saId  = (int)\Yii::$app->request->post('sa_id', 0);
+        $wgId  = (int)\Yii::$app->request->post('wg_id', 0);
+        $force = (bool)\Yii::$app->request->post('force', false);
         if (!$saId && !$wgId) return ['error' => 'No activity id'];
 
         $db = \Yii::$app->db;
 
         // WBS item was only "Saved" (never "Added to Gantt"), so it has no
-        // scheduleactivities row to key off — soft-delete the workgroups_new
+        // scheduleactivities row to key off — hard-delete the workgroups_new
         // row directly instead of going through the schedule-bar cascade below.
         if (!$saId && $wgId) {
             $uid      = Yii::$app->user->Id;
@@ -1247,10 +1771,7 @@ class ProjectsmainController extends Controller
                 [':id' => $wgId, ':p' => $pid]
             )->queryScalar();
             if (!$owned) return ['error' => 'WBS item not found'];
-            $db->createCommand(
-                "UPDATE workgroups_new SET Status = 1 WHERE Workgroup_Id = :id",
-                [':id' => $wgId]
-            )->execute();
+            $db->createCommand()->delete('workgroups_new', ['Workgroup_Id' => $wgId])->execute();
             return ['ok' => true];
         }
 
@@ -1272,27 +1793,184 @@ class ProjectsmainController extends Controller
             [':id' => $saId]
         )->queryOne();
 
-        // Cascade: remove any procurement/indent/work-order data raised against
-        // this activity, mirroring the old activity1/deleteiowactivity cleanup.
-        if ($sa) {
-            $wanIdForCascade = (int)$sa['activity_id'];
+        $wanIdForCascade = $sa ? (int)$sa['activity_id'] : 0;
 
+        // Data-integrity conflict check: block a permanent delete if progress
+        // has already been reported against this activity, unless the user
+        // has explicitly confirmed with force=1.
+        if ($wanIdForCascade && !$force) {
+            $conflicts = $this->checkActivityDeleteConflicts($saId, $wanIdForCascade);
+            if (!empty($conflicts)) {
+                return [
+                    'error'     => 'Yes',
+                    'conflict'  => true,
+                    'errortext' => 'Deleting this activity will also permanently delete: ' . implode('; ', $conflicts) . '. This cannot be undone.',
+                ];
+            }
+        }
+
+        $this->hardDeleteScheduleActivity($saId, $sa, $wanIdForCascade);
+
+        return ['ok' => true];
+    }
+
+    /**
+     * actionWbsdeleteiow — deletes an entire IOW: every activity attached
+     * to it (via the same cascade actionWbsdelete uses per-activity) plus
+     * the IOW (workgroups_new) row itself. Never touches the IOW's parent
+     * IOW Group (iow_groups) — that table is shared across many IOWs.
+     * Blocks with a conflict list (same shape actionWbsdelete returns) if
+     * any attached activity has active relationships or downstream
+     * progress/procurement data, unless force=1.
+     */
+    public function actionWbsdeleteiow()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid      = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return ['error' => 'No project selected'];
+        $pid   = (int)$projuser->projectid;
+        $wgId  = (int)\Yii::$app->request->post('wg_id', 0);
+        $force = (bool)\Yii::$app->request->post('force', false);
+        if (!$wgId) return ['error' => 'No wg_id'];
+
+        $db = \Yii::$app->db;
+        $owned = $db->createCommand(
+            "SELECT Workgroup_Id FROM workgroups_new WHERE Workgroup_Id=:id AND Project_Id=:p AND Status=0 LIMIT 1",
+            [':id' => $wgId, ':p' => $pid]
+        )->queryScalar();
+        if (!$owned) return ['error' => 'IOW not found'];
+
+        $saRows = $db->createCommand(
+            "SELECT sa.id, sa.scheduleitem_id, sa.activity_id
+             FROM scheduleactivities sa
+             JOIN wbsscheduleitems wsi ON wsi.scheduleitem_id = sa.scheduleitem_id
+             WHERE wsi.wbsid=:w AND wsi.projectId=:p AND wsi.status=0 AND sa.status=0",
+            [':w' => $wgId, ':p' => $pid]
+        )->queryAll();
+
+        if (!$force) {
+            $conflicts = [];
+            foreach ($saRows as $sa) {
+                $relCount = (int)$db->createCommand(
+                    "SELECT COUNT(*) FROM activity_relations
+                     WHERE (precedent_activity=:id OR dependent_activity=:id) AND status=0",
+                    [':id' => $sa['id']]
+                )->queryScalar();
+                if ($relCount > 0) {
+                    return ['error' => 'Please remove the relation on "' . $sa['id'] . '" before deleting this IOW'];
+                }
+                $wanId = (int)$sa['activity_id'];
+                if ($wanId) {
+                    $conflicts = array_merge($conflicts, $this->checkActivityDeleteConflicts((int)$sa['id'], $wanId));
+                }
+            }
+            if (!empty($conflicts)) {
+                return [
+                    'error'     => 'Yes',
+                    'conflict'  => true,
+                    'errortext' => 'Deleting this IOW will also permanently delete: ' . implode('; ', array_unique($conflicts)) . '. This cannot be undone.',
+                ];
+            }
+        }
+
+        foreach ($saRows as $sa) {
+            $this->hardDeleteScheduleActivity((int)$sa['id'], $sa, (int)$sa['activity_id']);
+        }
+
+        // hardDeleteScheduleActivity already removes workgroups_new once its
+        // last wbsscheduleitems row is gone — but an IOW with NO activities
+        // at all (never had a Gantt bar) has no scheduleactivities/
+        // wbsscheduleitems rows to trigger that cleanup, so it's handled
+        // directly here too.
+        $db->createCommand()->delete('workgroups_new', ['Workgroup_Id' => $wgId])->execute();
+
+        return ['ok' => true];
+    }
+
+    /**
+     * actionWbsupdateiow — renames an IOW and/or moves it to a different
+     * IOW Group, edited in place from the Edit Activities popup's own IOW
+     * row. Never creates or renames the IOW Group itself (iow_groups) —
+     * only the workgroups_new row's Name/iowGroupid, same two fields the
+     * Add IOW tab sets when first creating one.
+     */
+    public function actionWbsupdateiow()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid      = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) return ['error' => 'No project selected'];
+        $pid = (int)$projuser->projectid;
+        $db  = \Yii::$app->db;
+
+        $wgId       = (int)\Yii::$app->request->post('wg_id', 0);
+        $name       = trim(\Yii::$app->request->post('name', ''));
+        $iowGroupId = (int)\Yii::$app->request->post('iow_group_id', 0);
+        if (!$wgId) return ['error' => 'No wg_id'];
+        if ($name === '') return ['error' => 'IOW name is required'];
+        if (!$iowGroupId) return ['error' => 'IOW Group is required'];
+
+        $owned = $db->createCommand(
+            "SELECT Workgroup_Id FROM workgroups_new WHERE Workgroup_Id=:id AND Project_Id=:p AND Status=0 LIMIT 1",
+            [':id' => $wgId, ':p' => $pid]
+        )->queryScalar();
+        if (!$owned) return ['error' => 'IOW not found'];
+
+        $db->createCommand(
+            "UPDATE workgroups_new SET Name=:n, iowGroupid=:g, Updated_On=:t WHERE Workgroup_Id=:id",
+            [':n' => $name, ':g' => $iowGroupId, ':t' => date('Y-m-d H:i:s'), ':id' => $wgId]
+        )->execute();
+
+        // Mirror the name onto this IOW's own wbsscheduleitems row too —
+        // actionWbsadd() seeds that row's name from the IOW name at
+        // creation time, so keep it in sync on rename.
+        $db->createCommand(
+            "UPDATE wbsscheduleitems SET name=:n WHERE wbsid=:w AND projectId=:p AND status=0",
+            [':n' => $name, ':w' => $wgId, ':p' => $pid]
+        )->execute();
+
+        return ['error' => 'No', 'ok' => true];
+    }
+
+    // Shared cascade used by every path that permanently removes a single
+    // scheduleactivities row — nothing is left orphaned or soft-flagged in
+    // workgroup_activities_new, pricing tables, or downstream procurement
+    // data. $sa/$wanId may be passed in if the caller already fetched them
+    // (e.g. actionWbsdelete), otherwise they're looked up here.
+    private function hardDeleteScheduleActivity($saId, $sa = null, $wanId = null)
+    {
+        $db = \Yii::$app->db;
+
+        if ($sa === null) {
+            $sa = $db->createCommand(
+                "SELECT scheduleitem_id, activity_id FROM scheduleactivities WHERE id = :id",
+                [':id' => $saId]
+            )->queryOne();
+        }
+        if ($wanId === null) {
+            $wanId = $sa ? (int)$sa['activity_id'] : 0;
+        }
+
+        // Cascade: permanently remove any procurement/indent/work-order/progress
+        // data raised against this activity — nothing is left orphaned or soft-flagged.
+        if ($sa) {
             $pricingIds = $db->createCommand(
                 "SELECT pricing_resourceid FROM pricing_estimate_resources_new WHERE activity_id=:aid",
-                [':aid' => $wanIdForCascade]
+                [':aid' => $wanId]
             )->queryColumn();
             if (!empty($pricingIds)) {
                 $db->createCommand()->delete('store_indents', ['pricing_resourceid' => $pricingIds])->execute();
             }
 
-            $db->createCommand()->delete('wo_task_rates',   ['activity_id' => $wanIdForCascade])->execute();
-            $db->createCommand()->delete('wo_sc_rates',     ['activity_id' => $wanIdForCascade])->execute();
-            $db->createCommand()->delete('wo_activity_qty', ['activity_id' => $wanIdForCascade])->execute();
+            $db->createCommand()->delete('wo_task_rates',   ['activity_id' => $wanId])->execute();
+            $db->createCommand()->delete('wo_sc_rates',     ['activity_id' => $wanId])->execute();
+            $db->createCommand()->delete('wo_activity_qty', ['activity_id' => $wanId])->execute();
 
             $woNums = $db->createCommand(
                 "SELECT WO_Number FROM work_order
                  WHERE JSON_SEARCH(WO_Subject, 'one', :aid, NULL, '\$[*].activity_id') IS NOT NULL",
-                [':aid' => (string)$wanIdForCascade]
+                [':aid' => (string)$wanId]
             )->queryColumn();
             if (!empty($woNums)) {
                 $db->createCommand()->delete('wo_measurement_book', ['wo_number' => $woNums])->execute();
@@ -1310,69 +1988,2223 @@ class ProjectsmainController extends Controller
                 $db->createCommand()->delete('purchase_orders',           ['order_id' => $poIds])->execute();
             }
 
-            // Soft-delete the activity and its resource allocation (pricing_status
-            // is the active-row flag these tables are read by everywhere else).
-            $db->createCommand(
-                "UPDATE workgroup_activities_new SET pricing_status = 1 WHERE id = :id",
-                [':id' => $wanIdForCascade]
-            )->execute();
-            $db->createCommand(
-                "UPDATE pricing_estimate_new SET pricing_status = 1 WHERE activity_Id = :id",
-                [':id' => $wanIdForCascade]
-            )->execute();
-            $db->createCommand(
-                "UPDATE pricing_estimate_resources_new SET pricing_status = 1 WHERE activity_id = :id",
-                [':id' => $wanIdForCascade]
-            )->execute();
+            $db->createCommand()->delete('pricing_estimate_resources_new', ['activity_id' => $wanId])->execute();
+            $db->createCommand()->delete('pricing_estimate_new', ['activity_Id' => $wanId])->execute();
+            $db->createCommand()->delete('workgroup_activities_new', ['id' => $wanId])->execute();
         }
 
-        // Soft-delete the scheduleactivities row
-        $db->createCommand(
-            "UPDATE scheduleactivities SET status = 1 WHERE id = :id",
-            [':id' => $saId]
-        )->execute();
+        // Permanently remove progress-report history for this activity.
+        $db->createCommand()->delete('schedule_progress_report', ['activity_id' => $saId])->execute();
+        $db->createCommand()->delete('schedule_progress_report_log', ['activity_id' => $saId])->execute();
+        $db->createCommand()->delete('schedule_resource', ['activityid' => $saId])->execute();
+
+        // Permanently remove any relationships this activity was part of.
+        $db->createCommand()->delete('activity_relations', [
+            'or', ['precedent_activity' => $saId], ['dependent_activity' => $saId]
+        ])->execute();
+
+        // Permanently remove the scheduleactivities row
+        $db->createCommand()->delete('scheduleactivities', ['id' => $saId])->execute();
 
         if ($sa) {
             $wsiId = (int)$sa['scheduleitem_id'];
 
-            // If no active activities remain under this wbsscheduleitems row, soft-delete it
+            // If no activities remain under this wbsscheduleitems row, remove it too
             $remainAct = (int)$db->createCommand(
-                "SELECT COUNT(*) FROM scheduleactivities WHERE scheduleitem_id = :w AND status = 0",
+                "SELECT COUNT(*) FROM scheduleactivities WHERE scheduleitem_id = :w",
                 [':w' => $wsiId]
             )->queryScalar();
 
             if ($remainAct === 0) {
-                $db->createCommand(
-                    "UPDATE wbsscheduleitems SET status = 1 WHERE scheduleitem_id = :w",
-                    [':w' => $wsiId]
-                )->execute();
-
-                // Get the workgroup (IOW) linked to this wbsscheduleitems
+                // Get the workgroup (IOW) linked to this wbsscheduleitems before
+                // removing it. wbsid is the reliable FK — schedulegrp_id is
+                // always written as a literal 0 on insert (actionWbsadd,
+                // actionGanttitems), never the real IOW id, so it can't be
+                // used here despite the column name suggesting otherwise.
                 $wsi = $db->createCommand(
-                    "SELECT schedulegrp_id FROM wbsscheduleitems WHERE scheduleitem_id = :w",
+                    "SELECT wbsid FROM wbsscheduleitems WHERE scheduleitem_id = :w",
                     [':w' => $wsiId]
                 )->queryOne();
 
-                if ($wsi) {
-                    $wgId = (int)$wsi['schedulegrp_id'];
+                $db->createCommand()->delete('wbsscheduleitems', ['scheduleitem_id' => $wsiId])->execute();
 
-                    // If no active wbsscheduleitems remain under this workgroup, soft-delete workgroup
+                if ($wsi) {
+                    $wgId = (int)$wsi['wbsid'];
+
+                    // If no wbsscheduleitems remain under this IOW, remove it
+                    // too — deletes only this one workgroups_new row; its
+                    // parent IOW Group (iow_groups) is a separate, shared
+                    // table never touched here.
                     $remainWsi = (int)$db->createCommand(
-                        "SELECT COUNT(*) FROM wbsscheduleitems WHERE schedulegrp_id = :g AND status = 0",
+                        "SELECT COUNT(*) FROM wbsscheduleitems WHERE wbsid = :g",
                         [':g' => $wgId]
                     )->queryScalar();
 
                     if ($remainWsi === 0) {
-                        $db->createCommand(
-                            "UPDATE workgroups_new SET Status = 1 WHERE Workgroup_Id = :g",
-                            [':g' => $wgId]
-                        )->execute();
+                        $db->createCommand()->delete('workgroups_new', ['Workgroup_Id' => $wgId])->execute();
                     }
                 }
             }
         }
+    }
 
-        return ['ok' => true];
+    // Shared conflict check used before permanently deleting an activity —
+    // lists (in plain English) what dependent data exists so the user can
+    // make an informed decision before forcing the delete through.
+    private function checkActivityDeleteConflicts($saId, $wanId)
+    {
+        $db = \Yii::$app->db;
+        $conflicts = [];
+
+        $progressCount = (int)$db->createCommand(
+            "SELECT COUNT(*) FROM schedule_progress_report WHERE activity_id = :id",
+            [':id' => $saId]
+        )->queryScalar();
+        if ($progressCount) {
+            $conflicts[] = $progressCount . ' reported progress ' . ($progressCount === 1 ? 'entry' : 'entries');
+        }
+
+        $indentCount = (int)$db->createCommand(
+            "SELECT COUNT(*) FROM store_indents si
+             JOIN pricing_estimate_resources_new p ON p.pricing_resourceid = si.pricing_resourceid
+             WHERE p.activity_id = :id",
+            [':id' => $wanId]
+        )->queryScalar();
+        if ($indentCount) {
+            $conflicts[] = $indentCount . ' raised ' . ($indentCount === 1 ? 'indent' : 'indents');
+        }
+
+        $poCount = (int)$db->createCommand(
+            "SELECT COUNT(DISTINCT order_id) FROM purchase_order_activities WHERE activity_id = :id",
+            [':id' => $saId]
+        )->queryScalar();
+        if ($poCount) {
+            $conflicts[] = $poCount . ' purchase ' . ($poCount === 1 ? 'order' : 'orders') . ' (including any goods received against them)';
+        }
+
+        $woCount = (int)$db->createCommand(
+            "SELECT COUNT(*) FROM work_order
+             WHERE JSON_SEARCH(WO_Subject, 'one', :aid, NULL, '\$[*].activity_id') IS NOT NULL",
+            [':aid' => (string)$wanId]
+        )->queryScalar();
+        if ($woCount) {
+            $conflicts[] = $woCount . ' work ' . ($woCount === 1 ? 'order' : 'orders') . ' (including any measurement book billing against them)';
+        }
+
+        return $conflicts;
+    }
+
+    // ── Cashflow Dashboard editable targets ─────────────────────────────
+    // Generic per-project, per-metric target store backing the dial gauges
+    // on the Cashflow dashboard (e.g. Cash-To-Cash Cycle) — one row per
+    // project+metric, upserted on save.
+    public function actionCfgettarget()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+        $metricKey = (string)($_POST['metric_key'] ?? '');
+        if ($metricKey === '') { return json_encode(['error' => 'No metric_key']); }
+
+        $row = Yii::$app->db->createCommand(
+            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key=:mk",
+            [':pid' => $pid, ':mk' => $metricKey]
+        )->queryOne();
+
+        return json_encode([
+            'error'  => 'No',
+            'target' => $row ? (float)$row['target_value'] : 0,
+        ]);
+    }
+
+    public function actionCfsavetarget()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+        $metricKey = (string)($_POST['metric_key'] ?? '');
+        $value = (float)($_POST['target_value'] ?? 0);
+        if ($metricKey === '') { return json_encode(['error' => 'No metric_key']); }
+
+        Yii::$app->db->createCommand(
+            "INSERT INTO cf_dashboard_targets (project_id, metric_key, target_value, updated_by)
+             VALUES (:pid, :mk, :val, :uid)
+             ON DUPLICATE KEY UPDATE target_value=:val, updated_by=:uid",
+            [':pid' => $pid, ':mk' => $metricKey, ':val' => $value, ':uid' => $uid]
+        )->execute();
+
+        return json_encode(['error' => 'No']);
+    }
+
+    // Cashflow Dashboard "Bank" panel — current balance across ANY Bank
+    // account (accounts_item.account_type = 2), NOT restricted to a bank
+    // account linked to this project via accounts_item.projectid, since
+    // a project's transactions can pass through a shared/company-wide
+    // bank account that isn't itself tied to any one project. Project
+    // scoping comes entirely from each voucher/journalvoucher row's own
+    // project_id column — same correction already applied to
+    // actionCfwip/actionCfcurrentassets/actionCfcurrentliabilities.
+    // Computed the same way the Finance module's own Ledger/Bank Book
+    // do: sum every voucher and journalvoucher row where a Bank account
+    // is on either side, restricted to this project. A net CREDIT
+    // balance (money drawn against the account, e.g. a CC account in
+    // use) is "Availed" — shown as an orange overlay + needle on the
+    // dial. A net DEBIT balance means nothing is availed (needle at
+    // 0/left tip, dial fully grey, no overlay).
+    public function actionCfbankbalance()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $sum = function($sql) use ($pid) {
+            $v = Yii::$app->db->createCommand($sql, [':pid' => $pid])->queryScalar();
+            return $v ? (float)$v : 0;
+        };
+
+        $debit  = $sum("SELECT SUM(v.amount) FROM voucher v INNER JOIN accounts_item ai ON ai.id=v.account_id WHERE ai.account_type=2 AND v.contra=0 AND v.project_id=:pid");
+        $credit = $sum("SELECT SUM(v.amount) FROM voucher v INNER JOIN accounts_item ai ON ai.id=v.creditacnt WHERE ai.account_type=2 AND v.contra=0 AND v.project_id=:pid");
+        $contraDebit  = $sum("SELECT SUM(v.amount) FROM voucher v INNER JOIN accounts_item ai ON ai.id=v.account_id WHERE ai.account_type=2 AND v.contra=1 AND v.type='Receipt' AND v.project_id=:pid");
+        $contraCredit = $sum("SELECT SUM(v.amount) FROM voucher v INNER JOIN accounts_item ai ON ai.id=v.creditacnt WHERE ai.account_type=2 AND v.contra=1 AND v.type='Payment' AND v.project_id=:pid");
+        $journalDebit  = $sum("SELECT SUM(j.amount) FROM journalvoucher j INNER JOIN accounts_item ai ON ai.id=j.debitacnt WHERE ai.account_type=2 AND j.project_id=:pid");
+        $journalCredit = $sum("SELECT SUM(j.amount) FROM journalvoucher j INNER JOIN accounts_item ai ON ai.id=j.creditacnt WHERE ai.account_type=2 AND j.project_id=:pid");
+
+        $totalDebit  = $debit + $contraDebit + $journalDebit;
+        $totalCredit = $credit + $contraCredit + $journalCredit;
+        $net = $totalCredit - $totalDebit; // positive = net credit balance (availed)
+
+        $hasBank = ($totalDebit > 0 || $totalCredit > 0);
+
+        return json_encode([
+            'error'    => 'No',
+            'has_bank' => $hasBank,
+            'total_debit'  => round($totalDebit, 2),
+            'total_credit' => round($totalCredit, 2),
+            'balance_type' => $net > 0 ? 'credit' : 'debit',
+            'availed'      => $net > 0 ? round($net, 2) : 0,
+        ]);
+    }
+
+    // Bank/Working Capital panel breakdown (Cashflow Dashboard popup):
+    // a LINE chart (unlike every other breakdown popup here, which are
+    // bar charts) of the PEAK working-capital-drawn (Availed, see
+    // actionCfbankbalance) level reached in each stretch of time between
+    // consecutive client payments — i.e. how high the overdraft climbed
+    // before each payment came in and (presumably) paid it back down.
+    //
+    // Walks every Bank-touching voucher/journalvoucher row chronologically
+    // (same six-way debit/credit union actionCfbankbalance sums, just
+    // signed per-row instead of summed once: a CREDIT to Bank increases
+    // Availed, a DEBIT decreases it) and keeps a running balance,
+    // tracking the highest point reached within each window. Window
+    // boundaries are the client's payment dates — same "Client" account
+    // definition actionCfbillsreceivableavgtime uses (the debit side of
+    // the journal entry crediting "Contract Income"), specifically each
+    // date a plain Bank-debiting voucher credited that account. The
+    // first window runs from the start of all transactions to the first
+    // payment; each subsequent window runs between two consecutive
+    // payments; the final, still-open window (last payment to today) is
+    // also included, using every transaction after that last payment.
+    // One point per window, labelled by the month the window's OWN
+    // ending payment landed in ("Current" for the open window). Returns
+    // no points if there's no Contract Income account, no Client
+    // account, or no bank transactions at all.
+    // Forward-looking projected working-capital requirement, in fixed
+    // 45-day cycles from the project's planned start_date to its planned
+    // end_date (projects.start_date/end_date — not actual transaction
+    // history, unlike every other Cashflow Dashboard panel). Two curves
+    // feed this, both planned/estimated rather than actual:
+    //   - Cumulative planned COST: each scheduleactivities row's activity
+    //     cost (pricing_estimate_new.activity_qty * SUM(pricing_estimate_
+    //     resources_new.quantity * rate), the same formula
+    //     actionPerformancedashboard uses) is spread evenly over its own
+    //     duration in days (cost / duration_days = a daily rate), then
+    //     each 45-day cycle picks up daily_rate * however many of the
+    //     activity's days fall inside that cycle. Summed cumulatively.
+    //   - Cumulative expected INCOME: projects.project_value (the total
+    //     contract value from the project name card) divided evenly across
+    //     every cycle and accrued cumulatively — there is no milestone/
+    //     billing-schedule table in this schema to derive real expected
+    //     payment dates from, so this is a deliberate straight-line
+    //     assumption, not a projection of actual billing terms.
+    // Net requirement per cycle = cumulative cost - cumulative income; can
+    // go negative (a projected surplus) and is plotted as such rather than
+    // floored at zero, per explicit request.
+    public function actionCfbankbalancebreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $project = Yii::$app->db->createCommand(
+            "SELECT start_date, end_date, project_value FROM projects WHERE Project_Id = :pid",
+            [':pid' => $pid]
+        )->queryOne();
+        if (!$project || !$project['start_date'] || !$project['end_date']) {
+            return json_encode(['error' => 'No', 'points' => []]);
+        }
+
+        $projStart = new \DateTime(date('Y-m-d', strtotime($project['start_date'])));
+        $projEnd   = new \DateTime(date('Y-m-d', strtotime($project['end_date'])));
+        if ($projEnd <= $projStart) {
+            return json_encode(['error' => 'No', 'points' => []]);
+        }
+        $totalDays = (int)$projStart->diff($projEnd)->days;
+        $cycleLen = 45;
+        $cycleCount = max(1, (int)ceil($totalDays / $cycleLen));
+        $projectValue = (float)$project['project_value'];
+        $incomePerCycle = $projectValue / $cycleCount;
+
+        // Every activity's schedule window + planned cost, same cost
+        // formula as actionPerformancedashboard.
+        $activities = Yii::$app->db->createCommand(
+            "SELECT sa.start_date, sa.end_date,
+                    pen.activity_qty * COALESCE(res.cost_per_unit, 0) AS activity_cost
+               FROM scheduleactivities sa
+               INNER JOIN pricing_estimate_new pen
+                       ON pen.activity_Id = sa.activity_id AND pen.project_Id = sa.projectId
+               LEFT JOIN (
+                    SELECT activity_id, project_id, SUM(quantity * rate) AS cost_per_unit
+                      FROM pricing_estimate_resources_new
+                     WHERE pricing_status = 0
+                     GROUP BY activity_id, project_id
+               ) res ON res.activity_id = pen.activity_Id AND res.project_id = pen.project_Id
+              WHERE sa.projectId = :pid AND sa.start_date IS NOT NULL AND sa.end_date IS NOT NULL",
+            [':pid' => $pid]
+        )->queryAll();
+
+        // Bucket 1: cost attributed to each 45-day cycle, via an even
+        // daily spread over each activity's own schedule duration.
+        $cycleCost = array_fill(0, $cycleCount, 0.0);
+        foreach ($activities as $act) {
+            $actStart = new \DateTime(date('Y-m-d', strtotime($act['start_date'])));
+            $actEnd   = new \DateTime(date('Y-m-d', strtotime($act['end_date'])));
+            if ($actEnd < $actStart) { continue; }
+            $actDays = max(1, (int)$actStart->diff($actEnd)->days + 1);
+            $dailyRate = ((float)$act['activity_cost']) / $actDays;
+            if ($dailyRate == 0) { continue; }
+
+            // Walk this activity's own day range, clipped to the project
+            // window, and add each day's share into its containing cycle.
+            $walk = clone $actStart;
+            if ($walk < $projStart) { $walk = clone $projStart; }
+            $clipEnd = $actEnd < $projEnd ? $actEnd : $projEnd;
+            while ($walk <= $clipEnd) {
+                $dayOffset = (int)$projStart->diff($walk)->days;
+                $cycleIdx = min($cycleCount - 1, (int)floor($dayOffset / $cycleLen));
+                $cycleCost[$cycleIdx] += $dailyRate;
+                $walk->modify('+1 day');
+            }
+        }
+
+        $points = [];
+        $cumCost = 0.0;
+        $cumIncome = 0.0;
+        $cycleStart = clone $projStart;
+        for ($c = 0; $c < $cycleCount; $c++) {
+            $cumCost += $cycleCost[$c];
+            $cumIncome += $incomePerCycle;
+            $cycleEnd = clone $cycleStart;
+            $cycleEnd->modify('+' . ($cycleLen - 1) . ' day');
+            if ($cycleEnd > $projEnd) { $cycleEnd = clone $projEnd; }
+            $points[] = [
+                'name'   => $cycleEnd->format('d M Y'),
+                'amount' => round($cumCost - $cumIncome, 2),
+            ];
+            $cycleStart->modify('+' . $cycleLen . ' day');
+        }
+
+        return json_encode([
+            'error' => 'No',
+            'points' => $points,
+        ]);
+    }
+
+    // Shared helper: sums Bank/Cash PAYMENT transactions for a project,
+    // filtered to only those whose debited counterparty account belongs
+    // to a given account_type. In a bank/cash book, Bank/Cash is
+    // CREDITED when an expense is incurred or an asset is purchased —
+    // the debited side is the actual Expense/Asset account head. This
+    // walks every non-contra voucher where the CREDITED side is ANY
+    // Bank or Cash account head (account_type IN (1,2)) — NOT restricted
+    // to a Bank/Cash account linked to this project via
+    // accounts_item.projectid, since a project's transactions can pass
+    // through a shared/company-wide Bank or Cash account that isn't
+    // itself tied to any one project. Project scoping comes entirely
+    // from the voucher row's own project_id column. Sums the amount only
+    // when the debited account_id's account_type matches
+    // $debitAccountType (e.g. 8 = Expenses for Work In Progress). Contra
+    // (internal transfer) rows are excluded — they're not real external
+    // expense transactions. journalvoucher entries are NOT included here
+    // (journal entries don't touch Bank/Cash directly by definition in
+    // this schema's voucher/journalvoucher split).
+    private function _cfBankCashDebitedByType($pid, $debitAccountType)
+    {
+        $sql = "SELECT SUM(v.amount)
+                FROM voucher v
+                INNER JOIN accounts_item debitAi ON debitAi.id = v.account_id
+                INNER JOIN accounts_item creditAi ON creditAi.id = v.creditacnt
+                WHERE creditAi.account_type IN (1,2)
+                  AND v.contra = 0
+                  AND debitAi.account_type = :debitType
+                  AND v.project_id = :pid";
+
+        $v = Yii::$app->db->createCommand($sql, [':debitType' => $debitAccountType, ':pid' => $pid])->queryScalar();
+        return $v ? (float)$v : 0;
+    }
+
+    // Shared helper: net (Debit - Credit) balance of one account head,
+    // restricted to one project's own voucher/journalvoucher
+    // transactions. Positive = debit balance (the account is behaving as
+    // an Asset); negative = credit balance (behaving as a Liability).
+    // Opening balances excluded — pure transaction movement.
+    private function _cfAccountDebitBalance($accountId, $pid)
+    {
+        $sum = function($sql) use ($accountId, $pid) {
+            $v = Yii::$app->db->createCommand($sql, [':id' => $accountId, ':pid' => $pid])->queryScalar();
+            return $v ? (float)$v : 0;
+        };
+        $debit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=0 AND project_id=:pid");
+        $credit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=0 AND project_id=:pid");
+        $contraDebit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=1 AND type='Receipt' AND project_id=:pid");
+        $contraCredit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=1 AND type='Payment' AND project_id=:pid");
+        $journalDebit  = $sum("SELECT SUM(amount) FROM journalvoucher WHERE debitacnt=:id AND project_id=:pid");
+        $journalCredit = $sum("SELECT SUM(amount) FROM journalvoucher WHERE creditacnt=:id AND project_id=:pid");
+
+        $totalDebit  = $debit + $contraDebit + $journalDebit;
+        $totalCredit = $credit + $contraCredit + $journalCredit;
+        return $totalDebit - $totalCredit;
+    }
+
+    // Same as _cfAccountDebitBalance, but excludes journal entries whose
+    // CREDIT side is ANY Income-type account (accounts_item.account_type
+    // = 4 — Contract Income included, but not limited to it by name).
+    // Used ONLY by the Investments panel (actionCfcurrentassets/
+    // breakdown): a bill raised (or any other income recognized) but not
+    // yet collected is Bills Receivable, not an Investment, so it must
+    // not inflate this account's balance here — every OTHER caller of
+    // _cfAccountDebitBalance keeps counting it (Bills Receivable itself
+    // depends on the Contract Income-specific version of this).
+    private function _cfAccountDebitBalanceExcludingContractIncome($accountId, $pid)
+    {
+        $incomeAcctIds = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE account_type = 4"
+        )->queryColumn();
+
+        $sum = function($sql, $params = []) use ($accountId, $pid) {
+            $v = Yii::$app->db->createCommand($sql, array_merge([':id' => $accountId, ':pid' => $pid], $params))->queryScalar();
+            return $v ? (float)$v : 0;
+        };
+        $debit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=0 AND project_id=:pid");
+        $credit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=0 AND project_id=:pid");
+        $contraDebit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=1 AND type='Receipt' AND project_id=:pid");
+        $contraCredit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=1 AND type='Payment' AND project_id=:pid");
+
+        $journalDebitSql = "SELECT SUM(amount) FROM journalvoucher WHERE debitacnt=:id AND project_id=:pid";
+        $journalCreditSql = "SELECT SUM(amount) FROM journalvoucher WHERE creditacnt=:id AND project_id=:pid";
+        if (!empty($incomeAcctIds)) {
+            $placeholders = implode(',', array_map('intval', $incomeAcctIds));
+            $journalDebitSql .= " AND creditacnt NOT IN ($placeholders)";
+            $journalCreditSql .= " AND creditacnt NOT IN ($placeholders)";
+        }
+        $journalDebit  = $sum($journalDebitSql);
+        $journalCredit = $sum($journalCreditSql);
+
+        $totalDebit  = $debit + $contraDebit + $journalDebit;
+        $totalCredit = $credit + $contraCredit + $journalCredit;
+        return $totalDebit - $totalCredit;
+    }
+
+    // Same as _cfAccountDebitBalance, but restricted to transactions
+    // dated ON OR BEFORE $uptoDate (inclusive) — used to reconstruct
+    // what an account's balance would have read as of a past cycle's
+    // closing date, for the Total Investment per-cycle breakdown chart.
+    // Pass null for $uptoDate to mean "no upper bound" (same as
+    // _cfAccountDebitBalance).
+    private function _cfAccountDebitBalanceAsOf($accountId, $pid, $uptoDate)
+    {
+        if (!$uptoDate) {
+            return $this->_cfAccountDebitBalance($accountId, $pid);
+        }
+        $sum = function($sql) use ($accountId, $pid, $uptoDate) {
+            $v = Yii::$app->db->createCommand($sql, [':id' => $accountId, ':pid' => $pid, ':ud' => $uptoDate])->queryScalar();
+            return $v ? (float)$v : 0;
+        };
+        $debit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=0 AND project_id=:pid AND date(date) <= :ud");
+        $credit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=0 AND project_id=:pid AND date(date) <= :ud");
+        $contraDebit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=1 AND type='Receipt' AND project_id=:pid AND date(date) <= :ud");
+        $contraCredit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=1 AND type='Payment' AND project_id=:pid AND date(date) <= :ud");
+        $journalDebit  = $sum("SELECT SUM(amount) FROM journalvoucher WHERE debitacnt=:id AND project_id=:pid AND date(date) <= :ud");
+        $journalCredit = $sum("SELECT SUM(amount) FROM journalvoucher WHERE creditacnt=:id AND project_id=:pid AND date(date) <= :ud");
+
+        $totalDebit  = $debit + $contraDebit + $journalDebit;
+        $totalCredit = $credit + $contraCredit + $journalCredit;
+        return $totalDebit - $totalCredit;
+    }
+
+    // Same as _cfAccountDebitBalanceExcludingContractIncome, but also
+    // restricted to transactions dated ON OR BEFORE $uptoDate (pass null
+    // for "no upper bound", same as _cfAccountDebitBalanceAsOf). Used by
+    // _cfNetInvestmentAsOf (Total Investment) for its own Investments
+    // component, at each past cycle's closing date.
+    private function _cfAccountDebitBalanceAsOfExcludingIncome($accountId, $pid, $uptoDate)
+    {
+        if (!$uptoDate) {
+            return $this->_cfAccountDebitBalanceExcludingContractIncome($accountId, $pid);
+        }
+        $incomeAcctIds = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE account_type = 4"
+        )->queryColumn();
+
+        $sum = function($sql) use ($accountId, $pid, $uptoDate) {
+            $v = Yii::$app->db->createCommand($sql, [':id' => $accountId, ':pid' => $pid, ':ud' => $uptoDate])->queryScalar();
+            return $v ? (float)$v : 0;
+        };
+        $debit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=0 AND project_id=:pid AND date(date) <= :ud");
+        $credit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=0 AND project_id=:pid AND date(date) <= :ud");
+        $contraDebit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=1 AND type='Receipt' AND project_id=:pid AND date(date) <= :ud");
+        $contraCredit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=1 AND type='Payment' AND project_id=:pid AND date(date) <= :ud");
+
+        $journalDebitSql = "SELECT SUM(amount) FROM journalvoucher WHERE debitacnt=:id AND project_id=:pid AND date(date) <= :ud";
+        $journalCreditSql = "SELECT SUM(amount) FROM journalvoucher WHERE creditacnt=:id AND project_id=:pid AND date(date) <= :ud";
+        if (!empty($incomeAcctIds)) {
+            $placeholders = implode(',', array_map('intval', $incomeAcctIds));
+            $journalDebitSql .= " AND creditacnt NOT IN ($placeholders)";
+            $journalCreditSql .= " AND creditacnt NOT IN ($placeholders)";
+        }
+        $journalDebit  = $sum($journalDebitSql);
+        $journalCredit = $sum($journalCreditSql);
+
+        $totalDebit  = $debit + $contraDebit + $journalDebit;
+        $totalCredit = $credit + $contraCredit + $journalCredit;
+        return $totalDebit - $totalCredit;
+    }
+
+    // Shared helper: every account head mapped under EITHER the
+    // "Current Assets" (accounts_sub.id = 32) OR "Current Liabilities"
+    // (accounts_sub.id = 30) subgroup, via subgroup_accounts. This is
+    // the combined candidate pool for both actionCfcurrentassets and
+    // actionCfcurrentliabilities — an account head doesn't statically
+    // "belong" to one bucket or the other; each one's OWN current
+    // balance sign (Debit - Credit, project-scoped) decides which
+    // bucket it falls into for a given project: a debit balance means
+    // it's currently behaving as an Asset, a credit balance means it's
+    // currently behaving as a Liability. The same account can move
+    // between the two panels project to project, or period to period,
+    // as its balance sign changes.
+    private function _cfCurrentAssetLiabilityAccountIds()
+    {
+        return Yii::$app->db->createCommand(
+            "SELECT DISTINCT account_id FROM subgroup_accounts WHERE subgrp_id IN (32, 30)"
+        )->queryColumn();
+    }
+
+    // Shared helper: every Bank/Cash payment voucher (contra=0, credit
+    // side account_type IN 1,2) for this project, grouped by its DEBIT
+    // account head, restricted to a given date window (pass null for
+    // either bound to mean unbounded). Returns [acctId => amount].
+    // Feeds both the Investments and WIP formulas — each account's own
+    // current ledger balance (see _cfAccountDebitBalance) then decides
+    // which of the two panels its grouped amount counts toward:
+    //   - Expense-type (account_type=8) accounts always go to WIP — the
+    //     debit itself IS the recognized cost, regardless of balance.
+    //   - Any OTHER account with a current DEBIT balance is behaving
+    //     like an advance/deposit — no liability has been cleared yet —
+    //     so it goes to Investments.
+    //   - Any OTHER account with a CREDIT or ZERO balance means the
+    //     benefit has already been received and this payment is
+    //     clearing/part-settling that liability — so it goes to WIP.
+    private function _cfBankCashPaymentsByDebitAccount($pid, $sinceDate, $uptoDate)
+    {
+        $cond = "";
+        $params = [':pid' => $pid];
+        if ($sinceDate) { $cond .= " AND date(v.date) > :sd"; $params[':sd'] = $sinceDate; }
+        if ($uptoDate) { $cond .= " AND date(v.date) <= :ud"; $params[':ud'] = $uptoDate; }
+
+        $rows = Yii::$app->db->createCommand(
+            "SELECT v.account_id, SUM(v.amount) AS amt
+             FROM voucher v
+             INNER JOIN accounts_item creditAi ON creditAi.id = v.creditacnt
+             WHERE creditAi.account_type IN (1,2)
+               AND v.contra = 0
+               AND v.project_id = :pid
+               $cond
+             GROUP BY v.account_id",
+            $params
+        )->queryAll();
+
+        $byAccount = [];
+        foreach ($rows as $row) {
+            $byAccount[(int)$row['account_id']] = (float)$row['amt'];
+        }
+        return $byAccount;
+    }
+
+    // Investments panel (Cashflow Dashboard, formerly "Net Investments"):
+    // sum of Bank/Cash payment amounts (see
+    // _cfBankCashPaymentsByDebitAccount) grouped by debit account head,
+    // keeping only accounts whose OWN current ledger balance (vouchers +
+    // journals, project-scoped) is a DEBIT balance — behaving like an
+    // advance/deposit, not yet cleared against a liability. Expense-type
+    // accounts are excluded entirely here — they always count as WIP
+    // regardless of balance.
+    public function actionCfcurrentassets()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $byAccount = $this->_cfBankCashPaymentsByDebitAccount($pid, null, null);
+        $gstPairedIds = $this->_cfGstPairedAccountIds();
+
+        $total = $this->_cfGstNetInvestments($pid);
+        foreach ($byAccount as $acctId => $amt) {
+            if (in_array($acctId, $gstPairedIds, true)) { continue; }
+            $accountType = (int)Yii::$app->db->createCommand(
+                "SELECT account_type FROM accounts_item WHERE id=:id", [':id' => $acctId]
+            )->queryScalar();
+            if ($accountType === 8) { continue; }
+            $balance = $this->_cfAccountDebitBalance($acctId, $pid);
+            if ($balance > 0) {
+                $total += $amt;
+            }
+        }
+
+        return json_encode([
+            'error' => 'No',
+            'total' => round($total, 2),
+        ]);
+    }
+
+    // Investments panel breakdown (Cashflow Dashboard tooltip): same
+    // account pool and debit-balance filter as actionCfcurrentassets,
+    // but returns each contributing account head individually instead
+    // of just the sum — for the click-to-open per-account bar chart.
+    // Each row also carries a `members` array of the individual voucher
+    // transactions behind that account's payment total (see
+    // _cfAccountTransactionsDetail), consumed by the shared per-bar
+    // hover tooltip (_cfBreakdownTip in _performancedashboard.js) to
+    // show transaction-level detail on hover — same tooltip mechanism
+    // WIP's group bars already use for their member account heads.
+    public function actionCfcurrentassetsbreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $byAccount = $this->_cfBankCashPaymentsByDebitAccount($pid, null, null);
+        $gstPairedIds = $this->_cfGstPairedAccountIds();
+
+        $rows = [];
+        foreach ($this->_cfGstAccountPairs() as $pair) {
+            $net = $this->_cfAccountDebitBalance($pair[0], $pid) + $this->_cfAccountDebitBalance($pair[1], $pid);
+            if ($net > 0) {
+                $inputName = Yii::$app->db->createCommand(
+                    "SELECT name FROM accounts_item WHERE id=:id", [':id' => $pair[0]]
+                )->queryScalar();
+                $label = preg_replace('/^Input\s*/i', '', $inputName ?: '') ?: 'GST';
+                $rows[] = ['name' => 'Net ' . $label . ' Credit', 'amount' => round($net, 2), 'members' => []];
+            }
+        }
+        foreach ($byAccount as $acctId => $amt) {
+            if (in_array($acctId, $gstPairedIds, true)) { continue; }
+            $accountType = (int)Yii::$app->db->createCommand(
+                "SELECT account_type FROM accounts_item WHERE id=:id", [':id' => $acctId]
+            )->queryScalar();
+            if ($accountType === 8) { continue; }
+            $balance = $this->_cfAccountDebitBalance($acctId, $pid);
+            if ($balance > 0) {
+                $name = Yii::$app->db->createCommand(
+                    "SELECT name FROM accounts_item WHERE id=:id",
+                    [':id' => $acctId]
+                )->queryScalar();
+                $rows[] = [
+                    'name' => $name ?: ('Account #' . $acctId),
+                    'amount' => round($amt, 2),
+                    'members' => $this->_cfAccountTransactionsDetail($acctId, $pid),
+                ];
+            }
+        }
+        usort($rows, function($a, $b) { return $b['amount'] <=> $a['amount']; });
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+        ]);
+    }
+
+    // Shared helper: every individual voucher/journalvoucher transaction
+    // touching a single account head for a project, signed so a debit
+    // (increases the account's debit balance) is positive and a credit
+    // is negative — same net-effect convention as _cfAccountDebitBalance,
+    // just broken out row-by-row instead of summed. Each row is labelled
+    // "date · voucher_no · narration" (falling back to the voucher type
+    // when narration is blank) for display in the Investments breakdown
+    // hover tooltip. Ordered oldest-first so the tooltip reads like a
+    // running ledger.
+    private function _cfAccountTransactionsDetail($accountId, $pid)
+    {
+        $rows = Yii::$app->db->createCommand(
+            "SELECT date, voucher_no, narration, type, amount, 1 AS sign
+             FROM voucher WHERE account_id=:id AND contra=0 AND project_id=:pid
+             UNION ALL
+             SELECT date, voucher_no, narration, type, amount, -1 AS sign
+             FROM voucher WHERE creditacnt=:id AND contra=0 AND project_id=:pid
+             UNION ALL
+             SELECT date, voucher_no, narration, type, amount, 1 AS sign
+             FROM voucher WHERE account_id=:id AND contra=1 AND type='Receipt' AND project_id=:pid
+             UNION ALL
+             SELECT date, voucher_no, narration, type, amount, -1 AS sign
+             FROM voucher WHERE creditacnt=:id AND contra=1 AND type='Payment' AND project_id=:pid
+             UNION ALL
+             SELECT date, voucher_no, narration, 'Journal' AS type, amount, 1 AS sign
+             FROM journalvoucher WHERE debitacnt=:id AND project_id=:pid
+             UNION ALL
+             SELECT date, voucher_no, narration, 'Journal' AS type, amount, -1 AS sign
+             FROM journalvoucher WHERE creditacnt=:id AND project_id=:pid
+             ORDER BY date ASC",
+            [':id' => $accountId, ':pid' => $pid]
+        )->queryAll();
+
+        $members = [];
+        foreach ($rows as $r) {
+            $label = date('d-M-Y', strtotime($r['date'])) . ' · ' . ($r['voucher_no'] ?: $r['type']);
+            if (!empty($r['narration'])) { $label .= ' · ' . $r['narration']; }
+            $members[] = [
+                'name' => $label,
+                'amount' => round(((float)$r['sign']) * (float)$r['amount'], 2),
+            ];
+        }
+        return $members;
+    }
+
+    // Shared helper: the Bills Receivable value — the current balance of
+    // the account head that has a CREDIT posting against "Contract
+    // Income" through a JOURNAL entry (journalvoucher only) for the
+    // selected project. There is only ever one such debit account per
+    // project. Returns 0 if there's no "Contract Income" account or no
+    // qualifying journal entry yet. Shared by actionCfbillsreceivable
+    // and actionCfwip (which subtracts this from the WIP total — see
+    // Shared helper: the date of the MOST RECENT journal entry crediting
+    // "Contract Income" for this project — the start of the current,
+    // still-open WIP accrual cycle. Every time Contract Income is
+    // credited, the WIP accumulated up to that date is considered
+    // billed out (at its real cost, not the invoice/quoted value — see
+    // actionCfwip's comment) and permanently excluded from future WIP
+    // totals; only transactions dated AFTER this date belong to the
+    // still-open cycle. Returns null if there's no "Contract Income"
+    // account or no credit entry yet (the whole project-to-date range is
+    // one open cycle in that case).
+    private function _cfLatestContractIncomeDate($pid)
+    {
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return null;
+        }
+
+        $latestDate = Yii::$app->db->createCommand(
+            "SELECT MAX(date) FROM journalvoucher WHERE creditacnt = :cid AND project_id = :pid",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryScalar();
+
+        return $latestDate ?: null;
+    }
+
+    // Shared helper: every distinct date on which a journal entry
+    // credited "Contract Income" for this project, in ascending order —
+    // the full list of WIP accrual cycle boundaries (see
+    // _cfLatestContractIncomeDate, which just returns the last one of
+    // this list). Used by _cfNetInvestmentClosedCyclesWip to walk each
+    // now-closed cycle in turn. Returns an empty array if there's no
+    // "Contract Income" account or no credit entries yet.
+    private function _cfAllContractIncomeDates($pid)
+    {
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return [];
+        }
+
+        return Yii::$app->db->createCommand(
+            "SELECT DISTINCT date FROM journalvoucher WHERE creditacnt = :cid AND project_id = :pid ORDER BY date ASC",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryColumn();
+    }
+
+    // Shared helper: every date the client actually PAID (a Bank receipt
+    // — a plain, non-contra voucher debiting a Bank account and crediting
+    // the "Client" account, i.e. the debit side of the Contract Income
+    // journal entry — same single-account assumption
+    // _cfCollectionCycleDaysAverage already makes for this schema), as
+    // opposed to _cfAllContractIncomeDates (bill-RAISED dates). Used as
+    // the Total Investment per-cycle boundary — cycles are bounded by
+    // when cash actually lands, not when it was invoiced, per explicit
+    // direction. Returns an empty array if there's no Contract Income
+    // account, no Client account, or no payments received yet.
+    private function _cfAllContractIncomePaymentDates($pid)
+    {
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) { return []; }
+
+        $clientAcctId = Yii::$app->db->createCommand(
+            "SELECT j.debitacnt FROM journalvoucher j
+             WHERE j.creditacnt = :cid AND j.project_id = :pid
+             LIMIT 1",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryScalar();
+        if (!$clientAcctId) { return []; }
+
+        return Yii::$app->db->createCommand(
+            "SELECT DISTINCT v.date FROM voucher v
+             INNER JOIN accounts_item ai ON ai.id = v.account_id
+             WHERE ai.account_type = 2 AND v.creditacnt = :cid
+               AND v.contra = 0 AND v.project_id = :pid
+             ORDER BY v.date ASC",
+            [':cid' => (int)$clientAcctId, ':pid' => $pid]
+        )->queryColumn();
+    }
+
+    // Core Work In Progress computation for an arbitrary accrual window:
+    // transactions dated strictly AFTER $sinceDate, up to and including
+    // $uptoDate (pass null for either bound to mean unbounded on that
+    // side). Two components, both restricted to real Bank/Cash payment
+    // vouchers (contra=0, credit side account_type IN 1,2):
+    //   1. ALL CASH AND BANK EXPENSES — debit side is an Expense-type
+    //      account (account_type=8) — always WIP regardless of balance.
+    //   2. Payments made against any OTHER account head (see
+    //      _cfBankCashPaymentsByDebitAccount) whose own CURRENT LEDGER
+    //      BALANCE (vouchers + journals, full picture) is credit or
+    //      zero — meaning the benefit has already been received and
+    //      this payment is clearing/part-settling that liability. An
+    //      account still sitting at a genuine open DEBIT balance (an
+    //      advance/deposit not yet consumed) is excluded — that counts
+    //      as an Investment instead (see actionCfcurrentassets).
+    // Shared by actionCfwip (open cycle: sinceDate=latest boundary,
+    // uptoDate=null) and _cfNetInvestmentClosedCyclesWip (each closed
+    // cycle in turn).
+    private function _cfWipForWindow($pid, $sinceDate, $uptoDate)
+    {
+        $byAccount = $this->_cfBankCashPaymentsByDebitAccount($pid, $sinceDate, $uptoDate);
+
+        $total = 0;
+        foreach ($byAccount as $acctId => $amt) {
+            $accountType = (int)Yii::$app->db->createCommand(
+                "SELECT account_type FROM accounts_item WHERE id=:id", [':id' => $acctId]
+            )->queryScalar();
+            if ($accountType === 8) {
+                $total += $amt;
+                continue;
+            }
+            $balance = $this->_cfAccountDebitBalance($acctId, $pid);
+            if ($balance <= 0) {
+                $total += $amt;
+            }
+        }
+
+        return max(0, $total);
+    }
+
+    // Net Investment panel: Investments + WIP + Bills Receivable — see
+    // _cfNetInvestmentAsOf below for the exact formula.
+    //
+    // Target reuses the Bank-Working Capital target (bank_wcapital)
+    // rather than having its own — Net Investment and Working Capital
+    // represent the same capital commitment viewed from different
+    // angles.
+    public function actionCfnetinvestment()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $total = $this->_cfNetInvestmentAsOf($pid, null);
+
+        return json_encode([
+            'error' => 'No',
+            'total' => round($total, 2),
+        ]);
+    }
+
+    // Core Total/Net Investment computation, reconstructed as of an
+    // arbitrary date ($uptoDate — pass null for "as of today", which is
+    // what the live actionCfnetinvestment dial uses). Formula:
+    // Investments-as-of-that-date + WIP-as-of-that-date +
+    // Bills-Receivable-as-of-that-date — the same three panel figures
+    // shown elsewhere on this dashboard, using the SAME formulas
+    // (Investments: Bank/Cash payments grouped by debit account, kept
+    // where that account's own balance is debit — see
+    // actionCfcurrentassets; WIP: Bank/Cash payments to Expense accounts
+    // plus payments to any other account now at a credit/zero balance,
+    // current open cycle only; Bills Receivable: client account balance,
+    // GST excluded). Used both by the live dial (uptoDate=null) and by
+    // the Total Investment breakdown popup (uptoDate = each past cycle's
+    // own closing date).
+    private function _cfNetInvestmentAsOf($pid, $uptoDate)
+    {
+        // Investments component — same rule as the live actionCfcurrentassets
+        // dial (Bank/Cash payments grouped by debit account, kept only
+        // where that account's own current balance is debit), capped to
+        // $uptoDate so historical cycle bars reconstruct correctly too.
+        $investments = $this->_cfGstNetInvestments($pid);
+        $gstPairedIds = $this->_cfGstPairedAccountIds();
+        $byAccount = $this->_cfBankCashPaymentsByDebitAccount($pid, null, $uptoDate);
+        foreach ($byAccount as $acctId => $amt) {
+            if (in_array($acctId, $gstPairedIds, true)) { continue; }
+            $accountType = (int)Yii::$app->db->createCommand(
+                "SELECT account_type FROM accounts_item WHERE id=:id", [':id' => $acctId]
+            )->queryScalar();
+            if ($accountType === 8) { continue; }
+            $balance = $uptoDate
+                ? $this->_cfAccountDebitBalanceAsOf($acctId, $pid, $uptoDate)
+                : $this->_cfAccountDebitBalance($acctId, $pid);
+            if ($balance > 0) {
+                $investments += $amt;
+            }
+        }
+
+        // WIP here must be the CURRENT OPEN CYCLE ONLY (same window
+        // actionCfwip itself uses) — transactions dated strictly after
+        // the latest Contract Income boundary at or before $uptoDate.
+        // Cost accrued before that boundary was already billed out and
+        // is what Bills Receivable is measuring; counting it again here
+        // via an unbounded WIP window double-counted the same money in
+        // both terms.
+        $boundaries = $this->_cfAllContractIncomeDates($pid);
+        $latestBoundaryUpTo = null;
+        foreach ($boundaries as $b) {
+            if (!$uptoDate || $b <= $uptoDate) { $latestBoundaryUpTo = $b; }
+        }
+        $wip = $this->_cfWipForWindow($pid, $latestBoundaryUpTo, $uptoDate);
+
+        $billsReceivable = $this->_cfBillsReceivableAsOf($pid, $uptoDate);
+
+        return max(0, $investments + $wip + $billsReceivable);
+    }
+
+    // Total Investment panel breakdown (Cashflow Dashboard popup): one
+    // bar per bill actually raised — each CLOSED cycle's own TRUE
+    // DAY-BY-DAY AVERAGE Total Investment balance (see
+    // _cfNetInvestmentPerCycleRows/_cfDailyAverageNetInvestment), not
+    // just its closing-day snapshot. NO "Current" bar for the still-open
+    // cycle among the plotted bars, per earlier explicit direction —
+    // only bars for bills that have actually been raised. Each bar is
+    // labelled by the month/year its cycle closed. The "average" field
+    // returned here (shown as "Current:" in the popup) is the still-open
+    // current cycle's OWN day-by-day average so far — the same "Current"
+    // row _cfNetInvestmentPerCycleRows already computes, reused here
+    // rather than re-fetched as today's raw snapshot.
+    public function actionCfnetinvestmentbreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $allRows = $this->_cfNetInvestmentPerCycleRows($pid);
+        $rows = array_values(array_filter($allRows, function($r) { return $r['name'] !== 'Current'; }));
+        $currentRow = array_values(array_filter($allRows, function($r) { return $r['name'] === 'Current'; }));
+        $average = $currentRow ? $currentRow[0]['amount'] : 0;
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+            'average' => round($average, 2),
+        ]);
+    }
+
+    // Shared helper: one {name, amount} row per Total Investment cycle —
+    // "amount" is each cycle's own TRUE DAY-BY-DAY AVERAGE Total
+    // Investment balance, not just its closing-day value. Per explicit
+    // request: a cycle's average investment = the mean of
+    // _cfNetInvestmentAsOf() evaluated on EVERY individual day the cycle
+    // was open (day 1's balance + day 2's + ... + day N's, divided by N),
+    // which represents how much capital was actually tied up on average
+    // during that cycle rather than just its ending snapshot.
+    //
+    // Cycle boundaries here are PAYMENT-RECEIVED dates (see
+    // _cfAllContractIncomePaymentDates — when the client's cash actually
+    // lands), NOT bill-raised dates — a deliberate departure from
+    // _cfWipCycleDaysAverage/_cfCollectionCycleDaysAverage's own
+    // bill-to-bill boundaries, per explicit direction: "the new cycle's
+    // investment value starts from the day contract income is received."
+    // Cycle 1 starts at the project's first Bank/Cash transaction (same
+    // start point C2C/WIP use); every cycle after that starts ON the
+    // previous cycle's own payment-received date. The CLOSING cycle's
+    // averaging window stops the day BEFORE that payment date, not on
+    // it — per explicit direction: once the receivable clears, the cycle
+    // is done, and any spending that also happens to post on that same
+    // calendar day (e.g. vendor advances paid right after the client's
+    // payment lands) belongs to the NEW cycle, not the closing one. So
+    // the payment date itself is exclusively the new cycle's day 1, never
+    // counted toward the cycle that just closed. The still-open current
+    // cycle is averaged from its own start (the latest payment date, or
+    // Cycle 1's start if no payment has landed yet) through today.
+    // Deliberately O(days) calls to _cfNetInvestmentAsOf per cycle —
+    // slower than a single snapshot, but exact, per explicit direction.
+    // Same rows feed both actionCfnetinvestmentbreakdown's popup AND
+    // actionCfreecash/actionCfroi's "Average Investment" denominator, so
+    // both stay consistent with each other.
+    private function _cfNetInvestmentPerCycleRows($pid)
+    {
+        $boundaries = $this->_cfAllContractIncomePaymentDates($pid);
+        $firstDate = $this->_cfProjectFirstBankCashDate($pid);
+        if (!$firstDate) { return []; }
+
+        $rows = [];
+        $cycleStart = $firstDate;
+        foreach ($boundaries as $b) {
+            // Closing cycle's average stops the day BEFORE the payment
+            // lands, not on the payment date itself — per explicit
+            // direction: once the receivable clears, the cycle is done,
+            // and any spending that also happens to post on that same
+            // calendar day belongs to the NEW cycle, not this closing
+            // one (otherwise same-day vendor advances paid right after
+            // the client's payment lands would inflate the closing
+            // cycle's figure with money that was never part of it).
+            $closeDate = date('Y-m-d', strtotime($b . ' -1 day'));
+            $rows[] = [
+                'name' => date('M Y', strtotime($b)),
+                'amount' => round($this->_cfDailyAverageNetInvestment($pid, $cycleStart, $closeDate), 2),
+            ];
+            // Next cycle starts ON the payment-received date itself.
+            $cycleStart = $b;
+        }
+        // Current still-open cycle: averaged from its own start day
+        // through today.
+        $today = date('Y-m-d');
+        $rows[] = [
+            'name' => 'Current',
+            'amount' => round($this->_cfDailyAverageNetInvestment($pid, $cycleStart, $today), 2),
+        ];
+
+        return $rows;
+    }
+
+    // True day-by-day mean of _cfNetInvestmentAsOf() across every date
+    // from $startDate to $endDate inclusive — see _cfNetInvestmentPerCycleRows
+    // for why. Returns 0 if the range is empty/inverted.
+    private function _cfDailyAverageNetInvestment($pid, $startDate, $endDate)
+    {
+        $start = strtotime($startDate);
+        $end = strtotime($endDate);
+        if ($end < $start) { return 0; }
+
+        $sum = 0;
+        $count = 0;
+        for ($t = $start; $t <= $end; $t += 86400) {
+            $sum += $this->_cfNetInvestmentAsOf($pid, date('Y-m-d', $t));
+            $count++;
+        }
+        return $count ? $sum / $count : 0;
+    }
+
+    // Shared helper: plain average of _cfNetInvestmentPerCycleRows'
+    // amounts — the "Average Investment" figure ROI's and Free Cash's
+    // percentages are measured against (see actionCfroi/actionCfreecash).
+    // Per explicit direction, ROI/Free Cash are only ever measured
+    // against COMPLETED cycles — the still-open "Current" row is
+    // excluded here, even though it's still included in the Total
+    // Investment breakdown popup's own bars/"Current:" label
+    // (actionCfnetinvestmentbreakdown reads _cfNetInvestmentPerCycleRows
+    // directly, unaffected by this exclusion). Returns 0 if no cycle has
+    // completed yet — nothing to measure ROI/Free Cash against.
+    private function _cfNetInvestmentAverage($pid, $rows = null)
+    {
+        if ($rows === null) { $rows = $this->_cfNetInvestmentPerCycleRows($pid); }
+        $rows = array_values(array_filter($rows, function($r) { return $r['name'] !== 'Current'; }));
+        $sum = 0;
+        foreach ($rows as $r) { $sum += $r['amount']; }
+        return count($rows) ? $sum / count($rows) : 0;
+    }
+
+    // Free Cash panel (Cashflow Dashboard): a PERCENTAGE dial, same
+    // presentation pattern as Contribution Margin. The money you "take
+    // home" — the return before tax — after every investment and
+    // liability is accounted for.
+    //
+    // Free Cash (rupee value) = Contribution Margin (see
+    // _cfContributionMarginValue) MINUS Total Investment (see
+    // _cfNetInvestmentAsOf, as of today — same figure as the live Total
+    // Investment dial) MINUS Current Liabilities (see
+    // _cfCurrentLiabilitiesTotal).
+    //
+    // The dial's needle position/percentage shown at its center = (Free
+    // Cash / Average Investment) * 100, where Average Investment is the
+    // SAME "Average" figure shown in the Total Investment breakdown
+    // popup (see _cfNetInvestmentAverage — the plain average of every
+    // cycle's own closing Total Investment value, including the current
+    // open cycle).
+    //
+    // The rupee value itself is shown to the LEFT of the dial (Actual),
+    // in Lakhs if <= 99 Lakhs or Crores if greater. Target is a
+    // user-editable PERCENTAGE (not a rupee value), saved under
+    // metric_key "free_cash_target".
+    public function actionCfreecash()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $freeCashValue = $this->_cfFreeCashValue($pid);
+        $averageInvestment = $this->_cfNetInvestmentAverage($pid);
+        $freeCashPct = $averageInvestment > 0 ? ($freeCashValue / $averageInvestment) * 100 : 0;
+
+        return json_encode([
+            'error' => 'No',
+            'value' => round($freeCashValue, 2),
+            'percent' => round($freeCashPct, 2),
+            // Lets the frontend convert the user-editable percentage
+            // Target into its rupee equivalent for display, without
+            // re-deriving Average Investment client-side.
+            'average_investment' => round($averageInvestment, 2),
+        ]);
+    }
+
+    // Shared helper: Free Cash's rupee value — Contribution Margin (see
+    // _cfContributionMarginValue) MINUS (Total Investment (see
+    // _cfNetInvestmentAsOf, as of today) PLUS Current Liabilities (see
+    // _cfCurrentLiabilitiesTotal)). Current Liabilities was missing from
+    // this formula entirely until this fix — the surrounding comments
+    // always described it as part of Free Cash, but the code only ever
+    // subtracted Total Investment.
+    private function _cfFreeCashValue($pid)
+    {
+        $contributionMargin = $this->_cfContributionMarginValue($pid);
+        $totalInvestment = $this->_cfNetInvestmentAsOf($pid, null);
+        $currentLiabilities = $this->_cfCurrentLiabilitiesTotal($pid);
+        return $contributionMargin - ($totalInvestment + $currentLiabilities);
+    }
+
+    // ROI panel (Cashflow Dashboard): a PERCENTAGE dial, same
+    // presentation pattern as Contribution Margin/Free Cash. ROI =
+    // (Contribution Margin / Average Investment) * 100 — same Average
+    // Investment figure used by Free Cash's own percentage (see
+    // _cfNetInvestmentAverage — the plain average of every WIP accrual
+    // cycle's own closing Total Investment value, including the current
+    // open cycle). The rupee value shown to the LEFT of the dial
+    // (Actual) is Contribution Margin's own rupee value (see
+    // _cfContributionMarginValue) — ROI is a ratio of that same figure,
+    // not a separate rupee amount of its own. Target is a user-editable
+    // PERCENTAGE, saved under metric_key "roi_target".
+    public function actionCfroi()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $contributionMarginValue = $this->_cfContributionMarginValue($pid);
+        $averageInvestment = $this->_cfNetInvestmentAverage($pid);
+        $roiPct = $averageInvestment > 0 ? ($contributionMarginValue / $averageInvestment) * 100 : 0;
+
+        return json_encode([
+            'error' => 'No',
+            'value' => round($contributionMarginValue, 2),
+            'percent' => round($roiPct, 2),
+        ]);
+    }
+
+    // Client account's balance, EXCLUDING journal lines that credited a
+    // GST account (Output CGST/SGST/IGST, matched by name — same
+    // convention as the Current Liabilities GST mapping). A bill raised
+    // debits the client for the base amount PLUS GST; the GST portion
+    // isn't money owed to the project — it's tax collected on the
+    // government's behalf and passed straight to Current Liabilities —
+    // so it must not inflate Bills Receivable. Once the client actually
+    // pays, the payment (a plain credit to this account, no GST
+    // account involved) reduces the full balance including the GST
+    // that had never been added here, which is the correct net effect.
+    private function _cfClientAccountBalanceExcludingGst($accountId, $pid, $uptoDate = null)
+    {
+        $gstAcctIds = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name LIKE '%GST%'"
+        )->queryColumn();
+        $gstFilter = '';
+        if (!empty($gstAcctIds)) {
+            $placeholders = implode(',', array_map('intval', $gstAcctIds));
+            $gstFilter = " AND creditacnt NOT IN ($placeholders)";
+        }
+
+        $dateCond = $uptoDate ? " AND date(date) <= :ud" : "";
+        $params = [':id' => $accountId, ':pid' => $pid];
+        if ($uptoDate) { $params[':ud'] = $uptoDate; }
+
+        $sum = function($sql) use ($params) {
+            $v = Yii::$app->db->createCommand($sql, $params)->queryScalar();
+            return $v ? (float)$v : 0;
+        };
+        $debit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=0 AND project_id=:pid" . $dateCond);
+        $credit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=0 AND project_id=:pid" . $dateCond);
+        $contraDebit  = $sum("SELECT SUM(amount) FROM voucher WHERE account_id=:id AND contra=1 AND type='Receipt' AND project_id=:pid" . $dateCond);
+        $contraCredit = $sum("SELECT SUM(amount) FROM voucher WHERE creditacnt=:id AND contra=1 AND type='Payment' AND project_id=:pid" . $dateCond);
+        $journalDebit  = $sum("SELECT SUM(amount) FROM journalvoucher WHERE debitacnt=:id AND project_id=:pid" . $gstFilter . $dateCond);
+        $journalCredit = $sum("SELECT SUM(amount) FROM journalvoucher WHERE creditacnt=:id AND project_id=:pid" . $dateCond);
+
+        $totalDebit  = $debit + $contraDebit + $journalDebit;
+        $totalCredit = $credit + $contraCredit + $journalCredit;
+        return $totalDebit - $totalCredit;
+    }
+
+    private function _cfBillsReceivable($pid)
+    {
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return 0;
+        }
+
+        $debitAcctId = Yii::$app->db->createCommand(
+            "SELECT j.debitacnt FROM journalvoucher j
+             WHERE j.creditacnt = :cid AND j.project_id = :pid
+             LIMIT 1",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryScalar();
+        if (!$debitAcctId) {
+            return 0;
+        }
+
+        $balance = $this->_cfClientAccountBalanceExcludingGst((int)$debitAcctId, $pid);
+        return max(0, $balance);
+    }
+
+    // Same as _cfBillsReceivable, but reconstructed as of an arbitrary
+    // date ($uptoDate — pass null for "as of today", same as the
+    // unbounded version). Used by actionCfbillsreceivablebreakdown for
+    // the per-cycle breakdown popup.
+    private function _cfBillsReceivableAsOf($pid, $uptoDate)
+    {
+        if (!$uptoDate) {
+            return $this->_cfBillsReceivable($pid);
+        }
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return 0;
+        }
+
+        $debitAcctId = Yii::$app->db->createCommand(
+            "SELECT j.debitacnt FROM journalvoucher j
+             WHERE j.creditacnt = :cid AND j.project_id = :pid
+             LIMIT 1",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryScalar();
+        if (!$debitAcctId) {
+            return 0;
+        }
+
+        $balance = $this->_cfClientAccountBalanceExcludingGst((int)$debitAcctId, $pid, $uptoDate);
+        return max(0, $balance);
+    }
+
+    // Bills Receivable panel (Cashflow Dashboard): see _cfBillsReceivable.
+    public function actionCfbillsreceivable()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        return json_encode([
+            'error' => 'No',
+            'total' => round($this->_cfBillsReceivable($pid), 2),
+        ]);
+    }
+
+    // Bills Receivable panel breakdown (Cashflow Dashboard popup): one
+    // bar per bill actually raised — each bar valued at the Bills
+    // Receivable balance AS OF that bill's own Contract Income credit
+    // date (see _cfBillsReceivableAsOf). NO "Current" bar for the
+    // still-open cycle — only bars for bills that have actually been
+    // raised, per explicit direction. Bars are labelled by the month/
+    // year each bill was raised. Also returns the plain average of all
+    // returned bar values.
+    public function actionCfbillsreceivablebreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $boundaries = $this->_cfAllContractIncomeDates($pid);
+
+        $rows = [];
+        foreach ($boundaries as $b) {
+            $value = $this->_cfBillsReceivableAsOf($pid, $b);
+            $label = date('M Y', strtotime($b));
+            $rows[] = ['name' => $label, 'amount' => round($value, 2)];
+        }
+
+        $sum = 0;
+        foreach ($rows as $r) { $sum += $r['amount']; }
+        $average = count($rows) ? $sum / count($rows) : 0;
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+            'average' => round($average, 2),
+        ]);
+    }
+
+    // Contract Income panel (Cashflow Dashboard): the CUMULATIVE sum of
+    // every transaction crediting "Contract Income" for this project to
+    // date — see _cfLatestContractIncomeAmount. Each cycle's own bill
+    // adds to a running total; this is NOT a single cycle's own amount.
+    public function actionCfcontractincome()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        return json_encode([
+            'error' => 'No',
+            'total' => round($this->_cfLatestContractIncomeAmount($pid), 2),
+        ]);
+    }
+
+    // Contract Income panel breakdown (Cashflow Dashboard popup): one
+    // bar per Contract Income credit transaction (voucher or
+    // journalvoucher), in date order, labelled by the month/year it was
+    // credited. Each bar's VALUE is the CUMULATIVE (running) total up to
+    // and including that credit — not that single cycle's own billed
+    // amount — matching Contract Income's accumulated nature (each new
+    // bill adds to a running total). Also returns the plain average of
+    // these cumulative bar values and the final cumulative total.
+    public function actionCfcontractincomebreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return json_encode(['error' => 'No', 'accounts' => [], 'average' => 0, 'cumulative' => 0]);
+        }
+
+        $credits = Yii::$app->db->createCommand(
+            "SELECT amount, txn_date FROM (
+                 SELECT v.amount AS amount, v.date AS txn_date FROM voucher v
+                     WHERE v.creditacnt = :cid1 AND v.contra = 0 AND v.project_id = :pid1
+                 UNION ALL
+                 SELECT j.amount AS amount, j.date AS txn_date FROM journalvoucher j
+                     WHERE j.creditacnt = :cid2 AND j.project_id = :pid2
+             ) t
+             ORDER BY t.txn_date ASC",
+            [':cid1' => (int)$contractIncomeId, ':pid1' => $pid, ':cid2' => (int)$contractIncomeId, ':pid2' => $pid]
+        )->queryAll();
+
+        $rows = [];
+        $cumulative = 0;
+        $sumOfBars = 0;
+        foreach ($credits as $c) {
+            $cycleAmount = (float)$c['amount'];
+            $cumulative += $cycleAmount;
+            $rows[] = [
+                'name' => date('M Y', strtotime($c['txn_date'])),
+                'amount' => round($cumulative, 2),
+                // Each bill's own standalone amount for this one cycle
+                // (not summed with prior cycles) — shown as a paired bar
+                // alongside the cumulative 'amount' above.
+                'cycle_amount' => round($cycleAmount, 2),
+            ];
+            $sumOfBars += $cumulative;
+        }
+        $average = count($rows) ? $sumOfBars / count($rows) : 0;
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+            'average' => round($average, 2),
+            'cumulative' => round($cumulative, 2),
+        ]);
+    }
+
+    // Shared helper: the SAME "Project Expenditure Total" computation as
+    // FinancerequestsController::actionCfprojectexpenditure — every
+    // account under a master_id=1 accounts_sub subgroup (excluding
+    // "Investments"), account_type IN (5,8,6), summed by closing
+    // balance — duplicated here (controller-local, matching this
+    // codebase's existing pattern) rather than called cross-controller,
+    // WITH the same latest-Contract-Income-credit date cap: once
+    // Contract Income has been credited at least once, the sum only
+    // covers expenses from project inception through that date. Used by
+    // actionCfcontributionmargin.
+    private function _cfProjectExpenditureTotal($pid, $capDate)
+    {
+        $startdate = $capDate ? '2013-04-01' : '';
+        $enddate = $capDate ? $capDate : '';
+
+        $subgroups = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_sub WHERE master_id='1' AND Status=0 AND name != 'Investments'"
+        )->queryColumn();
+
+        $total = 0;
+        foreach ($subgroups as $subgrpId) {
+            $accounts = Yii::$app->db->createCommand(
+                "SELECT DISTINCT b.id FROM subgroup_accounts AS a
+                 INNER JOIN accounts_item AS b ON a.account_id = b.id
+                 WHERE a.subgrp_id=:sid AND a.accountschedule_id=0 AND b.account_type IN (5,8,6)",
+                [':sid' => $subgrpId]
+            )->queryColumn();
+
+            foreach ($accounts as $acctId) {
+                $openingbal = Yii::$app->db->createCommand(
+                    "SELECT balance FROM ledger_openingbalance WHERE accountid=:id",
+                    [':id' => $acctId]
+                )->queryScalar();
+                $openingbal = $openingbal ?: 0;
+                $closingbal = $openingbal + $this->_cfClosingBalanceForRange((int)$acctId, $pid, $startdate, $enddate);
+                $total += abs($closingbal);
+            }
+        }
+        return $total;
+    }
+
+    // Same date-range/credit-minus-debit logic as
+    // FinancerequestsController::closingbalance, duplicated here
+    // (controller-local) for _cfProjectExpenditureTotal's use.
+    private function _cfClosingBalanceForRange($acctId, $pid, $startdate, $enddate)
+    {
+        $initialdate = '2013-04-01';
+        $dateCond = ($startdate !== '' && $enddate !== '')
+            ? "date BETWEEN '" . $startdate . "' AND '" . $enddate . "'"
+            : "date >= '" . $initialdate . "'";
+
+        $rows = Yii::$app->db->createCommand(
+            "(SELECT amount, type, creditacnt, contra, account_id FROM voucher
+                WHERE (account_id=:id1 OR creditacnt=:id2) AND (project_id=:pid1) AND $dateCond)
+             UNION ALL
+             (SELECT amount, type, creditacnt, contra, debitacnt AS account_id FROM journalvoucher
+                WHERE (debitacnt=:id3 OR creditacnt=:id4) AND (place=:pid2) AND $dateCond)",
+            [':id1' => $acctId, ':id2' => $acctId, ':pid1' => $pid, ':id3' => $acctId, ':id4' => $acctId, ':pid2' => $pid]
+        )->queryAll();
+
+        $creditTotal = 0;
+        $debitTotal = 0;
+        foreach ($rows as $row) {
+            if ((int)$row['contra'] === 0) {
+                if ((int)$row['creditacnt'] === $acctId) { $creditTotal += (float)$row['amount']; }
+                elseif ((int)$row['account_id'] === $acctId) { $debitTotal += (float)$row['amount']; }
+            } else {
+                if ($row['type'] === 'Payment' && (int)$row['creditacnt'] === $acctId) { $creditTotal += (float)$row['amount']; }
+                elseif ($row['type'] === 'Receipt' && (int)$row['account_id'] === $acctId) { $debitTotal += (float)$row['amount']; }
+            }
+        }
+        return $creditTotal - $debitTotal;
+    }
+
+    // Contribution Margin panel (Cashflow Dashboard): a PERCENTAGE dial.
+    // Contribution Margin (rupee value) = Contract Income (see
+    // actionCfcontractincome — the amount of the single most recent
+    // transaction crediting Contract Income) MINUS Project Expenditure
+    // (see _cfProjectExpenditureTotal — cumulative, capped at the latest
+    // Contract Income credit date, same as the Project Expenditure
+    // panel). The dial's needle position/percentage shown at its center
+    // = (Contribution Margin / Contract Income) * 100. The rupee value
+    // itself is shown below the dial, in Lakhs if <= 99 Lakhs or Crores
+    // if greater. Target is a user-editable PERCENTAGE (not a rupee
+    // value), saved under metric_key "contribution_margin_target".
+    public function actionCfcontributionmargin()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $marginValue = $this->_cfContributionMarginValue($pid);
+        $contractIncome = $this->_cfLatestContractIncomeAmount($pid);
+        $marginPct = $contractIncome > 0 ? ($marginValue / $contractIncome) * 100 : 0;
+
+        return json_encode([
+            'error' => 'No',
+            'value' => round($marginValue, 2),
+            'percent' => round($marginPct, 2),
+        ]);
+    }
+
+    // Shared helper: the CUMULATIVE sum of every transaction crediting
+    // "Contract Income" for this project to date — each cycle's own
+    // billed amount adds to a running total (cycle 1's bill, plus cycle
+    // 2's, plus cycle 3's, and so on), NOT just the latest single bill's
+    // amount. Used by actionCfcontractincome and (via
+    // _cfContributionMarginValue) actionCfcontributionmargin,
+    // actionCfroi, and actionCfreecash — all four are worked out from
+    // this same accumulated Contract Income figure.
+    private function _cfLatestContractIncomeAmount($pid)
+    {
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) {
+            return 0;
+        }
+        $total = Yii::$app->db->createCommand(
+            "SELECT SUM(amount) FROM (
+                 SELECT v.amount AS amount FROM voucher v
+                     WHERE v.creditacnt = :cid1 AND v.contra = 0 AND v.project_id = :pid1
+                 UNION ALL
+                 SELECT j.amount AS amount FROM journalvoucher j
+                     WHERE j.creditacnt = :cid2 AND j.project_id = :pid2
+             ) t",
+            [':cid1' => (int)$contractIncomeId, ':pid1' => $pid, ':cid2' => (int)$contractIncomeId, ':pid2' => $pid]
+        )->queryScalar();
+        return $total ? (float)$total : 0;
+    }
+
+    // Shared helper: Contribution Margin's rupee value — Contract Income
+    // (see _cfLatestContractIncomeAmount) MINUS Project Expenditure (see
+    // _cfProjectExpenditureTotal — cumulative, capped at the latest
+    // Contract Income credit date). Extracted so actionCfreecash can
+    // reuse it without duplicating actionCfcontributionmargin's logic.
+    private function _cfContributionMarginValue($pid)
+    {
+        $contractIncome = $this->_cfLatestContractIncomeAmount($pid);
+        $capDate = $this->_cfLatestContractIncomeDate($pid);
+        $projectExpenditure = $this->_cfProjectExpenditureTotal($pid, $capDate);
+        return $contractIncome - $projectExpenditure;
+    }
+
+    // Shared helper: every account head this project has EVER
+    // transacted with — either side of a voucher OR a journalvoucher
+    // row — used by the Current Liabilities scan (no subgroup
+    // restriction; any account can be a liability if its own balance
+    // says so).
+    private function _cfAllProjectTouchedAccountIds($pid)
+    {
+        return Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item ai WHERE
+                EXISTS (SELECT 1 FROM voucher v WHERE (v.account_id=ai.id OR v.creditacnt=ai.id) AND v.project_id=:pid)
+                OR EXISTS (SELECT 1 FROM journalvoucher j WHERE (j.debitacnt=ai.id OR j.creditacnt=ai.id) AND j.project_id=:pid)",
+            [':pid' => $pid]
+        )->queryColumn();
+    }
+
+    // Current Liabilities panel (Cashflow Dashboard): every account head
+    // this project has ever transacted with (see
+    // _cfAllProjectTouchedAccountIds — no subgroup restriction) whose
+    // own current balance is a CREDIT balance is summed here (as a
+    // positive magnitude) — EXCEPT Bank-type (account_type=2, e.g. a CC
+    // facility — working capital, not a trade/other liability) and
+    // Income-type (account_type=4) accounts, which are excluded
+    // regardless of their balance sign.
+    public function actionCfcurrentliabilities()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        return json_encode([
+            'error' => 'No',
+            'total' => round($this->_cfCurrentLiabilitiesTotal($pid), 2),
+        ]);
+    }
+
+    // GST Input/Output account id pairs (matched by name — CGST/SGST/
+    // IGST each have one Input account and one Output account). Each
+    // pair is netted together (Input balance - Output balance) before
+    // deciding Investment vs Current Liability — a net CREDIT goes to
+    // Current Liabilities, a net DEBIT goes to Investments — rather than
+    // treating the Input and Output legs as two independent accounts.
+    // Returns [[inputId, outputId], ...].
+    private function _cfGstAccountPairs()
+    {
+        static $pairs = null;
+        if ($pairs !== null) { return $pairs; }
+        $rows = Yii::$app->db->createCommand(
+            "SELECT id, name FROM accounts_item WHERE name LIKE '%CGST%' OR name LIKE '%SGST%' OR name LIKE '%IGST%'"
+        )->queryAll();
+        $input = []; $output = [];
+        foreach ($rows as $row) {
+            foreach (['CGST', 'SGST', 'IGST'] as $tax) {
+                if (stripos($row['name'], $tax) === false) { continue; }
+                if (stripos($row['name'], 'Input') !== false) { $input[$tax] = (int)$row['id']; }
+                if (stripos($row['name'], 'Output') !== false) { $output[$tax] = (int)$row['id']; }
+            }
+        }
+        $pairs = [];
+        foreach (['CGST', 'SGST', 'IGST'] as $tax) {
+            if (isset($input[$tax]) && isset($output[$tax])) {
+                $pairs[] = [$input[$tax], $output[$tax]];
+            }
+        }
+        return $pairs;
+    }
+
+    // Sum of each GST pair's NET balance (Input - Output) that comes out
+    // CREDIT (net > 0 credit, i.e. Output side heavier) — this is the
+    // amount actually owed to the tax department, added to Current
+    // Liabilities. Positive magnitude.
+    private function _cfGstNetCurrentLiabilities($pid)
+    {
+        $total = 0;
+        foreach ($this->_cfGstAccountPairs() as $pair) {
+            $net = $this->_cfAccountDebitBalance($pair[0], $pid) + $this->_cfAccountDebitBalance($pair[1], $pid);
+            if ($net < 0) { $total += -$net; }
+        }
+        return $total;
+    }
+
+    // Sum of each GST pair's NET balance (Input - Output) that comes out
+    // DEBIT (net > 0, i.e. Input side heavier — GST credit still to be
+    // claimed) — added to Investments. Positive magnitude.
+    private function _cfGstNetInvestments($pid)
+    {
+        $total = 0;
+        foreach ($this->_cfGstAccountPairs() as $pair) {
+            $net = $this->_cfAccountDebitBalance($pair[0], $pid) + $this->_cfAccountDebitBalance($pair[1], $pid);
+            if ($net > 0) { $total += $net; }
+        }
+        return $total;
+    }
+
+    // Flat list of every account id involved in a GST Input/Output pair
+    // — excluded from the normal per-account Current Liabilities/
+    // Investments scans, since they're handled as netted pairs instead
+    // (see _cfGstAccountPairs).
+    private function _cfGstPairedAccountIds()
+    {
+        $ids = [];
+        foreach ($this->_cfGstAccountPairs() as $pair) {
+            $ids[] = $pair[0];
+            $ids[] = $pair[1];
+        }
+        return $ids;
+    }
+
+    // Current Liabilities total: see actionCfcurrentliabilities for the
+    // exact rule. GST Input/Output pairs are netted together first (see
+    // _cfGstNetCurrentLiabilities) rather than scanned as independent
+    // accounts.
+    private function _cfCurrentLiabilitiesTotal($pid)
+    {
+        $gstPairedIds = $this->_cfGstPairedAccountIds();
+        $total = $this->_cfGstNetCurrentLiabilities($pid);
+        foreach ($this->_cfAllProjectTouchedAccountIds($pid) as $acctId) {
+            $acctId = (int)$acctId;
+            if (in_array($acctId, $gstPairedIds, true)) { continue; }
+            $accountType = (int)Yii::$app->db->createCommand(
+                "SELECT account_type FROM accounts_item WHERE id=:id",
+                [':id' => $acctId]
+            )->queryScalar();
+            if ($accountType === 2 || $accountType === 4) {
+                continue;
+            }
+            $balance = $this->_cfAccountDebitBalance($acctId, $pid);
+            if ($balance < 0) {
+                $total += -$balance;
+            }
+        }
+        return $total;
+    }
+
+
+    // Current Liabilities panel breakdown (Cashflow Dashboard tooltip):
+    // same account pool/filter as actionCfcurrentliabilities, but
+    // returns each contributing account head (party) individually
+    // instead of just the sum — for the click-to-open per-account bar
+    // chart, same pattern as actionCfcurrentassetsbreakdown.
+    public function actionCfcurrentliabilitiesbreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $gstPairedIds = $this->_cfGstPairedAccountIds();
+        $rows = [];
+        foreach ($this->_cfGstAccountPairs() as $pair) {
+            $net = $this->_cfAccountDebitBalance($pair[0], $pid) + $this->_cfAccountDebitBalance($pair[1], $pid);
+            if ($net < 0) {
+                $outputName = Yii::$app->db->createCommand(
+                    "SELECT name FROM accounts_item WHERE id=:id", [':id' => $pair[1]]
+                )->queryScalar();
+                $label = preg_replace('/^Output\s*/i', '', $outputName ?: '') ?: 'GST';
+                $rows[] = ['name' => 'Net ' . $label . ' Payable', 'amount' => round(-$net, 2)];
+            }
+        }
+        foreach ($this->_cfAllProjectTouchedAccountIds($pid) as $acctId) {
+            $acctId = (int)$acctId;
+            if (in_array($acctId, $gstPairedIds, true)) { continue; }
+            $accountType = (int)Yii::$app->db->createCommand(
+                "SELECT account_type FROM accounts_item WHERE id=:id",
+                [':id' => $acctId]
+            )->queryScalar();
+            if ($accountType === 2 || $accountType === 4) {
+                continue;
+            }
+            $balance = $this->_cfAccountDebitBalance($acctId, $pid);
+            if ($balance < 0) {
+                $name = Yii::$app->db->createCommand(
+                    "SELECT name FROM accounts_item WHERE id=:id",
+                    [':id' => $acctId]
+                )->queryScalar();
+                $rows[] = ['name' => $name ?: ('Account #' . $acctId), 'amount' => round(-$balance, 2)];
+            }
+        }
+        usort($rows, function ($a, $b) { return $b['amount'] <=> $a['amount']; });
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+        ]);
+    }
+
+    // Current Work In Progress panel (Cashflow Dashboard):
+    // 1) Bank/Cash voucher payments AND journalvoucher postings for the
+    //    selected project whose debited counterparty is an Expense-type
+    //    account head (accounts_item.account_type = 8).
+    // 2) PLUS every OTHER (non-Expense, non-Income, non-Bank/Cash)
+    //    account head that received a debit posting — via a Bank/Cash
+    //    voucher payment OR a journal entry — for this project, i.e.
+    //    payments/postings to parties/suppliers/sub-contractors/assets/
+    //    liabilities/etc. Each such account is checked EVERY time: only
+    //    counted toward WIP when that account's own CURRENT live balance
+    //    (Debit - Credit, project-scoped, across ALL its transactions,
+    //    NOT date-restricted — the balance sign is a running/lifetime
+    //    check) is credit OR exactly zero (still outstanding, or fully
+    //    reconciled — e.g. a Bank advance later matched 1:1 against an
+    //    Expense journal entry nets to 0, but that money still really
+    //    left the bank and became a real expense). Only a strictly
+    //    positive (debit) balance is excluded from WIP — that's a
+    //    genuine asset/deposit still held, which belongs in Investments/
+    //    Current Assets instead (see actionCfcurrentassets). Excludes
+    //    Income (4) so Contract Income postings never get pulled into
+    //    WIP.
+    //
+    // WIP ACCRUAL CYCLES: every time Contract Income is credited via a
+    // journal entry, the WIP accumulated up to that date is considered
+    // billed out and permanently excluded from the total going forward
+    // — NOT by subtracting the Bills Receivable (invoice/quoted) value,
+    // since a bill is prepared from the quoted amount and includes
+    // profit/margin that has no counterpart in raw WIP cost. Instead,
+    // only transactions dated AFTER the LATEST Contract Income credit
+    // (see _cfLatestContractIncomeDate) count toward this total — the
+    // still-open accrual cycle. Everything from project inception up to
+    // that date belonged to a prior, now-closed cycle and is dropped
+    // entirely, cycle by cycle, as each new Contract Income credit
+    // lands.
+    public function actionCfwip()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $sinceDate = $this->_cfLatestContractIncomeDate($pid);
+        $total = $this->_cfWipForWindow($pid, $sinceDate, null);
+
+        return json_encode([
+            'error' => 'No',
+            'total' => round($total, 2),
+        ]);
+    }
+
+    // WIP-to-billing cycle time (Cashflow Dashboard, WIP panel): the
+    // length in days of the MOST RECENT CLOSED WIP accrual cycle — NOT
+    // an average across every cycle, and NOT extended to today. Cycle 1
+    // runs from the project's very first voucher/journalvoucher
+    // transaction date to the first Contract Income credit date (a
+    // journal entry credits "Contract Income" — see
+    // _cfAllContractIncomeDates); every cycle after that runs from the
+    // previous Contract Income credit date to the next one. A cycle only
+    // has a defined length once it CLOSES with a Contract Income credit
+    // — the currently open (not yet billed) cycle has no end date to
+    // measure, so it's excluded entirely (same "no Current bar" rule
+    // _cfActualC2cCycleGaps already uses). Returns 0 if no Contract
+    // Income has ever been credited yet.
+    public function actionCfwipavgtime()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        return json_encode([
+            'error' => 'No',
+            // Headline figure is now the TRUE average across every CLOSED
+            // cycle (was previously just the most recent cycle's own
+            // length, which didn't match the panel's own "Avg." label).
+            'avg_days' => round($this->_cfWipCycleDaysAverage($pid), 1),
+            'avg_all_cycles' => round($this->_cfWipCycleDaysAverage($pid), 1),
+        ]);
+    }
+
+    // True average WIP cycle length across every CLOSED cycle the
+    // project has ever had — the ORIGINAL averaging formula, kept
+    // around purely for the hover-tooltip context number (see
+    // actionCfwipavgtime); the live headline figure is
+    // _cfWipCycleDays (most recent cycle only). A cycle only counts
+    // once it's closed by a Contract Income credit — the still-open
+    // current cycle is excluded, same as _cfWipCycleDays.
+    // WIP Cycle 1 = first BANK/CASH transaction (not just any voucher —
+    // same starting point actionCfactualc2c's C2C average uses, via
+    // _cfActualC2cCycleGaps) -> Bill 1 raised. WIP Cycle n (n>1) = Bill
+    // (n-1) raised -> Bill n raised. This alignment matters: C2C is
+    // defined as Avg WIP + Avg Bills Receivable (see _cfActualC2cCycle),
+    // so both halves must share the exact same cycle-1 starting point for
+    // that sum to be meaningful.
+    private function _cfWipCycleDaysAverage($pid)
+    {
+        $firstDate = $this->_cfProjectFirstBankCashDate($pid);
+        if (!$firstDate) { return 0; }
+
+        $boundaries = $this->_cfAllContractIncomeDates($pid);
+        if (!count($boundaries)) { return 0; }
+
+        $cycleStarts = array_merge([$firstDate], $boundaries);
+        $totalDays = 0;
+        $cycleCount = count($boundaries);
+        for ($i = 0; $i < $cycleCount; $i++) {
+            $days = (strtotime($cycleStarts[$i + 1]) - strtotime($cycleStarts[$i])) / 86400;
+            $totalDays += max(0, $days);
+        }
+        return $cycleCount ? $totalDays / $cycleCount : 0;
+    }
+
+    // Shared helper — see actionCfwipavgtime for the full rule. Returns
+    // 0 if there's no first transaction or no Contract Income credit yet.
+    private function _cfWipCycleDays($pid)
+    {
+        $firstDate = $this->_cfProjectFirstTransactionDate($pid);
+        if (!$firstDate) { return 0; }
+
+        $boundaries = $this->_cfAllContractIncomeDates($pid);
+        if (!count($boundaries)) { return 0; }
+
+        // Length of the most recent CLOSED cycle: the last two
+        // boundaries in sequence (previous credit -> latest credit), or
+        // first transaction -> latest credit if only one credit exists
+        // so far.
+        $cycleStarts = array_merge([$firstDate], $boundaries);
+        $latestCreditIdx = count($cycleStarts) - 1;
+        $days = (strtotime($cycleStarts[$latestCreditIdx]) - strtotime($cycleStarts[$latestCreditIdx - 1])) / 86400;
+        return max(0, $days);
+    }
+
+    // Average Bills Receivable collection time (Cashflow Dashboard,
+    // Bills Receivable panel): the average number of days between a
+    // bill being raised (a journal entry crediting "Contract Income")
+    // and the client actually paying it (a Bank receipt — a plain,
+    // non-contra voucher debiting a Bank account and crediting the same
+    // "Client" account that bill was raised against). "Client" account
+    // = the debit side of the Contract Income journal entry, same
+    // single-account assumption _cfBillsReceivable already makes for
+    // this schema (only one such debit account per project).
+    //
+    // Shows the length of the MOST RECENT bill-to-payment cycle only —
+    // NOT an average across every bill the project has ever raised.
+    // Bills and payments are each pulled as their own individual
+    // transaction rows (not DISTINCT dates — two bills on the same
+    // calendar day must stay two separate data points) and paired up in
+    // chronological order (1st bill <-> 1st payment, 2nd <-> 2nd, etc.)
+    // so the LATEST bill is matched to the payment at the same
+    // chronological position, if one exists. If the latest bill hasn't
+    // been paid yet, this shows days-elapsed-so-far (today - bill date)
+    // — a bill cycle has no future boundary to eventually close it the
+    // way a WIP cycle does (see actionCfwipavgtime), so a running count
+    // is shown instead of leaving the panel blank. Returns 0 if no bill
+    // has ever been raised.
+    public function actionCfbillsreceivableavgtime()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        return json_encode([
+            'error' => 'No',
+            // Headline figure is now the TRUE average across every bill
+            // raised so far (was previously just the most recent bill's
+            // own cycle, which didn't match the panel's own "Avg." label).
+            'avg_days' => round($this->_cfCollectionCycleDaysAverage($pid), 1),
+            'avg_all_cycles' => round($this->_cfCollectionCycleDaysAverage($pid), 1),
+        ]);
+    }
+
+    // True average collection time across every bill the project has
+    // ever raised — the ORIGINAL averaging formula, kept around purely
+    // for the hover-tooltip context number (see
+    // actionCfbillsreceivableavgtime); the live headline figure is
+    // _cfCollectionCycleDays (most recent bill only). An unpaid bill
+    // still counts here too, using today as its end date so far — same
+    // convention as the single-cycle version.
+    private function _cfCollectionCycleDaysAverage($pid)
+    {
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) { return 0; }
+
+        $clientAcctId = Yii::$app->db->createCommand(
+            "SELECT j.debitacnt FROM journalvoucher j
+             WHERE j.creditacnt = :cid AND j.project_id = :pid
+             LIMIT 1",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryScalar();
+        if (!$clientAcctId) { return 0; }
+
+        $billDates = Yii::$app->db->createCommand(
+            "SELECT date FROM journalvoucher
+             WHERE creditacnt = :cid AND project_id = :pid
+             ORDER BY date ASC",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryColumn();
+        if (!count($billDates)) { return 0; }
+
+        $paymentDates = Yii::$app->db->createCommand(
+            "SELECT v.date FROM voucher v
+             INNER JOIN accounts_item ai ON ai.id = v.account_id
+             WHERE ai.account_type = 2 AND v.creditacnt = :cid
+               AND v.contra = 0 AND v.project_id = :pid
+             ORDER BY v.date ASC",
+            [':cid' => (int)$clientAcctId, ':pid' => $pid]
+        )->queryColumn();
+
+        $today = date('Y-m-d');
+        $totalDays = 0;
+        $count = count($billDates);
+        for ($i = 0; $i < $count; $i++) {
+            $endDate = isset($paymentDates[$i]) ? $paymentDates[$i] : $today;
+            $days = (strtotime($endDate) - strtotime($billDates[$i])) / 86400;
+            $totalDays += max(0, $days);
+        }
+        return $count ? $totalDays / $count : 0;
+    }
+
+    // Shared helper — see actionCfbillsreceivableavgtime for the full
+    // rule. Returns 0 if Contract Income has never been credited, or no
+    // client account can be identified.
+    private function _cfCollectionCycleDays($pid)
+    {
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+        if (!$contractIncomeId) { return 0; }
+
+        $clientAcctId = Yii::$app->db->createCommand(
+            "SELECT j.debitacnt FROM journalvoucher j
+             WHERE j.creditacnt = :cid AND j.project_id = :pid
+             LIMIT 1",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryScalar();
+        if (!$clientAcctId) { return 0; }
+
+        $billDates = Yii::$app->db->createCommand(
+            "SELECT date FROM journalvoucher
+             WHERE creditacnt = :cid AND project_id = :pid
+             ORDER BY date ASC",
+            [':cid' => (int)$contractIncomeId, ':pid' => $pid]
+        )->queryColumn();
+        if (!count($billDates)) { return 0; }
+
+        $paymentDates = Yii::$app->db->createCommand(
+            "SELECT v.date FROM voucher v
+             INNER JOIN accounts_item ai ON ai.id = v.account_id
+             WHERE ai.account_type = 2 AND v.creditacnt = :cid
+               AND v.contra = 0 AND v.project_id = :pid
+             ORDER BY v.date ASC",
+            [':cid' => (int)$clientAcctId, ':pid' => $pid]
+        )->queryColumn();
+
+        // Only the MOST RECENT bill's own cycle — paired to the payment
+        // at the same chronological index, if one exists yet.
+        $today = date('Y-m-d');
+        $lastIdx = count($billDates) - 1;
+        $endDate = isset($paymentDates[$lastIdx]) ? $paymentDates[$lastIdx] : $today;
+        $days = (strtotime($endDate) - strtotime($billDates[$lastIdx])) / 86400;
+        return max(0, $days);
+    }
+
+    // Shared helper: the date of the project's very first voucher or
+    // journalvoucher transaction (whichever is earliest) — the start
+    // point for actionCfwipavgtime's first WIP cycle. Returns null if
+    // the project has no transactions yet.
+    private function _cfProjectFirstTransactionDate($pid)
+    {
+        $voucherMin = Yii::$app->db->createCommand(
+            "SELECT MIN(date) FROM voucher WHERE project_id=:pid",
+            [':pid' => $pid]
+        )->queryScalar();
+        $journalMin = Yii::$app->db->createCommand(
+            "SELECT MIN(date) FROM journalvoucher WHERE project_id=:pid",
+            [':pid' => $pid]
+        )->queryScalar();
+
+        if ($voucherMin && $journalMin) { return min($voucherMin, $journalMin); }
+        return $voucherMin ?: ($journalMin ?: null);
+    }
+
+    // Shared helper: the date of the project's very first transaction
+    // touching any Bank or Cash account (account_type 1 or 2) — the
+    // shared Cycle-1 starting point for C2C, WIP, and (via that) Bills
+    // Receivable's averages, so all three reconcile as C2C = WIP + Bills
+    // Receivable. Returns null if the project has no Bank/Cash
+    // transactions yet.
+    private function _cfProjectFirstBankCashDate($pid)
+    {
+        return Yii::$app->db->createCommand(
+            "SELECT MIN(d) FROM (
+                SELECT v.date AS d FROM voucher v
+                INNER JOIN accounts_item ai ON ai.id IN (v.account_id, v.creditacnt)
+                WHERE ai.account_type IN (1,2) AND v.project_id = :pid1
+                UNION ALL
+                SELECT j.date FROM journalvoucher j
+                INNER JOIN accounts_item ai ON ai.id IN (j.debitacnt, j.creditacnt)
+                WHERE ai.account_type IN (1,2) AND j.project_id = :pid2
+             ) t",
+            [':pid1' => $pid, ':pid2' => $pid]
+        )->queryScalar();
+    }
+
+    // Work In Progress panel breakdown (Cashflow Dashboard tooltip): same
+    // computation as actionCfwip — including the same accrual-cycle date
+    // scoping (see _cfLatestContractIncomeDate) — but instead of a
+    // single total, buckets every contributing amount by its Project
+    // Expenditure group (accounts_sub, via subgroup_accounts) for the
+    // click-to-open bar chart. Accounts not mapped into any Project
+    // Expenditure subgroup (e.g. a Party/Liability account like Pearl
+    // Enterprises, routed into WIP via the balance<=0 rule rather than
+    // being a real expense head) are bucketed as "Vendors and Others".
+    // Each bucket also carries its individual contributing account heads
+    // (name + amount) so the frontend can show a per-account hover
+    // tooltip on each bar. No proportional scaling is needed here (that
+    // was only an artifact of the old Bills-Receivable-value deduction)
+    // — every underlying query is already date-restricted to the open
+    // cycle, so the bucket totals sum to actionCfwip's total exactly.
+    public function actionCfwipbreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $sinceDate = $this->_cfLatestContractIncomeDate($pid);
+
+        $groupOf = function ($acctId) {
+            $name = Yii::$app->db->createCommand(
+                "SELECT s.name FROM subgroup_accounts sa
+                 INNER JOIN accounts_sub s ON s.id = sa.subgrp_id
+                 WHERE sa.account_id = :id AND sa.accountschedule_id = 0
+                 LIMIT 1",
+                [':id' => (int)$acctId]
+            )->queryScalar();
+            if (!$name || $name === 'Current Liabilities' || $name === 'Current Assets') {
+                return 'Vendors and Others';
+            }
+            return $name;
+        };
+
+        // buckets[group] = total; bucketAccounts[group][acctId] = amount
+        $buckets = [];
+        $bucketAccounts = [];
+        $addTo = function ($group, $acctId, $amount) use (&$buckets, &$bucketAccounts) {
+            if ($amount == 0) { return; }
+            if (!isset($buckets[$group])) { $buckets[$group] = 0; $bucketAccounts[$group] = []; }
+            $buckets[$group] += $amount;
+            if (!isset($bucketAccounts[$group][$acctId])) { $bucketAccounts[$group][$acctId] = 0; }
+            $bucketAccounts[$group][$acctId] += $amount;
+        };
+
+        $byAccount = $this->_cfBankCashPaymentsByDebitAccount($pid, $sinceDate, null);
+        foreach ($byAccount as $acctId => $amt) {
+            $accountType = (int)Yii::$app->db->createCommand(
+                "SELECT account_type FROM accounts_item WHERE id=:id", [':id' => $acctId]
+            )->queryScalar();
+            if ($accountType === 8) {
+                $addTo($groupOf($acctId), $acctId, $amt);
+                continue;
+            }
+            $balance = $this->_cfAccountDebitBalance($acctId, $pid);
+            if ($balance <= 0) {
+                $addTo($groupOf($acctId), $acctId, $amt);
+            }
+        }
+
+        // Batch-resolve every contributing account id's name in one query.
+        $allAcctIds = [];
+        foreach ($bucketAccounts as $accts) {
+            foreach ($accts as $acctId => $amt) { $allAcctIds[$acctId] = true; }
+        }
+        $acctNames = [];
+        if ($allAcctIds) {
+            $nameRows = Yii::$app->db->createCommand(
+                "SELECT id, name FROM accounts_item WHERE id IN (" . implode(',', array_keys($allAcctIds)) . ")"
+            )->queryAll();
+            foreach ($nameRows as $nr) { $acctNames[$nr['id']] = $nr['name']; }
+        }
+
+        $rows = [];
+        foreach ($buckets as $name => $amount) {
+            if ($amount <= 0) { continue; }
+            $members = [];
+            foreach ($bucketAccounts[$name] as $acctId => $amt) {
+                if ($amt <= 0) { continue; }
+                $members[] = [
+                    'name' => $acctNames[$acctId] ?? ('Account #' . $acctId),
+                    'amount' => round($amt, 2),
+                ];
+            }
+            usort($members, function ($a, $b) { return $b['amount'] <=> $a['amount']; });
+            $rows[] = ['name' => $name, 'amount' => round($amount, 2), 'members' => $members];
+        }
+        usort($rows, function ($a, $b) { return $b['amount'] <=> $a['amount']; });
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+        ]);
+    }
+
+    // Shared helper: the length, in days, of EACH cash-to-cash cycle —
+    // where each cycle's length is the gap between consecutive Contract
+    // Income credit-side transactions for the selected project — EXCEPT
+    // the first cycle, which is measured from the project's very first
+    // Bank/Cash transaction (any Bank/Cash account, project-scoped) to
+    // the first Contract Income credit. If there are N Contract Income
+    // credits, there are N gaps (cycle 1 = first Bank/Cash txn ->
+    // credit 1; cycle 2 = credit 1 -> credit 2; ...; cycle N = credit
+    // N-1 -> credit N). Returns an array of ['date' => creditDate,
+    // 'days' => gapDays] — one entry per gap/cycle, in ascending date
+    // order — or an empty array if there's no first Bank/Cash
+    // transaction, no Contract Income account head, or no Contract
+    // Income credits yet. Used by both actionCfactualc2c (which
+    // averages these) and actionCfactualc2cbreakdown (which shows them
+    // individually).
+    private function _cfActualC2cCycleGaps($pid)
+    {
+        $firstBankCashDate = Yii::$app->db->createCommand(
+            "SELECT MIN(d) FROM (
+                SELECT v.date AS d FROM voucher v
+                INNER JOIN accounts_item ai ON ai.id IN (v.account_id, v.creditacnt)
+                WHERE ai.account_type IN (1,2) AND v.project_id = :pid1
+                UNION ALL
+                SELECT j.date FROM journalvoucher j
+                INNER JOIN accounts_item ai ON ai.id IN (j.debitacnt, j.creditacnt)
+                WHERE ai.account_type IN (1,2) AND j.project_id = :pid2
+             ) t",
+            [':pid1' => $pid, ':pid2' => $pid]
+        )->queryScalar();
+
+        if (!$firstBankCashDate) {
+            return [];
+        }
+
+        $contractIncomeId = Yii::$app->db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+
+        if (!$contractIncomeId) {
+            return [];
+        }
+
+        $creditDates = Yii::$app->db->createCommand(
+            "SELECT date FROM (
+                SELECT date FROM voucher WHERE creditacnt = :id1 AND contra = 0 AND project_id = :pid1
+                UNION ALL
+                SELECT date FROM journalvoucher WHERE creditacnt = :id2 AND project_id = :pid2
+             ) t
+             ORDER BY date ASC",
+            [':id1' => (int)$contractIncomeId, ':pid1' => $pid, ':id2' => (int)$contractIncomeId, ':pid2' => $pid]
+        )->queryColumn();
+
+        if (!$creditDates) {
+            return [];
+        }
+
+        $prevDate = $firstBankCashDate;
+        $gaps = [];
+        foreach ($creditDates as $creditDate) {
+            $gapDays = (strtotime($creditDate) - strtotime($prevDate)) / 86400;
+            $gaps[] = ['date' => $creditDate, 'days' => $gapDays];
+            $prevDate = $creditDate;
+        }
+
+        return $gaps;
+    }
+
+    // Cash-to-Cash Cycle = Avg WIP (_cfWipCycleDaysAverage) + Avg Bills
+    // Receivable (_cfCollectionCycleDaysAverage), NOT computed
+    // independently from payment-to-payment gaps any more. WIP covers
+    // start-of-project (first Bank/Cash txn) through each bill being
+    // raised; Bills Receivable covers each bill being raised through
+    // that same bill's payment — together they span the complete cycle,
+    // so this sum is definitionally the same thing "cash out to cash
+    // back in" measures, per explicit request that the three figures
+    // reconcile exactly (C2C = WIP + Bills Receivable, always).
+    // _cfActualC2cCycleGaps/actionCfactualc2cbreakdown's own per-cycle
+    // payment-to-payment bar chart is intentionally left as a separate,
+    // unchanged view.
+    private function _cfActualC2cCycle($pid)
+    {
+        return $this->_cfWipCycleDaysAverage($pid) + $this->_cfCollectionCycleDaysAverage($pid);
+    }
+
+    // Actual Cash-to-Cash Cycle panel (Cashflow Dashboard) — see
+    // _cfActualC2cCycle for the full explanation.
+    public function actionCfactualc2c()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        return json_encode([
+            'error' => 'No',
+            'total' => round($this->_cfActualC2cCycle($pid), 2),
+        ]);
+    }
+
+    // Cash-to-Cash Cycle panel breakdown (Cashflow Dashboard popup): one
+    // bar per completed cycle, showing that cycle's own length in days
+    // (see _cfActualC2cCycleGaps) — bars labelled by the month/year the
+    // cycle's Contract Income credit landed. Unlike Total
+    // Investment/Bills Receivable, there's no "Current" bar here — a
+    // cycle's length is only defined once it CLOSES with a Contract
+    // Income credit; an open, not-yet-credited cycle has no end date to
+    // measure against. Also returns the plain average across all
+    // cycles (same figure as the live dial's actionCfactualc2c total).
+    public function actionCfactualc2cbreakdown()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+
+        $gaps = $this->_cfActualC2cCycleGaps($pid);
+
+        $rows = [];
+        foreach ($gaps as $g) {
+            $rows[] = ['name' => date('M Y', strtotime($g['date'])), 'amount' => round($g['days'], 2)];
+        }
+
+        $sum = 0;
+        foreach ($rows as $r) { $sum += $r['amount']; }
+        $average = count($rows) ? $sum / count($rows) : 0;
+
+        return json_encode([
+            'error' => 'No',
+            'accounts' => $rows,
+            'average' => round($average, 2),
+        ]);
     }
 
     public function actionPerformancedashboard()
@@ -1393,7 +4225,7 @@ class ProjectsmainController extends Controller
         // All activities for this project
         $activities = $connection->createCommand(
             "SELECT sa.id, sa.name, sa.scheduleitem_id, sa.activity_id, sa.duration, sa.delay,
-                    sa.completed_status, sa.start_date, sa.end_date,
+                    sa.completed_status, sa.start_date, sa.end_date, sa.act_start_date,
                     sa.actual_start_date, sa.actual_end_date, sa.unit, sa.resource_units,
                     sa.quantity, sa.old_duration, sa.critical_status,
                     DATEDIFF(sa.start_date, '$proj_start') AS padding,
@@ -1523,9 +4355,9 @@ class ProjectsmainController extends Controller
                         ) + 1) / rpt.cumulated_qty * sa.quantity
                     ) - sa.old_duration
                     WHEN (rpt.cumulated_qty IS NULL OR rpt.cumulated_qty = 0)
-                         AND sa.start_date IS NOT NULL AND sa.start_date != '0000-00-00'
-                         AND sa.start_date < CURDATE()
-                    THEN DATEDIFF(CURDATE(), sa.start_date)
+                         AND sa.act_start_date IS NOT NULL AND sa.act_start_date != '0000-00-00'
+                         AND sa.act_start_date < CURDATE()
+                    THEN DATEDIFF(CURDATE(), sa.act_start_date)
                     ELSE 0
                 END
             ))";
@@ -1582,6 +4414,10 @@ class ProjectsmainController extends Controller
                                           / rpt.cumulated_qty * sa.quantity
                                       ) - 1) DAY
                                   )
+                             WHEN (rpt.cumulated_qty IS NULL OR rpt.cumulated_qty = 0)
+                                  AND sa.act_start_date IS NOT NULL AND sa.act_start_date != '0000-00-00'
+                                  AND sa.act_start_date < CURDATE()
+                             THEN DATE_ADD(sa.end_date, INTERVAL DATEDIFF(CURDATE(), sa.act_start_date) DAY)
                              ELSE NULL END,
                         sa.actual_end_date
                     )) AS a_end
@@ -1602,6 +4438,17 @@ class ProjectsmainController extends Controller
                 HAVING MAX(sa.actual_end_date) IS NOT NULL
             ) AS wbs
         ")->queryOne();
+        // Planned Duration/Completion shown in the Project Snapshot card
+        // (#gsc-tip) come from the Gantt/WBS rollup ($dur_row) — the same
+        // span the Gantt's own "B. Duration" column reports (earliest
+        // scheduleactivities.start_date to latest .end_date across the
+        // whole WBS) — NOT from the project master's Duration/End Date
+        // fields (projects.duration/end_date), which only reflect what was
+        // typed into the Edit Project form and can disagree with the real
+        // schedule once activities are added/resequenced. A prior version
+        // of this code sourced Planned Duration from projects.duration
+        // instead; reverted per explicit direction that "as per the Gantt
+        // chart" is the correct answer for how long the project takes.
         $proj_budgeted    = max(1, (int)($dur_row['budgeted']  ?? 0));
         $proj_actual      = max(0, (int)($dur_row['actual']    ?? 0));
         $proj_b_start_raw = $dur_row['b_start_date'] ?? '';
@@ -1787,14 +4634,61 @@ class ProjectsmainController extends Controller
         $pid = (int)$projuser->projectid;
         $connection = \Yii::$app->db;
         $act = $connection->createCommand(
-            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status
+            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, act_start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status
              FROM scheduleactivities WHERE id=$actid AND projectId=$pid"
         )->queryOne();
         $kpi = $this->_buildKpi($act, $pid, $connection);
         file_put_contents(Yii::getAlias('@app') . '/runtime/kpi_debug.json', json_encode($kpi, JSON_PRETTY_PRINT));
-        return json_encode(['error'=>'No', 'kpi' => $kpi]);
+        return json_encode(['error'=>'No', 'kpi' => $kpi, 'activity_name' => $act ? $act['name'] : '']);
     }
 
+
+    /**
+     * Public wrapper around _buildKpi() for callers outside this
+     * controller (e.g. ChatbotController::toolDiagnoseProductivityGap)
+     * that need the exact same per-activity KPI data — same convention
+     * as computeRoiThresholds() being called directly by
+     * ChatbotController rather than re-implemented. Looks the activity
+     * up by id, scoped to the given project, same query shape as
+     * actionKpidebug() above. Returns null if not found.
+     */
+    public function buildKpiForActivity($activityId, $projectId)
+    {
+        $connection = \Yii::$app->db;
+        $actid = (int)$activityId;
+        $pid = (int)$projectId;
+        $act = $connection->createCommand(
+            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, act_start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status
+             FROM scheduleactivities WHERE id=$actid AND projectId=$pid"
+        )->queryOne();
+        if (!$act) return null;
+        return $this->_buildKpi($act, $pid, $connection);
+    }
+
+    /**
+     * Public wrappers around the Cashflow dashboard's existing private
+     * Cash-to-Cash Cycle / Total Investment / Contribution Margin
+     * helpers, for ChatbotController::toolCheckRoiHealth() — the CCC
+     * driver reuses these AS-IS rather than re-deriving cash-cycle or
+     * investment math from per-bill dates, per explicit instruction to
+     * just use the dashboard's existing actual/target C2C. Same
+     * public-wrapper convention as buildKpiForActivity() /
+     * checkRoiHealthForProject() above.
+     */
+    public function cfActualC2cCycle($pid)
+    {
+        return $this->_cfActualC2cCycle((int)$pid);
+    }
+
+    public function cfNetInvestmentCurrent($pid)
+    {
+        return $this->_cfNetInvestmentAsOf((int)$pid, null);
+    }
+
+    public function cfContributionMarginCurrent($pid)
+    {
+        return $this->_cfContributionMarginValue((int)$pid);
+    }
 
     private function _buildKpi($act, $pid, $connection)
     {
@@ -1863,13 +4757,23 @@ class ProjectsmainController extends Controller
             ];
         }, $cod_rows);
 
-        // Resource capacity
-        $res_rows = $connection->createCommand(
-            "SELECT r.Name AS name, strr.count AS cnt
-             FROM schedule_task_report_resources strr
-             JOIN resources r ON r.Resource_Id = strr.res_id
-             WHERE strr.activity_id=$actid
-             ORDER BY strr.count DESC LIMIT 8"
+        // Resource capacity — latest reported qty per resource (one bar per
+        // resource row, not grouped by type — two resources sharing the same
+        // type each get their own bar), from the Report Resource popup's own
+        // save table. One row per resource_id: the most recent date logged
+        // for that resource on this activity.
+        $res_latest_rows = $connection->createCommand(
+            "SELECT srl.resource_id, srl.name, srl.quantity, rt.Name AS type_name
+             FROM schedule_resource_report_log srl
+             LEFT JOIN resourcetype rt ON rt.ResourceType_Id = srl.resource_type_id
+             INNER JOIN (
+                 SELECT resource_id, MAX(date) AS max_date
+                 FROM schedule_resource_report_log
+                 WHERE activity_id=$actid
+                 GROUP BY resource_id
+             ) latest ON latest.resource_id = srl.resource_id AND latest.max_date = srl.date
+             WHERE srl.activity_id=$actid
+             ORDER BY srl.name ASC"
         )->queryAll();
 
         // Last reported date for target production needle
@@ -1888,8 +4792,13 @@ class ProjectsmainController extends Controller
         )->queryOne();
         $reported_start = ($spr && !empty($spr['start_date']) && $spr['start_date'] != '0000-00-00')
             ? $spr['start_date'] : '';
-        $planned_start = (!empty($act['start_date']) && $act['start_date'] != '0000-00-00')
-            ? $act['start_date'] : '';
+        // act_start_date is the true immutable baseline — start_date can now be
+        // rescheduled to today by GetRelationcorrect() for an activity that has
+        // no progress and whose baseline has already passed (see HelperComponent),
+        // so it can no longer be used to detect/measure start delay here.
+        $planned_start = (!empty($act['act_start_date']) && $act['act_start_date'] != '0000-00-00')
+            ? $act['act_start_date']
+            : ((!empty($act['start_date']) && $act['start_date'] != '0000-00-00') ? $act['start_date'] : '');
         // Use reported start if activity has started, otherwise planned start
         $act_start_date = ($actual_qty > 0 && $reported_start)
             ? $reported_start
@@ -1901,29 +4810,50 @@ class ProjectsmainController extends Controller
             ? round($target_qty / $b_duration, 3) : 0;
 
         $target_prod = $planned_per_day;
-        $elapsed_work     = 0; // for Productivity & Cycle Time: (last_reported - start + 1) - break_days
-        $elapsed_calendar = 0; // for Capacity, Projected Duration, Activity bars: today - start + 1
+        $elapsed_work       = 0; // for Productivity: (last_reported - start + 1) - break_days (days)
+        $elapsed_work_hours = 0; // for Cycle Time only: (elapsed calendar hours) - break hours (hours)
+        $elapsed_calendar = 0; // for Capacity Utilisation and the "Elapsed" display only: today - start + 1
         $elapsed          = 0; // sent to JS as k.elapsed (calendar-based)
         $start_delay = 0;
         $today_ts = strtotime(date('Y-m-d'));
         if ($act_start_date && $last_reported_date && $actual_qty > 0) {
-            // break_hour column stores days (user enters days directly)
-            $break_days       = $cum_break;
+            // break_hour column stores hours (user enters break hours directly).
+            // elapsed_work is day-based (used by Productivity), so break hours are
+            // converted to days for it. Cycle Time uses its own hours-based elapsed
+            // value instead, so break hours are subtracted directly with no conversion.
+            $break_days       = $wh > 0 ? ($cum_break / $wh) : 0;
             $elapsed_work     = max(1, (strtotime($last_reported_date) - strtotime($act_start_date)) / 86400 + 1 - $break_days);
             $elapsed_calendar = max(1, ($today_ts - strtotime($act_start_date)) / 86400 + 1);
             $elapsed          = $elapsed_calendar;
+            $elapsed_work_hours = max(1, ((strtotime($last_reported_date) - strtotime($act_start_date)) / 86400 + 1) * $wh - $cum_break);
             $actual_prod  = round($actual_qty / $elapsed_work, 3);
-            $actual_cycle = round(($elapsed_work / $actual_qty) * $wh, 3);
+            $actual_cycle = round($elapsed_work_hours / $actual_qty, 3);
             $cap_max  = round($elapsed_calendar * $wh, 2);
-            $cap_used = round(max(0, $cap_max - ($cum_break * $wh)), 2); // break_days × wh = break_hours deducted from cap_max (hours)
+            $cap_used = round(max(0, $cap_max - $cum_break), 2); // cap_used = cap_max - cumulative break hours
         } elseif ($planned_start && $actual_qty == 0 && strtotime($planned_start) < $today_ts) {
             // No progress yet but start date has passed — count start delay as elapsed
             $start_delay      = (int)floor(($today_ts - strtotime($planned_start)) / 86400);
             $elapsed_calendar = $start_delay;
             $elapsed          = $start_delay;
         }
-        $projected_duration = ($actual_qty > 0 && $elapsed_calendar > 0)
-            ? (int)round($elapsed_calendar / $actual_qty * $target_qty)
+        // Start delay only has meaning BEFORE an activity has actually
+        // started (the elseif branch above — no progress reported yet,
+        // planned start already passed). The instant any progress exists
+        // (actual_qty > 0), start delay stops applying entirely and the
+        // projection becomes a pure performance/pace calculation:
+        //   (last_reported_date − actual_start_date) ÷ quantity_done × target_quantity
+        // — anchored to the LAST REPORT DATE, never to today. Using
+        // elapsed_calendar (today − start) here was wrong even for a
+        // still-in-progress activity, not just a finished one: it made
+        // the projected duration keep drifting later every single day
+        // regardless of whether any new work was actually reported, and
+        // for a fully-reported activity it kept growing forever after
+        // completion (a 4-day activity finished on time would show a
+        // 53-day "delay" just because 53 days have since passed). elapsed_work
+        // (start to last_reported_date, already used correctly for
+        // Productivity above) is the right basis any time actual_qty > 0.
+        $projected_duration = ($actual_qty > 0 && $elapsed_work > 0)
+            ? (int)round($elapsed_work / $actual_qty * $target_qty)
             : ($start_delay > 0 ? $b_duration + $start_delay : 0);
 
         // Tasks for Resource Productivity panel
@@ -2000,7 +4930,9 @@ class ProjectsmainController extends Controller
             'cap_max'              => $cap_max,
             'cap_used'             => $cap_used,
             'cause_of_delay'       => $cause_of_delay,
-            'resources'            => $res_rows,
+            'resource_latest'      => array_map(function($r){
+                return ['resource_id' => (int)$r['resource_id'], 'name' => $r['name'], 'type_name' => $r['type_name'] ?: '', 'qty' => round((float)$r['quantity'], 2)];
+            }, $res_latest_rows),
             'tasks'                => $tasks,
             'elapsed'              => (int)round($elapsed),
             'start_delay'          => $start_delay,
@@ -2012,8 +4944,230 @@ class ProjectsmainController extends Controller
                 ? date('Y-m-d', strtotime($planned_start . ' +' . (max(1, $b_duration) - 1) . ' days'))
                 : ($act['end_date'] ?? ''),
             'critical'             => (($act['critical_status'] ?? '') === 'Yes'),
+            'completed'            => ((int)($act['completed_status'] ?? 0) === 1),
             'project_name'         => $project_name,
         ];
+    }
+
+    // ROI Target Thresholds baseline derivation — see
+    // docs/dashboard-chatbot-roi-health-tool.md section 2 for the full
+    // spec. Computes and upserts one roi_target_thresholds row for
+    // $project_id. Deterministic PHP only — no LLM involvement, per the
+    // spec's "deterministic PHP, never LLM-inferred" principle.
+    //
+    // NOTE: this only builds the BASELINE thresholds row. It does NOT
+    // implement the check_roi_health tool (comparing live values against
+    // these thresholds) — that is explicitly deferred to a future
+    // session per the spec's section 4 / the instruction that created
+    // this function.
+    //
+    // pur_min / cde_min derivation: PUR and CDE are not yet first-class
+    // metrics anywhere else in this codebase (no existing "PUR"/"CDE"
+    // dashboard function to call). Built from the three per-activity
+    // metric families _buildKpi() already computes — Capacity
+    // Utilisation, Cycle Time, and Productivity — per explicit mapping:
+    //   - CDE (Required Capacity ÷ Deployed Capacity) = Capacity
+    //     Utilisation alone = cap_used / cap_max — how effectively the
+    //     available time was used by the resources.
+    //   - PUR (Productive Hours ÷ Available Hours) = an EQUAL-WEIGHT
+    //     (50/50) blend, WITHIN each activity, of:
+    //       - Productivity ratio  = actual_productivity / target_productivity
+    //         (how much they produced per day)
+    //       - Cycle Time ratio    = target_cycle_time / actual_cycle_time
+    //         (how efficiently they worked — how long to produce one
+    //         unit; NOT inverted the other way, since dividing target by
+    //         actual already reads "higher is better", the same
+    //         direction as the other two ratios, without needing any
+    //         sign flip)
+    // Both the per-activity CDE and per-activity PUR are then aggregated
+    // into ONE project-level pur_min/cde_min, weighted by each
+    // activity's ESTIMATED cost (activity_cost) — heavier activities
+    // pull the project-level threshold more than small ones, since they
+    // matter more for ROI. Activities with zero estimated cost, or
+    // missing the inputs a given ratio needs, are excluded from that
+    // ratio's weighted average rather than treated as 0.
+    //
+    // cost_variance_max_adverse_pct derivation: back-calculated from
+    // target_roi_pct against planned revenue (projects.project_value)
+    // and planned cost (SUM of every activity's estimated activity_cost)
+    // — the max adverse cost overrun, as a % of planned cost, that still
+    // leaves target_roi_pct of margin. Planned profit = revenue - cost;
+    // required minimum profit to hit target_roi_pct is
+    // revenue * target_roi_pct/100 — this baseline derivation uses
+    // profit as a % of revenue, NOT the Cashflow Dashboard's live
+    // Contribution Margin / Average Investment ROI formula (see
+    // actionCfroi), because Contribution Margin (Contract Income minus
+    // actual Project Expenditure) is purely ledger-driven and doesn't
+    // exist yet before any site activity — planned revenue/cost from the
+    // estimate is the only data available at baseline. The LIVE
+    // check_roi_health/recommend_corrective_action comparison, once a
+    // project has real ledger activity, DOES use the dashboard's actual
+    // Contribution Margin / Investment formula (see toolCheckRoiHealth's
+    // own projected_roi_pct comment) — only this baseline threshold
+    // stays on the planned-data proxy. The tolerable overrun is: current
+    // planned profit minus that required minimum, expressed as a % of
+    // planned cost.
+    //
+    // critical_float_min_days: a scheduling buffer POLICY, not derived
+    // from ROI math (per spec) — defaults to 5 days here; callers may
+    // override via $criticalFloatMinDays.
+    // $persist: when true (default), upserts the computed values into
+    // roi_target_thresholds as the project's baseline — the normal
+    // "compute the baseline" call. When false, computes and returns the
+    // exact same figures WITHOUT writing to the table — used by
+    // check_roi_health to read live current PUR/CDE/planned-cost figures
+    // for comparison against the ALREADY-STORED baseline, without
+    // silently overwriting that baseline every time someone asks a
+    // health question.
+    public function computeRoiThresholds($projectId, $targetRoiPct = 40.00, $criticalFloatMinDays = 5, $persist = true)
+    {
+        $pid = (int)$projectId;
+        $connection = \Yii::$app->db;
+
+        // Same activity list / cost joins as actionPerformancedashboard's
+        // main query (see lines ~3104-3166), trimmed to just what this
+        // baseline needs: activity id and estimated activity_cost.
+        $activities = $connection->createCommand(
+            "SELECT sa.id, COALESCE(cost.activity_cost, 0) AS activity_cost
+             FROM scheduleactivities sa
+             LEFT JOIN (
+                 SELECT pen.activity_Id,
+                        COALESCE(pen.activity_qty, 0) * COALESCE(SUM(pern.quantity * pern.rate), 0) AS activity_cost
+                 FROM pricing_estimate_new pen
+                 LEFT JOIN pricing_estimate_resources_new pern
+                        ON pern.activity_id = pen.activity_Id AND pern.project_id = pen.project_Id AND pern.pricing_status = 0
+                 WHERE pen.project_Id = $pid AND pen.pricing_status = 0
+                 GROUP BY pen.activity_Id
+             ) cost ON cost.activity_Id = sa.activity_id
+             WHERE sa.projectId=$pid AND sa.status=0"
+        )->queryAll();
+
+        // For each activity, pull the same raw fields _buildKpi() uses to
+        // derive target_productivity/actual_productivity and
+        // cap_max/cap_used, WITHOUT running the full _buildKpi() (which
+        // also builds tasks/resources/cause-of-delay — unneeded overhead
+        // here). We reuse _buildKpi() directly instead: it is already the
+        // single source of truth for these ratios (ChatbotController's
+        // KPI tool is an "exact port" of it), and re-deriving the same
+        // logic separately would risk the two silently drifting apart.
+        $purWeightedSum = 0; $purWeightTotal = 0;
+        $cdeWeightedSum = 0; $cdeWeightTotal = 0;
+        $plannedCostTotal = 0;
+
+        foreach ($activities as $actRow) {
+            $weight = (float)$actRow['activity_cost'];
+            $plannedCostTotal += $weight;
+            if ($weight <= 0) { continue; }
+
+            $act = $connection->createCommand(
+                "SELECT sa.id, sa.name, sa.scheduleitem_id, sa.activity_id, sa.duration, sa.delay,
+                        sa.completed_status, sa.start_date, sa.end_date, sa.act_start_date,
+                        sa.actual_start_date, sa.actual_end_date, sa.unit, sa.resource_units,
+                        sa.quantity, sa.old_duration, sa.critical_status
+                 FROM scheduleactivities sa WHERE sa.id = " . (int)$actRow['id']
+            )->queryOne();
+            if (!$act) { continue; }
+
+            $kpi = $this->_buildKpi($act, $pid, $connection);
+            if (!$kpi) { continue; }
+
+            // PUR: equal-weight (50/50) blend of Productivity ratio and
+            // Cycle Time ratio, WITHIN this activity. Each sub-ratio only
+            // contributes if its own inputs are available; if only one
+            // of the two is available, PUR for this activity falls back
+            // to that one ratio alone rather than being skipped entirely
+            // or averaged against a missing value.
+            $productivityRatio = null;
+            if ((float)$kpi['target_productivity'] > 0 && (float)$kpi['actual_productivity'] > 0) {
+                $productivityRatio = (float)$kpi['actual_productivity'] / (float)$kpi['target_productivity'];
+            }
+            $cycleTimeRatio = null;
+            if ((float)$kpi['actual_cycle_time'] > 0 && (float)$kpi['target_cycle_time'] > 0) {
+                $cycleTimeRatio = (float)$kpi['target_cycle_time'] / (float)$kpi['actual_cycle_time'];
+            }
+            if ($productivityRatio !== null || $cycleTimeRatio !== null) {
+                $parts = array_filter([$productivityRatio, $cycleTimeRatio], function ($v) { return $v !== null; });
+                $pur = array_sum($parts) / count($parts);
+                $purWeightedSum += $pur * $weight;
+                $purWeightTotal += $weight;
+            }
+
+            // CDE: Capacity Utilisation alone — only meaningful once
+            // cap_max is non-zero (activity has started).
+            if ((float)$kpi['cap_max'] > 0) {
+                $cde = (float)$kpi['cap_used'] / (float)$kpi['cap_max'];
+                $cdeWeightedSum += $cde * $weight;
+                $cdeWeightTotal += $weight;
+            }
+        }
+
+        $purMin = $purWeightTotal > 0 ? round($purWeightedSum / $purWeightTotal, 4) : 0.0000;
+        $cdeMin = $cdeWeightTotal > 0 ? round($cdeWeightedSum / $cdeWeightTotal, 4) : 0.0000;
+
+        // Planned revenue = projects.project_value (contract value) —
+        // same field already used elsewhere as the project's revenue
+        // baseline (see FinancerequestsController::actionCfprojectexpenditure,
+        // Project Expenditure panel's 90% target).
+        $projectValue = $connection->createCommand(
+            "SELECT project_value FROM projects WHERE Project_Id=$pid"
+        )->queryScalar();
+        $plannedRevenue = (float)($projectValue ?: 0);
+
+        $costVarianceMaxAdversePct = 0.00;
+        if ($plannedRevenue > 0 && $plannedCostTotal > 0) {
+            $plannedProfit = $plannedRevenue - $plannedCostTotal;
+            $requiredMinProfit = $plannedRevenue * ((float)$targetRoiPct / 100);
+            $tolerableOverrun = $plannedProfit - $requiredMinProfit; // rupees of cost cushion before target ROI is missed
+            $costVarianceMaxAdversePct = round(max(0, $tolerableOverrun) / $plannedCostTotal * 100, 2);
+        }
+
+        // ccc_max_days: NOT back-calculated from target_roi_pct. Per
+        // explicit instruction, this reads the Cashflow dashboard's own
+        // existing user-editable Cash-to-Cash Cycle target — the same
+        // number the user already sets via the pencil icon on the C2C
+        // dial (cf_dashboard_targets, metric_key='c2c_cycle') — rather
+        // than deriving a threshold from ROI math against per-bill data
+        // this app doesn't capture. Falls back to the project's current
+        // actual C2C if no target has been set yet, so a fresh project
+        // reads as "on target" rather than red against a phantom 0-day
+        // threshold.
+        $cccTarget = $connection->createCommand(
+            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=$pid AND metric_key='c2c_cycle'"
+        )->queryScalar();
+        $cccMaxDays = $cccTarget !== false && (float)$cccTarget > 0
+            ? (int)round((float)$cccTarget)
+            : (int)round($this->_cfActualC2cCycle($pid));
+
+        $data = [
+            'project_id' => $pid,
+            'target_roi_pct' => $targetRoiPct,
+            'pur_min' => $purMin,
+            'cde_min' => $cdeMin,
+            'cost_variance_max_adverse_pct' => $costVarianceMaxAdversePct,
+            'critical_float_min_days' => (int)$criticalFloatMinDays,
+            'ccc_max_days' => $cccMaxDays,
+        ];
+
+        if ($persist) {
+            $now = date('Y-m-d H:i:s');
+            $existing = $connection->createCommand(
+                "SELECT id FROM roi_target_thresholds WHERE project_id=$pid"
+            )->queryScalar();
+
+            if ($existing) {
+                $data['last_reviewed_at'] = $now;
+                $connection->createCommand()->update('roi_target_thresholds', $data, ['project_id' => $pid])->execute();
+            } else {
+                $data['baseline_computed_at'] = $now;
+                $connection->createCommand()->insert('roi_target_thresholds', $data)->execute();
+            }
+        }
+
+        return array_merge($data, [
+            'project_id' => $pid,
+            'planned_revenue' => $plannedRevenue,
+            'planned_cost_total' => round($plannedCostTotal, 2),
+        ]);
     }
 
     public function actionCostdashboardbatch()
@@ -2204,17 +5358,39 @@ class ProjectsmainController extends Controller
 
         $pid   = (int)$projuser->projectid;
         $actid = (int)($_POST['actid'] ?? 0);
-        if (!$actid) return json_encode(['error' => 'No activity', 'items' => []]);
+        $wanIdParam = (int)($_POST['wan_id'] ?? 0);
+        if (!$actid && !$wanIdParam) return json_encode(['error' => 'No activity', 'items' => []]);
 
         $db = \Yii::$app->db;
 
-        $sa = $db->createCommand(
-            "SELECT name, activity_id, quantity, unit FROM scheduleactivities WHERE id = :actid AND projectId = :pid",
-            [':actid' => $actid, ':pid' => $pid]
-        )->queryOne();
-        if (!$sa) return json_encode(['error' => 'Not found', 'items' => []]);
-
-        $wbId = (int)$sa['activity_id'];
+        // Estimate-only activities (e.g. the auto-seeded "Project Overhead"/
+        // "Project General Expenses" — see ProjectsController::
+        // _seedProjectOverheadActivity) deliberately have no scheduleactivities
+        // row (no Gantt bar). The caller passes wan_id (workgroup_activities_new.id)
+        // directly for these instead of actid; resource-cost data below is
+        // keyed by $wbId regardless of which path resolved it, so it works
+        // identically either way. Only the task/work-done panels ($actid-keyed,
+        // schedule_task_new/schedule_progress_report) stay empty for these —
+        // there is no Gantt-derived task/progress data to show, which is
+        // correct, not an error.
+        if ($actid) {
+            $sa = $db->createCommand(
+                "SELECT name, activity_id, quantity, unit FROM scheduleactivities WHERE id = :actid AND projectId = :pid",
+                [':actid' => $actid, ':pid' => $pid]
+            )->queryOne();
+            if (!$sa) return json_encode(['error' => 'Not found', 'items' => []]);
+            $wbId = (int)$sa['activity_id'];
+        } else {
+            $wan = $db->createCommand(
+                "SELECT id, activity_Name AS name, cycle_Quantity AS quantity, cycle_Unit AS unit
+                 FROM workgroup_activities_new WHERE id = :wid AND project_Id = :pid",
+                [':wid' => $wanIdParam, ':pid' => $pid]
+            )->queryOne();
+            if (!$wan) return json_encode(['error' => 'Not found', 'items' => []]);
+            $sa   = $wan;
+            $wbId = (int)$wan['id'];
+            $actid = 0; // no Gantt bar — task/progress-report queries below intentionally find nothing
+        }
 
         // Activity quantity from estimate
         $actQty = 0;
@@ -2240,15 +5416,31 @@ class ProjectsmainController extends Controller
                         COALESCE(pern.display_name, r.Name, rt.Name) AS name,
                         COALESCE(rt.Name, '') AS type_name,
                         pern.rate, pern.quantity,
+                        ear.est_resource_quantity AS alloc_qty,
                         pern.resourcetype_Id AS type_id,
                         COALESCE(r.Unit, '') AS unit,
+                        r.Resource_group_Id AS group_id,
+                        COALESCE(rg.Resource_group_Name, '') AS group_name,
                         grn_cost.actual_unit_cost,
                         grn_cost.grn_qty,
                         si.stock_at_site,
-                        pern.task_ids
+                        pern.task_ids,
+                        r.Resource_Acc_Id,
+                        acc_cost.total_expense  AS acc_total_expense,
+                        acc_cost.first_txn_date AS acc_first_txn_date
                  FROM pricing_estimate_resources_new pern
-                 LEFT JOIN resources r     ON r.Resource_Id        = pern.resource_Id
-                 LEFT JOIN resourcetype rt ON rt.ResourceType_Id   = pern.resourcetype_Id
+                 LEFT JOIN resources r      ON r.Resource_Id        = pern.resource_Id
+                 LEFT JOIN resourcetype rt  ON rt.ResourceType_Id   = pern.resourcetype_Id
+                 LEFT JOIN resource_group rg ON rg.Resource_group_Id = r.Resource_group_Id
+                 LEFT JOIN workgroup_activities_new wa ON wa.id = pern.activity_id
+                 -- Yield's \"Resource Quantity\" is the Activity Library
+                 -- master allocation (est_resource_quantity), keyed by the
+                 -- library activity id (wa.activity_Id) — NOT
+                 -- pern.quantity, which is a different, project-scaled
+                 -- figure used by the Cost/Rate formulas instead.
+                 LEFT JOIN estactivity_resources ear
+                     ON ear.estactivity_id = wa.activity_Id
+                    AND ear.est_resource_id = pern.resource_Id
                  LEFT JOIN (
                      SELECT por.allocation_id,
                             SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4)) * por.rate)
@@ -2274,9 +5466,32 @@ class ProjectsmainController extends Controller
                      ) latest ON latest.resource_id = si.resource_id
                               AND si.id = latest.max_id
                  ) si ON si.resource_id = pern.resource_Id
+                 LEFT JOIN (
+                     -- Actual cost of a Support Resource = current ledger
+                     -- balance on its linked Account Head for this project
+                     -- (payment vouchers + journal vouchers, the two
+                     -- ledger-entry tables this app posts transactions
+                     -- into) divided by Elapsed Days (Today minus Project
+                     -- Planned Start Date, computed once below in PHP and
+                     -- reused for every row). Support Resources never get
+                     -- a GRN (they are not purchase-order items), so this
+                     -- is a distinct actual-cost source from grn_cost
+                     -- above, not a replacement for it.
+                     SELECT t.account_id,
+                            SUM(t.amount) AS total_expense,
+                            MIN(t.date) AS first_txn_date
+                     FROM (
+                         SELECT account_id, date, amount FROM voucher
+                         WHERE project_id = :pid4 AND delete_status = 0
+                         UNION ALL
+                         SELECT debitacnt AS account_id, date, amount FROM journalvoucher
+                         WHERE project_id = :pid4 AND delete_status = 0
+                     ) t
+                     GROUP BY t.account_id
+                 ) acc_cost ON acc_cost.account_id = r.Resource_Acc_Id
                  WHERE pern.activity_id = :wid AND pern.project_id = :pid AND pern.pricing_status = 0
                  ORDER BY pern.rate DESC",
-                [':wid' => $wbId, ':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid, ':wid2' => $wbId]
+                [':wid' => $wbId, ':pid' => $pid, ':pid2' => $pid, ':pid3' => $pid, ':wid2' => $wbId, ':pid4' => $pid]
             )->queryAll();
             // Build task planned qty per unit from schedule_task_new (Schedule tab → Activity → Task → Qty/Unit)
             $taskQtyMap  = [];  // task_id => task_qty (planned qty per activity unit)
@@ -2322,6 +5537,34 @@ class ProjectsmainController extends Controller
             $actualUnitCostTotal = 0.0;
             $schedQty = (float)($sa['quantity'] ?? 0);
             $ratio    = ($schedQty > 0) ? $actQty / $schedQty : 0.0;
+
+            // Support Resources' Actual Consumption = Actual Project Duration
+            // (days) itself — reuses the exact same "Actual Duration"
+            // definition already shown project-wide elsewhere in this app
+            // (Project Snapshot card / Project Duration panel): Planned
+            // Duration + Start Delay when no progress has been reported yet
+            // (Project Overhead itself is never scheduled on the Gantt, so
+            // it never has progress), Elapsed-Work-based projection once
+            // progress exists. Computed once per activity, reused for every
+            // Support Resource row below.
+            $supportResActualDuration = null;
+            $elapsedDays = null;
+            $proj = $db->createCommand(
+                "SELECT start_date, end_date FROM projects WHERE Project_Id = :pid",
+                [':pid' => $pid]
+            )->queryOne();
+            if ($proj && $proj['start_date'] && $proj['end_date']) {
+                $plannedStartTs = strtotime($proj['start_date']);
+                $plannedEndTs   = strtotime($proj['end_date']);
+                $plannedDuration = ($plannedEndTs > $plannedStartTs) ? round(($plannedEndTs - $plannedStartTs) / 86400) + 1 : 0;
+                $todayTs = strtotime(date('Y-m-d'));
+                if ($plannedDuration > 0 && $plannedStartTs) {
+                    $startDelay = ($todayTs > $plannedStartTs) ? (int)floor(($todayTs - $plannedStartTs) / 86400) : 0;
+                    $elapsedDays = max(0, $startDelay);
+                    $supportResActualDuration = $plannedDuration + $elapsedDays;
+                }
+            }
+
             foreach ($rows as $r) {
                 $resQty  = (float)$r['quantity'];
                 $typeId  = (int)$r['type_id'];
@@ -2344,6 +5587,20 @@ class ProjectsmainController extends Controller
                     $actUnit = (in_array($typeId, [2, 6, 7, 8]) && $r['actual_unit_cost'] !== null
                         ? (float)$r['actual_unit_cost']
                         : null);
+                }
+                // Support Resources (and any other resource linked to an
+                // Account Head but never GRN'd, e.g. type 22) get their
+                // actual cost from real project expenses instead: current
+                // ledger balance on that Account Head for this project
+                // (payment + journal vouchers) ÷ Elapsed Days (Today −
+                // Project Planned Start Date — the same figure shown on
+                // the Elapsed Days dial, not tied to the account's own
+                // transaction dates). Only applied when nothing above
+                // already produced a value, and only when a transaction
+                // actually exists (first_txn_date from the join is NULL
+                // until then) — no transaction yet means unknown, not zero.
+                if ($actUnit === null && $r['Resource_Acc_Id'] && $r['acc_first_txn_date'] !== null) {
+                    $actUnit = (float)$r['acc_total_expense'] / max(1, (int)($elapsedDays ?? 0));
                 }
                 // Planned Consumption = res_qty × (estQty / schedQty)
                 $plannedConsumption = round($resQty * $ratio, 3);
@@ -2372,9 +5629,22 @@ class ProjectsmainController extends Controller
                     } else {
                         $actualConsumption = $plannedConsumption;
                     }
+                } elseif ($r['Resource_Acc_Id']) {
+                    // Support Resources: Unit Cost of Activity uses Actual
+                    // Rate × Planned Consumption (same Consumption factor as
+                    // Estimate — only the Rate side changes to Actual).
+                    // Cost of Resources instead uses Actual Rate × Actual
+                    // Duration (see $actualConsumptionForCost below) — the
+                    // two panels intentionally use different Consumption
+                    // factors for Support Resources.
+                    $actualConsumption = $plannedConsumption;
                 } else {
                     $actualConsumption = $plannedConsumption;
                 }
+
+                $actualConsumptionForCost = $r['Resource_Acc_Id'] && $supportResActualDuration !== null
+                    ? round($supportResActualDuration, 3)
+                    : $actualConsumption;
 
                 $actualResQty = $actualConsumption;
 
@@ -2396,30 +5666,43 @@ class ProjectsmainController extends Controller
                 $items[] = [
                     'name'                 => $r['name'],
                     'type_name'            => $r['type_name'],
+                    'group_id'             => (int)($r['group_id'] ?? 0),
+                    'group_name'           => $r['group_name'] ?? '',
                     'rate'                 => (float)$r['rate'],
                     'type_id'              => $typeId,
                     'unit'                 => $r['unit'],
                     'task_unit'            => $taskUnit,
                     'res_qty'              => $resQty,
+                    'alloc_qty'            => isset($r['alloc_qty']) ? (float)$r['alloc_qty'] : $resQty,
                     'consumption'          => round($lastQty * $resQty, 3),
                     'actual_unit_cost'     => $actUnit,
                     'actual_res_qty'       => $actualResQty,
                     'planned_consumption'  => $plannedConsumption,
                     'actual_consumption'   => $actualConsumption,
+                    'actual_consumption_cost' => $actualConsumptionForCost,
                     'indent_raised'        => ($r['stock_at_site'] !== null),
                     'has_mb'               => ($typeId === 4 && isset($taskWorkDoneById) && !empty(array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')), function($tid) use ($taskWorkDoneById){ return ($taskWorkDoneById[$tid] ?? 0) > 0; }))),
+                    'has_acc_head'         => !empty($r['Resource_Acc_Id']),
                 ];
             }
         }
 
         return json_encode([
-            'activity_name'       => $sa['name'],
-            'activity_qty'        => $actQty,
-            'schedule_qty'        => (float)($sa['quantity'] ?? 0),
-            'unit'                => $sa['unit'] ?? '',
-            'last_report_qty'     => $lastQty,
-            'actual_unit_cost_raw'=> round($actualUnitCostTotal, 4),
-            'items'               => $items,
+            'activity_name'          => $sa['name'],
+            'activity_qty'           => $actQty,
+            'schedule_qty'           => (float)($sa['quantity'] ?? 0),
+            'unit'                   => $sa['unit'] ?? '',
+            'last_report_qty'        => $lastQty,
+            'actual_unit_cost_raw'   => round($actualUnitCostTotal, 4),
+            // Project-level Planned/Actual Duration (Planned Duration +
+            // Start Delay) — same figures used for the Support Resources'
+            // Yield ratio above, exposed directly so the Yield panel can
+            // show a single Planned-vs-Actual bar for Project Overhead
+            // without recomputing this on the client.
+            'planned_duration'       => isset($plannedDuration) ? (int)$plannedDuration : 0,
+            'actual_duration'        => isset($supportResActualDuration) ? (int)$supportResActualDuration : 0,
+            'elapsed_days'           => isset($elapsedDays) ? (int)$elapsedDays : 0,
+            'items'                  => $items,
         ]);
     }
 
@@ -3889,50 +7172,67 @@ class ProjectsmainController extends Controller
         }
 	}
 	
-	public function actionDeletescheduleitem()
+	// Deletes an entire WBS schedule item (group) — every activity under it
+    // is permanently removed via the same hardDeleteScheduleActivity cascade
+    // used for single-activity deletes, so nothing is left orphaned in
+    // workgroup_activities_new / pricing tables / procurement data. A
+    // conflict check runs first (unless force=1) and reports back in plain
+    // English what would also be deleted, matching actionWbsdelete's UX.
+    public function actionDeletescheduleitem()
     {
-        if($_POST['itemId']){
-            $model=Wbsscheduleitems::findOne($_POST['itemId']);
-            if($model)
-            {
-                $model->status = 1;
-                if($model->save(false))
-                {
+        $itemId = (int)($_POST['itemId'] ?? 0);
+        $force  = (bool)($_POST['force'] ?? false);
+        if (!$itemId) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'No item id.']);
+        }
 
-                    $scheduleactivities = Scheduleactivities::find()->where(['projectId' => $model->projectId])->andWhere(['scheduleitem_id'=>$model->scheduleitem_id])->all();
+        $model = Wbsscheduleitems::findOne($itemId);
+        if (!$model) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Item not found.']);
+        }
 
-                    foreach($scheduleactivities as $scheduleactivity):
+        $activities = Scheduleactivities::find()
+            ->where(['projectId' => $model->projectId, 'scheduleitem_id' => $model->scheduleitem_id])
+            ->all();
 
-                        $scheduleactivity->status = 1;
-                        $scheduleactivity->save(false);
-
-                        if($scheduleactivity->status==1){
-
-                            //$relations = ActivityRelations::model()->findAll(array('condition'=>'precedent_activity ='.$scheduleactivity->id.' OR dependent_activity ='.$scheduleactivity->id.' AND projectId ='.$scheduleactivity->projectId.' AND status =0'));
-
-                            $relations = ActivityRelations::find()->where(['status' => 0])->andWhere(['or',['precedent_activity'=>$scheduleactivity->id],['dependent_activity'=>$scheduleactivity->id]])->andWhere(['projectId'=> $scheduleactivity->projectId])->all();
-
-                            foreach($relations as $relation):
-
-                                $relation->status = 1;
-                                $relation->save(false);
-
-                            endforeach;
-
-                        }
-
-                    endforeach;
-
-                    $arr = array('Id' => $_POST['itemId'],'error'=>'No');
-                    return json_encode($arr);
-                }
-                else
-                {
-                    $arr = array('Id' => $_POST['itemId'],'error'=>'Yes','errortext'=>'Can not delete now.');
-                    return json_encode($arr);  
-                }
+        if (!$force) {
+            $conflicts = [];
+            foreach ($activities as $activity) {
+                $wanId = (int)$activity->activity_id;
+                $conflicts = array_merge($conflicts, $this->checkActivityDeleteConflicts($activity->id, $wanId));
+            }
+            if (!empty($conflicts)) {
+                return json_encode([
+                    'error'     => 'Yes',
+                    'conflict'  => true,
+                    'errortext' => 'Deleting this WBS item will also permanently delete: ' . implode('; ', array_unique($conflicts)) . '. This cannot be undone.',
+                ]);
             }
         }
+
+        foreach ($activities as $activity) {
+            $this->hardDeleteScheduleActivity($activity->id, ['scheduleitem_id' => $activity->scheduleitem_id, 'activity_id' => $activity->activity_id], (int)$activity->activity_id);
+        }
+
+        // hardDeleteScheduleActivity already removes the wbsscheduleitems row
+        // once its last activity is gone; only clean up here if it somehow
+        // had none to begin with (an empty WBS item deleted with no children).
+        $stillExists = Wbsscheduleitems::findOne($itemId);
+        if ($stillExists) {
+            $db = \Yii::$app->db;
+            $wgId = (int)$stillExists->schedulegrp_id;
+            $db->createCommand()->delete('wbsscheduleitems', ['scheduleitem_id' => $itemId])->execute();
+
+            $remainWsi = (int)$db->createCommand(
+                "SELECT COUNT(*) FROM wbsscheduleitems WHERE schedulegrp_id = :g",
+                [':g' => $wgId]
+            )->queryScalar();
+            if ($remainWsi === 0) {
+                $db->createCommand()->delete('workgroups_new', ['Workgroup_Id' => $wgId])->execute();
+            }
+        }
+
+        return json_encode(['Id' => $itemId, 'error' => 'No']);
 	}
 
 	
@@ -5167,17 +8467,21 @@ class ProjectsmainController extends Controller
             $vendorid = '';
         }
         $connection = Yii::$app->db;
-        $sql="SELECT Resource_Id,Name,Unit,Price,ResourceType_Id,Resource_group_Id,Resource_Location,Vendor_Id FROM resources WHERE status='0' AND pricing_status=0 ";
+        $sql="SELECT r.Resource_Id,r.Name,r.Unit,r.Price,r.ResourceType_Id,r.Resource_group_Id,r.Resource_Location,r.Vendor_Id,
+                     rg.Resource_group_Name AS GroupName
+              FROM resources r
+              LEFT JOIN resource_group rg ON rg.Resource_group_Id = r.Resource_group_Id
+              WHERE r.status='0' AND r.pricing_status=0 ";
 
         if($restypeid!='')
-            $sql.="AND ResourceType_Id ='".$restypeid."' ";
+            $sql.="AND r.ResourceType_Id ='".$restypeid."' ";
         /*if($resourcegroupid!='none' && $resourcegroupid!='')
-            $sql.="AND Resource_group_Id ='".$resourcegroupid."' ";*/
+            $sql.="AND r.Resource_group_Id ='".$resourcegroupid."' ";*/
         if($vendorid!='none' && $vendorid!='')
-            $sql.="AND Vendor_Id ='".$vendorid."' ";
+            $sql.="AND r.Vendor_Id ='".$vendorid."' ";
         if($_POST['name']!='')
-            $sql .= "AND Name LIKE '%" . $_POST['name'] . "%'";
-        $sql.=" GROUP BY Name ORDER BY Resource_Id ASC, Name ASC";
+            $sql .= "AND r.Name LIKE '%" . $_POST['name'] . "%'";
+        $sql.=" GROUP BY r.Name ORDER BY rg.Resource_group_Name ASC, r.Resource_Id ASC, r.Name ASC";
         //echo $sql;exit;
         $command=$connection->createCommand($sql);
         $dataReader=$command->query();
@@ -5217,47 +8521,29 @@ class ProjectsmainController extends Controller
                                         </div>
                                     </div>';
         if(count($dataProvider)>0):
+            $project = Projects::findOne($_POST['Project_Id']);
+            $rescapacity = $project->duration * $project->wrkhours;
+            $currentGroup = null;
+            $rowIndex = 1;
             foreach($dataProvider AS $key=>$data):
-                /*$sql1="SELECT Resource_Id,Name,Unit,Price,ResourceType_Id,Resource_group_Id,Resource_Location,Vendor_Id FROM resources WHERE status='0' AND pricing_status=0 AND Name='".$data['Name']."' ";
-                if($restypeid!='')
-                    $sql1.="AND ResourceType_Id ='".$restypeid."' ";
-                if($resourcegroupid!='none' && $resourcegroupid!='')
-                    $sql1.="AND Resource_group_Id ='".$resourcegroupid."' ";
-                if($vendorid!='none' && $vendorid!='')
-                    $sql1.="AND Vendor_Id ='".$vendorid."' ";
-                if($_POST['name']!='')
-                    $sql1 .= "AND Name LIKE '%" . $_POST['name'] . "%'";
-                $sql1.=" ORDER BY Resource_Id ASC, Name ASC";
-                //echo $sql1;exit;
-                $command=$connection->createCommand($sql1);
-                $dataReader=$command->query();
-                $childdataProvider=$dataReader->readAll();
-                $childdatarows='';
-                foreach($childdataProvider AS $childdata):
-                    $vendor=Vendors::model()->findByPk($childdata['Vendor_Id']);
-                    $vendorname=$vendor->Name." ".$vendor->Brand;
-                    $childdatarows.="<tr id='resource_vendorrow".$childdata['Resource_Id']."' class='resourcetype".$childdata['ResourceType_Id']."'>
-                            <td colspan='1'></td>
-                            <td>".$vendorname."</td>
-                            <td>".$childdata['Resource_Location']."</td>
-                            <td>".$childdata['Unit']."</td>
-                            <td>".$childdata['Price']." <input type='hidden' id='resourceprice".$childdata['Resource_Id']."' value='".$childdata['Price']."'></td>
-                            <td class='small75'><button type='button' class='btn btn-primary addresource' value='".$childdata['Resource_Id']."' id='addresource_button".$childdata['Resource_Id']."' title='Add Item'> <span class='glyphicon glyphicon-upload'></span></button></td>
-                        </tr>";
-                endforeach;*/
-                //$groupname = ResourceGroup::findOne($data['Resource_group_Id'])->Resource_group_Name;
-                $project = Projects::findOne($_POST['Project_Id']); 
-                $rescapacity = $project->duration * $project->wrkhours;
-                $datarows.='<div class="add-activity-search-results-content-wpr row resourcetype'.$data['ResourceType_Id'].'" id="resourcerow'.$data['Resource_Id'].'">    
+                $groupName = $data['GroupName'] ?: 'Unassigned';
+                if($groupName !== $currentGroup):
+                    $currentGroup = $groupName;
+                    $safeGroup = htmlspecialchars($groupName, ENT_QUOTES);
+                    $datarows.='<div class="row resource-group-hdr" style="background:#e8f0f7;color:#2c3e50;font-weight:600;padding:6px 12px;margin:0;">
+                                    <span class="icon-folder" style="margin-right:5px;color:#5b8ab5;"></span>'.$safeGroup.'
+                                </div>';
+                endif;
+                $datarows.='<div class="add-activity-search-results-content-wpr row resourcetype'.$data['ResourceType_Id'].'" id="resourcerow'.$data['Resource_Id'].'">
                                 <div class="col-md-1">
-                                    <label>&nbsp;</label>	
-                                    <span>'.intval($key+1).'</span>
+                                    <label>&nbsp;</label>
+                                    <span>'.$rowIndex.'</span>
                                 </div>
                                 <div class="col-md-6">
                                     <label>&nbsp;</label>
                                     <span >'.$data['Name'].'</span></div>
                                 <div class="col-md-3">
-                                    <label>&nbsp;</label>	
+                                    <label>&nbsp;</label>
                                     <span>'.$rescapacity.'</span>
                                 </div>
                                 <div class="col-md-2">
@@ -5267,6 +8553,7 @@ class ProjectsmainController extends Controller
                                     <button type="button" class="btn btn-primary addresource add-alloc-item" value="'.$data['Resource_Id'].'" id="addresource_button'.$data['Resource_Id'].'" title="Add Item"> <span class="glyphicon glyphicon-upload"></span></button>
                                 </div>
                             </div>';
+                $rowIndex++;
             endforeach;
             $datarows.='</div>
             </div>';
@@ -5376,61 +8663,10 @@ class ProjectsmainController extends Controller
 
 	public function actionScheduleactivitydelete()
     {
-        $activity=Scheduleactivities::findOne($_POST['id']);
-        $connection = Yii::$app->db;
-        if(!empty($activity))
-        {
-            $act_Id = $activity->activity_id;
-            $sch_Id = $activity->id;
-            //check data in project schedule - relation
-            $relations = ActivityRelations::find()->where(['or',['precedent_activity' => $_POST['id']],['dependent_activity' => $_POST['id']]])->andWhere(['status' => 0])->all();
-
-            if(!empty($relations))
-            {
-                $arr = array('error'=>'Yes','errortext'=>'Cannot delete this item as it has relation in schedule. Please delete activity relation.');
-                return json_encode($arr);
-            }
-            else
-            {
-                //no relation delete all data
-                $model=WorkgroupActivitiesNew::findOne($act_Id);
-                $model->delete();
-
-                $activity->status = 1;
-                
-                if($activity->save(false)):
-                    $relations = ActivityRelations::find()->where(['or',['precedent_activity' => $_POST['id']],['dependent_activity' => $_POST['id']]])->andWhere(['status' => 0])->all();
-                    foreach($relations as $relation):
-                        $relation->status = 1;
-                        $relation->save(false);
-                    endforeach;
-                endif;
-
-                $delquery = 'DELETE FROM schedule_task WHERE wbs_activity_Id="'.$act_Id.'" ';
-                $command1=$connection->createCommand($delquery);
-                $dataReader1=$command1->query();
-                $delquery2 = 'DELETE FROM schedule_activity WHERE wbs_activity_Id="'.$act_Id.'"';
-                $command2=$connection->createCommand($delquery2);
-                $dataReader2=$command2->query();
-                $delquery3 = 'DELETE FROM schedule_activity_new WHERE actvity_id="'.$act_Id.'"';
-                $command3=$connection->createCommand($delquery3);
-                $dataReader3=$command3->query();
-
-                $arr = array('Id' => $_POST['id'],'processid'=>$_POST['type'],'error'=>'No');
-                return json_encode($arr);
-
-            }
-
-        }
-        
-        
-
-       
-
-        
-
+        $_POST['sa_id'] = $_POST['id'] ?? 0;
+        return $this->actionWbsdelete();
     }
-	
+
 	//functions
 
 	public function GetRelationcorrect($projectid)
@@ -6849,15 +10085,12 @@ class ProjectsmainController extends Controller
             // to prevent cross-project contamination when the user's active project doesn't match.
             $precedentAct = Scheduleactivities::findOne((int)$_POST['firstActivity']);
             $model->projectId = $precedentAct ? $precedentAct->projectId : $projectid;
-            if($precedentAct->start_date=='' && $precedentAct->end_date==''){
+            // Seed the precedent's Planned baseline if it has none yet —
+            // RecalculatePlannedDates() below needs an anchor for it.
+            if(!$precedentAct->act_start_date || $precedentAct->act_start_date=='0000-00-00'){
                 $getDateAfterHoliday = Yii::$app->helper->getDateAfterHoliday(date("d-m-Y"), $projectid);
-                $today               = date('Y-m-d', strtotime($getDateAfterHoliday));
-
-                $precedentAct->start_date        = $today;
-                $precedentAct->end_date          = $today;
-                $precedentAct->actual_start_date = $today;
-                $precedentAct->actual_end_date   = $today;
-                $precedentAct->duration          = 1;
+                $precedentAct->act_start_date = date('Y-m-d', strtotime($getDateAfterHoliday));
+                $precedentAct->old_duration = $precedentAct->old_duration ?: 1;
                 $precedentAct->save(false);
             }
             $dependentAct = Scheduleactivities::findOne($_POST['secondActivity']);
@@ -6865,43 +10098,19 @@ class ProjectsmainController extends Controller
                 $_POST['lag'] = 0;
             }
             $lag = $_POST['lag'];
-            $duration                   = $dependentAct->duration + $lag - 1;
-
-
-            //$dependentAct->start_date   = date('Y-m-d', strtotime($precedentAct->start_date. ' + '.$lag.' days'));
-            //$dependentAct->end_date     = date('Y-m-d', strtotime($precedentAct->start_date. ' + '.$duration.' days'));
-
-            // Preserve original baseline before relation shifts the start date
-            if (!$dependentAct->act_start_date || $dependentAct->act_start_date == '0000-00-00') {
-                $dependentAct->act_start_date = $dependentAct->start_date ?: date('Y-m-d');
-            }
-
-            $dependentAct->start_date   = date('Y-m-d',
-                                                strtotime(
-                                                    Yii::$app->helper->getDateAfterHoliday($precedentAct->start_date, $projectid, $lag)
-                                                )
-                                              );
-            $dependentAct->end_date   = date('Y-m-d',
-                                                strtotime(
-                                                    Yii::$app->helper->getDateAfterHoliday(
-                                                        $precedentAct->start_date,
-                                                        $projectid,
-                                                        ($dependentAct->duration + $lag)
-                                                    )
-                                                )
-                                            );
-
-            $dependentAct->lag          = $_POST['lag'];
+            $dependentAct->lag = $lag;
             $dependentAct->save(false);
             $availableActivites = Scheduleactivities::find()->where(['projectId' => $_POST['projectId']])->andWhere(['status' => 0])->orderBy(['scheduleitem_id' => SORT_ASC])->all();
-            if($precedentAct->start_date!='' && $precedentAct->end_date!='')
+            if($precedentAct->act_start_date!='' && $precedentAct->act_start_date!='0000-00-00')
             {
-                   
+
                 if($model->save(false))
                 {
 
-                    //correcting relation dates
-
+                    // Adding a relationship is an explicit user action —
+                    // Planned recalculates for every affected activity.
+                    // Actual also refreshes immediately for this page view.
+                    Yii::$app->helper->RecalculatePlannedDates($_POST['projectId']);
                     Yii::$app->helper->GetRelationcorrect($_POST['projectId']);
 
                     $relations = ActivityRelations::find()->where(['projectId' => $_POST['projectId']])->andWhere(['status' => 0])->all();
@@ -7273,44 +10482,31 @@ class ProjectsmainController extends Controller
         $precedentAct = Scheduleactivities::findOne($_POST['firstActivity']);
         $wbs = Wbsscheduleitems::findOne($precedentAct->scheduleitem_id);
         $dependentAct = Scheduleactivities::findOne($_POST['secondActivity']);
-        // Preserve original baseline before relation shifts the start date
-        if (!$dependentAct->act_start_date || $dependentAct->act_start_date == '0000-00-00') {
-            $dependentAct->act_start_date = $dependentAct->start_date ?: date('Y-m-d');
+        // Seed the precedent's Planned baseline if it has none yet —
+        // RecalculatePlannedDates() below needs an anchor for it. Actual
+        // date math for the dependent (start/end per relation type) is no
+        // longer hand-computed here — RecalculatePlannedDates() (Planned)
+        // and GetRelationcorrect() (Actual) both derive it properly via the
+        // real FS/SS/FF/lag CPM propagation.
+        if (!$precedentAct->act_start_date || $precedentAct->act_start_date == '0000-00-00') {
+            $precedentAct->act_start_date = $precedentAct->start_date ?: date('Y-m-d');
+            $precedentAct->old_duration = $precedentAct->old_duration ?: 1;
+            $precedentAct->save(false);
         }
-        if($_POST['relationType']==1){
-            $lag = $_POST['lag'];
-            $dependentAct->start_date = date('Y-m-d', strtotime($precedentAct->start_date. ' + '.$lag.' days'));
-            $duration = $dependentAct->duration + $lag - 1;
-            $dependentAct->end_date = date('Y-m-d', strtotime($precedentAct->start_date. ' + '.$duration.' days'));
-        }
-        elseif($_POST['relationType']==3){
-            $lead = $_POST['lag'];
-            $duration = $dependentAct->duration - 1;
-            $end_date = date('Y-m-d', strtotime($precedentAct->end_date. ' + '.$lead.' days'));
-            $dependentAct->start_date = date('Y-m-d', strtotime($end_date. ' - '.$duration.' days'));
-            $dependentAct->end_date = date('Y-m-d', strtotime($precedentAct->end_date. ' + '.$lead.' days'));
-        }
-        else{ 
-            $lead = $_POST['lag'] + 1;
-            $dependentAct->start_date = date('Y-m-d', strtotime($precedentAct->end_date. ' + '.$lead.' days'));
-            $duration = $dependentAct->duration - 1;
-            $dependentAct->end_date = date('Y-m-d', strtotime($dependentAct->start_date. ' + '.$duration.' days'));
-        }
-
 
         $dependentAct->lag = $_POST['lag'];
         $dependentAct->save(false);
-        
+
         $availableActivites = Scheduleactivities::find()->where(['projectId' => $model->projectId])->andWhere(['status' => 0])->orderBy(['scheduleitem_id' => SORT_ASC])->all();
-        
-        if($precedentAct->start_date!='' && $precedentAct->end_date!='' && $dependentAct->start_date!='' && $dependentAct->end_date!=''){
+
+        if($precedentAct->act_start_date!='' && $precedentAct->act_start_date!='0000-00-00'){
 
         if($model->save(false)){
 
-            //$availableActivites = ActivityRelations::model()->findAll(array('condition'=>'projectId ='.$model->projectId.' AND status =0 AND wbs_schedule_status=0','order'=>'precedent_schedule_item ASC'));
-
-            //correcting relation dates
-            
+            // Editing a relationship is an explicit user action — Planned
+            // recalculates for every affected activity. Actual also
+            // refreshes immediately for this page view.
+            Yii::$app->helper->RecalculatePlannedDates($model->projectId);
             Yii::$app->helper->GetRelationcorrect($model->projectId);
 
             $relations = ActivityRelations::find()->where(['projectId' => $model->projectId])->andWhere(['precedent_schedule_item' => $_POST['firstItem']])->andWhere(['dependent_schedule_item' => $_POST['firstItem']])->andWhere(['status' => 0])->all();
@@ -7402,8 +10598,12 @@ class ProjectsmainController extends Controller
                 $reported_deleted->save(false);
             }*/
 
+            // Deleting a relationship is an explicit user action — Planned
+            // recalculates so the dependent's baseline is no longer derived
+            // from a relation that no longer exists.
+            Yii::$app->helper->RecalculatePlannedDates($model->projectId);
             Yii::$app->helper->GetRelationcorrect($model->projectId);
-            
+
             $arr = array('relationId'=> $_POST['relationId'] ,'error' => 'No');
         }
         else{
@@ -7857,7 +11057,10 @@ class ProjectsmainController extends Controller
                 $holiday->save(false);
             }
         }
-        
+
+        // Changing the working-day calendar is an explicit user action that
+        // affects the CPM working-day math for both Planned and Actual.
+        Yii::$app->helper->RecalculatePlannedDates($ProjectId);
         Yii::$app->helper->GetRelationcorrect($ProjectId);
 
         $holiday_arr = [];
@@ -7976,6 +11179,21 @@ class ProjectsmainController extends Controller
         return $this->render('newganttview', ['projectId' => $id, 'project' => $project, 'embedMode' => ($layout === 'false')]);
     }
 
+    /* Experimental "Dependency view" — same Gantt rendering engine as
+       actionNewganttchart, but a separate view file (newganttview_dependency)
+       that regroups rows into Parallel Activities / Sequenced Activities
+       sections instead of the normal WBS-only grouping. Kept fully
+       separate so it can be removed cleanly if it doesn't prove useful. */
+    public function actionNewganttchartdep($id, $layout = 'true')
+    {
+        if ($layout === 'false') {
+            $this->layout = false;
+        }
+        Yii::$app->helper->GetRelationcorrect($id);
+        $project = Projects::findOne($id);
+        return $this->render('newganttview_dependency', ['projectId' => $id, 'project' => $project, 'embedMode' => ($layout === 'false')]);
+    }
+
 
 
     public function actionGetcriticalpath()
@@ -8079,32 +11297,72 @@ class ProjectsmainController extends Controller
         }
     }
 
+    // Driven from workgroups_new (every WBS/IOW node for the project),
+    // LEFT JOINed out to wbsscheduleitems and scheduleactivities — a bare
+    // IOW with no wbsscheduleitems row and no activities yet still
+    // returns a row here (scheduleitem_id/dates/duration all NULL), so
+    // it appears in the Gantt as a name-only header immediately after
+    // creation via actionWbsaddiows(). Previously this started from
+    // wbsscheduleitems with an INNER JOIN to scheduleactivities, which
+    // silently omitted any WBS node with no scheduled activity at all.
+    // The "Support Activities" / Overhead IOW group is excluded outright
+    // — a WBS node built from it (Project Overhead, Project General
+    // Expenses) is a cost-side Estimate concept seeded automatically for
+    // every new project by ProjectsController::_seedProjectOverheadActivity
+    // (iow_groups.id=17), never a schedulable Gantt activity, and must
+    // never appear in the Gantt chart regardless of whether activities
+    // are ever added under it — per explicit direction. Both 17 and 18
+    // are excluded: live data has group id 17 for projects created after
+    // the auto-seed feature shipped, and a pre-existing legacy id 18 on
+    // at least one older project (same "Support Activities" concept,
+    // just created before that convention settled on 17).
     public function actionGanttitems()
     {
         $projectId = (int)$_POST['projectid'];
         $rows = \Yii::$app->db->createCommand("
-            SELECT a.scheduleitem_id, a.name,
+            SELECT a.scheduleitem_id, b.Name AS name,
                    MIN(s.actual_start_date)       AS start_date,
                    MAX(s.actual_end_date)         AS end_date,
                    b.iowGroupid,
                    COALESCE(ig.name, '')          AS iow_group_name,
                    COALESCE(b.sortorder, 999999)  AS wg_sortorder,
                    b.Workgroup_Id,
-                   MIN(COALESCE(act_a.a_start, s.actual_start_date))      AS a_min_start,
-                   MAX(COALESCE(act_a.a_end_computed, s.actual_end_date)) AS a_max_end,
+                   MIN(COALESCE(act_a.a_start, s.actual_start_date)) AS a_min_start,
+                   MAX(COALESCE(
+                       act_a.a_end_computed,
+                       CASE WHEN act_a.a_end_computed IS NULL
+                                 AND s.act_start_date IS NOT NULL AND s.act_start_date != '0000-00-00'
+                                 AND s.act_start_date < CURDATE()
+                            THEN DATE_ADD(s.end_date, INTERVAL DATEDIFF(CURDATE(), s.act_start_date) DAY)
+                            ELSE s.actual_end_date END
+                   )) AS a_max_end,
                    CASE
                      WHEN MIN(COALESCE(act_a.a_start, s.actual_start_date)) IS NOT NULL
-                          AND MAX(COALESCE(act_a.a_end_computed, s.actual_end_date)) IS NOT NULL
+                          AND MAX(COALESCE(
+                              act_a.a_end_computed,
+                              CASE WHEN act_a.a_end_computed IS NULL
+                                        AND s.act_start_date IS NOT NULL AND s.act_start_date != '0000-00-00'
+                                        AND s.act_start_date < CURDATE()
+                                   THEN DATE_ADD(s.end_date, INTERVAL DATEDIFF(CURDATE(), s.act_start_date) DAY)
+                                   ELSE s.actual_end_date END
+                          )) IS NOT NULL
                      THEN DATEDIFF(
-                            MAX(COALESCE(act_a.a_end_computed, s.actual_end_date)),
+                            MAX(COALESCE(
+                                act_a.a_end_computed,
+                                CASE WHEN act_a.a_end_computed IS NULL
+                                          AND s.act_start_date IS NOT NULL AND s.act_start_date != '0000-00-00'
+                                          AND s.act_start_date < CURDATE()
+                                     THEN DATE_ADD(s.end_date, INTERVAL DATEDIFF(CURDATE(), s.act_start_date) DAY)
+                                     ELSE s.actual_end_date END
+                            )),
                             MIN(COALESCE(act_a.a_start, s.actual_start_date))
                           ) + 1
                      ELSE NULL
                    END AS a_duration
-            FROM wbsscheduleitems AS a
-            LEFT JOIN workgroups_new AS b ON a.wbsid = b.Workgroup_Id
+            FROM workgroups_new AS b
+            LEFT JOIN wbsscheduleitems AS a ON a.wbsid = b.Workgroup_Id AND a.status = 0
             LEFT JOIN iow_groups AS ig ON ig.id = b.iowGroupid AND ig.status = 0
-            JOIN scheduleactivities AS s
+            LEFT JOIN scheduleactivities AS s
                  ON s.scheduleitem_id = a.scheduleitem_id
                  AND s.status = 0
                  AND s.actual_start_date IS NOT NULL
@@ -8138,8 +11396,9 @@ class ProjectsmainController extends Controller
                 ) AS rpt_i ON rpt_i.activity_id = spr_i.activity_id
                 WHERE spr_i.start_date IS NOT NULL AND spr_i.start_date != '0000-00-00'
             ) AS act_a ON act_a.activity_id = s.id
-            WHERE a.projectId = :projectId AND a.status = 0
-            GROUP BY a.scheduleitem_id
+            WHERE b.Project_Id = :projectId AND b.Status = 0
+              AND b.iowGroupid NOT IN (17, 18)
+            GROUP BY b.Workgroup_Id
             ORDER BY COALESCE(b.sortorder, 999999) ASC, b.Workgroup_Id ASC, a.scheduleitem_id ASC
         ", [':projectId' => $projectId])->queryAll();
         return json_encode(['result' => $rows, 'error' => 'No']);
@@ -8151,7 +11410,7 @@ class ProjectsmainController extends Controller
         $rows = \Yii::$app->db->createCommand("
             SELECT sa.id, sa.name,
                    sa.activity_id AS wan_id,
-                   sa.start_date, sa.actual_start_date, sa.actual_end_date,
+                   sa.start_date, sa.act_start_date, sa.actual_start_date, sa.actual_end_date,
                    sa.old_duration, sa.quantity,
                    sa.scheduleitem_id, sa.critical_status,
                    sa.completed_status,
@@ -8205,6 +11464,199 @@ class ProjectsmainController extends Controller
             ORDER BY COALESCE(wa.sortorder, 999999) ASC, sa.id ASC
         ", [':itemId' => $itemId])->queryAll();
         return json_encode(['result' => $rows, 'error' => 'No']);
+    }
+
+    /* Inline edit of an activity's PLANNED Start date from the Gantt
+       name-click tooltip. Actual Start/End are system-only (driven by
+       progress/delay via GetRelationcorrect()) and are never editable here
+       — the client no longer renders them as clickable.
+       Blocked once the activity is complete (completed_status = 1): its
+       Planned is frozen forever at that point, per the agreed baseline
+       model — this is NOT the old "any progress reported" gate, since the
+       user may freely revise Planned dates while an activity is still in
+       progress. Also blocked when this activity is the dependent side of an
+       active relationship — its Planned Start is derived from its
+       precedent via RecalculatePlannedDates(), not a direct input; remove
+       the relationship first to edit it directly. */
+    public function actionUpdateactivitystartdate()
+    {
+        $id    = (int)($_POST['id'] ?? 0);
+        $field = $_POST['field'] ?? '';
+        $date  = $_POST['date'] ?? '';
+        if (!$id || $field !== 'planned' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Invalid request.']);
+        }
+
+        $db = \Yii::$app->db;
+
+        $hasRelation = $db->createCommand(
+            "SELECT COUNT(*) FROM activity_relations WHERE dependent_activity = :id AND status = 0",
+            [':id' => $id]
+        )->queryScalar();
+        if ($hasRelation) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'This activity\'s start is set by a relationship. Remove the relationship first to edit its start date.']);
+        }
+
+        $sa = $db->createCommand(
+            "SELECT projectId, completed_status, old_duration FROM scheduleactivities WHERE id = :id AND status = 0",
+            [':id' => $id]
+        )->queryOne();
+        if (!$sa) return json_encode(['error' => 'Yes', 'errortext' => 'Activity not found.']);
+        if ((int)$sa['completed_status'] === 1) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'This activity is complete — its Planned dates are locked.']);
+        }
+
+        $db->createCommand(
+            "UPDATE scheduleactivities SET act_start_date = :s WHERE id = :id",
+            [':s' => $date, ':id' => $id]
+        )->execute();
+
+        // A direct Planned-date edit is an explicit user action — Planned
+        // recalculates for every affected activity. Actual also refreshes
+        // immediately for this page view.
+        Yii::$app->helper->RecalculatePlannedDates((int)$sa['projectId']);
+        Yii::$app->helper->GetRelationcorrect((int)$sa['projectId']);
+
+        return json_encode(['error' => 'No']);
+    }
+
+    /* Drag-and-drop reorder of activities within a single WBS/schedule item
+       on the Gantt chart (newganttview.php's jQuery UI sortable on the
+       list-side rows). Only workgroup_activities_new.sortorder changes —
+       no dates are touched. Scoped to one scheduleitem_id, matching the
+       existing ORDER BY in actionGanttactivities() (COALESCE(wa.sortorder,
+       999999) ASC), which is itself scoped per WBS item, not per IOW group.
+       Reordering is purely a display-order/default-sequence change — it
+       never touches any activity's dates, and activity_relations references
+       activities by id, not by list position, so inserting an unrelated
+       activity between two related ones (or reordering around an existing
+       relationship) doesn't affect that relationship at all. No
+       relationship check is needed here. */
+    public function actionReordertaskswithinwbs()
+    {
+        $scheduleitemId = (int)($_POST['scheduleitem_id'] ?? 0);
+        $wanIds = $_POST['wan_ids'] ?? [];
+        if (!$scheduleitemId || !is_array($wanIds) || !count($wanIds)) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Invalid request.']);
+        }
+        $wanIds = array_map('intval', $wanIds);
+
+        $db = \Yii::$app->db;
+
+        // Resolve each wan_id to its live scheduleactivities.id within this
+        // WBS item — reject the whole request if any wan_id doesn't
+        // resolve (stale client-side state, e.g. an activity removed from
+        // the Gantt after the page was loaded but before the drag).
+        foreach ($wanIds as $wanId) {
+            $saId = $db->createCommand(
+                "SELECT id FROM scheduleactivities WHERE activity_id = :w AND scheduleitem_id = :s AND status = 0 LIMIT 1",
+                [':w' => $wanId, ':s' => $scheduleitemId]
+            )->queryScalar();
+            if (!$saId) {
+                return json_encode(['error' => 'Yes', 'errortext' => 'Could not reorder — the activity list has changed. Please refresh and try again.']);
+            }
+        }
+
+        $sort = 1;
+        foreach ($wanIds as $wanId) {
+            $db->createCommand(
+                "UPDATE workgroup_activities_new SET sortorder = :s WHERE id = :id",
+                [':s' => $sort, ':id' => $wanId]
+            )->execute();
+            $sort++;
+        }
+
+        return json_encode(['error' => 'No']);
+    }
+
+    /* Moves one activity from its current WBS item/IOW to a different one
+       (dragged onto a row belonging to another IOW on the Gantt chart).
+       Only scheduleactivities.scheduleitem_id and
+       workgroup_activities_new.wbs_id are repointed — dates, quantities,
+       tasks and resources are untouched. Both the source and target WBS
+       items' activity lists are re-sequenced afterwards (source to close
+       the gap, target to place the moved activity at drop_after_wan_id's
+       position, or at the end if omitted/not found). */
+    public function actionMoveactivitytoiow()
+    {
+        $wanId          = (int)($_POST['wan_id'] ?? 0);
+        $targetItemId   = (int)($_POST['target_scheduleitem_id'] ?? 0);
+        $dropAfterWanId = (int)($_POST['drop_after_wan_id'] ?? 0);
+        if (!$wanId || !$targetItemId) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Invalid request.']);
+        }
+
+        $db = \Yii::$app->db;
+
+        $saRow = $db->createCommand(
+            "SELECT id, scheduleitem_id FROM scheduleactivities WHERE activity_id = :w AND status = 0 LIMIT 1",
+            [':w' => $wanId]
+        )->queryOne();
+        if (!$saRow) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Could not move — the activity list has changed. Please refresh and try again.']);
+        }
+        $sourceItemId = (int)$saRow['scheduleitem_id'];
+        if ($sourceItemId === $targetItemId) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Activity is already in this IOW.']);
+        }
+
+        $targetWgId = $db->createCommand(
+            "SELECT wbsid FROM wbsscheduleitems WHERE scheduleitem_id = :s AND status = 0 LIMIT 1",
+            [':s' => $targetItemId]
+        )->queryScalar();
+        if (!$targetWgId) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Target IOW not found.']);
+        }
+
+        // Repoint the activity itself
+        $db->createCommand(
+            "UPDATE scheduleactivities SET scheduleitem_id = :s WHERE activity_id = :w AND status = 0",
+            [':s' => $targetItemId, ':w' => $wanId]
+        )->execute();
+        $db->createCommand(
+            "UPDATE workgroup_activities_new SET wbs_id = :g WHERE id = :id",
+            [':g' => $targetWgId, ':id' => $wanId]
+        )->execute();
+
+        // Re-sequence the source WBS item's remaining activities (close the gap)
+        $sourceWanIds = $db->createCommand(
+            "SELECT wan.id FROM scheduleactivities sa
+             JOIN workgroup_activities_new wan ON wan.id = sa.activity_id
+             WHERE sa.scheduleitem_id = :s AND sa.status = 0
+             ORDER BY wan.sortorder ASC, wan.id ASC",
+            [':s' => $sourceItemId]
+        )->queryColumn();
+        $sort = 1;
+        foreach ($sourceWanIds as $id) {
+            $db->createCommand("UPDATE workgroup_activities_new SET sortorder = :s WHERE id = :id", [':s' => $sort, ':id' => $id])->execute();
+            $sort++;
+        }
+
+        // Re-sequence the target WBS item's activities, placing the moved
+        // one right after drop_after_wan_id (or at the end if not given/found)
+        $targetWanIds = $db->createCommand(
+            "SELECT wan.id FROM scheduleactivities sa
+             JOIN workgroup_activities_new wan ON wan.id = sa.activity_id
+             WHERE sa.scheduleitem_id = :s AND sa.status = 0
+             ORDER BY wan.sortorder ASC, wan.id ASC",
+            [':s' => $targetItemId]
+        )->queryColumn();
+        $targetWanIds = array_map('intval', $targetWanIds);
+        $movedIdx = array_search($wanId, $targetWanIds, true);
+        if ($movedIdx !== false) array_splice($targetWanIds, $movedIdx, 1);
+        $insertAt = count($targetWanIds);
+        if ($dropAfterWanId) {
+            $afterIdx = array_search($dropAfterWanId, $targetWanIds, true);
+            if ($afterIdx !== false) $insertAt = $afterIdx + 1;
+        }
+        array_splice($targetWanIds, $insertAt, 0, [$wanId]);
+        $sort = 1;
+        foreach ($targetWanIds as $id) {
+            $db->createCommand("UPDATE workgroup_activities_new SET sortorder = :s WHERE id = :id", [':s' => $sort, ':id' => $id])->execute();
+            $sort++;
+        }
+
+        return json_encode(['error' => 'No']);
     }
 
     public function actionGanttlastactivity()
@@ -11891,6 +15343,86 @@ class ProjectsmainController extends Controller
         } catch (\Exception $e) {
             return json_encode(['error' => 'Yes', 'errortext' => $e->getMessage()]);
         }
+    }
+
+    // BOQ upload popup (top-bar icon next to Project Estimate) — stores the
+    // uploaded file exactly like actionUploadprojectfiles() above, but under
+    // its own file_type='boq' so it can be listed/replaced independently of
+    // general project documents. Only saves the file for now; what happens
+    // when "Create Project Schedule and Estimate" is clicked is separate,
+    // pending scope from the user.
+    public function actionUploadboq()
+    {
+        try {
+            $projectId = (int)($_POST['project_id'] ?? 0);
+            if (!$projectId) {
+                return json_encode(['error' => 'Yes', 'errortext' => 'No project selected']);
+            }
+            if (empty($_FILES['boq_file']['name'])) {
+                return json_encode(['error' => 'Yes', 'errortext' => 'No file selected']);
+            }
+
+            $origName = $_FILES['boq_file']['name'];
+            $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+            $allowed = ['xlsx', 'xls', 'pdf'];
+            if (!in_array($ext, $allowed)) {
+                return json_encode(['error' => 'Yes', 'errortext' => 'Only Excel (.xlsx, .xls) or PDF files are allowed.']);
+            }
+
+            $uploadDir = Yii::getAlias('@webroot') . '/uploads/boq/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+            $storedName = uniqid('boq_') . '.' . $ext;
+
+            if (!move_uploaded_file($_FILES['boq_file']['tmp_name'], $uploadDir . $storedName)) {
+                return json_encode(['error' => 'Yes', 'errortext' => 'Could not save the uploaded file.']);
+            }
+
+            \Yii::$app->db->createCommand()->insert('project_files', [
+                'project_id'    => $projectId,
+                'file_type'     => 'boq',
+                'filename'      => $storedName,
+                'original_name' => $origName,
+                'uploaded_at'   => date('Y-m-d H:i:s'),
+                'uploaded_by'   => Yii::$app->user->id,
+            ])->execute();
+
+            return json_encode(['error' => 'No', 'id' => (int)Yii::$app->db->lastInsertID, 'original_name' => $origName]);
+        } catch (\Exception $e) {
+            return json_encode(['error' => 'Yes', 'errortext' => $e->getMessage()]);
+        }
+    }
+
+    public function actionListboq()
+    {
+        $projectId = (int)($_POST['project_id'] ?? 0);
+        if (!$projectId) return json_encode(['error' => 'Yes', 'errortext' => 'No project selected']);
+
+        $rows = \Yii::$app->db->createCommand(
+            "SELECT id, filename, original_name, uploaded_at FROM project_files
+             WHERE project_id=:p AND file_type='boq' ORDER BY uploaded_at DESC",
+            [':p' => $projectId]
+        )->queryAll();
+
+        return json_encode(['error' => 'No', 'rows' => $rows]);
+    }
+
+    public function actionDeleteboq()
+    {
+        $id = (int)($_POST['id'] ?? 0);
+        if (!$id) return json_encode(['error' => 'Yes', 'errortext' => 'No file specified']);
+
+        $row = \Yii::$app->db->createCommand(
+            "SELECT filename FROM project_files WHERE id=:id AND file_type='boq' LIMIT 1",
+            [':id' => $id]
+        )->queryOne();
+        if (!$row) return json_encode(['error' => 'Yes', 'errortext' => 'File not found']);
+
+        $path = Yii::getAlias('@webroot') . '/uploads/boq/' . $row['filename'];
+        if (is_file($path)) @unlink($path);
+
+        \Yii::$app->db->createCommand()->delete('project_files', ['id' => $id, 'file_type' => 'boq'])->execute();
+
+        return json_encode(['error' => 'No']);
     }
 
 }

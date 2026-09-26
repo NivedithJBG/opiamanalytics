@@ -81,3 +81,16 @@ production/uploads/
 development/uploads/
 financial/uploads/
 quality/uploads/
+
+# Runtime error logs at repo/app root (PHP's relative error_log setting)
+/error_log
+production/error_log
+development/error_log
+financial/error_log
+quality/error_log
+
+# Manual opcache-clear helper (not app code)
+opcache_reset.php
+
+# WordPress webfont cache (auto-downloaded by a font-optimizer plugin)
+blog/wp-content/fonts/

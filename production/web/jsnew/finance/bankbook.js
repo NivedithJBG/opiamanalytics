@@ -129,6 +129,10 @@ $(function(){
                         alert(data.errortext);
                     }
                     $('.preloader').hide();
+                },
+                error: function(xhr, status, err){
+                    $('.preloader').hide();
+                    alert('Could not load Bank Book. Please try again.');
                 }
             });
         }

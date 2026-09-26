@@ -13,7 +13,7 @@ $(document).on( "click", "#act-lib-actvty", function(){
 
     $('#collapsemasteract').hide();
 
-});    
+});
 
 $(function() {
     // project section function
@@ -72,7 +72,7 @@ $(function() {
         var row = '<div class="row task-row" id="task-row-' + taskRowCount + '" style="margin-top:4px;">' +
             '<div class="col-md-1"></div>' +
             '<div class="col-md-4"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name"></div>' +
-            '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit"></div>' +
+            '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit" oninput="this.value=this.value.replace(/[0-9]/g,\'\')"></div>' +
             '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day"></div>' +
             '<div class="col-md-1"><button type="button" class="remove-task-row" style="background:none;border:none;padding:6px 4px;"><span class="icon-minus" style="color:#d9534f;font-size:18px;"></span></button></div>' +
             '</div>';
@@ -85,11 +85,32 @@ $(function() {
 
     $(document).on('click', '#saveestactivity', function(){
         var error=0;
+        // Clear every field-level error message up front, INCLUDING the
+        // ones with no .error class (Project Type/IOW Group/Activity Type/
+        // Name/Unit all use a plain `<span style="color:red;">`, not
+        // class="error") — .error alone never matched them, so a message
+        // shown on one failed attempt was never cleared on a later
+        // successful one; it just sat there permanently once triggered.
         $('.error').hide();
-        $('#estactivitytypeid').next('span').hide();
-        var acttype = $('#estactivitytypeid').val();
-        if (!acttype || acttype === '0') {
-            $('#estactivitytypeid').next('span').html('Select activity type').show('slow');
+        $('#estworktypelistss1, #actIowGroupId, #estactivitytypeid, .estactivityname, .estactivityunit').each(function(){
+            $(this).next('span').hide().html('');
+        });
+
+        // All fields on this form are required — Project Type, IOW Group
+        // and Activity Type were previously optional (see removed comments
+        // below), but per explicit direction every field must be filled
+        // before an activity can be added, so those three are validated
+        // the same way Activity Name/Unit already were.
+        if(!$('#estworktypelistss1').val() || $('#estworktypelistss1').val() === '0'){
+            $('#estworktypelistss1').next('span').html('Select Project Type').show('slow');
+            error = 1;
+        }
+        if(!$('#actIowGroupId').val()){
+            $('#actIowGroupId').next('span').html('Select IOW Group').show('slow');
+            error = 1;
+        }
+        if(!$('#estactivitytypeid').val() || $('#estactivitytypeid').val() === '0'){
+            $('#estactivitytypeid').next('span').html('Select Activity Type').show('slow');
             error = 1;
         }
         $('.estactivityname').each(function(){
@@ -108,7 +129,28 @@ $(function() {
                 error=1;
             }
         });
-        // Project Type is optional — activities without one list under all types
+
+        // Every task row currently on the form must be fully filled in
+        // (Task Name, Unit, Productivity/day) — a half-filled row (e.g.
+        // productivity left blank) silently saved as 0 before, which is
+        // exactly the "productivity not saving" confusion from earlier;
+        // now it's caught here instead.
+        $('#task-rows-container .task-row').each(function(){
+            var $row = $(this);
+            var $name = $row.find('.task-name');
+            var $unit = $row.find('.task-unit');
+            var $prod = $row.find('.task-productivity');
+            if($name.val() === '' || $unit.val() === '' || $prod.val() === ''){
+                $row.find('.task-name, .task-unit, .task-productivity').css('border-color', '#d9534f');
+                error = 1;
+            } else {
+                $row.find('.task-name, .task-unit, .task-productivity').css('border-color', '');
+            }
+        });
+        if(error && $('#task-rows-container .task-row').length && !$('#task-rows-error').length){
+            $('#task-rows-container').after('<div id="task-rows-error" style="color:red;font-size:12px;margin-top:4px;">Please fill in Task Name, Unit and Productivity/day for every task row (or remove the empty row).</div>');
+        }
+        if(!error){ $('#task-rows-error').remove(); }
 
         if(error==0){
             var editingId = $('#editingActivityId').val();
@@ -146,17 +188,17 @@ $(function() {
                 success:function(data){
                     if(data.error=='No')
                     {
-                        $(".search-and-actions-wrpr").show();
-                        $('#estactivityform')[0].reset();
-                        $('#task-rows-container .task-row:not(#task-row-1)').remove();
-                        taskRowCount = 1;
-                        $(".add-activity-form").hide();
-                        $("#estactivityitems").show();
-                        $('#listestactivity').trigger('click');
                         $('#saveestactivity').attr("disabled", false);
+
+                        // Both Add and Edit now close the modal on success
+                        // (closeAlAddActivityModal — same teardown/reset for
+                        // both, not the old inline panel's elements which
+                        // don't apply here) and refresh the list behind it
+                        // so the new/updated activity is visible immediately.
+                        $(".search-and-actions-wrpr").show();
+                        closeAlAddActivityModal();
+                        $('#listestactivity').trigger('click');
                         $('.panel-default').removeClass('add-form-active');
-                        $('#editingActivityId').val('');
-                        $('#saveestactivity').html('<span class="icon-check"></span> Add Activity');
                     } else {
                         alert('Save failed: ' + (data.msg || 'Unknown error'));
                         $('#saveestactivity').attr("disabled", false);
@@ -169,7 +211,7 @@ $(function() {
             });
         }
     });
-    
+
 });
 
 $(document).on( "click", ".editestactivitybutton", function(){
@@ -224,7 +266,7 @@ $(document).on( "click", "#saveactivitybutton", function(){
                         $("#estactivityitems").show();
                         $('#listestactivity').trigger('click');
                         $('#saveactivitybutton').attr("disabled", false);
-                  
+
                 }
                 $('#saveestactivitybutton'+data.Id).attr("disabled", false);
             }
@@ -309,7 +351,7 @@ $(document).on('click', '.al-edit-activity-btn', function(){
                             '<input type="hidden" class="task-id" name="task_id[]" value="'+(task.id||0)+'">' +
                             '<div class="col-md-1"></div>' +
                             '<div class="col-md-4"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name" value="'+$('<div/>').text(task.task_name).html()+'"></div>' +
-                            '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit" value="'+$('<div/>').text(task.task_unit||'').html()+'"></div>' +
+                            '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit" value="'+$('<div/>').text(task.task_unit||'').html()+'" oninput="this.value=this.value.replace(/[0-9]/g,\'\')"></div>' +
                             '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day" value="'+parseFloat(task.productivity||0).toFixed(3)+'"></div>' +
                             '<div class="col-md-1">'+btnHtml+'</div></div>'
                         );
@@ -320,7 +362,7 @@ $(document).on('click', '.al-edit-activity-btn', function(){
                         '<div class="row task-row" id="task-row-1" style="margin-top:4px;">' +
                         '<div class="col-md-1"></div>' +
                         '<div class="col-md-4"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name"></div>' +
-                        '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit"></div>' +
+                        '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit" oninput="this.value=this.value.replace(/[0-9]/g,\'\')"></div>' +
                         '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day"></div>' +
                         '<div class="col-md-1"><button type="button" class="add-task-row" style="background:none;border:none;padding:6px 4px;"><span class="icon-add" style="color:#337ab7;font-size:18px;"></span></button></div></div>'
                     );
@@ -330,12 +372,33 @@ $(document).on('click', '.al-edit-activity-btn', function(){
     });
 });
 
-/* close manually-opened modal */
-$(document).on('click', '[data-dismiss="modal"], .cancelactivity', function(){
+/* close manually-opened modal — shared by the dismiss/cancel buttons and
+   by the Update Activity save-success handler above (editingId branch),
+   which previously toggled the OLD inline-panel's .add-activity-form/
+   #estactivityitems elements instead of actually closing this Bootstrap
+   modal — the modal stayed open showing its pre-save (now stale) input
+   values, making a successful save look like it hadn't taken effect. */
+function closeAlAddActivityModal(){
     $('#alAddActivityPopup').css('display','none').removeClass('in').attr('aria-hidden','true');
     $('body').removeClass('modal-open');
     $('.modal-backdrop').remove();
-});
+
+    // Reset the whole Add Activity form on close, including the context
+    // fields (Project Type / IOW Group / Activity Type / Working Hours)
+    // that are deliberately kept filled between saves while the popup
+    // stays open — they must not carry over the next time it's opened.
+    $('#estactivityform')[0].reset();
+    $('#task-rows-container .task-row:not(#task-row-1)').remove();
+    $('#task-rows-container .task-row:first .task-name, #task-rows-container .task-row:first .task-unit, #task-rows-container .task-row:first .task-productivity').val('');
+    taskRowCount = 1;
+    $('#actIowGroupId').html('<option value="">Select IOW Group</option>');
+    $('#editingActivityId').val('');
+    $('#estactivitytypeid').val('0');
+    $('#estworktypelistss1').val('0');
+    $('#saveestactivity').html('<span class="icon-check"></span> Add Activity');
+    $('.error').hide();
+}
+$(document).on('click', '[data-dismiss="modal"], .cancelactivity', closeAlAddActivityModal);
 
 $(document).on( "click", "#addestactivity", function(){
     $(".estactivityname").val('');
@@ -390,7 +453,7 @@ $(document).on( "click", ".cancelactivity", function(){
              data: {id:idval},
              success: function(data){
                  if(data.error=='No')
-                 { 
+                 {
 
                      $('.items-select-bar').html(data.result);
                      $('.allocation-list-items-master').html(data.listadded);
@@ -413,7 +476,7 @@ $(document).on( "click", ".cancelactivity", function(){
                          $('.resource-not-allocated-info').css('display','flex');
                          $('.allocation-cntnt-wrpr').addClass('resource-not-allocated');
                          $('.infodisplay').html('<div style="margin-top: 11px;" class="info-box"><span class="icon-info"></span> <span>Resources not added. Please add resources.  </span></div>');
-                                                
+
                      }
                      else
                      {
@@ -432,660 +495,327 @@ $(document).on( "click", ".added-item-allocation-save-btn", function(){
     var idval = $('#EstActivity_Id').val();
     ;
         $.ajax({
-            type: 'POST',
-            url: '../projects/allocationlist',
-            beforeSend : function(){
+             type: 'POST',
+             url: '../projects/allocationlist',
+             beforeSend : function(){
                 $('.preloader').show();
-            },
-            dataType: "json",
-            data: {id:idval},
-            success: function(data){
-                if(data.error=='No')
-                {
-                    $('.items-select-bar').html(data.result);
-                    $('.added-alloc-items-wrpr').html(data.listadded);
-                    $('.resource-not-allocated').removeClass('resource-not-allocated');
-                    $('.added-item-allocation-save-btn-wrpr').addClass('saving');
-                    $('.saving').children('.button-label').text('Saving');
-                    setTimeout(function(){
-                        $('.resources-from-selected-item-wrpr').addClass('resource-saved');
-                        $('.allocation-right-bar').addClass('resource-saved');
-                        $('.ton-column').addClass('col-md-2');
-                        $('.amount-column').addClass('col-md-3');
-                    }, 400);
+             },
+             dataType: "json",
+             data: {id:idval},
+             success: function(data){
+                 if(data.error=='No')
+                 {
 
-                }
-
-                $('.preloader').hide();
-            }
-        });
-
-});
-
-$(document).on( "click", "#addedlist", function(){
-    var idval = $('#EstActivity_Id').val();
-        $.ajax({
-            type: 'POST',
-            url: '../projects/allocationlist',
-            beforeSend : function(){
-                $('.preloader').show();
-            },
-            dataType: "json",
-            data: {id:idval},
-            success: function(data){
-                if(data.error=='No')
-                {
-                    if(data.added==0)
-                    {
-                       $('.allocation-list-items-cntnr').hide();
-                        $('#alredyadded').show();
-                        $('.infodisplay').show();
-                    }
-                    else
-                    {
-                        $('.infodisplay').hide();
-                        $('#alredyadded').hide();
-                        //$('.resource-not-allocated-info').css('display','flex');
-                        //$('.icon-info3').css('margin-top','-230px');
-                        //$('.info-text').css('margin-top','-100px');
-                        $('.allocation-list-items-cntnr').show();
-                    }
-                    //$('.items-select-bar').html(data.result);
-                    $('.allocation-list-items-cntnr').html(data.listadded);
-                    //$('.resource-not-allocated').removeClass('resource-not-allocated');
-                    //$('.added-item-allocation-save-btn-wrpr').addClass('saving');
-                    //$('.saving').children('.button-label').text('Saving');
-                   
-
-                }
-
-                $('.preloader').hide();
-            }
-        });
-
+                     $('.items-select-bar').html(data.result);
+                     $('.allocation-list-items-master').html(data.listadded);
+                     $('.activityrate span').html(data.activitynameval);
+                     $('#activityrate').html(data.activitynameval);
+                     $('#activityratenow').html(data.activitynamerate);
+                     $('#activityunt').html(data.actvtyunit);
+                 }
+                 $('.preloader').hide();
+             }
+         });
 });
 
 $(document).on( "click", ".resourcesearch", function(){
-        var resorcetypeid=$(this).data("id");
-        $('#resourcegroupval').val(resorcetypeid);
-        var resgroup = $('#resourcegroup1').val();
-        var activity_id = $('#EstActivity_Id').val();
-        $('.preloader').show();
-        console.log(activity_id);
+    var idval = $('#EstActivity_Id').val();
+    var restypeid = $(this).data("id");
+    $('.resourcesearch').removeClass('active');
+    $(this).addClass('active');
         $.ajax({
-            type: 'POST',
-            url: '../projectsetup/resourcesearchbytyid',
-            dataType: "json",
-            data: {activity_id:activity_id,resourcetypeid:resorcetypeid,resgroup:resgroup},
-            success: function(data){
-                if(data.error=='No')
-                {
-                    $('.preloader').hide();
-                    $('.allocation-items-master').html(data.result);
-                    $('.activityid').html(data.activityname);
-                    //$('#restypeid').val(resorcetypeid);
-                    //$('#resourcegroupselection').html(data.group);
-                    //$('#resourcetable').show();
+             type: 'POST',
+             url: '../projects/allocationsearch',
+             beforeSend : function(){
+                $('.preloader').show();
+             },
+             dataType: "json",
+             data: {activity_id:idval, restypeid:restypeid, resgroup:$('#resourcegroup1').val()},
+             success: function(data){
+                 $('.preloader').hide();
+                 $('#accordionmast').html(data.result);
+             }
+         });
+});
 
-                }
-                else
-                {
-                    alert(data.errortext);
-                }
+$(document).on( "click", ".searchresoureskey", function(){
+    var resgroup = $('#resourcegroup1').val();
+    var activity_id = $('#EstActivity_Id').val();
+});
 
-                $('.preloader').hide();
-            }
-        });
-    });
-
-    //$(document).on( "change","input[type=radio][name=mpequ-select]", function(){
-    $(document).on( "change",".mpequ-select", function(){
-        var resid=$(this).data("resid"); 
-        var restype = $(this).data("type"); 
-        var type=this.value;
-
-        $.ajax({
-            type:'POST',
-            url:'../resources/masterplantestdata',
-            dataType:'json',
-            data: {type:type,resid:resid,restype:restype},
-            success:function(data){
-                if(data.error=='No')
-                {
-                    $('.plantrow'+resid).html(data.datarows);
-                }
-            }
-        });
-
-    });
-
-    $(document).on( "change","input[type=radio][name=mlequ-select]", function(){
-        var resid=$(this).data("resid"); 
-        var restype = $(this).data("type"); 
-        var type=this.value;
-
-        $.ajax({
-            type:'POST',
-            url:'../resources/masterestdata',
-            dataType:'json',
-            data: {type:type,resid:resid,restype:restype},
-            success:function(data){
-                if(data.error=='No')
-                {
-                    $('.mleasedrow'+resid).html(data.datarows);
-                }
-            }
-        });
-
-    });
-
-
-$(document).on( "click", ".master-addresource", function(){
-    var resid=$(this).val();
-    var error=0;
+$(document).on( "click", ".mplant_no_of_hrs", function(){
     var actid = $('#EstActivity_Id').val();
-    var restype = $('#mastalloc').val();
+});
 
-    $('.error').hide();
-    /* if(!$.isNumeric($('#master-resourcequantity'+resid).val()))
-    {
-        $('#master-resourcequantity'+resid).next("span").html('Enter Valid Quantity').show('slow');
-        error=1;
-    }  */
-
-    if(restype == 33){
-
-        var mannumber = $('#estimate-mannumbr'+resid).val();
-        var mandays = $('#estimate-no-ofdays'+resid).val();
-        var man_qty = $('#estimate-qty'+resid).val();
-
-        if(str=='' || mannumber=='' || mandays=='' || man_qty=='')
-        {
-            error=1;
-            alert('Enter the fields')
-        }
-
-        if(error==0)
-        {
-            $('.preloader').show();
-            var str=$('#estimate-specificrate'+resid).val();
-            var resourcerate=str.replace(/,/g, '');
-           // resourceqty = $('#master-resourcequantity'+resid).val();;
-
-            $.ajax({
+$(document).on("click", ".manpower-add-btn", function(){
+    var resid = $(this).data('resid');
+    var restype = $(this).data('restype');
+    var resourcerate = $('#manpowerrate'+resid).val();
+    var mannumber = $('#mannumber'+resid).val();
+    var mandays = $('#mandays'+resid).val();
+    var man_qty = $('#man_qty'+resid).val();
+    $.ajax({
                 type:'POST',
                 url:'../projects/addactivityresource',
-                beforeSend:function(){
-                    $('#addresourcebutton'+resid).attr("disabled",true);
-                    $('.preloaderitems').show();
+                beforeSend: function(){
+                    $('.preloader').show();
                 },
-                dataType:"json",
+                dataType:'json',
                 data:{EstActivity_Id:$('#EstActivity_Id').val(),resid:resid, resourcerate:resourcerate, mannumber:mannumber, mandays:mandays, man_qty:man_qty, restype:restype},
-                success:function(data){
-                    $('.allocation-cntnt-wrpr').addClass('resource-not-allocated');
+                success: function(data){
                     $('.preloader').hide();
-                    $('.infodisplay').hide();
-                    $('.allocation-list-items-cntnr').show();
-                    $('#addedresources').html(data.result);
-                    $('#addresourcebutton'+resid).attr("disabled",false);
-                    $('#master-resourcequantity'+resid).val('');
-                    $('.preloaderitems').hide();
-                    $('#resourcerow'+resid).remove();
-                    $('#estactresourceratetotal').val(data.price);
+                    $('.added-activity-list-wrpr').html(data.result);
                     $('#activityratenow').html('Rate : '+data.price);
-                    $('#addedlist').trigger('click');
                     $('.activityrate span').html(data.activityhead);
                     $('#activityrate').html(data.activityhead);
-                    $('#listestactivity').trigger('click');
-                    //$('.res_actlibrary_'+actid).trigger('click');
+                    $('.added-item-allocation-save-btn').trigger('click');
                     //$('.close-resource-list-btn').trigger('click');
-                    
-                    //$('#amount').val(data.amount);
                 }
-            });
+    });
+});
 
-        }
-
-    }
-    else if(restype == 26)
-    {
-        
-       
-        var type = document.querySelector('input[name="mpequ-select'+resid+'"]:checked').value;
-
-        if (type == 'mplant_no_of_hrs') {            
-
-            var fueltype = $('#fueltype'+resid).val();
-            var fuel_vendor = $('#fuel_vendor'+resid).val();
-            var fuelrate = $('#mast-fuelrate'+resid).val();
-            var fuelqty = $('#mast-fuelqty'+resid).val();
-            var hoursno = $('#estimate-resourcetime'+resid).val();
-            var repair = $('#mast-repair'+resid).val();
-
-            if(fuelrate=='' || fuelqty=='' || hoursno==''){
-                error=1;
-                alert('Enter the fields')
-            }
-
-            if(error==0)
-            {
-                $('.preloader').show();
-                $.ajax({
-                    type:'POST',
-                    url:'../projects/addactivityresource',
-                    beforeSend:function(){
-                        $('#addresourcebutton'+resid).attr("disabled",true);
-                        $('.preloaderitems').show();
-                    },
-                    dataType:"json",
-                    data:{  EstActivity_Id:$('#EstActivity_Id').val(),
-                            resid:resid,
-                            repair:repair,
-                            fuelrate:fuelrate,
-                            fuelqty:fuelqty,
-                            hoursno:hoursno,
-                            fueltype:fueltype, 
-                            fuel_vendor: fuel_vendor,
-                            restype:restype,
-                            type:type
-                        },
-                    success:function(data){
-                        $('.allocation-cntnt-wrpr').addClass('resource-not-allocated');
-                        $('.preloader').hide();
-                        $('.infodisplay').hide();
-                        $('.allocation-list-items-cntnr').show();
-                        $('#addedresources').html(data.result);
-                        $('#addresourcebutton'+resid).attr("disabled",false);
-                        $('#master-resourcequantity'+resid).val('');
-                        $('.preloaderitems').hide();
-                        $('#resourcerow'+resid).remove();
-                        $('#estactresourceratetotal').val(data.price);
-                        $('#activityratenow').html('Rate : '+data.price);
-                        $('#addedlist').trigger('click');
-                        $('.activityrate span').html(data.activityhead);
-                        $('#activityrate').html(data.activityhead);
-                        $('#listestactivity').trigger('click');
-                        //$('.res_actlibrary_'+actid).trigger('click');
-                        //$('.close-resource-list-btn').trigger('click');
-                        
-                        //$('#amount').val(data.amount);
-                    }
-                });
-            }
-
-        }else if (type == 'mdepreciation') {
-
-            var str=$('#estimate-plantrate'+resid).val();
-            var resourcerate=str.replace(/,/g, '');
-            var dep_qty = $('#estimate-dep-qty'+resid).val();
-
-            $.ajax({
-                type:'POST',
-                url:'../projects/addactivityresource',
-                beforeSend:function(){
-                    $('#addresourcebutton'+resid).attr("disabled",true);
-                    $('.preloaderitems').show();
-                },
-                dataType:"json",
-                data:{EstActivity_Id:$('#EstActivity_Id').val(), resid:resid, res_qty:dep_qty, resourcerate:resourcerate, restype:restype, type:type},
-                success:function(data){
-                    $('.allocation-cntnt-wrpr').addClass('resource-not-allocated');
-                    $('.preloader').hide();
-                    $('.infodisplay').hide();
-                    $('.allocation-list-items-cntnr').show();
-                    $('#addedresources').html(data.result);
-                    $('#addresourcebutton'+resid).attr("disabled",false);
-                    $('#master-resourcequantity'+resid).val('');
-                    $('.preloaderitems').hide();
-                    $('#resourcerow'+resid).remove();
-                    $('#estactresourceratetotal').val(data.price);
-                    $('#activityratenow').html('Rate : '+data.price);
-                    $('#addedlist').trigger('click');
-                    $('.activityrate span').html(data.activityhead);
-                    $('#activityrate').html(data.activityhead);
-                    $('#listestactivity').trigger('click');
-                    //$('.res_actlibrary_'+actid).trigger('click');
-                    //$('.close-resource-list-btn').trigger('click');
-                    
-                    //$('#amount').val(data.amount);
-                }
-            });
-
-
-
-
-        }
-
-    }else if(restype == 24)
-    {
-        var type = document.querySelector('input[name="mlequ-select"]:checked').value;
-
-        if (type == 'mlno_of_hrs') {
-
-            
-
-            var fueltype = $('#fueltype'+resid).val();
-
-            var fuelrate = $('#estimate-fuelrate'+resid).val();
-
-            var fuelqty = $('#estimate-fuelqty'+resid).val();
-
-            var hoursno = $('#estimate-resourcetime'+resid).val();
-
-            
-
-            if(fuelrate=='' || fuelqty=='' || hoursno==''){
-
-                error=1;
-
-                alert('Enter the fields')
-
-
-                
-            }
-
-
-            if(error==0)
-            {
-                $('.preloader').show();
-            
-            
-
-                $.ajax({
-                    type:'POST',
-                    url:'../projects/addactivityresource',
-                    beforeSend:function(){
-                        $('#addresourcebutton'+resid).attr("disabled",true);
-                        $('.preloaderitems').show();
-                    },
-                    dataType:"json",
-                    data:{EstActivity_Id:$('#EstActivity_Id').val(),resid:resid,fueltype:fueltype,fuelrate:fuelrate,fuelqty:fuelqty,hoursno:hoursno,restype:restype,type:type},
-                    success:function(data){
-                        $('.allocation-cntnt-wrpr').addClass('resource-not-allocated');
-                        $('.preloader').hide();
-                        $('.infodisplay').hide();
-                        $('.allocation-list-items-cntnr').show();
-                        $('#addedresources').html(data.result);
-                        $('#addresourcebutton'+resid).attr("disabled",false);
-                        $('#master-resourcequantity'+resid).val('');
-                        $('.preloaderitems').hide();
-                        $('#resourcerow'+resid).remove();
-                        $('#estactresourceratetotal').val(data.price);
-                        $('#activityratenow').html('Rate : '+data.price);
-                        $('#addedlist').trigger('click');
-                        $('.activityrate span').html(data.activityhead);
-                        $('#activityrate').html(data.activityhead);
-                        $('#listestactivity').trigger('click');
-                        //$('.res_actlibrary_'+actid).trigger('click');
-                        //$('.close-resource-list-btn').trigger('click');
-                        
-                        //$('#amount').val(data.amount);
-                    }
-                });
-
-            }
-
-
-
-
-         
-        }else if (type == 'mlease_period') {
-
-            var leaseperiod = $('#estimate-leaseperiod'+resid).val();
-
-            var str = $('#estimate-specificrate'+resid).val();
-            var resourcerate = str.replace(/,/g, '');
-
-           
-
-
-            $.ajax({
-                type:'POST',
-                url:'../projects/addactivityresource',
-                beforeSend:function(){
-                    $('#addresourcebutton'+resid).attr("disabled",true);
-                    $('.preloaderitems').show();
-                },
-                dataType:"json",
-                data:{EstActivity_Id:$('#EstActivity_Id').val(),resid:resid,leaseperiod:leaseperiod,resourcerate:resourcerate,restype:restype,type:type},
-                success:function(data){
-                    $('.allocation-cntnt-wrpr').addClass('resource-not-allocated');
-                    $('.preloader').hide();
-                    $('.infodisplay').hide();
-                    $('.allocation-list-items-cntnr').show();
-                    $('#addedresources').html(data.result);
-                    $('#addresourcebutton'+resid).attr("disabled",false);
-                    $('#master-resourcequantity'+resid).val('');
-                    $('.preloaderitems').hide();
-                    $('#resourcerow'+resid).remove();
-                    $('#estactresourceratetotal').val(data.price);
-                    $('#activityratenow').html('Rate : '+data.price);
-                    $('#addedlist').trigger('click');
-                    $('.activityrate span').html(data.activityhead);
-                    $('#activityrate').html(data.activityhead);
-                    $('#listestactivity').trigger('click');
-                    //$('.res_actlibrary_'+actid).trigger('click');
-                    //$('.close-resource-list-btn').trigger('click');
-                    
-                    //$('#amount').val(data.amount);
-                }
-            });
-
-
-            
-
-
-
-            
-        }
-
-
-
-    }else{
-
-        if(error==0)
-        {
-        $('.preloader').show();
-        var price=$('#master-resourceprice'+resid).val();
-        var str=$('#estimate-specificrate'+resid).val();
-        var sprice=str.replace(/,/g, '');
-        var quantity=$('#estimate-resourcequantity'+resid).val();
+$(document).on("click", ".mplant-add-btn", function(){
+    var resid = $(this).data('resid');
+    var restype = $(this).data('restype');
+    var type = $(this).data('type');
+    if(type == 'mplant_no_of_hrs'){
+        var hoursno = $('#hoursno'+resid).val();
+        var fueltype = $('#fueltype'+resid).val();
+        var fuel_vendor = $('#fuel_vendor'+resid).val();
+        var fuelrate = $('#fuelrate'+resid).val();
+        var fuelqty = $('#fuelqty'+resid).val();
+        var repair = $('#repair'+resid).val();
         $.ajax({
+                    type:'POST',
+                    url:'../projects/addactivityresource',
+                    beforeSend: function(){
+                        $('.preloader').show();
+                    },
+                    dataType:'json',
+                    data:{  EstActivity_Id:$('#EstActivity_Id').val(),
+                            resid:resid,fueltype:fueltype,fuel_vendor:fuel_vendor,fuelrate:fuelrate,fuelqty:fuelqty,
+                            hoursno:hoursno,repair:repair,restype:restype,type:type},
+                    success: function(data){
+                        $('.preloader').hide();
+                        $('.added-activity-list-wrpr').html(data.result);
+                        $('#activityratenow').html('Rate : '+data.price);
+                        $('.activityrate span').html(data.activityhead);
+                        $('#activityrate').html(data.activityhead);
+                        $('.added-item-allocation-save-btn').trigger('click');
+                        //$('.close-resource-list-btn').trigger('click');
+                    }
+        });
+    }else{
+        var res_qty = $('#res_qty'+resid).val();
+        var resourcerate = $('#mplantrate'+resid).val();
+        $.ajax({
+                type:'POST',
+                url:'../projects/addactivityresource',
+                beforeSend: function(){
+                    $('.preloader').show();
+                },
+                dataType:'json',
+                data:{EstActivity_Id:$('#EstActivity_Id').val(), resid:resid, res_qty:res_qty, resourcerate:resourcerate, restype:restype, type:type},
+                success: function(data){
+                    $('.preloader').hide();
+                    $('.added-activity-list-wrpr').html(data.result);
+                    $('#activityratenow').html('Rate : '+data.price);
+                    $('.activityrate span').html(data.activityhead);
+                    $('#activityrate').html(data.activityhead);
+                    $('.added-item-allocation-save-btn').trigger('click');
+                    //$('.close-resource-list-btn').trigger('click');
+                }
+        });
+    }
+});
+
+$(document).on("click", ".mlease-add-btn", function(){
+    var resid = $(this).data('resid');
+    var restype = $(this).data('restype');
+    var type = $(this).data('type');
+    if(type == 'mlno_of_hrs'){
+        var hoursno = $('#lhoursno'+resid).val();
+        var fueltype = $('#lfueltype'+resid).val();
+        var fuelrate = $('#lfuelrate'+resid).val();
+        var fuelqty = $('#lfuelqty'+resid).val();
+        $.ajax({
+                    type:'POST',
+                    url:'../projects/addactivityresource',
+                    beforeSend: function(){
+                        $('.preloader').show();
+                    },
+                    dataType:'json',
+                    data:{EstActivity_Id:$('#EstActivity_Id').val(),resid:resid,fueltype:fueltype,fuelrate:fuelrate,fuelqty:fuelqty,hoursno:hoursno,restype:restype,type:type},
+                    success: function(data){
+                        $('.preloader').hide();
+                        $('.added-activity-list-wrpr').html(data.result);
+                        $('#activityratenow').html('Rate : '+data.price);
+                        $('.activityrate span').html(data.activityhead);
+                        $('#activityrate').html(data.activityhead);
+                        $('.added-item-allocation-save-btn').trigger('click');
+                        //$('.close-resource-list-btn').trigger('click');
+                    }
+        });
+    }else{
+        var leaseperiod = $('#leaseperiod'+resid).val();
+        var resourcerate = $('#mleaserate'+resid).val();
+        $.ajax({
+                type:'POST',
+                url:'../projects/addactivityresource',
+                beforeSend: function(){
+                    $('.preloader').show();
+                },
+                dataType:'json',
+                data:{EstActivity_Id:$('#EstActivity_Id').val(),resid:resid,leaseperiod:leaseperiod,resourcerate:resourcerate,restype:restype,type:type},
+                success: function(data){
+                    $('.preloader').hide();
+                    $('.added-activity-list-wrpr').html(data.result);
+                    $('#activityratenow').html('Rate : '+data.price);
+                    $('.activityrate span').html(data.activityhead);
+                    $('#activityrate').html(data.activityhead);
+                    $('.added-item-allocation-save-btn').trigger('click');
+                    //$('.close-resource-list-btn').trigger('click');
+                }
+        });
+    }
+});
+
+$(document).on("click", ".resource-add-btn", function(){
+    var resid = $(this).data('resid');
+    var restype = $(this).data('restype');
+    var type = $(this).data('type');
+    var quantity = $('#quantity'+resid).val();
+    var price = $('#srate'+resid).val();
+    var sprice = $('#srate'+resid).val();
+    $.ajax({
             type:'POST',
             url:'../projects/addactivityresource',
-            beforeSend:function(){
-                $('#addresourcebutton'+resid).attr("disabled",true);
-                $('.preloaderitems').show();
+            beforeSend: function(){
+                $('.preloader').show();
             },
-            dataType:"json",
+            dataType:'json',
             data:{EstActivity_Id:$('#EstActivity_Id').val(),resid:resid,rate:price,srate:sprice,quantity:quantity,restype:restype,type:type},
-            success:function(data){
-                $('.allocation-cntnt-wrpr').addClass('resource-not-allocated');
+            success: function(data){
                 $('.preloader').hide();
-                $('.infodisplay').hide();
-                $('.allocation-list-items-cntnr').show();
-                $('#addedresources').html(data.result);
-                $('#addresourcebutton'+resid).attr("disabled",false);
-                $('#master-resourcequantity'+resid).val('');
-                $('.preloaderitems').hide();
-                $('#resourcerow'+resid).remove();
-                $('#estactresourceratetotal').val(data.price);
+                $('.added-activity-list-wrpr').html(data.result);
                 $('#activityratenow').html('Rate : '+data.price);
-                $('#addedlist').trigger('click');
                 $('.activityrate span').html(data.activityhead);
                 $('#activityrate').html(data.activityhead);
-                $('#listestactivity').trigger('click');
-                
+                $('.added-item-allocation-save-btn').trigger('click');
             }
-        });
-    }
-
-    }
-
-    
-
-
-    
+    });
 });
 
 $(document).on( "click", ".removeresourceitem", function(){
-    var resid=$(this).data("id");
-    $('.preloader').show();
+    var resid = $(this).data("id");
+    var r = confirm("Are you sure you want to remove this resource ?");
+    if(r==true){
     $.ajax({
-        type:'POST',
+        type: 'POST',
         url:'../projects/deleteactivityresource',
-        beforeSend:function(){
+        beforeSend : function(){
             $('#removeresourceitem'+resid).attr("disabled",true);
-            $('.preloaderitems').show();
         },
-        dataType:"json",
+        dataType: "json",
         data:{resid:resid,activityid:$('#EstActivity_Id').val()},
-        success:function(data){
-            $('.preloader').hide();
+        success: function(data){
             $('#tempresrow'+resid).remove();
-            $('.res-masterrow'+resid).remove();
-            //$('#addedresources').html(data.result);
-            $('#estactresourceratetotal').val(data.price);
             $('#activityratenow').html('Rate : '+data.price);
-            //$('#amount').val(data.amount);
             $('#removeresourceitem'+resid).attr("disabled",false);
-            $('.preloaderitems').hide();
             $('.activityrate span').html(data.activityhead);
             $('#activityrate').html(data.activityhead);
-            $('#listestactivity').trigger('click');
             //$('#resourceallocation').trigger('click');
             $('.close-resource-list-btn').trigger('click');
         }
     });
+    }
 });
 
 $(document).on( "click", ".updatesallocateresourceunit", function(){
     var mid = $(this).attr('data-v');
     $("#updatesallocateresourceunit"+mid).hide();
-    $("#allocateresourceunit"+mid).hide();
-    $("#allocateresourceqty"+mid).hide();
+    $("#savesallocateresourceunit"+mid).show();
     $("#editallocateresourceunit"+mid).show();
     $("#editallocateresourceqty"+mid).show();
     $("#savesallocateresourceunit"+mid).show();
-
 });
 
 $(document).on( "click", ".savesallocateresourceunit", function(){
     var mid = $(this).attr('data-v');
-    var dactivity = $(this).attr('data-activity');
+    var activityid = $(this).attr('data-activity');
     //var updatevalue = $("#editallocateresourceunit"+mid).val();
-
     var str = $("#editallocateresourceunit"+mid).val();
     var updatevalue = str.replace(/,/g, '');
-
-
     var updateqty = $("#editallocateresourceqty"+mid).val();
-    if(updatevalue != ''){
-        $.ajax({
+    $.ajax({
             type: 'POST',
             url: '../projects/updateallocaterrated',
             beforeSend : function(){
                 $('.preloader').show();
             },
             dataType: "json",
-            data: {PRID:mid,dactivity:dactivity,updatevalue:updatevalue,updateqty:updateqty},
+            data:{PRID:mid,updatevalue:updatevalue,updateqty:updateqty},
             success: function(data){
-                if(data.error=='No')
-                {
                 	$("#editallocateresourceunit"+mid).hide();
                     $("#editallocateresourceqty"+mid).hide();
                     $("#savesallocateresourceunit"+mid).hide();
                     $("#updatesallocateresourceunit"+mid).show();
-                    $("#allocateresourceunit"+mid).html(updatevalue);
                     $("#allocateresourceqty"+mid).html(updateqty);
-                    $("#allocateresourceunit"+mid).show();
-                    $("#allocateresourceqty"+mid).show();
-                    $("#activityratenow").html('Rate: '+data.total);
+                    $("#allocateresourceunit"+mid).html(updatevalue);
                     $("#allocateres_amt"+mid).html(data.restotal);
-                }
-
+                    $("#activityratenow").html('Rate: '+data.total);
                 $('.preloader').hide();
             }
-        });
-
-    }else{
-        return true;
-    }
+    });
 });
 
 /*$(document).on( "input", "#resourcegroup1", function(e){
-        
-        var resorcetypeid=$('#resourcegroupval').val();
+    if(e.which===13){
         var resgroup = $('#resourcegroup1').val();
-        $('.preloader').show();
-        //console.log(resorcetypeid);
+        var activity_id = $('#EstActivity_Id').val();
         $.ajax({
             type: 'POST',
-            url: '../projectsetup/resourcesearchbytyid',
+            url: '../projects/allocationsearch',
+            beforeSend : function(){
+                $('.preloader').show();
+            },
             dataType: "json",
-            data: {resourcetypeid:resorcetypeid,resgroup:resgroup},
+            data:{resgroup:resgroup,activity_id:activity_id},
             success: function(data){
-                if(data.error=='No')
-                {
-                    $('.preloader').hide();
-                    $('.allocation-items-master').html(data.result);
-                    //$('#restypeid').val(resorcetypeid);
-                    //$('#resourcegroupselection').html(data.group);
-                    //$('#resourcetable').show();
-
-                }
-                else
-                {
-                    alert(data.errortext);
-                }
-
                 $('.preloader').hide();
+                $('#accordionmast').html(data.result);
             }
         });
+    }
 });*/
 
-$(document).on( "click", "#actmaster-res", function(e){
-        
-        var resorcetypeid=$('#resourcegroupval').val();
-        var resgroup = $('#resourcegroup1').val();
-        $('.preloader').show();
-        //console.log(resorcetypeid);
-        $.ajax({
-            type: 'POST',
-            url: '../projectsetup/resourcesearchbytyid',
-            dataType: "json",
-            data: {resourcetypeid:resorcetypeid,resgroup:resgroup},
-            success: function(data){
-                if(data.error=='No')
-                {
-                    $('.preloader').hide();
-                    $('.allocation-items-master').html(data.result);
-                    //$('#restypeid').val(resorcetypeid);
-                    //$('#resourcegroupselection').html(data.group);
-                    //$('#resourcetable').show();
-
-                }
-                else
-                {
-                    alert(data.errortext);
-                }
-
-                $('.preloader').hide();
-            }
-        });
+$(document).on( "keyup", "#resourcegroup1", function(e){
+    var resgroup = $('#resourcegroup1').val();
+    var activity_id = $('#EstActivity_Id').val();
+    var restypeid = $('.resourcesearch.active').data('id') || '';
+    $.ajax({
+        type: 'POST',
+        url: '../projects/allocationsearch',
+        beforeSend : function(){
+            $('.preloader').show();
+        },
+        dataType: "json",
+        data:{resgroup:resgroup,activity_id:activity_id,restypeid:restypeid},
+        success: function(data){
+            $('.preloader').hide();
+            $('#accordionmast').html(data.result);
+        }
+    });
 });
 
-
-$(document).on( "click", ".close-popup", function(){
-
-$('#listestactivity').trigger('click');
-
+$(document).on( "click", ".searchresoureskey", function(){
+    $('#resourcegroup1').trigger('keyup');
 });
 
-    function OnSearch () 
+    function OnSearch ()
     {
         $('#resourcegroup1').trigger('keyup');
-            
+
     }
 
 
@@ -1098,7 +828,7 @@ $(document).on('click','.resource-list-btn', function(e){
     e.preventDefault();
 
     $('#resourcegroup1').val('');
-    
+
     $('.allocate-resource-tabss').addClass('add-allocation-list-active');
     $('#addedlist').trigger('click');
     $('.allocation-cntnt-wrpr').addClass('resource-not-allocated');
@@ -1106,10 +836,10 @@ $(document).on('click','.resource-list-btn', function(e){
        //$("html, body").animate({ scrollTop: $('.allocate-resource-tab').offset().top }, 1000);
     }, 10);
 });
-                
+
 $(document).on('click','.close-resource-list-btn', function(e){
     $(".resource-not-allocated").css("cssText", "display:none  !important;");
-    e.preventDefault();   
+    e.preventDefault();
     $('.allocate-resource-tabss').removeClass('add-allocation-list-active');
  });
 
@@ -1122,7 +852,7 @@ $(document).on('change','.editallocateresourceqty', function(e){
     var amount = (updatevalue * updateqty).toFixed(2);
 
     $("#allocateres_amt"+mid).html(amount);
-    
+
 });
 
 $(document).on('change','.editallocateresourceunit', function(e){
@@ -1133,13 +863,13 @@ $(document).on('change','.editallocateresourceunit', function(e){
     var amount = (updatevalue * updateqty).toFixed(2);
 
     $("#allocateres_amt"+mid).html(amount);
-    
+
 });
 
 $(document).on("change", "input[type=text][name=mastqty]", function () {
 
     var id = $(this).attr('data-id');
-    
+
     var equconsumption = $('#mast-fuelqty'+id).val();
 
     var equrate = $('#mast-fuelrate'+id).val();
@@ -1170,7 +900,7 @@ $(document).on("change", "input[type=text][name=mastqty]", function () {
 
     $('#mast-machrate'+id).val(total);
 
-}); 
+});
 
 $(document).on("change", "input[type=text][name=masteqrate]", function () {
 
@@ -1357,6 +1087,5 @@ $(document).on("change", "select[type=text][name=mastlfue]", function () {
 
     $('#mastlfrate'+id).html($h2);
     $('#mastlfqt'+id).html($h1);
-
 
 });

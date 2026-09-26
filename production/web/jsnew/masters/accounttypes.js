@@ -169,12 +169,12 @@ $(document).on( "click", ".deletecnttypesbutton", function(){
     }
 
 });
-$(document).on('click','.accountheads',function(){ 
+$(document).on('click','.accountheads',function(){
     var accounttypeid=$(this).val();
     $('#accounttype').val(accounttypeid);
     $('#accountsubgrp').val('none');
     $('#searchaccounts').val('');
-    $('#acc-heads').trigger('click'); 
+    $('#acc-heads').trigger('click');
     //$('#Accounts').trigger('click');
     //$('#listaccounts').trigger('click');
 
@@ -189,7 +189,7 @@ $(document).on('click','.accountheads',function(){
     $('#collapseaccnts').addClass('in');
 
     $("#collapseaccnttyp").attr("aria-expanded","false");
-    
+
     $("#collapseaccnts").attr("aria-expanded","true");
 
     $('#collapseaccnts').css('height','');

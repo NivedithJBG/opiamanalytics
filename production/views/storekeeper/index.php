@@ -1960,14 +1960,8 @@
     var _skTabWins = {};
     var _skTabLoaded = {};
     var _skTabIds = ['indents', 'issued', 'mbwo', 'reportprogress'];
-    var _skWinZ = 999999;
     var _skSeqState = { n: 0 };
 
-    function _skNextZ(){
-        var base = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 999999;
-        if (base >= _skWinZ) _skWinZ = base;
-        return ++_skWinZ;
-    }
     function _skOpenSeq(){
         var anyOpen = _skTabIds.some(function(t){
             var w = _skTabWins[t];
@@ -2054,14 +2048,19 @@
         bdt(document, 'mouseup', function(){ _action = null; });
 
         function raise(){
-            win.style.setProperty('z-index', _skNextZ(), 'important');
-            /* This window's own mousedown-raise fires on every click inside
-               it, including the click that opens a sub-popup, so if the
-               popup is already open and the user clicks the window again
-               this would otherwise bury it — re-raise any open sub-popup
-               above it, mirroring Procurement's same fix. */
-            if (tab === 'indents' && typeof window._skReraiseOpenSubPopups === 'function') {
-                window._skReraiseOpenSubPopups();
+            /* Delegates to the app-wide floater authority (main.php) instead
+               of a locally-hardcoded counter, so this window's stacking
+               order interleaves correctly by actual click order with every
+               other floating window in the app (Resource Library, the
+               Gantt chart, Procurement, etc.) — not just within Site Office.
+               popupBringToFront also re-raises this window's own registered
+               sub-popups (see the registerSubPopupReraise call below), so
+               the old manual _skReraiseOpenSubPopups() call here is no
+               longer needed. */
+            if (typeof window.popupBringToFront === 'function') {
+                window.popupBringToFront(win.id);
+            } else {
+                win.style.setProperty('z-index', 999999, 'important');
             }
         }
         bdt(win, 'mousedown', raise, true);
@@ -2088,6 +2087,16 @@
 
         win.__raise = raise;
         win.__anchor = anchor;
+
+        /* Indents is the only tab with its own sub-popup family (task modal,
+           Raise Indent) — register once so popupBringToFront automatically
+           re-raises them whenever this tab-window is brought to front,
+           replacing the old manual call that used to live inside raise(). */
+        if (tab === 'indents' && typeof window.registerSubPopupReraise === 'function'
+            && typeof window._skReraiseOpenSubPopups === 'function') {
+            window.registerSubPopupReraise(win.id, window._skReraiseOpenSubPopups);
+        }
+
         return win;
     }
 

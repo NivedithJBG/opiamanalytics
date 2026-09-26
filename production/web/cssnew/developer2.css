@@ -231,10 +231,12 @@ color:red !important;
     display: none;
     position: fixed;
     background: #ffffff;
-    top: 80px;
-    left: calc(50% - 500px);
-    width: 1000px;
-    height: 60vh;
+    top: 8vh;
+    left: 8vw;
+    width: 84vw;
+    height: 84vh;
+    max-width: 84vw;
+    max-height: 84vh;
     min-width: 720px;
     min-height: 300px;
     border-radius: 8px;
@@ -242,6 +244,22 @@ color:red !important;
     z-index: 10003;
     flex-direction: column;
     overflow: hidden;
+}
+/* Activity Library's resource-allocation panel: legacy CSS reserves a fixed
+   258px margin-right on .resources-from-selected-item-wrpr for a 3rd sidebar
+   (.allocation-right-bar) that isn't present on this screen, starving the
+   resource fields of width regardless of how wide the popup itself is. Force
+   it to actually fill the space next to the (250px-capped) left sidebar. */
+.menu4-popup-cntnr .resources-from-selected-item-wrpr {
+    margin-right: 0 !important;
+    flex: 1 1 auto !important;
+}
+.menu4-popup-cntnr .allocation-cntnt-wrpr {
+    width: 100% !important;
+}
+.menu4-popup-cntnr .info-box {
+    background: #555 !important;
+    border-color: #555 !important;
 }
 /* Activity Library modals float above the panel — no backdrop, high z-index.
    Fixed well above the shared popup focus-manager's dynamic range (which
@@ -291,7 +309,7 @@ color:red !important;
 }
 .menu4-win-hdr-btns button:hover { opacity: 1; }
 .menu4-cntnt-wrpr {
-    flex: 1; min-height: 0; overflow: auto;
+    flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
 }
 /* resize handles */
 .m4-rs { position:absolute; z-index:20; background:transparent; }

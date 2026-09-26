@@ -93,28 +93,14 @@ class DashboardController extends Controller
                        //$datarows.="<tr id='tempprodrow' style='background: white;'><th colspan='9' style='font-size: 16px;background: white;'>".$structure['Name']."</th></tr>";  
                         $subtot=0;
                         foreach($wbsactivities as $key=> $wbsactivity):
-                            $sqltemvals="SELECT est_resource_amount AS Price FROM estactivity_resources WHERE estactivity_id='".$wbsactivity['activity_Id']."' ";
-                            $command=$connection->createCommand($sqltemvals);
-                            $dataReader=$command->query();
-                            $resourcesadded=$dataReader->readAll();
-                            $price=0;
-                            foreach($resourcesadded AS $key=>$data):
-                                $price=$price+$data['Price'];
-                            endforeach;
                             $pricingestimate=PricingEstimateNew::find()->where(['project_Id' => $projectid])->andWhere(['activity_Id' =>$wbsactivity['id']])->andWhere(['pricing_status' =>0])->one();
 
                             $pricingestimateres=PricingEstimateResourcesNew::find()->where(['project_Id' => $projectid])->andWhere(['activity_Id' =>$wbsactivity['id']])->andWhere(['pricing_status' =>0])->all();
 
-                            if($pricingestimateres):
-                                $specrate=0;
-                                foreach($pricingestimateres AS $pricingestimatere):
-                                    $specrate=$specrate + ($pricingestimatere['rate'] * $pricingestimatere['quantity']);
-                                endforeach;
-                                //$specrate=$pricingestimate['specific_rate'];
-                            else:
-                                $specrate=$price;
-                                //$specrate=0;
-                            endif;
+                            $specrate=0;
+                            foreach($pricingestimateres AS $pricingestimatere):
+                                $specrate=$specrate + ($pricingestimatere['rate'] * $pricingestimatere['quantity']);
+                            endforeach;
                             if($pricingestimate){
                             $amount=$pricingestimate->activity_qty * $specrate;
                             $subtot = $subtot + $amount;
@@ -182,28 +168,14 @@ class DashboardController extends Controller
                        //$datarows.="<tr id='tempprodrow' style='background: white;'><th colspan='9' style='font-size: 16px;background: white;'>".$structure['Name']."</th></tr>";  
                         $subtot=0;
                         foreach($wbsactivities as $key=> $wbsactivity):
-                            $sqltemvals="SELECT est_resource_amount AS Price FROM estactivity_resources WHERE estactivity_id='".$wbsactivity['activity_Id']."' ";
-                            $command=$connection->createCommand($sqltemvals);
-                            $dataReader=$command->query();
-                            $resourcesadded=$dataReader->readAll();
-                            $price=0;
-                            foreach($resourcesadded AS $key=>$data):
-                                $price=$price+$data['Price'];
-                            endforeach;
                             $pricingestimate=PricingEstimateNew::find()->where(['project_Id' => $projectid])->andWhere(['activity_Id' =>$wbsactivity['id']])->andWhere(['pricing_status' =>0])->one();
 
                             $pricingestimateres=PricingEstimateResourcesNew::find()->where(['project_Id' => $projectid])->andWhere(['activity_Id' =>$wbsactivity['id']])->andWhere(['pricing_status' =>0])->all();
 
-                            if($pricingestimateres):
-                                $specrate=0;
-                                foreach($pricingestimateres AS $pricingestimatere):
-                                    $specrate=$specrate + ($pricingestimatere['rate'] * $pricingestimatere['quantity']);
-                                endforeach;
-                                //$specrate=$pricingestimate['specific_rate'];
-                            else:
-                                $specrate=$price;
-                                //$specrate=0;
-                            endif;
+                            $specrate=0;
+                            foreach($pricingestimateres AS $pricingestimatere):
+                                $specrate=$specrate + ($pricingestimatere['rate'] * $pricingestimatere['quantity']);
+                            endforeach;
                             $amount=$pricingestimate->activity_qty * $specrate;
                             $subtot = $subtot + $amount;
                         endforeach;
@@ -271,28 +243,14 @@ class DashboardController extends Controller
                //$datarows.="<tr id='tempprodrow' style='background: white;'><th colspan='9' style='font-size: 16px;background: white;'>".$structure['Name']."</th></tr>";  
                 $subtot=0;
                 foreach($wbsactivities as $key=> $wbsactivity):
-                    $sqltemvals="SELECT est_resource_amount AS Price FROM estactivity_resources WHERE estactivity_id='".$wbsactivity['activity_Id']."' ";
-                    $command=$connection->createCommand($sqltemvals);
-                    $dataReader=$command->query();
-                    $resourcesadded=$dataReader->readAll();
-                    $price=0;
-                    foreach($resourcesadded AS $key=>$data):
-                        $price=$price+$data['Price'];
-                    endforeach;
                     $pricingestimate=PricingEstimateNew::find()->where(['project_Id' => $projectid])->andWhere(['activity_Id' =>$wbsactivity['id']])->andWhere(['pricing_status' =>0])->one();
 
                     $pricingestimateres=PricingEstimateResourcesNew::find()->where(['project_Id' => $projectid])->andWhere(['activity_Id' =>$wbsactivity['id']])->andWhere(['pricing_status' =>0])->all();
 
-                    if($pricingestimateres):
-                        $specrate=0;
-                        foreach($pricingestimateres AS $pricingestimatere):
-                            $specrate=$specrate + ($pricingestimatere['rate'] * $pricingestimatere['quantity']);
-                        endforeach;
-                        //$specrate=$pricingestimate['specific_rate'];
-                    else:
-                        $specrate=$price;
-                        //$specrate=0;
-                    endif;
+                    $specrate=0;
+                    foreach($pricingestimateres AS $pricingestimatere):
+                        $specrate=$specrate + ($pricingestimatere['rate'] * $pricingestimatere['quantity']);
+                    endforeach;
                     $amount=$pricingestimate->activity_qty * $specrate;
                     $subtot = $subtot + $amount;
                     $datarows.= "['".$wbsactivity['activity_Name']."', ".$amount."],";
@@ -1232,34 +1190,20 @@ class DashboardController extends Controller
                    //$datarows.="<tr id='tempprodrow' style='background: white;'><th colspan='9' style='font-size: 16px;background: white;'>".$structure['Name']."</th></tr>";  
                     $subtot=0;
                     foreach($wbsactivities as $key=> $wbsactivity):
-                        $sqltemvals="SELECT est_resource_amount AS Price FROM estactivity_resources WHERE estactivity_id='".$wbsactivity['activity_Id']."' ";
-                        $command=$connection->createCommand($sqltemvals);
-                        $dataReader=$command->query();
-                        $resourcesadded=$dataReader->readAll();
-                        $price=0;
-                        foreach($resourcesadded AS $key=>$data):
-                            $price=$price+$data['Price'];
-                        endforeach;
                         $pricingestimate=PricingEstimateNew::find()->where(['project_Id' => $projectid])->andWhere(['activity_Id' =>$wbsactivity['id']])->andWhere(['pricing_status' =>0])->one();
 
                         $pricingestimateres=PricingEstimateResourcesNew::find()->where(['project_Id' => $projectid])->andWhere(['activity_Id' =>$wbsactivity['id']])->andWhere(['pricing_status' =>0])->all();
 
-                        if($pricingestimateres):
-                            $specrate=0;
-                            foreach($pricingestimateres AS $pricingestimatere):
-                                $specrate=$specrate + ($pricingestimatere['rate'] * $pricingestimatere['quantity']);
-                            endforeach;
-                            //$specrate=$pricingestimate['specific_rate'];
-                        else:
-                            $specrate=$price;
-                            //$specrate=0;
-                        endif;
+                        $specrate=0;
+                        foreach($pricingestimateres AS $pricingestimatere):
+                            $specrate=$specrate + ($pricingestimatere['rate'] * $pricingestimatere['quantity']);
+                        endforeach;
                         if($pricingestimate){
                             $amount=$pricingestimate->activity_qty * $specrate;
                             $subtot = $subtot + $amount;
                         }
                     endforeach;
-                     $pricesum=$pricesum + $subtot; 
+                     $pricesum=$pricesum + $subtot;
                 }
              endforeach;
         }
@@ -2132,26 +2076,12 @@ class DashboardController extends Controller
                     { 
                         $subtot=0;
                         foreach($wbsactivities as $key=> $wbsactivity):
-                            $sqltemvals="SELECT est_resource_amount AS Price FROM estactivity_resources WHERE estactivity_id='".$wbsactivity['activity_Id']."' ";
-                            $command=$connection->createCommand($sqltemvals);
-                            $dataReader=$command->query();
-                            $resourcesadded=$dataReader->readAll();
-                            $price=0;
-                            foreach($resourcesadded AS $key=>$data):
-                                $price=$price+$data['Price'];
-                            endforeach;
                             $pricingestimate=PricingEstimateNew::find()->where(['project_Id'=>$projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status'=>0])->one();
                              $pricingestimateres=PricingEstimateResourcesNew::find()->where(['project_Id'=>$projectid])->andWhere(['activity_id'=>$wbsactivity['id']])->andWhere(['pricing_status'=>0])->all();
-                            if($pricingestimateres):
-                                $specrate=0;
-                                foreach($pricingestimateres AS $pricingestimatere):
-                                    $specrate=$specrate + ($pricingestimatere['rate'] * $pricingestimatere['quantity']);
-                                endforeach;
-                                //$specrate=$pricingestimate['specific_rate'];
-                            else:
-                                $specrate=$price;
-                                //$specrate=0;
-                            endif;
+                            $specrate=0;
+                            foreach($pricingestimateres AS $pricingestimatere):
+                                $specrate=$specrate + ($pricingestimatere['rate'] * $pricingestimatere['quantity']);
+                            endforeach;
 
                             $sqlreprt="SELECT sum(quantity) as qty FROM activity_report_wrkactvty WHERE activity_id='".$wbsactivity['id']."' ";
                             $command=$connection->createCommand($sqlreprt);
@@ -2625,26 +2555,12 @@ class DashboardController extends Controller
                     { 
                         $subtot=0;
                         foreach($wbsactivities as $key=> $wbsactivity):
-                            $sqltemvals="SELECT est_resource_amount AS Price FROM estactivity_resources WHERE estactivity_id='".$wbsactivity['activity_Id']."' ";
-                            $command=$connection->createCommand($sqltemvals);
-                            $dataReader=$command->query();
-                            $resourcesadded=$dataReader->readAll();
-                            $price=0;
-                            foreach($resourcesadded AS $key=>$data):
-                                $price=$price+$data['Price'];
-                            endforeach;
                             $pricingestimate=PricingEstimateNew::find()->where(['project_Id'=>$projectid])->andWhere(['activity_Id'=>$wbsactivity['id']])->andWhere(['pricing_status'=>0])->one();
                              $pricingestimateres=PricingEstimateResourcesNew::find()->where(['project_Id'=>$projectid])->andWhere(['activity_id'=>$wbsactivity['id']])->andWhere(['pricing_status'=>0])->all();
-                            if($pricingestimateres):
-                                $specrate=0;
-                                foreach($pricingestimateres AS $pricingestimatere):
-                                    $specrate=$specrate + ($pricingestimatere['rate'] * $pricingestimatere['quantity']);
-                                endforeach;
-                                //$specrate=$pricingestimate['specific_rate'];
-                            else:
-                                $specrate=$price;
-                                //$specrate=0;
-                            endif;
+                            $specrate=0;
+                            foreach($pricingestimateres AS $pricingestimatere):
+                                $specrate=$specrate + ($pricingestimatere['rate'] * $pricingestimatere['quantity']);
+                            endforeach;
 
                             $sqlreprt="SELECT sum(quantity) as qty FROM activity_report_wrkactvty WHERE activity_id='".$wbsactivity['id']."' ";
                             $command=$connection->createCommand($sqlreprt);

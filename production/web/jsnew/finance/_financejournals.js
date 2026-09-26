@@ -45,68 +45,30 @@ $(document).on( "click", ".finjournladd", function(){
     });
 
 });  
-    $(document).on('change','.debitamount',function(){
-       
-
-            var amnt = 0;
-            $('.debitamount').each(function() {
-
-                // new code start - dec 21-2022
-
-                var amtvalue = parseFloat($('.creditamount').val());
-                if(isNaN(amtvalue)) {
-                  amtvalue = 0;
-                  //alert (value);
-                }
-
-                // new code end - dec 21-2022
-                
-            var debt_amnt = $(this).val();
-            if(debt_amnt){
-
-                // old code start 
-            amnt = parseFloat(amnt) + parseFloat(debt_amnt);
-
-            // old code end 
-
-
-            // new code start - dec 21-2022
-          //amnt = amtvalue;
-            // new code end - dec 21-2022
-
-        }
-           
-            $('.creditamount').val(amnt.toFixed(2));
-          
-            
-            
-        }); 
-        
-        
-
-
+    $(document).on("input change",".debitamount",function(){
+        var amnt = 0;
+        $(".debitamount").each(function(){
+            var v = parseFloat($(this).val());
+            if(!isNaN(v)) amnt += v;
+        });
+        $(".creditamount").val(amnt.toFixed(2));
     });
-     
-      $(document).on('change','.creditamount',function(){
-       
+    $(document).on("blur",".debitamount",function(){
+        var v = parseFloat($(this).val());
+        if(!isNaN(v)) $(this).val(v.toFixed(2));
+    });
 
-            var amntt = 0;
-            $('.creditamount').each(function() {
-
-
-            var credt_amnt = $(this).val();
-            if(credt_amnt){
-            amntt = parseFloat(amntt) + parseFloat(credt_amnt);
-        }   
-        $('.debitamount').val(amntt.toFixed(2));
-            
-            
-            
-        }); 
-        
-        
-
-
+    $(document).on("input change",".creditamount",function(){
+        var amntt = 0;
+        $(".creditamount").each(function(){
+            var v = parseFloat($(this).val());
+            if(!isNaN(v)) amntt += v;
+        });
+        $(".debitamount").val(amntt.toFixed(2));
+    });
+    $(document).on("blur",".creditamount",function(){
+        var v = parseFloat($(this).val());
+        if(!isNaN(v)) $(this).val(v.toFixed(2));
     });
     
 

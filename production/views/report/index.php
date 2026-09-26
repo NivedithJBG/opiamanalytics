@@ -99,6 +99,22 @@ $(document).on('focus','.datepicker',function(){
     });
 });
 
+// Report Date (the per-activity progress-report popup's date field) — no
+// maxDate cap, unlike Activity Start Date and every other .datepicker
+// field above. A site engineer needs to log progress for a date other
+// than today (e.g. catching up on yesterday's report, or backfilling
+// several days at once), and the shared maxDate:new Date() restriction
+// silently blocked that. Kept as a separate class/handler rather than
+// touching .datepicker itself, so Activity Start Date and any other
+// field sharing that class keep their existing "no future dates" cap.
+$(document).on('focus','.datepicker-nomax',function(){
+    $(this).datepicker({
+        dateFormat: 'dd-mm-yy',
+        changeMonth: true,
+        changeYear: true
+    });
+});
+
 (function(){
     var scriptUrl = '<?php echo Yii::$app->request->baseUrl; ?>/jsnew/operations/progressreport.js';
 

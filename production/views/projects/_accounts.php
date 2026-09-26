@@ -137,7 +137,7 @@ use app\models\AccountsItem;
                         <!--<th><span class="headings">&nbsp;</span></th>-->
                     </tr>                                            
                     <?php 
-                      $groups=Accountsmaster::find()->Where(['NOT LIKE', 'name', 'Project Expenditure'])->andWhere(['NOT LIKE', 'name', 'Corporate Expenditure'])->andWhere(['Status'=>0])->all();
+                      $groups=Accountsmaster::find()->Where(['NOT LIKE', 'name', 'Corporate Expenditure'])->andWhere(['Status'=>0])->all();
                       foreach($groups AS $group): 
                         if($group->id==1){
                     ?>      

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /* newganttview.php — Clean Gantt chart view.
  * Works both as a full page (layout=true) and in the popup modal (layout=false, injected via $.ajax).
  * Data comes from actionGanttitems + actionGanttactivities (direct scheduleactivities query, no JOIN).
@@ -7,22 +7,40 @@
  */
 ?>
 <style>
-#gantt-act-tooltip {
-  display: none;
-  position: fixed;
-  z-index: 9999;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 12px;
-  color: #222;
-  line-height: 1.8;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
-  pointer-events: none;
-  white-space: nowrap;
+/* ── Activity name hover tooltip: Planned/Actual Start-End grid ───────────── */
+#gname-tip {
+  display:none; position:fixed; z-index:200400;
+  background:#fff; border-radius:6px; box-shadow:0 6px 24px rgba(0,0,0,.3);
+  border:1px solid #dde3ef; padding:0; min-width:340px; font-size:11px;
 }
-#gantt-act-tooltip b { color: #1a2540; }
+#gname-tip.gname-tip-open { display:block; }
+#gname-tip .gname-tip-row {
+  display:flex; justify-content:space-between; padding:6px 12px;
+  white-space:nowrap;
+}
+#gname-tip .gname-tip-row.gname-tip-planned { background:#eef1f5; color:#1a2540; }
+#gname-tip .gname-tip-row.gname-tip-actual  { background:#f7f8f9; color:#1a2540; }
+#gname-tip .gname-tip-name {
+  padding:8px 12px; text-align:center; font-weight:700; font-size:12px;
+  color:#fff; background:#1a2540; border-bottom:1px solid #0d1730;
+  border-radius:5px 5px 0 0;
+}
+#gname-tip .gname-tip-row span { display:inline-block; }
+#gname-tip .gname-tip-row b { color:#1a2540; }
+#gname-tip .gname-tip-row.gname-tip-actual b { color:#1a2540; }
+#gname-tip .gname-date-late  { color:#e53935; font-weight:700; }
+#gname-tip .gname-date-early { color:#27ae60; font-weight:700; }
+/* Editable date value — Planned Start / Actual Start only (per-field class) */
+#gname-tip .gname-date-editable { cursor:pointer; border-bottom:1px dashed #8a93a6; }
+#gname-tip .gname-date-editable:hover { background:#dde6f5; }
+#gname-tip .gname-date-input {
+  border:1px solid #4a6fa5; border-radius:3px; font-size:11px; padding:1px 3px;
+  width:104px; font-family:inherit;
+}
+#gname-tip .gname-tip-err {
+  padding:5px 12px; font-size:10px; color:#e53935; background:#fdecea;
+  border-top:1px solid #f5c6c2;
+}
 
 /* ── Gantt row highlight when cost modal is open ──────────────────────────── */
 tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8820c; outline-offset: -1px; }
@@ -31,9 +49,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 #gkm-bk { display:none; }
 #gkm-modal {
   display:none; position:fixed; z-index:10015;
-  top:80px; left:calc(50% - 412px);
-  width:825px; height:65vh;
-  min-width:420px; min-height:280px;
+  top:80px; left:calc(50% - 370px);
+  width:740px; height:58vh;
+  min-width:380px; min-height:420px;
   background:#f0f3fa; border-radius:10px;
   box-shadow:0 8px 40px rgba(0,0,0,0.28);
   flex-direction:column; overflow:hidden;
@@ -56,13 +74,13 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 .gkm-rs-ne { right:-4px; top:-4px; width:14px; height:14px; cursor:ne-resize; }
 .gkm-rs-nw { left:-4px;  top:-4px; width:14px; height:14px; cursor:nw-resize; }
 #gkm-loading { text-align:center; padding:40px; font-size:13px; color:#5a6e8c; }
-#gkm-body { flex:1; min-height:0; display:flex; flex-direction:column; padding:10px; gap:8px; overflow:hidden; }
-#gkm-content { display:flex; flex-direction:column; gap:8px; flex:1; min-height:0; }
-#gkm-row1 { display:flex; gap:8px; flex:1; min-height:0; }
-#gkm-row2 { display:flex; gap:8px; flex:1; min-height:0; }
+#gkm-body { flex:1; min-height:0; display:flex; flex-direction:column; padding:6px 10px 0; gap:0; overflow:hidden; }
+#gkm-content { display:grid; grid-template-columns:repeat(3, 1fr); grid-template-rows:repeat(2, 1fr); gap:5px; flex:1; min-height:0; overflow-y:auto; }
+#gkm-row1 { display:contents; }
+#gkm-row2 { display:contents; }
 .gkm-panel {
-  flex:1; background:#fff; border-radius:6px; border:1px solid #dde3ef;
-  display:flex; flex-direction:column; overflow:hidden; min-width:0;
+  background:#fff; border-radius:5px; border:1px solid #dde3ef;
+  display:flex; flex-direction:column; overflow:hidden; min-width:0; min-height:0;
 }
 .gkm-panel-title {
   font-size:10px; font-weight:700; color:#e8efff; text-transform:uppercase;
@@ -73,10 +91,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
 /* ── KPI Float Panel ─────────────────────────────────────────────────────── */
 #gkp-popup {
-  display: none; position: fixed; z-index: 10015;
-  top: 80px; left: calc(50% - 490px);
-  width: 980px; height: 30vh;
-  min-width: 500px; min-height: 180px;
+  display: none; position: fixed; z-index: 100200;
+  top: 80px; left: calc(50% - 370px);
+  width: 740px; height: 58vh;
+  min-width: 380px; min-height: 420px;
   background: #f0f3fa;
   border-radius: 10px; box-shadow: 0 8px 36px rgba(0,0,0,0.32);
   overflow: hidden; pointer-events: auto;
@@ -85,13 +103,18 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 #gkp-popup.gkp-visible { display: flex; }
 #gkp-hdr {
   background: #1a2540; color: #fff; padding: 10px 14px;
-  font-size: 13px; font-weight: 600; font-family: 'Barlow Condensed', sans-serif;
   display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
   cursor: move; user-select: none;
 }
+#gkp-title {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+#gkp-title-actname { text-transform: none; font-weight: 500; opacity: .85; }
 #gkp-close { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:0 4px; line-height:1; flex-shrink:0; }
 #gkp-body {
-  display: flex; flex-direction: row; gap: 5px; padding: 6px; flex: 1; min-height: 0; overflow: hidden;
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr);
+  gap: 5px; padding: 6px; flex: 1; min-height: 0; overflow-y: auto;
 }
 #gkp-row1 { display: contents; }
 #gkp-row2 { display: contents; }
@@ -105,8 +128,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 .gkp-rs-ne { right:-4px; top:-4px; width:14px; height:14px; cursor:ne-resize; }
 .gkp-rs-nw { left:-4px;  top:-4px; width:14px; height:14px; cursor:nw-resize; }
 .gkp-panel {
-  flex: 1; background: #fff; border-radius: 5px; border: 1px solid #dde3ef;
-  display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+  background: #fff; border-radius: 5px; border: 1px solid #dde3ef;
+  display: flex; flex-direction: column; overflow: hidden; min-width: 0; min-height: 0;
 }
 .gkp-panel-title {
   font-size: 9px; font-weight: 700; color: #e8efff; text-transform: uppercase;
@@ -121,48 +144,81 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 .gkp-kv-val.over { color:#e53935; }
 .gkp-kv-val.good { color:#27ae60; }
 
-/* ── Resource Cost Tooltip ──────────────────────────────────────────────────── */
-#rcost-tt {
-  display:none; position:fixed; z-index:10050;
-  background:#fff; color:#1a2540;
-  border-radius:8px; box-shadow:0 6px 28px rgba(0,0,0,0.28); border:1px solid #dde3ef;
-  padding:12px 16px; min-width:480px; max-width:700px;
-  font-family:'Barlow Condensed',sans-serif; font-size:11px;
-  pointer-events:none;
+/* ── Resource Capacity bar hover tooltip — reuses .gm-bar-tip (Cost
+   Dashboard's Est/Act popup style), sized up slightly ── */
+#gkp-res-tip.gkp-res-tip-big { padding: 14px 16px; min-width: 280px; }
+#gkp-res-tip.gkp-res-tip-big .gm-bar-tip-hdr { font-size: 12px; margin-bottom: 10px; }
+#gkp-res-tip.gkp-res-tip-big .gm-bar-stack { width: 34px; }
+#gkp-res-tip.gkp-res-tip-big .gm-bar-val { font-size: 12px; }
+#gkp-res-tip.gkp-res-tip-big .gm-bar-lbl { font-size: 11px; max-width: 68px; }
+
+/* ── Project Duration hover panel — independent of KPI/Cost dashboards.
+   Triggered by hovering #gantt-win-proj-name in the Gantt window header. ── */
+#gpd-tip {
+  display: none; position: fixed; z-index: 10020;
+  width: 520px;
+  background: #fff; border-radius: 6px; border: 1px solid #dde3ef;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  overflow: hidden; font-family: 'Barlow Condensed', sans-serif;
 }
-#rcost-tt .tt-type-hdr {
-  font-size:10px; font-weight:700; color:#3461b8; text-transform:uppercase;
-  letter-spacing:0.05em; padding:6px 0 4px; border-top:1px solid #e5eaf5;
-  margin-top:6px;
+#gpd-tip.gpd-open { display: block; }
+#gpd-tip-title {
+  font-size: 12px; font-weight: 700; color: #e8efff; text-transform: uppercase;
+  letter-spacing: 0.04em; text-align: center;
+  padding: 8px 12px; background: #1a2540;
+  border-bottom: 1px solid #0d1f3c;
+  cursor: move; user-select: none;
 }
-#rcost-tt .tt-type-hdr:first-child { border-top:none; margin-top:0; padding-top:0; }
-/* vertical bar chart per resource group */
-#rcost-tt .tt-vbar-section { display:flex; gap:6px; align-items:flex-end; padding:0 0 4px; }
-#rcost-tt .tt-vbar-col { display:flex; flex-direction:column; align-items:center; flex:1; min-width:0; }
-#rcost-tt .tt-vbar-vals { font-size:8px; color:#7a8aaa; text-align:center; line-height:1.3; margin-bottom:2px; width:100%; }
-#rcost-tt .tt-vbar-vals b { display:block; font-size:9px; }
-#rcost-tt .tt-vbar-bars { width:100%; display:flex; gap:3px; align-items:flex-end; height:80px; }
-#rcost-tt .tt-vbar-est { flex:1; background:#4a6fa5; border-radius:2px 2px 0 0; min-height:2px; }
-#rcost-tt .tt-vbar-act { flex:1; border-radius:2px 2px 0 0; min-height:2px; }
-#rcost-tt .tt-vbar-diff { font-size:8px; font-weight:700; text-align:center; margin-top:2px; }
-#rcost-tt .tt-vbar-name { font-size:8px; color:#1a2540; text-align:center; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; }
-#rcost-tt .tt-legend { display:flex; gap:12px; margin-top:8px; padding-top:6px; border-top:1px solid #e5eaf5; }
-#rcost-tt .tt-legend span { font-size:9px; color:#7a8aaa; display:flex; align-items:center; gap:3px; }
-#rcost-tt .tt-legend i { display:inline-block; width:9px; height:9px; border-radius:1px; }
-.rcost-info-icon {
-  display:inline-flex; align-items:center; justify-content:center;
-  width:16px; height:16px; border-radius:50%;
-  background:#3461b8; color:#fff; font-size:12px; font-weight:400;
-  cursor:default; flex-shrink:0; line-height:1; user-select:none;
-  margin-left:4px; vertical-align:middle;
+#gpd-tip-body { padding: 16px 18px; }
+#gpd-proj-name { font-size:14px; font-weight:700; color:#1a2540; text-align:left; margin-bottom:10px; }
+#gpd-bar-status { font-size:12px; font-weight:700; margin-bottom:4px; min-height:15px; }
+#gpd-bar-status.gpd-late  { color:#e53935; }
+#gpd-bar-status.gpd-early { color:#27ae60; }
+#gpd-bar { position:relative; display:flex; align-items:stretch; height:10px; border-radius:4px; overflow:hidden; margin:8px 0 15px; background:#eef1f6; }
+.gpd-bar-labels { display:flex; justify-content:space-between; font-size:13px; font-weight:400; color:#000; }
+.gpd-bar-labels b { color:#00838f; font-weight:700; }
+.gpd-divider { border-top:1px solid #b9c0cc; margin:11px 0; }
+.gpd-date-labels { font-size:13px; color:#000; }
+.gpd-date-labels b { color:#1a2540; }
+#gpd-tip-loading { padding:16px; text-align:center; color:#9aa5ba; font-size:11px; }
+
+/* ── Project Snapshot hover card — hovering the project name in the
+   Gantt window header (#gantt-win-proj-name). Independent of #gpd-tip
+   (the existing click-triggered popup) — separate element, separate
+   trigger, same visual language as the "Projects" list card (.gpm-card
+   in main.php: rounded white card, bold name in a bordered header
+   strip, label/value rows below). Values are placeholders for now —
+   the source formulas for several fields (Actual Duration,
+   Delayed/Earlier, Actual Completion Date) are still to be defined. ── */
+#gsc-tip {
+  display: none; position: fixed; z-index: 10025;
+  width: 480px;
+  border-radius:16px;
+  box-sizing:border-box;background:#efefef;overflow:hidden;
+  box-shadow:0 8px 30px rgba(0,0,0,0.25);
+  font-family: 'Barlow Condensed', sans-serif;
 }
+#gsc-tip.gsc-open { display: block; }
+#gsc-tip-top { background:#d8d8d8;padding:14px 20px; cursor:move; user-select:none; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+#gsc-tip-name { font-size:15px;font-weight:700;color:#1a1a1a;margin:0; }
+#gsc-tip-close { background:none; border:none; font-size:19px; line-height:1; color:#777; cursor:pointer; padding:0 2px; flex-shrink:0; }
+#gsc-tip-close:hover { color:#222; }
+#gsc-tip-body { padding:12px 22px 22px;background:transparent; }
+#gsc-tip-content { display:flex; flex-wrap:wrap; row-gap:16px; }
+.gsc-row { font-size:15px;color:#1a1a1a;display:flex; align-items:center; gap:10px; flex:0 0 50%; min-width:0; box-sizing:border-box; white-space:nowrap; }
+.gsc-row label { font-weight:400;color:#1a1a1a;margin:0;display:flex; align-items:center; gap:10px; }
+.gsc-swatch { display:inline-block; width:12px; height:12px; border-radius:2px; flex-shrink:0; }
+.gsc-row .gsc-val { font-weight:700; color:#1a1a1a; margin-left:6px; }
+.gsc-row .gsc-val.gsc-late  { color:#e53935; }
+.gsc-row .gsc-val.gsc-early { color:#27ae60; }
+#gsc-tip-loading { padding:16px; text-align:center; color:#9aa5ba; font-size:11px; }
 
 /* ── Gantt Cost Float Panel ─────────────────────────────────────────────────── */
 #gcm-popup {
-  display: none; position: fixed; z-index: 10015;
-  top: 80px; left: calc(50% - 470px);
-  width: 940px; height: 38vh;
-  min-width: 420px; min-height: 280px;
+  display: none; position: fixed; z-index: 100200;
+  top: 80px; left: calc(50% - 370px);
+  width: 740px; height: 58vh;
+  min-width: 380px; min-height: 420px;
   background: #f0f3fa;
   border-radius: 10px; box-shadow: 0 8px 36px rgba(0,0,0,0.32);
   overflow: hidden; pointer-events: auto;
@@ -171,16 +227,24 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 #gcm-popup.gcm-visible { display: flex; }
 #gcm-pop-hdr {
   background: #1a2540; color: #fff; padding: 10px 14px;
-  font-size: 13px; font-weight: 600; font-family: 'Barlow Condensed', sans-serif;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  display: flex; align-items: center; flex-shrink: 0;
   cursor: move; user-select: none;
+}
+#gcm-pop-hdr-left, #gcm-pop-hdr-right { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#gcm-pop-hdr-right { display: flex; justify-content: flex-end; }
+#gcm-pop-hdr-left, #gcm-pop-hdr-center {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+}
+#gcm-pop-hdr-left { color: #ffffff; }
+#gcm-title-actname { text-transform: none; font-weight: 500; opacity: .85; }
+#gcm-pop-hdr-center {
+  flex-shrink: 0; text-align: center; padding: 0 12px; color: #ffffff;
 }
 #gcm-pop-close { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; padding:0 4px; line-height:1; flex-shrink:0; }
 #gcm-pop-body {
   display: flex; flex-direction: column; gap: 5px; padding: 6px; flex: 1; min-height: 0; overflow: hidden;
 }
-#gcm-pop-row1 { display: flex; gap: 5px; flex: 1; min-height: 0; }
+#gcm-pop-row1 { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 5px; flex: 1; min-height: 0; overflow-y: auto; }
 #gcm-pop-row2 { display: none !important; }
 .gcm-rs { position:absolute; z-index:20; background:transparent; }
 .gcm-rs-e  { right:-4px; top:10px; bottom:10px; width:10px; cursor:e-resize; }
@@ -192,8 +256,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 .gcm-rs-ne { right:-4px; top:-4px; width:14px; height:14px; cursor:ne-resize; }
 .gcm-rs-nw { left:-4px;  top:-4px; width:14px; height:14px; cursor:nw-resize; }
 .gcm-pop-panel {
-  flex: 1; background: #fff; border-radius: 5px; border: 1px solid #dde3ef;
-  display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+  background: #fff; border-radius: 5px; border: 1px solid #dde3ef;
+  display: flex; flex-direction: column; overflow: hidden; min-width: 0; min-height: 0;
 }
 .gcm-pop-panel-title {
   font-size: 9px; font-weight: 700; color: #e8efff; text-transform: uppercase;
@@ -201,7 +265,208 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   background: #1a2540; border-bottom: 1px solid #0d1f3c;
 }
 .gcm-pop-panel-body { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+/* Unit Cost of Resources / Yield / Cost of Resources: as more Resource
+   Types get allocated to an activity, their Type-bar list grows taller
+   than the panel — scroll instead of hard-clipping new bars off, so every
+   type stays reachable rather than silently disappearing beyond the fixed
+   panel height. Every other panel (dials etc.) keeps the shared
+   overflow:hidden above. */
+#gm-cd-ucr, #gm-cd-rcon, #gm-cd-rcost { overflow-y: auto; }
 #gcm-pop-loading { text-align: center; padding: 18px; font-size: 11px; color: #5a6e8c; }
+
+/* ── Resource hover tooltips (vertical Est vs Act bars) — shared by Unit
+   Cost of Resources (#gm-ucr-tip) and Yield (#gm-rcon-tip) panels ── */
+#gm-cd-ucr, #gm-cd-rcon, #gm-cd-rcost { cursor:default; }
+.gm-bar-tip {
+  display:none; position:fixed; z-index:200300;
+  background:#fff; border-radius:6px; box-shadow:0 6px 24px rgba(0,0,0,.3);
+  padding:10px 12px; min-width:220px; max-width:560px; font-size:11px;
+}
+.gm-bar-tip.gm-bar-tip-open { display:block; }
+.gm-bar-tip .gm-bar-tip-hdr {
+  font-size:10px; font-weight:700; color:#1a2540; text-transform:uppercase;
+  letter-spacing:.04em; margin-bottom:8px;
+}
+.gm-bar-tip .gm-bar-bars {
+  display:flex; align-items:flex-end; gap:10px; overflow-x:auto; padding-bottom:2px;
+}
+.gm-bar-tip .gm-bar-col { display:flex; flex-direction:column; align-items:center; flex-shrink:0; width:auto; min-width:52px; }
+.gm-bar-tip .gm-bar-val { font-size:10px; font-weight:700; color:#1a2540; margin-bottom:3px; white-space:nowrap; padding:0 2px; }
+.gm-bar-tip .gm-bar-stack {
+  width:26px; display:flex; flex-direction:column; justify-content:flex-end;
+  border:1px solid #dde3ef; border-bottom:2px solid #1a2540; border-radius:2px 2px 0 0;
+  background-image: repeating-linear-gradient(to top, #eef1f5 0, #eef1f5 1px, transparent 1px, transparent 22.5px);
+  background-position: bottom; background-repeat: repeat-y;
+  position: relative; overflow:hidden;
+}
+.gm-bar-tip .gm-bar-lbl {
+  font-size:9.5px; color:#5a6e8c; margin-top:5px; text-align:center; line-height:1.2;
+  max-width:52px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.gm-bar-tip .gm-bar-tip-legend {
+  display:flex; gap:12px; flex-wrap:wrap; margin-top:10px; padding-top:8px;
+  border-top:1px solid #eee; font-size:9.5px; color:#5a6e8c;
+}
+.gm-bar-tip .gm-bar-tip-legend span { display:inline-flex; align-items:center; gap:4px; }
+.gm-bar-tip .gm-bar-tip-legend i { width:9px; height:9px; border-radius:2px; display:inline-block; }
+.gm-bar-tip .gm-bar-tip-empty { padding:10px; text-align:center; color:#aaa; }
+
+/* ── Unit Cost of Resources drill-down popup — click-driven (Type bar →
+   Group bars → Resource bars), reuses .gm-bar-tip's look but centers
+   fixed on screen instead of following the mouse, since there is no
+   hover/mousemove tracking for it. ── */
+.gm-bar-tip.gm-ucr-drill-open {
+  z-index: 200310; padding: 14px 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.4);
+  width: 460px; max-width: 92vw;
+  height: 360px; max-height: 82vh;
+  flex-direction: column;
+}
+.gm-bar-tip.gm-ucr-drill-open { display: none; padding: 0 0 14px; overflow: hidden; }
+.gm-bar-tip.gm-ucr-drill-open.gm-bar-tip-open { display: flex; }
+#gm-ucr-tip-hdr {
+  font-size: 12px; margin-bottom: 10px; flex-shrink: 0;
+  background: #1a2540; color: #fff; padding: 10px 12px 10px 16px;
+  border-radius: 6px 6px 0 0; text-transform: uppercase; letter-spacing: .04em;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  cursor: move; user-select: none;
+}
+#gm-ucr-tip-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#gm-ucr-tip-close {
+  background: none; border: none; color: #fff; font-size: 18px; line-height: 1;
+  cursor: pointer; padding: 0 4px; opacity: .8; flex-shrink: 0;
+}
+#gm-ucr-tip-close:hover { opacity: 1; }
+#gm-ucr-tip-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.gm-bar-tip.gm-ucr-drill-open .gm-ucr-drill-body,
+.gm-bar-tip.gm-ucr-drill-open .gm-bar-tip-empty { padding-left: 16px; padding-right: 16px; }
+.gm-ucr-drill-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; }
+
+/* ── Horizontal bar chart (proper X/Y axes) — used for the Resource Type
+   panel and the Resource Group popup: category names on the left (Y
+   axis), value axis along the bottom (X axis) with gridlines at clean
+   tick intervals, one bar per category sized against that axis.
+   --gm-axis-w is set per-instance (label column width) by the JS. ── */
+.gm-hchart { font-family:'Barlow Condensed',sans-serif; --gm-axis-w: 90px; flex-shrink:0; }
+.gm-hchart-plot { position:relative; }
+.gm-hchart-grid {
+  position:absolute; top:0; bottom:0; left:var(--gm-axis-w); right:26px;
+}
+.gm-hchart-gridline {
+  position:absolute; top:0; bottom:0; width:1px; background:#98a3b3;
+}
+.gm-hchart-rows { display:flex; flex-direction:column; gap:10px; padding:2px 0; }
+.gm-hchart-row { display:flex; align-items:center; height:20px; }
+.gm-hchart-rowlbl {
+  width:var(--gm-axis-w); flex-shrink:0; padding-right:6px; box-sizing:border-box;
+  font-size:9.5px; color:#1a2540; text-align:right;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.gm-hchart-rowlbl-lg { font-size:12.5px; font-weight:600; }
+.gm-hchart-rowtrack {
+  flex:1; margin-right:26px; position:relative; height:12px;
+}
+.gm-hchart-bar {
+  position:relative; height:12px; min-width:2px;
+  border-radius:0 3px 3px 0;
+  display:flex; align-items:center;
+  transition:width .25s ease;
+}
+.gm-hchart-barval {
+  position:absolute; left:100%; margin-left:5px;
+  font-size:9px; font-weight:700; color:#1a2540; white-space:nowrap;
+}
+.gm-hchart-bar-over {
+  position:absolute; top:0; height:12px; background:#e64a19;
+  border-radius:0 3px 3px 0;
+}
+.gm-hchart-rowtrack .gm-hchart-bar-over { display:flex; align-items:center; }
+.gm-hchart-xaxis { position:relative; margin-top:4px; border-top:1px solid #b9c2d1; }
+.gm-hchart-xaxis-ticks { position:relative; margin-left:var(--gm-axis-w); margin-right:26px; height:14px; }
+.gm-hchart-xtick {
+  position:absolute; top:3px; transform:translateX(-50%);
+  font-size:8.5px; color:#5a6e8c; white-space:nowrap;
+}
+.gm-hchart-xtitle {
+  margin-left:var(--gm-axis-w); margin-right:26px; text-align:center;
+  font-size:9px; font-weight:700; color:#3461b8; text-transform:uppercase;
+  letter-spacing:.04em; margin-top:4px;
+}
+.gm-hchart-sm .gm-hchart-rowlbl-lg { font-size:10px; }
+.gm-hchart-sm .gm-hchart-barval { font-size:8px; }
+.gm-hchart-sm .gm-hchart-xtick { font-size:7.5px; }
+.gm-hchart-sm .gm-hchart-xtitle { font-size:8px; }
+.gm-hchart-withytitle { display:flex; align-items:stretch; gap:6px; }
+.gm-hchart-ytitle {
+  writing-mode:vertical-rl; transform:rotate(180deg); flex-shrink:0;
+  text-align:center; font-size:9px; font-weight:700; color:#3461b8;
+  text-transform:uppercase; letter-spacing:.04em; padding:2px 0;
+}
+.gm-hchart-withytitle .gm-hchart-main { flex:1; min-width:0; }
+
+/* ── Vertical bar chart (proper X/Y axes) — used for the Resources popup:
+   value axis on the left (Y axis) with horizontal gridlines at clean
+   tick intervals, resource names along the bottom (X axis), value
+   labelled on top of each bar. ── */
+.gm-vchart { font-family:'Barlow Condensed',sans-serif; display:flex; flex-direction:column; flex:1; min-height:0; }
+.gm-vchart-plot { flex:1; min-height:0; display:flex; }
+.gm-vchart-yaxis {
+  width:32px; flex-shrink:0; display:flex; flex-direction:column; justify-content:space-between;
+  padding:16px 4px 0 0; box-sizing:border-box; text-align:right;
+}
+.gm-vchart-ytick { font-size:8.5px; color:#5a6e8c; line-height:1; }
+.gm-vchart-area { flex:1; min-width:0; position:relative; padding-top:16px; box-sizing:border-box; }
+.gm-vchart-grid { position:absolute; left:0; right:0; top:16px; bottom:0; }
+.gm-vchart-gridline { position:absolute; left:0; right:0; height:1px; background:#98a3b3; }
+.gm-vchart-bars {
+  position:relative; height:100%; display:flex; align-items:flex-end;
+  gap:14px; padding:0 10px; border-left:1px solid #b9c2d1; border-bottom:1px solid #b9c2d1;
+  box-sizing:border-box;
+}
+.gm-vchart-col { flex:1; max-width:70px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+.gm-vchart-bar-wrap {
+  position:relative; width:60%; min-height:2px;
+  display:flex; flex-direction:column; align-items:center;
+  transition:height .25s ease;
+}
+.gm-vchart-bar {
+  position:relative; width:100%; flex:1; min-height:0;
+  border-radius:3px 3px 0 0;
+  overflow:hidden;
+}
+.gm-vchart-diff { position:absolute; top:0; left:0; right:0; }
+.gm-vchart-barval {
+  flex-shrink:0; margin-bottom:1px; display:block;
+  font-size:11.5px; font-weight:700; color:#1a2540; white-space:nowrap;
+}
+.gm-vchart-barval-diff {
+  flex-shrink:0; margin-bottom:3px; display:block;
+  font-size:10.5px; font-weight:700; white-space:nowrap;
+}
+.gm-vchart-legend {
+  display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:8px;
+  font-size:8.5px; color:#5a6e8c; flex-shrink:0;
+}
+.gm-vchart-legend span { display:inline-flex; align-items:center; gap:4px; }
+.gm-vchart-legend i { width:8px; height:8px; border-radius:2px; display:inline-block; }
+.gm-vchart-legend-lg {
+  font-size:12.5px; font-weight:600; color:#1a2540; margin-top:14px;
+  flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:8px;
+}
+.gm-vchart-legend-lg i { width:10px; height:10px; }
+.gm-vchart-legend-sm { font-size:8.5px; margin-top:8px; gap:4px; }
+.gm-vchart-legend-sm i { width:7px; height:7px; }
+.gm-vchart-xaxis { display:flex; margin-top:4px; }
+.gm-vchart-xaxis-spacer { width:32px; flex-shrink:0; }
+.gm-vchart-xlabels { flex:1; display:flex; gap:14px; padding:0 10px; box-sizing:border-box; }
+.gm-vchart-xlbl {
+  flex:1; max-width:70px; text-align:center; font-size:8.5px; color:#1a2540;
+  white-space:normal; word-break:break-word; line-height:1.2;
+}
+.gm-vchart-ytitle {
+  text-align:center; font-size:9px; font-weight:700; color:#3461b8;
+  text-transform:uppercase; letter-spacing:.04em; margin-top:6px; flex-shrink:0;
+}
 
 /* ── Gantt Cost Modal (kept for backwards compat, hidden by default) ─────── */
 #gcm-bk { display: none; }
@@ -286,16 +551,35 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 /* Widen the activity name column */
 #gantt-container .gtaskname,
 #gantt-container .gspanning.gtaskname {
-  min-width: 220px !important;
-  width: 220px !important;
-  max-width: 220px !important;
+  min-width: 280px !important;
+  width: 280px !important;
+  max-width: 280px !important;
 }
 /* Dedicated status-indicator column (sits just before the activity name column) */
 #gantt-container .gtasklist {
-  min-width: 16px !important;
-  width: 16px !important;
-  max-width: 16px !important;
+  min-width: 32px !important;
+  width: 32px !important;
+  max-width: 32px !important;
   text-align: center !important;
+  white-space: nowrap;
+}
+.gact-reorder-handle {
+  display: inline-block; cursor: grab; color: #9aa3b2; font-size: 11px;
+  letter-spacing: -2px; vertical-align: middle; margin-left: 3px;
+  user-select: none;
+}
+.gact-reorder-handle:hover { color: #1a6fc4; }
+.gact-reorder-handle.gact-dragging { cursor: grabbing; }
+/* Ghost row that follows the cursor while dragging */
+#gact-drag-ghost {
+  display: none; position: fixed; z-index: 300000; pointer-events: none;
+  background: #fff; border: 1px solid #4a6fa5; border-radius: 4px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25); padding: 4px 10px;
+  font-size: 12px; color: #1a2540; white-space: nowrap;
+}
+/* Highlight the row currently under the cursor as the drop target */
+#gantt-container .gtasktablewrapper tr.gact-drop-target td {
+  background: #eef4fb !important; outline: 1px dashed #4a6fa5; outline-offset: -1px;
 }
 .btn-opiam {
   position: relative;
@@ -326,6 +610,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 .dot-normal    { background: #337ab7; }
 /* Critical path bar colour — overrides external CSS (needed when view loads without full layout) */
 .gtaskpink, div.gtaskpink.gplan { background: #00ACC1 !important; border-color: #0097A7 !important; }
+/* Completed activity bar colour */
+.gtaskgreen, div.gtaskgreen.gplan { background: #00842e !important; border-color: #00611f !important; }
 /* Status dots */
 .act-dot {
   display: inline-block; width: 12px; height: 12px;
@@ -367,7 +653,6 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 <div id="gantt-embed-wrap">
   <div id="gantt-float-body" style="flex:1;min-height:0;display:flex;flex-direction:column;padding:8px 10px;overflow:hidden;">
 <?php endif; ?>
-    <div id="gantt-act-tooltip"></div>
     <div id="gantt-toolbar">
 
       <span id="gantt-status" style="font-size:12px;color:#666;margin-left:8px;"></span>
@@ -403,20 +688,36 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   <div class="gcm-rs gcm-rs-nw" data-dir="nw"></div>
   <div class="gcm-rs gcm-rs-se" data-dir="se"></div>
   <div class="gcm-rs gcm-rs-sw" data-dir="sw"></div>
-  <div id="gcm-pop-hdr">Cost Dashboard <button id="gcm-pop-close" title="Close">&times;</button></div>
+  <div id="gcm-pop-hdr">
+    <span id="gcm-pop-hdr-left">Manage Cost</span>
+    <span id="gcm-pop-hdr-center"></span>
+    <span id="gcm-pop-hdr-right"><button id="gcm-pop-close" title="Close">&times;</button></span>
+  </div>
   <div id="gcm-pop-body">
     <div id="gcm-pop-loading">Loading&hellip;</div>
     <div id="gcm-pop-row1" style="display:none">
-      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Cost of Resources</div><div class="gcm-pop-panel-body" id="gm-cd-rcost"></div></div>
-      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Unit Cost of Activity</div><div class="gcm-pop-panel-body" id="gm-cd-g5" style="align-items:center;justify-content:center"></div></div>
-      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Work Done</div><div class="gcm-pop-panel-body" id="gm-cd-g4" style="align-items:center;justify-content:center"></div></div>
-      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Cost of Activity</div><div class="gcm-pop-panel-body" id="gm-cd-g2"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title" id="gcm-title-g5">Unit Cost of Activity</div><div class="gcm-pop-panel-body" id="gm-cd-g5" style="align-items:center;justify-content:flex-start"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title" id="gcm-title-g4">Work Done</div><div class="gcm-pop-panel-body" id="gm-cd-g4" style="align-items:center;justify-content:flex-start"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title" id="gcm-title-g2">Cost of Activity</div><div class="gcm-pop-panel-body" id="gm-cd-g2"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Unit Cost of Resources</div><div class="gcm-pop-panel-body" id="gm-cd-ucr" style="align-items:center;justify-content:flex-start"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title" id="gcm-title-rcon">Yield</div><div class="gcm-pop-panel-body" id="gm-cd-rcon" style="align-items:center;justify-content:flex-start"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Cost of Resources</div><div class="gcm-pop-panel-body" id="gm-cd-rcost" style="align-items:center;justify-content:flex-start"></div></div>
     </div>
     <div id="gcm-pop-row2" style="display:none"></div>
   </div>
 </div>
 
-<div id="rcost-tt"></div>
+<div id="gm-ucr-tip" class="gm-bar-tip">
+  <div id="gm-ucr-tip-hdr" class="gm-bar-tip-hdr">
+    <span id="gm-ucr-tip-title"></span>
+    <button type="button" id="gm-ucr-tip-close" title="Close">&times;</button>
+  </div>
+  <div id="gm-ucr-tip-body"></div>
+</div>
+<div id="gm-rcon-tip" class="gm-bar-tip"></div>
+<div id="gm-rcost-tip" class="gm-bar-tip"></div>
+<div id="gname-tip"></div>
+<div id="gact-drag-ghost"></div>
 
 <!-- KPI Click Modal -->
 <div id="gkm-bk"></div>
@@ -437,11 +738,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     <div id="gkm-loading">Loading&hellip;</div>
     <div id="gkm-content" style="display:none">
       <div id="gkm-row1">
-        <div class="gkm-panel" style="flex:1"><div class="gkm-panel-title">Target Production</div><div class="gkm-panel-body" id="gkm-tp"></div></div>
-        <div class="gkm-panel" style="flex:1.4"><div class="gkm-panel-title">Activity Duration</div><div class="gkm-panel-body" id="gkm-dur"></div></div>
+        <div class="gkm-panel"><div class="gkm-panel-title">Target Production</div><div class="gkm-panel-body" id="gkm-tp"></div></div>
+        <div class="gkm-panel"><div class="gkm-panel-title">Activity Duration</div><div class="gkm-panel-body" id="gkm-dur"></div></div>
+        <div class="gkm-panel"><div class="gkm-panel-title">Capacity Utilisation</div><div class="gkm-panel-body" id="gkm-g5"></div></div>
       </div>
       <div id="gkm-row2">
-        <div class="gkm-panel"><div class="gkm-panel-title">Capacity Utilisation</div><div class="gkm-panel-body" id="gkm-g5"></div></div>
         <div class="gkm-panel"><div class="gkm-panel-title">Cycle Time</div><div class="gkm-panel-body" id="gkm-g4"></div></div>
         <div class="gkm-panel"><div class="gkm-panel-title">Productivity</div><div class="gkm-panel-body" id="gkm-g3"></div></div>
       </div>
@@ -459,21 +760,97 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   <div class="gkp-rs gkp-rs-nw" data-dir="nw"></div>
   <div class="gkp-rs gkp-rs-se" data-dir="se"></div>
   <div class="gkp-rs gkp-rs-sw" data-dir="sw"></div>
-  <div id="gkp-hdr"><span id="gkp-title">KPI Dashboard</span><button id="gkp-close" title="Close">&times;</button></div>
+  <div id="gkp-hdr"><span id="gkp-title">Manage Schedule</span><button id="gkp-close" title="Close">&times;</button></div>
   <div id="gkp-body">
     <div id="gkp-row1">
-      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Capacity Utilisation</div><div class="gkp-panel-body" id="gkp-g5"></div></div>
-      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Cycle Time</div><div class="gkp-panel-body" id="gkp-g4"></div></div>
-      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Productivity</div><div class="gkp-panel-body" id="gkp-g3"></div></div>
-      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Target Production</div><div class="gkp-panel-body" id="gkp-tp"></div></div>
-      <div class="gkp-panel" style="flex:1"><div class="gkp-panel-title">Activity Duration</div><div class="gkp-panel-body" id="gkp-dur"></div></div>
+      <div class="gkp-panel"><div class="gkp-panel-title">Productivity</div><div class="gkp-panel-body" id="gkp-g3"></div></div>
+      <div class="gkp-panel"><div class="gkp-panel-title">Target Production</div><div class="gkp-panel-body" id="gkp-tp"></div></div>
+      <div class="gkp-panel"><div class="gkp-panel-title">Activity Duration</div><div class="gkp-panel-body" id="gkp-dur"></div></div>
     </div>
     <div id="gkp-row2">
+      <div class="gkp-panel"><div class="gkp-panel-title">Resource Capacity</div><div class="gkp-panel-body" id="gkp-res"></div></div>
+      <div class="gkp-panel"><div class="gkp-panel-title">Capacity Utilisation</div><div class="gkp-panel-body" id="gkp-g5"></div></div>
+      <div class="gkp-panel"><div class="gkp-panel-title">Cycle Time</div><div class="gkp-panel-body" id="gkp-g4"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Resource Capacity bar hover tooltip — independent, own trigger, own data -->
+<div id="gkp-res-tip" class="gm-bar-tip"></div>
+
+<!-- Project Duration hover panel — independent, own trigger, own data -->
+<div id="gpd-tip">
+  <div id="gpd-tip-title">Project Schedule Summery</div>
+  <div id="gpd-tip-body">
+    <div id="gpd-proj-name"><?= htmlspecialchars(isset($project) && $project ? $project->Name : 'Project') ?></div>
+    <div id="gpd-tip-loading">Loading&hellip;</div>
+    <div id="gpd-tip-content" style="display:none">
+      <div id="gpd-bar-status"></div>
+      <div id="gpd-bar"></div>
+      <div class="gpd-bar-labels">
+        <span title="Planned Start + Duration. Fixed until the user changes the planned start date or duration.">Target Duration: <b id="gpd-target-comp">—</b></span>
+        <span title="If no progress reported: Planned Duration + Start Delay (days elapsed since the activity was due to start). If progress reported: Elapsed Days ÷ Quantity Done &times; Total Quantity.">Expected Duration: <b id="gpd-expected-comp">—</b></span>
+      </div>
+      <div class="gpd-divider"></div>
+      <div class="gpd-bar-labels gpd-date-labels">
+        <span>Target Completion Date: <b id="gpd-target-date">—</b></span>
+        <span>Expected Completion Date: <b id="gpd-expected-date">—</b></span>
+      </div>
+      <div class="gpd-divider"></div>
+      <div class="gpd-bar-labels gpd-date-labels">
+        <span>Elapsed Days: <b id="gpd-elapsed-days">—</b></span>
+        <span>Remaining Days: <b id="gpd-remaining-days">—</b></span>
+      </div>
+      <div class="gpd-divider"></div>
+      <div class="gpd-bar-labels gpd-date-labels">
+        <span>Start Date: <b id="gpd-start-date">—</b></span>
+        <span>Work Completed: <b id="gpd-pct-complete">—</b></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Project Snapshot hover card — hovering the project name in the Gantt
+     window header. Independent of #gpd-tip (own trigger, own data, own
+     styling — matches the "Projects" list card look). -->
+<div id="gsc-tip">
+  <div id="gsc-tip-top"><div id="gsc-tip-name">Project</div><button id="gsc-tip-close" title="Close">&times;</button></div>
+  <div id="gsc-tip-body">
+    <div id="gsc-tip-loading">Loading&hellip;</div>
+    <div id="gsc-tip-content" style="display:none">
+      <div class="gsc-row"><label title="Planned Start + Duration. Fixed until the user changes the planned start date or duration."><span class="gsc-swatch" style="background:#ff9800;"></span>Planned Duration</label><span class="gsc-val" id="gsc-planned-dur">—</span></div>
+      <div class="gsc-row"><label title="If no progress reported: Planned Duration + Start Delay (days elapsed since the activity was due to start). If progress reported: Elapsed Days ÷ Quantity Done &times; Total Quantity."><span class="gsc-swatch" style="background:#2979ff;"></span>Actual Duration</label><span class="gsc-val" id="gsc-actual-dur">—</span></div>
+      <div class="gsc-row"><label><span class="gsc-swatch" style="background:#43a047;"></span>Planned Completion</label><span class="gsc-val" id="gsc-planned-comp">—</span></div>
+      <div class="gsc-row"><label><span class="gsc-swatch" style="background:#fb8c00;"></span>Actual Completion</label><span class="gsc-val" id="gsc-actual-comp">—</span></div>
+      <div class="gsc-row"><label><span class="gsc-swatch" style="background:#ab47bc;"></span>Delayed</label><span class="gsc-val" id="gsc-status">—</span></div>
+      <div class="gsc-row"><label><span class="gsc-swatch" style="background:#00c853;"></span>% Completion</label><span class="gsc-val" id="gsc-pct">—</span></div>
+      <div class="gsc-row"><label><span class="gsc-swatch" style="background:#26c6da;"></span>Elapsed Days</label><span class="gsc-val" id="gsc-elapsed">—</span></div>
+      <div class="gsc-row"><label><span class="gsc-swatch" style="background:#e53935;"></span>Remaining Days</label><span class="gsc-val" id="gsc-remaining">—</span></div>
     </div>
   </div>
 </div>
 
 <script type="text/javascript">
+(function(){
+  if(typeof window.bindDragTouch !== 'function'){
+    // Standalone fallback: this view can be loaded with layout=false (embedded
+    // Gantt popup), which skips layouts/main.php where the shared shim normally
+    // comes from. Without it, drag/resize here only ever bound mousedown, so
+    // dragging never worked on touch devices (iPad).
+    var _touchTypeFor = { mousedown: 'touchstart', mousemove: 'touchmove', mouseup: 'touchend' };
+    window.bindDragTouch = function(el, mouseType, handler, opts){
+      if(!el) return;
+      el.addEventListener(mouseType, handler, opts);
+      var touchType = _touchTypeFor[mouseType];
+      if(!touchType) return;
+      el.addEventListener(touchType, function(e){
+        var t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+        if(t){ e.clientX = t.clientX; e.clientY = t.clientY; }
+        handler(e);
+      }, opts);
+    };
+  }
+})();
 (function($) {
   var criticalid = [];
   var projectId  = <?= (int)$projectId ?>;
@@ -597,13 +974,32 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       projectId, projectName, '', '', 'ggroupblack', '', 0, '', 0, 1, 0, 1, '', '', '', g
     );
     var _projHid = _projTi.getID();
+    window._ganttProjectRowHid = _projHid; // used by the project-row click handler to open the Relationships popup
     g.AddTaskItem(_projTi);
 
     // Map from hashed task ID → status for dot column
     var _actStatus = {};
     // Map from hashed task ID → raw DB values, used after Draw() to patch B. columns
     var _actCells = {};
+    // Map from hashed task ID (TaskItem.getID()) → real scheduleactivities.id.
+    // JSGantt's own getID() only ever returns a one-way hash of the pID
+    // string passed to the TaskItem constructor (see hashKey() in
+    // jsgantt.js) — there is no built-in getter back to the original id.
+    // Dependency lines are stamped with gDepId<hash>/gDepNextId<hash>
+    // classes (DrawDependencies in jsgantt.js), so this map is what lets
+    // a line click be resolved back to the real precedent/successor
+    // activity ids for openProjectRelationsList's edit-jump.
+    window._ganttActRealId = {};
     window._ganttActCells = _actCells;
+    // Map from EVERY WBS-tier row's hashed task ID → {wgId, iowGroupId}
+    // (bare IOWs with no activity yet, AND IOWs that already have one or
+    // more activities scheduled) — so clicking any IOW row opens the
+    // Activity Picker popup scoped to that IOW AND filtered to its
+    // parent IOW Group (see the click handler further below). Does NOT
+    // include per-activity child rows or the IOW-Group/project tier
+    // rows — only the WBS-item tier itself.
+    var _wbsRowWgId = {};
+    window._ganttWbsBareRowWgId = _wbsRowWgId;
     // A. Duration/Start/End for group rows (WBS items and IOW groups) — separate to avoid clearing B. columns
     var _groupActDur   = {};
     var _groupActStart = {};
@@ -657,13 +1053,23 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           // WBS bar uses A. dates when available, falls back to B. dates
           var _wbsBarS = _wbsAStart || safeDate(item.start_date);
           var _wbsBarE = _wbsAEnd ? addOneDay(_wbsAEnd) : (item.end_date ? addOneDay(item.end_date) : '');
+          // A bare IOW (no activity added under it yet) has no
+          // wbsscheduleitems row, so scheduleitem_id is null — use a
+          // synthetic, stable row id instead so JSGantt still gets a
+          // unique identifier. Marked so the child-activity fetch below
+          // is skipped for it (there is nothing to fetch).
+          var _wbsIsBare = (item.scheduleitem_id === null || item.scheduleitem_id === undefined);
+          var _wbsRowId = _wbsIsBare ? ('wg_' + item.Workgroup_Id) : item.scheduleitem_id;
           var _wbsTi = new JSGantt.TaskItem(
-            item.scheduleitem_id,
+            _wbsRowId,
             item.name,
             _wbsBarS, _wbsBarE,
             'ggroupblack', '', 0, '', 0, 1, wbsParent, 1, '', '', '', g
           );
           var _wbsHid = _wbsTi.getID();
+          // Always populated (bare or already-scheduled) — any IOW row
+          // can open the Activity Picker to add more activities.
+          _wbsRowWgId[_wbsHid] = { wgId: item.Workgroup_Id, iowGroupId: item.iowGroupid || 0 };
           // B. duration span = span of child schedule dates
           var _wbsBDur = (item.start_date && item.end_date)
               ? Math.round((new Date(item.end_date) - new Date(item.start_date)) / 86400000) + 1
@@ -703,7 +1109,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
             if (_bE && (!_ibd.maxEnd   || _bE > _ibd.maxEnd  )) _ibd.maxEnd   = _bE;
           }
 
-          // Load activities for this WBS item synchronously
+          // Load activities for this WBS item synchronously — skipped
+          // for a bare IOW (no scheduleitem_id yet, so nothing to fetch).
+          if (_wbsIsBare) continue;
           $.ajax({
             type: 'POST',
             url: _base + '/ganttactivities',
@@ -717,29 +1125,47 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                   var act = actData.result[j];
                   if (!safeDate(act.actual_start_date) || !safeDate(act.actual_end_date)) continue;
 
-                  var pId    = act.id + 'ABC' + act.id;
-                  var pClass = ($.inArray(Number(act.id), criticalid) !== -1)
-                               ? 'gtaskpink' : 'gtaskblue';
+                  var pId       = act.id + 'ABC' + act.id;
+                  var isCritical = ($.inArray(Number(act.id), criticalid) !== -1);
+                  // Completed overrides critical for the BAR colour — once
+                  // done, the bar shows green regardless of whether it sat
+                  // on the critical path. The status dot below keeps its
+                  // own separate priority (critical still wins there), so
+                  // isCritical is tracked independently of pClass.
+                  var pClass = (parseInt(act.completed_status) === 1) ? 'gtaskgreen'
+                               : isCritical ? 'gtaskpink' : 'gtaskblue';
 
                   var plannedStart = safeDate(act.actual_start_date);
                   var plannedEnd   = safeDate(act.actual_end_date);
-                  // B. Duration always matches Planned Start/End exactly.
-                  var bDur = (plannedStart && plannedEnd)
-                    ? Math.round((new Date(plannedEnd) - new Date(plannedStart)) / 86400000) + 1
-                    : act.old_duration;
+                  // B. Duration = the TRUE original planned duration (old_duration),
+                  // never derived from plannedStart/plannedEnd. GetRelationcorrect()
+                  // (HelperComponent.php) keeps an activity's START anchored to its
+                  // true baseline (act_start_date, never moved) and instead absorbs
+                  // any start delay by EXTENDING the duration — so actual_end_date
+                  // (plannedEnd) already comes back as baseline_start + (planned
+                  // duration + overdue days). Deriving B. Duration from
+                  // plannedEnd-plannedStart would read that INFLATED span, making
+                  // B. and A. Duration always equal and hiding the delay entirely —
+                  // old_duration is the one value that stays the true, un-inflated
+                  // plan.
+                  var bDur = (parseInt(act.old_duration, 10) > 0) ? parseInt(act.old_duration, 10) : 1;
 
                   var hasProgress = (act.actual_duration !== null && act.actual_duration !== undefined);
                   var aStart, aEndComputed, actDur;
 
                   if (!hasProgress) {
-                    // No progress reported yet: Actual = Planned, shifted by the start
-                    // delay (days between planned start and today, if the planned
-                    // start has already passed). Duration itself doesn't change.
+                    // No progress reported yet: Actual = Planned, straight from the
+                    // server — plannedStart/plannedEnd (actual_start_date/
+                    // actual_end_date) are already the fully correct, delay-inclusive
+                    // dates (see bDur comment above). actDur is the ACTUAL current
+                    // span (plannedEnd - plannedStart + 1) — this will naturally
+                    // exceed bDur whenever there's a real start delay, which is what
+                    // drives the red delay-overlay below.
                     aStart = plannedStart;
-                    var startDelayDays = (plannedStart && plannedStart < todayStr)
-                      ? Math.round((new Date(todayStr) - new Date(plannedStart)) / 86400000) : 0;
-                    aEndComputed = (plannedEnd && startDelayDays > 0) ? addDays(plannedEnd, startDelayDays) : plannedEnd;
-                    actDur = bDur + startDelayDays;
+                    aEndComputed = plannedEnd;
+                    actDur = (plannedStart && plannedEnd)
+                      ? Math.round((new Date(plannedEnd) - new Date(plannedStart)) / 86400000) + 1
+                      : bDur;
                   } else {
                     // Progress has been reported: A. Start is the real reported start,
                     // A. Duration/End follow the productivity projection (elapsed ÷ qty
@@ -769,23 +1195,31 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     '', '', g, null,
                     null, null
                   );
+                  window._ganttActRealId[_ti.getID()] = act.id;
                   // Status dot data
                   _actStatus[_ti.getID()] = {
                     completed:   (parseInt(act.completed_status) === 1),
                     hasProgress: (parseFloat(act.cumulated_qty) > 0),
                     planStart:   safeDate(act.actual_start_date),
-                    critical:    (pClass === 'gtaskpink')
+                    critical:    isCritical
                   };
-                  // B. columns show schedule values; A. columns fall back to B. when no progress
+                  // B. Start/End: act_start_date is the true, never-moved baseline
+                  // start; its end is derived from old_duration (bDur), matching the
+                  // un-inflated B. Duration above. A. columns show the server's
+                  // current actual dates (fall back to B. when no progress).
+                  var bStartForCell = safeDate(act.act_start_date) || act.actual_start_date;
+                  var bEndForCell = (bStartForCell) ? addDays(bStartForCell, bDur - 1) : act.actual_end_date;
                   _actCells[_ti.getID()] = {
                     dur:    bDur,
-                    start:  act.actual_start_date,
-                    end:    act.actual_end_date,
+                    start:  bStartForCell,
+                    end:    bEndForCell,
                     actdur: actDur,
                     astart: aStart || act.actual_start_date,
                     aend:   aEndComputed || act.actual_end_date,
+                    scheduleitemId: parentId,
                     rawId:  act.id,
-                    wanId:  act.wan_id
+                    wanId:  act.wan_id,
+                    hasProgress: hasProgress
                   };
                   g.AddTaskItem(_ti);
                 }
@@ -832,6 +1266,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
     g.Draw();
 
+    // Exposed so the #gantt-win resize handler (main.php) can switch
+    // Day/Week/Month zoom level to fit the window's new width — same
+    // g.setFormat() the Format radio buttons already call, just
+    // triggered automatically instead of by hand.
+    window._ganttChartObj = g;
+
     // Relabel native column headers and inject custom columns
     var _c = document.getElementById('gantt-container');
 
@@ -850,8 +1290,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     var _durHdr = _findHdrCell('gdur');
     var _resHdr = _findHdrCell('gres');
 
-    if (_durHdr) _durHdr.textContent = 'B. Duration';
-    if (_resHdr) _resHdr.textContent = 'A. Duration';
+    if (_durHdr) { _durHdr.textContent = 'B. Duration'; _durHdr.title = 'Planned Start + Duration. Fixed until the user changes the planned start date or duration.'; }
+    if (_resHdr) { _resHdr.textContent = 'A. Duration'; _resHdr.title = 'If no progress reported: Planned Duration + Start Delay. If progress reported: Elapsed Days ÷ Quantity Done × Total Quantity.'; }
 
     // Label the activity name column
     var _nameHdrs = _c ? _c.querySelectorAll('.gtaskname') : [];
@@ -862,21 +1302,6 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         _nameHdrs[_ni].style.cssText = 'font-weight:600;font-size:11px;text-align:left;padding-left:4px;';
         break;
       }
-    }
-
-    function _makeHdr(id, txt, width) {
-      var td = document.createElement('td');
-      td.id = id;
-      td.className = 'gtaskheading';
-      td.style.cssText = 'text-align:center;font-weight:600;font-size:11px;width:' + width + 'px;min-width:' + width + 'px;';
-      td.textContent = txt;
-      return td;
-    }
-
-    // Inject KPI header then Cost header after A.Duration (gres)
-    if (_resHdr && !document.getElementById('gcost-hdr-cell')) {
-      var _kpiHdrInserted = _resHdr.parentNode.insertBefore(_makeHdr('gkpi-hdr-cell', 'KPI', 50), _resHdr.nextSibling);
-      _resHdr.parentNode.insertBefore(_makeHdr('gcost-hdr-cell', 'Cost', 50), _kpiHdrInserted.nextSibling);
     }
 
     // Apply progressive indentation + patch B. columns and A. columns with formatted values
@@ -932,6 +1357,20 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       // Leaf activity: patch B. Duration and A. Duration
       var _db = _actCells[_tid];
       if (_db) {
+        // Drag handle for reordering within this activity's WBS item —
+        // "press and hold, then move" like the KPI/Cost floating panels'
+        // own drag (raw mousedown/mousemove/mouseup), not jQuery UI
+        // sortable, which never engaged reliably against JSGantt's row
+        // structure. See _initActivityDrag below.
+        if (_dotCell && !_dotCell.querySelector('.gact-reorder-handle')) {
+          var _handle = document.createElement('span');
+          _handle.className = 'gact-reorder-handle';
+          _handle.title = 'Press and drag to reorder';
+          _handle.textContent = '⋮⋮';
+          _handle.setAttribute('data-tid', _tid);
+          _dotCell.appendChild(_handle);
+        }
+
         var _durEl = _row.querySelector('td.gdur div');
         if (_durEl) _durEl.textContent = formatGanttDur(_db.dur);
 
@@ -943,38 +1382,6 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
             _adEl.style.fontWeight = '600';
           }
         }
-      }
-
-      // Inject KPI cell then Cost cell after A.Duration (gres) — all rows
-      var _resTd = _row.querySelector('td.gres');
-      if (_resTd && !_row.querySelector('td.gcol-kpi')) {
-        // KPI cell
-        var _kpiTd = document.createElement('td');
-        _kpiTd.className = 'gcol-kpi';
-        _kpiTd.style.cssText = 'width:50px;min-width:50px;text-align:center;padding:0;vertical-align:middle;';
-        if (_db) {
-          var _kpiIcon = document.createElement('span');
-          _kpiIcon.style.cssText = 'display:inline-block;cursor:pointer;vertical-align:middle;';
-          _kpiIcon.innerHTML = '<svg width="14" height="12" viewBox="0 0 14 12" xmlns="http://www.w3.org/2000/svg">'
-            + '<rect x="0" y="7" width="3" height="5" rx="0.5" fill="#00838f"/>'
-            + '<rect x="4" y="4" width="3" height="8" rx="0.5" fill="#00838f"/>'
-            + '<rect x="8" y="1" width="3" height="11" rx="0.5" fill="#00838f"/>'
-            + '<polyline points="1.5,6 5.5,3 9.5,0.5 13,0" fill="none" stroke="#004d55" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>'
-            + '</svg>';
-          _kpiIcon.setAttribute('data-kpiactid', _db.rawId);
-          _kpiTd.appendChild(_kpiIcon);
-        }
-        _resTd.parentNode.insertBefore(_kpiTd, _resTd.nextSibling);
-        // Cost cell (after KPI)
-        var _costTd = document.createElement('td');
-        _costTd.className = 'gcol-cost';
-        _costTd.style.cssText = 'width:50px;min-width:50px;text-align:center;padding:0;vertical-align:middle;';
-        var _costIcon = document.createElement('span');
-        _costIcon.style.cssText = 'display:inline-block;width:8px;height:8px;background:#546e7a;border-radius:2px;cursor:pointer;';
-        // Store raw activity DB id so click handler can POST it
-        if (_db) _costIcon.setAttribute('data-actid', _db.rawId);
-        _costTd.appendChild(_costIcon);
-        _kpiTd.parentNode.insertBefore(_costTd, _kpiTd.nextSibling);
       }
 
       // Group row A. Duration
@@ -1074,51 +1481,158 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     })();
 
     $('#gantt-status').text('');
-
-    // ── Activity name tooltip — must run AFTER cloneNode so listeners survive ──
-    (function() {
-      var _tip = document.getElementById('gantt-act-tooltip');
-      if (!_tip) return;
-
-      function _fmt(d) {
-        if (!d || d === '0000-00-00') return '—';
-        var p = d.split('-');
-        return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d;
-      }
-
-      var _tasks2 = g.getList ? g.getList() : [];
-      for (var _ti2 = 0; _ti2 < _tasks2.length; _ti2++) {
-        var _tid2 = _tasks2[_ti2].getID();
-        var _db2  = _actCells[_tid2];
-        if (!_db2) continue;
-        // getElementById finds the cloned row (same ID, now in DOM)
-        var _row2 = document.getElementById('gantt-container' + 'child_' + _tid2);
-        if (!_row2) continue;
-        var _nameCell = _row2.querySelector('td.gtaskname');
-        if (!_nameCell) continue;
-
-        (function(db, cell) {
-          cell.addEventListener('mouseenter', function(e) {
-            _tip.innerHTML =
-              '<b>Planned Start:</b> ' + _fmt(db.start)  + '<br>' +
-              '<b>Actual Start:</b> '  + _fmt(db.astart) + '<br>' +
-              '<b>Planned End:</b> '   + _fmt(db.end)    + '<br>' +
-              '<b>Actual End:</b> '    + _fmt(db.aend);
-            _tip.style.display = 'block';
-            _tip.style.left = (e.clientX + 14) + 'px';
-            _tip.style.top  = (e.clientY + 14) + 'px';
-          });
-          cell.addEventListener('mousemove', function(e) {
-            _tip.style.left = (e.clientX + 14) + 'px';
-            _tip.style.top  = (e.clientY + 14) + 'px';
-          });
-          cell.addEventListener('mouseleave', function() {
-            _tip.style.display = 'none';
-          });
-        })(_db2, _nameCell);
-      }
-    })();
   }
+
+  // ── Reorder activities within one WBS item — press-and-hold drag ───────────
+  // Same raw mousedown/mousemove/mouseup shape as the KPI/Cost floating
+  // panels' own drag (see "Drag + Resize: KPI modal" above) — NOT jQuery UI
+  // sortable, which was tried first and never reliably engaged against
+  // JSGantt's row structure. Bound once via delegation on document (not
+  // per-row), so it keeps working across every loadGantt() reload without
+  // needing to re-bind. Reordering only ever changes
+  // workgroup_activities_new.sortorder — no dates are touched, and there is
+  // no relationship-based restriction (see actionReordertaskswithinwbs).
+  (function(){
+    var $ghost = $('#gact-drag-ghost');
+    var _dragTid = null, _dragScheduleitemId = null, _dragRow = null;
+    var _dropRow = null;
+
+    function _rowFromPoint(x, y) {
+      // The activity list (left, name/duration columns) and the bar chart
+      // (right, task bars) are separate DOM trees in JSGantt — a point
+      // over the chart side resolves through .gtaskbarcontainer/other
+      // chart layers, never through a list-table <tr>, so a plain
+      // elementFromPoint()+closest('tr') on that side always returns null.
+      // Same class of bug as the relationship-line click handler above
+      // (see the elementsFromPoint note there) — use the row's Y position
+      // via the LIST table specifically instead of trusting whichever
+      // element happens to be topmost at this point.
+      var listRows = document.querySelectorAll('#gantt-container .gtasktablewrapper tr[id*="child_"]');
+      for (var i = 0; i < listRows.length; i++) {
+        var r = listRows[i];
+        if (r.id.indexOf('childrow_') !== -1) continue;
+        var rect = r.getBoundingClientRect();
+        if (y >= rect.top && y < rect.bottom) return r;
+      }
+      return null;
+    }
+
+    $(document).off('mousedown.gactdrag').on('mousedown.gactdrag', '#gantt-container .gact-reorder-handle', function(e) {
+      var tid = $(this).attr('data-tid');
+      var db = (window._ganttActCells || {})[tid];
+      if (!db) return;
+      var row = document.getElementById('gantt-container' + 'child_' + tid);
+      if (!row) return;
+
+      _dragTid = tid;
+      _dragScheduleitemId = db.scheduleitemId;
+      _dragRow = row;
+      $(this).addClass('gact-dragging');
+
+      var nameCell = row.querySelector('td.gtaskname');
+      $ghost.text(nameCell ? nameCell.textContent.trim() : 'Activity')
+        .css({ left: (e.clientX + 14) + 'px', top: (e.clientY + 10) + 'px', display: 'block' });
+
+      e.preventDefault();
+    });
+
+    $(document).off('mousemove.gactdrag').on('mousemove.gactdrag', function(e) {
+      if (!_dragTid) return;
+      $ghost.css({ left: (e.clientX + 14) + 'px', top: (e.clientY + 10) + 'px' });
+
+      if (_dropRow) { $(_dropRow).removeClass('gact-drop-target'); _dropRow = null; }
+      var cells = window._ganttActCells || {};
+      var row = _rowFromPoint(e.clientX, e.clientY);
+      if (row && row !== _dragRow) {
+        var rowTid = row.id.slice(row.id.indexOf('child_') + 'child_'.length);
+        var rowDb = cells[rowTid];
+        // Any other leaf-activity row is a valid drop target now — same
+        // WBS item reorders in place, a different WBS item/IOW moves the
+        // activity there (see mouseup below).
+        if (rowDb) {
+          _dropRow = row;
+          $(row).addClass('gact-drop-target');
+        }
+      }
+    });
+
+    $(document).off('mouseup.gactdrag').on('mouseup.gactdrag', function(e) {
+      if (!_dragTid) return;
+      $('.gact-reorder-handle.gact-dragging').removeClass('gact-dragging');
+      $ghost.css('display', 'none');
+      if (_dropRow) $(_dropRow).removeClass('gact-drop-target');
+
+      var dragTid = _dragTid, scheduleitemId = _dragScheduleitemId, dropRow = _dropRow;
+      _dragTid = null; _dragScheduleitemId = null; _dragRow = null; _dropRow = null;
+      if (!dropRow) return; // released outside a valid activity row — no-op
+
+      var cells = window._ganttActCells || {};
+      var dropTid = dropRow.id.slice(dropRow.id.indexOf('child_') + 'child_'.length);
+      var dropDb = cells[dropTid];
+      if (!dropDb) return;
+
+      if (dropDb.scheduleitemId === scheduleitemId) {
+        // Same WBS item — reorder within it. Build the new order: every
+        // activity in this WBS item, in current DOM order, with the
+        // dragged one removed and reinserted at the drop row's position.
+        var orderedTids = [];
+        $('#gantt-container .gtasktablewrapper tr[id*="child_"]').each(function() {
+          if (this.id.indexOf('childrow_') !== -1) return;
+          var rowTid = this.id.slice(this.id.indexOf('child_') + 'child_'.length);
+          var rowDb = cells[rowTid];
+          if (rowDb && rowDb.scheduleitemId === scheduleitemId) orderedTids.push(rowTid);
+        });
+        var fromIdx = orderedTids.indexOf(dragTid);
+        var toIdx = orderedTids.indexOf(dropTid);
+        if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+        orderedTids.splice(fromIdx, 1);
+        toIdx = orderedTids.indexOf(dropTid);
+        orderedTids.splice(toIdx, 0, dragTid);
+
+        var wanIds = orderedTids.map(function(t){ return cells[t].wanId; });
+
+        $.ajax({
+          type: 'POST',
+          url: _base + '/reordertaskswithinwbs',
+          dataType: 'json',
+          data: { scheduleitem_id: scheduleitemId, wan_ids: wanIds },
+          success: function(resp) {
+            if (!resp || resp.error !== 'No') {
+              alert((resp && resp.errortext) || 'Could not reorder — please try again.');
+              return;
+            }
+            if (typeof window.loadGantt === 'function') window.loadGantt();
+          },
+          error: function() {
+            alert('Network error — could not save the new order.');
+          }
+        });
+      } else {
+        // Different WBS item/IOW — move the activity there, placed right
+        // after the row it was dropped on.
+        $.ajax({
+          type: 'POST',
+          url: _base + '/moveactivitytoiow',
+          dataType: 'json',
+          data: {
+            wan_id: cells[dragTid].wanId,
+            target_scheduleitem_id: dropDb.scheduleitemId,
+            drop_after_wan_id: dropDb.wanId
+          },
+          success: function(resp) {
+            if (!resp || resp.error !== 'No') {
+              alert((resp && resp.errortext) || 'Could not move — please try again.');
+              return;
+            }
+            if (typeof window.loadGantt === 'function') window.loadGantt();
+          },
+          error: function() {
+            alert('Network error — could not save the move.');
+          }
+        });
+      }
+    });
+  })();
 
   // ── Gantt Cost Popup — wired once at page level (not per-draw) ──────────────
   (function() {
@@ -1167,7 +1681,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       return u.length > 8 ? _sh(u, 8) : u;
     }
 
-    function _gauge(elId, val, maxVal, trackStyle, targetFrac, lbl1, v1, lbl2, v2) {
+    function _gauge(elId, val, maxVal, trackStyle, targetFrac, lbl1, v1, lbl2, v2, targetVal, extraLbl, centreOverrideVal, hideTickWhenNotOver) {
       var el = document.getElementById(elId);
       if (!el) return;
       val = +val || 0; maxVal = +maxVal || 1;
@@ -1188,452 +1702,985 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         }
         return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="' + cap + '"/>';
       }
+      // esttarget: the Estimate is the fixed target sitting at dial centre
+      // (always 50%, by construction — maxVal is always 2×Estimate at the
+      // one call site that uses this mode) — track is green on the left
+      // half (Actual would land under-target there) and red on the right
+      // half (over-target), and the needle/centre-dot colour itself
+      // switches red/green live based on whether Actual is currently over
+      // or under that Estimate, instead of a fixed colour by dial position.
+      var isEstTarget = (trackStyle === 'esttarget');
+      // esttarget-prop: same green/orange target-line mechanic as
+      // esttarget, but the target (Planned Duration) sits at whatever
+      // fraction of the dial it actually falls at (targetFrac), rather
+      // than always dead-centre — maxVal is the larger of Planned/Actual
+      // here, not a fixed 2×target, so the target line recedes left as
+      // Actual grows past Planned instead of staying pinned at 50%.
+      var isEstTargetProp = (trackStyle === 'esttarget-prop');
+      var isAnyEstTarget = isEstTarget || isEstTargetProp;
+      var tf = isEstTargetProp ? Math.max(0, Math.min(1, +targetFrac || 0)) : 0.5;
+      var overTarget = isAnyEstTarget && (val > (+targetVal || 0));
+      var underTarget = isAnyEstTarget && (val < (+targetVal || 0));
       var trackSvg = (trackStyle === 'flat') ? arc(0, 1, '#a8d4f5')
         : (trackStyle === 'cost') ? arc(0, 0.5, '#00838f') + arc(0.5, 1, '#FF6D00')
+        : (trackStyle === 'qtygreen' || trackStyle === 'qtypercent') ? arc(0, 0.5, '#FF6D00') + arc(0.5, 1, '#27ae60')
+        : (trackStyle === 'costgreen' || trackStyle === 'costpercent') ? arc(0, 0.5, '#27ae60') + arc(0.5, 1, '#FF6D00')
+        // esttarget-prop: orange-red only fills the segment beyond the
+        // target tick when Actual genuinely exceeds it (overTarget) — the
+        // scale still stretches (×1.1 headroom) to fit whichever of
+        // val/targetVal is larger even when there's no overrun, so without
+        // this guard the segment from tf→1 would always paint orange even
+        // when nothing is actually over (e.g. Work Done's Done=0,
+        // Sched=5200 case). When not over, that same segment stays the
+        // grey base colour instead of being left unpainted.
+        : isEstTargetProp ? arc(0, tf, '#5a6b82') + arc(tf, 1, overTarget ? '#e64a19' : '#5a6b82')
+        : isEstTarget ? arc(0, 0.5, '#27ae60') + arc(0.5, 1, '#e64a19')
         : arc(0, 0.5, '#8B0000') + arc(0.5, 1, '#81C784');
       var nr = r - 15, na = Math.PI * (1 - f);
       var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
-      var fillCol = (trackStyle === 'flat') ? '#0d1f6e' : (trackStyle === 'cost') ? '#1b9e8e' : '#1a3a6b';
-      var dotCol  = (trackStyle === 'flat') ? '#a8d4f5' : '#dce3ef';
-      var centreVal = (trackStyle === 'cost') ? _fmtCost(val) : _fm(val);
+      var fillCol = (trackStyle === 'flat') ? '#0d1f6e' : (trackStyle === 'cost' || trackStyle === 'costgreen' || trackStyle === 'qtygreen' || trackStyle === 'costpercent' || trackStyle === 'qtypercent') ? '#1b9e8e' : '#1a3a6b';
+      var dotCol  = (trackStyle === 'flat') ? '#a8d4f5' : isAnyEstTarget ? (overTarget ? '#e64a19' : underTarget ? (isEstTargetProp ? '#5a6b82' : '#27ae60') : '#dce3ef') : '#dce3ef';
+      var needleCol = isAnyEstTarget ? '#000' : '#333';
+      var actValCol = isAnyEstTarget ? '#000' : '#333';
+      var centreVal = isEstTargetProp ? _fm(+targetVal || 0) : isEstTarget ? _fmtCost(+targetVal || 0) : (trackStyle === 'costpercent' || trackStyle === 'qtypercent') ? (Math.round(val) + '%') : (trackStyle === 'cost' || trackStyle === 'costgreen') ? _fmtCost(val) : _fm(val);
       var lblSvg = '';
       if (lbl1) lblSvg += '<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">' + lbl1 + ' <tspan font-weight="700">' + v1 + '</tspan></text>';
       if (lbl2) lblSvg += '<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">' + lbl2 + ' <tspan font-weight="700">' + v2 + '</tspan></text>';
-      var svg = '<svg width="100%" height="100%" viewBox="0 0 210 138" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:hidden;">'
+      // esttarget-prop only, and only when the caller explicitly passes
+      // extraLbl (e.g. "Elapsed 80 d" for the Elapsed Days dial) — a third
+      // row below Planned/Actual, centred, on its own y so it never
+      // crowds against them. Not every esttarget-prop dial has a third
+      // figure worth showing (Work Done doesn't), so this stays opt-in.
+      if (isEstTargetProp && extraLbl) lblSvg += '<text x="' + cx + '" y="148" text-anchor="middle" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">' + extraLbl + '</text>';
+      // esttarget: a yellow tick marking the exact target point on the
+      // track — dead centre (top of dial) for the fixed-50% mode, or at
+      // the computed targetFrac position for esttarget-prop.
+      var targetTickSvg = '';
+      if (isEstTarget) {
+        targetTickSvg = '<line x1="' + cx + '" y1="' + (cy - r - 4) + '" x2="' + cx + '" y2="' + (cy - r + sw + 4) + '" stroke="#FFD500" stroke-width="3" stroke-linecap="round"/>';
+      } else if (isEstTargetProp && !(hideTickWhenNotOver && !overTarget)) {
+        var ta = Math.PI * (1 - tf);
+        var tcos = Math.cos(ta), tsin = Math.sin(ta);
+        var tx1 = (cx + (r - sw / 2 - 4) * tcos).toFixed(1), ty1 = (cy - (r - sw / 2 - 4) * tsin).toFixed(1);
+        var tx2 = (cx + (r + sw / 2 + 4) * tcos).toFixed(1), ty2 = (cy - (r + sw / 2 + 4) * tsin).toFixed(1);
+        targetTickSvg = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#FFD500" stroke-width="3" stroke-linecap="round"/>';
+        // Planned-value label sitting just past the tick's outer end,
+        // outside the dial arc — anchor flips left/right/centre depending
+        // on which side of the dial the tick falls so the text never runs
+        // off the edge.
+        var tlx = (cx + (r + sw / 2 + 14) * tcos).toFixed(1), tly = Math.max(11, cy - (r + sw / 2 + 14) * tsin).toFixed(1);
+        var tAnchor = tcos > 0.15 ? 'start' : (tcos < -0.15 ? 'end' : 'middle');
+        targetTickSvg += '<text x="' + tlx + '" y="' + tly + '" text-anchor="' + tAnchor + '" dominant-baseline="middle" font-size="17" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + _fm(+targetVal || 0) + '</text>';
+      }
+      var needleWidth = isAnyEstTarget ? 4 : 3;
+      var pivotCol = isAnyEstTarget ? '#000' : '#555';
+      // esttarget only: Actual shown as a second, smaller line directly
+      // under the Estimate figure at dial centre, in the same black as
+      // the target text/needle — the track halves and centre-dot are
+      // what carry the over/under signal now, not the text or needle.
+      var actualCentreSvg = isEstTarget
+        ? '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="16" font-weight="700" fill="' + actValCol + '" font-family="Barlow Condensed,Arial">Act ' + _fmtCost(val) + '</text>'
+        : '';
+      // esttarget-prop: dial centre shows centreOverrideVal if the caller
+      // passed one (e.g. Elapsed Days shows Actual Duration at centre,
+      // distinct from the needle's own Elapsed Days value), otherwise
+      // falls back to the needle's own value (val) — correct default for
+      // Work Done, where centre and needle both mean the same "Done" qty.
+      var centreDisplayVal = (centreOverrideVal !== undefined && centreOverrideVal !== null) ? +centreOverrideVal : val;
+      var centreValSvg = isEstTargetProp
+        ? '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="16" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">Act ' + _fm(centreDisplayVal) + '</text>'
+        : '<text x="' + cx + '" y="' + (cy - (isAnyEstTarget ? 32 : 18)) + '" text-anchor="middle" font-size="' + (isAnyEstTarget ? 16 : 22) + '" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">' + centreVal + '</text>';
+      // esttarget-prop only: Elapsed Days label at the needle's tip,
+      // just outside the dial track — the needle itself points to the
+      // Elapsed Days fraction, so its own value is shown right there
+      // rather than only at dial centre (which now reads Actual Duration).
+      var needleTipSvg = '';
+      if (isEstTargetProp) {
+        var ntx = (cx + (r + sw / 2 + 12) * Math.cos(na)).toFixed(1), nty = (cy - (r + sw / 2 + 12) * Math.sin(na)).toFixed(1);
+        var ntAnchor = Math.cos(na) > 0.15 ? 'start' : (Math.cos(na) < -0.15 ? 'end' : 'middle');
+        needleTipSvg = '<text x="' + ntx + '" y="' + nty + '" text-anchor="' + ntAnchor + '" dominant-baseline="middle" font-size="13" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + _fm(val) + '</text>';
+      }
+      // esttarget-prop needs extra vertical room for the Elapsed-Days row
+      // sitting below Planned/Actual, so it never crowds or clips.
+      var svgH = isEstTargetProp ? 138 : 120;
+      var svgVB = isEstTargetProp ? '0 0 210 156' : '0 0 210 138';
+      var svg = '<svg width="100%" height="' + svgH + '" viewBox="' + svgVB + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:hidden;flex-shrink:0;">'
         + trackSvg
-        + (f > 0 ? arc(0, f, fillCol, (trackStyle === 'cost' ? 'butt' : 'round')) : '')
-        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
-        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/>'
+        + ((f > 0 && !isAnyEstTarget && trackStyle !== 'costgreen' && trackStyle !== 'qtygreen' && trackStyle !== 'costpercent' && trackStyle !== 'qtypercent') ? arc(0, f, fillCol, (trackStyle === 'cost' ? 'butt' : 'round')) : '')
+        + targetTickSvg
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="' + needleCol + '" stroke-width="' + needleWidth + '" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="' + pivotCol + '"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="' + dotCol + '"/>'
-        + '<text x="' + cx + '" y="' + (cy - 18) + '" text-anchor="middle" font-size="22" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">' + centreVal + '</text>'
+        + centreValSvg
+        + actualCentreSvg
+        + needleTipSvg
         + lblSvg
         + '</svg>';
       el.innerHTML += svg;
     }
 
-    // 1. Unit Cost of Resources → gm-cd-c6
+    // 1. Unit Cost of Resources → gm-cd-ucr — one horizontal bar per
+    // distinct Resource Type allocated to the activity (Materials,
+    // Support Resources, etc.), count of resources under that type as
+    // the bar's value, drawn as a proper axis chart (gridlines + value
+    // ticks) like the Resource Groups popup one level down.
+    var _ucrTipItems = [];
+    var _UCR_BAR_COLS = ['#3461b8','#d4845a','#27afc4','#7c5cbf','#f0c419','#8fa3bc','#ec407a','#26a69a'];
+    // Base-bar palette for the Est/Act (Resources) chart specifically —
+    // deliberately excludes orange-red/teal hues (#e64a19 / #1b9e8e are the
+    // fixed over/under-estimate overlay colours) so a resource's base bar
+    // never visually merges with its own overrun or saving indicator.
+    var _UCR_ESTACT_COLS = ['#3461b8','#7c5cbf','#2d6ea5','#5b4b8a','#4472c4','#8064a2','#376092','#5c3d99'];
+
+    // "Nice" axis step: pick a round number (1/2/5 × 10^n) so gridlines land
+    // on clean values instead of awkward fractions of the max value.
+    function _ucrNiceStep(maxVal, targetTicks) {
+      if (maxVal <= 0) return 1;
+      var rough = maxVal / targetTicks;
+      var mag = Math.pow(10, Math.floor(Math.log(rough) / Math.LN10));
+      var norm = rough / mag;
+      var step = (norm <= 1) ? 1 : (norm <= 2) ? 2 : (norm <= 5) ? 5 : 10;
+      return step * mag;
+    }
+
+    // Shared horizontal bar chart: `rows` = [{name, value}], category
+    // names on the left (Y axis), value axis along the bottom (X axis)
+    // with gridlines at clean tick intervals — matches a standard
+    // horizontal bar-graph layout (axis line, tick marks, gridlines).
+    function _renderHBarChart(rows, opts) {
+      opts = opts || {};
+      var onClick = opts.onClick || '';
+      var labelW = opts.labelW || 90;
+      var labelCls = opts.bigLabels ? ' gm-hchart-rowlbl-lg' : '';
+      var fam = "font-family:'Barlow Condensed',sans-serif;";
+      if (!rows.length) return '<div class="gm-bar-tip-empty">No data</div>';
+
+      var showOverrun = !!opts.showOverrun;
+      var maxVal = 0;
+      rows.forEach(function(r) {
+        var total = (+r.value || 0) + (showOverrun ? (+r.overCount || 0) : 0);
+        maxVal = Math.max(maxVal, total);
+      });
+      if (maxVal <= 0) maxVal = 1;
+      var step = _ucrNiceStep(maxVal, 4);
+      // Whole-number data (e.g. a count of resources) should never show
+      // fractional gridlines like 0.5 — round the step up to at least 1.
+      if (opts.integerTicks) step = Math.max(1, Math.round(step));
+      var axisMax = Math.ceil(maxVal / step) * step;
+      if (axisMax <= 0) axisMax = step;
+      var ticks = [];
+      for (var t = 0; t <= axisMax + 1e-9; t += step) ticks.push(t);
+
+      var html = opts.yTitle ? '<div class="gm-hchart-withytitle"><div class="gm-hchart-ytitle">' + opts.yTitle + '</div><div class="gm-hchart-main">' : '';
+      html += '<div class="gm-hchart' + (opts.smallFont ? ' gm-hchart-sm' : '') + '" style="--gm-axis-w:' + labelW + 'px;">';
+      html += '<div class="gm-hchart-plot">';
+      html += '<div class="gm-hchart-grid">';
+      ticks.forEach(function(tv) { html += '<div class="gm-hchart-gridline" style="left:' + ((tv / axisMax) * 100) + '%;"></div>'; });
+      html += '</div><div class="gm-hchart-rows">';
+      rows.forEach(function(r, i) {
+        var val = +r.value || 0;
+        var overCount = showOverrun ? (+r.overCount || 0) : 0;
+        var pct = Math.max(0, Math.min(100, (val / axisMax) * 100));
+        var overPct = Math.max(0, Math.min(100 - pct, (overCount / axisMax) * 100));
+        var col = _UCR_BAR_COLS[i % _UCR_BAR_COLS.length];
+        var cls = onClick ? (' ' + onClick + '-bar') : '';
+        var hasOver = overPct > 0;
+        var valLbl = _fmtFull(val) + (hasOver ? (' + ' + overCount) : '');
+        var barH = opts.barHeight || 12;
+        var trackStyle = opts.barHeight ? ('height:' + barH + 'px;') : '';
+        var rowInlineStyle = (opts.barHeight ? ('height:' + (barH + 8) + 'px;') : '') + (onClick ? 'cursor:pointer;' : '');
+        var overSeg = hasOver
+          ? '<div class="gm-hchart-bar-over" style="left:' + pct + '%;width:' + overPct + '%;height:' + barH + 'px;" title="' + overCount + ' over estimate">' + (opts.hideBarVal ? '' : '<span class="gm-hchart-barval">' + valLbl + '</span>') + '</div>'
+          : '';
+        var barStyle = 'width:' + pct + '%;height:' + barH + 'px;background:' + (opts.singleColor || col) + ';' + (hasOver ? 'border-radius:0;' : '');
+        var baseVal = (hasOver || opts.hideBarVal) ? '' : '<span class="gm-hchart-barval">' + valLbl + '</span>';
+        html += '<div class="gm-hchart-row' + cls + '"' + (rowInlineStyle ? ' style="' + rowInlineStyle + '"' : '') + (onClick ? ' data-name="' + $('<span>').text(r.name).html() + '"' : '') + '>'
+          + '<div class="gm-hchart-rowlbl' + labelCls + '" title="' + $('<span>').text(r.name).html() + '">' + $('<span>').text(r.name).html() + '</div>'
+          + '<div class="gm-hchart-rowtrack" style="' + trackStyle + '"><div class="gm-hchart-bar" style="' + barStyle + '">' + baseVal + '</div>' + overSeg + '</div>'
+          + '</div>';
+      });
+      html += '</div></div>';
+      html += '<div class="gm-hchart-xaxis"><div class="gm-hchart-xaxis-ticks">';
+      ticks.forEach(function(tv) { html += '<div class="gm-hchart-xtick" style="left:' + ((tv / axisMax) * 100) + '%;">' + _fmtFull(tv) + '</div>'; });
+      html += '</div></div>';
+      if (opts.xTitle) html += '<div class="gm-hchart-xtitle">' + opts.xTitle + '</div>';
+      html += '</div>';
+      if (opts.yTitle) html += '</div></div>';
+      return html;
+    }
+
+    // Shared vertical bar chart: `rows` = [{name, value}] OR, when
+    // opts.estAct is true, [{name, est, act, hasActual}] — category names
+    // on the X axis (bottom), value axis on the left (Y axis) with
+    // horizontal gridlines at clean tick intervals, value labelled on top
+    // of each bar. In est/act mode, the bar is drawn to the Estimate
+    // height with an overlay segment on top: orange extension above the
+    // bar when Actual > Estimate (over budget), teal segment marking
+    // where Actual sits within the bar when Actual < Estimate (under
+    // budget) — same over/under convention as the rest of this popup.
+    function _renderVBarChart(rows, opts) {
+      opts = opts || {};
+      if (!rows.length) return '<div class="gm-bar-tip-empty">No data</div>';
+      var fmtBase = opts.fmt || _fmtFull;
+      // valUnit: quantity/rate charts pass their unit (Sqm, Metre, …) so
+      // every bar's value label carries it — cost/currency charts leave
+      // this unset and show plain numbers, since ₹ amounts have no unit.
+      // valUnitSep lets a rate chart use "/Sqm" instead of the default
+      // " Sqm" separator, so a per-unit rate never reads like a quantity.
+      var fmt = opts.valUnit ? function(v){ return fmtBase(v) + (opts.valUnitSep || ' ') + opts.valUnit; } : fmtBase;
+
+      var maxVal = 0;
+      rows.forEach(function(r) {
+        if (opts.estAct) maxVal = Math.max(maxVal, +r.est || 0, +r.act || 0);
+        else maxVal = Math.max(maxVal, +r.value || 0);
+      });
+      if (maxVal <= 0) maxVal = 1;
+      var step = _ucrNiceStep(maxVal, 5);
+      var axisMax = Math.ceil(maxVal / step) * step;
+      if (axisMax <= 0) axisMax = step;
+      var ticks = [];
+      for (var t = 0; t <= axisMax + 1e-9; t += step) ticks.push(t);
+      ticks.reverse(); // top → bottom for the Y-axis label column
+
+      var html = '<div class="gm-vchart">';
+      html += '<div class="gm-vchart-plot">';
+      html += '<div class="gm-vchart-yaxis">';
+      ticks.forEach(function(tv) { html += '<div class="gm-vchart-ytick">' + fmtBase(tv) + '</div>'; });
+      html += '</div>';
+      html += '<div class="gm-vchart-area">';
+      html += '<div class="gm-vchart-grid">';
+      ticks.forEach(function(tv) { html += '<div class="gm-vchart-gridline" style="bottom:' + ((tv / axisMax) * 100) + '%;"></div>'; });
+      html += '</div>';
+      html += '<div class="gm-vchart-bars">';
+      rows.forEach(function(r, i) {
+        var col = _UCR_BAR_COLS[i % _UCR_BAR_COLS.length];
+        if (opts.estAct) {
+          var est = +r.est || 0, act = +r.act || 0;
+          var over  = r.hasActual && act > est;
+          var under = r.hasActual && act < est;
+          var totalPct = Math.max(0, Math.min(100, (Math.max(est, act) / axisMax) * 100));
+          var diffAbsPct = Math.max(0, (Math.abs(act - est) / axisMax) * 100);
+          // .gm-vchart-diff sits inside a bar sized to totalPct of the chart —
+          // its own height must be expressed as a % OF THE BAR, not of the
+          // chart, since CSS % height resolves against the parent element.
+          var diffPctOfBar = (totalPct > 0) ? Math.min(100, (diffAbsPct / totalPct) * 100) : 0;
+          var diffCol = over ? '#e64a19' : (under ? '#1b9e8e' : '');
+          var diffSeg = (r.hasActual && diffPctOfBar > 0) ? '<div class="gm-vchart-diff" style="height:' + diffPctOfBar + '%;background:' + diffCol + ';"></div>' : '';
+          // When Actual is within/under Estimate: Estimate on top, full
+          // Actual value below. When Actual exceeds Estimate: full Actual
+          // value on top in red, Estimate below — so the higher figure
+          // always reads first, and the bar's own colour signal is echoed
+          // in the number itself.
+          var estLbl = '<span class="gm-vchart-barval">' + fmt(est) + '</span>';
+          var actLblCol = over ? '#e64a19' : (under ? '#1b9e8e' : '#1a2540');
+          var actLbl = (r.hasActual) ? '<span class="gm-vchart-barval-diff" style="color:' + actLblCol + ';">' + fmt(act) + '</span>' : '';
+          var barValHtml = over ? (actLbl + estLbl) : (estLbl + actLbl);
+          // Each resource keeps its own base colour (from the orange/teal-
+          // free _UCR_ESTACT_COLS palette) so bars stay visually distinct,
+          // while the over/under overlay colour never collides with it.
+          var baseCol = _UCR_ESTACT_COLS[i % _UCR_ESTACT_COLS.length];
+          html += '<div class="gm-vchart-col">'
+            + '<div class="gm-vchart-bar-wrap" style="height:' + totalPct + '%;">'
+            +   barValHtml
+            +   '<div class="gm-vchart-bar" style="background:' + (opts.singleColor || baseCol) + ';">' + diffSeg + '</div>'
+            + '</div></div>';
+        } else {
+          var val = +r.value || 0;
+          var pct = Math.max(0, Math.min(100, (val / axisMax) * 100));
+          html += '<div class="gm-vchart-col">'
+            + '<div class="gm-vchart-bar-wrap" style="height:' + pct + '%;">'
+            +   '<span class="gm-vchart-barval">' + fmt(val) + '</span>'
+            +   '<div class="gm-vchart-bar" style="background:' + (opts.singleColor || col) + ';"></div>'
+            + '</div></div>';
+        }
+      });
+      html += '</div></div></div>';
+      html += '<div class="gm-vchart-xaxis"><div class="gm-vchart-xaxis-spacer"></div><div class="gm-vchart-xlabels">';
+      rows.forEach(function(r) { html += '<div class="gm-vchart-xlbl" title="' + $('<span>').text(r.name).html() + '">' + $('<span>').text(r.name).html() + '</div>'; });
+      html += '</div></div>';
+      if (opts.yTitle) html += '<div class="gm-vchart-ytitle">' + opts.yTitle + '</div>';
+      html += '</div>';
+      return html;
+    }
+
+    // Shared renderer for the three Type-bar panels (Unit Cost of
+    // Resources / Yield / Cost of Resources) — all three now use the
+    // same Type→Group→Resource bar-chart structure; only the metric's
+    // own est/act/over formula (see _UCR_METRICS) differs between them.
+    function _renderUcrTypePanel(elId, metric, items, actName) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      if (!items.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No resources allocated</div>'; return; }
+
+      var rows = _ucrTypesFor(metric);
+      var html = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _sh(actName||'', 40) + '</div>';
+      // Centred vertically within the panel (justify-content:center) so a
+      // single bar sits mid-panel, and the whole stack stays centred as
+      // more Resource Types are added — growing evenly instead of pinned
+      // to the top. overflow-y:auto covers the case where it eventually
+      // outgrows the panel's own height.
+      html += '<div data-metric="' + metric + '" style="width:100%;box-sizing:border-box;padding:8px 10px;flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;overflow-y:auto;">'
+        + _renderHBarChart(rows, { onClick: 'gm-ucr-type', labelW: 90, bigLabels: true, smallFont: true, integerTicks: true, showOverrun: true, xTitle: 'No. of Resources' })
+        + '</div>';
+      el.innerHTML = html;
+    }
+
     function _renderUnitCostOfResource(items, actName) {
-      var el = document.getElementById('gm-cd-c6');
-      if (!el) return;
       items = items || [];
-      if (!items.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No resources allocated</div>'; return; }
-      var maxVal = 0;
-      items.forEach(function(r) {
-        var est = +r.rate || 0;
-        var act = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined) ? +r.actual_unit_cost : est;
-        if (Math.max(est, act) > maxVal) maxVal = Math.max(est, act);
-      });
-      if (maxVal === 0) maxVal = 1;
-
-      // Colour palette for resources (cycles if more than palette length)
-      var palette = ['#3461b8','#00838f','#e8820c','#8e44ad','#27ae60','#c0392b','#2980b9','#d4845a'];
-
-      var barCols = '', valRow = '', lblRow = '', legendRows = '';
-      items.forEach(function(r, idx) {
-        var est = +r.rate || 0;
-        var hasActual = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
-        var act = hasActual ? +r.actual_unit_cost : est;
-        var unit = r.unit ? ' /' + _shu(r.unit) : '';
-        var col = palette[idx % palette.length];
-        var diff = act - est;
-        var diffCol = diff > 0 ? '#e8820c' : '#1b9e8e';
-        var valCol  = diff > 0 ? '#e8820c' : (diff < 0 ? '#1b9e8e' : col);
-
-        // Single stacked bar: base = estimated (resource colour), overlay = difference
-        // Over: [est base | orange extension on top]
-        // Under: [act base | teal saving on top up to est level]
-        // Even: just the base
-        var estH  = (est / maxVal * 100).toFixed(1);
-        var actH  = (act / maxVal * 100).toFixed(1);
-        var barInner;
-        if (diff > 0) {
-          var diffH = ((diff) / maxVal * 100).toFixed(1);
-          barInner =
-            '<div style="width:100%;height:' + diffH + '%;background:#e8820c;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
-            + '<div style="width:100%;height:' + estH + '%;background:' + col + ';flex-shrink:0"></div>';
-        } else if (diff < 0) {
-          var saveH = (Math.abs(diff) / maxVal * 100).toFixed(1);
-          barInner =
-            '<div style="width:100%;height:' + saveH + '%;background:#1b9e8e;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
-            + '<div style="width:100%;height:' + actH + '%;background:' + col + ';flex-shrink:0"></div>';
-        } else {
-          barInner = '<div style="width:100%;height:' + estH + '%;background:' + col + ';border-radius:2px 2px 0 0;flex-shrink:0"></div>';
-        }
-
-        barCols +=
-          '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;padding:0 3px">'
-          + barInner
-          + '</div>';
-
-        // Act value above bar (coloured by diff), Est value smaller below it
-        valRow +=
-          '<div style="flex:1;text-align:center;padding-bottom:1px">'
-          + '<div style="font-size:8px;font-weight:700;color:' + valCol + '">' + _fmtCost(act) + '</div>'
-          + '<div style="font-size:7px;color:#888">' + _fmtCost(est) + '</div>'
-          + '</div>';
-
-        // Index number below bars
-        lblRow += '<div style="flex:1;text-align:center;font-size:9px;color:#1a2540;font-weight:700;padding-top:2px">' + (idx + 1) + '</div>';
-
-        // Legend row
-        legendRows +=
-          '<div style="display:flex;align-items:baseline;gap:5px;padding:2px 6px;border-bottom:1px solid #f0f3fa;font-size:10px">'
-          + '<span style="font-weight:700;color:#1a2540;flex-shrink:0;min-width:12px">' + (idx + 1) + '.</span>'
-          + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + col + ';flex-shrink:0;margin-bottom:1px"></span>'
-          + '<span style="flex:1;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (r.name||'') + '">' + (r.name||'') + '</span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fmtFull(est) + unit + '</b></span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + valCol + '">' + _fmtFull(act) + unit + '</b></span>'
-          + '</div>';
-      });
-
-      // Chart key
-      var key = '<div style="display:flex;gap:12px;padding:3px 6px;flex-shrink:0">'
-        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#4a5568;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Estimated</span>'
-        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#e8820c;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Over</span>'
-        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#1b9e8e;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Under</span>'
-        + '</div>';
-
-      el.innerHTML =
-        '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0">' + _sh(actName||'', 40) + '</div>'
-        + '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">'
-        +   '<div style="display:flex;gap:2px;padding:2px 6px 0;flex-shrink:0">' + valRow + '</div>'
-        +   '<div style="display:flex;gap:2px;flex:1;min-height:0;padding:0 6px;align-items:flex-end;border-bottom:1px solid #c8d0e0">' + barCols + '</div>'
-        +   '<div style="display:flex;gap:2px;padding:2px 6px;flex-shrink:0">' + lblRow + '</div>'
-        +   key
-        +   '<div style="overflow-y:auto;flex-shrink:0;max-height:90px;border-top:1px solid #e8efff;margin-top:2px">' + legendRows + '</div>'
-        + '</div>';
+      _ucrTipItems = items;
+      _renderUcrTypePanel('gm-cd-ucr', 'ucr', items, actName);
     }
 
-    // 2. Consumption of Resources → gm-cd-c7
-    function _renderResourceConsumption(items, actName, lastQty, actUnit) {
-      var el = document.getElementById('gm-cd-c7');
-      if (!el) return;
-      items = items || [];
-      if (!items.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No resources allocated</div>'; return; }
-      var maxVal = 0;
-      items.forEach(function(r) {
-        var est = +r.planned_consumption || 0;
-        var typeId = +r.type_id;
-        var isMaterial = [2, 6, 7, 8].indexOf(typeId) >= 0;
-        var isSC = typeId === 4;
-        var hasActual = (isMaterial && r.indent_raised) || (isSC && r.has_mb);
-        var act = hasActual ? (+r.actual_consumption || 0) : est;
-        if (Math.max(est, act) > maxVal) maxVal = Math.max(est, act);
-      });
-      if (maxVal === 0) maxVal = 1;
+    /* ═══════════════════════════════════════════════════════════════
+       Shared Type → Group → Resource drill-down popup (click-driven),
+       used by all three resource-based panels — Unit Cost of Resources,
+       Yield, and Cost of Resources. Each panel supplies its own items
+       array and its own value/over-estimate formulas via _UCR_METRICS
+       below; none of those formulas are touched here — this block only
+       controls how the numbers are grouped and drawn (Type bars → Group
+       popup → per-resource popup with vertical Est/Act bars).
+    ═══════════════════════════════════════════════════════════════ */
+    var _ucrDrillLevel = 'groups'; // 'groups' | 'resources'
+    var _ucrDrillMetric = 'ucr';
+    var _ucrDrillType = '';
+    var _ucrDrillGroup = '';
 
-      var palette = ['#3461b8','#00838f','#e8820c','#8e44ad','#27ae60','#c0392b','#2980b9','#d4845a'];
-      var barCols = '', valRow = '', lblRow = '', legendRows = '';
-
-      items.forEach(function(r, idx) {
-        var est = +r.planned_consumption || 0;
-        var typeId = +r.type_id;
-        var isMaterial = [2, 6, 7, 8].indexOf(typeId) >= 0;
-        var isSC = typeId === 4;
-        var hasActual = (isMaterial && r.indent_raised) || (isSC && r.has_mb);
-        var act = hasActual ? (+r.actual_consumption || 0) : est;
-        var unit = r.unit ? _shu(r.unit) : (r.task_unit ? _shu(r.task_unit) : '');
-        var col = palette[idx % palette.length];
-        var diff = act - est;
-        var valCol = diff > 0 ? '#e8820c' : (diff < 0 ? '#1b9e8e' : col);
-
-        var estH  = (est / maxVal * 100).toFixed(1);
-        var actH  = (act / maxVal * 100).toFixed(1);
-        var barInner;
-        if (diff > 0) {
-          var diffH = (diff / maxVal * 100).toFixed(1);
-          barInner =
-            '<div style="width:100%;height:' + diffH + '%;background:#e8820c;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
-            + '<div style="width:100%;height:' + estH + '%;background:' + col + ';flex-shrink:0"></div>';
-        } else if (diff < 0) {
-          var saveH = (Math.abs(diff) / maxVal * 100).toFixed(1);
-          barInner =
-            '<div style="width:100%;height:' + saveH + '%;background:#1b9e8e;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
-            + '<div style="width:100%;height:' + actH + '%;background:' + col + ';flex-shrink:0"></div>';
-        } else {
-          barInner = '<div style="width:100%;height:' + estH + '%;background:' + col + ';border-radius:2px 2px 0 0;flex-shrink:0"></div>';
-        }
-
-        barCols +=
-          '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;padding:0 3px">'
-          + barInner
-          + '</div>';
-
-        valRow +=
-          '<div style="flex:1;text-align:center;padding-bottom:1px">'
-          + '<div style="font-size:8px;font-weight:700;color:' + valCol + '">' + _fm(act) + (unit ? ' '+unit : '') + '</div>'
-          + '<div style="font-size:7px;color:#888">' + _fm(est) + (unit ? ' '+unit : '') + '</div>'
-          + '</div>';
-
-        lblRow += '<div style="flex:1;text-align:center;font-size:9px;color:#1a2540;font-weight:700;padding-top:2px">' + (idx + 1) + '</div>';
-
-        legendRows +=
-          '<div style="display:flex;align-items:baseline;gap:5px;padding:2px 6px;border-bottom:1px solid #f0f3fa;font-size:10px">'
-          + '<span style="font-weight:700;color:#1a2540;flex-shrink:0;min-width:12px">' + (idx + 1) + '.</span>'
-          + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + col + ';flex-shrink:0;margin-bottom:1px"></span>'
-          + '<span style="flex:1;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (r.name||'') + '">' + (r.name||'') + '</span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fmtFull(est) + (unit ? ' '+unit : '') + '</b></span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + valCol + '">' + _fmtFull(act) + (unit ? ' '+unit : '') + '</b></span>'
-          + '</div>';
-      });
-
-      var key = '<div style="display:flex;gap:12px;padding:3px 6px;flex-shrink:0">'
-        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#4a5568;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Estimated</span>'
-        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#e8820c;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Over</span>'
-        + '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#1b9e8e;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Under</span>'
-        + '</div>';
-
-      el.innerHTML =
-        '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0">' + _sh(actName||'', 40) + '</div>'
-        + '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">'
-        +   '<div style="display:flex;gap:2px;padding:2px 6px 0;flex-shrink:0">' + valRow + '</div>'
-        +   '<div style="display:flex;gap:2px;flex:1;min-height:0;padding:0 6px;align-items:flex-end;border-bottom:1px solid #c8d0e0">' + barCols + '</div>'
-        +   '<div style="display:flex;gap:2px;padding:2px 6px;flex-shrink:0">' + lblRow + '</div>'
-        +   key
-        +   '<div style="overflow-y:auto;flex-shrink:0;max-height:90px;border-top:1px solid #e8efff;margin-top:2px">' + legendRows + '</div>'
-        + '</div>';
+    // Shared by rcost's isOver/estAct below — a top-level function rather
+    // than an object method because isOver is called detached (e.g.
+    // resRows.filter(m.isOver)), which would lose a `this` binding.
+    function _rcostHasActual(r) {
+      var typeId = +r.type_id;
+      var isMaterial = [2, 6, 7, 8].indexOf(typeId) >= 0;
+      var isSC = typeId === 4;
+      var hasActualRate = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+      var hasActualQty  = (isMaterial && r.indent_raised) || (isSC && r.has_mb) || (!isMaterial && !isSC && r.has_acc_head);
+      return hasActualRate || hasActualQty;
     }
 
-    // 3. Cost of Resources → gm-cd-rcost
-    function _renderResourceCost(items, actName, actUnit) {
-      var el = document.getElementById('gm-cd-rcost');
-      if (!el) return;
-      items = items || [];
-      if (!items.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No resources</div>'; return; }
-
-      // Build grouped data (for chart) and per-resource detail (for tooltip)
-      var groups = {}, groupItems = {};
-      items.forEach(function(r) {
-        var key = r.type_name || 'Other';
-        if (!groups[key]) { groups[key] = { est: 0, act: 0 }; groupItems[key] = []; }
-        var estUC = +r.rate || 0;
-        var actUC = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined) ? +r.actual_unit_cost : estUC;
-        var estC  = estUC * (+r.planned_consumption || 0);
-        var actC  = actUC * (+r.actual_consumption  || 0);
-        groups[key].est += estC;
-        groups[key].act += actC;
-        groupItems[key].push({
-          name: r.name || r.resource_name || '—',
-          estUC: estUC, actUC: actUC,
-          estCons: +r.planned_consumption || 0,
-          actCons: +r.actual_consumption  || 0,
-          estCost: estC, actCost: actC,
-          unit: r.consumption_unit || actUnit || ''
-        });
-      });
-
-      var labels = Object.keys(groups);
-      if (!labels.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No data</div>'; return; }
-      var maxVal = 0;
-      labels.forEach(function(k) { maxVal = Math.max(maxVal, groups[k].est, groups[k].act); });
-      if (maxVal === 0) maxVal = 1;
-      var estRow = '', actRow = '', bars = '', lblRow = '', legendRows3 = '';
-      labels.forEach(function(k, idx3) {
-        var est = groups[k].est, act = groups[k].act;
-        var diff = act - est;
-        var actCol = diff > 0 ? '#e8820c' : (diff < 0 ? '#1b9e8e' : '#4a5568');
-        var estPct = (est / maxVal * 100).toFixed(1);
-        var actPct = (act / maxVal * 100).toFixed(1);
-        estRow += '<div style="flex:1;text-align:center;font-size:9px;font-weight:700;color:#4a5568">' + _fmtCost(est) + '</div>';
-        actRow += '<div style="flex:1;text-align:center;font-size:9px;font-weight:700;color:' + actCol + '">' + _fmtCost(act) + '</div>';
-        var barInner;
-        if (diff > 0) {
-          var diffPct = (diff / maxVal * 100).toFixed(1);
-          barInner = '<div style="width:100%;height:' + diffPct + '%;background:#e8820c;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
-                   + '<div style="width:100%;height:' + estPct + '%;background:#4a5568;flex-shrink:0"></div>';
-        } else if (diff < 0) {
-          var savePct = (Math.abs(diff) / maxVal * 100).toFixed(1);
-          barInner = '<div style="width:100%;height:' + savePct + '%;background:#1b9e8e;border-radius:2px 2px 0 0;flex-shrink:0"></div>'
-                   + '<div style="width:100%;height:' + actPct + '%;background:#4a5568;flex-shrink:0"></div>';
-        } else {
-          barInner = '<div style="width:100%;height:' + estPct + '%;background:#4a5568;border-radius:2px 2px 0 0;flex-shrink:0"></div>';
-        }
-        bars += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;padding:0 3px">' + barInner + '</div>';
-        lblRow += '<div style="flex:1;text-align:center;font-size:9px;color:#1a2540;font-weight:600;padding-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + k + '">' + (idx3 + 1) + '</div>';
-        legendRows3 +=
-          '<div style="display:flex;align-items:baseline;gap:5px;padding:2px 6px;border-bottom:1px solid #f0f3fa;font-size:10px">'
-          + '<span style="font-weight:700;color:#1a2540;flex-shrink:0;min-width:12px">' + (idx3 + 1) + '.</span>'
-          + '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#4a5568;flex-shrink:0;margin-bottom:1px"></span>'
-          + '<span style="flex:1;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + k + '">' + k + '</span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Est&nbsp;<b style="color:#000">' + _fmtFull(est) + (actUnit ? ' ' + actUnit : '') + '</b></span>'
-          + '<span style="flex-shrink:0;color:#4a5568;margin-left:6px">Act&nbsp;<b style="color:' + actCol + '">' + _fmtFull(act) + (actUnit ? ' ' + actUnit : '') + '</b></span>'
-          + '</div>';
-      });
-
-      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;display:flex;align-items:center;justify-content:space-between">'
-        + '<span>' + _sh(actName||'', 40) + '</span>'
-        + '<span class="rcost-info-icon" id="rcost-info-btn">&#9432;</span>'
-        + '</div>'
-        + '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">'
-        +   '<div style="display:flex;gap:2px;padding:2px 6px 0;flex-shrink:0">' + estRow + '</div>'
-        +   '<div style="display:flex;gap:2px;padding:0 6px;flex-shrink:0">' + actRow + '</div>'
-        +   '<div style="display:flex;gap:2px;flex:1;min-height:0;padding:0 6px;align-items:flex-end;border-bottom:1px solid #c8d0e0">' + bars + '</div>'
-        +   '<div style="display:flex;gap:2px;padding:2px 6px;flex-shrink:0">' + lblRow + '</div>'
-        +   '<div style="display:flex;gap:12px;padding:3px 6px;flex-shrink:0;flex-wrap:wrap">'
-        +     '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#4a5568;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Estimated</span>'
-        +     '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#e8820c;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Over</span>'
-        +     '<span style="font-size:9px;color:#666"><span style="display:inline-block;width:10px;height:8px;background:#1b9e8e;border-radius:1px;margin-right:3px;vertical-align:middle"></span>Under</span>'
-        +   '</div>'
-        +   '<div style="overflow-y:auto;flex-shrink:0;max-height:80px;border-top:1px solid #e8efff;margin-top:2px">' + legendRows3 + '</div>'
-        + '</div>';
-
-      // Build tooltip content — vertical bar chart per resource, grouped by type
-      var ttHtml = '';
-      labels.forEach(function(typeName) {
-        ttHtml += '<div class="tt-type-hdr">' + typeName + '</div>';
-        var resArr = groupItems[typeName];
-        // Compute maxima across all resources in this type for scaling
-        var maxCons = 0, maxUC = 0;
-        resArr.forEach(function(r){
-          maxCons = Math.max(maxCons, r.estCons, r.actCons);
-          maxUC   = Math.max(maxUC,  r.estUC,   r.actUC);
-        });
-        if (maxCons === 0) maxCons = 1;
-        if (maxUC   === 0) maxUC   = 1;
-
-        // Section header row labels
-        ttHtml += '<div style="display:flex;gap:6px;margin-bottom:3px;">';
-        resArr.forEach(function(r) {
-          ttHtml += '<div style="flex:1;min-width:0;text-align:center;font-size:9px;color:#1a2540;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + r.name + '">' + r.name + '</div>';
-        });
-        ttHtml += '</div>';
-
-        // Row 1: Unit Cost bars
-        ttHtml += '<div style="font-size:9px;color:#7a8aaa;margin-bottom:2px;margin-top:5px;font-weight:600;">Unit Cost</div>';
-        ttHtml += '<div class="tt-vbar-section">';
-        resArr.forEach(function(r) {
-          var ucDiff   = r.actUC - r.estUC;
-          var actUCCol = ucDiff > 0 ? '#e8820c' : (ucDiff < 0 ? '#1b9e8e' : '#4a6fa5');
-          var ucDiffStr = ucDiff > 0 ? '+' + _fmtCost(ucDiff) : (ucDiff < 0 ? '−' + _fmtCost(Math.abs(ucDiff)) : '');
-          var estH = Math.max(2, (r.estUC / maxUC * 80)).toFixed(1);
-          var actH = Math.max(2, (r.actUC / maxUC * 80)).toFixed(1);
-          ttHtml += '<div class="tt-vbar-col">'
-            + '<div class="tt-vbar-vals"><span style="color:#7a8aaa">' + _fmtCost(r.estUC) + '</span><b style="color:' + actUCCol + '">' + _fmtCost(r.actUC) + '</b></div>'
-            + '<div class="tt-vbar-bars">'
-            + '<div class="tt-vbar-est" style="height:' + estH + 'px"></div>'
-            + '<div class="tt-vbar-act" style="height:' + actH + 'px;background:' + actUCCol + '"></div>'
-            + '</div>'
-            + (ucDiffStr ? '<div class="tt-vbar-diff" style="color:' + (ucDiff>0?'#e8820c':'#1b9e8e') + '">' + ucDiffStr + '</div>' : '<div class="tt-vbar-diff"></div>')
-            + '</div>';
-        });
-        ttHtml += '</div>';
-
-        // Row 2: Consumption bars
-        ttHtml += '<div style="font-size:9px;color:#7a8aaa;margin-bottom:2px;margin-top:8px;font-weight:600;">Consumption</div>';
-        ttHtml += '<div class="tt-vbar-section">';
-        resArr.forEach(function(r) {
-          var cDiff    = r.actCons - r.estCons;
-          var actCCol  = cDiff > 0 ? '#e8820c' : (cDiff < 0 ? '#1b9e8e' : '#4a6fa5');
-          var cDiffStr = cDiff > 0 ? '+' + _fmtFull(cDiff) : (cDiff < 0 ? '−' + _fmtFull(Math.abs(cDiff)) : '');
-          var estH = Math.max(2, (r.estCons / maxCons * 80)).toFixed(1);
-          var actH = Math.max(2, (r.actCons / maxCons * 80)).toFixed(1);
-          ttHtml += '<div class="tt-vbar-col">'
-            + '<div class="tt-vbar-vals"><span style="color:#7a8aaa">' + _fmtFull(r.estCons) + '</span><b style="color:' + actCCol + '">' + _fmtFull(r.actCons) + (r.unit?' '+r.unit:'') + '</b></div>'
-            + '<div class="tt-vbar-bars">'
-            + '<div class="tt-vbar-est" style="height:' + estH + 'px"></div>'
-            + '<div class="tt-vbar-act" style="height:' + actH + 'px;background:' + actCCol + '"></div>'
-            + '</div>'
-            + (cDiffStr ? '<div class="tt-vbar-diff" style="color:' + (cDiff>0?'#e8820c':'#1b9e8e') + '">' + cDiffStr + '</div>' : '<div class="tt-vbar-diff"></div>')
-            + '</div>';
-        });
-        ttHtml += '</div>';
-      });
-
-      ttHtml += '<div class="tt-legend">'
-        + '<span><i style="background:#4a6fa5"></i>Estimated</span>'
-        + '<span><i style="background:#e8820c"></i>Over</span>'
-        + '<span><i style="background:#1b9e8e"></i>Saving</span>'
-        + '</div>';
-
-      var ttEl = document.getElementById('rcost-tt');
-      if (ttEl) ttEl.innerHTML = ttHtml;
-
-      // Wire hover on info icon
-      var iconEl = document.getElementById('rcost-info-btn');
-      if (iconEl && ttEl) {
-        iconEl.addEventListener('mouseenter', function(e) {
-          ttEl.style.display = 'block';
-          var r = iconEl.getBoundingClientRect();
-          var ttW = 560;
-          var left = Math.min(r.right + 8, window.innerWidth - ttW - 8);
-          ttEl.style.left = Math.max(8, left) + 'px';
-          ttEl.style.top  = Math.max(8, r.top - 10) + 'px';
-        });
-        iconEl.addEventListener('mouseleave', function() {
-          ttEl.style.display = 'none';
-        });
+    // One entry per panel. `items()` returns that panel's current items
+    // array (already computed by its own _render* function below).
+    // `isOver(r)` / `estAct(r)` reuse each panel's own existing formula —
+    // copied verbatim from its dial/tooltip code, not reformulated here.
+    var _UCR_METRICS = {
+      ucr: {
+        // A Support Resource (has_acc_head) with no transaction posted yet
+        // to its Account Head has no actual value at all for this metric —
+        // it's excluded everywhere Unit Cost of Activity/Resources draws
+        // from this list (Type bars, Group bars, Resource drill-down)
+        // until a real expense appears against that account.
+        items: function(){
+          return _ucrTipItems.filter(function(r){
+            var hasActual = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+            return !(r.has_acc_head && !hasActual);
+          });
+        },
+        // A resource counts as "over budget" only once it actually has a
+        // recorded actual unit cost (GRN/purchase data) that exceeds its
+        // estimated rate — no actual yet is not an overrun, it's unknown.
+        isOver: function(r){
+          var hasActual = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+          return hasActual && (+r.actual_unit_cost > +r.rate);
+        },
+        estAct: function(r){
+          var hasActual = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+          return { est: +r.rate || 0, act: hasActual ? +r.actual_unit_cost : (+r.rate || 0), hasActual: hasActual };
+        },
+        unitOf: function(r){ return r.unit || ''; },
+        yTitle: function(unit){ return 'Rate' + (unit ? (' (per ' + $('<span>').text(unit).html() + ')') : ''); },
+        rateSuffix: function(unit){ return unit ? ' — Rate per ' + $('<span>').text(unit).html() : ''; }
+      },
+      rcon: {
+        items: function(){ return _rconTipItems; },
+        // Same formula as _renderResourceConsumption's dial and this
+        // panel's own hover tooltip: actual only counts once indent/MB
+        // data exists for that resource, otherwise falls back to planned.
+        // Support Resources (linked to an Account Head) get their actual
+        // from the Actual-Project-Duration ÷ Planned-Duration ratio
+        // instead (see ProjectsmainController::actionCostdashboardactivity)
+        // — always available once that resource exists, no raised-indent
+        // or sent-MB precondition needed.
+        isOver: function(r){
+          var typeId = +r.type_id;
+          var isMaterial = [2, 6, 7, 8].indexOf(typeId) >= 0;
+          var isSC = typeId === 4;
+          var hasActual = (isMaterial && r.indent_raised) || (isSC && r.has_mb) || (!isMaterial && !isSC && r.has_acc_head);
+          // Same est/act basis as estAct() below — compares Actual
+          // Consumption against Allocated Quantity per unit, not the
+          // scaled totals (multiplying both sides by the same Activity
+          // Qty doesn't change which one is bigger).
+          var act = hasActual ? (+r.actual_consumption || 0) : (+r.alloc_qty || 0);
+          return hasActual && (act > (+r.alloc_qty || 0));
+        },
+        estAct: function(r){
+          var typeId = +r.type_id;
+          var isMaterial = [2, 6, 7, 8].indexOf(typeId) >= 0;
+          var isSC = typeId === 4;
+          var hasActual = (isMaterial && r.indent_raised) || (isSC && r.has_mb) || (!isMaterial && !isSC && r.has_acc_head);
+          var actQty = _rconTipActQty || 0;
+          // Estimate = Activity Qty × the resource's own Allocated
+          // Quantity — alloc_qty is the Activity Library master allocation
+          // (estactivity_resources.est_resource_quantity), NOT res_qty
+          // (pricing_estimate_resources_new.quantity, a different,
+          // project-scaled figure the Cost/Rate formulas use instead).
+          // Actual = Actual Consumption per unit of the activity × Activity
+          // Qty.
+          var est = actQty * (+r.alloc_qty || 0);
+          var act = hasActual ? (actQty * (+r.actual_consumption || 0)) : est;
+          return { est: est, act: act, hasActual: hasActual };
+        },
+        unitOf: function(r){ return (+r.type_id === 4 && r.task_unit) ? r.task_unit : (r.unit || ''); },
+        yTitle: function(unit){ return 'Quantity' + (unit ? (' (' + $('<span>').text(unit).html() + ')') : ''); },
+        rateSuffix: function(unit){ return unit ? ' — Quantity in ' + $('<span>').text(unit).html() : ''; }
+      },
+      rcost: {
+        // Same exclusion as the ucr metric: a Support Resource with no
+        // transaction posted yet to its Account Head is left out of this
+        // panel entirely (Type bars, Group bars, Resource drill-down)
+        // until a real expense appears — even though its consumption side
+        // alone would otherwise make _rcostHasActual true.
+        items: function(){
+          return _rcostTipItems.filter(function(r){
+            var hasActualRate = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+            return !(r.has_acc_head && !hasActualRate);
+          });
+        },
+        // Cost = Yield × Unit Cost. Yield (this activity's Total Quantity
+        // Required for the resource) = alloc_qty × Activity Qty — same
+        // figure as the Yield panel. "Actual" data can arrive from either
+        // side independently — a resource's rate can have real GRN/expense
+        // data while its consumption is still just planned, or vice versa
+        // (e.g. a Support Resource always has an actual consumption once
+        // the project has a duration ratio, but its actual unit cost stays
+        // at Rate until a transaction is posted) — so hasActual must be
+        // true if EITHER side has real data, otherwise a resource whose
+        // consumption alone is running over never shows its overrun here.
+        isOver: function(r){
+          var yield_ = _rcostTipActQty * (+r.alloc_qty || 0);
+          var estUC = +r.rate || 0;
+          var hasActualRate = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+          var actUC = hasActualRate ? +r.actual_unit_cost : estUC;
+          var est = estUC * yield_;
+          var act = actUC * yield_;
+          return _rcostHasActual(r) && (act > est);
+        },
+        estAct: function(r){
+          var yield_ = _rcostTipActQty * (+r.alloc_qty || 0);
+          var estUC = +r.rate || 0;
+          var hasActualRate = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+          var actUC = hasActualRate ? +r.actual_unit_cost : estUC;
+          var est = estUC * yield_;
+          var act = actUC * yield_;
+          return { est: est, act: act, hasActual: _rcostHasActual(r) };
+        },
+        unitOf: function(r){ return ''; },
+        yTitle: function(unit){ return 'Cost'; },
+        rateSuffix: function(unit){ return ' — Cost of Resources'; }
       }
+    };
+
+    // Colour identity follows the resource type down through every
+    // drill-down level (Type → Group → Resource) — a type shown orange at
+    // the top of the chain stays that same orange in its Group bars and
+    // its individual Resource bars, instead of each level picking a fresh
+    // colour from the palette independently.
+    function _ucrColorForType(metric, typeName) {
+      var order = _ucrTypesFor(metric).map(function(r){ return r.name; });
+      var idx = order.indexOf(typeName);
+      return _UCR_BAR_COLS[(idx >= 0 ? idx : 0) % _UCR_BAR_COLS.length];
+    }
+
+    function _ucrTypesFor(metric) {
+      var items = _UCR_METRICS[metric].items();
+      var counts = {}, overs = {}, order = [];
+      items.forEach(function(r) {
+        var name = r.type_name || 'Unassigned';
+        if (!(name in counts)) { counts[name] = 0; overs[name] = 0; order.push(name); }
+        counts[name]++;
+        if (_UCR_METRICS[metric].isOver(r)) overs[name]++;
+      });
+      return order.map(function(name) { return { name: name, value: counts[name], overCount: overs[name] }; });
+    }
+
+    function _ucrGroupsForType(metric, typeName) {
+      var seen = {}; var groups = [];
+      _UCR_METRICS[metric].items().forEach(function(r) {
+        if ((r.type_name || 'Unassigned') !== typeName) return;
+        var g = r.group_name || 'Unassigned';
+        if (seen[g]) return;
+        seen[g] = true;
+        groups.push(g);
+      });
+      return groups;
+    }
+
+    function _ucrResourcesForGroup(metric, typeName, groupName) {
+      return _UCR_METRICS[metric].items().filter(function(r) {
+        return (r.type_name || 'Unassigned') === typeName && (r.group_name || 'Unassigned') === groupName;
+      });
+    }
+
+    function _renderUcrGroupBars(metric, typeName) {
+      var m = _UCR_METRICS[metric];
+      var groups = _ucrGroupsForType(metric, typeName);
+      var rows = groups.map(function(name) {
+        var resRows = _ucrResourcesForGroup(metric, typeName, name);
+        return { name: name, value: resRows.length, overCount: resRows.filter(m.isOver).length };
+      });
+      var typeColor = _ucrColorForType(metric, typeName);
+      return {
+        title: $('<span>').text(typeName).html() + ' — Resource Groups',
+        body: '<div class="gm-ucr-drill-body">'
+          + _renderHBarChart(rows, { onClick: 'gm-ucr-group', labelW: 110, bigLabels: true, integerTicks: true, showOverrun: true, xTitle: 'No. of Resources', yTitle: 'Resource Group', singleColor: typeColor })
+          + '</div>'
+      };
+    }
+
+    function _renderUcrResourceBars(metric, typeName, groupName) {
+      var m = _UCR_METRICS[metric];
+      var resRows = _ucrResourcesForGroup(metric, typeName, groupName);
+      if (!resRows.length) {
+        return { title: $('<span>').text(groupName).html(), body: '<div class="gm-bar-tip-empty">No resources</div>' };
+      }
+      var unit = m.unitOf(resRows[0]);
+      var rows = resRows.map(function(r) {
+        var ea = m.estAct(r);
+        return { name: r.name || '', est: ea.est, act: ea.act, hasActual: ea.hasActual };
+      });
+      var typeColor = _ucrColorForType(metric, typeName);
+
+      return {
+        title: $('<span>').text(groupName).html() + m.rateSuffix(unit),
+        body: '<div class="gm-ucr-drill-body">'
+          + _renderVBarChart(rows, { estAct: true, yTitle: m.yTitle(unit), valUnit: ((metric === 'rcon' || metric === 'ucr') && unit) ? unit : '', valUnitSep: (metric === 'ucr') ? '/' : ' ', fmt: (metric === 'rcost') ? _fmtCost : undefined, singleColor: typeColor })
+          + '</div>'
+      };
+    }
+
+    function _openUcrDrill(metric, typeName) {
+      _ucrDrillLevel = 'groups';
+      _ucrDrillMetric = metric;
+      _ucrDrillType = typeName;
+      var r = _renderUcrGroupBars(metric, typeName);
+      $('#gm-ucr-tip-title').html(r.title);
+      $('#gm-ucr-tip-body').html(r.body);
+      var $tip = $('#gm-ucr-tip');
+      // Re-centre on every fresh open (not on the group→resources drill
+      // click within the same open popup) — matches every other floating
+      // popup in this app: reopening always starts centred, dragging only
+      // persists while that one popup instance stays open.
+      var w = 460, h = 360;
+      $tip.css({
+        left: Math.max(8, (window.innerWidth  - w) / 2) + 'px',
+        top:  Math.max(8, (window.innerHeight - h) / 2) + 'px'
+      });
+      $tip.addClass('gm-bar-tip-open gm-ucr-drill-open');
+      if (typeof window.popupBringToFront === 'function') window.popupBringToFront('gm-ucr-tip');
+    }
+
+    $(document).on('click', '.gm-ucr-type-bar', function(e) {
+      e.stopPropagation();
+      _openUcrDrill($(this).closest('[data-metric]').data('metric') || 'ucr', $(this).data('name'));
+    });
+
+    $(document).on('click', '.gm-ucr-group-bar', function(e) {
+      e.stopPropagation();
+      var groupName = $(this).data('name');
+      _ucrDrillLevel = 'resources';
+      _ucrDrillGroup = groupName;
+      var r = _renderUcrResourceBars(_ucrDrillMetric, _ucrDrillType, groupName);
+      $('#gm-ucr-tip-title').html(r.title);
+      $('#gm-ucr-tip-body').html(r.body);
+    });
+
+    $(document).on('click', '#gm-ucr-tip-close', function(e) {
+      e.stopPropagation();
+      $('#gm-ucr-tip').removeClass('gm-bar-tip-open gm-ucr-drill-open');
+    });
+
+    // Click anywhere outside the drill popup closes it; clicks inside it
+    // (including the group/resource bars themselves) must not bubble to
+    // this handler — each bar click above already stopPropagation()s.
+    $(document).on('click', function() {
+      $('#gm-ucr-tip').removeClass('gm-bar-tip-open gm-ucr-drill-open');
+    });
+    $(document).on('click', '#gm-ucr-tip', function(e) { e.stopPropagation(); });
+
+    // ── Drag: Unit Cost of Resources drill-down popup ───────────────────
+    (function(){
+      var win = document.getElementById('gm-ucr-tip');
+      var hdr = document.getElementById('gm-ucr-tip-hdr');
+      if (!win || !hdr) return;
+      var _dragging = false, _sx = 0, _sy = 0, _ox = 0, _oy = 0;
+      bindDragTouch(hdr, 'mousedown', function(e){
+        if (e.target.closest('#gm-ucr-tip-close')) return;
+        var r = win.getBoundingClientRect();
+        win.style.left = r.left + 'px'; win.style.top = r.top + 'px';
+        _dragging = true; _sx = e.clientX; _sy = e.clientY; _ox = r.left; _oy = r.top;
+        e.preventDefault(); e.stopPropagation();
+      });
+      bindDragTouch(document, 'mousemove', function(e){
+        if (!_dragging) return;
+        win.style.left = Math.max(0, _ox + (e.clientX - _sx)) + 'px';
+        win.style.top  = Math.max(0, _oy + (e.clientY - _sy)) + 'px';
+      });
+      bindDragTouch(document, 'mouseup', function(){ _dragging = false; });
+    })();
+
+    // Shared renderer for both resource-hover tooltips: a vertical bar per
+    // resource — grey base up to the lower of Est/Act, then an orange
+    // segment on top when actual exceeds estimate, or a green segment when
+    // actual is under estimate. `rows` = [{name, est, act, hasActual}, ...],
+    // `fmt` formats the value shown above each bar, `title` is the tooltip heading.
+    function _renderBarTip(rows, fmt, title, hideLegend) {
+      if (!rows.length) return '<div class="gm-bar-tip-empty">No resources allocated</div>';
+      var maxVal = 0;
+      rows.forEach(function(r) { maxVal = Math.max(maxVal, r.est, r.act); });
+      if (maxVal <= 0) maxVal = 1;
+
+      var BAR_H = 90;
+      var html = '<div class="gm-bar-tip-hdr">' + title + '</div>'
+        + '<div class="gm-bar-bars">';
+      rows.forEach(function(r) {
+        var over  = r.hasActual && r.act > r.est;
+        var under = r.hasActual && r.act < r.est;
+        var baseVal = Math.min(r.est, r.act);
+        var baseH = Math.round((baseVal / maxVal) * BAR_H);
+        var diffH = Math.round((Math.abs(r.act - r.est) / maxVal) * BAR_H);
+        var diffCol = over ? '#e8820c' : (under ? '#1b9e8e' : '');
+        var diffSeg = (r.hasActual && diffH > 0) ? '<div style="height:' + diffH + 'px;background:' + diffCol + ';width:100%;"></div>' : '';
+        var unitLbl = r.unit ? (' ' + r.unit) : '';
+        html += '<div class="gm-bar-col">'
+          + '<div class="gm-bar-val">' + fmt(r.act) + unitLbl + '</div>'
+          + '<div class="gm-bar-stack" style="height:' + BAR_H + 'px;">'
+          +   diffSeg
+          +   '<div style="height:' + baseH + 'px;background:#64748b;width:100%;"></div>'
+          + '</div>'
+          + '<div class="gm-bar-lbl" title="' + $('<span>').text(r.name).html() + '">' + _sh($('<span>').text(r.name).html(), 12) + '</div>'
+          + '</div>';
+      });
+      html += '</div>';
+      if (!hideLegend) {
+        html += '<div class="gm-bar-tip-legend">'
+          +   '<span><i style="background:#64748b"></i> Base</span>'
+          +   '<span><i style="background:#e8820c"></i> Over Estimate</span>'
+          +   '<span><i style="background:#1b9e8e"></i> Under Estimate</span>'
+          + '</div>';
+      }
+      return html;
+    }
+
+    // Binds hover/move/leave handlers for a bar-tip panel. `panelSel` is the
+    // panel body to hover over, `$tip` its tooltip element, `getRows` lazily
+    // builds the [{name,est,act,hasActual}] rows from that panel's current data.
+    function _bindBarTip(panelSel, $tip, getRows, fmt, title) {
+      $(document).on('mouseenter', panelSel, function(){
+        $tip.html(_renderBarTip(getRows(), fmt, title)).addClass('gm-bar-tip-open');
+      });
+      $(document).on('mousemove', panelSel, function(e){
+        if (!$tip.hasClass('gm-bar-tip-open')) return;
+        var tw = $tip.outerWidth(), th = $tip.outerHeight();
+        var left = Math.min(e.clientX + 14, window.innerWidth  - tw - 8);
+        var top  = Math.min(e.clientY + 14, window.innerHeight - th - 8);
+        $tip.css({ left: Math.max(8,left) + 'px', top: Math.max(8,top) + 'px' });
+      });
+      $(document).on('mouseleave', panelSel, function(){
+        $tip.removeClass('gm-bar-tip-open');
+      });
+    }
+
+    // 2. Consumption of Resources → gm-cd-rcon
+    // Yield dial: centre = sum(planned consumption), needle = sum(actual
+    // consumption, falling back to planned per-resource where no actual
+    // exists yet). Same mechanic as the Unit Cost of Resources dial above.
+    var _rconTipItems = [];
+    var _rconTipActQty = 0;
+    function _renderResourceConsumption(items, actName, lastQty, actUnit, plannedDuration, actualDuration, activityQty) {
+      items = items || [];
+      _rconTipItems = items;
+      // Total Quantity Required = Planned/Actual Consumption per unit of
+      // the activity × the activity's own full Estimated Qty — the Yield
+      // drill-down shows the total resource quantity needed for the whole
+      // activity, not just the per-unit-of-activity ratio.
+      _rconTipActQty = +activityQty || 0;
+      // Project Overhead's Yield is a project-duration comparison, not a
+      // per-resource breakdown — one plain Planned-vs-Actual-Duration bar,
+      // no Type/Group/Resource drill-down and not clickable, per explicit
+      // direction. Every other activity keeps the normal Type-bar panel.
+      if (actName === 'Project Overhead') {
+        _renderOverheadYieldBar('gm-cd-rcon', +plannedDuration || 0, +actualDuration || 0, actName);
+        return;
+      }
+      _renderUcrTypePanel('gm-cd-rcon', 'rcon', items, actName);
+    }
+
+    function _renderOverheadYieldBar(elId, plannedDuration, actualDuration, actName) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      if (!plannedDuration) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No project dates set</div>'; return; }
+      // Single horizontal bar: length = Planned Duration, orange-red
+      // extension = the overrun (Actual − Planned) when the project is
+      // running long — same visual mechanic as the Type/Group overrun
+      // extension, just carrying a day-count difference instead of a
+      // resource count. Not clickable — no onClick handler passed.
+      var overDays = Math.max(0, actualDuration - plannedDuration);
+      var row = { name: 'Duration', value: plannedDuration, overCount: overDays };
+      var html = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _sh(actName||'', 40) + '</div>';
+      // The chart itself is centred exactly like the other two Type-bar
+      // panels (identical flex:1;min-height:0 sub-container, same as
+      // _renderUcrTypePanel) so the bar lands at the same vertical
+      // position across all three panels. The legend is absolutely
+      // positioned below it — NOT a normal flex sibling — so it consumes
+      // zero space from that centring container; a flex sibling here
+      // (even flex-shrink:0) still shrinks the space the chart centres
+      // within, nudging its bar upward relative to the other two panels.
+      html += '<div style="width:100%;box-sizing:border-box;padding:8px 10px;flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;overflow:hidden;">'
+        +   _renderHBarChart([row], { labelW: 50, bigLabels: true, smallFont: true, showOverrun: true, integerTicks: true, singleColor: '#3461b8', xTitle: 'Days' })
+        + '</div>';
+      el.innerHTML = html;
+    }
+
+    // 3. Cost of Resources → gm-cd-rcost — dial: centre/needle = sum of all
+    // resources' actual cost (rate × consumption × Sch. Qty), estimated sum =
+    // dial half-scale. Green when actual cost is under estimate, orange when over.
+    var _rcostTipItems = [], _rcostTipSchedQty = 0, _rcostTipActQty = 0;
+    function _renderResourceCost(items, actName, actUnit, schedQty, activityQty) {
+      items = items || [];
+      schedQty = +schedQty || 0;
+      _rcostTipItems = items;
+      _rcostTipSchedQty = schedQty;
+      // Cost of Resources = Rate × Activity Qty only — the resource's own
+      // Quantity (a per-unit-of-activity consumption ratio) and Schedule
+      // Qty are no longer part of this formula; multiplying by both was
+      // double-counting since Activity Qty already represents the full
+      // quantity the activity covers.
+      _rcostTipActQty = +activityQty || 0;
+      // Project Overhead's Cost of Resources is a total-cost comparison,
+      // not a per-resource breakdown — one plain Planned-vs-Actual
+      // Resource Cost bar (summed across all resources), no Type/Group/
+      // Resource drill-down and not clickable — same treatment as the
+      // Yield panel's Planned-vs-Actual Duration bar. Every other
+      // activity keeps the normal Type-bar panel.
+      if (actName === 'Project Overhead') {
+        // Same exclusion as the Unit Cost of Activity panel: a Support
+        // Resource with no transaction posted yet to its Account Head has
+        // no actual value at all — leave it out of this bar and its
+        // drill-down entirely (not even an Estimate contribution) until a
+        // real expense appears against that account.
+        var liveItems = items.filter(function(r){
+          var hasAct = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+          return !(r.has_acc_head && !hasAct);
+        });
+        var estCostTotal = 0, actCostTotal = 0;
+        liveItems.forEach(function(r) {
+          var estUC = +r.rate || 0;
+          var hasAct = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+          var actUC = hasAct ? +r.actual_unit_cost : estUC;
+          // Estimate = Rate × Activity Qty only (no resource-quantity/
+          // consumption ratio or Schedule Qty multiplier).
+          estCostTotal += estUC * _rcostTipActQty;
+          // Support Resources' Actual Cost = Actual Unit Cost × Actual
+          // Duration only. actual_consumption_cost carries the Actual
+          // Duration for these rows — distinct from actual_consumption,
+          // which the Unit Cost of Activity panel uses with Planned
+          // Consumption instead.
+          actCostTotal += actUC * (+r.actual_consumption_cost  || 0);
+        });
+        _renderOverheadCostBar('gm-cd-rcost', estCostTotal, actCostTotal, actName, liveItems, schedQty);
+        return;
+      }
+      _renderUcrTypePanel('gm-cd-rcost', 'rcost', items, actName);
+    }
+
+    function _renderOverheadCostBar(elId, plannedCost, actualCost, actName, items, schedQty) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      if (!plannedCost) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No resources allocated</div>'; return; }
+      // Same single-bar mechanic as _renderOverheadYieldBar: length =
+      // Planned Resource Cost, orange-red extension = the overrun
+      // (Actual − Planned) when actual cost is running over. Clicking it
+      // opens the shared drill-down popup straight at the per-resource
+      // vertical-bar view (no Type/Group levels — Project Overhead's
+      // resource list is short enough not to need that grouping here).
+      var overCost = Math.max(0, actualCost - plannedCost);
+      var row = { name: 'Cost', value: plannedCost, overCount: overCost };
+      var html = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _sh(actName||'', 40) + '</div>';
+      html += '<div style="width:100%;box-sizing:border-box;padding:8px 10px;flex:1;min-height:0;overflow:hidden;">'
+        + '<div class="gm-overhead-cost-bar" style="height:100%;display:flex;flex-direction:column;justify-content:center;cursor:pointer;">'
+        +   _renderHBarChart([row], { labelW: 50, bigLabels: true, smallFont: true, showOverrun: true, singleColor: '#3461b8', xTitle: 'Cost', hideBarVal: true })
+        + '</div>'
+        + '</div>';
+      el.innerHTML = html;
+      $(el).find('.gm-overhead-cost-bar').off('click.overheadCost').on('click.overheadCost', function(e){
+        e.stopPropagation();
+        _openOverheadCostDrill(items, schedQty, actName);
+      });
+    }
+
+    // Per-resource Estimate-vs-Actual Cost bars for Project Overhead's
+    // Cost of Resources panel — same est/act vertical-bar mechanic as
+    // _renderUcrResourceBars, but keyed on total cost (rate × consumption
+    // × schedQty) per resource instead of unit rate, and formatted with
+    // the Cr/Lakh/K notation (_fmtCost) rather than plain numbers, since
+    // these are full rupee totals rather than per-unit rates.
+    function _openOverheadCostDrill(items, schedQty, actName) {
+      var rows = (items || []).map(function(r) {
+        var estUC = +r.rate || 0;
+        var hasActual = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+        var actUC = hasActual ? +r.actual_unit_cost : estUC;
+        var est = estUC * _rcostTipActQty;
+        var act = actUC * (+r.actual_consumption_cost  || 0);
+        return { name: r.name || '', est: est, act: act, hasActual: hasActual };
+      });
+      var body = rows.length
+        ? '<div class="gm-ucr-drill-body">' + _renderVBarChart(rows, { estAct: true, fmt: _fmtCost, yTitle: 'Cost' }) + '</div>'
+        : '<div class="gm-bar-tip-empty">No resources</div>';
+      $('#gm-ucr-tip-title').html($('<span>').text(actName || 'Cost of Resources').html());
+      $('#gm-ucr-tip-body').html(body);
+      var $tip = $('#gm-ucr-tip');
+      var w = 460, h = 360;
+      $tip.css({
+        left: Math.max(8, (window.innerWidth  - w) / 2) + 'px',
+        top:  Math.max(8, (window.innerHeight - h) / 2) + 'px'
+      });
+      $tip.addClass('gm-bar-tip-open gm-ucr-drill-open');
+      if (typeof window.popupBringToFront === 'function') window.popupBringToFront('gm-ucr-tip');
     }
 
     // 4. Unit Cost of Activity → gm-cd-g5
-    function _renderUnitCostOfActivity(items, actName, actUnit, schedQty) {
+    function _renderUnitCostOfActivity(items, actName, actUnit, schedQty, activityQty) {
       items = items || []; schedQty = +schedQty || 0;
-      var estTotal = 0, actTotal = 0;
+      var estQty = +activityQty || 0;
+      var estCostTotal = 0, actCostTotal = 0;
       items.forEach(function(r) {
-        var estUC = +r.rate || 0;
         var hasAct = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+        // A Support Resource (has_acc_head) with no transaction posted yet
+        // to its Account Head has no actual value at all — it's excluded
+        // from this panel entirely (no Estimate contribution either) until
+        // a real expense appears against that account.
+        if (r.has_acc_head && !hasAct) return;
+        var estUC = +r.rate || 0;
         var actUC = hasAct ? +r.actual_unit_cost : estUC;
-        estTotal += estUC * (+r.planned_consumption || 0);
-        actTotal += actUC * (+r.actual_consumption  || 0);
+        // Unit Cost of Activity = Cost of Resources ÷ Estimated Activity
+        // Qty. Cost of Resources per resource = Rate × Yield, where Yield
+        // = Allocated Qty (alloc_qty) × Activity Qty — same figures the
+        // Cost of Resources / Yield panels use.
+        var resYield = estQty * (+r.alloc_qty || 0);
+        estCostTotal += estUC * resYield;
+        actCostTotal += actUC * resYield;
       });
+      var estTotal = estQty > 0 ? estCostTotal / estQty : 0;
+      var actTotal = estQty > 0 ? actCostTotal / estQty : 0;
       var maxVal = estTotal > 0 ? estTotal * 2 : 1;
       var unitLbl = actUnit ? ' /' + actUnit : '';
       var el5 = document.getElementById('gm-cd-g5');
       if (el5) el5.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _sh(actName||'', 40) + '</div>';
-      _gauge('gm-cd-g5', actTotal, maxVal, 'cost', 0.5, 'Est', _fmtFull(estTotal) + unitLbl, 'Act', _fmtFull(actTotal) + unitLbl);
+      _gauge('gm-cd-g5', actTotal, maxVal, 'esttarget', 0.5, 'Est', _fmtFull(estTotal) + unitLbl, 'Act', _fmtFull(actTotal) + unitLbl, estTotal);
     }
 
-    // 5. Work Done → gm-cd-g4
+    // Elapsed Days dial (Project Overhead only) → gm-cd-g4. Dial's full
+    // scale (0 → track end) = Actual Duration. Yellow tick marks Planned
+    // Duration within that scale — the segment beyond it out to the
+    // track's end (i.e. Actual − Planned) is the orange-red overrun.
+    // Needle points to Elapsed Days (Today − Planned Start Date) within
+    // that same 0 → Actual Duration scale — a third, independent figure
+    // from either endpoint.
+    function _renderElapsedDaysDial(d) {
+      var el = document.getElementById('gm-cd-g4');
+      if (!el) return;
+      var plannedDur   = +d.planned_duration || 0;
+      var actualDur    = +d.actual_duration  || 0;
+      var elapsedDays  = +d.elapsed_days || 0;
+      var actName      = d.activity_name || '';
+      // Scale headroom (+10%) so the needle never lands exactly on the
+      // dial's outer edge — pinned to f=1 there, its short radial line
+      // sits flush against the track's own end and reads as "missing".
+      var maxVal = Math.max(actualDur, 1) * 1.1;
+      var targetFrac = plannedDur / maxVal;
+      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _sh(actName, 40) + '</div>';
+      _gauge('gm-cd-g4', elapsedDays, maxVal, 'esttarget-prop', targetFrac, 'Planned', plannedDur + ' d', 'Actual', actualDur + ' d', plannedDur, 'Elapsed ' + _fm(elapsedDays) + ' d', actualDur, true);
+    }
+
+    // 5. Work Done → gm-cd-g4. Same esttarget-prop dial mechanic as
+    // Elapsed Days: grey track up to Schedule Qty, yellow tick marking
+    // that boundary, orange-red fills the gap beyond it when Done exceeds
+    // Schedule Qty, needle always points to the real Done value (never
+    // capped at Schedule Qty) — scale stretches to fit whichever is larger
+    // so the yellow line recedes left as the overrun grows.
     function _renderValueOfWorkDone(d) {
       var el = document.getElementById('gm-cd-g4');
       if (!el) return;
       var schedQty = +d.schedule_qty || 0;
-      var lastQty  = +d.last_report_qty || 0;
+      var rawLastQty = +d.last_report_qty || 0;
+      var estQty   = +d.activity_qty || 0;
+      // Done = (Estimated Qty ÷ Schedule Qty) × Last Reported Qty — scales
+      // the raw progress-reported quantity by the ratio between this
+      // activity's own Estimated Qty and its full Schedule Qty, instead of
+      // showing the raw reported quantity directly.
+      var lastQty  = schedQty > 0 ? (estQty / schedQty) * rawLastQty : rawLastQty;
       var unit     = d.unit || '';
       var actName  = d.activity_name || '';
-      var maxVal   = schedQty > 0 ? schedQty : 1;
-      var cx=105, cy=92, r=76, sw=14;
-      function ptF(frac){ var a=Math.PI*(1-frac); return [(cx+r*Math.cos(a)).toFixed(1),(cy-r*Math.sin(a)).toFixed(1)]; }
-      function arc(f1,f2,col,cap){
-        if(f2<=f1) return ''; cap=cap||'butt';
-        var p1=ptF(f1),p2=ptF(f2);
-        if((f2-f1)>=1){ var pm=ptF(0.5); return '<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+pm[0]+','+pm[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>'; }
-        return '<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>';
-      }
-      var f=Math.max(0,Math.min(1,lastQty/maxVal));
-      var nr=r-15,na=Math.PI*(1-f);
-      var nx=(cx+nr*Math.cos(na)).toFixed(1),ny=(cy-nr*Math.sin(na)).toFixed(1);
-      var pct=schedQty>0?(lastQty/schedQty*100).toFixed(1):'0.0';
-      var svg='<svg width="100%" height="100%" viewBox="0 0 210 138" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:hidden;">'
-        +arc(0,1,'#64748b')+(f>0?arc(0,f,'#94a3b8','butt'):'')
-        +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
-        +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/>'
-        +'<circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#dce3ef"/>'
-        +'<text x="'+cx+'" y="'+(cy-22)+'" text-anchor="middle" font-size="22" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+pct+'%</text>'
-        +'<text x="10" y="122" text-anchor="start" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Done <tspan font-weight="700">'+_fmtFull(lastQty)+(unit?' '+unit:'')+'</tspan></text>'
-        +'<text x="200" y="122" text-anchor="end" font-size="14" fill="#111" font-family="Barlow Condensed,Arial">Sched <tspan font-weight="700">'+_fmtFull(schedQty)+(unit?' '+unit:'')+'</tspan></text>'
-        +'</svg>';
-      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_sh(actName,40)+'</div>' + svg;
+      // Dial scale/target boundary is driven by Estimated Qty (estQty),
+      // not Schedule Qty — the tip at the dial's left/target position
+      // represents the activity's own Estimated Qty, matching how Done
+      // itself is scaled above.
+      var maxVal = Math.max(estQty, lastQty, 1) * 1.1;
+      var targetFrac = estQty / maxVal;
+      el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _sh(actName, 40) + '</div>';
+      _gauge('gm-cd-g4', lastQty, maxVal, 'esttarget-prop', targetFrac, 'Est', _fmtFull(estQty) + (unit ? ' ' + unit : ''), 'Done', _fmtFull(lastQty) + (unit ? ' ' + unit : ''), estQty, null, null, true);
     }
 
     // 6. Cost of Activity → gm-cd-g2
     function _renderCostOfActivity(d) {
       var el = document.getElementById('gm-cd-g2');
       if (!el) return;
-      var items = d.items || [], schedQty = +d.schedule_qty || 0, actName = d.activity_name || '';
+      var items = d.items || [], actName = d.activity_name || '';
+      var isProjectOverhead = (actName === 'Project Overhead');
+      var schedQty = +d.schedule_qty || 0;
+      var estQty   = +d.activity_qty || 0;
       var estUCTotal = 0, actUCTotal = 0, hasActual = false;
+      // Project Overhead's Support Resources: Actual Cost contribution to
+      // the bar/top-row total = Actual Unit Cost × Actual Duration only —
+      // accumulated separately in actCostOverheadSum (already a total, not
+      // a per-unit rate) and kept out of actUCTotal so it isn't
+      // double-counted against the × Estimated Qty multiplier below.
+      // estUCTotal/actUCTotal are Unit Cost of Activity's own totals
+      // (Cost of Resources ÷ Estimated Qty, i.e. Σ(Rate×Yield) ÷ Estimated
+      // Qty) — reused here for both the bar (× Estimated Qty, which
+      // cancels back to Σ(Rate×Yield)) and the Work Done section (× Work
+      // Done Qty) below, matching that panel's own formula.
+      var estResCostTotal = 0, actResCostTotal = 0;
+      var actCostOverheadSum = 0;
       items.forEach(function(r) {
-        var estUC  = +r.rate || 0;
-        var estCons = +r.planned_consumption || 0;
-        estUCTotal += estUC * estCons;
         var hasAct = (r.actual_unit_cost !== null && r.actual_unit_cost !== undefined);
+        // A Support Resource with no transaction posted yet to its Account
+        // Head has no actual value at all — skip it entirely (no Estimate
+        // contribution either), matching the exclusion already applied to
+        // Unit Cost of Activity and Cost of Resources.
+        if (isProjectOverhead && r.has_acc_head && !hasAct) return;
+        var estUC  = +r.rate || 0;
         var actUC  = hasAct ? +r.actual_unit_cost : estUC;
-        var actCons = +r.actual_consumption || 0;
-        actUCTotal += actUC * actCons;
         if (hasAct) hasActual = true;
+        if (isProjectOverhead && r.has_acc_head) {
+          actCostOverheadSum += actUC * (+r.actual_consumption_cost || 0);
+        } else {
+          var resYield = estQty * (+r.alloc_qty || 0);
+          estResCostTotal += estUC * resYield;
+          actResCostTotal += actUC * resYield;
+        }
       });
-      var estCost = estUCTotal * schedQty;
-      var actCost = hasActual ? actUCTotal * schedQty : estCost;
+      estUCTotal = estQty > 0 ? estResCostTotal / estQty : 0;
+      actUCTotal = estQty > 0 ? actResCostTotal / estQty : 0;
+      // Actual Activity Quantity: normally the same as the Estimated Qty,
+      // but if Work Done has actually exceeded it, use the exceeded
+      // (larger) quantity instead — same scaled Done value as the Work
+      // Done dial: (Estimated Qty ÷ Schedule Qty) × Last Reported Qty.
+      var rawLastQty = +d.last_report_qty || 0;
+      var workDone = isProjectOverhead
+        ? (+d.elapsed_days || 0)
+        : (schedQty > 0 ? (estQty / schedQty) * rawLastQty : rawLastQty);
+      var actQty = Math.max(estQty, workDone);
+      var estCost = estUCTotal * estQty;
+      var actCost = hasActual ? (actUCTotal * actQty + actCostOverheadSum) : estCost;
       var diff = actCost - estCost;
       var over = diff > 0;
       var barHtml;
@@ -1650,22 +2697,28 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       }
       var diffLabel = hasActual && diff !== 0 ? (over?'+':'-') + _fmtFull(Math.abs(diff)) + ' ' + (over?'over':'saving') : '';
       var diffCol = over ? '#e8820c' : '#1b9e8e';
-      var workDone = +d.last_report_qty || 0;
       var estCostWD = estUCTotal * workDone;
       var actCostWD = actUCTotal * workDone;
       var diffWD = actCostWD - estCostWD;
       var overWD = diffWD > 0;
       var diffWDLabel = diffWD !== 0 ? (overWD?'+':'-') + _fmtFull(Math.abs(diffWD)) + ' ' + (overWD?'over':'saving') : '';
       var valRow = '<div style="display:flex;justify-content:space-between;align-items:baseline;font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:700;color:#111;margin-bottom:6px">'
-        +'<span>Est: ' + _fmtFull(estCost) + (hasActual ? '&nbsp;&nbsp;&nbsp;Act: <span style="color:'+(over?'#e8820c':'#1b9e8e')+'">' + _fmtFull(actCost) + '</span>' : '') + '</span>'
-        +(diffLabel ? '<span style="color:'+diffCol+'">'+diffLabel+'</span>' : '')
+        +'<span>Est: ' + _fmtFull(estCost) + '</span>'
+        +(hasActual ? '<span>Act: <span style="color:'+(over?'#e8820c':'#1b9e8e')+'">' + _fmtFull(actCost) + '</span></span>' : '')
         +'</div>';
-      var wdRow = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:600;color:#444;margin-top:8px;line-height:1.7">'
-        +'<div>Estimated Cost of Work Done &nbsp;<span style="color:#111">' + _fmtFull(estCostWD) + '</span></div>'
+      // Project Overhead has no Work Done quantity to speak of — this
+      // section is really the Planned/Actual cost accrued up to today
+      // (Unit Cost × Elapsed Days), so it reads "as of Today" instead of
+      // "of Work Done" only for Project Overhead; every other activity
+      // keeps the original Work Done wording.
+      var estWDLabel = isProjectOverhead ? 'Planned Cost as of Today' : 'Estimated Cost of Work Done';
+      var actWDLabel = isProjectOverhead ? 'Actual Cost as of Today'  : 'Actual Cost of Work Done';
+      var wdRow = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:600;color:#444;margin-top:8px;line-height:1.7">'
+        +'<div>'+estWDLabel+' &nbsp;<span style="color:#111">' + _fmtFull(estCostWD) + '</span></div>'
         +(hasActual
-          ? '<div>Actual Cost of Work Done &nbsp;<span style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">' + _fmtFull(actCostWD) + '</span></div>'
+          ? '<div>'+actWDLabel+' &nbsp;<span style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">' + _fmtFull(actCostWD) + '</span></div>'
             +'<div style="color:'+(overWD?'#e8820c':'#1b9e8e')+'">Difference &nbsp;'+(diffWDLabel||_fmtFull(0))+'</div>'
-          : '<div>Actual Cost of Work Done &nbsp;<span style="color:#888;font-style:italic;font-weight:500">No Cost Reported</span></div>'
+          : '<div>'+actWDLabel+' &nbsp;<span style="color:#888;font-style:italic;font-weight:500">No Cost Reported</span></div>'
         )
         +'</div>';
       el.style.overflow = 'auto';
@@ -1678,7 +2731,6 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     // ── Cost icon hover → floating popup ─────────────────────────────────────
     var _gcpTimer  = null;
     var _gcpXhr    = null;
-    var _gcpCache  = {};
 
     function _positionCostPopup(anchorEl) {
       var pop = document.getElementById('gcm-popup');
@@ -1698,65 +2750,102 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       clearTimeout(_gcpTimer);
       if (_gcpXhr) { _gcpXhr.abort(); _gcpXhr = null; }
       var pop = document.getElementById('gcm-popup');
-      if (pop) pop.classList.remove('gcm-visible');
+      if (pop) { pop.classList.remove('gcm-visible'); pop.style.display = 'none'; delete pop.dataset.portraitFitted; }
     }
 
-    function _showCostPopup(actId, anchorEl) {
+    // Guarantees the popup is actually laid out and visible even if this
+    // AJAX-loaded fragment's own <style> block hasn't taken effect for any
+    // reason (e.g. injected into a page that already had conflicting rules) —
+    // sets the same properties the .gcm-visible CSS class is meant to apply,
+    // directly as inline style, which always wins.
+    function _forceShowCostPopup(pop) {
+      pop.classList.add('gcm-visible');
+      pop.style.display = 'flex';
+      if (!pop.style.width)  pop.style.width  = '740px';
+      if (!pop.style.height) pop.style.height = '58vh';
+      if (!pop.style.position) pop.style.position = 'fixed';
+      // #gcm-popup is a true floater (like cd-modal/cf-modal), not a
+      // sub-popup — it must get its own live ++_z on every open, not a
+      // one-time snapshot (popupSubZBase's _z + 5000 goes stale the moment
+      // any other floater is clicked/opened afterward, letting this popup
+      // get buried again — the exact bug class this fixes, see KPI/Cost
+      // Dashboard/Cashflow all needing to stay visible simultaneously).
+      if (typeof window.popupBringToFront === 'function') { window.popupBringToFront('gcm-popup'); }
+      else { pop.style.zIndex = 10015; }
+      if (typeof window.popupFitPortrait === 'function') { window.popupFitPortrait('gcm-popup'); }
+    }
+
+    // isWanId: true when actId is actually a workgroup_activities_new.id
+    // (Estimate-only activities with no Gantt bar — e.g. the auto-seeded
+    // "Project Overhead"/"Project General Expenses" — pass their wan_id
+    // here instead of a scheduleactivities id, since they don't have one;
+    // see ProjectsmainController::actionCostdashboardactivity's wan_id
+    // fallback).
+    function _showCostPopup(actId, anchorEl, isWanId) {
       var pop = document.getElementById('gcm-popup');
       if (!pop) return;
 
       function _doRender(d) {
-        document.getElementById('gcm-pop-hdr').childNodes[0].textContent = 'Cost Dashboard — ' + (d.activity_name || '');
-        ['gm-cd-rcost','gm-cd-g5','gm-cd-g4','gm-cd-g2'].forEach(function(id) {
+        document.getElementById('gcm-pop-hdr-left').textContent = 'Manage Cost';
+        ['gm-cd-rcost','gm-cd-ucr','gm-cd-rcon','gm-cd-g5','gm-cd-g4','gm-cd-g2'].forEach(function(id) {
           var el = document.getElementById(id); if (el) el.innerHTML = '';
         });
+        // Panel headings for "Project Overhead" specifically read
+        // differently — it's a lump-sum/day-rate line item, not a
+        // quantity-driven construction activity, so "Unit Cost of
+        // Activity"/"Work Done"/"Cost of Activity"/"Yield" don't mean the
+        // same thing here as they do elsewhere. Every other activity
+        // (including "Project General Expenses") keeps the standard titles.
+        var isProjectOverhead = (d.activity_name === 'Project Overhead');
+        document.getElementById('gcm-title-g5').textContent   = isProjectOverhead ? 'Cost Per Day'          : 'Unit Cost of Activity';
+        document.getElementById('gcm-title-g4').textContent   = isProjectOverhead ? 'Elapsed Days'          : 'Work Done';
+        document.getElementById('gcm-title-g2').textContent   = isProjectOverhead ? 'Project Overhead Cost' : 'Cost of Activity';
+        document.getElementById('gcm-title-rcon').textContent = isProjectOverhead ? 'Days'                  : 'Yield';
         document.getElementById('gcm-pop-loading').style.display = 'none';
-        document.getElementById('gcm-pop-row1').style.display = 'flex';
-        _renderResourceCost(d.items, d.activity_name, d.unit);
-        _renderUnitCostOfActivity(d.items, d.activity_name, d.unit, d.schedule_qty);
-        _renderValueOfWorkDone(d);
+        document.getElementById('gcm-pop-row1').style.display = 'grid';
+        _renderResourceCost(d.items, d.activity_name, d.unit, d.schedule_qty, d.activity_qty);
+        _renderUnitCostOfResource(d.items, d.activity_name);
+        _renderResourceConsumption(d.items, d.activity_name, d.last_report_qty, d.unit, d.planned_duration, d.actual_duration, d.activity_qty);
+        _renderUnitCostOfActivity(d.items, d.activity_name, d.unit, d.schedule_qty, d.activity_qty);
+        if (isProjectOverhead) { _renderElapsedDaysDial(d); } else { _renderValueOfWorkDone(d); }
         _renderCostOfActivity(d);
         _positionCostPopup(anchorEl);
       }
 
-      if (_gcpCache[actId]) {
-        document.getElementById('gcm-pop-loading').style.display = 'none';
-        pop.classList.add('gcm-visible');
-        _positionCostPopup(anchorEl);
-        _doRender(_gcpCache[actId]);
-        return;
-      }
+      // This data is time-sensitive (Elapsed Days, live ledger balances,
+      // Actual Duration) and must be recomputed fresh on every single
+      // open — a per-session cache here means the popup keeps showing
+      // whatever day it was first opened on, silently going stale as time
+      // passes and new transactions post. Always re-fetch; no cache read.
 
       // Show loading state
-      document.getElementById('gcm-pop-hdr').childNodes[0].textContent = 'Cost Dashboard — Loading…';
+      document.getElementById('gcm-pop-hdr-left').textContent = 'Manage Cost';
       document.getElementById('gcm-pop-loading').style.display = 'block';
       document.getElementById('gcm-pop-row1').style.display = 'none';
-      pop.classList.add('gcm-visible');
+      _forceShowCostPopup(pop);
       _positionCostPopup(anchorEl);
 
       if (_gcpXhr) _gcpXhr.abort();
       _gcpXhr = $.ajax({
         type: 'POST', url: _base + '/costdashboardactivity',
-        data: { actid: actId }, dataType: 'json',
+        data: isWanId ? { wan_id: actId } : { actid: actId }, dataType: 'json',
         success: function(d) {
           _gcpXhr = null;
           if (!d || d.error) {
             document.getElementById('gcm-pop-loading').textContent = d && d.error ? d.error : 'Error loading data';
             return;
           }
-          _gcpCache[actId] = d;
           _doRender(d);
         },
         error: function(x, s) { _gcpXhr = null; if (s !== 'abort') _hideCostPopup(); }
       });
     }
 
-    $(document).on('click', '#gantt-container .gcol-cost span[data-actid]', function(e) {
-      e.stopPropagation();
-      var actId = $(this).data('actid');
-      if (!actId) return;
-      _showCostPopup(actId, this);
-    });
+    // The Cost Dashboard is intentionally not triggerable from anywhere in
+    // the Gantt chart itself (its own gcol-cost trigger cell was removed) —
+    // it is only ever opened from the Project Estimate report, which calls
+    // this exposed function directly for a given scheduleactivities id.
+    window.showCostDashboardPopup = _showCostPopup;
 
     $('#gcm-pop-close').on('click', function() {
       _hideCostPopup();
@@ -1837,8 +2926,13 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         (function(){
           var el=document.getElementById('gkm-tp'); if(!el)return;
           var tq=+k.target_qty||0,aq=+k.actual_qty||0,dur=+k.b_duration||0,u=k.unit?' '+k.unit:'';
-          var asd=k.act_start_date||'',lrd=k.last_reported_date||'';
-          var elDays=(asd&&lrd)?Math.max(0,Math.round((new Date(lrd)-new Date(asd))/86400000)+1):0;
+          // Days elapsed since the activity's Planned Start Date (not its
+          // Actual/reported start, and not gated on progress having been
+          // reported yet) — Target to Date accrues from day one of the
+          // plan regardless of whether work has actually begun.
+          var psd=k.adj_start_date||'';
+          var todayMid=new Date(); todayMid.setHours(0,0,0,0);
+          var elDays=psd?Math.max(0,Math.round((todayMid-new Date(psd))/86400000)+1):0;
           var compTarget=(dur>0&&tq>0)?Math.min(tq,elDays*(tq/dur)):0;
           var fAct=tq>0?Math.max(0,Math.min(1,aq/tq)):0;
           var fTgt=tq>0?Math.max(0,Math.min(1,compTarget/tq)):0;
@@ -1848,9 +2942,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           function arcD(f1,f2,col,cap){if(f2<=f1)return'';cap=cap||'butt';var p1=ptF(f1),p2=ptF(f2);if((f2-f1)>=1){var pm=ptF(0.5);return'<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+pm[0]+','+pm[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>';}return'<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>';}
           var nr=r-15,na=Math.PI*(1-fTgt),nx=(cx+nr*Math.cos(na)).toFixed(1),ny=(cy-nr*Math.sin(na)).toFixed(1);
           el.innerHTML='<svg width="100%" viewBox="0 -12 210 146" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
-            +arcD(0,1,'#a8aeb8')+(fAct>0?arcD(0,fAct,'#0d1f6e','butt'):'')
+            +arcD(0,1,'#5a6b82')+(fAct>0?arcD(0,fAct,'#0d1f6e','butt'):'')
             +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="3" stroke-linecap="round"/>'
-            +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/><circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#a8aeb8"/>'
+            +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#555"/><circle cx="'+cx+'" cy="'+cy+'" r="2.5" fill="#5a6b82"/>'
             +(tq>0?'<text x="105" y="40" text-anchor="middle" font-size="10" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Target to Date</text>':'')
             +(tq>0?'<text x="105" y="53" text-anchor="middle" font-size="15" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+_fmtFull(compTarget)+u+'</text>':'')
             +'<text x="105" y="66" text-anchor="middle" font-size="10" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual</text>'
@@ -1878,6 +2972,16 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           var elapsedDays=elapsed;
           if(k.act_start_date&&k.act_start_date!=='0000-00-00'){var td2=new Date();td2.setHours(0,0,0,0);var sd2=new Date(k.act_start_date);sd2.setHours(0,0,0,0);elapsedDays=Math.max(0,Math.round((td2-sd2)/86400000)+1);}
           function fmD(s){if(!s||s==='0000-00-00')return'—';var p=s.split('-');return p[2]+'-'+p[1]+'-'+p[0];}
+          // Right-end label is the Actual/Projected End Date (Planned
+          // Start + Actual/Projected Duration, i.e. aDur — which already
+          // reflects any delay/overrun), not the fixed Planned End Date,
+          // so it always shows when the activity is really headed to
+          // finish rather than the static baseline target.
+          var actEndDate='';
+          if(k.adj_start_date&&k.adj_start_date!=='0000-00-00'&&aDur>0){
+            var aed=new Date(k.adj_start_date); aed.setDate(aed.getDate()+(Math.max(1,Math.round(aDur))-1));
+            actEndDate=aed.getFullYear()+'-'+String(aed.getMonth()+1).padStart(2,'0')+'-'+String(aed.getDate()).padStart(2,'0');
+          }
           el.innerHTML='<div style="padding:10px 14px;'+fam+'font-size:12px;box-sizing:border-box;">'
             +'<div style="display:flex;justify-content:space-between;align-items:baseline;font-weight:700;color:#1a2540;">'
             +'<span>'+bDur+'d Planned'+(isOver?' <span style="color:#e53935;">+' +(aDur-bDur)+'d</span>':isUnder?' <span style="color:#27ae60;">−'+(bDur-aDur)+'d</span>':'')+' </span>'
@@ -1886,7 +2990,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
             +'<div style="display:flex;justify-content:space-between;color:#5a6e8c;font-size:11px;">'
             +'<span>Act. Start: <b style="color:#1a2540;">'+fmD(k.act_start_date)+'</b></span>'
             +'<span>Elapsed: <b style="color:#1a2540;">'+elapsedDays+'d</b></span>'
-            +'<span>Plan End: <b style="color:#1a2540;">'+fmD(k.adj_end_date)+'</b></span>'
+            +'<span>Act. End: <b style="color:#1a2540;">'+fmD(actEndDate)+'</b></span>'
             +'</div>'
             +'</div>';
         })();
@@ -1919,24 +3023,380 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     (function(){
       var win = document.getElementById('gkm-modal');
       var hdr = document.getElementById('gkm-header');
+      // Join the app-wide floater stacking authority — clicking this panel
+      // brings it above every other floating window, in actual click order,
+      // same as Resource Library/Vendor Library/etc. already do.
+      if(typeof window.bindDragTouch === 'function' && typeof window.popupBringToFront === 'function'){
+        window.bindDragTouch(win, 'mousedown', function(){ window.popupBringToFront('gkm-modal'); }, true);
+      }
       var MIN_W=420, MIN_H=280, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0;
       function _anchor(){ var r=win.getBoundingClientRect(); win.style.left=r.left+'px'; win.style.top=r.top+'px'; win.style.width=r.width+'px'; win.style.height=r.height+'px'; return r; }
-      hdr.addEventListener('mousedown', function(e){ if(e.target.id==='gkm-close') return; var r=_anchor(); _action='drag'; _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault(); });
-      document.querySelectorAll('.gkm-rs').forEach(function(el){ el.addEventListener('mousedown', function(e){ var r=_anchor(); _action=el.getAttribute('data-dir'); _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height; e.preventDefault(); e.stopPropagation(); }); });
-      document.addEventListener('mousemove', function(e){ if(!_action) return; var dx=e.clientX-_sx, dy=e.clientY-_sy; if(_action==='drag'){ win.style.left=Math.max(0,_ox+dx)+'px'; win.style.top=Math.max(0,_oy+dy)+'px'; } else { var l=_ox,t=_oy,w=_ow,h=_oh; if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);} if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);} if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;} if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;} win.style.left=l+'px'; win.style.top=t+'px'; win.style.width=w+'px'; win.style.height=h+'px'; } });
-      document.addEventListener('mouseup', function(){ _action=null; });
+      bindDragTouch(hdr, 'mousedown', function(e){ if(e.target.id==='gkm-close') return; var r=_anchor(); _action='drag'; _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault(); });
+      document.querySelectorAll('.gkm-rs').forEach(function(el){ bindDragTouch(el, 'mousedown', function(e){ var r=_anchor(); _action=el.getAttribute('data-dir'); _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height; e.preventDefault(); e.stopPropagation(); }); });
+      bindDragTouch(document, 'mousemove', function(e){ if(!_action) return; var dx=e.clientX-_sx, dy=e.clientY-_sy; if(_action==='drag'){ win.style.left=Math.max(0,_ox+dx)+'px'; win.style.top=Math.max(0,_oy+dy)+'px'; } else { var l=_ox,t=_oy,w=_ow,h=_oh; if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);} if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);} if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;} if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;} win.style.left=l+'px'; win.style.top=t+'px'; win.style.width=w+'px'; win.style.height=h+'px'; } });
+      bindDragTouch(document, 'mouseup', function(){ _action=null; });
     })();
 
     // ── Drag + Resize: Cost panel ──────────────────────────────────────────────
     (function(){
       var win = document.getElementById('gcm-popup');
       var hdr = document.getElementById('gcm-pop-hdr');
+      // Join the app-wide floater stacking authority — see the KPI modal's
+      // identical binding just above for why.
+      if(typeof window.bindDragTouch === 'function' && typeof window.popupBringToFront === 'function'){
+        window.bindDragTouch(win, 'mousedown', function(){ window.popupBringToFront('gcm-popup'); }, true);
+      }
       var MIN_W=420, MIN_H=280, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0;
-      function _anchor(){ var r=win.getBoundingClientRect(); win.style.left=r.left+'px'; win.style.top=r.top+'px'; win.style.width=r.width+'px'; win.style.height=r.height+'px'; return r; }
-      hdr.addEventListener('mousedown', function(e){ if(e.target.id==='gcm-pop-close') return; var r=_anchor(); _action='drag'; _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault(); });
-      document.querySelectorAll('.gcm-rs').forEach(function(el){ el.addEventListener('mousedown', function(e){ var r=_anchor(); _action=el.getAttribute('data-dir'); _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height; e.preventDefault(); e.stopPropagation(); }); });
-      document.addEventListener('mousemove', function(e){ if(!_action) return; var dx=e.clientX-_sx, dy=e.clientY-_sy; if(_action==='drag'){ win.style.left=Math.max(0,_ox+dx)+'px'; win.style.top=Math.max(0,_oy+dy)+'px'; } else { var l=_ox,t=_oy,w=_ow,h=_oh; if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);} if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);} if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;} if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;} win.style.left=l+'px'; win.style.top=t+'px'; win.style.width=w+'px'; win.style.height=h+'px'; } });
-      document.addEventListener('mouseup', function(){ _action=null; });
+      function _anchor(){ var r=win.getBoundingClientRect(); win.style.left=r.left+'px'; win.style.top=r.top+'px'; win.style.width=r.width+'px'; win.style.height=r.height+'px'; win.dataset.userSized='1'; return r; }
+      bindDragTouch(hdr, 'mousedown', function(e){ if(e.target.closest('#gcm-pop-close')) return; var r=_anchor(); _action='drag'; _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault(); });
+      document.querySelectorAll('.gcm-rs').forEach(function(el){ bindDragTouch(el, 'mousedown', function(e){ var r=_anchor(); _action=el.getAttribute('data-dir'); _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height; e.preventDefault(); e.stopPropagation(); }); });
+      bindDragTouch(document, 'mousemove', function(e){ if(!_action) return; var dx=e.clientX-_sx, dy=e.clientY-_sy; if(_action==='drag'){ win.style.left=Math.max(0,_ox+dx)+'px'; win.style.top=Math.max(0,_oy+dy)+'px'; } else { var l=_ox,t=_oy,w=_ow,h=_oh; if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);} if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);} if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;} if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;} win.style.left=l+'px'; win.style.top=t+'px'; win.style.width=w+'px'; win.style.height=h+'px'; } });
+      bindDragTouch(document, 'mouseup', function(){ _action=null; });
+    })();
+
+    // Whenever #gantt-win itself is brought to front, re-raise gpd-tip (a
+    // true small anchored sub-popup) so it stays above it — same guarantee
+    // Resource Library gives its own sub-popups. gkp-popup and gcm-popup
+    // are NOT included here any more — they're true floaters now (see
+    // _raiseKpiPopup / _forceShowCostPopup), each with their own live
+    // popupBringToFront() z-index; overwriting that with a stale
+    // popupSubZBase() snapshot here would re-bury them behind
+    // cd-modal/cf-modal, which is exactly the bug this replaced. gkm-modal
+    // is dead/unreachable code (see its own comment above) — left in place
+    // only because it can never actually be visible.
+    if(typeof window.registerSubPopupReraise === 'function'){
+      window.registerSubPopupReraise('gantt-win', function(){
+        ['gkm-modal','gpd-tip'].forEach(function(id){
+          var el = document.getElementById(id);
+          if(el && getComputedStyle(el).display !== 'none'){
+            el.style.zIndex = window.popupSubZBase();
+          }
+        });
+      });
+    }
+  })();
+
+  // ── Project Duration popup — independent of the KPI/Cost dashboards.
+  // Clicking the small clock icon next to the project name in the Gantt
+  // window header (#btn-project-duration) shows planned vs actual project
+  // duration, fetched via the existing performancedashboard endpoint's
+  // project_bar payload (no new backend).
+  (function(){
+    var tip = document.getElementById('gpd-tip');
+    if (!tip) return;
+    var _cache = null;
+
+    function fmD(s){
+      if(!s || s==='0000-00-00') return '—';
+      var d = new Date(s); if (isNaN(d)) return '—';
+      var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear();
+    }
+
+    function render(pb){
+      var planned = Math.max(0, +pb.budgeted || 0);
+      var diff = Math.max(0, +pb.delay || 0);
+      var expectedDur = Math.max(0, +pb.actual || 0);
+
+      document.getElementById('gpd-target-comp').textContent   = planned + ' d';
+      document.getElementById('gpd-expected-comp').textContent = expectedDur > 0 ? (expectedDur + ' d') : '—';
+      document.getElementById('gpd-target-date').textContent   = fmD(pb.b_end_date);
+      document.getElementById('gpd-expected-date').textContent = fmD(pb.proj_end_date || pb.a_end_date);
+
+      // Elapsed Days = planned start date of the first activity till today.
+      // Remaining Days = project planned duration - elapsed days.
+      var plannedStart = pb.b_start_date || '';
+      var elapsedDays = 0;
+      if (plannedStart) {
+        var sd = new Date(plannedStart); sd.setHours(0,0,0,0);
+        var td = new Date(); td.setHours(0,0,0,0);
+        elapsedDays = Math.max(0, Math.round((td - sd) / 86400000) + 1);
+      }
+      var remainingDays = Math.max(0, planned - elapsedDays);
+      document.getElementById('gpd-elapsed-days').textContent   = plannedStart ? (elapsedDays + ' d') : '—';
+      document.getElementById('gpd-remaining-days').textContent = remainingDays + ' d';
+
+      document.getElementById('gpd-start-date').textContent = fmD(plannedStart);
+      document.getElementById('gpd-pct-complete').textContent = (pb.pct_complete != null ? pb.pct_complete : 0) + '%';
+
+      // Delayed/Savings status line above the bar — delay comes from the
+      // critical-path overrun (pb.delay); savings is when the expected
+      // duration undercuts the target duration.
+      (function(){
+        var statusEl = document.getElementById('gpd-bar-status');
+        statusEl.className = '';
+        if (diff > 0) {
+          statusEl.textContent = 'Delayed by: ' + diff + ' d';
+          statusEl.className = 'gpd-late';
+        } else if (expectedDur > 0 && expectedDur < planned) {
+          statusEl.textContent = 'Savings by: ' + (planned - expectedDur) + ' d';
+          statusEl.className = 'gpd-early';
+        } else {
+          statusEl.textContent = '';
+        }
+      })();
+
+      // Duration bar — planned span in the Gantt's critical-path colour
+      // (#00ACC1), overrun (if any) in red, same visual language as the
+      // Activity Duration panel's bar. Bar length = B. Duration, the same
+      // planned/budgeted duration shown against the project row in the Gantt.
+      (function(){
+        var actual = planned + diff;
+        var maxDur = Math.max(planned, actual, 1);
+        var barHtml;
+        if (diff > 0) {
+          barHtml = '<div style="width:'+(planned/maxDur*100).toFixed(1)+'%;background:#00ACC1;min-width:3px;"></div>'
+                  + '<div style="width:'+(diff/maxDur*100).toFixed(1)+'%;background:#e53935;min-width:3px;"></div>';
+        } else {
+          barHtml = '<div style="width:100%;background:#00ACC1;"></div>';
+        }
+        document.getElementById('gpd-bar').innerHTML = barHtml;
+      })();
+
+      document.getElementById('gpd-tip-loading').style.display = 'none';
+      document.getElementById('gpd-tip-content').style.display = 'block';
+    }
+
+    var _dragged = false;
+
+    function position(anchorEl){
+      var r = anchorEl.getBoundingClientRect();
+      var top = r.bottom + 6;
+      var left = Math.min(r.left, window.innerWidth - 536);
+      tip.style.top = Math.max(4, top) + 'px';
+      tip.style.left = Math.max(4, left) + 'px';
+    }
+
+    function show(anchorEl){
+      if (!_dragged) position(anchorEl);
+      tip.style.zIndex = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 10020;
+      tip.classList.add('gpd-open');
+      if (_cache) { render(_cache); return; }
+      document.getElementById('gpd-tip-loading').style.display = 'block';
+      document.getElementById('gpd-tip-content').style.display = 'none';
+      $.ajax({
+        type: 'POST', url: _base + '/performancedashboard', dataType: 'json',
+        success: function(d){
+          if (!d || !d.project_bar) { document.getElementById('gpd-tip-loading').textContent = 'No data.'; return; }
+          _cache = d.project_bar;
+          var acts = d.activities || [];
+          var total = acts.length, done = 0;
+          acts.forEach(function(a){ if (+a.completed_status !== 0) done++; });
+          _cache.pct_complete = total > 0 ? Math.round((done / total) * 100) : 0;
+          render(_cache);
+        },
+        error: function(){ document.getElementById('gpd-tip-loading').textContent = 'Failed to load.'; }
+      });
+    }
+    function hide(){ tip.classList.remove('gpd-open'); }
+
+    // #btn-project-duration lives in main.php, OUTSIDE #gantt-win-body —
+    // every Gantt reload (_loadGanttWin) replaces #gantt-win-body's HTML,
+    // destroying this #gpd-tip instance and re-running this whole script
+    // block, but the button itself survives untouched. A direct
+    // btn.addEventListener() + a per-button "already bound" dataset guard
+    // (the previous approach) meant: after the first reload, the guard was
+    // still set from the FIRST script run, so the fresh listener (closing
+    // over the new, live #gpd-tip) never got attached — the button then
+    // silently did nothing, or at best re-opened a #gpd-tip that no longer
+    // existed in the DOM. Delegated listeners on `document`, registered
+    // once globally (window._gpdDelegatedBound, survives across reloads
+    // since `window` itself is never torn down), sidestep this entirely —
+    // they always resolve #btn-project-duration/#gpd-tip fresh from the
+    // DOM on each click, so they keep working no matter how many times
+    // the Gantt has been reloaded since page load.
+    if (!window._gpdDelegatedBound) {
+      window._gpdDelegatedBound = true;
+      document.addEventListener('click', function(e){
+        var btn = e.target.closest('#btn-project-duration');
+        var liveTip = document.getElementById('gpd-tip');
+        if (btn) {
+          e.preventDefault(); e.stopPropagation();
+          if (!liveTip) return;
+          if (liveTip.classList.contains('gpd-open')) { liveTip.classList.remove('gpd-open'); return; }
+          if (typeof window._gpdShow === 'function') window._gpdShow(btn);
+          return;
+        }
+        if (!liveTip || !liveTip.classList.contains('gpd-open')) return;
+        var curBtn = document.getElementById('btn-project-duration');
+        if (curBtn && (e.target === curBtn || curBtn.contains(e.target))) return;
+        if (liveTip.contains(e.target)) return;
+        liveTip.classList.remove('gpd-open');
+      });
+    }
+    // Re-exposed on every script run so the delegated handler above always
+    // calls the CURRENT closure's show()/render() (fresh _cache, fresh tip
+    // reference) rather than a stale one left over from a prior Gantt load.
+    window._gpdShow = show;
+
+    // ── Drag ──────────────────────────────────────────────────────────────
+    (function(){
+      var titleEl = document.getElementById('gpd-tip-title');
+      var _action=false, _sx=0, _sy=0, _ox=0, _oy=0;
+      function _anchor(){ var r=tip.getBoundingClientRect(); tip.style.left=r.left+'px'; tip.style.top=r.top+'px'; return r; }
+      bindDragTouch(titleEl, 'mousedown', function(e){
+        var r=_anchor(); _action=true; _dragged=true;
+        _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault();
+      });
+      bindDragTouch(document, 'mousemove', function(e){
+        if(!_action) return;
+        var dx=e.clientX-_sx, dy=e.clientY-_sy;
+        tip.style.left=Math.max(0,_ox+dx)+'px'; tip.style.top=Math.max(0,_oy+dy)+'px';
+      });
+      bindDragTouch(document, 'mouseup', function(){ _action=false; });
+    })();
+  })();
+
+  // ── Project Snapshot hover card ─────────────────────────────────────────
+  // Hovering the project name in the Gantt window header
+  // (#gantt-win-proj-name) shows a compact card styled like the
+  // "Projects" list card (.gpm-card in main.php), independent of the
+  // click-triggered #gpd-tip popup above (own trigger, own element, own
+  // styling — same underlying performancedashboard data for now, since
+  // several of the 8 fields share the same source; formulas for
+  // Actual Duration / Status / Actual Completion are placeholders
+  // pending further direction).
+  (function(){
+    var tip = document.getElementById('gsc-tip');
+    if (!tip) return;
+    var _cache = null;
+
+    function fmD(s){
+      if(!s || s==='0000-00-00') return '—';
+      var d = new Date(s); if (isNaN(d)) return '—';
+      var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear();
+    }
+
+    function render(pb, projName){
+      document.getElementById('gsc-tip-name').textContent = projName || 'Project';
+
+      var planned = Math.max(0, +pb.budgeted || 0);
+      var diff = Math.max(0, +pb.delay || 0);
+      var expectedDur = Math.max(0, +pb.actual || 0);
+
+      document.getElementById('gsc-planned-dur').textContent = planned + ' d';
+      document.getElementById('gsc-actual-dur').textContent = expectedDur > 0 ? (expectedDur + ' d') : '—';
+      document.getElementById('gsc-planned-comp').textContent = fmD(pb.b_end_date);
+      document.getElementById('gsc-actual-comp').textContent = fmD(pb.proj_end_date || pb.a_end_date);
+
+      var plannedStart = pb.b_start_date || '';
+      var elapsedDays = 0;
+      if (plannedStart) {
+        var sd = new Date(plannedStart); sd.setHours(0,0,0,0);
+        var td = new Date(); td.setHours(0,0,0,0);
+        elapsedDays = Math.max(0, Math.round((td - sd) / 86400000) + 1);
+      }
+      var remainingDays = Math.max(0, planned - elapsedDays);
+      document.getElementById('gsc-elapsed').textContent = plannedStart ? (elapsedDays + ' d') : '—';
+      document.getElementById('gsc-remaining').textContent = remainingDays + ' d';
+      document.getElementById('gsc-pct').textContent = (pb.pct_complete != null ? pb.pct_complete : 0) + '%';
+
+      var statusEl = document.getElementById('gsc-status');
+      statusEl.className = 'gsc-val';
+      if (diff > 0) {
+        statusEl.textContent = 'Delayed by ' + diff + ' d';
+        statusEl.className = 'gsc-val gsc-late';
+      } else if (expectedDur > 0 && expectedDur < planned) {
+        statusEl.textContent = 'Earlier by ' + (planned - expectedDur) + ' d';
+        statusEl.className = 'gsc-val gsc-early';
+      } else {
+        statusEl.textContent = '—';
+      }
+
+      document.getElementById('gsc-tip-loading').style.display = 'none';
+      document.getElementById('gsc-tip-content').style.display = 'flex';
+    }
+
+    function position(anchorEl){
+      var r = anchorEl.getBoundingClientRect();
+      var top = r.bottom + 6;
+      var left = Math.min(r.left, window.innerWidth - 496);
+      tip.style.top = Math.max(4, top) + 'px';
+      tip.style.left = Math.max(4, left) + 'px';
+    }
+
+    // Once the user starts dragging the card by its header, it "pins"
+    // open — mouseleave no longer auto-hides it, and the card stays
+    // wherever it was dragged to until the user explicitly closes it
+    // (× button) or clicks elsewhere. Un-pinned (the normal hover
+    // state), it still auto-hides ~150ms after the mouse leaves both
+    // the trigger and the card, same as before.
+    var _pinned = false;
+
+    function show(anchorEl){
+      if (!_pinned) position(anchorEl);
+      tip.style.zIndex = (typeof window.popupSubZBase === 'function') ? window.popupSubZBase() : 10025;
+      tip.classList.add('gsc-open');
+      var projName = anchorEl.textContent || 'Project';
+      if (_cache) { render(_cache, projName); return; }
+      document.getElementById('gsc-tip-loading').style.display = 'block';
+      document.getElementById('gsc-tip-content').style.display = 'none';
+      $.ajax({
+        type: 'POST', url: _base + '/performancedashboard', dataType: 'json',
+        success: function(d){
+          if (!d || !d.project_bar) { document.getElementById('gsc-tip-loading').textContent = 'No data.'; return; }
+          _cache = d.project_bar;
+          var acts = d.activities || [];
+          var total = acts.length, done = 0;
+          acts.forEach(function(a){ if (+a.completed_status !== 0) done++; });
+          _cache.pct_complete = total > 0 ? Math.round((done / total) * 100) : 0;
+          render(_cache, projName);
+        },
+        error: function(){ document.getElementById('gsc-tip-loading').textContent = 'Failed to load.'; }
+      });
+    }
+    function hide(){ tip.classList.remove('gsc-open'); _pinned = false; }
+
+    function bind(){
+      var nameEl = document.getElementById('gantt-win-proj-name');
+      if (!nameEl || nameEl.dataset.gscBound) return;
+      nameEl.dataset.gscBound = '1';
+      var hideTimer = null;
+      nameEl.addEventListener('mouseenter', function(){
+        clearTimeout(hideTimer);
+        show(nameEl);
+      });
+      nameEl.addEventListener('mouseleave', function(){
+        if (_pinned) return;
+        hideTimer = setTimeout(hide, 150);
+      });
+      tip.addEventListener('mouseenter', function(){ clearTimeout(hideTimer); });
+      tip.addEventListener('mouseleave', function(){
+        if (_pinned) return;
+        hideTimer = setTimeout(hide, 150);
+      });
+    }
+    bind();
+    // #gantt-win-proj-name lives in main.php outside this embedded view; if
+    // this script runs before it's in the DOM, retry shortly.
+    if (!document.getElementById('gantt-win-proj-name')) setTimeout(bind, 500);
+
+    document.getElementById('gsc-tip-close').addEventListener('click', function(e){
+      e.stopPropagation();
+      hide();
+    });
+
+    // ── Drag by the header (#gsc-tip-top) — same mechanics as the other
+    // draggable popups in this app. Starting a drag pins the card open.
+    (function(){
+      var hdr = document.getElementById('gsc-tip-top');
+      var _action = false, _sx = 0, _sy = 0, _ox = 0, _oy = 0;
+      function _anchor(){ var r = tip.getBoundingClientRect(); tip.style.left = r.left + 'px'; tip.style.top = r.top + 'px'; return r; }
+      bindDragTouch(hdr, 'mousedown', function(e){
+        if (e.target.id === 'gsc-tip-close') return;
+        var r = _anchor();
+        _action = true; _pinned = true;
+        _sx = e.clientX; _sy = e.clientY; _ox = r.left; _oy = r.top;
+        e.preventDefault();
+      });
+      bindDragTouch(document, 'mousemove', function(e){
+        if (!_action) return;
+        var dx = e.clientX - _sx, dy = e.clientY - _sy;
+        tip.style.left = Math.max(0, _ox + dx) + 'px';
+        tip.style.top = Math.max(0, _oy + dy) + 'px';
+      });
+      bindDragTouch(document, 'mouseup', function(){ _action = false; });
     })();
   })();
 
@@ -1975,20 +3435,6 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     $('#gantt-status').text('Recalculating critical path…');
     refreshCriticalPath(function() { loadGantt(); });
   });
-
-  // ---- Quick Entry button ---------------------------------------------------
-  $(document).off('click.qe').on('click.qe', '#btn-quick-entry', function(e) {
-    e.preventDefault();
-    if (typeof openQeModal === 'function') {
-      openQeModal();
-    } else {
-      $('#qe-bk').addClass('qe-open');
-      $('#qe-modal').addClass('qe-open');
-    }
-  });
-
-  // ---- Click on any activity bar opens Quick Entry prefilled ---------------
-  // (rawId lookup happens inside the IIFE where _actCells is in scope — see below)
 
   // ---- Init -----------------------------------------------------------------
 
@@ -2145,6 +3591,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     var _kpTimer   = null;   // debounce timer
     var _kpXhr     = null;   // in-flight request
     var _kpCache   = {};     // actid → kpi data cache
+    var _kpNameCache = {};   // actid → activity name cache, shown in the popup title
+    var _kpOpenActId = null; // actid whose popup is currently shown, for click-to-toggle
 
     var _fmK = function(v){ v=+v||0; if(!v)return'0'; return(+v.toFixed(2)).toLocaleString('en-IN'); };
     var _shK = function(s,n){ s=String(s||''); return s.length>n?s.slice(0,n-1)+'…':s; };
@@ -2230,8 +3678,13 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     function _renderKpuTargetProd(k) {
       var el=document.getElementById('gkp-tp'); if(!el)return;
       var tq=+k.target_qty||0, aq=+k.actual_qty||0, dur=+k.b_duration||0, u=k.unit?' '+k.unit:'';
-      var asd=k.act_start_date||'', lrd=k.last_reported_date||'';
-      var elDays=(asd&&lrd)?Math.max(0,Math.round((new Date(lrd)-new Date(asd))/86400000)+1):0;
+      // Days elapsed since the activity's Planned Start Date (not its
+      // Actual/reported start, and not gated on progress having been
+      // reported yet) — Target to Date accrues from day one of the plan
+      // regardless of whether work has actually begun.
+      var psd=k.adj_start_date||'';
+      var todayMid=new Date(); todayMid.setHours(0,0,0,0);
+      var elDays=psd?Math.max(0,Math.round((todayMid-new Date(psd))/86400000)+1):0;
       var compTarget=(dur>0&&tq>0)?Math.min(tq,elDays*(tq/dur)):0;
       var fAct=tq>0?Math.max(0,Math.min(1,aq/tq)):0;
       var fTgt=tq>0?Math.max(0,Math.min(1,compTarget/tq)):0;
@@ -2241,9 +3694,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       function arcP(f1,f2,col,cap){if(f2<=f1)return'';cap=cap||'butt';var p1=ptF(f1),p2=ptF(f2);if((f2-f1)>=1){var pm=ptF(0.5);return'<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+pm[0]+','+pm[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>';}return'<path d="M'+p1[0]+','+p1[1]+' A'+r+','+r+' 0 0,1 '+p2[0]+','+p2[1]+'" fill="none" stroke="'+col+'" stroke-width="'+sw+'" stroke-linecap="'+cap+'"/>';}
       var nr=r-12,na=Math.PI*(1-fTgt),nx=(cx+nr*Math.cos(na)).toFixed(1),ny=(cy-nr*Math.sin(na)).toFixed(1);
       el.innerHTML='<svg width="100%" viewBox="0 -8 180 130" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet" style="display:block;width:100%;height:auto;">'
-        +arcP(0,1,'#a8aeb8')+(fAct>0?arcP(0,fAct,'#0d1f6e','butt'):'')
+        +arcP(0,1,'#5a6b82')+(fAct>0?arcP(0,fAct,'#0d1f6e','butt'):'')
         +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="#333" stroke-width="2.5" stroke-linecap="round"/>'
-        +'<circle cx="'+cx+'" cy="'+cy+'" r="5" fill="#555"/><circle cx="'+cx+'" cy="'+cy+'" r="2" fill="#a8aeb8"/>'
+        +'<circle cx="'+cx+'" cy="'+cy+'" r="5" fill="#555"/><circle cx="'+cx+'" cy="'+cy+'" r="2" fill="#5a6b82"/>'
         +(tq>0?'<text x="90" y="44" text-anchor="middle" font-size="8" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Target to Date</text>':'')
         +(tq>0?'<text x="90" y="55" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2540" font-family="Barlow Condensed,Arial">'+_fmK(compTarget)+u+'</text>':'')
         +'<text x="90" y="65" text-anchor="middle" font-size="8" fill="#5a6e8c" font-family="Barlow Condensed,Arial">Actual</text>'
@@ -2265,7 +3718,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       if(!aDur) aDur=bDur;
       var maxDur=Math.max(bDur,aDur,1);
       var isOver=aDur>bDur, isUnder=bDur>aDur;
-      var baseCol=k.critical?'#00838f':'#37474F';
+      var baseCol=k.completed?'#00842e':(k.critical?'#00838f':'#37474F');
       var fam="font-family:'Barlow Condensed',sans-serif;";
       var bar='<div style="position:relative;display:flex;align-items:stretch;height:11px;border-radius:3px;overflow:hidden;margin:4px 0;">';
       if(isOver){
@@ -2285,6 +3738,14 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         var sd=new Date(k.act_start_date);sd.setHours(0,0,0,0);
         elapsedDays=Math.max(0,Math.round((td-sd)/86400000)+1);
       }
+      // Right-end label is the Actual/Projected End Date (Planned Start +
+      // Actual/Projected Duration, i.e. aDur — already reflects any
+      // delay/overrun), not the fixed Planned End Date.
+      var actEndDate2='';
+      if(k.adj_start_date&&k.adj_start_date!=='0000-00-00'&&aDur>0){
+        var aed2=new Date(k.adj_start_date); aed2.setDate(aed2.getDate()+(Math.max(1,Math.round(aDur))-1));
+        actEndDate2=aed2.getFullYear()+'-'+String(aed2.getMonth()+1).padStart(2,'0')+'-'+String(aed2.getDate()).padStart(2,'0');
+      }
       el.innerHTML='<div style="padding:5px 7px;'+fam+'font-size:10px;box-sizing:border-box;">'
         +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px;">'
         +'<span style="color:#1a2540;font-weight:700;">'+bDur+'d Planned'+(isOver?' <span style="color:#e53935;">+' +(aDur-bDur)+'d</span>':isUnder?' <span style="color:#27ae60;">−'+(bDur-aDur)+'d</span>':'')+' </span>'
@@ -2294,7 +3755,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         +'<div style="display:flex;justify-content:space-between;color:#5a6e8c;font-size:9px;">'
         +'<span>Start: <b style="color:#1a2540;">'+(_fmDateK(k.act_start_date)||'—')+'</b></span>'
         +'<span>Elapsed: <b style="color:#1a2540;">'+elapsedDays+'d</b></span>'
-        +'<span>Plan End: <b style="color:#1a2540;">'+(_fmDateK(k.adj_end_date)||'—')+'</b></span>'
+        +'<span>Act. End: <b style="color:#1a2540;">'+(_fmDateK(actEndDate2)||'—')+'</b></span>'
         +'</div>'
         +'</div>';
       var durCls=aDur>bDur?'over':aDur<bDur?'good':'';
@@ -2304,13 +3765,90 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         +'</div>');
     }
 
-    function _renderKpi(k) {
-      document.getElementById('gkp-title').textContent = 'KPI — ' + (k.activity_name || '');
+    var _gkpResData = []; // last-rendered resource_latest rows, indexed same as the bars, for hover lookup
+
+    function _renderKpuResourceCapacity(k) {
+      var el = document.getElementById('gkp-res'); if (!el) return;
+      var items = k.resource_latest || [];
+      _gkpResData = items;
+      if (!items.length) {
+        el.innerHTML = '<div style="text-align:center;font-size:11px;color:#9aa5ba;padding:14px 0;font-family:\'Barlow Condensed\',sans-serif;">No resource data</div>';
+        return;
+      }
+      var cols = ['#3461b8','#d4845a','#27afc4','#7c5cbf','#f0c419','#8fa3bc','#ec407a','#26a69a'];
+      var maxVal = 0;
+      items.forEach(function(r){ maxVal = Math.max(maxVal, +r.qty || 0); });
+      if (!maxVal) maxVal = 1;
+      var fam = "font-family:'Barlow Condensed',sans-serif;";
+      var bars = '<div class="gkp-res-hover-area" style="flex:1;min-height:0;display:flex;align-items:flex-end;gap:4px;padding:6px 8px 0;border-bottom:1px solid #dde3ef;overflow-x:auto;cursor:default;">';
+      var labels = '<div style="display:flex;gap:4px;padding:3px 8px 5px;flex-shrink:0;overflow-x:hidden;">';
+      items.forEach(function(r, i) {
+        var qty = +r.qty || 0;
+        var col = cols[i % cols.length];
+        var pct = Math.max(4, (qty / maxVal * 100)).toFixed(1) + '%';
+        bars += '<div style="flex:1;min-width:14px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">'
+          + '<div style="width:60%;height:' + pct + ';min-height:3px;background:' + col + ';border-radius:2px 2px 0 0;"></div>'
+          + '</div>';
+        labels += '<div style="flex:1;min-width:14px;text-align:center;font-size:8px;color:#5a6e8c;' + fam + 'overflow:hidden;white-space:nowrap;">' + _shK(r.type_name || '', 10) + '</div>';
+      });
+      bars += '</div>';
+      labels += '</div>';
+      el.innerHTML = bars + labels;
+    }
+
+    // Hover the panel → rich bar-chart tooltip (same style/classes as the
+    // Cost Dashboard's Est/Act popups: gridline-textured bars + legend),
+    // one bar per resource, sized slightly larger per request.
+    (function(){
+      var $tip = $('#gkp-res-tip');
+      function _rows(){
+        return _gkpResData.map(function(r){
+          return { name: r.name || '', est: +r.qty || 0, act: +r.qty || 0, hasActual: false, unit: '' };
+        });
+      }
+      $(document).on('mouseenter', '.gkp-res-hover-area', function(){
+        $tip.html(_renderBarTip(_rows(), function(v){ return _fmK(v); }, 'Resource Quantity (Latest Reported)', true)).addClass('gm-bar-tip-open gkp-res-tip-big');
+      });
+      $(document).on('mousemove', '.gkp-res-hover-area', function(e){
+        if (!$tip.hasClass('gm-bar-tip-open')) return;
+        var tw = $tip.outerWidth(), th = $tip.outerHeight();
+        var left = Math.min(e.clientX + 14, window.innerWidth  - tw - 8);
+        var top  = Math.min(e.clientY + 14, window.innerHeight - th - 8);
+        $tip.css({ left: Math.max(8,left) + 'px', top: Math.max(8,top) + 'px' });
+      });
+      $(document).on('mouseleave', '.gkp-res-hover-area', function(){
+        $tip.removeClass('gm-bar-tip-open gkp-res-tip-big');
+      });
+    })();
+
+    // Small blue activity-name label shown at the top of each panel body —
+    // same visual pattern the Cost Dashboard's panels already use (e.g.
+    // _renderResourceCost) — instead of in the popup's own header.
+    function _gkpPanelNameLabel(actName) {
+      return '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _shK(actName || '', 40) + '</div>';
+    }
+
+    function _renderKpi(k, actId) {
+      // k.activity_name (set by _buildKpi server-side) is the reliable
+      // source — it was already present in the KPI payload before the
+      // separate _kpNameCache/outer-JSON activity_name field was added,
+      // so read it directly instead of depending on that second field
+      // round-tripping correctly.
+      var nm = (k && k.activity_name) || (actId != null ? _kpNameCache[actId] : null);
+      document.getElementById('gkp-title').textContent = 'Manage Schedule';
       _renderKpuCapacity(k);
       _renderKpuCycleTime(k);
       _renderKpuProductivity(k);
       _renderKpuTargetProd(k);
       _renderKpuDuration(k);
+      _renderKpuResourceCapacity(k);
+      // Label injected AFTER each panel's own render — every _renderKpu*
+      // above sets innerHTML directly (gauges are drawn as full inline
+      // SVG), which would wipe out a label set beforehand.
+      ['gkp-g3','gkp-tp','gkp-dur','gkp-res','gkp-g5','gkp-g4'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.insertAdjacentHTML('afterbegin', _gkpPanelNameLabel(nm));
+      });
     }
 
     function _positionPopup(mouseX, mouseY) {
@@ -2349,6 +3887,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       if (_kpXhr) { _kpXhr.abort(); _kpXhr = null; }
       var pop = document.getElementById('gkp-popup');
       pop.classList.remove('gkp-visible');
+      delete pop.dataset.portraitFitted;
+      _kpOpenActId = null;
     }
 
     // Extract raw actid from the bar's hashed task ID via _actCells lookup
@@ -2357,27 +3897,57 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var pfx = 'gantt-containerbardiv_';
       if (idAttr.indexOf(pfx) !== 0) return null;
       var tid = idAttr.slice(pfx.length);
-      var cells = _actCells || window._ganttActCells || {};
+      var cells = window._ganttActCells || {};
       var db  = cells[tid];
       return (db && db.rawId) ? db.rawId : null;
     }
 
+    // Same lookup, keyed off the grid ROW's id instead of the bar's — the
+    // row (left-hand name/columns table) is a separate element from the bar
+    // (right-hand timeline), so hovering it can trigger the KPI popup
+    // without competing with clicking the bar to open the WBS entry form.
+    function _getActIdFromRow(row) {
+      var idAttr = row.id || '';   // e.g. "gantt-containerchildrow_<hashed_tid>"
+      var pfx = 'gantt-containerchildrow_';
+      if (idAttr.indexOf(pfx) !== 0) return null;
+      var tid = idAttr.slice(pfx.length);
+      var cells = window._ganttActCells || {};
+      var db  = cells[tid];
+      return (db && db.rawId) ? db.rawId : null;
+    }
+
+    // #gkp-popup is a true floater (like cd-modal/cf-modal), not a
+    // sub-popup — it must get its own live ++_z on every open, not a
+    // one-time snapshot (popupSubZBase's _z + 5000 goes stale the moment
+    // any other floater is clicked/opened afterward, letting this popup
+    // get buried again — the exact bug class this fixes, see KPI/Cost
+    // Dashboard/Cashflow all needing to stay visible simultaneously).
+    function _raiseKpiPopup(pop) {
+      if (typeof window.popupBringToFront === 'function') { window.popupBringToFront('gkp-popup'); return; }
+      pop.style.zIndex = 10015;
+    }
+
     // Generic KPI fetch + show function (used by bar hover and KPI icon hover)
     function _showKpiForAct(actId, positionFn) {
+      _kpOpenActId = actId;
       if (_kpCache[actId]) {
-        _renderKpi(_kpCache[actId]);
+        _renderKpi(_kpCache[actId], actId);
         var pop = document.getElementById('gkp-popup');
         pop.classList.add('gkp-visible');
+        _raiseKpiPopup(pop);
+        if (typeof window.popupFitPortrait === 'function') { window.popupFitPortrait('gkp-popup'); }
         positionFn();
         return;
       }
       if (_kpXhr) _kpXhr.abort();
-      document.getElementById('gkp-title').textContent = 'Loading KPI…';
-      ['gkp-g5','gkp-g4','gkp-g3','gkp-tp','gkp-dur'].forEach(function(id){
+      document.getElementById('gkp-title').textContent = 'Manage Schedule';
+      ['gkp-g5','gkp-g4','gkp-g3','gkp-tp','gkp-dur','gkp-res'].forEach(function(id){
         var el=document.getElementById(id); if(el) el.innerHTML='';
       });
       var pop = document.getElementById('gkp-popup');
       pop.classList.add('gkp-visible');
+      _raiseKpiPopup(pop);
+      if (typeof window.popupFitPortrait === 'function') { window.popupFitPortrait('gkp-popup'); }
       positionFn();
       _kpXhr = $.ajax({
         type: 'POST', url: _base + '/performancedashboardkpi',
@@ -2386,67 +3956,432 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           _kpXhr = null;
           if (!d || !d.kpi) return;
           _kpCache[actId] = d.kpi;
-          _renderKpi(d.kpi);
+          _kpNameCache[actId] = d.activity_name || '';
+          _renderKpi(d.kpi, actId);
           positionFn();
         },
         error: function(x, s) { _kpXhr = null; if(s!=='abort') _hidePopup(); }
       });
     }
 
-    // Bar hover — KPI popup (disabled: now click-only)
-    $(document).off('mouseover.gkpihover').on('mouseover.gkpihover', '#gantt-container .gtaskbarcontainer:not(.gplan)', function(e) {
-      return; // click on KPI icon opens the panel instead
-      var actId = _getActIdFromBarDiv(this);
-      if (!actId) return;
-      clearTimeout(_kpTimer);
-      var mx = e.clientX, my = e.clientY;
-      _kpTimer = setTimeout(function() {
-        _showKpiForAct(actId, function(){ _positionPopup(mx, my); });
-      }, 300);
-    });
+    // Row click — KPI popup. Bound to #gantt-container itself (not the row
+    // element directly) so it also catches clicks on nested cells/backdrop
+    // divs inside the row whose own delegated-selector match might not be
+    // the <tr> — resolves the activity id via closest('tr') off the actual
+    // click target rather than relying on `this`. Explicitly excludes the
+    // bar itself so it doesn't compete with clicking the bar to open the
+    // WBS entry form (see the click.qebar handler further below). Stays
+    // open until the user clicks a different row (which replaces its
+    // contents), clicks the same row again while its popup is open
+    // (toggle-close), or clicks the × close button.
+    // Finds the dependency-line element (if any) at the given click
+    // coordinates — a plain e.target.closest() isn't reliable here
+    // because the "planned" ghost bar overlay (.gtaskbarcontainer.gplan,
+    // jsgantt.css, z-index:10000) visually covers the same row/bar area
+    // a line passes through; when that overlay is what's actually under
+    // the cursor, e.target IS the overlay and .closest() walking its
+    // ancestors can never reach the line (a sibling, not an ancestor).
+    // elementsFromPoint returns the FULL stack at the click point,
+    // topmost first, so the line is found regardless of what else is
+    // painted on top of it. Shared by both the KPI-popup exclusion below
+    // and the line-click-opens-relationship-editor handler further down.
+    function _ganttDepLineAt(clientX, clientY){
+      var stack = document.elementsFromPoint(clientX, clientY);
+      for (var i = 0; i < stack.length; i++) {
+        var el = stack[i];
+        if (el.classList && Array.prototype.some.call(el.classList, function(c){ return c.indexOf('gDepId') === 0; })) {
+          return el;
+        }
+      }
+      return null;
+    }
 
+    (function(){
+      var _gc = document.getElementById('gantt-container');
+      if (!_gc) return;
+      _gc.addEventListener('click', function(e) {
+        // While the Add Relationship form's Gantt-click picker is active
+        // (window._relPickFromGantt, overrelay-relations.php — a no-op
+        // when that form isn't open), a bar click should feed the
+        // picker, not open the KPI popup. This handler registers BEFORE
+        // the picker's own interception further down the file, so it
+        // needs its own bail-out here rather than relying on that one.
+        if (typeof window._relPickFromGantt === 'function') {
+          var _pickCheckBar = e.target.closest('.gtaskbarcontainer');
+          var _pickCheckId = _pickCheckBar ? _getActIdFromBarDiv(_pickCheckBar) : null;
+          if (_pickCheckId && typeof window._relPickIsActive === 'function' && window._relPickIsActive()) return;
+        }
+        // A dependency line/arrow can visually sit on top of a bar —
+        // let the line-click handler (below, same #gantt-container
+        // capture-phase listener) win in that case rather than opening
+        // the KPI popup underneath it.
+        if (_ganttDepLineAt(e.clientX, e.clientY)) return;
+        var barEl = e.target.closest('.gtaskbarcontainer');
+        if (!barEl) return;
+        var actId = _getActIdFromBarDiv(barEl);
+        if (!actId) return;
+        var pop = document.getElementById('gkp-popup');
+        if (_kpOpenActId === actId && pop.classList.contains('gkp-visible')) {
+          _hidePopup();
+          return;
+        }
+        var mx = e.clientX, my = e.clientY;
+        _showKpiForAct(actId, function(){ _positionPopup(mx, my); });
+      }, true);
+    })();
+
+    // Activity name click — Planned/Actual Start-End grid tooltip. Bound to
+    // the .gtaskname cell specifically (not the whole row, unlike the KPI
+    // hover above). Opens on click and stays open (unlike the old hover
+    // version) until the user clicks elsewhere — see click.gnametipoutside
+    // below — so Planned Start / Actual Start can be clicked to edit without
+    // the tooltip vanishing first.
+    (function(){
+      var $nameTip = $('#gname-tip');
+      var _curActId = null;   // rawId (scheduleactivities.id) of the activity currently shown
+      function _fmtNameDate(d) {
+        if (!d || d === '0000-00-00') return '—';
+        var p = d.split('-');
+        return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d;
+      }
+      // Actual vs Planned, per date (Start compared to Start, End to End,
+      // independently) — later than planned = red, earlier than planned =
+      // green, same date = no colour change. Raw YYYY-MM-DD strings compare
+      // correctly with plain string comparison.
+      function _dateCls(actual, planned) {
+        if (!actual || actual === '0000-00-00' || !planned || planned === '0000-00-00' || actual === planned) return '';
+        return actual > planned ? 'gname-date-late' : 'gname-date-early';
+      }
+      function _dateSpan(field, raw, cls, editable) {
+        var tag = editable ? 'u' : 'span';
+        var cssCls = (editable ? 'gname-date-editable ' : '') + (cls || '');
+        return '<' + tag + ' class="' + cssCls + '" data-field="' + field + '" data-date="' + (raw || '') + '">' + _fmtNameDate(raw) + '</' + tag + '>';
+      }
+      function _render(name, db) {
+        // Before any progress is reported, "Actual Start" is only ever a
+        // mirror of Planned Start (see astart: aStart || act.actual_start_date
+        // above) — both are the same editable value/edit window. Once
+        // progress exists, schedule_progress_report.start_date becomes the
+        // historical record and neither is editable any more (server also
+        // enforces this — see actionUpdateactivitystartdate).
+        var editable = !db.hasProgress;
+        $nameTip.html(
+          '<div class="gname-tip-name">' + $('<span>').text(name).html() + '</div>'
+          + '<div class="gname-tip-row gname-tip-planned">'
+            + '<span><b>Planned Start:</b> ' + _dateSpan('planned', db.start, '', editable) + '</span>'
+            + '<span><b>Planned End:</b> ' + _fmtNameDate(db.end) + '</span>'
+          + '</div>'
+          + '<div class="gname-tip-row gname-tip-actual">'
+            + '<span><b>Actual Start:</b> <span class="' + _dateCls(db.astart, db.start) + '">' + _fmtNameDate(db.astart) + '</span></span>'
+            + '<span><b>Actual End:</b> <span class="' + _dateCls(db.aend, db.end) + '">' + _fmtNameDate(db.aend) + '</span></span>'
+          + '</div>'
+        ).addClass('gname-tip-open');
+      }
+      function _showErr(msg) {
+        $nameTip.find('.gname-tip-err').remove();
+        $nameTip.append('<div class="gname-tip-err">' + $('<span>').text(msg).html() + '</div>');
+      }
+      var _editing = false;   // true while a date input inside the tooltip is open
+
+      // Anchored to the cell's own bounding box (not the mouse position) and
+      // positioned immediately to its right, touching/overlapping the cell
+      // edge — not just "near" it. This removes the empty gap a cursor had
+      // to cross to reach the tooltip, which is what let mouseleave fire
+      // and close it before the cursor ever arrived (the previous
+      // cursor-offset + delayed-close approach was too fragile/timing
+      // dependent). No mousemove repositioning either — it stays put once shown.
+      function _positionNearCell(cellEl) {
+        var r = cellEl.getBoundingClientRect();
+        var tw = $nameTip.outerWidth() || 340, th = $nameTip.outerHeight() || 90;
+        var left = r.right - 6;   // slight overlap with the cell so there's no gap to cross
+        if (left + tw > window.innerWidth - 8) left = Math.max(8, r.left - tw + 6);
+        var top = r.top;
+        if (top + th > window.innerHeight - 8) top = Math.max(8, window.innerHeight - th - 8);
+        $nameTip.css({ left: left + 'px', top: top + 'px' });
+      }
+      $(document).off('mouseenter.gnametip').on('mouseenter.gnametip', '#gantt-container td.gtaskname', function(e){
+        // .gtaskname lives in the LEFT list table's row — id prefix
+        // "...child_<id>" — a distinct element from the chart/bar table's
+        // row ("...childrow_<id>", used by the KPI row-hover). Match "child_"
+        // but not "childrow_" (which also starts with "child").
+        var row = this.closest('tr');
+        if (!row || row.id.indexOf('child_') === -1 || row.id.indexOf('childrow_') !== -1) return;
+        var tid = row.id.slice(row.id.indexOf('child_') + 'child_'.length);
+        var cells = window._ganttActCells || {};
+        var db = cells[tid];
+        if (!db) return;
+        _curActId = db.rawId || null;
+        var name = this.textContent.trim();
+        _render(name, db);
+        _positionNearCell(this);
+      });
+      // Leaving the name cell schedules a close — a short grace period still
+      // helps for the sliver of travel between the cell edge and the
+      // (now overlapping) tooltip edge, cancelled the instant the cursor
+      // reaches either the cell again or the tooltip itself.
+      var _closeTimer = null;
+      function _scheduleClose() {
+        if (_editing) return;
+        clearTimeout(_closeTimer);
+        _closeTimer = setTimeout(function(){
+          if (_editing) return;
+          $nameTip.removeClass('gname-tip-open').empty();
+          _curActId = null;
+        }, 300);
+      }
+      function _cancelClose() { clearTimeout(_closeTimer); }
+      $(document).off('mouseleave.gnametip').on('mouseleave.gnametip', '#gantt-container td.gtaskname', _scheduleClose);
+      $(document).off('mouseenter.gnametipcancel').on('mouseenter.gnametipcancel', '#gantt-container td.gtaskname', _cancelClose);
+      $nameTip.off('mouseenter.gnametip').on('mouseenter.gnametip', _cancelClose);
+      $nameTip.off('mouseleave.gnametip').on('mouseleave.gnametip', _scheduleClose);
+
+      // Click on an editable date value → swap it for a native date input
+      // (browser renders its own calendar picker on focus/click). One more
+      // click on the date, or anywhere else, closes/commits it — handled by
+      // the input's own change/blur below.
+      $nameTip.on('click', '.gname-date-editable', function(e){
+        e.stopPropagation();
+        if (!_curActId) return;
+        var $val = $(this);
+        if ($val.is('input')) return;
+        _editing = true;
+        var field = $val.data('field');
+        var raw = $val.data('date');
+        var $input = $('<input type="date" class="gname-date-input">').val(raw && raw !== '0000-00-00' ? raw : '');
+        $val.replaceWith($input);
+        $input.trigger('focus');
+        if ($input[0].showPicker) { try { $input[0].showPicker(); } catch(err) {} }
+
+        function _commit() {
+          var newDate = $input.val();
+          $input.off();
+          if (!newDate || newDate === raw) { _closeEditor(); return; }
+          $.ajax({
+            type: 'POST', url: _base + '/updateactivitystartdate',
+            data: { id: _curActId, field: field, date: newDate }, dataType: 'json',
+            success: function(resp) {
+              if (resp && resp.error === 'No') {
+                // scheduleactivities/schedule_progress_report changed server-side
+                // (planned edits also shift the End date to preserve duration) —
+                // simplest correct path is a full reload rather than patching the
+                // cached _ganttActCells values and risking drift.
+                _editing = false;
+                $nameTip.removeClass('gname-tip-open').empty();
+                _curActId = null;
+                if (typeof window.loadGantt === 'function') window.loadGantt();
+              } else {
+                _closeEditor();
+                _showErr((resp && resp.errortext) || 'Could not update the date.');
+              }
+            },
+            error: function() { _closeEditor(); _showErr('Could not update the date.'); }
+          });
+        }
+        function _closeEditor() {
+          _editing = false;
+          var $u = $('<u class="gname-date-editable ' + (field === 'actual' ? _dateCls($input.val(), raw) : '') + '" data-field="' + field + '" data-date="' + (raw || '') + '">' + _fmtNameDate(raw) + '</u>');
+          $input.replaceWith($u);
+        }
+        $input.off('change.gnamedate').on('change.gnamedate', _commit);
+        $input.off('blur.gnamedate').on('blur.gnamedate', function(){
+          // Native date pickers fire change on pick; a blur with no change
+          // (user clicked away without picking) just reverts the editor.
+          setTimeout(function(){ if ($input.parent().length || $input.closest('#gname-tip').length) _commit(); }, 150);
+        });
+        $input.off('click.gnamedate').on('click.gnamedate', function(ev){ ev.stopPropagation(); });
+      });
+
+      // While mid-edit the tooltip ignores mouseleave (see above), so a
+      // click anywhere outside it is the only way to abandon the edit —
+      // reverts the open input back to its display value without saving.
+      $(document).off('click.gnametipoutside').on('click.gnametipoutside', function(e) {
+        if (!$nameTip.hasClass('gname-tip-open')) return;
+        if (e.target.closest && e.target.closest('#gname-tip')) return;
+        _editing = false;
+        $nameTip.removeClass('gname-tip-open').empty();
+        _curActId = null;
+      });
+    })();
 
     $('#gkp-close').off('click').on('click', function() { _hidePopup(); });
 
-    // KPI icon click — inside this IIFE so _showKpiForAct is in scope
-    $(document).off('click.gkpiicon').on('click.gkpiicon', '#gantt-container .gcol-kpi span[data-kpiactid]', function(e) {
-      e.stopPropagation();
-      var actId = $(this).data('kpiactid');
-      if (!actId) return;
-      _showKpiForAct(actId, function(){});
-    });
+    // NOTE: deliberately no "click outside closes it" handler here — KPI,
+    // Cost Dashboard, and Cashflow Dashboard must all be able to stay open
+    // at the same time (user requirement), so clicking one popup's trigger
+    // must never auto-close another. Close only via the × button
+    // (#gkp-close, bound above) or clicking the same row again (toggle,
+    // bound in the row-click handler below) — matching how #cd-modal and
+    // #cf-modal already behave (their own × / backdrop only, never a
+    // generic outside-click).
+    $(document).off('click.gkpioutside');
 
     // Drag + Resize: KPI float panel
     (function(){
       var win = document.getElementById('gkp-popup');
       var hdr = document.getElementById('gkp-hdr');
+      // Join the app-wide floater stacking authority — see the KPI modal's
+      // identical binding earlier in this file for why.
+      if(typeof window.bindDragTouch === 'function' && typeof window.popupBringToFront === 'function'){
+        window.bindDragTouch(win, 'mousedown', function(){ window.popupBringToFront('gkp-popup'); }, true);
+      }
       var MIN_W=400, MIN_H=280, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0;
-      function _anchor(){ var r=win.getBoundingClientRect(); win.style.left=r.left+'px'; win.style.top=r.top+'px'; win.style.width=r.width+'px'; win.style.height=r.height+'px'; return r; }
-      hdr.addEventListener('mousedown', function(e){ if(e.target.id==='gkp-close') return; var r=_anchor(); _action='drag'; _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault(); });
-      document.querySelectorAll('.gkp-rs').forEach(function(el){ el.addEventListener('mousedown', function(e){ var r=_anchor(); _action=el.getAttribute('data-dir'); _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height; e.preventDefault(); e.stopPropagation(); }); });
-      document.addEventListener('mousemove', function(e){ if(!_action) return; var dx=e.clientX-_sx, dy=e.clientY-_sy; if(_action==='drag'){ win.style.left=Math.max(0,_ox+dx)+'px'; win.style.top=Math.max(0,_oy+dy)+'px'; } else { var l=_ox,t=_oy,w=_ow,h=_oh; if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);} if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);} if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;} if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;} win.style.left=l+'px'; win.style.top=t+'px'; win.style.width=w+'px'; win.style.height=h+'px'; } });
-      document.addEventListener('mouseup', function(){ _action=null; });
+      function _anchor(){ var r=win.getBoundingClientRect(); win.style.left=r.left+'px'; win.style.top=r.top+'px'; win.style.width=r.width+'px'; win.style.height=r.height+'px'; win.dataset.userSized='1'; return r; }
+      bindDragTouch(hdr, 'mousedown', function(e){ if(e.target.id==='gkp-close') return; var r=_anchor(); _action='drag'; _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault(); });
+      document.querySelectorAll('.gkp-rs').forEach(function(el){ bindDragTouch(el, 'mousedown', function(e){ var r=_anchor(); _action=el.getAttribute('data-dir'); _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height; e.preventDefault(); e.stopPropagation(); }); });
+      bindDragTouch(document, 'mousemove', function(e){ if(!_action) return; var dx=e.clientX-_sx, dy=e.clientY-_sy; if(_action==='drag'){ win.style.left=Math.max(0,_ox+dx)+'px'; win.style.top=Math.max(0,_oy+dy)+'px'; } else { var l=_ox,t=_oy,w=_ow,h=_oh; if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);} if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);} if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;} if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;} win.style.left=l+'px'; win.style.top=t+'px'; win.style.width=w+'px'; win.style.height=h+'px'; } });
+      bindDragTouch(document, 'mouseup', function(){ _action=null; });
     })();
 
-    // Bar click — open WBS Quick Entry prefilled with saved data
-    // Unbind any handler registered by a previous load of this page (this
-    // whole script is re-executed via reloadGantt() -> $.html() on every
-    // WBS save/add, and a plain un-namespaced $(document).on() here would
-    // otherwise stack a new copy each time, firing openQeModal() multiple
-    // times per click and duplicating the resource rows it re-fetches).
-    $(document).off('click.qebar').on('click.qebar', '.gtaskbarcontainer:not(.gplan)', function() {
-      var idAttr = this.id || '';
-      var pfx = 'gantt-containerbardiv_';
-      var rawId = null, wanId = null;
-      if (idAttr.indexOf(pfx) === 0) {
-        var tid = idAttr.slice(pfx.length);
-        var cells = window._ganttActCells || {};
-        var db = cells[tid];
-        rawId = (db && db.rawId) ? db.rawId : null;
-        wanId = (db && db.wanId)  ? db.wanId  : null;
-      }
-      if (typeof window.openQeModal === 'function') window.openQeModal(rawId || null, wanId || null);
-    });
+    // Old "Bar click -> WBS Quick Entry" handler removed — the old
+    // qe-modal form no longer exists (replaced by the Add IOWs popup +
+    // Activity Picker). Unbind any stale copy a previous page load may
+    // have registered, in case reloadGantt() ran before this deploy.
+    $(document).off('click.qebar');
+
+    // IOW row click — ANY IOW row (bare, or already has one or more
+    // activities scheduled under it) opens the Activity Picker popup so
+    // the user can add another activity from the Activity Library under
+    // this IOW. Bound directly (capture phase, whole container) instead
+    // of jQuery delegation on a specific selector — this library renders
+    // the B./A. Duration cells as plain <td>s that a delegated selector
+    // on tr.gname/tr[id*="child_"] was unreliably missing depending on
+    // exactly which descendant received the click; resolving the row via
+    // e.target.closest('tr') on every click in the container is more
+    // robust against that. window._ganttWbsBareRowWgId (despite the
+    // name) is populated for every WBS-tier row, not just bare ones.
+    //
+    // The IOW's own timeline BAR (once it has an activity scheduled) is
+    // NOT inside this <tr> at all — JSGantt renders the chart/bar area
+    // in an entirely separate DOM tree from the name/duration list rows
+    // (see .gtaskbarcontainer, id "<divId>bardiv_<hashedId>" — same
+    // hashedId as the row's "..child_<hashedId>"). Resolved separately
+    // below so clicking the bar itself also opens the picker.
+    (function(){
+      var gc = document.getElementById('gantt-container');
+      if (!gc) return;
+      if (gc._iowRowClickBound) return; // avoid stacking a duplicate listener on reloadGantt()
+      gc._iowRowClickBound = true;
+      gc.addEventListener('click', function(e){
+        // Pick Precedent/Dependent for the Add Relationship form by
+        // clicking activities on the Gantt directly, instead of using
+        // its IOW/Activity dropdowns — see window._relPickFromGantt
+        // (overrelay-relations.php), which only actually does anything
+        // while that form is open, so this is a no-op the rest of the
+        // time and every other click behavior below stays untouched.
+        // Takes priority over the line-click and row-click handlers
+        // below: while picking is active, ANY activity click (bar or
+        // row) should feed the form, not open the KPI popup or jump to
+        // an existing relationship's edit view.
+        if (typeof window._relPickFromGantt === 'function') {
+          var pickBarEl = e.target.closest('.gtaskbarcontainer');
+          var pickRowEl = pickBarEl ? null : e.target.closest('[id^="gantt-containerchildrow_"]');
+          var pickActId = pickBarEl ? _getActIdFromBarDiv(pickBarEl) : (pickRowEl ? _getActIdFromRow(pickRowEl) : null);
+          if (pickActId && window._relPickFromGantt(pickActId)) return;
+        }
+
+        // Dependency line/arrow click — jump straight into editing that
+        // one relationship, instead of opening the plain unscoped list
+        // (which is what clicking the project row/bar does, below).
+        // JSGantt stamps every line segment AND its arrowhead with
+        // gDepId<hash>/gDepNextId<hash> classes (see DrawDependencies in
+        // jsgantt.js) — <hash> is TaskItem.getID()'s one-way hash of the
+        // pId string, NOT the real activity id (jsgantt.js also stamps
+        // gDepDataId/gDepNextDataId from each TaskItem's pDataObject,
+        // but this app's TaskItem constructor calls never pass that
+        // argument, so those classes never actually appear — do not use
+        // them). The hash is resolved back to the real scheduleactivities
+        // id via window._ganttActRealId, the same hash→real-id map built
+        // alongside _actStatus when each TaskItem is created above.
+        // See _ganttDepLineAt above for why elementsFromPoint is used
+        // instead of e.target.closest().
+        var depEl = _ganttDepLineAt(e.clientX, e.clientY);
+        if (depEl) {
+          var precMatch = depEl.className.match(/(?:^|\s)gDepId(\S+)/);
+          var nextMatch = depEl.className.match(/gDepNextId(\S+)/);
+          var idMap = window._ganttActRealId || {};
+          if (precMatch && nextMatch && idMap[precMatch[1]] && idMap[nextMatch[1]]) {
+            var precAct = idMap[precMatch[1]];
+            var depAct  = idMap[nextMatch[1]];
+            if (typeof window.openProjectRelationsList === 'function') {
+              window.openProjectRelationsList({ precAct: precAct, depAct: depAct });
+            }
+            return;
+          }
+        }
+
+        // Click anywhere in a leaf ACTIVITY's row (the name/duration
+        // columns — NOT its bar, which is already claimed by the KPI
+        // popup's own click handler above) — open the Relationships
+        // popup jumped to whichever relationship(s) involve this
+        // activity, on either side (precedent or dependent). Doesn't
+        // require hitting the thin connector line itself; the whole row
+        // is the target. _jumpToEdit (overrelay-relations.php) silently
+        // no-ops if this activity has no relationships at all.
+        //
+        // IMPORTANT: "[id^=gantt-containerchildrow_]" is the CHART-side
+        // row (jsgantt.js's childrow_ prefix, drawChartHead/drawCharBody)
+        // — it's the row that physically CONTAINS the bar, not a
+        // separate name-list row. Without excluding .gtaskbarcontainer
+        // here too, clicking the bar matches this same row and opens
+        // the Relationships popup at the same time as the KPI popup.
+        var actRow = e.target.closest('.gtaskbarcontainer')
+          ? null
+          : e.target.closest('[id^="gantt-containerchildrow_"]');
+        if (actRow) {
+          var rowActId = _getActIdFromRow(actRow);
+          if (rowActId) {
+            if (typeof window.openProjectRelationsList === 'function') {
+              window.openProjectRelationsList({ actId: rowActId });
+            }
+            return;
+          }
+        }
+
+        var tid = null;
+
+        var barEl = e.target.closest('.gtaskbarcontainer');
+        if (barEl && barEl.id && barEl.id.indexOf('bardiv_') !== -1) {
+          tid = barEl.id.slice(barEl.id.indexOf('bardiv_') + 'bardiv_'.length);
+        } else {
+          var row = e.target.closest('tr');
+          if (row && row.id && row.id.indexOf('child_') !== -1 && row.id.indexOf('childrow_') === -1) {
+            tid = row.id.slice(row.id.indexOf('child_') + 'child_'.length);
+          }
+        }
+        if (tid === null) return;
+
+        // Project-tier row/bar — opens the Relationships List popup
+        // (overrelay-relations.php), scoped to this project via its own
+        // #gantt-win-open[data-projectid] lookup. Checked before the
+        // WBS-tier map below since the project row is never in that map.
+        if (String(tid) === String(window._ganttProjectRowHid)) {
+          if (typeof window.openProjectRelationsList === 'function') window.openProjectRelationsList();
+          return;
+        }
+
+        var wgMap = window._ganttWbsBareRowWgId || {};
+        var info = wgMap[tid];
+        if (!info) return; // not a WBS-tier IOW row/bar — ignore (e.g. IOW-Group tier, or a leaf activity row/bar)
+
+        // Always resolve the IOW's current name from ITS OWN name row —
+        // not from whichever element happened to receive the click.
+        // Clicking the BAR (a separate DOM tree from the name/list rows,
+        // see the comment above) previously left this blank, which made
+        // actionWbsadd() fall back to renaming the IOW to the activity's
+        // own name — the exact bug this replaced.
+        var iowName = '';
+        document.querySelectorAll('#gantt-container tr[id*="child_"]').forEach(function(r){
+          if (iowName) return; // already found
+          var idx = r.id.indexOf('child_');
+          if (idx === -1 || r.id.indexOf('childrow_') !== -1) return;
+          if (r.id.slice(idx + 'child_'.length) !== tid) return; // exact match only, not a substring
+          var nc = r.querySelector('.gtaskname');
+          if (nc && nc.textContent.trim()) iowName = nc.textContent.trim();
+        });
+
+        if (typeof window.openEditActivitiesModal === 'function') window.openEditActivitiesModal(info.wgId, iowName, info.iowGroupId);
+      }, true);
+    })();
   })();
 
   function reloadRelationsPanel(notice, warningText) {
@@ -2510,6 +4445,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 (function(){
   var panel = document.getElementById('gantt-float');
   var hdr   = document.getElementById('gantt-float-hdr');
+  // Join the app-wide floater stacking authority (this standalone page
+  // loads the normal layout, so main.php's floater script is present here
+  // too) — see the embed-mode KPI/Cost panels' identical binding for why.
+  if(typeof window.bindDragTouch === 'function' && typeof window.popupBringToFront === 'function'){
+    window.bindDragTouch(panel, 'mousedown', function(){ window.popupBringToFront('gantt-float'); }, true);
+  }
   var MIN_W = 500, MIN_H = 300;
   var _action=null,_sx=0,_sy=0,_ox=0,_oy=0,_ow=0,_oh=0;
   function _anchor(){
@@ -2518,18 +4459,18 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     panel.style.top=r.top+'px'; panel.style.width=r.width+'px';
     panel.style.height=r.height+'px'; return r;
   }
-  hdr.addEventListener('mousedown',function(e){
+  bindDragTouch(hdr, 'mousedown', function(e){
     var r=_anchor(); _action='drag';
     _sx=e.clientX;_sy=e.clientY;_ox=r.left;_oy=r.top; e.preventDefault();
   });
   document.querySelectorAll('.gf-rs').forEach(function(el){
-    el.addEventListener('mousedown',function(e){
+    bindDragTouch(el, 'mousedown', function(e){
       var r=_anchor(); _action=el.getAttribute('data-dir');
       _sx=e.clientX;_sy=e.clientY;_ox=r.left;_oy=r.top;_ow=r.width;_oh=r.height;
       e.preventDefault(); e.stopPropagation();
     });
   });
-  document.addEventListener('mousemove',function(e){
+  bindDragTouch(document, 'mousemove', function(e){
     if(!_action) return;
     var dx=e.clientX-_sx, dy=e.clientY-_sy;
     if(_action==='drag'){
@@ -2546,7 +4487,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       panel.style.width=w+'px';panel.style.height=h+'px';
     }
   });
-  document.addEventListener('mouseup',function(){_action=null;});
+  bindDragTouch(document, 'mouseup', function(){_action=null;});
 })();
 <?php endif; ?>
 

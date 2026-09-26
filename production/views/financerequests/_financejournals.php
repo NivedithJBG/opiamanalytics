@@ -293,7 +293,7 @@ use app\models\Vendors;
     </div>
 
 
-    <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/finance/_financejournals.js" type="text/javascript"></script>
+    <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/finance/_financejournals.js?v=<?php echo time(); ?>" type="text/javascript"></script>
 
     <!-- <input type="radio" id="rd5" class="finjouradio" name="rd"> -->
 	<div class="panel-heading" >

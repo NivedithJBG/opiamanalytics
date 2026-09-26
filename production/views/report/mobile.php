@@ -30,8 +30,14 @@ body{background:var(--bg)}
 #mob-report-date{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:var(--slate-text);border-radius:8px;padding:7px 12px;font-size:13px;font-family:'Inter',sans-serif;flex:1}
 #mob-report-date::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.7}
 
+/* ── Tab strip ── */
+#mob-tabs{background:var(--slate);display:flex;flex-shrink:0;border-bottom:1px solid rgba(0,0,0,.15)}
+.mob-tab{flex:1;background:none;border:none;padding:11px 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:rgba(241,245,249,.55);cursor:pointer;border-bottom:3px solid transparent}
+.mob-tab.active{color:var(--slate-text);border-bottom-color:var(--accent)}
+
 /* ── Scrollable content ── */
-#mob-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 80px;background:var(--bg)}
+#mob-content-progress,#mob-content-mbook{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 80px;background:var(--bg)}
+#mob-content-mbook{display:none}
 
 /* ── IOW group header ── */
 .mob-iow-hdr{
@@ -80,12 +86,13 @@ body{background:var(--bg)}
 .mob-cum-info{font-size:11px;color:var(--muted);margin-top:8px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid var(--border)}
 .mob-cum-info strong{color:var(--text)}
 
-.mob-form-actions{display:flex;gap:8px;margin-top:14px}
-.mob-btn{flex:1;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;transition:opacity .15s}
+.mob-form-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.mob-btn{flex:1;min-width:100px;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;transition:opacity .15s}
 .mob-btn:active{opacity:.8}
-.mob-btn-report{background:var(--accent);color:#fff}
-.mob-btn-cancel{background:#fff;color:var(--muted);border:1px solid var(--border)}
+.mob-btn-report{background:#166534;color:#fff}
+.mob-btn-cancel{background:#ea580c;color:#fff}
 .mob-btn-complete{background:var(--green);color:#fff;font-size:12px}
+.mob-btn-resource{background:var(--accent);color:#fff;flex-basis:100%}
 
 /* ── Loading / empty ── */
 #mob-loading{text-align:center;padding:50px 20px;color:var(--muted);font-size:14px}
@@ -140,6 +147,57 @@ body{background:var(--bg)}
 }
 .mob-edit-banner.show{display:block}
 
+/* ── Resource sheet (slide-up, full-screen) ── */
+#res-sheet-bk{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1200}
+#res-sheet-bk.show{display:block}
+#res-sheet{
+  display:flex;flex-direction:column;
+  position:fixed;left:0;right:0;bottom:0;
+  height:88vh;max-height:88vh;
+  background:#fff;border-radius:16px 16px 0 0;
+  box-shadow:0 -4px 24px rgba(0,0,0,.25);
+  z-index:1201;
+  transform:translateY(100%);transition:transform .25s ease;
+}
+#res-sheet.show{transform:translateY(0)}
+#res-sheet-hdr{
+  flex-shrink:0;padding:14px 16px 12px;border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+}
+#res-sheet-hdr .rs-titles{min-width:0}
+#res-sheet-hdr .rs-title{font-size:15px;font-weight:700;color:var(--text)}
+#res-sheet-hdr .rs-sub{font-size:12px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#res-sheet-close{background:none;border:none;font-size:24px;line-height:1;color:var(--muted);cursor:pointer;padding:0 4px;flex-shrink:0}
+#res-sheet-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px 12px}
+#res-sheet-colhdr{
+  display:flex;align-items:center;gap:10px;
+  padding:0 4px 8px;position:sticky;top:0;background:#fff;z-index:1;
+  font-size:11px;font-weight:700;color:var(--slate2);
+  text-transform:uppercase;letter-spacing:.5px;
+  border-bottom:1.5px solid var(--border);
+}
+.res-row{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 4px;border-bottom:1px solid var(--card2);
+}
+.res-row-info{flex:1;min-width:0}
+.res-row-type{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.res-row-name{font-size:14px;font-weight:600;color:var(--text);margin-top:2px}
+.res-row-unit{font-size:11px;color:var(--muted)}
+.res-row-qty{width:90px;flex-shrink:0}
+.res-row-qty input{
+  width:100%;padding:9px 10px;font-size:14px;text-align:right;
+  border:1.5px solid var(--border);border-radius:8px;font-family:'Inter',sans-serif;
+  box-sizing:border-box;outline:none;
+}
+.res-row-qty input:focus{border-color:var(--accent)}
+#res-sheet-empty{text-align:center;color:var(--muted);font-size:13px;padding:40px 20px}
+#res-sheet-actions{
+  flex-shrink:0;display:flex;gap:8px;padding:12px 16px;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
+  border-top:1px solid var(--border);
+}
+
 /* ── Bottom nav ── */
 #mob-bottom-nav{
   position:fixed;bottom:0;left:0;right:0;
@@ -158,22 +216,36 @@ body{background:var(--bg)}
   <div id="mob-topbar">
     <button class="mob-back" id="mob-back-btn">&#8592;</button>
     <div>
-      <div class="mob-title">Progress Report</div>
+      <div class="mob-title">Progress &amp; M.Book</div>
       <div class="mob-proj"><?= htmlspecialchars($projectName) ?></div>
     </div>
   </div>
 
-  <!-- Date bar -->
-  <div id="mob-date-bar">
+  <!-- Tab strip -->
+  <div id="mob-tabs">
+    <button type="button" class="mob-tab<?= $initialTab === 'progress' ? ' active' : '' ?>" data-tab="progress">Progress</button>
+    <button type="button" class="mob-tab<?= $initialTab === 'mbook' ? ' active' : '' ?>" data-tab="mbook">M.Book</button>
+  </div>
+
+  <!-- Date bar (Progress tab only) -->
+  <div id="mob-date-bar" style="<?= $initialTab === 'mbook' ? 'display:none' : '' ?>">
     <label>Report Date</label>
     <input type="date" id="mob-report-date" value="<?= date('Y-m-d') ?>">
   </div>
 
-  <!-- Scrollable activity list -->
-  <div id="mob-content">
+  <!-- Progress Report pane -->
+  <div id="mob-content-progress" style="<?= $initialTab === 'mbook' ? 'display:none' : '' ?>">
     <div id="mob-loading">
       <div class="mob-spinner"></div>
       Loading activities…
+    </div>
+  </div>
+
+  <!-- M.Book pane -->
+  <div id="mob-content-mbook" style="<?= $initialTab === 'mbook' ? 'display:block' : '' ?>">
+    <div id="mbk-loading" class="mob-mbk-loading">
+      <div class="mob-spinner"></div>
+      Loading work orders…
     </div>
   </div>
 
@@ -184,6 +256,30 @@ body{background:var(--bg)}
 
 <!-- Calendar portal (fixed, outside all scroll/overflow containers) -->
 <div class="cdp-panel" id="cdp-portal"></div>
+
+<!-- Resource sheet (slide-up, full-screen) -->
+<div id="res-sheet-bk"></div>
+<div id="res-sheet">
+  <div id="res-sheet-hdr">
+    <div class="rs-titles">
+      <div class="rs-title">Report Resources at Site</div>
+      <div class="rs-sub" id="res-sheet-actname"></div>
+    </div>
+    <button id="res-sheet-close" type="button">&times;</button>
+  </div>
+  <div id="res-sheet-body">
+    <div id="res-sheet-empty" style="display:none">Loading&hellip;</div>
+    <div id="res-sheet-colhdr" style="display:none">
+      <div class="res-row-info">Resources</div>
+      <div class="res-row-qty">Nos</div>
+    </div>
+    <div id="res-sheet-rows"></div>
+  </div>
+  <div id="res-sheet-actions">
+    <button class="mob-btn" id="res-sheet-cancel" type="button" style="background:#ea580c;color:#fff">Cancel</button>
+    <button class="mob-btn" id="res-sheet-save" type="button" style="background:#166534;color:#fff">Save</button>
+  </div>
+</div>
 
 <!-- Bottom nav -->
 <div id="mob-bottom-nav">
@@ -199,6 +295,9 @@ body{background:var(--bg)}
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<?= $this->render('_mobile_mbook_pane') ?>
+
 <script>
 (function(){
 'use strict';
@@ -219,17 +318,21 @@ function fmtDate(ymd){
 }
 
 function loadActivities(){
+  // #cdp-portal lives outside #mob-content and survives the reload below —
+  // close it so it can't stay open floating over a stale position once the
+  // card it was anchored to is gone.
+  closeCdpPortal();
   var date = fmtDate(document.getElementById('mob-report-date').value);
-  $('#mob-content').html('<div id="mob-loading"><div class="mob-spinner"></div>Loading…</div>');
+  $('#mob-content-progress').html('<div id="mob-loading"><div class="mob-spinner"></div>Loading…</div>');
 
   $.ajax({
     type:'POST', url:'../report/scheduleprogressactivities',
     dataType:'json', data:{dateselect: date},
     success: function(d){
-      if(d.error !== 'No'){ $('#mob-content').html('<div id="mob-loading">No activities found.</div>'); return; }
+      if(d.error !== 'No'){ $('#mob-content-progress').html('<div id="mob-loading">No activities found.</div>'); return; }
       renderActivities(d);
     },
-    error: function(){ $('#mob-content').html('<div id="mob-loading">Failed to load. Please refresh.</div>'); }
+    error: function(){ $('#mob-content-progress').html('<div id="mob-loading">Failed to load. Please refresh.</div>'); }
   });
 }
 
@@ -241,13 +344,13 @@ function renderActivities(d){
     dataType:'json', data:{dateselect: fmtDate(document.getElementById('mob-report-date').value)},
     success: function(r){
       if(!r || !r.activities || !r.activities.length){
-        $('#mob-content').html('<div id="mob-loading">No activities found for this project.</div>');
+        $('#mob-content-progress').html('<div id="mob-loading">No activities found for this project.</div>');
         return;
       }
       buildCards(r.activities);
     },
     error: function(){
-      $('#mob-content').html('<div id="mob-loading">No activities found for this project.</div>');
+      $('#mob-content-progress').html('<div id="mob-loading">No activities found for this project.</div>');
     }
   });
 }
@@ -296,7 +399,7 @@ function buildCards(activities){
     html += '</div></div>';
     html += '</div>';
     html += '<div class="mob-form-row">';
-    html += '<div class="mob-form-field"><label>Break Days</label><input type="number" id="fbd-'+act.id+'" placeholder="0" step="0.5" min="0" inputmode="decimal"></div>';
+    html += '<div class="mob-form-field"><label>No Work / Hours</label><input type="number" id="fbd-'+act.id+'" placeholder="0" step="0.5" min="0" inputmode="decimal"></div>';
     html += '<div class="mob-form-field"><label>Unit</label><input type="text" value="'+escHtml(act.unit||'—')+'" readonly></div>';
     html += '</div>';
     html += '<div class="mob-form-row">';
@@ -305,6 +408,8 @@ function buildCards(activities){
     html += '</div>';
 
     html += '<div class="mob-form-actions">';
+    html += '<button class="mob-btn mob-btn-resource" data-id="'+act.id+'" data-name="'+escHtml(act.name)+'">Report Resource</button>';
+    html += '<button class="mob-btn mob-btn-complete" data-id="'+act.id+'" data-name="'+escHtml(act.name)+'">&#10003; Mark Complete</button>';
     html += '<button class="mob-btn mob-btn-cancel" data-id="'+act.id+'">Cancel</button>';
     html += '<button class="mob-btn mob-btn-report" data-id="'+act.id+'">Submit Report</button>';
     html += '</div>';
@@ -313,7 +418,7 @@ function buildCards(activities){
     html += '</div>'; // mob-act-card
   });
 
-  $('#mob-content').html(html);
+  $('#mob-content-progress').html(html);
 }
 
 function escHtml(s){
@@ -474,8 +579,18 @@ function checkExistingReport(id, reportDate) {
   });
 }
 
+function closeCdpPortal(){
+  document.getElementById('cdp-portal').classList.remove('open');
+  _cdpActiveId = null;
+}
+
 // Toggle form open/close on card tap
 $(document).on('click','.mob-act-top', function(){
+  // The calendar portal is a single shared element repositioned per-card
+  // (see cdpOpen) — switching cards without closing it first leaves it
+  // floating at its old position, appearing stuck and unresponsive over
+  // whichever card is now open.
+  closeCdpPortal();
   var id = $(this).data('id');
   var $form = $('#form-'+id);
   if($form.hasClass('open')){
@@ -504,9 +619,131 @@ $(document).on('change','.frd-input', function(){
 
 // Cancel
 $(document).on('click','.mob-btn-cancel',function(){
+  closeCdpPortal();
   var id = $(this).data('id');
   $('#form-'+id).removeClass('open');
   _openActId = null;
+});
+
+// Mark Complete — same endpoint the desktop Progress Report screen uses
+// (ReportController::actionCompleteactivtiyreport). Completed activities
+// are excluded from mobileactivities' own list (sa.completed_status = 0
+// filter), so on success the card is simply removed rather than reloading
+// the whole list — one less round trip on a mobile connection.
+$(document).on('click','.mob-btn-complete',function(){
+  var $btn = $(this);
+  var id   = $btn.data('id');
+  var name = $btn.data('name') || 'this activity';
+  if(!window.confirm('Mark "'+name+'" as complete?')) return;
+
+  var origText = $btn.text();
+  $btn.text('Saving…').attr('disabled', true);
+
+  $.ajax({
+    type:'POST', url:'../report/completeactivtiyreport',
+    dataType:'json', data:{ id: id },
+    success: function(r){
+      if(r.error === 'No'){
+        closeCdpPortal();
+        toast('Activity marked complete!');
+        $('.mob-act-card[data-id="'+id+'"]').slideUp(200, function(){ $(this).remove(); });
+        if(_openActId == id) _openActId = null;
+      } else {
+        $btn.text(origText).removeAttr('disabled');
+        toast('Could not mark complete. Please try again.');
+      }
+    },
+    error: function(){
+      $btn.text(origText).removeAttr('disabled');
+      toast('Network error. Please try again.');
+    }
+  });
+});
+
+// ── Report Resources at Site (slide-up sheet) ───────────────────────────
+var _resSheetActId = null;
+
+function resSheetOpen(id, name){
+  _resSheetActId = id;
+  $('#res-sheet-actname').text(name || '');
+  $('#res-sheet-rows').empty();
+  $('#res-sheet-colhdr').hide();
+  $('#res-sheet-empty').text('Loading…').show();
+  $('#res-sheet-bk, #res-sheet').addClass('show');
+
+  var reportDate = document.getElementById('mob-report-date').value;
+  $.ajax({
+    type:'POST', url:'../report/resourceusagelist',
+    dataType:'json', data:{ actid: id, date: fmtDate(reportDate) },
+    success: function(resp){
+      if(!resp || resp.error !== 'No' || !resp.resources || !resp.resources.length){
+        $('#res-sheet-empty').text('No Direct Labour / Sub Contractor / Plant & Equipment resources allocated to this activity.').show();
+        return;
+      }
+      $('#res-sheet-empty').hide();
+      $('#res-sheet-colhdr').show();
+      var html = '';
+      resp.resources.forEach(function(r){
+        html += '<div class="res-row" data-resource-id="'+r.resource_id+'" data-resource-type-id="'+(r.resource_type_id||'')+'" data-name="'+escHtml(r.name)+'">';
+        html += '<div class="res-row-info">';
+        html += '<div class="res-row-type">'+escHtml(r.type_name||'')+'</div>';
+        html += '<div class="res-row-name">'+escHtml(r.name)+(r.unit ? ' <span class="res-row-unit">('+escHtml(r.unit)+')</span>' : '')+'</div>';
+        html += '</div>';
+        html += '<div class="res-row-qty"><input type="number" class="res-qty-input" min="0" step="any" inputmode="decimal" placeholder="0" value="'+(r.reported_qty > 0 ? r.reported_qty : '')+'"></div>';
+        html += '</div>';
+      });
+      $('#res-sheet-rows').html(html);
+    },
+    error: function(){
+      $('#res-sheet-empty').text('Could not load resources. Please try again.').show();
+    }
+  });
+}
+
+function resSheetClose(){
+  $('#res-sheet-bk, #res-sheet').removeClass('show');
+  _resSheetActId = null;
+}
+
+$(document).on('click','.mob-btn-resource',function(){
+  resSheetOpen($(this).data('id'), $(this).data('name'));
+});
+
+$('#res-sheet-close, #res-sheet-cancel, #res-sheet-bk').on('click', resSheetClose);
+
+$('#res-sheet-save').on('click', function(){
+  if(!_resSheetActId) return;
+  var id = _resSheetActId;
+  var rows = [];
+  $('#res-sheet-rows .res-row').each(function(){
+    var $row = $(this);
+    rows.push({
+      resource_id: $row.data('resource-id'),
+      resource_type_id: $row.data('resource-type-id'),
+      name: $row.data('name'),
+      qty: $row.find('.res-qty-input').val() || 0
+    });
+  });
+
+  var $btn = $(this);
+  var origText = $btn.text();
+  $btn.text('Saving…').attr('disabled', true);
+
+  var reportDate = document.getElementById('mob-report-date').value;
+  $.ajax({
+    type:'POST', url:'../report/saveresourceusage',
+    dataType:'json', data:{ actid: id, date: fmtDate(reportDate), rows: rows },
+    success: function(resp){
+      $btn.text(origText).removeAttr('disabled');
+      if(!resp || resp.error !== 'No'){ toast('Could not save resource usage.'); return; }
+      toast('Resources saved!');
+      resSheetClose();
+    },
+    error: function(){
+      $btn.text(origText).removeAttr('disabled');
+      toast('Network error. Please try again.');
+    }
+  });
 });
 
 // Submit / Update report
@@ -566,8 +803,40 @@ $(document).on('input','.fqty-input',function(){
 // Date change reloads list
 document.getElementById('mob-report-date').addEventListener('change', loadActivities);
 
-// Load on start
-loadActivities();
+// ── Tabs ──────────────────────────────────────────────────────────────
+var _progressLoadedOnce = false;
+var _mbookLoadedOnce = false;
+
+function switchTab(tab){
+  $('.mob-tab').removeClass('active');
+  $('.mob-tab[data-tab="'+tab+'"]').addClass('active');
+  if(tab === 'progress'){
+    closeCdpPortal();
+    $('#mob-date-bar').show();
+    $('#mob-content-progress').show();
+    $('#mob-content-mbook').hide();
+    if(!_progressLoadedOnce){ loadActivities(); _progressLoadedOnce = true; }
+  } else {
+    $('#mob-date-bar').hide();
+    $('#mob-content-progress').hide();
+    $('#mob-content-mbook').show();
+    if(!_mbookLoadedOnce && typeof loadMbWoList === 'function'){ loadMbWoList(); _mbookLoadedOnce = true; }
+  }
+  if(history.replaceState) history.replaceState(null, '', '?tab='+tab);
+}
+
+$(document).on('click', '.mob-tab', function(){
+  switchTab($(this).data('tab'));
+});
+
+// Load on start — whichever tab the server marked active
+var _startTab = <?= json_encode($initialTab) ?>;
+if(_startTab === 'mbook'){
+  if(typeof loadMbWoList === 'function'){ loadMbWoList(); _mbookLoadedOnce = true; }
+} else {
+  loadActivities();
+  _progressLoadedOnce = true;
+}
 
 })();
 </script>

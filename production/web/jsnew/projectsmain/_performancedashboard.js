@@ -2,6 +2,27 @@
 (function(){
 'use strict';
 
+if(typeof window.bindDragTouch !== 'function'){
+  // Standalone fallback in case this script loads on a page without
+  // layouts/main.php, where the shared shim normally comes from. Without it,
+  // drag here only ever bound mousedown, so dragging never worked on touch
+  // devices (iPad).
+  (function(){
+    var _touchTypeFor = { mousedown: 'touchstart', mousemove: 'touchmove', mouseup: 'touchend' };
+    window.bindDragTouch = function(el, mouseType, handler, opts){
+      if(!el) return;
+      el.addEventListener(mouseType, handler, opts);
+      var touchType = _touchTypeFor[mouseType];
+      if(!touchType) return;
+      el.addEventListener(touchType, function(e){
+        var t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+        if(t){ e.clientX = t.clientX; e.clientY = t.clientY; }
+        handler(e);
+      }, opts);
+    };
+  })();
+}
+
 var _ch = {};
 var _loaded = false;
 var _groups    = [];
@@ -32,11 +53,21 @@ $(document).on('mouseenter', '#pd-modal .blbl[data-tip], #cd-modal .blbl[data-ti
 $(document).on('click', '.perf-dashboard-btn', function(e){
     e.preventDefault();
     $('#pd-modal, #pd-bk').addClass('pd-open');
+    if (typeof window.popupBringToFront === 'function') window.popupBringToFront('pd-modal');
+    if (typeof window.popupCascade === 'function') window.popupCascade('pd-modal');
+    if (typeof window.popupFitPortrait === 'function') window.popupFitPortrait('pd-modal');
     if (!_loaded) { loadAll(); _loaded = true; }
 });
-$(document).on('click', '#pd-close, #pd-bk', function(){
+// Only the X button closes this — clicking elsewhere (or another dashboard
+// button) must never dismiss an already-open dashboard.
+$(document).on('click', '#pd-close', function(){
     $('#pd-modal, #pd-bk').removeClass('pd-open');
     $('#pd-tip').hide();
+    delete document.getElementById('pd-modal').dataset.portraitFitted;
+});
+// Bring to front on click anywhere inside, same as the other floaters.
+$(document).on('mousedown touchstart', '#pd-modal', function(){
+    if (typeof window.popupBringToFront === 'function') window.popupBringToFront('pd-modal');
 });
 
 // Cost Dashboard
@@ -59,6 +90,9 @@ function _resTypeCol(name, fallback){
 $(document).on('click', '.cost-dashboard-btn', function(e){
     e.preventDefault();
     $('#cd-modal, #cd-bk').addClass('cd-open');
+    if (typeof window.popupBringToFront === 'function') window.popupBringToFront('cd-modal');
+    if (typeof window.popupCascade === 'function') window.popupCascade('cd-modal');
+    if (typeof window.popupFitPortrait === 'function') window.popupFitPortrait('cd-modal');
     if (!_cdLoaded) {
         _cdLoaded = true;
         var done1 = false, done2 = false;
@@ -90,12 +124,3211 @@ $(document).on('click', '.cost-dashboard-btn', function(e){
         if (done1) tryRender();
     }
 });
-$(document).on('click', '#cd-close, #cd-bk', function(){
+// Only the X button closes this — clicking elsewhere (or another dashboard
+// button) must never dismiss an already-open dashboard.
+$(document).on('click', '#cd-close', function(){
     $('#cd-modal, #cd-bk').removeClass('cd-open');
+    delete document.getElementById('cd-modal').dataset.portraitFitted;
+});
+// Bring to front on click anywhere inside, same as the other floaters.
+$(document).on('mousedown touchstart', '#cd-modal', function(){
+    if (typeof window.popupBringToFront === 'function') window.popupBringToFront('cd-modal');
 });
 $(document).on('click', '#cd-c4 .brow[data-aid]', function(){
     loadCdActivityData($(this).data('aid'));
 });
+
+// Cashflow money-value formatter: values under 1 Crore (1,00,00,000,
+// i.e. 99 Lakhs or less) display in Lakhs; values at or above 1 Crore
+// display in Crores. Callers pass Math.max(target, actual) in so BOTH
+// figures on a dial always share the same unit — the unit is decided
+// once, by whichever of the two is larger, never independently per
+// value (that independent-conversion path was the actual bug: it let
+// Target and Actual land in different units and look mismatched).
+// Input is raw rupees; returns {value, unit} for display, and always
+// positive magnitudes (dial panels treat everything as absolute value,
+// per earlier explicit request — negative underlying balances should
+// not display a minus sign).
+function _cfFmtMoney(rupees){
+    var v = Math.abs(+rupees || 0);
+    if (v >= 10000000) {
+        return { value: v / 10000000, unit: 'Crores' };
+    }
+    return { value: v / 100000, unit: 'Lakhs' };
+}
+
+// Converts a manually-typed editable target (T.WIP, W.Capital, Contract
+// Income target, etc.) into raw rupees. ALWAYS reads the typed number as
+// Lakhs (e.g. entering "110" means 110 Lakhs, i.e. 1.1 Crores) — no
+// magnitude-based guessing on the input side. This is what actually
+// caused the mismatch bug: the old rule read "110" as 110 CRORES
+// (>=100 triggered the Crores branch) while Actual displayed in
+// Crores too but at a tiny fraction, making Target look 1000x larger
+// than intended. _cfFmtMoney's own Lakhs/Crores DISPLAY switch (above)
+// is unaffected by this — it still auto-picks Crores once the value is
+// large enough, it just no longer double-guesses on entry.
+function _cfEnteredToRupees(n){
+    var v = +n || 0;
+    return v * 100000;
+}
+
+// Opening the Cashflow Dashboard fires ~16-20 AJAX requests at once (one
+// or two per panel: a target fetch plus a totals fetch). The session
+// backend here (Yii CacheSession over FileCache — see config/web.php)
+// has no per-request locking to serialize concurrent reads/writes of
+// the login session the way PHP's native file session handler does —
+// under a burst of ~20 simultaneous requests all reading the same
+// session, a request can occasionally come back with an empty/stale
+// identity, which surfaced as panels flashing to zero, targets
+// disappearing, or the user appearing logged out, all without any
+// error being logged server-side (the failure happens at the session
+// layer, before Yii's own error handler runs). Routing every Cashflow
+// AJAX call through this small concurrency-limited queue (max 3 in
+// flight at once) keeps requests from piling up against the session
+// simultaneously, without adding any noticeable delay to the dashboard
+// opening (~20 quick requests at 3-wide still finish in well under a
+// second on a normal connection).
+var _cfAjaxQueue = [];
+var _cfAjaxInFlight = 0;
+// FileCache (the session backend here) has no locking at all — even 3
+// concurrent writers hitting the SAME session's cache file at once was
+// still corrupting/losing the session (observed live: an entire
+// dashboard-open burst coming back 403 "Login Required" end to end,
+// immediately after a fresh login). Fully serial (1 at a time) is the
+// only concurrency level that's actually safe against this backend.
+var _CF_AJAX_MAX_CONCURRENT = 1;
+function _cfQueueAjax(opts){
+    _cfAjaxQueue.push(opts);
+    _cfDrainAjaxQueue();
+}
+function _cfDrainAjaxQueue(){
+    while (_cfAjaxInFlight < _CF_AJAX_MAX_CONCURRENT && _cfAjaxQueue.length) {
+        var opts = _cfAjaxQueue.shift();
+        _cfAjaxInFlight++;
+        var userComplete = opts.complete;
+        opts.complete = function(){
+            _cfAjaxInFlight--;
+            if (typeof userComplete === 'function') userComplete.apply(this, arguments);
+            _cfDrainAjaxQueue();
+        };
+        $.ajax(opts);
+    }
+}
+
+// Shared target fetch with a single retry: none of the Cashflow panels'
+// AJAX calls had error handling, so a transient network/session hiccup
+// on cfgettarget silently left a panel's target at its just-reset 0
+// value with no retry and no visual difference from a genuine 0 target
+// — this is what made targets appear to randomly "vanish" on some
+// refreshes. onOk is only invoked on an actual successful response
+// (retried once on failure or a non-'No' error before giving up).
+function _cfFetchTarget(metricKey, onOk){
+    function attempt(retriesLeft){
+        _cfQueueAjax({
+            type: 'POST', url: '../projectsmain/cfgettarget', dataType: 'json',
+            data: { metric_key: metricKey },
+            success: function(d){
+                if (d && d.error === 'No') { onOk(d); }
+                else if (retriesLeft > 0) { setTimeout(function(){ attempt(retriesLeft - 1); }, 800); }
+            },
+            error: function(){
+                if (retriesLeft > 0) { setTimeout(function(){ attempt(retriesLeft - 1); }, 800); }
+            }
+        });
+    }
+    attempt(1);
+}
+
+// ── Cashflow Dashboard ──────────────────────────────────────────────────
+// Placeholder shell: "Bank" panel renders a grey bar with no real data yet.
+// No backend call — wire up a real data source when one exists.
+//
+// renderCfBars() resets every panel's state to zero/blank before firing
+// its fetches, so calling it again while a PREVIOUS call's fetches are
+// still in flight piles a fresh batch of ~15 concurrent AJAX requests on
+// top of the last one — flashing every dial back to zero and letting a
+// still-loading generation's callbacks race each other, which is what
+// produced the "vanishing / wrong / zero / needle in a strange
+// position" symptoms. Guarding on "was the modal already open" (a CSS
+// class) turned out to be unreliable — if the class was ever left on
+// (e.g. navigating away without using the explicit close button) the
+// dashboard would silently stop refreshing altogether and just keep
+// showing whatever was last (possibly incompletely) rendered. Guard on
+// an explicit in-flight flag instead: every click always requests a
+// fresh load, but a click that arrives while a load is still in
+// progress is ignored rather than piling up another concurrent batch.
+var _cfLoading = false;
+$(document).on('click', '.cashflow-dashboard-btn', function(e){
+    e.preventDefault();
+    $('#cf-modal, #cf-bk').addClass('cf-open');
+    if (typeof window.popupBringToFront === 'function') window.popupBringToFront('cf-modal');
+    if (typeof window.popupCascade === 'function') window.popupCascade('cf-modal');
+    if (typeof window.popupFitPortrait === 'function') window.popupFitPortrait('cf-modal');
+    if (!_cfLoading) { renderCfBars(); }
+});
+// Only the X button closes this — clicking elsewhere (or another dashboard
+// button) must never dismiss an already-open dashboard.
+$(document).on('click', '#cf-close', function(){
+    $('#cf-modal, #cf-bk').removeClass('cf-open');
+    delete document.getElementById('cf-modal').dataset.portraitFitted;
+});
+// Bring to front on click anywhere inside, same as the other floaters.
+$(document).on('mousedown touchstart', '#cf-modal', function(){
+    if (typeof window.popupBringToFront === 'function') window.popupBringToFront('cf-modal');
+});
+
+// Bumped on every renderCfBars() call (i.e. every time the Cashflow
+// Dashboard is opened). Each panel's AJAX success callback captures the
+// generation it was fired under and checks it's still current before
+// writing into shared state — otherwise a slow response from a PREVIOUS
+// open (e.g. rapid close/reopen) can land after a newer, faster
+// response and overwrite a correctly-fetched target back to stale/zero
+// data, which is what made targets appear to randomly vanish on
+// refresh.
+var _cfLoadGen = 0;
+
+function renderCfBars(){
+    _cfLoadGen++;
+    _cfLoading = true;
+    // _cfFetchTarget retries once after an 800ms delay on failure, so a
+    // full load cycle can legitimately take a bit over 800ms; 2.5s gives
+    // every panel's fetches (including a retry) comfortable room to
+    // settle before the next click is allowed to start a new load.
+    setTimeout(function(){ _cfLoading = false; }, 2500);
+    _cfDials.forEach(function(d){ renderCfDial(d.elId, d.metricKey, d.unit, d.unitFontSize, d.reverseColors); });
+    renderCfBankDial();
+    renderCfWipDial();
+    renderCfBillsReceivableDial();
+    renderCfCurrentAssetsDial();
+    renderCfCurrentLiabilitiesDial();
+    renderCfCurrLiabDial2();
+    renderCfC2cLegend();
+    renderCfProjExpDial();
+    renderCfNetInvDial();
+    renderCfContribMarginDial();
+    renderCfFreeCashDial();
+    renderCfRoiDial();
+}
+
+// Investments panel — single flat dial with an editable target (yellow
+// marker at the dial's center, half of the full 2x scale — same
+// treatment as the Bank panel's Allocated marker), plus an orange
+// overlay arc (0 to Actual, on the same scale) showing the Current
+// Assets figure's progress along the dial — same overlay treatment as
+// the Bank panel's orange Availed arc. Needle position also represents
+// the actual value: sum of DEBIT current balances of every account head
+// under the Current Assets subgroup, for the selected project — see
+// actionCfcurrentassets. The actual value itself is shown as a number
+// in the dial's center (with the Lakhs/Crores unit beneath it). Target
+// is saved to cf_dashboard_targets under metric_key "investments_target"
+// via cfsavetarget/cfgettarget.
+var _cfInvestState = { target: 0, actual: 0, editing: false };
+
+function _cfInvestDialSvg(target, actual){
+    var targetCr = _cfEnteredToRupees(target) / 10000000;
+    var maxV = targetCr > 0 ? targetCr * 2 : 1;
+    var f = Math.max(0, Math.min(1, actual / maxV));
+    var cx = 105, cy = 82, r = 76, sw = 15;
+    function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
+    function arc(f1, f2, col){
+        if (f2 <= f1) return '';
+        var p1 = ptF(f1), p2 = ptF(f2);
+        return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    }
+    // Up to target (first half of the 0-2x scale) = dark blue; beyond
+    // target (second half) = orange. Target always sits at the dial's
+    // midpoint (see targetF below), so this split is fixed, not
+    // actual-dependent.
+    var arcPath = arc(0, 0.5, '#0d3f7a') + arc(0.5, 1, '#b5540a');
+    var targetF = 0.5;
+    var ta = Math.PI * (1 - targetF);
+    var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
+    var tx1 = (cx + tr1 * Math.cos(ta)).toFixed(1), ty1 = (cy - tr1 * Math.sin(ta)).toFixed(1);
+    var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
+    var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
+        + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    var nr = r - 14, na = Math.PI * (1 - f);
+    var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
+    // Target is typed directly in Lakhs (the input box's fixed
+    // convention -- see _cfEnteredToRupees) and Actual is shown in
+    // that SAME fixed Lakhs unit, never auto-converted to Crores by
+    // magnitude, so the two numbers always stay comparable and the
+    // unit the user chose by using this box is never second-guessed.
+    var fmt = { unit: 'Lakhs' };
+    var divisor = 100;
+    var centerCol = actual > targetCr ? '#c62828' : '#000';
+    var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+        + arcPath
+        + targetLine
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
+        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="' + centerCol + '" font-family="Barlow Condensed,Arial">' + (actual * divisor).toFixed(2) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">' + fmt.unit + '</text>'
+        + '</svg>';
+    return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
+}
+
+function _cfDrawInvestDial(){
+    var el = document.getElementById('cf-currentassets');
+    if (!el) return;
+    el.style.justifyContent = 'center';
+    el.style.cursor = 'pointer';
+    el.title = 'Click to see account breakdown';
+    var s = _cfInvestState;
+    var targetCr = _cfEnteredToRupees(s.target) / 10000000;
+    // Target is typed directly in Lakhs (the input box's fixed
+    // convention -- see _cfEnteredToRupees) and Actual is shown in
+    // that SAME fixed Lakhs unit, never auto-converted to Crores by
+    // magnitude, so the two numbers always stay comparable and the
+    // unit the user chose by using this box is never second-guessed.
+    var fmt = { unit: 'Lakhs' };
+    var divisor = 100;
+    var targetCell = s.editing
+        ? '<input class="cf-invest-input" data-field="target" type="number" step="any" value="' + s.target + '" style="width:54px;font-size:13px;padding:0 3px;border:1px solid #b0bec5;border-radius:2px;color:#5a5a5a;font-weight:700;">'
+        : '<span style="font-size:13px;color:#5a5a5a;font-weight:700;">' + (targetCr * divisor).toFixed(2) + '</span>';
+    // Actual legend colour always matches whichever arc half the needle
+    // is currently pointing into (dark blue up to target, orange beyond).
+    var maxV = targetCr > 0 ? targetCr * 2 : 1;
+    var needleCol = (s.actual / maxV) <= 0.5 ? '#0d3f7a' : '#b5540a';
+    el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
+        + _cfInvestDialSvg(s.target, s.actual)
+        + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
+        + '<span style="font-size:13px;color:#111;">Actual: <span style="font-size:13px;color:' + needleCol + ';font-weight:700;">' + (s.actual * divisor).toFixed(2) + '</span></span>'
+        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Target: ' + targetCell + ' <button class="cf-invest-pencil" title="Edit Target" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>'
+        + '</div>'
+        + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
+}
+
+function renderCfCurrentAssetsDial(){
+    var gen = _cfLoadGen;
+    _cfInvestState = { target: 0, actual: 0, editing: false };
+    _cfDrawInvestDial();
+    _cfFetchTarget('investments_target', function(d){
+        if (gen === _cfLoadGen) { _cfInvestState.target = +d.target || 0; _cfDrawInvestDial(); }
+    });
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfcurrentassets', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                // Backend returns the total in raw rupees; state keeps it
+                // as a Crores-scale float, same as every other panel.
+                _cfInvestState.actual = (+d.total || 0) / 10000000;
+                _cfDrawInvestDial();
+            }
+        }
+    });
+}
+
+// Net Investment panel — single flat dial, same visual treatment as the
+// Investments dial (_cfInvestDialSvg is generic and reused as-is), but
+// with NO editable target of its own: it reuses the Bank-Working
+// Capital target (metric_key "bank_wcapital") since Net Investment and
+// Working Capital represent the same capital commitment viewed from
+// different angles (see actionCfnetinvestment's comment). Actual =
+// Investments + current open-cycle Work In Progress + the cumulative
+// WIP cost already closed out against past Bills Receivable events —
+// i.e. every rupee ever put into the project's cost base that hasn't
+// yet come back as realized Contract Income, regardless of which panel
+// it's currently displayed under.
+var _cfNetInvState = { target: 0, actual: 0 };
+
+function _cfDrawNetInvDial(){
+    var el = document.getElementById('cf-netinvestment');
+    if (!el) return;
+    el.style.justifyContent = 'center';
+    el.style.cursor = 'pointer';
+    el.title = 'Click to see per-cycle breakdown';
+    var s = _cfNetInvState;
+    var targetCr = _cfEnteredToRupees(s.target) / 10000000;
+    // Target is typed directly in Lakhs (the input box's fixed
+    // convention -- see _cfEnteredToRupees) and Actual is shown in
+    // that SAME fixed Lakhs unit, never auto-converted to Crores by
+    // magnitude, so the two numbers always stay comparable and the
+    // unit the user chose by using this box is never second-guessed.
+    var fmt = { unit: 'Lakhs' };
+    var divisor = 100;
+    var maxV = targetCr > 0 ? targetCr * 2 : 1;
+    var needleCol = (s.actual / maxV) <= 0.5 ? '#0d3f7a' : '#b5540a';
+    el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
+        + _cfInvestDialSvg(s.target, s.actual)
+        + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
+        + '<span style="font-size:13px;color:#111;">Actual: <span style="font-size:13px;color:' + needleCol + ';font-weight:700;">' + (s.actual * divisor).toFixed(2) + '</span></span>'
+        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Target: <span style="font-size:13px;color:#5a5a5a;font-weight:700;">' + (targetCr * divisor).toFixed(2) + '</span></span>'
+        + '</div>'
+        + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
+}
+
+function renderCfNetInvDial(){
+    var gen = _cfLoadGen;
+    _cfNetInvState = { target: 0, actual: 0 };
+    _cfDrawNetInvDial();
+    _cfFetchTarget('bank_wcapital', function(d){
+        if (gen === _cfLoadGen) { _cfNetInvState.target = +d.target || 0; _cfDrawNetInvDial(); }
+    });
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfnetinvestment', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfNetInvState.actual = (+d.total || 0) / 10000000;
+                _cfDrawNetInvDial();
+            }
+        }
+    });
+}
+
+// Total Investment breakdown popup — same draggable/resizable vertical
+// bar chart window as the other breakdown popups (see
+// _cfInvestBreakdownChartHtml/_cfShowInvestBreakdown above), one bar per
+// WIP accrual cycle: each closed cycle's CLOSING Total Investment value,
+// plus the current open cycle valued as of today (see
+// actionCfnetinvestmentbreakdown). X-axis labels are the month/year each
+// cycle closed ("Current" for the open cycle) rather than account names.
+// Also shows the average of all cycle values alongside the Total.
+function _cfRedrawNetInvBreakdown(){
+    var s = window._cfNetInvBreakdownState;
+    if (!s) return;
+    var chartH = Math.max(120, $('#cf-netinv-breakdown-win').height() - 130);
+    var r = _cfInvestBreakdownChartHtml(s.accounts, chartH);
+    $('#cf-netinv-breakdown-unit').html(
+        '<span style="font-weight:700;color:#251840;">Amount in ' + r.unit + '</span>'
+        + '<span style="float:right;font-weight:700;color:#251840;">Current: ' + _cfIndianComma(s.average / (r.unit === 'Crores' ? 10000000 : 100000)) + ' ' + r.unit + '</span>'
+    );
+    $('#cf-netinv-breakdown-chart').html(r.body);
+}
+
+function _cfShowNetInvBreakdown(accounts, average){
+    $('#cf-netinv-breakdown-win').remove();
+    window._cfNetInvBreakdownState = { accounts: accounts, average: average };
+
+    var winW = 640, winH = 380, MIN_W = 340, MIN_H = 240;
+    var left = Math.max(10, (window.innerWidth - winW) / 2);
+    var top = Math.max(10, (window.innerHeight - winH) / 2);
+
+    var rsHandles = ['n','s','e','w','ne','nw','se','sw'];
+    var rsHtml = '';
+    for (var h = 0; h < rsHandles.length; h++) {
+        rsHtml += '<div class="cf-netinv-rs" data-dir="' + rsHandles[h] + '" style="position:absolute;';
+        var d = rsHandles[h];
+        if (d === 'n') rsHtml += 'top:-4px;left:10px;right:10px;height:10px;cursor:n-resize;';
+        else if (d === 's') rsHtml += 'bottom:-4px;left:10px;right:10px;height:10px;cursor:s-resize;';
+        else if (d === 'e') rsHtml += 'right:-4px;top:10px;bottom:10px;width:10px;cursor:e-resize;';
+        else if (d === 'w') rsHtml += 'left:-4px;top:10px;bottom:10px;width:10px;cursor:w-resize;';
+        else if (d === 'ne') rsHtml += 'right:-4px;top:-4px;width:14px;height:14px;cursor:ne-resize;';
+        else if (d === 'nw') rsHtml += 'left:-4px;top:-4px;width:14px;height:14px;cursor:nw-resize;';
+        else if (d === 'se') rsHtml += 'right:-4px;bottom:-4px;width:14px;height:14px;cursor:se-resize;';
+        else if (d === 'sw') rsHtml += 'left:-4px;bottom:-4px;width:14px;height:14px;cursor:sw-resize;';
+        rsHtml += 'z-index:20;background:transparent;"></div>';
+    }
+
+    var html = '<div id="cf-netinv-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
+        + rsHtml
+        + '<div id="cf-netinv-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#251840;cursor:move;user-select:none;">'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Total Investment — Per-Cycle Breakdown</span>'
+        + '<button id="cf-netinv-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
+        + '</div>'
+        + '<div id="cf-netinv-breakdown-unit" style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;"></div>'
+        + '<div style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;">'
+        + '<div id="cf-netinv-breakdown-chart" style="min-width:0;"></div>'
+        + '</div>'
+        + '</div>';
+    $('body').append(html);
+    _cfRedrawNetInvBreakdown();
+
+    // Drag (header) + resize (8 handles) — same mechanics as the other
+    // breakdown windows.
+    var win = document.getElementById('cf-netinv-breakdown-win');
+    var hdr = document.getElementById('cf-netinv-breakdown-hdr');
+    var _action = null, _sx = 0, _sy = 0, _ox = 0, _oy = 0, _ow = 0, _oh = 0;
+
+    function onDown(e, dir){
+        var r = win.getBoundingClientRect();
+        _action = dir; _sx = e.clientX; _sy = e.clientY;
+        _ox = r.left; _oy = r.top; _ow = r.width; _oh = r.height;
+        e.preventDefault();
+        if (dir !== 'drag') e.stopPropagation();
+    }
+    function onMove(e){
+        if (!_action) return;
+        e.preventDefault();
+        var dx = e.clientX - _sx, dy = e.clientY - _sy;
+        if (_action === 'drag') {
+            var x = Math.max(0, Math.min(_ox + dx, window.innerWidth - win.offsetWidth));
+            var y = Math.max(0, Math.min(_oy + dy, window.innerHeight - win.offsetHeight));
+            win.style.left = x + 'px'; win.style.top = y + 'px';
+        } else {
+            var l = _ox, t = _oy, w = _ow, h = _oh;
+            if (_action.indexOf('e') > -1) { w = Math.max(MIN_W, _ow + dx); }
+            if (_action.indexOf('s') > -1) { h = Math.max(MIN_H, _oh + dy); }
+            if (_action.indexOf('w') > -1) { var nw = Math.max(MIN_W, _ow - dx); l = _ox + (_ow - nw); w = nw; }
+            if (_action.indexOf('n') > -1) { var nh = Math.max(MIN_H, _oh - dy); t = _oy + (_oh - nh); h = nh; }
+            win.style.left = l + 'px'; win.style.top = t + 'px';
+            win.style.width = w + 'px'; win.style.height = h + 'px';
+            _cfRedrawNetInvBreakdown();
+        }
+    }
+    function onUp(){ _action = null; }
+
+    if (typeof window.bindDragTouch === 'function') {
+        window.bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-netinv-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-netinv-rs').each(function(){
+            var dir = $(this).data('dir');
+            window.bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        window.bindDragTouch(document, 'mousemove', onMove, { passive: false });
+        window.bindDragTouch(document, 'mouseup', onUp);
+    } else {
+        bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-netinv-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-netinv-rs').each(function(){
+            var dir = $(this).data('dir');
+            bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        bindDragTouch(document, 'mousemove', onMove);
+        bindDragTouch(document, 'mouseup', onUp);
+    }
+}
+$(document).on('click', '#cf-netinvestment', function(e){
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfnetinvestmentbreakdown', dataType: 'json',
+        success: function(d){
+            if (d && d.error === 'No') { _cfShowNetInvBreakdown(d.accounts || [], +d.average || 0); }
+        }
+    });
+});
+$(document).on('click', '#cf-netinv-breakdown-close', function(){ $('#cf-netinv-breakdown-win').remove(); });
+
+// Investments breakdown popup — clicking anywhere on the panel (except
+// the pencil/target controls, which have their own click handling)
+// fetches every account currently contributing to the Investments
+// total (see actionCfcurrentassetsbreakdown, same pool/filter as
+// actionCfcurrentassets) and shows them as a vertical bar chart, tallest
+// bar first. A fixed-position overlay appended to <body> (not nested
+// inside the draggable/resizable #cf-modal) so it isn't clipped by the
+// modal's own bounds; closes on backdrop click or its own close button.
+// Distinct colour per bar — cycled if there are more accounts than
+// colours.
+var _cfInvestBarColours = ['#0d3f7a', '#b5540a', '#2e9e44', '#7a2e8a', '#c62828', '#00838f', '#8a6d00', '#455a64'];
+
+// Shortens a full account name to a short chart-axis label — takes the
+// first 1-2 significant words, dropping generic trailing words like
+// "and", "Construction", "Designers", etc. so long names like "Hebron
+// Industries and Construction" become "Hebron Industries" rather than
+// wrapping across several lines under a narrow bar.
+function _cfShortLabel(name){
+    var words = (name || '').replace(/\(.*?\)/g, '').trim().split(/\s+/);
+    var stop = ['and', 'of', 'the', 'for'];
+    var out = [];
+    for (var i = 0; i < words.length && out.length < 2; i++) {
+        if (stop.indexOf(words[i].toLowerCase()) === -1) out.push(words[i]);
+    }
+    return out.join(' ') || name;
+}
+
+// Renders just the chart markup (called both on first open and on
+// every resize, since the bar heights/gridlines are pixel-computed
+// against the current chart area size).
+function _cfInvestBreakdownChartHtml(accounts, chartH, unitMode){
+    // unitMode: 'money' (default) formats via _cfFmtMoney (Lakhs/Crores,
+    // auto-scaled) — 'days' shows the raw day-count values as-is, no
+    // unit conversion (used by the Cash-to-Cash Cycle breakdown, whose
+    // bars are day-counts, not rupee amounts).
+    unitMode = unitMode || 'money';
+    var fmtVal = unitMode === 'days'
+        ? function(v){ return { value: +v || 0, unit: 'Days' }; }
+        : _cfFmtMoney;
+
+    var maxAmt = 0, sumAmt = 0;
+    for (var i = 0; i < accounts.length; i++) {
+        if (accounts[i].amount > maxAmt) maxAmt = accounts[i].amount;
+        sumAmt += accounts[i].amount;
+    }
+    if (maxAmt <= 0) maxAmt = 1;
+    var fmtMax = fmtVal(maxAmt);
+    var axisMax = fmtMax.value;
+    var unit = fmtMax.unit;
+    var totalDisp = unitMode === 'days' ? sumAmt.toFixed(2) : (sumAmt / (unit === 'Crores' ? 10000000 : 100000)).toFixed(2);
+    var niceMax = axisMax <= 0 ? 1 : Math.ceil(axisMax * 1.05 * 100) / 100;
+    var axisW = 34;
+
+    // Exactly 5 evenly-spaced gridlines (0 to niceMax) — a normal chart
+    // axis, not one line per account value (that produced 10+ crowded,
+    // overlapping labels when accounts had many different amounts).
+    // Drawn as a repeating background-image on the chart container
+    // itself (not separate absolutely-positioned sibling divs) — a
+    // background paints behind ALL of the container's content
+    // unconditionally, so there's no risk of it being hidden behind a
+    // flex item's own stacking context the way a positioned sibling
+    // element could be.
+    var stepCount = 5;
+    var stepPx = chartH / stepCount;
+    var gridBg = 'repeating-linear-gradient(to top, #aab2c0 0, #aab2c0 1px, transparent 1px, transparent ' + stepPx.toFixed(2) + 'px)';
+    var gridLabelsHtml = '';
+    for (var g = 0; g <= stepCount; g++) {
+        var gv = Math.round((niceMax / stepCount) * g * 100) / 100;
+        var gy = chartH - g * stepPx;
+        gridLabelsHtml += '<div style="position:absolute;left:-' + (axisW + 4) + 'px;top:' + (gy - 7).toFixed(1) + 'px;width:' + axisW + 'px;text-align:right;font-size:10px;color:#8a94a3;font-family:Barlow Condensed,Arial;">' + gv.toFixed(2) + '</div>';
+    }
+
+    // Bar column width flexes to fill the available chart width instead
+    // of a fixed px size — so the whole set of bars always fits without
+    // needing a horizontal scrollbar, however many accounts there are.
+    var barsHtml = '';
+    for (var j = 0; j < accounts.length; j++) {
+        var acct = accounts[j];
+        var fmt = fmtVal(acct.amount);
+        var barPx = Math.max(2, (fmt.value / niceMax) * chartH);
+        var col = _cfInvestBarColours[j % _cfInvestBarColours.length];
+        var hasMembers = acct.members && acct.members.length;
+        barsHtml += '<div class="cf-breakdown-bar-col" data-idx="' + j + '" style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + chartH + 'px;flex:1 1 0;min-width:0;position:relative;' + (hasMembers ? 'cursor:pointer;' : '') + '">'
+            + '<div style="font-size:11px;font-weight:700;color:#251840;margin-bottom:4px;white-space:nowrap;">' + fmt.value.toFixed(2) + '</div>'
+            + '<div style="width:70%;max-width:34px;height:' + barPx.toFixed(1) + 'px;background:' + col + ';border-radius:2px 2px 0 0;"></div>'
+            + '</div>';
+    }
+    var labelsHtml = '';
+    for (var k = 0; k < accounts.length; k++) {
+        labelsHtml += '<div style="flex:1 1 0;min-width:0;font-size:11px;color:#333;text-align:center;line-height:1.2;padding:0 3px;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;">' + _cfShortLabel(accounts[k].name) + '</div>';
+    }
+
+    // Always render the gridlines/axis frame, even with zero bars — an
+    // empty chart still shows the reader the scale/labels; only the
+    // bars themselves are conditional, plus a centered placeholder
+    // message when there's nothing to plot yet.
+    var emptyMsgHtml = accounts.length ? '' : '<div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;color:#8a94a3;font-size:12px;font-family:Barlow Condensed,Arial;">No data yet</div>';
+    var body = '<div style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;">'
+        + '<div class="cf-breakdown-chart-area" style="position:relative;flex:1;min-width:0;display:flex;align-items:flex-end;gap:6px;height:' + chartH + 'px;background-image:' + gridBg + ';">'
+        + gridLabelsHtml
+        + barsHtml
+        + emptyMsgHtml
+        + '</div>'
+        + '</div>'
+        // X-axis line + the account names as its value labels.
+        + '<div style="margin-left:' + (axisW + 4) + 'px;border-top:2px solid #251840;"></div>'
+        + '<div style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;gap:6px;margin-top:6px;">' + labelsHtml + '</div>';
+    return { unit: unit, total: totalDisp, body: body };
+}
+
+// Per-bar hover tooltip for breakdown popups (WIP's group bars only —
+// each bar's underlying `members` array, when present, lists the
+// individual account heads that make up that group's total). Shared by
+// both the Investments and WIP breakdown windows since they use the
+// same bar markup; Investments bars simply have no `members` and so
+// never trigger a tooltip. Positioned against the bar's own bounding
+// rect (not the mouse cursor) so it can't lose the hover before being
+// reached — same anchoring approach as #pd-res-tip elsewhere in this
+// file.
+// Formats a number with Indian digit grouping (comma after 3 digits from
+// the decimal point, then every 2 digits thereafter — e.g. 1234567.89
+// becomes "12,34,567.89"), 2 decimal places fixed.
+function _cfIndianComma(n){
+    n = +n || 0;
+    var neg = n < 0; n = Math.abs(n);
+    var parts = n.toFixed(2).split('.');
+    var intPart = parts[0];
+    var lastThree = intPart.length > 3 ? intPart.slice(-3) : intPart;
+    var rest = intPart.length > 3 ? intPart.slice(0, -3) : '';
+    if (rest) { lastThree = ',' + lastThree; }
+    var withCommas = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + lastThree;
+    return (neg ? '-' : '') + withCommas + '.' + parts[1];
+}
+
+(function(){
+    function _cfBreakdownTip(){
+        var t = document.getElementById('cf-breakdown-tip');
+        if (!t) {
+            t = document.createElement('div');
+            t.id = 'cf-breakdown-tip';
+            t.style.cssText = 'display:none;position:fixed;z-index:200700;background:#fff;border:1px solid #b0bec5;border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.25);padding:14px 16px;font-family:Barlow Condensed,Arial;max-width:900px;min-width:420px;';
+            document.body.appendChild(t);
+        }
+        return t;
+    }
+    $(document).on('mouseenter', '.cf-breakdown-bar-col', function(e){
+        var win = $(this).closest('[id$="-breakdown-win"]');
+        var stateKeys = { 'cf-wip-breakdown-win': '_cfWipBreakdownState', 'cf-projexp-breakdown-win': '_cfProjExpBreakdownState', 'cf-invest-breakdown-win': '_cfInvestBreakdownState', 'cf-currliab-breakdown-win': '_cfCurrLiabBreakdownState', 'cf-netinv-breakdown-win': '_cfNetInvBreakdownState', 'cf-billsrecv-breakdown-win': '_cfBillsRecvBreakdownState', 'cf-c2c-breakdown-win': '_cfC2cBreakdownState', 'cf-ci-breakdown-win': '_cfContractIncomeBreakdownState' };
+        var stateKey = stateKeys[win.attr('id')];
+        if (!stateKey) return;
+        var s = window[stateKey];
+        if (!s) return;
+        var idx = +this.dataset.idx;
+        var acct = s.accounts[idx];
+        if (!acct || !acct.members || !acct.members.length) return;
+        var tip = _cfBreakdownTip();
+        var rowsHtml = '', netTotal = 0;
+        for (var i = 0; i < acct.members.length; i++) {
+            netTotal += (+acct.members[i].amount || 0);
+            rowsHtml += '<tr><td style="padding:6px 20px 6px 10px;font-size:15px;color:#333;white-space:nowrap;border:1px solid #d5dae2;">' + $('<div>').text(acct.members[i].name || '').html() + '</td>'
+                + '<td style="padding:6px 10px;font-size:15px;font-weight:700;color:#251840;text-align:right;border:1px solid #d5dae2;">' + _cfIndianComma(acct.members[i].amount) + '</td></tr>';
+        }
+        rowsHtml += '<tr><td style="padding:6px 20px 6px 10px;font-size:15px;font-weight:700;color:#251840;white-space:nowrap;border:1px solid #d5dae2;background:#f4f6fa;">Net</td>'
+            + '<td style="padding:6px 10px;font-size:15px;font-weight:700;color:#251840;text-align:right;border:1px solid #d5dae2;background:#f4f6fa;">' + _cfIndianComma(netTotal) + '</td></tr>';
+        tip.innerHTML = '<div style="font-size:16px;font-weight:700;color:#251840;margin-bottom:6px;border-bottom:1px solid #e0e4ea;padding-bottom:6px;">' + $('<div>').text(acct.name || '').html() + '</div>'
+            + '<table style="border-collapse:collapse;width:100%;">'
+            + '<thead><tr><th style="padding:6px 20px 6px 10px;font-size:14px;color:#5a6e8c;text-align:left;border:1px solid #d5dae2;background:#f4f6fa;">Account Head</th><th style="padding:6px 10px;font-size:14px;color:#5a6e8c;text-align:right;border:1px solid #d5dae2;background:#f4f6fa;">Amount</th></tr></thead>'
+            + '<tbody>' + rowsHtml + '</tbody></table>';
+        var rect = this.getBoundingClientRect();
+        tip.style.display = 'block';
+        var tw = tip.offsetWidth || 200, th = tip.offsetHeight || 60;
+        var left = Math.min(rect.left, window.innerWidth - tw - 8);
+        var top = rect.top - th - 8;
+        if (top < 4) top = rect.bottom + 8;
+        tip.style.left = Math.max(4, left) + 'px';
+        tip.style.top = top + 'px';
+    }).on('mouseleave', '.cf-breakdown-bar-col', function(){
+        var tip = document.getElementById('cf-breakdown-tip');
+        if (tip) tip.style.display = 'none';
+    });
+})();
+
+function _cfRedrawInvestBreakdown(){
+    var s = window._cfInvestBreakdownState;
+    if (!s) return;
+    var chartH = Math.max(120, $('#cf-invest-breakdown-win').height() - 130);
+    var r = _cfInvestBreakdownChartHtml(s.accounts, chartH);
+    $('#cf-invest-breakdown-unit').html(
+        '<span style="font-weight:700;color:#251840;">Amount in ' + r.unit + '</span>'
+        + '<span style="float:right;font-weight:700;color:#251840;">Total: ' + r.total + ' ' + r.unit + '</span>'
+    );
+    $('#cf-invest-breakdown-chart').html(r.body);
+}
+
+function _cfShowInvestBreakdown(accounts){
+    $('#cf-invest-breakdown-win').remove();
+    window._cfInvestBreakdownState = { accounts: accounts };
+
+    var winW = 640, winH = 380, MIN_W = 340, MIN_H = 240;
+    var left = Math.max(10, (window.innerWidth - winW) / 2);
+    var top = Math.max(10, (window.innerHeight - winH) / 2);
+
+    var rsHandles = ['n','s','e','w','ne','nw','se','sw'];
+    var rsHtml = '';
+    for (var h = 0; h < rsHandles.length; h++) {
+        rsHtml += '<div class="cf-invest-rs" data-dir="' + rsHandles[h] + '" style="position:absolute;';
+        var d = rsHandles[h];
+        if (d === 'n') rsHtml += 'top:-4px;left:10px;right:10px;height:10px;cursor:n-resize;';
+        else if (d === 's') rsHtml += 'bottom:-4px;left:10px;right:10px;height:10px;cursor:s-resize;';
+        else if (d === 'e') rsHtml += 'right:-4px;top:10px;bottom:10px;width:10px;cursor:e-resize;';
+        else if (d === 'w') rsHtml += 'left:-4px;top:10px;bottom:10px;width:10px;cursor:w-resize;';
+        else if (d === 'ne') rsHtml += 'right:-4px;top:-4px;width:14px;height:14px;cursor:ne-resize;';
+        else if (d === 'nw') rsHtml += 'left:-4px;top:-4px;width:14px;height:14px;cursor:nw-resize;';
+        else if (d === 'se') rsHtml += 'right:-4px;bottom:-4px;width:14px;height:14px;cursor:se-resize;';
+        else if (d === 'sw') rsHtml += 'left:-4px;bottom:-4px;width:14px;height:14px;cursor:sw-resize;';
+        rsHtml += 'z-index:20;background:transparent;"></div>';
+    }
+
+    var html = '<div id="cf-invest-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
+        + rsHtml
+        + '<div id="cf-invest-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#251840;cursor:move;user-select:none;">'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Investments — Account Breakdown</span>'
+        + '<button id="cf-invest-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
+        + '</div>'
+        + '<div id="cf-invest-breakdown-unit" style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;"></div>'
+        + '<div style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;">'
+        + '<div id="cf-invest-breakdown-chart" style="min-width:0;"></div>'
+        + '</div>'
+        + '</div>';
+    $('body').append(html);
+    _cfRedrawInvestBreakdown();
+
+    // Drag (header) + resize (8 handles) — same mechanics as #cf-modal
+    // and every other floating window in this app (see bindDragTouch).
+    var win = document.getElementById('cf-invest-breakdown-win');
+    var hdr = document.getElementById('cf-invest-breakdown-hdr');
+    var _action = null, _sx = 0, _sy = 0, _ox = 0, _oy = 0, _ow = 0, _oh = 0;
+
+    function onDown(e, dir){
+        var r = win.getBoundingClientRect();
+        _action = dir; _sx = e.clientX; _sy = e.clientY;
+        _ox = r.left; _oy = r.top; _ow = r.width; _oh = r.height;
+        e.preventDefault();
+        if (dir !== 'drag') e.stopPropagation();
+    }
+    function onMove(e){
+        if (!_action) return;
+        e.preventDefault();
+        var dx = e.clientX - _sx, dy = e.clientY - _sy;
+        if (_action === 'drag') {
+            var x = Math.max(0, Math.min(_ox + dx, window.innerWidth - win.offsetWidth));
+            var y = Math.max(0, Math.min(_oy + dy, window.innerHeight - win.offsetHeight));
+            win.style.left = x + 'px'; win.style.top = y + 'px';
+        } else {
+            var l = _ox, t = _oy, w = _ow, h = _oh;
+            if (_action.indexOf('e') > -1) { w = Math.max(MIN_W, _ow + dx); }
+            if (_action.indexOf('s') > -1) { h = Math.max(MIN_H, _oh + dy); }
+            if (_action.indexOf('w') > -1) { var nw = Math.max(MIN_W, _ow - dx); l = _ox + (_ow - nw); w = nw; }
+            if (_action.indexOf('n') > -1) { var nh = Math.max(MIN_H, _oh - dy); t = _oy + (_oh - nh); h = nh; }
+            win.style.left = l + 'px'; win.style.top = t + 'px';
+            win.style.width = w + 'px'; win.style.height = h + 'px';
+            _cfRedrawInvestBreakdown();
+        }
+    }
+    function onUp(){ _action = null; }
+
+    if (typeof window.bindDragTouch === 'function') {
+        window.bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-invest-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-invest-rs').each(function(){
+            var dir = $(this).data('dir');
+            window.bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        window.bindDragTouch(document, 'mousemove', onMove, { passive: false });
+        window.bindDragTouch(document, 'mouseup', onUp);
+    } else {
+        bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-invest-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-invest-rs').each(function(){
+            var dir = $(this).data('dir');
+            bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        bindDragTouch(document, 'mousemove', onMove);
+        bindDragTouch(document, 'mouseup', onUp);
+    }
+}
+$(document).on('click', '#cf-currentassets', function(e){
+    if ($(e.target).closest('.cf-invest-pencil, .cf-invest-input').length) return;
+    $.ajax({
+        type: 'POST', url: '../projectsmain/cfcurrentassetsbreakdown', dataType: 'json',
+        success: function(d){
+            if (d && d.error === 'No') { _cfShowInvestBreakdown(d.accounts || []); }
+        }
+    });
+});
+$(document).on('click', '#cf-invest-breakdown-close', function(){ $('#cf-invest-breakdown-win').remove(); });
+
+$(document).on('click', '.cf-invest-pencil', function(e){
+    e.preventDefault(); e.stopPropagation();
+    var s = _cfInvestState;
+    if (s.editing) {
+        var val = +$('.cf-invest-input[data-field="target"]').val() || 0;
+        s.target = val;
+        s.editing = false;
+        _cfDrawInvestDial();
+        $.ajax({
+            type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json',
+            data: { metric_key: 'investments_target', target_value: val },
+            // Re-render every panel once the save confirms — other
+            // panels (e.g. Current Liabilities) can depend on this
+            // target and had no way to know it just changed, since each
+            // panel only fetches its dependencies once, when the
+            // dashboard opens.
+            success: function(){ renderCfBars(); }
+        });
+    } else {
+        s.editing = true;
+        _cfDrawInvestDial();
+    }
+});
+$(document).on('click', '.cf-invest-input', function(e){ e.stopPropagation(); });
+
+// Current Liabilities panel — single flat teal dial (one colour, no
+// target-split, since the target here isn't a user-entered threshold
+// like the other panels — it's DERIVED: Target Bills Receivable minus
+// Target Net WIP, both pulled from cf_dashboard_targets. Needle/actual
+// is the sum of net balances of every account head under the Current
+// Liabilities subgroup, scoped to the selected project's own
+// transactions — see actionCfcurrentliabilities. If the derived target
+// comes out negative (Net WIP's target set higher than Bills
+// Receivable's), it's treated as 0 for the dial's scale, same as every
+// other dial's target<=0 fallback.
+var _cfCurrLiabState = { billsRecvTarget: 0, wipTarget: 0, actual: 0 };
+
+// Vertical bar chart replacing the old dial — a single bar for the
+// Actual value, its value labeled on top, Y-axis gridlines with amount
+// labels, X-axis labeled with the panel name. No target reference here
+// (dropped along with the dial's yellow marker) per explicit request.
+// Single flat dark-grey dial — needle only, no target split (target is
+// pinned at the dial's zero/left end, so there's nothing to mark; the
+// needle alone shows where the value sits against the auto-scaled max).
+// Value = Current Liabilities + Total Investment combined, per explicit
+// request. Clicking the panel opens the 2-bar comparison as a popup
+// (see _cfCurrLiabBarSvg/_cfShowCurrLiabCombinedTip below) rather than
+// showing that breakdown inline on the dial itself.
+function _cfCurrLiabDialSvg(sumVal){
+    var maxV = sumVal > 0 ? sumVal * 1.5 : 1;
+    var f = Math.max(0, Math.min(1, sumVal / maxV));
+    var cx = 105, cy = 82, r = 76, sw = 15;
+    function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
+    var p1 = ptF(0), p2 = ptF(1);
+    var arcPath = '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="#5a5f68" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    var nr = r - 14, na = Math.PI * (1 - f);
+    var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
+    var fmt = _cfFmtMoney(Math.abs(sumVal) * 10000000);
+    var divisor = fmt.unit === 'Crores' ? 1 : 100;
+    var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+        + arcPath
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
+        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + (sumVal * divisor).toFixed(2) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">' + fmt.unit + '</text>'
+        + '</svg>';
+    return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
+}
+
+// Two side-by-side bars sharing one Y-axis/scale: Current Liabilities
+// and Total Investment (the latter is a read-only echo of that panel's
+// own value, fetched independently — see renderCfCurrentLiabilitiesDial
+// — the Total Investment panel/dial itself is untouched). Now used as
+// the click-triggered popup's content, not the panel's own display.
+function _cfCurrLiabBarSvg(actual, netInvActual){
+    var scaleBasis = Math.max(Math.abs(actual), Math.abs(netInvActual));
+    var fmt = _cfFmtMoney(scaleBasis * 10000000);
+    var divisor = fmt.unit === 'Crores' ? 1 : 100;
+    var dispVal = actual * divisor;
+    var dispNetInv = netInvActual * divisor;
+
+    var w = 320, h = 220;
+    // padL trimmed to just enough for the Y-axis value labels (the axis
+    // line itself sits at the panel's extreme left edge, not indented in
+    // toward the middle) — padB carries separate room for the axis line
+    // AND each bar's caption stacked below it.
+    var padL = 34, padR = 12, padT = 26, padB = 42;
+    var plotW = w - padL - padR, plotH = h - padT - padB;
+    var scaleMax = Math.max(Math.abs(dispVal), Math.abs(dispNetInv)) > 0
+        ? Math.max(Math.abs(dispVal), Math.abs(dispNetInv)) * 1.15 : 1;
+
+    var gridHtml = '', gridLines = 4;
+    for (var g = 0; g <= gridLines; g++) {
+        var gv = scaleMax * g / gridLines;
+        var gy = (padT + plotH - (plotH * g / gridLines)).toFixed(1);
+        gridHtml += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (w - padR) + '" y2="' + gy + '" stroke="#e8ecf2" stroke-width="1"/>'
+            + '<text x="' + (padL - 4) + '" y="' + (parseFloat(gy) + 4) + '" text-anchor="end" font-size="11" fill="#8a94a6" font-family="Barlow Condensed,Arial">' + gv.toFixed(1) + '</text>';
+    }
+
+    // Two slim columns, each centered in its own half of the plot width.
+    // Unit is appended inline on the value label (not a separate caption
+    // row) per earlier explicit request to drop the standalone unit line.
+    // Each bar carries data-cflbar so a delegated click handler can open
+    // that metric's own existing account-breakdown popup.
+    function bar(val, colX, col, label, key){
+        var barW = plotW * 0.22;
+        var barX = colX - barW / 2;
+        var barH = scaleMax > 0 ? (Math.abs(val) / scaleMax) * plotH : 0;
+        var barY = padT + plotH - barH;
+        return '<rect data-cflbar="' + key + '" x="' + barX.toFixed(1) + '" y="' + barY.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + barH.toFixed(1) + '" fill="' + col + '" style="cursor:pointer;"/>'
+            + '<text x="' + colX.toFixed(1) + '" y="' + (barY - 10).toFixed(1) + '" text-anchor="middle" font-size="15" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + val.toFixed(2) + ' ' + fmt.unit + '</text>'
+            + '<text data-cflbar="' + key + '" x="' + colX.toFixed(1) + '" y="' + (h - 10) + '" text-anchor="middle" font-size="12" fill="#5a6e8c" font-family="Barlow Condensed,Arial" style="cursor:pointer;">' + label + '</text>';
+    }
+    var col1X = padL + plotW * 0.28, col2X = padL + plotW * 0.72;
+    var barsHtml = bar(dispVal, col1X, '#3d7a6e', 'Current Liabilities', 'cl')
+        + bar(dispNetInv, col2X, '#0d3f7a', 'Total Investment', 'ti');
+
+    var axisY = (padT + plotH).toFixed(1);
+    // preserveAspectRatio="none": this panel should fill the entire
+    // available space (per explicit request), not letterbox to preserve
+    // the viewBox's fixed aspect ratio — "meet" was leaving visible empty
+    // margins around the chart whenever the panel's actual aspect ratio
+    // didn't match 320:220.
+    var svg = '<svg width="100%" height="100%" viewBox="0 0 ' + w + ' ' + h + '" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style="display:block;flex:1;min-height:0;">'
+        + gridHtml
+        + '<line x1="' + padL + '" y1="' + padT + '" x2="' + padL + '" y2="' + axisY + '" stroke="#b7c0cc" stroke-width="1"/>'
+        + '<line x1="' + padL + '" y1="' + axisY + '" x2="' + (w - padR) + '" y2="' + axisY + '" stroke="#b7c0cc" stroke-width="1"/>'
+        + barsHtml
+        + '</svg>';
+    return '<div style="flex:1;min-height:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:stretch;margin-top:6px;">' + svg + '</div>';
+}
+
+function _cfDrawCurrLiabDial(){
+    var el = document.getElementById('cf-currentliabilities');
+    if (!el) return;
+    el.style.justifyContent = 'center';
+    el.style.cursor = 'pointer';
+    el.title = 'Click to compare with Total Investment';
+    var s = _cfCurrLiabState;
+    var sumVal = s.actual + s.netInvActual;
+    el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
+        + _cfCurrLiabDialSvg(sumVal)
+        + '<div style="display:flex;justify-content:center;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
+        + '<span style="font-size:12px;color:#5a5a5a;">Current Liabilities + Total Investment</span>'
+        + '</div>'
+        + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
+    // Re-draw the tooltip in place if it's already open, so it stays in
+    // sync as fresh data comes in (billsRecvTarget/wipTarget/actual/
+    // netInvActual each arrive from separate AJAX calls at different
+    // times — see renderCfCurrentLiabilitiesDial).
+    if (document.getElementById('cf-currliab-tip-win')) { _cfRedrawCurrLiabTip(); }
+}
+
+// Popup shown when the Current Liabilities dial is clicked: the 2-bar
+// Current-Liabilities-vs-Total-Investment comparison (previously the
+// panel's own permanent display, moved here per explicit request).
+// Clicking either bar inside it opens that metric's own existing
+// account-breakdown popup (_cfShowCurrLiabBreakdown / _cfShowNetInvBreakdown).
+function _cfRedrawCurrLiabTip(){
+    var s = _cfCurrLiabState;
+    var el = document.getElementById('cf-currliab-tip-chart');
+    if (!el) return;
+    el.innerHTML = _cfCurrLiabBarSvg(s.actual, s.netInvActual);
+}
+
+function _cfShowCurrLiabTip(){
+    if (document.getElementById('cf-currliab-tip-win')) return;
+    var winW = 360, winH = 280;
+    var anchorEl = document.getElementById('cf-currentliabilities');
+    var rect = anchorEl ? anchorEl.getBoundingClientRect() : null;
+    var left = rect ? Math.min(rect.left, window.innerWidth - winW - 10) : (window.innerWidth - winW) / 2;
+    var top = rect ? Math.min(rect.bottom + 6, window.innerHeight - winH - 10) : (window.innerHeight - winH) / 2;
+    if (left < 10) left = 10;
+    if (top < 10) top = 10;
+    var html = '<div id="cf-currliab-tip-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
+        + '<div id="cf-currliab-tip-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:#251840;cursor:move;user-select:none;">'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:14px;font-weight:700;color:#fff;">Current Liabilities vs Total Investment</span>'
+        + '<button id="cf-currliab-tip-close" style="background:none;border:none;font-size:18px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
+        + '</div>'
+        + '<div id="cf-currliab-tip-chart" style="flex:1;min-height:0;display:flex;padding:6px 10px;"></div>'
+        + '</div>';
+    $('body').append(html);
+    _cfRedrawCurrLiabTip();
+
+    var win = document.getElementById('cf-currliab-tip-win');
+    var hdr = document.getElementById('cf-currliab-tip-hdr');
+    var bdt = (typeof window.bindDragTouch === 'function') ? window.bindDragTouch : function(elm, ev, fn, opts){ elm.addEventListener(ev, fn, opts); };
+    var _action = null, _sx = 0, _sy = 0, _ox = 0, _oy = 0;
+    function _anchor(){ var r = win.getBoundingClientRect(); win.style.left = r.left + 'px'; win.style.top = r.top + 'px'; return r; }
+    bdt(hdr, 'mousedown', function(e){
+        if (e.target.id === 'cf-currliab-tip-close') return;
+        var r = _anchor();
+        _action = true; _sx = e.clientX; _sy = e.clientY; _ox = r.left; _oy = r.top;
+        e.preventDefault();
+    });
+    bdt(document, 'mousemove', function(e){
+        if (!_action) return;
+        win.style.left = Math.max(0, _ox + (e.clientX - _sx)) + 'px';
+        win.style.top = Math.max(0, _oy + (e.clientY - _sy)) + 'px';
+    });
+    bdt(document, 'mouseup', function(){ _action = null; });
+}
+$(document).on('click', '#cf-currliab-tip-close', function(){ $('#cf-currliab-tip-win').remove(); });
+// Bar/label click inside the tooltip opens that metric's own existing
+// account-breakdown popup — same endpoints the Current Liabilities and
+// Total Investment panels themselves already use when clicked directly.
+$(document).on('click', '#cf-currliab-tip-chart [data-cflbar="cl"]', function(e){
+    e.stopPropagation();
+    $.ajax({
+        type: 'POST', url: '../projectsmain/cfcurrentliabilitiesbreakdown', dataType: 'json',
+        success: function(d){ if (d && d.error === 'No') { _cfShowCurrLiabBreakdown(d.accounts || []); } }
+    });
+});
+$(document).on('click', '#cf-currliab-tip-chart [data-cflbar="ti"]', function(e){
+    e.stopPropagation();
+    $.ajax({
+        type: 'POST', url: '../projectsmain/cfnetinvestmentbreakdown', dataType: 'json',
+        success: function(d){ if (d && d.error === 'No') { _cfShowNetInvBreakdown(d.accounts || [], +d.average || 0); } }
+    });
+});
+
+function renderCfCurrentLiabilitiesDial(){
+    var gen = _cfLoadGen;
+    _cfCurrLiabState = { billsRecvTarget: 0, wipTarget: 0, actual: 0, netInvActual: 0 };
+    _cfDrawCurrLiabDial();
+    _cfFetchTarget('bills_receivable_target', function(d){
+        if (gen === _cfLoadGen) { _cfCurrLiabState.billsRecvTarget = +d.target || 0; _cfDrawCurrLiabDial(); }
+    });
+    _cfFetchTarget('wip_target', function(d){
+        if (gen === _cfLoadGen) { _cfCurrLiabState.wipTarget = +d.target || 0; _cfDrawCurrLiabDial(); }
+    });
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfcurrentliabilities', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfCurrLiabState.actual = (+d.total || 0) / 10000000;
+                _cfDrawCurrLiabDial();
+            }
+        }
+    });
+    // Total Investment's own value, shown as a second bar alongside
+    // Current Liabilities per explicit request — fetched independently
+    // here (same endpoint the Total Investment panel itself uses) rather
+    // than reading _cfNetInvState directly, since that panel's own AJAX
+    // may not have resolved yet by the time this one renders.
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfnetinvestment', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfCurrLiabState.netInvActual = (+d.total || 0) / 10000000;
+                _cfDrawCurrLiabDial();
+            }
+        }
+    });
+}
+
+// Standalone Current Liabilities dial — occupies #cf-bank, the grid slot
+// that used to be the Cash-to-Cash Cycle panel (that metric moved to two
+// small squares on the group sub-heading instead, see
+// renderCfC2cLegend). Single flat colour, no target/needle split, since
+// this metric has no editable target of its own — same treatment as the
+// old combined dial's underlying value, just shown alone here instead of
+// summed with Total Investment.
+var _cfCurrLiabState2 = { actual: 0 };
+
+function _cfCurrLiabDialSvg2(actual){
+    var cx = 105, cy = 82, r = 76, sw = 15;
+    function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
+    var p1 = ptF(0), p2 = ptF(1);
+    var arcPath = '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="#4a4f57" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    var maxV = actual > 0 ? actual * 1.5 : 1;
+    var f = Math.max(0, Math.min(1, actual / maxV));
+    var nr = r - 14, na = Math.PI * (1 - f);
+    var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
+    var fmt = _cfFmtMoney(Math.abs(actual) * 10000000);
+    var divisor = fmt.unit === 'Crores' ? 1 : 100;
+    var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+        + arcPath
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
+        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + (actual * divisor).toFixed(2) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">' + fmt.unit + '</text>'
+        + '</svg>';
+    return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
+}
+
+function _cfDrawCurrLiabDial2(){
+    var el = document.getElementById('cf-bank');
+    if (!el) return;
+    el.style.justifyContent = 'center';
+    el.style.cursor = 'pointer';
+    el.title = 'Click to see account breakdown';
+    var s = _cfCurrLiabState2;
+    var fmt = _cfFmtMoney(Math.abs(s.actual) * 10000000);
+    var divisor = fmt.unit === 'Crores' ? 1 : 100;
+    el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
+        + _cfCurrLiabDialSvg2(s.actual)
+        + '<div style="display:flex;justify-content:center;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
+        + '<span style="font-size:13px;color:#111;">Actual: <span style="font-size:13px;color:#4a4f57;font-weight:700;">' + (s.actual * divisor).toFixed(2) + '</span></span>'
+        + '</div>'
+        + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
+}
+
+function renderCfCurrLiabDial2(){
+    var gen = _cfLoadGen;
+    _cfCurrLiabState2 = { actual: 0 };
+    _cfDrawCurrLiabDial2();
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfcurrentliabilities', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfCurrLiabState2.actual = (+d.total || 0) / 10000000;
+                _cfDrawCurrLiabDial2();
+            }
+        }
+    });
+}
+
+// Cash-to-Cash Cycle: no dial/panel any more (see the _cfDials comment
+// above) — Target and Actual now show as two small colored squares plus
+// their values inline on the group sub-heading bar (#cf-c2c-legend).
+// Target's square is always green (it's just the reference point, not a
+// pass/fail state of its own); Actual's square is green when at/under
+// Target (a shorter cycle is good) and red when it exceeds Target.
+var _cfC2cLegendState = { target: 0, actual: 0 };
+
+function _cfDrawC2cLegend(){
+    var el = document.getElementById('cf-c2c-legend');
+    if (!el) return;
+    var s = _cfC2cLegendState;
+    var actualCol = s.actual > s.target ? '#c62828' : '#2e7d32';
+    function sq(col){ return '<span style="display:inline-block;width:9px;height:9px;background:' + col + ';border-radius:1px;vertical-align:middle;"></span>'; }
+    el.innerHTML = sq('#2e7d32') + ' T ' + s.target.toFixed(1) + ' Days'
+        + '&nbsp;&nbsp;' + sq(actualCol) + ' A ' + s.actual.toFixed(1) + ' Days';
+}
+
+function renderCfC2cLegend(){
+    var gen = _cfLoadGen;
+    _cfC2cLegendState = { target: 0, actual: 0 };
+    _cfDrawC2cLegend();
+    _cfFetchTarget('c2c_cycle', function(d){
+        if (gen === _cfLoadGen) { _cfC2cLegendState.target = +d.target || 0; _cfDrawC2cLegend(); }
+    });
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfactualc2c', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfC2cLegendState.actual = +d.total || 0;
+                _cfDrawC2cLegend();
+            }
+        }
+    });
+}
+
+// Current Liabilities breakdown popup — same draggable/resizable
+// vertical bar chart window as Investments (see
+// _cfInvestBreakdownChartHtml/_cfShowInvestBreakdown above), one bar per
+// contributing party/account (see actionCfcurrentliabilitiesbreakdown,
+// same pool/filter as actionCfcurrentliabilities). No hover breakdown
+// needed here — each bar is already a single account, same as
+// Investments.
+function _cfRedrawCurrLiabBreakdown(){
+    var s = window._cfCurrLiabBreakdownState;
+    if (!s) return;
+    var chartH = Math.max(120, $('#cf-currliab-breakdown-win').height() - 130);
+    var r = _cfInvestBreakdownChartHtml(s.accounts, chartH);
+    $('#cf-currliab-breakdown-unit').html(
+        '<span style="font-weight:700;color:#251840;">Amount in ' + r.unit + '</span>'
+        + '<span style="float:right;font-weight:700;color:#251840;">Total: ' + r.total + ' ' + r.unit + '</span>'
+    );
+    $('#cf-currliab-breakdown-chart').html(r.body);
+}
+
+function _cfShowCurrLiabBreakdown(accounts){
+    $('#cf-currliab-breakdown-win').remove();
+    window._cfCurrLiabBreakdownState = { accounts: accounts };
+
+    var winW = 640, winH = 380, MIN_W = 340, MIN_H = 240;
+    var left = Math.max(10, (window.innerWidth - winW) / 2);
+    var top = Math.max(10, (window.innerHeight - winH) / 2);
+
+    var rsHandles = ['n','s','e','w','ne','nw','se','sw'];
+    var rsHtml = '';
+    for (var h = 0; h < rsHandles.length; h++) {
+        rsHtml += '<div class="cf-currliab-rs" data-dir="' + rsHandles[h] + '" style="position:absolute;';
+        var d = rsHandles[h];
+        if (d === 'n') rsHtml += 'top:-4px;left:10px;right:10px;height:10px;cursor:n-resize;';
+        else if (d === 's') rsHtml += 'bottom:-4px;left:10px;right:10px;height:10px;cursor:s-resize;';
+        else if (d === 'e') rsHtml += 'right:-4px;top:10px;bottom:10px;width:10px;cursor:e-resize;';
+        else if (d === 'w') rsHtml += 'left:-4px;top:10px;bottom:10px;width:10px;cursor:w-resize;';
+        else if (d === 'ne') rsHtml += 'right:-4px;top:-4px;width:14px;height:14px;cursor:ne-resize;';
+        else if (d === 'nw') rsHtml += 'left:-4px;top:-4px;width:14px;height:14px;cursor:nw-resize;';
+        else if (d === 'se') rsHtml += 'right:-4px;bottom:-4px;width:14px;height:14px;cursor:se-resize;';
+        else if (d === 'sw') rsHtml += 'left:-4px;bottom:-4px;width:14px;height:14px;cursor:sw-resize;';
+        rsHtml += 'z-index:20;background:transparent;"></div>';
+    }
+
+    var html = '<div id="cf-currliab-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
+        + rsHtml
+        + '<div id="cf-currliab-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#251840;cursor:move;user-select:none;">'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Current Liabilities — Account Breakdown</span>'
+        + '<button id="cf-currliab-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
+        + '</div>'
+        + '<div id="cf-currliab-breakdown-unit" style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;"></div>'
+        + '<div style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;">'
+        + '<div id="cf-currliab-breakdown-chart" style="min-width:0;"></div>'
+        + '</div>'
+        + '</div>';
+    $('body').append(html);
+    _cfRedrawCurrLiabBreakdown();
+
+    // Drag (header) + resize (8 handles) — same mechanics as the
+    // Investments breakdown window.
+    var win = document.getElementById('cf-currliab-breakdown-win');
+    var hdr = document.getElementById('cf-currliab-breakdown-hdr');
+    var _action = null, _sx = 0, _sy = 0, _ox = 0, _oy = 0, _ow = 0, _oh = 0;
+
+    function onDown(e, dir){
+        var r = win.getBoundingClientRect();
+        _action = dir; _sx = e.clientX; _sy = e.clientY;
+        _ox = r.left; _oy = r.top; _ow = r.width; _oh = r.height;
+        e.preventDefault();
+        if (dir !== 'drag') e.stopPropagation();
+    }
+    function onMove(e){
+        if (!_action) return;
+        e.preventDefault();
+        var dx = e.clientX - _sx, dy = e.clientY - _sy;
+        if (_action === 'drag') {
+            var x = Math.max(0, Math.min(_ox + dx, window.innerWidth - win.offsetWidth));
+            var y = Math.max(0, Math.min(_oy + dy, window.innerHeight - win.offsetHeight));
+            win.style.left = x + 'px'; win.style.top = y + 'px';
+        } else {
+            var l = _ox, t = _oy, w = _ow, h = _oh;
+            if (_action.indexOf('e') > -1) { w = Math.max(MIN_W, _ow + dx); }
+            if (_action.indexOf('s') > -1) { h = Math.max(MIN_H, _oh + dy); }
+            if (_action.indexOf('w') > -1) { var nw = Math.max(MIN_W, _ow - dx); l = _ox + (_ow - nw); w = nw; }
+            if (_action.indexOf('n') > -1) { var nh = Math.max(MIN_H, _oh - dy); t = _oy + (_oh - nh); h = nh; }
+            win.style.left = l + 'px'; win.style.top = t + 'px';
+            win.style.width = w + 'px'; win.style.height = h + 'px';
+            _cfRedrawCurrLiabBreakdown();
+        }
+    }
+    function onUp(){ _action = null; }
+
+    if (typeof window.bindDragTouch === 'function') {
+        window.bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-currliab-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-currliab-rs').each(function(){
+            var dir = $(this).data('dir');
+            window.bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        window.bindDragTouch(document, 'mousemove', onMove, { passive: false });
+        window.bindDragTouch(document, 'mouseup', onUp);
+    } else {
+        bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-currliab-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-currliab-rs').each(function(){
+            var dir = $(this).data('dir');
+            bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        bindDragTouch(document, 'mousemove', onMove);
+        bindDragTouch(document, 'mouseup', onUp);
+    }
+}
+$(document).on('click', '#cf-currentliabilities', function(e){
+    _cfShowCurrLiabTip();
+});
+$(document).on('click', '#cf-currliab-breakdown-close', function(){ $('#cf-currliab-breakdown-win').remove(); });
+
+// Project Expenditure panel — single flat dial, deep purple up to
+// target and deep orange beyond, no target-split colour logic needed
+// since it's the same two-colour treatment throughout (unlike the
+// dark-blue/orange dials, purple/orange doesn't reuse either half's
+// colour for anything else). Target is NOT user-editable — it's
+// DERIVED as 90% of the project's contract value
+// (projects.project_value), same "auto-computed, no pencil" pattern as
+// Current Liabilities. Needle/actual = the Finance module's Project
+// Expenditure Total (see actionCfprojectexpenditure in
+// FinancerequestsController, which mirrors actionProexpenditure's own
+// grand-total calculation minus the Advances/Liabilities section).
+var _cfProjExpState = { target: 0, actual: 0 };
+
+function _cfProjExpDialSvg(targetCr, actual){
+    var maxV = targetCr > 0 ? targetCr * 2 : 1;
+    var f = Math.max(0, Math.min(1, actual / maxV));
+    var cx = 105, cy = 82, r = 76, sw = 15;
+    function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
+    function arc(f1, f2, col){
+        if (f2 <= f1) return '';
+        var p1 = ptF(f1), p2 = ptF(f2);
+        return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    }
+    var arcPath = arc(0, 0.5, '#251840') + arc(0.5, 1, '#b5540a');
+    var targetF = 0.5;
+    var ta = Math.PI * (1 - targetF);
+    var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
+    var tx1 = (cx + tr1 * Math.cos(ta)).toFixed(1), ty1 = (cy - tr1 * Math.sin(ta)).toFixed(1);
+    var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
+    var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
+        + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    var nr = r - 14, na = Math.PI * (1 - f);
+    var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
+    // Target is typed directly in Lakhs (the input box's fixed
+    // convention -- see _cfEnteredToRupees) and Actual is shown in
+    // that SAME fixed Lakhs unit, never auto-converted to Crores by
+    // magnitude, so the two numbers always stay comparable and the
+    // unit the user chose by using this box is never second-guessed.
+    var fmt = { unit: 'Lakhs' };
+    var divisor = 100;
+    var centerCol = actual > targetCr ? '#c62828' : '#000';
+    var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+        + arcPath
+        + targetLine
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
+        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="' + centerCol + '" font-family="Barlow Condensed,Arial">' + (actual * divisor).toFixed(2) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">' + fmt.unit + '</text>'
+        + '</svg>';
+    return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
+}
+
+function _cfDrawProjExpDial(){
+    var el = document.getElementById('cf-projectexpenditure');
+    if (!el) return;
+    el.style.justifyContent = 'center';
+    el.style.cursor = 'pointer';
+    el.title = 'Click to see group breakdown';
+    var s = _cfProjExpState;
+    // Backend already returns target/total in raw rupees; convert both
+    // to the same Crores-scale float convention as every other panel.
+    var targetCr = s.target / 10000000;
+    // Target is typed directly in Lakhs (the input box's fixed
+    // convention -- see _cfEnteredToRupees) and Actual is shown in
+    // that SAME fixed Lakhs unit, never auto-converted to Crores by
+    // magnitude, so the two numbers always stay comparable and the
+    // unit the user chose by using this box is never second-guessed.
+    var fmt = { unit: 'Lakhs' };
+    var divisor = 100;
+    var maxV = targetCr > 0 ? targetCr * 2 : 1;
+    var needleCol = (s.actual / maxV) <= 0.5 ? '#251840' : '#b5540a';
+    el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
+        + _cfProjExpDialSvg(targetCr, s.actual)
+        + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
+        + '<span style="font-size:13px;color:#111;">Actual: <span style="font-size:13px;color:' + needleCol + ';font-weight:700;">' + (s.actual * divisor).toFixed(2) + '</span></span>'
+        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Target: <span style="font-size:13px;color:#251840;font-weight:700;">' + (targetCr * divisor).toFixed(2) + '</span></span>'
+        + '</div>'
+        + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
+}
+
+function renderCfProjExpDial(){
+    var gen = _cfLoadGen;
+    _cfProjExpState = { target: 0, actual: 0 };
+    _cfDrawProjExpDial();
+    _cfQueueAjax({
+        type: 'POST', url: '../financerequests/cfprojectexpenditure', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfProjExpState.target = +d.target || 0;
+                _cfProjExpState.actual = (+d.total || 0) / 10000000;
+                _cfDrawProjExpDial();
+            }
+        }
+    });
+}
+
+// Project Expenditure breakdown popup — same draggable/resizable
+// vertical bar chart window as Investments/WIP (see
+// _cfInvestBreakdownChartHtml/_cfShowInvestBreakdown above), bucketed by
+// Project Expenditure group (see actionCfprojectexpenditurebreakdown).
+// Each bar's hover tooltip lists its individual contributing account
+// heads, via the same shared .cf-breakdown-bar-col hover handler used
+// by the WIP popup.
+function _cfRedrawProjExpBreakdown(){
+    var s = window._cfProjExpBreakdownState;
+    if (!s) return;
+    var chartH = Math.max(120, $('#cf-projexp-breakdown-win').height() - 130);
+    var r = _cfInvestBreakdownChartHtml(s.accounts, chartH);
+    $('#cf-projexp-breakdown-unit').html(
+        '<span style="font-weight:700;color:#251840;">Amount in ' + r.unit + '</span>'
+        + '<span style="float:right;font-weight:700;color:#251840;">Total: ' + r.total + ' ' + r.unit + '</span>'
+    );
+    $('#cf-projexp-breakdown-chart').html(r.body);
+}
+
+function _cfShowProjExpBreakdown(accounts){
+    $('#cf-projexp-breakdown-win').remove();
+    window._cfProjExpBreakdownState = { accounts: accounts };
+
+    var winW = 640, winH = 380, MIN_W = 340, MIN_H = 240;
+    var left = Math.max(10, (window.innerWidth - winW) / 2);
+    var top = Math.max(10, (window.innerHeight - winH) / 2);
+
+    var rsHandles = ['n','s','e','w','ne','nw','se','sw'];
+    var rsHtml = '';
+    for (var h = 0; h < rsHandles.length; h++) {
+        rsHtml += '<div class="cf-projexp-rs" data-dir="' + rsHandles[h] + '" style="position:absolute;';
+        var d = rsHandles[h];
+        if (d === 'n') rsHtml += 'top:-4px;left:10px;right:10px;height:10px;cursor:n-resize;';
+        else if (d === 's') rsHtml += 'bottom:-4px;left:10px;right:10px;height:10px;cursor:s-resize;';
+        else if (d === 'e') rsHtml += 'right:-4px;top:10px;bottom:10px;width:10px;cursor:e-resize;';
+        else if (d === 'w') rsHtml += 'left:-4px;top:10px;bottom:10px;width:10px;cursor:w-resize;';
+        else if (d === 'ne') rsHtml += 'right:-4px;top:-4px;width:14px;height:14px;cursor:ne-resize;';
+        else if (d === 'nw') rsHtml += 'left:-4px;top:-4px;width:14px;height:14px;cursor:nw-resize;';
+        else if (d === 'se') rsHtml += 'right:-4px;bottom:-4px;width:14px;height:14px;cursor:se-resize;';
+        else if (d === 'sw') rsHtml += 'left:-4px;bottom:-4px;width:14px;height:14px;cursor:sw-resize;';
+        rsHtml += 'z-index:20;background:transparent;"></div>';
+    }
+
+    var html = '<div id="cf-projexp-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
+        + rsHtml
+        + '<div id="cf-projexp-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#251840;cursor:move;user-select:none;">'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Project Expenditure — Group Breakdown</span>'
+        + '<button id="cf-projexp-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
+        + '</div>'
+        + '<div id="cf-projexp-breakdown-unit" style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;"></div>'
+        + '<div style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;">'
+        + '<div id="cf-projexp-breakdown-chart" style="min-width:0;"></div>'
+        + '</div>'
+        + '</div>';
+    $('body').append(html);
+    _cfRedrawProjExpBreakdown();
+
+    // Drag (header) + resize (8 handles) — same mechanics as the
+    // Investments/WIP breakdown windows.
+    var win = document.getElementById('cf-projexp-breakdown-win');
+    var hdr = document.getElementById('cf-projexp-breakdown-hdr');
+    var _action = null, _sx = 0, _sy = 0, _ox = 0, _oy = 0, _ow = 0, _oh = 0;
+
+    function onDown(e, dir){
+        var r = win.getBoundingClientRect();
+        _action = dir; _sx = e.clientX; _sy = e.clientY;
+        _ox = r.left; _oy = r.top; _ow = r.width; _oh = r.height;
+        e.preventDefault();
+        if (dir !== 'drag') e.stopPropagation();
+    }
+    function onMove(e){
+        if (!_action) return;
+        e.preventDefault();
+        var dx = e.clientX - _sx, dy = e.clientY - _sy;
+        if (_action === 'drag') {
+            var x = Math.max(0, Math.min(_ox + dx, window.innerWidth - win.offsetWidth));
+            var y = Math.max(0, Math.min(_oy + dy, window.innerHeight - win.offsetHeight));
+            win.style.left = x + 'px'; win.style.top = y + 'px';
+        } else {
+            var l = _ox, t = _oy, w = _ow, h = _oh;
+            if (_action.indexOf('e') > -1) { w = Math.max(MIN_W, _ow + dx); }
+            if (_action.indexOf('s') > -1) { h = Math.max(MIN_H, _oh + dy); }
+            if (_action.indexOf('w') > -1) { var nw = Math.max(MIN_W, _ow - dx); l = _ox + (_ow - nw); w = nw; }
+            if (_action.indexOf('n') > -1) { var nh = Math.max(MIN_H, _oh - dy); t = _oy + (_oh - nh); h = nh; }
+            win.style.left = l + 'px'; win.style.top = t + 'px';
+            win.style.width = w + 'px'; win.style.height = h + 'px';
+            _cfRedrawProjExpBreakdown();
+        }
+    }
+    function onUp(){ _action = null; }
+
+    if (typeof window.bindDragTouch === 'function') {
+        window.bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-projexp-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-projexp-rs').each(function(){
+            var dir = $(this).data('dir');
+            window.bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        window.bindDragTouch(document, 'mousemove', onMove, { passive: false });
+        window.bindDragTouch(document, 'mouseup', onUp);
+    } else {
+        bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-projexp-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-projexp-rs').each(function(){
+            var dir = $(this).data('dir');
+            bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        bindDragTouch(document, 'mousemove', onMove);
+        bindDragTouch(document, 'mouseup', onUp);
+    }
+}
+$(document).on('click', '#cf-projectexpenditure', function(e){
+    $.ajax({
+        type: 'POST', url: '../financerequests/cfprojectexpenditurebreakdown', dataType: 'json',
+        success: function(d){
+            if (d && d.error === 'No') { _cfShowProjExpBreakdown(d.accounts || []); }
+        }
+    });
+});
+$(document).on('click', '#cf-projexp-breakdown-close', function(){ $('#cf-projexp-breakdown-win').remove(); });
+
+// Average Work In Progress panel — same layout pattern as the Bank
+// panel: flat dial, full scale = 2x Target (T.WIP), yellow bright
+// marker line at the dial's center (the target threshold), needle =
+// Current WIP (actual, no averaging), teal overlay arc (0 to C.WIP, on
+// the same scale) showing Current WIP's progress along the dial — same
+// overlay treatment as the Bank panel's orange Availed arc. Legend row
+// shows two values left-to-right: C.WIP (Current WIP, static, left tip)
+// — T.WIP (Target WIP, editable via pencil at the right tip, saved to
+// cf_dashboard_targets under metric_key "wip_target" via the same
+// cfsavetarget/cfgettarget endpoints the Bank panel uses). C.WIP = sum
+// of Bank/Cash payment transactions for the selected project whose
+// debited counterparty is an Expense-type account head
+// (accounts_item.account_type = 8) — see actionCfwip.
+var _cfWipState = { target: 0, currentWip: 0, editing: false, avgDays: null };
+
+function _cfWipDialSvg(target, currentWip){
+    // target is the raw number the user typed (e.g. "19"); reinterpret it
+    // via the same magnitude rule as every other value (< 100 = Lakhs,
+    // >= 100 = Crores), then convert to the same Crores-scale float
+    // currentWip is already in, so both share one axis.
+    var targetCr = _cfEnteredToRupees(target) / 10000000;
+    var maxV = targetCr > 0 ? targetCr * 2 : 1;
+    var f = Math.max(0, Math.min(1, currentWip / maxV));
+    var cx = 105, cy = 82, r = 76, sw = 15;
+    function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
+    function arc(f1, f2, col){
+        if (f2 <= f1) return '';
+        var p1 = ptF(f1), p2 = ptF(f2);
+        return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    }
+    // Target marker: bright yellow line at the dial's center (target =
+    // half of the full 2x scale) — same treatment as the Bank panel's
+    // Allocated marker.
+    var targetF = 0.5;
+    var ta = Math.PI * (1 - targetF);
+    var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
+    var tx1 = (cx + tr1 * Math.cos(ta)).toFixed(1), ty1 = (cy - tr1 * Math.sin(ta)).toFixed(1);
+    var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
+    var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
+        + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    var nr = r - 14, na = Math.PI * (1 - f);
+    var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
+    // Target is typed directly in Lakhs (the input box's fixed
+    // convention -- see _cfEnteredToRupees) and Actual is shown in
+    // that SAME fixed Lakhs unit, never auto-converted to Crores by
+    // magnitude, so the two numbers always stay comparable and the
+    // unit the user chose by using this box is never second-guessed.
+    var fmt = { unit: 'Lakhs' };
+    var divisor = 100;
+    var centerCol = currentWip > targetCr ? '#c62828' : '#000';
+    var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+        + arc(0, 0.5, '#e07b00') + arc(0.5, 1, '#71797e')
+        + targetLine
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
+        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="' + centerCol + '" font-family="Barlow Condensed,Arial">' + (currentWip * divisor).toFixed(2) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">' + fmt.unit + '</text>'
+        + '</svg>';
+    return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
+}
+
+function _cfDrawWipDial(){
+    var el = document.getElementById('cf-billsreceivable');
+    if (!el) return;
+    el.style.justifyContent = 'center';
+    el.style.cursor = 'pointer';
+    el.title = 'Click to see group breakdown';
+    var s = _cfWipState;
+    // s.target is the raw number the user typed; reinterpret it via the
+    // magnitude rule (< 100 = Lakhs, >= 100 = Crores) before comparing it
+    // against currentWip, which is already a Crores-scale float.
+    var targetCr = _cfEnteredToRupees(s.target) / 10000000;
+    // Target is typed directly in Lakhs (the input box's fixed
+    // convention -- see _cfEnteredToRupees) and Actual is shown in
+    // that SAME fixed Lakhs unit, never auto-converted to Crores by
+    // magnitude, so the two numbers always stay comparable and the
+    // unit the user chose by using this box is never second-guessed.
+    var fmt = { unit: 'Lakhs' };
+    var divisor = 100; // state values are already in Crores; 1 Crore = 100 Lakhs
+    var targetCell = s.editing
+        ? '<input class="cf-wip-input" data-field="target" type="number" step="any" value="' + s.target + '" style="width:54px;font-size:13px;padding:0 3px;border:1px solid #b0bec5;border-radius:2px;color:#081142;font-weight:700;">'
+        : '<span style="font-size:13px;color:#081142;font-weight:700;">' + (targetCr * divisor).toFixed(2) + '</span>';
+    // Actual (C.WIP) legend colour always matches whichever arc half the
+    // needle is currently pointing into (grey up to target, orange
+    // beyond).
+    var maxV = targetCr > 0 ? targetCr * 2 : 1;
+    var needleCol = (s.currentWip / maxV) <= 0.5 ? '#e07b00' : '#71797e';
+    el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
+        + _cfWipDialSvg(s.target, s.currentWip)
+        + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 6px;width:100%;box-sizing:border-box;">'
+        + '<span style="font-size:12px;color:#111;">C.WIP: <span style="font-size:12px;color:' + needleCol + ';font-weight:700;">' + (s.currentWip * divisor).toFixed(2) + '</span></span>'
+        + '<span style="font-size:12px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>T.WIP: ' + targetCell + ' <button class="cf-wip-pencil" title="Edit Target WIP" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>'
+        + '</div>'
+        + (s.avgDays !== null
+            ? '<div style="width:100%;text-align:center;font-family:Barlow Condensed,Arial;padding:2px 6px 0;box-sizing:border-box;"><span style="font-size:12px;color:#111;" title="Length of the most recent WIP cycle (last Contract Income credit to the one before it, or project start for the first cycle). Average across all closed cycles so far: ' + (s.avgAllCycles !== null ? s.avgAllCycles.toFixed(1) : '—') + ' days.">Avg. Time in WIP: <span style="font-weight:700;color:#081142;">' + s.avgDays.toFixed(1) + ' days</span></span></div>'
+            : '')
+        + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
+}
+
+function renderCfWipDial(){
+    var gen = _cfLoadGen;
+    _cfWipState = { target: 0, currentWip: 0, editing: false, avgDays: null, avgAllCycles: null };
+    _cfDrawWipDial();
+    _cfFetchTarget('wip_target', function(d){
+        if (gen === _cfLoadGen) { _cfWipState.target = +d.target || 0; _cfDrawWipDial(); }
+    });
+    // C.WIP = sum of Bank/Cash payment transactions whose debited
+    // counterparty is an Expense-type account head — see actionCfwip.
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfwip', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfWipState.currentWip = (+d.total || 0) / 10000000;
+                _cfDrawWipDial();
+            }
+        }
+    });
+    // Length of the most recent WIP cycle (not an average) — see
+    // actionCfwipavgtime. avg_all_cycles is the true historical average,
+    // shown only in the dial's hover tooltip as extra context.
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfwipavgtime', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfWipState.avgDays = +d.avg_days || 0;
+                _cfWipState.avgAllCycles = +d.avg_all_cycles || 0;
+                _cfDrawWipDial();
+            }
+        }
+    });
+}
+
+// Contribution Margin panel — a PERCENTAGE dial (unlike every other
+// Cashflow dial, which shows a money value at its center). Center shows
+// the margin percentage; the underlying rupee value (Contract Income -
+// Project Expenditure — see actionCfcontributionmargin) is shown below
+// the dial in Lakhs (<= 99 Lakhs) or Crores (> 99 Lakhs). Target is a
+// user-editable PERCENTAGE (not a rupee amount, so _cfEnteredToRupees'
+// Lakhs/Crores magnitude rule does NOT apply here), saved under
+// metric_key "contribution_margin_target". Scale is 0-100%, needle at
+// dial center (50%) represents the target's position only when target
+// is exactly 50 — like every other dial here, the target marker sits at
+// the dial's fixed midpoint and the SCALE (max = target*2) stretches or
+// compresses around it, except percentage naturally caps at 100 so the
+// max is clamped to 100 when target*2 would exceed it.
+var _cfContribMarginState = { target: 0, value: 0, percent: 0, editing: false };
+
+function _cfContribMarginDialSvg(target, percent, valueLabel){
+    var maxV = target > 0 ? Math.min(100, target * 2) : 100;
+    var f = Math.max(0, Math.min(1, percent / maxV));
+    var cx = 105, cy = 82, r = 76, sw = 15;
+    function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
+    function arc(f1, f2, col){
+        if (f2 <= f1) return '';
+        var p1 = ptF(f1), p2 = ptF(f2);
+        return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    }
+    var arcPath = arc(0, 0.5, '#b5540a') + arc(0.5, 1, '#00838f');
+    var targetF = maxV > 0 ? Math.max(0, Math.min(1, target / maxV)) : 0.5;
+    var ta = Math.PI * (1 - targetF);
+    var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
+    var tx1 = (cx + tr1 * Math.cos(ta)).toFixed(1), ty1 = (cy - tr1 * Math.sin(ta)).toFixed(1);
+    var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
+    var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
+        + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    var nr = r - 14, na = Math.PI * (1 - f);
+    var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
+    // Percentage label sits just outside the needle's own tip, along the
+    // same angle the needle points at — not centered in the dial anymore
+    // (only valueLabel occupies the center now) — per explicit request.
+    var labelR = r + sw / 2 + 14;
+    var labelX = (cx + labelR * Math.cos(na)).toFixed(1), labelY = (cy - labelR * Math.sin(na)).toFixed(1);
+    var labelAnchor = Math.cos(na) > 0.15 ? 'start' : (Math.cos(na) < -0.15 ? 'end' : 'middle');
+    var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+        + arcPath
+        + targetLine
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
+        + '<text x="' + labelX + '" y="' + labelY + '" text-anchor="' + labelAnchor + '" font-size="16" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + percent.toFixed(2) + '%</text>'
+        + '<text x="' + cx + '" y="' + (cy - 20) + '" text-anchor="middle" font-size="24" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">' + valueLabel + '</text>'
+        + '</svg>';
+    return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
+}
+
+function _cfDrawContribMarginDial(){
+    var el = document.getElementById('cf-contribmargin');
+    if (!el) return;
+    el.style.justifyContent = 'center';
+    var s = _cfContribMarginState;
+    var fmt = _cfFmtMoney(s.value); // s.value is already raw rupees
+    var divisor = fmt.unit === 'Crores' ? 10000000 : 100000;
+    var targetCell = s.editing
+        ? '<input class="cf-contribmargin-input" data-field="target" type="number" step="any" value="' + s.target + '" style="width:54px;font-size:13px;padding:0 3px;border:1px solid #b0bec5;border-radius:2px;color:#5a5a5a;font-weight:700;">'
+        : '<span style="font-size:13px;color:#5a5a5a;font-weight:700;">' + s.target.toFixed(2) + '%</span>';
+    var maxV = s.target > 0 ? Math.min(100, s.target * 2) : 100;
+    var needleCol = (s.percent / maxV) <= 0.5 ? '#b5540a' : '#00838f';
+    var valueLabel = (s.value / divisor).toFixed(2) + ' ' + fmt.unit;
+    el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
+        + _cfContribMarginDialSvg(s.target, s.percent, valueLabel)
+        + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
+        + '<span style="font-size:13px;color:' + needleCol + ';font-weight:700;">' + s.percent.toFixed(2) + '%</span>'
+        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Target: ' + targetCell + ' <button class="cf-contribmargin-pencil" title="Edit Target" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>'
+        + '</div>'
+        + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
+}
+
+function renderCfContribMarginDial(){
+    var gen = _cfLoadGen;
+    _cfContribMarginState = { target: 0, value: 0, percent: 0, editing: false };
+    _cfDrawContribMarginDial();
+    _cfFetchTarget('contribution_margin_target', function(d){
+        if (gen === _cfLoadGen) { _cfContribMarginState.target = +d.target || 0; _cfDrawContribMarginDial(); }
+    });
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfcontributionmargin', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfContribMarginState.value = +d.value || 0;
+                _cfContribMarginState.percent = +d.percent || 0;
+                _cfDrawContribMarginDial();
+            }
+        }
+    });
+}
+
+$(document).on('click', '.cf-contribmargin-pencil', function(e){
+    e.preventDefault(); e.stopPropagation();
+    var s = _cfContribMarginState;
+    if (s.editing) {
+        var val = +$('.cf-contribmargin-input[data-field="target"]').val() || 0;
+        s.target = val;
+        s.editing = false;
+        _cfDrawContribMarginDial();
+        _cfQueueAjax({
+            type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json',
+            data: { metric_key: 'contribution_margin_target', target_value: val },
+            success: function(){ renderCfBars(); }
+        });
+    } else {
+        s.editing = true;
+        _cfDrawContribMarginDial();
+    }
+});
+
+// Free Cash panel — needle/arc still driven by the percentage —
+// (Free Cash value / Average Investment) * 100 — same as Contribution
+// Margin's gauge mechanics, but the dial's CENTER now shows the actual
+// rupee value (Contribution Margin - Total Investment - Current
+// Liabilities — see actionCfreecash) instead of the percentage, per
+// explicit request. Same rupee value is also shown to the left in
+// Lakhs (<= 99 Lakhs) or Crores (> 99 Lakhs). Target is a user-editable
+// PERCENTAGE, saved under metric_key "free_cash_target". Left-arc
+// colour (deep purple, #4a2e7a) is distinct from Contribution Margin's
+// teal, per explicit request, so the two dials aren't visually identical.
+var _cfFreeCashState = { target: 0, value: 0, percent: 0, avgInvestment: 0, editing: false };
+
+function _cfFreeCashDialSvg(target, percent, centerLabel){
+    var maxV = target > 0 ? Math.min(100, target * 2) : 100;
+    var f = Math.max(0, Math.min(1, percent / maxV));
+    var cx = 105, cy = 82, r = 76, sw = 15;
+    function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
+    function arc(f1, f2, col){
+        if (f2 <= f1) return '';
+        var p1 = ptF(f1), p2 = ptF(f2);
+        return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    }
+    var arcPath = arc(0, 0.5, '#b5540a') + arc(0.5, 1, '#2e7d32');
+    var targetF = maxV > 0 ? Math.max(0, Math.min(1, target / maxV)) : 0.5;
+    var ta = Math.PI * (1 - targetF);
+    var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
+    var tx1 = (cx + tr1 * Math.cos(ta)).toFixed(1), ty1 = (cy - tr1 * Math.sin(ta)).toFixed(1);
+    var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
+    var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
+        + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    var nr = r - 14, na = Math.PI * (1 - f);
+    var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
+    var centerCol = percent > target ? '#c62828' : '#000';
+    var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+        + arcPath
+        + targetLine
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
+        + '<text x="' + cx + '" y="' + (cy - 22) + '" text-anchor="middle" font-size="22" font-weight="700" fill="' + centerCol + '" font-family="Barlow Condensed,Arial">' + centerLabel + '</text>'
+        + '</svg>';
+    return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
+}
+
+function _cfDrawFreeCashDial(){
+    var el = document.getElementById('cf-expenses');
+    if (!el) return;
+    el.style.justifyContent = 'center';
+    var s = _cfFreeCashState;
+    // Target is still edited/stored as a PERCENTAGE (metric_key
+    // "free_cash_target"), but displayed here as its rupee equivalent —
+    // target% * Average Investment / 100 — formatted the same way as
+    // the Actual value, per explicit request to show a figure, not %.
+    var targetRupees = s.target / 100 * s.avgInvestment;
+    var targetFmt = _cfFmtMoney(targetRupees);
+    // Actual's displayed unit follows the Target's unit (so the two
+    // never show in different units, e.g. Actual in Lakhs while Target
+    // sits in Crores) — falling back to Actual's own auto-magnitude unit
+    // only when there's no target set yet (targetRupees is 0, so
+    // targetFmt carries no real signal to follow).
+    var fmt = targetRupees !== 0 ? targetFmt : _cfFmtMoney(s.value);
+    var divisor = fmt.unit === 'Crores' ? 10000000 : 100000;
+    var targetDivisor = divisor;
+    var targetCell = s.editing
+        ? '<input class="cf-freecash-input" data-field="target" type="number" step="any" value="' + (targetRupees / targetDivisor).toFixed(2) + '" style="width:60px;font-size:13px;padding:0 3px;border:1px solid #b0bec5;border-radius:2px;color:#5a5a5a;font-weight:700;"> <span style="font-size:11px;color:#888;">' + fmt.unit + '</span>'
+        : '<span style="font-size:13px;color:#5a5a5a;font-weight:700;">' + (targetRupees / targetDivisor).toFixed(2) + ' ' + fmt.unit + '</span>';
+    var maxV = s.target > 0 ? Math.min(100, s.target * 2) : 100;
+    var needleCol = (s.percent / maxV) <= 0.5 ? '#4a2e7a' : '#b5540a';
+    var centerLabel = (s.value / divisor).toFixed(2) + ' ' + fmt.unit;
+    el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
+        + _cfFreeCashDialSvg(s.target, s.percent, centerLabel)
+        + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
+        + '<span style="font-size:13px;color:' + needleCol + ';font-weight:700;">' + (s.value / divisor).toFixed(2) + ' ' + fmt.unit + '</span>'
+        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Target: ' + targetCell + ' <button class="cf-freecash-pencil" title="Edit Target" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>'
+        + '</div>'
+        + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
+}
+
+function renderCfFreeCashDial(){
+    var gen = _cfLoadGen;
+    _cfFreeCashState = { target: 0, value: 0, percent: 0, avgInvestment: 0, editing: false };
+    _cfDrawFreeCashDial();
+    _cfFetchTarget('free_cash_target', function(d){
+        if (gen === _cfLoadGen) { _cfFreeCashState.target = +d.target || 0; _cfDrawFreeCashDial(); }
+    });
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfreecash', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfFreeCashState.value = +d.value || 0;
+                _cfFreeCashState.percent = +d.percent || 0;
+                _cfFreeCashState.avgInvestment = +d.average_investment || 0;
+                _cfDrawFreeCashDial();
+            }
+        }
+    });
+}
+
+$(document).on('click', '.cf-freecash-pencil', function(e){
+    e.preventDefault(); e.stopPropagation();
+    var s = _cfFreeCashState;
+    if (s.editing) {
+        // Input is entered as a rupee figure (Lakhs under 100, else
+        // Crores — same convention as _cfEnteredToRupees), converted
+        // back to the percentage that's actually stored server-side.
+        var enteredRupees = _cfEnteredToRupees(+$('.cf-freecash-input[data-field="target"]').val() || 0);
+        var pct = s.avgInvestment > 0 ? (enteredRupees / s.avgInvestment) * 100 : 0;
+        s.target = pct;
+        s.editing = false;
+        _cfDrawFreeCashDial();
+        _cfQueueAjax({
+            type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json',
+            data: { metric_key: 'free_cash_target', target_value: pct },
+            success: function(){ renderCfBars(); }
+        });
+    } else {
+        s.editing = true;
+        _cfDrawFreeCashDial();
+    }
+});
+
+// ROI panel — a PERCENTAGE dial, same presentation pattern as
+// Contribution Margin/Free Cash (Actual PERCENTAGE shown to the LEFT,
+// Target editable on the right, percentage at center too). ROI =
+// (Contribution Margin / Average Investment) * 100 (see actionCfroi).
+// Target is a user-editable PERCENTAGE, saved under metric_key
+// "roi_target". Arc is orange-red (#b5540a) on the left half, teal
+// (#00838f) on the right half, per explicit request.
+var _cfRoiState = { target: 0, value: 0, percent: 0, editing: false };
+
+function _cfRoiDialSvg(target, percent){
+    var maxV = target > 0 ? Math.min(100, target * 2) : 100;
+    var f = Math.max(0, Math.min(1, percent / maxV));
+    var cx = 105, cy = 82, r = 76, sw = 15;
+    function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
+    function arc(f1, f2, col){
+        if (f2 <= f1) return '';
+        var p1 = ptF(f1), p2 = ptF(f2);
+        return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    }
+    var arcPath = arc(0, 0.5, '#b5540a') + arc(0.5, 1, '#00838f');
+    var targetF = maxV > 0 ? Math.max(0, Math.min(1, target / maxV)) : 0.5;
+    var ta = Math.PI * (1 - targetF);
+    var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
+    var tx1 = (cx + tr1 * Math.cos(ta)).toFixed(1), ty1 = (cy - tr1 * Math.sin(ta)).toFixed(1);
+    var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
+    var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
+        + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    var nr = r - 14, na = Math.PI * (1 - f);
+    var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
+    var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+        + arcPath
+        + targetLine
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
+        + '<text x="' + cx + '" y="' + (cy - 22) + '" text-anchor="middle" font-size="26" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + percent.toFixed(2) + '%</text>'
+        + '</svg>';
+    return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
+}
+
+function _cfDrawRoiDial(){
+    var el = document.getElementById('cf-roi');
+    if (!el) return;
+    el.style.justifyContent = 'center';
+    var s = _cfRoiState;
+    var targetCell = s.editing
+        ? '<input class="cf-roi-input" data-field="target" type="number" step="any" value="' + s.target + '" style="width:54px;font-size:13px;padding:0 3px;border:1px solid #b0bec5;border-radius:2px;color:#5a5a5a;font-weight:700;">'
+        : '<span style="font-size:13px;color:#5a5a5a;font-weight:700;">' + s.target.toFixed(2) + '%</span>';
+    var maxV = s.target > 0 ? Math.min(100, s.target * 2) : 100;
+    var needleCol = (s.percent / maxV) <= 0.5 ? '#b5540a' : '#00838f';
+    el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
+        + _cfRoiDialSvg(s.target, s.percent)
+        + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
+        + '<span style="font-size:13px;color:' + needleCol + ';font-weight:700;">' + s.percent.toFixed(2) + '%</span>'
+        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Target: ' + targetCell + ' <button class="cf-roi-pencil" title="Edit Target" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>'
+        + '</div>'
+        + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
+}
+
+function renderCfRoiDial(){
+    var gen = _cfLoadGen;
+    _cfRoiState = { target: 0, value: 0, percent: 0, editing: false };
+    _cfDrawRoiDial();
+    _cfFetchTarget('roi_target', function(d){
+        if (gen === _cfLoadGen) { _cfRoiState.target = +d.target || 0; _cfDrawRoiDial(); }
+    });
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfroi', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfRoiState.value = +d.value || 0;
+                _cfRoiState.percent = +d.percent || 0;
+                _cfDrawRoiDial();
+            }
+        }
+    });
+}
+
+$(document).on('click', '.cf-roi-pencil', function(e){
+    e.preventDefault(); e.stopPropagation();
+    var s = _cfRoiState;
+    if (s.editing) {
+        var val = +$('.cf-roi-input[data-field="target"]').val() || 0;
+        s.target = val;
+        s.editing = false;
+        _cfDrawRoiDial();
+        _cfQueueAjax({
+            type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json',
+            data: { metric_key: 'roi_target', target_value: val },
+            success: function(){ renderCfBars(); }
+        });
+    } else {
+        s.editing = true;
+        _cfDrawRoiDial();
+    }
+});
+
+// Work In Progress breakdown popup — same draggable/resizable vertical
+// bar chart window as the Investments breakdown (see
+// _cfInvestBreakdownChartHtml/_cfShowInvestBreakdown above), but bucketed
+// by Project Expenditure group instead of by individual account (see
+// actionCfwipbreakdown). Reuses the same chart-rendering function since
+// the {name, amount} row shape is identical.
+function _cfRedrawWipBreakdown(){
+    var s = window._cfWipBreakdownState;
+    if (!s) return;
+    var chartH = Math.max(120, $('#cf-wip-breakdown-win').height() - 130);
+    var r = _cfInvestBreakdownChartHtml(s.accounts, chartH);
+    $('#cf-wip-breakdown-unit').html(
+        '<span style="font-weight:700;color:#081142;">Amount in ' + r.unit + '</span>'
+        + '<span style="float:right;font-weight:700;color:#081142;">Total: ' + r.total + ' ' + r.unit + '</span>'
+        + (s.avgAllCycles != null
+            ? '<div style="clear:both;padding-top:4px;color:#5a6e8c;">Average time in WIP: <b style="color:#081142;">' + s.avgAllCycles.toFixed(1) + ' days</b></div>'
+            : '')
+    );
+    $('#cf-wip-breakdown-chart').html(r.body);
+}
+
+function _cfShowWipBreakdown(accounts){
+    $('#cf-wip-breakdown-win').remove();
+    window._cfWipBreakdownState = { accounts: accounts, avgDays: _cfWipState.avgDays, avgAllCycles: _cfWipState.avgAllCycles };
+
+    var winW = 640, winH = 380, MIN_W = 340, MIN_H = 240;
+    var left = Math.max(10, (window.innerWidth - winW) / 2);
+    var top = Math.max(10, (window.innerHeight - winH) / 2);
+
+    var rsHandles = ['n','s','e','w','ne','nw','se','sw'];
+    var rsHtml = '';
+    for (var h = 0; h < rsHandles.length; h++) {
+        rsHtml += '<div class="cf-wip-rs" data-dir="' + rsHandles[h] + '" style="position:absolute;';
+        var d = rsHandles[h];
+        if (d === 'n') rsHtml += 'top:-4px;left:10px;right:10px;height:10px;cursor:n-resize;';
+        else if (d === 's') rsHtml += 'bottom:-4px;left:10px;right:10px;height:10px;cursor:s-resize;';
+        else if (d === 'e') rsHtml += 'right:-4px;top:10px;bottom:10px;width:10px;cursor:e-resize;';
+        else if (d === 'w') rsHtml += 'left:-4px;top:10px;bottom:10px;width:10px;cursor:w-resize;';
+        else if (d === 'ne') rsHtml += 'right:-4px;top:-4px;width:14px;height:14px;cursor:ne-resize;';
+        else if (d === 'nw') rsHtml += 'left:-4px;top:-4px;width:14px;height:14px;cursor:nw-resize;';
+        else if (d === 'se') rsHtml += 'right:-4px;bottom:-4px;width:14px;height:14px;cursor:se-resize;';
+        else if (d === 'sw') rsHtml += 'left:-4px;bottom:-4px;width:14px;height:14px;cursor:sw-resize;';
+        rsHtml += 'z-index:20;background:transparent;"></div>';
+    }
+
+    var html = '<div id="cf-wip-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
+        + rsHtml
+        + '<div id="cf-wip-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#081142;cursor:move;user-select:none;">'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Work In Progress — Group Breakdown</span>'
+        + '<button id="cf-wip-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
+        + '</div>'
+        + '<div id="cf-wip-breakdown-unit" style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;"></div>'
+        + '<div style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;">'
+        + '<div id="cf-wip-breakdown-chart" style="min-width:0;"></div>'
+        + '</div>'
+        + '</div>';
+    $('body').append(html);
+    _cfRedrawWipBreakdown();
+
+    // Drag (header) + resize (8 handles) — same mechanics as the
+    // Investments breakdown window (see _cfShowInvestBreakdown).
+    var win = document.getElementById('cf-wip-breakdown-win');
+    var hdr = document.getElementById('cf-wip-breakdown-hdr');
+    var _action = null, _sx = 0, _sy = 0, _ox = 0, _oy = 0, _ow = 0, _oh = 0;
+
+    function onDown(e, dir){
+        var r = win.getBoundingClientRect();
+        _action = dir; _sx = e.clientX; _sy = e.clientY;
+        _ox = r.left; _oy = r.top; _ow = r.width; _oh = r.height;
+        e.preventDefault();
+        if (dir !== 'drag') e.stopPropagation();
+    }
+    function onMove(e){
+        if (!_action) return;
+        e.preventDefault();
+        var dx = e.clientX - _sx, dy = e.clientY - _sy;
+        if (_action === 'drag') {
+            var x = Math.max(0, Math.min(_ox + dx, window.innerWidth - win.offsetWidth));
+            var y = Math.max(0, Math.min(_oy + dy, window.innerHeight - win.offsetHeight));
+            win.style.left = x + 'px'; win.style.top = y + 'px';
+        } else {
+            var l = _ox, t = _oy, w = _ow, h = _oh;
+            if (_action.indexOf('e') > -1) { w = Math.max(MIN_W, _ow + dx); }
+            if (_action.indexOf('s') > -1) { h = Math.max(MIN_H, _oh + dy); }
+            if (_action.indexOf('w') > -1) { var nw = Math.max(MIN_W, _ow - dx); l = _ox + (_ow - nw); w = nw; }
+            if (_action.indexOf('n') > -1) { var nh = Math.max(MIN_H, _oh - dy); t = _oy + (_oh - nh); h = nh; }
+            win.style.left = l + 'px'; win.style.top = t + 'px';
+            win.style.width = w + 'px'; win.style.height = h + 'px';
+            _cfRedrawWipBreakdown();
+        }
+    }
+    function onUp(){ _action = null; }
+
+    if (typeof window.bindDragTouch === 'function') {
+        window.bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-wip-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-wip-rs').each(function(){
+            var dir = $(this).data('dir');
+            window.bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        window.bindDragTouch(document, 'mousemove', onMove, { passive: false });
+        window.bindDragTouch(document, 'mouseup', onUp);
+    } else {
+        bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-wip-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-wip-rs').each(function(){
+            var dir = $(this).data('dir');
+            bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        bindDragTouch(document, 'mousemove', onMove);
+        bindDragTouch(document, 'mouseup', onUp);
+    }
+}
+$(document).on('click', '#cf-billsreceivable', function(e){
+    if ($(e.target).closest('.cf-wip-pencil, .cf-wip-input').length) return;
+    $.ajax({
+        type: 'POST', url: '../projectsmain/cfwipbreakdown', dataType: 'json',
+        success: function(d){
+            if (d && d.error === 'No') { _cfShowWipBreakdown(d.accounts || []); }
+        }
+    });
+});
+$(document).on('click', '#cf-wip-breakdown-close', function(){ $('#cf-wip-breakdown-win').remove(); });
+
+$(document).on('click', '.cf-wip-pencil', function(e){
+    e.preventDefault(); e.stopPropagation();
+    var s = _cfWipState;
+    if (s.editing) {
+        var val = +$('.cf-wip-input[data-field="target"]').val() || 0;
+        s.target = val;
+        s.editing = false;
+        _cfDrawWipDial();
+        $.ajax({
+            type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json',
+            data: { metric_key: 'wip_target', target_value: val },
+            success: function(){ renderCfBars(); }
+        });
+    } else {
+        s.editing = true;
+        _cfDrawWipDial();
+    }
+});
+$(document).on('click', '.cf-wip-input', function(e){ e.stopPropagation(); });
+
+// Bills Receivable panel — single flat yellow-green dial with an
+// editable target (yellow marker at the dial's center, half of the full
+// 2x scale — same treatment as the Bank panel's Allocated marker).
+// Needle position represents the actual value — placeholder at 0, no
+// data source yet. Target is saved to cf_dashboard_targets under
+// metric_key "bills_receivable_target" via cfsavetarget/cfgettarget.
+var _cfBillsRecvState = { target: 0, actual: 0, editing: false, avgDays: null };
+
+function _cfBillsRecvDialSvg(target, actual){
+    var targetCr = _cfEnteredToRupees(target) / 10000000;
+    var maxV = targetCr > 0 ? targetCr * 2 : 1;
+    var f = Math.max(0, Math.min(1, actual / maxV));
+    var cx = 105, cy = 82, r = 76, sw = 15;
+    function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
+    function arc(f1, f2, col){
+        if (f2 <= f1) return '';
+        var p1 = ptF(f1), p2 = ptF(f2);
+        return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    }
+    // Up to target (first half) = deep orange; beyond target (second
+    // half) = the panel's original yellow-green.
+    var arcPath = arc(0, 0.5, '#b5540a') + arc(0.5, 1, '#6b8e23');
+    var targetF = 0.5;
+    var ta = Math.PI * (1 - targetF);
+    var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
+    var tx1 = (cx + tr1 * Math.cos(ta)).toFixed(1), ty1 = (cy - tr1 * Math.sin(ta)).toFixed(1);
+    var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
+    var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
+        + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    var nr = r - 14, na = Math.PI * (1 - f);
+    var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
+    // Target is typed directly in Lakhs (the input box's fixed
+    // convention -- see _cfEnteredToRupees) and Actual is shown in
+    // that SAME fixed Lakhs unit, never auto-converted to Crores by
+    // magnitude, so the two numbers always stay comparable and the
+    // unit the user chose by using this box is never second-guessed.
+    var fmt = { unit: 'Lakhs' };
+    var divisor = 100;
+    // More Bills Receivable collected is good, so falling SHORT of
+    // target is the bad outcome — center value turns red when actual is
+    // below target, same convention as Contract Income.
+    var centerCol = actual < targetCr ? '#c62828' : '#000';
+    var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+        + arcPath
+        + targetLine
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
+        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="' + centerCol + '" font-family="Barlow Condensed,Arial">' + (actual * divisor).toFixed(2) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">' + fmt.unit + '</text>'
+        + '</svg>';
+    return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
+}
+
+function _cfDrawBillsRecvDial(){
+    var el = document.getElementById('cf-contract-income');
+    if (!el) return;
+    el.style.justifyContent = 'center';
+    el.style.cursor = 'pointer';
+    el.title = 'Click to see per-cycle breakdown';
+    var s = _cfBillsRecvState;
+    var targetCr = _cfEnteredToRupees(s.target) / 10000000;
+    // Target is typed directly in Lakhs (the input box's fixed
+    // convention -- see _cfEnteredToRupees) and Actual is shown in
+    // that SAME fixed Lakhs unit, never auto-converted to Crores by
+    // magnitude, so the two numbers always stay comparable and the
+    // unit the user chose by using this box is never second-guessed.
+    var fmt = { unit: 'Lakhs' };
+    var divisor = 100;
+    var targetCell = s.editing
+        ? '<input class="cf-billsrecv-input" data-field="target" type="number" step="any" value="' + s.target + '" style="width:54px;font-size:13px;padding:0 3px;border:1px solid #b0bec5;border-radius:2px;color:#6b8e23;font-weight:700;">'
+        : '<span style="font-size:13px;color:#6b8e23;font-weight:700;">' + (targetCr * divisor).toFixed(2) + '</span>';
+    // Actual legend colour always matches whichever arc half the needle
+    // is currently pointing into (deep orange up to target, olive-green
+    // beyond).
+    var maxV = targetCr > 0 ? targetCr * 2 : 1;
+    var needleCol = (s.actual / maxV) <= 0.5 ? '#b5540a' : '#6b8e23';
+    el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
+        + _cfBillsRecvDialSvg(s.target, s.actual)
+        + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
+        + '<span style="font-size:13px;color:#111;">Actual: <span style="font-size:13px;color:' + needleCol + ';font-weight:700;">' + (s.actual * divisor).toFixed(2) + '</span></span>'
+        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Target: ' + targetCell + ' <button class="cf-billsrecv-pencil" title="Edit Target" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>'
+        + '</div>'
+        + (s.avgDays !== null
+            ? '<div style="width:100%;text-align:center;font-family:Barlow Condensed,Arial;padding:2px 6px 0;box-sizing:border-box;"><span style="font-size:12px;color:#111;" title="Days from the most recent bill to its payment (or to today if still unpaid). Average across all bills raised so far: ' + (s.avgAllCycles !== null ? s.avgAllCycles.toFixed(1) : '—') + ' days.">Avg. Collection Time: <span style="font-weight:700;color:#6b8e23;">' + s.avgDays.toFixed(1) + ' days</span></span></div>'
+            : '')
+        + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
+}
+
+function renderCfBillsReceivableDial(){
+    var gen = _cfLoadGen;
+    _cfBillsRecvState = { target: 0, actual: 0, editing: false, avgDays: null, avgAllCycles: null };
+    _cfDrawBillsRecvDial();
+    _cfFetchTarget('bills_receivable_target', function(d){
+        if (gen === _cfLoadGen) { _cfBillsRecvState.target = +d.target || 0; _cfDrawBillsRecvDial(); }
+    });
+    // Actual = sum of transactions where the debit side is a Party
+    // account (Other Parties) and the credit side is Contract Income —
+    // see actionCfbillsreceivable.
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfbillsreceivable', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfBillsRecvState.actual = (+d.total || 0) / 10000000;
+                _cfDrawBillsRecvDial();
+            }
+        }
+    });
+    // Days from the most recent bill to its payment (not an average) —
+    // see actionCfbillsreceivableavgtime. avg_all_cycles is the true
+    // historical average, shown only in the dial's hover tooltip.
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfbillsreceivableavgtime', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfBillsRecvState.avgDays = +d.avg_days || 0;
+                _cfBillsRecvState.avgAllCycles = +d.avg_all_cycles || 0;
+                _cfDrawBillsRecvDial();
+            }
+        }
+    });
+}
+
+// Bills Receivable breakdown popup — same draggable/resizable vertical
+// bar chart window and per-cycle pattern as the Total Investment
+// breakdown (see _cfShowNetInvBreakdown above): one bar per WIP accrual
+// cycle, each CLOSED cycle valued at its own CLOSING Bills Receivable
+// balance, the current open cycle valued as of today (see
+// actionCfbillsreceivablebreakdown). Also shows the average across all
+// cycles.
+function _cfRedrawBillsRecvBreakdown(){
+    var s = window._cfBillsRecvBreakdownState;
+    if (!s) return;
+    var chartH = Math.max(120, $('#cf-billsrecv-breakdown-win').height() - 130);
+    var r = _cfInvestBreakdownChartHtml(s.accounts, chartH);
+    $('#cf-billsrecv-breakdown-unit').html(
+        '<span style="font-weight:700;color:#251840;">Amount in ' + r.unit + '</span>'
+        + '<span style="float:right;font-weight:700;color:#251840;">Average: ' + _cfIndianComma(s.average / (r.unit === 'Crores' ? 10000000 : 100000)) + ' ' + r.unit + '</span>'
+        + (s.avgAllCycles != null
+            ? '<div style="clear:both;padding-top:4px;color:#5a6e8c;">Average collection time: <b style="color:#251840;">' + s.avgAllCycles.toFixed(1) + ' days</b></div>'
+            : '')
+    );
+    $('#cf-billsrecv-breakdown-chart').html(r.body);
+}
+
+function _cfShowBillsRecvBreakdown(accounts, average){
+    $('#cf-billsrecv-breakdown-win').remove();
+    window._cfBillsRecvBreakdownState = { accounts: accounts, average: average, avgDays: _cfBillsRecvState.avgDays, avgAllCycles: _cfBillsRecvState.avgAllCycles };
+
+    var winW = 640, winH = 380, MIN_W = 340, MIN_H = 240;
+    var left = Math.max(10, (window.innerWidth - winW) / 2);
+    var top = Math.max(10, (window.innerHeight - winH) / 2);
+
+    var rsHandles = ['n','s','e','w','ne','nw','se','sw'];
+    var rsHtml = '';
+    for (var h = 0; h < rsHandles.length; h++) {
+        rsHtml += '<div class="cf-billsrecv-rs" data-dir="' + rsHandles[h] + '" style="position:absolute;';
+        var d = rsHandles[h];
+        if (d === 'n') rsHtml += 'top:-4px;left:10px;right:10px;height:10px;cursor:n-resize;';
+        else if (d === 's') rsHtml += 'bottom:-4px;left:10px;right:10px;height:10px;cursor:s-resize;';
+        else if (d === 'e') rsHtml += 'right:-4px;top:10px;bottom:10px;width:10px;cursor:e-resize;';
+        else if (d === 'w') rsHtml += 'left:-4px;top:10px;bottom:10px;width:10px;cursor:w-resize;';
+        else if (d === 'ne') rsHtml += 'right:-4px;top:-4px;width:14px;height:14px;cursor:ne-resize;';
+        else if (d === 'nw') rsHtml += 'left:-4px;top:-4px;width:14px;height:14px;cursor:nw-resize;';
+        else if (d === 'se') rsHtml += 'right:-4px;bottom:-4px;width:14px;height:14px;cursor:se-resize;';
+        else if (d === 'sw') rsHtml += 'left:-4px;bottom:-4px;width:14px;height:14px;cursor:sw-resize;';
+        rsHtml += 'z-index:20;background:transparent;"></div>';
+    }
+
+    var html = '<div id="cf-billsrecv-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
+        + rsHtml
+        + '<div id="cf-billsrecv-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#334455;cursor:move;user-select:none;">'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bills Receivable — Per-Cycle Breakdown</span>'
+        + '<button id="cf-billsrecv-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
+        + '</div>'
+        + '<div id="cf-billsrecv-breakdown-unit" style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;"></div>'
+        + '<div style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;">'
+        + '<div id="cf-billsrecv-breakdown-chart" style="min-width:0;"></div>'
+        + '</div>'
+        + '</div>';
+    $('body').append(html);
+    _cfRedrawBillsRecvBreakdown();
+
+    // Drag (header) + resize (8 handles) — same mechanics as the other
+    // breakdown windows.
+    var win = document.getElementById('cf-billsrecv-breakdown-win');
+    var hdr = document.getElementById('cf-billsrecv-breakdown-hdr');
+    var _action = null, _sx = 0, _sy = 0, _ox = 0, _oy = 0, _ow = 0, _oh = 0;
+
+    function onDown(e, dir){
+        var r = win.getBoundingClientRect();
+        _action = dir; _sx = e.clientX; _sy = e.clientY;
+        _ox = r.left; _oy = r.top; _ow = r.width; _oh = r.height;
+        e.preventDefault();
+        if (dir !== 'drag') e.stopPropagation();
+    }
+    function onMove(e){
+        if (!_action) return;
+        e.preventDefault();
+        var dx = e.clientX - _sx, dy = e.clientY - _sy;
+        if (_action === 'drag') {
+            var x = Math.max(0, Math.min(_ox + dx, window.innerWidth - win.offsetWidth));
+            var y = Math.max(0, Math.min(_oy + dy, window.innerHeight - win.offsetHeight));
+            win.style.left = x + 'px'; win.style.top = y + 'px';
+        } else {
+            var l = _ox, t = _oy, w = _ow, h = _oh;
+            if (_action.indexOf('e') > -1) { w = Math.max(MIN_W, _ow + dx); }
+            if (_action.indexOf('s') > -1) { h = Math.max(MIN_H, _oh + dy); }
+            if (_action.indexOf('w') > -1) { var nw = Math.max(MIN_W, _ow - dx); l = _ox + (_ow - nw); w = nw; }
+            if (_action.indexOf('n') > -1) { var nh = Math.max(MIN_H, _oh - dy); t = _oy + (_oh - nh); h = nh; }
+            win.style.left = l + 'px'; win.style.top = t + 'px';
+            win.style.width = w + 'px'; win.style.height = h + 'px';
+            _cfRedrawBillsRecvBreakdown();
+        }
+    }
+    function onUp(){ _action = null; }
+
+    if (typeof window.bindDragTouch === 'function') {
+        window.bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-billsrecv-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-billsrecv-rs').each(function(){
+            var dir = $(this).data('dir');
+            window.bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        window.bindDragTouch(document, 'mousemove', onMove, { passive: false });
+        window.bindDragTouch(document, 'mouseup', onUp);
+    } else {
+        bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-billsrecv-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-billsrecv-rs').each(function(){
+            var dir = $(this).data('dir');
+            bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        bindDragTouch(document, 'mousemove', onMove);
+        bindDragTouch(document, 'mouseup', onUp);
+    }
+}
+$(document).on('click', '#cf-contract-income', function(e){
+    if ($(e.target).closest('.cf-billsrecv-pencil, .cf-billsrecv-input').length) return;
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfbillsreceivablebreakdown', dataType: 'json',
+        success: function(d){
+            if (d && d.error === 'No') { _cfShowBillsRecvBreakdown(d.accounts || [], +d.average || 0); }
+        }
+    });
+});
+$(document).on('click', '#cf-billsrecv-breakdown-close', function(){ $('#cf-billsrecv-breakdown-win').remove(); });
+
+$(document).on('click', '.cf-billsrecv-pencil', function(e){
+    e.preventDefault(); e.stopPropagation();
+    var s = _cfBillsRecvState;
+    if (s.editing) {
+        var val = +$('.cf-billsrecv-input[data-field="target"]').val() || 0;
+        s.target = val;
+        s.editing = false;
+        _cfDrawBillsRecvDial();
+        $.ajax({
+            type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json',
+            data: { metric_key: 'bills_receivable_target', target_value: val },
+            success: function(){ renderCfBars(); }
+        });
+    } else {
+        s.editing = true;
+        _cfDrawBillsRecvDial();
+    }
+});
+$(document).on('click', '.cf-billsrecv-input', function(e){ e.stopPropagation(); });
+
+// Bank panel — single flat dark-grey dial (no target/actual split, no
+// editable input). Needle position represents "Availed"; left tip is
+// labelled "Availed", right tip "Surplus". Placeholder at 0 — no data
+// source yet.
+// Bank panel: flat dark-grey full-scale dial (0 to W.Capital), with an
+// orange overlay arc + needle showing Availed's progress along that scale.
+// Left tip label = Availed (actual, static). Right tip label = W.Capital
+// (the scale/target, editable via pencil — saved to cf_dashboard_targets
+// under metric_key "bank_wcapital" via the same cfsavetarget/cfgettarget
+// endpoints the other Cashflow dials use).
+var _cfBankState = { wcapital: 0, availed: 0, editing: false };
+
+function _cfBankDialSvg(wcapital, availed){
+    // wcapital is the raw number the user typed; reinterpret it via the
+    // magnitude rule (< 100 = Lakhs, >= 100 = Crores), then convert to
+    // the same Crores-scale float availed is already in.
+    var wcapitalCr = _cfEnteredToRupees(wcapital) / 10000000;
+    // Full dial scale = 2x W.Capital, so the target (W.Capital) sits at
+    // the dial's center (50%) -- matching the target-vs-actual dials
+    // elsewhere on this Cashflow tab (see _cfDialSvg's maxV = target*2).
+    var maxV = wcapitalCr > 0 ? wcapitalCr * 2 : 1;
+    var f = Math.max(0, Math.min(1, availed / maxV));
+    var cx = 105, cy = 82, r = 76, sw = 15;
+    function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
+    function arc(f1, f2, col){
+        if (f2 <= f1) return '';
+        var p1 = ptF(f1), p2 = ptF(f2);
+        return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    }
+    // Target marker: a bright yellow line across the arc's band at the
+    // dial's center (target = W.Capital, half of the full 2x scale), so
+    // crossing it visually flags Availed passing the target threshold.
+    var targetF = 0.5;
+    var ta = Math.PI * (1 - targetF);
+    var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
+    var tx1 = (cx + tr1 * Math.cos(ta)).toFixed(1), ty1 = (cy - tr1 * Math.sin(ta)).toFixed(1);
+    var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
+    var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
+        + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    var nr = r - 14, na = Math.PI * (1 - f);
+    var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
+    // Center shows the actual (Availed) value + unit, same treatment as
+    // the Investments dial (value at cy-30, unit at cy-14, above the
+    // needle pivot). Displayed unit follows Allocated (the target-like
+    // figure)'s own magnitude, not whichever of the two is larger —
+    // falls back to Availed's own magnitude only when Allocated is 0.
+    var fmt = wcapitalCr !== 0 ? _cfFmtMoney(Math.abs(wcapitalCr) * 10000000) : _cfFmtMoney(Math.abs(availed) * 10000000);
+    var divisor = fmt.unit === 'Crores' ? 1 : 100;
+    var centerCol = availed > wcapitalCr ? '#c62828' : '#000';
+    var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+        + arc(0, 0.5, '#00838f') + arc(0.5, 1, '#e07b00')
+        + targetLine
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
+        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="' + centerCol + '" font-family="Barlow Condensed,Arial">' + (availed * divisor).toFixed(2) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">' + fmt.unit + '</text>'
+        + '</svg>';
+    return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
+}
+
+function _cfDrawBankDial(){
+    var el = document.getElementById('cf-bankdial');
+    if (!el) return;
+    el.style.justifyContent = 'center';
+    el.style.cursor = 'pointer';
+    el.title = 'Click to see peak working capital usage between client payments';
+    var s = _cfBankState;
+    // Allocated (W.Capital) is a user-entered target: the raw number
+    // typed is reinterpreted via the magnitude rule (< 100 = Lakhs,
+    // >= 100 = Crores), same as every other value. Actual (Availed) is
+    // derived from a raw rupee backend figure and follows the same rule;
+    // the displayed unit follows Allocated's own magnitude (falling back
+    // to Availed's own magnitude only when Allocated is 0/unset), so the
+    // two numbers stay comparable at a glance rather than each floating
+    // independently between Lakhs and Crores.
+    var wcapitalRupees = _cfEnteredToRupees(s.wcapital);
+    var availedRupees = (+s.availed || 0) * 10000000;
+    var fmt = wcapitalRupees !== 0 ? _cfFmtMoney(Math.abs(wcapitalRupees)) : _cfFmtMoney(Math.abs(availedRupees));
+    var divisor = fmt.unit === 'Crores' ? 10000000 : 100000;
+    var wcCell = s.editing
+        ? '<input class="cf-bank-input" data-field="wcapital" type="number" step="any" value="' + s.wcapital + '" style="width:54px;font-size:13px;padding:0 3px;border:1px solid #b0bec5;border-radius:2px;color:#5a5a5a;font-weight:700;">'
+        : '<span style="font-size:13px;color:#5a5a5a;font-weight:700;">' + (wcapitalRupees / divisor).toFixed(2) + '</span>';
+    // Actual (Availed) legend colour/swatch always matches whichever arc
+    // half the needle is currently pointing into (grey up to target,
+    // orange beyond).
+    var maxV = wcapitalRupees > 0 ? wcapitalRupees * 2 : 1;
+    var needleCol = (availedRupees / maxV) <= 0.5 ? '#00838f' : '#e07b00';
+    el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
+        + _cfBankDialSvg(s.wcapital, s.availed)
+        + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
+        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:' + needleCol + ';border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Actual: <span style="font-size:13px;color:' + needleCol + ';font-weight:700;">' + (availedRupees / divisor).toFixed(2) + '</span></span>'
+        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Allocated: ' + wcCell + ' <button class="cf-bank-pencil" title="Edit Allocated" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>'
+        + '</div>'
+        + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
+}
+
+function renderCfBankDial(){
+    var gen = _cfLoadGen;
+    _cfBankState = { wcapital: 0, availed: 0, editing: false };
+    _cfDrawBankDial();
+    _cfFetchTarget('bank_wcapital', function(d){
+        if (gen === _cfLoadGen) { _cfBankState.wcapital = +d.target || 0; _cfDrawBankDial(); }
+    });
+    // Availed = the project's linked bank account's current balance, only
+    // when that balance is a net CREDIT (money drawn against the account).
+    // A DEBIT balance means nothing is availed — dial stays fully grey,
+    // needle at the left tip (availed=0), matching the initial state above.
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfbankbalance', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No' && d.has_bank && d.balance_type === 'credit') {
+                // Backend returns availed in raw rupees; W.Capital is
+                // entered directly in Crores by the user, so convert here
+                // to keep both values on the same scale for the dial.
+                _cfBankState.availed = (+d.availed || 0) / 10000000;
+                _cfDrawBankDial();
+            }
+        }
+    });
+}
+
+$(document).on('click', '.cf-bank-pencil', function(e){
+    e.preventDefault(); e.stopPropagation();
+    var s = _cfBankState;
+    if (s.editing) {
+        var val = +$('.cf-bank-input[data-field="wcapital"]').val() || 0;
+        s.wcapital = val;
+        s.editing = false;
+        _cfDrawBankDial();
+        $.ajax({
+            type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json',
+            data: { metric_key: 'bank_wcapital', target_value: val },
+            success: function(){ renderCfBars(); }
+        });
+    } else {
+        s.editing = true;
+        _cfDrawBankDial();
+    }
+});
+$(document).on('click', '.cf-bank-input', function(e){ e.stopPropagation(); });
+
+// Bank/Working Capital breakdown popup — a LINE chart (every other
+// breakdown popup on this dashboard is a bar chart), one point per
+// 45-day cycle from the project's planned start to its planned end,
+// showing the PROJECTED net working-capital requirement (cumulative
+// planned cost minus cumulative straight-lined expected income) at
+// that point — see actionCfbankbalancebreakdown. X axis = the calendar
+// date each cycle ends on. Y axis = amount in Lakhs/Crores, same
+// magnitude rule as every other value on this dashboard. Values can go
+// negative (a projected surplus rather than a funding gap) — the zero
+// line is drawn wherever it falls inside the plot rather than always
+// pinned to the bottom, and negative-side gridlines/labels are included.
+function _cfLineChartHtml(points, chartH){
+    points = points || [];
+    var maxVal = 0, minVal = 0;
+    for (var i = 0; i < points.length; i++) {
+        if (points[i].amount > maxVal) maxVal = points[i].amount;
+        if (points[i].amount < minVal) minVal = points[i].amount;
+    }
+    var magnitude = Math.max(Math.abs(maxVal), Math.abs(minVal));
+    var fmt = _cfFmtMoney(magnitude);
+    var divisor = fmt.unit === 'Crores' ? 10000000 : 100000;
+
+    var padL = 64, padR = 16, padT = 16, padB = 34;
+    var w = Math.max(360, points.length * 90);
+    var h = Math.max(160, chartH);
+    var plotW = w - padL - padR, plotH = h - padT - padB;
+    var scaleMax = maxVal > 0 ? maxVal * 1.15 : 0;
+    var scaleMin = minVal < 0 ? minVal * 1.15 : 0;
+    var scaleRange = (scaleMax - scaleMin) || 1;
+
+    function xAt(i){ return points.length > 1 ? padL + (plotW * i / (points.length - 1)) : padL + plotW / 2; }
+    function yAt(v){ return padT + plotH - (plotH * (v - scaleMin) / scaleRange); }
+
+    var gridHtml = '', gridLines = 4;
+    for (var g = 0; g <= gridLines; g++) {
+        var gv = scaleMin + (scaleRange * g / gridLines);
+        var gy = yAt(gv).toFixed(1);
+        gridHtml += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (w - padR) + '" y2="' + gy + '" stroke="#e8ecf2" stroke-width="1"/>'
+            + '<text x="' + (padL - 8) + '" y="' + (parseFloat(gy) + 4) + '" text-anchor="end" font-size="10" fill="#8a94a6" font-family="Barlow Condensed,Arial">' + (gv / divisor).toFixed(1) + '</text>';
+    }
+    // Zero line drawn distinctly (darker/dashed) when it falls strictly
+    // inside the plot, i.e. whenever the series crosses from surplus to
+    // shortfall or vice versa.
+    var zeroHtml = '';
+    if (scaleMin < 0 && scaleMax > 0) {
+        var zy = yAt(0).toFixed(1);
+        zeroHtml = '<line x1="' + padL + '" y1="' + zy + '" x2="' + (w - padR) + '" y2="' + zy + '" stroke="#8a94a6" stroke-width="1.2" stroke-dasharray="4,3"/>';
+    }
+
+    var pathD = '', dotsHtml = '', labelsHtml = '';
+    for (var p = 0; p < points.length; p++) {
+        var px = xAt(p), py = yAt(points[p].amount);
+        pathD += (p === 0 ? 'M' : 'L') + px.toFixed(1) + ',' + py.toFixed(1) + ' ';
+        var dotColor = points[p].amount < 0 ? '#2e7d32' : '#e07b00';
+        dotsHtml += '<circle cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="4" fill="' + dotColor + '" stroke="#fff" stroke-width="1.5"/>'
+            + '<text x="' + px.toFixed(1) + '" y="' + (py - 10).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#333" font-family="Barlow Condensed,Arial">' + _cfIndianComma(points[p].amount / divisor) + '</text>';
+        labelsHtml += '<text x="' + px.toFixed(1) + '" y="' + (h - 10) + '" text-anchor="middle" font-size="11" fill="#5a6e8c" font-family="Barlow Condensed,Arial">' + $('<div>').text(points[p].name).html() + '</text>';
+    }
+
+    var axisY = yAt(0).toFixed(1); /* x-axis sits at value 0, not always the bottom */
+    var svg = '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
+        + gridHtml + zeroHtml
+        + '<line x1="' + padL + '" y1="' + padT + '" x2="' + padL + '" y2="' + (h - padB) + '" stroke="#b7c0cc" stroke-width="1"/>'
+        + '<line x1="' + padL + '" y1="' + axisY + '" x2="' + (w - padR) + '" y2="' + axisY + '" stroke="#b7c0cc" stroke-width="1"/>'
+        + (points.length ? '<path d="' + pathD + '" fill="none" stroke="#e07b00" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' : '')
+        + dotsHtml + labelsHtml
+        + '</svg>';
+
+    return { unit: fmt.unit, body: '<div style="overflow-x:auto;">' + svg + '</div>' };
+}
+
+function _cfRedrawBankBreakdown(){
+    var s = window._cfBankBreakdownState;
+    if (!s) return;
+    var chartH = Math.max(120, $('#cf-bank-breakdown-win').height() - 130);
+    var r = _cfLineChartHtml(s.points, chartH);
+    $('#cf-bank-breakdown-unit').html(
+        '<span style="font-weight:700;color:#251840;">Projected Net Working Capital Requirement, in ' + r.unit + '</span>'
+    );
+    $('#cf-bank-breakdown-chart').html(r.body);
+}
+
+function _cfShowBankBreakdown(points){
+    $('#cf-bank-breakdown-win').remove();
+    window._cfBankBreakdownState = { points: points };
+
+    var winW = 720, winH = 380, MIN_W = 380, MIN_H = 240;
+    var left = Math.max(10, (window.innerWidth - winW) / 2);
+    var top = Math.max(10, (window.innerHeight - winH) / 2);
+
+    var rsHandles = ['n','s','e','w','ne','nw','se','sw'];
+    var rsHtml = '';
+    for (var h = 0; h < rsHandles.length; h++) {
+        rsHtml += '<div class="cf-bank-bd-rs" data-dir="' + rsHandles[h] + '" style="position:absolute;';
+        var d = rsHandles[h];
+        if (d === 'n') rsHtml += 'top:-4px;left:10px;right:10px;height:10px;cursor:n-resize;';
+        else if (d === 's') rsHtml += 'bottom:-4px;left:10px;right:10px;height:10px;cursor:s-resize;';
+        else if (d === 'e') rsHtml += 'right:-4px;top:10px;bottom:10px;width:10px;cursor:e-resize;';
+        else if (d === 'w') rsHtml += 'left:-4px;top:10px;bottom:10px;width:10px;cursor:w-resize;';
+        else if (d === 'ne') rsHtml += 'right:-4px;top:-4px;width:14px;height:14px;cursor:ne-resize;';
+        else if (d === 'nw') rsHtml += 'left:-4px;top:-4px;width:14px;height:14px;cursor:nw-resize;';
+        else if (d === 'se') rsHtml += 'right:-4px;bottom:-4px;width:14px;height:14px;cursor:se-resize;';
+        else if (d === 'sw') rsHtml += 'left:-4px;bottom:-4px;width:14px;height:14px;cursor:sw-resize;';
+        rsHtml += 'z-index:20;background:transparent;"></div>';
+    }
+
+    var html = '<div id="cf-bank-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
+        + rsHtml
+        + '<div id="cf-bank-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#5a5a5a;cursor:move;user-select:none;">'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Working Capital — Projected Requirement per 45-Day Cycle</span>'
+        + '<button id="cf-bank-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
+        + '</div>'
+        + '<div id="cf-bank-breakdown-unit" style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;"></div>'
+        + '<div style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;">'
+        + '<div id="cf-bank-breakdown-chart" style="min-width:0;"></div>'
+        + '</div>'
+        + '</div>';
+    $('body').append(html);
+    _cfRedrawBankBreakdown();
+
+    var win = document.getElementById('cf-bank-breakdown-win');
+    var hdr = document.getElementById('cf-bank-breakdown-hdr');
+    var _action = null, _sx = 0, _sy = 0, _ox = 0, _oy = 0, _ow = 0, _oh = 0;
+
+    function onDown(e, dir){
+        var r = win.getBoundingClientRect();
+        _action = dir; _sx = e.clientX; _sy = e.clientY;
+        _ox = r.left; _oy = r.top; _ow = r.width; _oh = r.height;
+        e.preventDefault();
+        if (dir !== 'drag') e.stopPropagation();
+    }
+    function onMove(e){
+        if (!_action) return;
+        e.preventDefault();
+        var dx = e.clientX - _sx, dy = e.clientY - _sy;
+        if (_action === 'drag') {
+            var x = Math.max(0, Math.min(_ox + dx, window.innerWidth - win.offsetWidth));
+            var y = Math.max(0, Math.min(_oy + dy, window.innerHeight - win.offsetHeight));
+            win.style.left = x + 'px'; win.style.top = y + 'px';
+        } else {
+            var l = _ox, t = _oy, w = _ow, hh = _oh;
+            if (_action.indexOf('e') > -1) { w = Math.max(MIN_W, _ow + dx); }
+            if (_action.indexOf('s') > -1) { hh = Math.max(MIN_H, _oh + dy); }
+            if (_action.indexOf('w') > -1) { var nw = Math.max(MIN_W, _ow - dx); l = _ox + (_ow - nw); w = nw; }
+            if (_action.indexOf('n') > -1) { var nh = Math.max(MIN_H, _oh - dy); t = _oy + (_oh - nh); hh = nh; }
+            win.style.left = l + 'px'; win.style.top = t + 'px';
+            win.style.width = w + 'px'; win.style.height = hh + 'px';
+            _cfRedrawBankBreakdown();
+        }
+    }
+    function onUp(){ _action = null; }
+
+    if (typeof window.bindDragTouch === 'function') {
+        window.bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-bank-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-bank-bd-rs').each(function(){
+            window.bindDragTouch(this, 'mousedown', function(e){ onDown(e, this.getAttribute('data-dir')); });
+        });
+        window.bindDragTouch(document, 'mousemove', onMove);
+        window.bindDragTouch(document, 'mouseup', onUp);
+    }
+
+    document.getElementById('cf-bank-breakdown-close').addEventListener('click', function(){
+        win.remove();
+    });
+}
+
+$(document).on('click', '#cf-bankdial', function(e){
+    if (e.target.closest('.cf-bank-pencil') || e.target.closest('.cf-bank-input')) return;
+    $.ajax({
+        type: 'POST', url: '../projectsmain/cfbankbalancebreakdown', dataType: 'json',
+        success: function(d){
+            if (d && d.error === 'No') { _cfShowBankBreakdown(d.points || []); }
+        }
+    });
+});
+
+// Half blue-green / half dark orange dial, shared by every Cashflow panel
+// that shows a target-vs-actual metric. Needle = actual value. Target is
+// user-editable (pencil icon toggles an inline input; value saves to
+// cf_dashboard_targets on the second pencil click, when edit mode is
+// closed). Actual has no real data source yet — 0. Same size/geometry for
+// every instance; only the element id, metric_key, and unit label differ.
+// cf-bank (Cash-to-Cash Cycle) removed from this list — it no longer has
+// its own dial/panel; Target/Actual now show as two small colored
+// squares on the group sub-heading bar instead (see
+// renderCfC2cLegend/_cfDrawC2cLegend below). cf-bank's element id is now
+// reused for the new standalone Current Liabilities dial in the same
+// grid slot (see renderCfCurrLiabDial2).
+var _cfDials = [
+    { elId: 'cf-contractincome',  metricKey: 'contract_income', unit: 'Crores', reverseColors: true }
+];
+var _cfDialState = {}; // elId -> { target, editing }
+
+function _cfDialSvg(target, actual, unit, unitFontSize, reverseColors, actualDisp, solidColor){
+    unitFontSize = unitFontSize || 16;
+    var maxV = target > 0 ? target * 2 : 1;
+    var f = Math.max(0, Math.min(1, actual / maxV));
+    var cx = 105, cy = 82, r = 76, sw = 15;
+    function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
+    function arc(f1, f2, col){
+        if (f2 <= f1) return '';
+        var p1 = ptF(f1), p2 = ptF(f2);
+        return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    }
+    // solidColor: single-colour arc (no orange/red second half) — used
+    // by Contract Income, per explicit request, since crossing target
+    // there is always a good outcome, not something to flag visually.
+    var firstCol = solidColor || (reverseColors ? '#b5540a' : '#00838f');
+    var secondCol = solidColor || (reverseColors ? '#00838f' : '#b5540a');
+    // Target marker: bright yellow band at the dial's fixed midpoint
+    // (target always sits at 50% of the 0-2x scale) — same treatment as
+    // every other Cashflow dial (Investments, Bills Receivable, etc.),
+    // EXCEPT Contract Income (solidColor set), which omits it per
+    // explicit request.
+    var targetF = 0.5;
+    var ta = Math.PI * (1 - targetF);
+    var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
+    var tx1 = (cx + tr1 * Math.cos(ta)).toFixed(1), ty1 = (cy - tr1 * Math.sin(ta)).toFixed(1);
+    var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
+    var targetLine = solidColor ? '' : (
+        '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
+        + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>'
+    );
+    var nr = r - 14, na = Math.PI * (1 - f);
+    var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
+    // Center value turns red whenever Actual sits on the "bad" side of
+    // Target. For normal dials (e.g. Cash-to-Cash Cycle, longer is
+    // worse) that's actual > target. For reverseColors dials (e.g.
+    // Contract Income, where MORE is good) it's the opposite — falling
+    // SHORT of target is the bad outcome, so red triggers on
+    // actual < target instead.
+    var centerCol = (reverseColors ? (actual < target) : (actual > target)) ? '#c62828' : '#000';
+    var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+        + arc(0, 0.5, firstCol) + arc(0.5, 1, secondCol)
+        + targetLine
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
+        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="' + centerCol + '" font-family="Barlow Condensed,Arial">' + actualDisp + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">' + unit + '</text>'
+        + '</svg>';
+    return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
+}
+
+function _cfDrawDial(elId, metricKey, unit, unitFontSize, reverseColors){
+    var el = document.getElementById(elId);
+    if (!el) return;
+    el.style.justifyContent = 'center';
+    if (elId === 'cf-contractincome') {
+        el.style.cursor = 'pointer';
+        el.title = 'Click to see per-cycle breakdown';
+    }
+    var state = _cfDialState[elId];
+    var target = state.target, actual = state.actual || 0;
+    // Target/Actual here are user-entered directly in the panel's
+    // declared unit for non-money dials. For money-denominated dials (unit ===
+    // 'Crores'), the raw number typed is reinterpreted via the magnitude
+    // rule (< 100 = Lakhs, >= 100 = Crores), same as every other value —
+    // and the dial's own scale math needs that same reinterpreted value,
+    // not the raw typed number.
+    var isMoney = unit === 'Crores';
+    var dispUnit = unit;
+    var targetForSvg = target;
+    var targetDisp = target, actualDisp = actual;
+    if (isMoney) {
+        var targetCr = _cfEnteredToRupees(target) / 10000000;
+        targetForSvg = targetCr;
+        // The Target input box has no unit selector — every number typed
+        // into it is always Lakhs, by fixed app-wide convention (see
+        // _cfEnteredToRupees). So Lakhs is the unit the user chose by
+        // using this box at all, and both Target and Actual stay in
+        // Lakhs here always — never auto-converted to Crores by
+        // magnitude, no matter how large the number gets.
+        dispUnit = 'Lakhs';
+        var divisor = 100; // targetCr/actual are Crores-scale; 1 Crore = 100 Lakhs
+        targetDisp = targetCr * divisor;
+        actualDisp = actual * divisor;
+    }
+    // Editing always types in Lakhs (the input box's fixed convention —
+    // see _cfEnteredToRupees) even when the resolved display elsewhere
+    // has switched to Crores, so the box is explicitly labeled "Lakhs"
+    // while open — otherwise a bare "110" next to a dial now reading
+    // "Crores" looks like a units mismatch instead of the same figure.
+    var targetCell = state.editing
+        ? '<input class="cf-dial-target-input" data-elid="' + elId + '" data-metric="' + metricKey + '" type="number" step="any" value="' + target + '" style="width:58px;font-size:15px;padding:0 3px;border:1px solid #b0bec5;border-radius:2px;"> <span style="font-size:11px;color:#888;">Lakhs</span>'
+        : '<span style="font-size:15px;color:#000;font-weight:700;">' + targetDisp.toFixed(2) + '</span>';
+    // Actual legend colour always matches whichever arc half the needle
+    // is currently pointing into — same firstCol/secondCol split (and
+    // reverseColors flag) used inside _cfDialSvg.
+    var maxV = targetForSvg > 0 ? targetForSvg * 2 : 1;
+    // Contract Income is a single solid colour (no orange/red half) —
+    // per explicit request, since crossing target there is always good.
+    var solidColor = (elId === 'cf-contractincome') ? '#00838f' : null;
+    var firstCol = solidColor || (reverseColors ? '#b5540a' : '#00838f');
+    var secondCol = solidColor || (reverseColors ? '#00838f' : '#b5540a');
+    var needleCol = (actual / maxV) <= 0.5 ? firstCol : secondCol;
+    // Center unit label (in the dial itself) is the single place the
+    // Lakhs/Crores unit shows for money dials — Target/Actual below
+    // display bare numbers with no unit suffix, to avoid repeating it.
+    // The dial's own center now also shows the Actual value itself
+    // (above the unit label), same two-line pattern used by the other
+    // Cashflow dials (Bills Receivable, Free Cash, etc.).
+    var actualCell = '<span style="font-size:15px;color:' + needleCol + ';font-weight:700;">' + actualDisp.toFixed(2) + '</span>';
+    var actualBlock = '<span style="font-size:15px;color:#111;">Actual: ' + actualCell + '</span>';
+    var targetBlock = '<span style="font-size:15px;color:#111;">Target: ' + targetCell + ' <button class="cf-dial-target-pencil" data-elid="' + elId + '" title="Edit target" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>';
+    // Actual always shown on the left, Target on the right — same
+    // convention as every other Cashflow dial.
+    var legendRow = actualBlock + targetBlock;
+    el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
+        + _cfDialSvg(targetForSvg, actual, dispUnit, unitFontSize, reverseColors, actualDisp.toFixed(2), solidColor)
+        + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
+        + legendRow
+        + '</div>'
+        + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
+}
+
+function renderCfDial(elId, metricKey, unit, unitFontSize, reverseColors){
+    var gen = _cfLoadGen;
+    _cfDialState[elId] = { target: 0, actual: 0, editing: false };
+    _cfDrawDial(elId, metricKey, unit, unitFontSize, reverseColors);
+    _cfFetchTarget(metricKey, function(d){
+        if (gen === _cfLoadGen) {
+            _cfDialState[elId].target = +d.target || 0;
+            _cfDrawDial(elId, metricKey, unit, unitFontSize, reverseColors);
+        }
+    });
+    // Cash-to-Cash Cycle panel (cf-bank) — Actual = average days per
+    // cycle, where each cycle is the gap between consecutive Contract
+    // Income credit transactions (first cycle measured from the
+    // project's first Bank/Cash transaction) — see actionCfactualc2c.
+    if (elId === 'cf-bank') {
+        _cfQueueAjax({
+            type: 'POST', url: '../projectsmain/cfactualc2c', dataType: 'json',
+            success: function(d){
+                if (gen === _cfLoadGen && d && d.error === 'No') {
+                    _cfDialState[elId].actual = +d.total || 0;
+                    _cfDrawDial(elId, metricKey, unit, unitFontSize, reverseColors);
+                }
+            }
+        });
+    }
+    // Contract Income panel (cf-contractincome) — Actual = sum of
+    // transactions where the debit side is a Bank account and the
+    // credit side is a Party account (the cash receipt that clears a
+    // receivable raised via Bills Receivable) — see
+    // actionCfcontractincome.
+    if (elId === 'cf-contractincome') {
+        _cfQueueAjax({
+            type: 'POST', url: '../projectsmain/cfcontractincome', dataType: 'json',
+            success: function(d){
+                if (gen === _cfLoadGen && d && d.error === 'No') {
+                    _cfDialState[elId].actual = (+d.total || 0) / 10000000;
+                    _cfDrawDial(elId, metricKey, unit, unitFontSize, reverseColors);
+                }
+            }
+        });
+    }
+}
+
+// Cash-to-Cash Cycle breakdown popup — same draggable/resizable vertical
+// bar chart window as the other breakdown popups, but showing each
+// COMPLETED cycle's own length in days (see
+// actionCfactualc2cbreakdown/_cfActualC2cCycleGaps) rather than a rupee
+// amount — uses _cfInvestBreakdownChartHtml's 'days' unitMode. No
+// "Current" bar: a cycle's length is only defined once it closes with a
+// Contract Income credit. Also shows the average across all cycles
+// (same figure as the live dial's Actual value).
+function _cfRedrawC2cBreakdown(){
+    var s = window._cfC2cBreakdownState;
+    if (!s) return;
+    var chartH = Math.max(120, $('#cf-c2c-breakdown-win').height() - 130);
+    var r = _cfInvestBreakdownChartHtml(s.accounts, chartH, 'days');
+    $('#cf-c2c-breakdown-unit').html(
+        '<span style="font-weight:700;color:#251840;">Days per Cycle</span>'
+        + '<span style="float:right;font-weight:700;color:#251840;">Average: ' + _cfIndianComma(s.average) + ' Days</span>'
+    );
+    $('#cf-c2c-breakdown-chart').html(r.body);
+}
+
+function _cfShowC2cBreakdown(accounts, average){
+    $('#cf-c2c-breakdown-win').remove();
+    window._cfC2cBreakdownState = { accounts: accounts, average: average };
+
+    var winW = 640, winH = 380, MIN_W = 340, MIN_H = 240;
+    var left = Math.max(10, (window.innerWidth - winW) / 2);
+    var top = Math.max(10, (window.innerHeight - winH) / 2);
+
+    var rsHandles = ['n','s','e','w','ne','nw','se','sw'];
+    var rsHtml = '';
+    for (var h = 0; h < rsHandles.length; h++) {
+        rsHtml += '<div class="cf-c2c-rs" data-dir="' + rsHandles[h] + '" style="position:absolute;';
+        var d = rsHandles[h];
+        if (d === 'n') rsHtml += 'top:-4px;left:10px;right:10px;height:10px;cursor:n-resize;';
+        else if (d === 's') rsHtml += 'bottom:-4px;left:10px;right:10px;height:10px;cursor:s-resize;';
+        else if (d === 'e') rsHtml += 'right:-4px;top:10px;bottom:10px;width:10px;cursor:e-resize;';
+        else if (d === 'w') rsHtml += 'left:-4px;top:10px;bottom:10px;width:10px;cursor:w-resize;';
+        else if (d === 'ne') rsHtml += 'right:-4px;top:-4px;width:14px;height:14px;cursor:ne-resize;';
+        else if (d === 'nw') rsHtml += 'left:-4px;top:-4px;width:14px;height:14px;cursor:nw-resize;';
+        else if (d === 'se') rsHtml += 'right:-4px;bottom:-4px;width:14px;height:14px;cursor:se-resize;';
+        else if (d === 'sw') rsHtml += 'left:-4px;bottom:-4px;width:14px;height:14px;cursor:sw-resize;';
+        rsHtml += 'z-index:20;background:transparent;"></div>';
+    }
+
+    var html = '<div id="cf-c2c-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
+        + rsHtml
+        + '<div id="cf-c2c-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#334455;cursor:move;user-select:none;">'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Cash-to-Cash Cycle — Per-Cycle Breakdown</span>'
+        + '<button id="cf-c2c-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
+        + '</div>'
+        + '<div id="cf-c2c-breakdown-unit" style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;"></div>'
+        + '<div style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;">'
+        + '<div id="cf-c2c-breakdown-chart" style="min-width:0;"></div>'
+        + '</div>'
+        + '</div>';
+    $('body').append(html);
+    _cfRedrawC2cBreakdown();
+
+    // Drag (header) + resize (8 handles) — same mechanics as the other
+    // breakdown windows.
+    var win = document.getElementById('cf-c2c-breakdown-win');
+    var hdr = document.getElementById('cf-c2c-breakdown-hdr');
+    var _action = null, _sx = 0, _sy = 0, _ox = 0, _oy = 0, _ow = 0, _oh = 0;
+
+    function onDown(e, dir){
+        var r = win.getBoundingClientRect();
+        _action = dir; _sx = e.clientX; _sy = e.clientY;
+        _ox = r.left; _oy = r.top; _ow = r.width; _oh = r.height;
+        e.preventDefault();
+        if (dir !== 'drag') e.stopPropagation();
+    }
+    function onMove(e){
+        if (!_action) return;
+        e.preventDefault();
+        var dx = e.clientX - _sx, dy = e.clientY - _sy;
+        if (_action === 'drag') {
+            var x = Math.max(0, Math.min(_ox + dx, window.innerWidth - win.offsetWidth));
+            var y = Math.max(0, Math.min(_oy + dy, window.innerHeight - win.offsetHeight));
+            win.style.left = x + 'px'; win.style.top = y + 'px';
+        } else {
+            var l = _ox, t = _oy, w = _ow, h = _oh;
+            if (_action.indexOf('e') > -1) { w = Math.max(MIN_W, _ow + dx); }
+            if (_action.indexOf('s') > -1) { h = Math.max(MIN_H, _oh + dy); }
+            if (_action.indexOf('w') > -1) { var nw = Math.max(MIN_W, _ow - dx); l = _ox + (_ow - nw); w = nw; }
+            if (_action.indexOf('n') > -1) { var nh = Math.max(MIN_H, _oh - dy); t = _oy + (_oh - nh); h = nh; }
+            win.style.left = l + 'px'; win.style.top = t + 'px';
+            win.style.width = w + 'px'; win.style.height = h + 'px';
+            _cfRedrawC2cBreakdown();
+        }
+    }
+    function onUp(){ _action = null; }
+
+    if (typeof window.bindDragTouch === 'function') {
+        window.bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-c2c-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-c2c-rs').each(function(){
+            var dir = $(this).data('dir');
+            window.bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        window.bindDragTouch(document, 'mousemove', onMove, { passive: false });
+        window.bindDragTouch(document, 'mouseup', onUp);
+    } else {
+        bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-c2c-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-c2c-rs').each(function(){
+            var dir = $(this).data('dir');
+            bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        bindDragTouch(document, 'mousemove', onMove);
+        bindDragTouch(document, 'mouseup', onUp);
+    }
+}
+// #cf-bank now hosts the standalone Current Liabilities dial (see
+// renderCfCurrLiabDial2) — clicking it opens the same account-level
+// breakdown popup the old #cf-currentliabilities dial used.
+$(document).on('click', '#cf-bank', function(e){
+    $.ajax({
+        type: 'POST', url: '../projectsmain/cfcurrentliabilitiesbreakdown', dataType: 'json',
+        success: function(d){
+            if (d && d.error === 'No') { _cfShowCurrLiabBreakdown(d.accounts || []); }
+        }
+    });
+});
+$(document).on('click', '#cf-c2c-breakdown-close', function(){ $('#cf-c2c-breakdown-win').remove(); });
+
+// Contract Income breakdown popup — a PAIRED/grouped bar chart, two
+// bars per Contract Income credit: LEFT bar = that cycle's own standalone
+// billed amount (cycle_amount), RIGHT bar = the cumulative running total
+// through that cycle (amount) — see actionCfcontractincomebreakdown.
+// Both bars share one value axis/unit, scaled off the larger of the two
+// series (the cumulative series, since it only grows). Labelled by the
+// month/year each bill was credited.
+function _cfContractIncomeGroupedChartHtml(accounts, chartH){
+    var maxAmt = 0;
+    for (var i = 0; i < accounts.length; i++) {
+        if (accounts[i].amount > maxAmt) maxAmt = accounts[i].amount;
+        if (accounts[i].cycle_amount > maxAmt) maxAmt = accounts[i].cycle_amount;
+    }
+    if (maxAmt <= 0) maxAmt = 1;
+    var fmtMax = _cfFmtMoney(maxAmt);
+    var axisMax = fmtMax.value;
+    var unit = fmtMax.unit;
+    var divisor = unit === 'Crores' ? 10000000 : 100000;
+    var niceMax = axisMax <= 0 ? 1 : Math.ceil(axisMax * 1.05 * 100) / 100;
+    var axisW = 34;
+
+    var stepCount = 5;
+    var stepPx = chartH / stepCount;
+    var gridBg = 'repeating-linear-gradient(to top, #aab2c0 0, #aab2c0 1px, transparent 1px, transparent ' + stepPx.toFixed(2) + 'px)';
+    var gridLabelsHtml = '';
+    for (var g = 0; g <= stepCount; g++) {
+        var gv = Math.round((niceMax / stepCount) * g * 100) / 100;
+        var gy = chartH - g * stepPx;
+        gridLabelsHtml += '<div style="position:absolute;left:-' + (axisW + 4) + 'px;top:' + (gy - 7).toFixed(1) + 'px;width:' + axisW + 'px;text-align:right;font-size:10px;color:#8a94a3;font-family:Barlow Condensed,Arial;">' + gv.toFixed(2) + '</div>';
+    }
+
+    var cycleCol = '#0d3f7a', cumCol = '#b5540a';
+    var barsHtml = '';
+    for (var j = 0; j < accounts.length; j++) {
+        var acct = accounts[j];
+        var cycleVal = (+acct.cycle_amount || 0) / divisor;
+        var cumVal = (+acct.amount || 0) / divisor;
+        var cyclePx = Math.max(2, (cycleVal / niceMax) * chartH);
+        var cumPx = Math.max(2, (cumVal / niceMax) * chartH);
+        barsHtml += '<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + chartH + 'px;flex:1 1 0;min-width:0;">'
+            + '<div style="display:flex;align-items:flex-end;justify-content:center;width:100%;position:relative;height:' + Math.max(cyclePx, cumPx).toFixed(1) + 'px;">'
+            + '<div style="position:absolute;bottom:' + (cyclePx + 2).toFixed(1) + 'px;right:22px;font-size:10px;font-weight:700;color:' + cycleCol + ';white-space:nowrap;">' + cycleVal.toFixed(2) + '</div>'
+            + '<div style="width:22px;height:' + cyclePx.toFixed(1) + 'px;background:' + cycleCol + ';border-radius:2px 0 0 0;"></div>'
+            + '<div style="position:absolute;bottom:' + (cumPx + 2).toFixed(1) + 'px;left:22px;font-size:10px;font-weight:700;color:' + cumCol + ';white-space:nowrap;">' + cumVal.toFixed(2) + '</div>'
+            + '<div style="width:22px;height:' + cumPx.toFixed(1) + 'px;background:' + cumCol + ';border-radius:0 2px 0 0;"></div>'
+            + '</div>'
+            + '</div>';
+    }
+    var labelsHtml = '';
+    for (var k = 0; k < accounts.length; k++) {
+        labelsHtml += '<div style="flex:1 1 0;min-width:0;font-size:11px;color:#333;text-align:center;line-height:1.2;padding:0 3px;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;">' + accounts[k].name + '</div>';
+    }
+
+    var emptyMsgHtml = accounts.length ? '' : '<div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;color:#8a94a3;font-size:12px;font-family:Barlow Condensed,Arial;">No data yet</div>';
+    var body = '<div style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;">'
+        + '<div style="position:relative;flex:1;min-width:0;display:flex;align-items:flex-end;gap:6px;height:' + chartH + 'px;background-image:' + gridBg + ';">'
+        + gridLabelsHtml
+        + barsHtml
+        + emptyMsgHtml
+        + '</div>'
+        + '</div>'
+        + '<div style="margin-left:' + (axisW + 4) + 'px;border-top:2px solid #251840;"></div>'
+        + '<div style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;gap:6px;margin-top:6px;">' + labelsHtml + '</div>'
+        + '<div style="display:flex;gap:16px;justify-content:center;margin-top:10px;font-size:11px;font-family:Barlow Condensed,Arial;">'
+        + '<span><span style="display:inline-block;width:10px;height:10px;background:' + cycleCol + ';border-radius:2px;vertical-align:middle;margin-right:4px;"></span>This bill</span>'
+        + '<span><span style="display:inline-block;width:10px;height:10px;background:' + cumCol + ';border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Cumulative</span>'
+        + '</div>';
+    return { unit: unit, body: body };
+}
+
+function _cfRedrawContractIncomeBreakdown(){
+    var s = window._cfContractIncomeBreakdownState;
+    if (!s) return;
+    var chartH = Math.max(140, $('#cf-ci-breakdown-win').height() - 160);
+    var r = _cfContractIncomeGroupedChartHtml(s.accounts, chartH);
+    var cumFmt = _cfFmtMoney(s.cumulative);
+    var cumDisp = _cfIndianComma(s.cumulative / (cumFmt.unit === 'Crores' ? 10000000 : 100000)) + ' ' + cumFmt.unit;
+    $('#cf-ci-breakdown-unit').html(
+        '<span style="font-weight:700;color:#251840;">Amount in ' + r.unit + '</span>'
+        + '<span style="float:right;font-weight:700;color:#b5540a;">Cumulative: ' + cumDisp + '</span>'
+    );
+    $('#cf-ci-breakdown-chart').html(r.body);
+}
+
+function _cfShowContractIncomeBreakdown(accounts, average, cumulative){
+    $('#cf-ci-breakdown-win').remove();
+    // _cfInvestBreakdownChartHtml's header line reads "Total:" from
+    // r.total, which is the SUM of the bars shown — that's already the
+    // cumulative total, not the average, so the average is passed
+    // through separately here (currently unused by the chart itself,
+    // shown instead via the Average/Cycle label built in
+    // _cfRedrawContractIncomeBreakdown from s.average directly).
+    window._cfContractIncomeBreakdownState = { accounts: accounts, average: average, cumulative: cumulative };
+
+    var winW = 640, winH = 380, MIN_W = 340, MIN_H = 240;
+    var left = Math.max(10, (window.innerWidth - winW) / 2);
+    var top = Math.max(10, (window.innerHeight - winH) / 2);
+
+    var rsHandles = ['n','s','e','w','ne','nw','se','sw'];
+    var rsHtml = '';
+    for (var h = 0; h < rsHandles.length; h++) {
+        rsHtml += '<div class="cf-ci-rs" data-dir="' + rsHandles[h] + '" style="position:absolute;';
+        var d = rsHandles[h];
+        if (d === 'n') rsHtml += 'top:-4px;left:10px;right:10px;height:10px;cursor:n-resize;';
+        else if (d === 's') rsHtml += 'bottom:-4px;left:10px;right:10px;height:10px;cursor:s-resize;';
+        else if (d === 'e') rsHtml += 'right:-4px;top:10px;bottom:10px;width:10px;cursor:e-resize;';
+        else if (d === 'w') rsHtml += 'left:-4px;top:10px;bottom:10px;width:10px;cursor:w-resize;';
+        else if (d === 'ne') rsHtml += 'right:-4px;top:-4px;width:14px;height:14px;cursor:ne-resize;';
+        else if (d === 'nw') rsHtml += 'left:-4px;top:-4px;width:14px;height:14px;cursor:nw-resize;';
+        else if (d === 'se') rsHtml += 'right:-4px;bottom:-4px;width:14px;height:14px;cursor:se-resize;';
+        else if (d === 'sw') rsHtml += 'left:-4px;bottom:-4px;width:14px;height:14px;cursor:sw-resize;';
+        rsHtml += 'z-index:20;background:transparent;"></div>';
+    }
+
+    var html = '<div id="cf-ci-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
+        + rsHtml
+        + '<div id="cf-ci-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#334455;cursor:move;user-select:none;">'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Contract Income — Per-Cycle Breakdown</span>'
+        + '<button id="cf-ci-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
+        + '</div>'
+        + '<div id="cf-ci-breakdown-unit" style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;"></div>'
+        + '<div style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;">'
+        + '<div id="cf-ci-breakdown-chart" style="min-width:0;"></div>'
+        + '</div>'
+        + '</div>';
+    $('body').append(html);
+    _cfRedrawContractIncomeBreakdown();
+
+    // Drag (header) + resize (8 handles) — same mechanics as the other
+    // breakdown windows.
+    var win = document.getElementById('cf-ci-breakdown-win');
+    var hdr = document.getElementById('cf-ci-breakdown-hdr');
+    var _action = null, _sx = 0, _sy = 0, _ox = 0, _oy = 0, _ow = 0, _oh = 0;
+
+    function onDown(e, dir){
+        var r = win.getBoundingClientRect();
+        _action = dir; _sx = e.clientX; _sy = e.clientY;
+        _ox = r.left; _oy = r.top; _ow = r.width; _oh = r.height;
+        e.preventDefault();
+        if (dir !== 'drag') e.stopPropagation();
+    }
+    function onMove(e){
+        if (!_action) return;
+        e.preventDefault();
+        var dx = e.clientX - _sx, dy = e.clientY - _sy;
+        if (_action === 'drag') {
+            var x = Math.max(0, Math.min(_ox + dx, window.innerWidth - win.offsetWidth));
+            var y = Math.max(0, Math.min(_oy + dy, window.innerHeight - win.offsetHeight));
+            win.style.left = x + 'px'; win.style.top = y + 'px';
+        } else {
+            var l = _ox, t = _oy, w = _ow, h = _oh;
+            if (_action.indexOf('e') > -1) { w = Math.max(MIN_W, _ow + dx); }
+            if (_action.indexOf('s') > -1) { h = Math.max(MIN_H, _oh + dy); }
+            if (_action.indexOf('w') > -1) { var nw = Math.max(MIN_W, _ow - dx); l = _ox + (_ow - nw); w = nw; }
+            if (_action.indexOf('n') > -1) { var nh = Math.max(MIN_H, _oh - dy); t = _oy + (_oh - nh); h = nh; }
+            win.style.left = l + 'px'; win.style.top = t + 'px';
+            win.style.width = w + 'px'; win.style.height = h + 'px';
+            _cfRedrawContractIncomeBreakdown();
+        }
+    }
+    function onUp(){ _action = null; }
+
+    if (typeof window.bindDragTouch === 'function') {
+        window.bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-ci-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-ci-rs').each(function(){
+            var dir = $(this).data('dir');
+            window.bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        window.bindDragTouch(document, 'mousemove', onMove, { passive: false });
+        window.bindDragTouch(document, 'mouseup', onUp);
+    } else {
+        bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-ci-breakdown-close') onDown(e, 'drag'); });
+        $(win).find('.cf-ci-rs').each(function(){
+            var dir = $(this).data('dir');
+            bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); });
+        });
+        bindDragTouch(document, 'mousemove', onMove);
+        bindDragTouch(document, 'mouseup', onUp);
+    }
+}
+$(document).on('click', '#cf-contractincome', function(e){
+    if ($(e.target).closest('.cf-dial-target-pencil, .cf-dial-target-input').length) return;
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfcontractincomebreakdown', dataType: 'json',
+        success: function(d){
+            if (d && d.error === 'No') { _cfShowContractIncomeBreakdown(d.accounts || [], +d.average || 0, +d.cumulative || 0); }
+        }
+    });
+});
+$(document).on('click', '#cf-ci-breakdown-close', function(){ $('#cf-ci-breakdown-win').remove(); });
+
+$(document).on('click', '.cf-dial-target-pencil', function(e){
+    e.preventDefault(); e.stopPropagation();
+    var elId = $(this).data('elid');
+    var d = _cfDials.filter(function(x){ return x.elId === elId; })[0];
+    if (!d) return;
+    var state = _cfDialState[elId];
+    if (state.editing) {
+        var val = +$('.cf-dial-target-input[data-elid="' + elId + '"]').val() || 0;
+        state.target = val;
+        state.editing = false;
+        _cfDrawDial(d.elId, d.metricKey, d.unit, d.unitFontSize, d.reverseColors);
+        $.ajax({
+            type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json',
+            data: { metric_key: d.metricKey, target_value: val },
+            success: function(){ renderCfBars(); }
+        });
+    } else {
+        state.editing = true;
+        _cfDrawDial(d.elId, d.metricKey, d.unit, d.unitFontSize, d.reverseColors);
+    }
+});
+$(document).on('click', '.cf-dial-target-input', function(e){ e.stopPropagation(); });
+
+// ── Drag + Resize: Cashflow modal ────────────────────────────────────────
+// Centered via transform on first open; anchored to fixed left/top pixel
+// values on first drag/resize interaction so it behaves like every other
+// floating window afterwards.
+(function(){
+    var win = document.getElementById('cf-modal');
+    var hdr = document.getElementById('cf-hdr');
+    if (!win || !hdr) return;
+    var bdt = (typeof window.bindDragTouch === 'function') ? window.bindDragTouch : function(el, ev, fn, opts){ el.addEventListener(ev, fn, opts); };
+    var MIN_W = 600, MIN_H = 400, _action = null, _sx = 0, _sy = 0, _ox = 0, _oy = 0, _ow = 0, _oh = 0;
+
+    function _anchor(){
+        var r = win.getBoundingClientRect();
+        win.style.transform = 'none';
+        win.style.left = r.left + 'px'; win.style.top = r.top + 'px';
+        win.style.width = r.width + 'px'; win.style.height = r.height + 'px';
+        win.dataset.userSized = '1'; /* stop popupFitPortrait from overriding a size the user chose */
+        return r;
+    }
+
+    bdt(hdr, 'mousedown', function(e){
+        if (e.target.id === 'cf-close') return;
+        var r = _anchor();
+        _action = 'drag'; _sx = e.clientX; _sy = e.clientY; _ox = r.left; _oy = r.top;
+        e.preventDefault();
+    });
+    win.querySelectorAll('.cf-rs').forEach(function(el){
+        bdt(el, 'mousedown', function(e){
+            var r = _anchor();
+            _action = el.getAttribute('data-dir');
+            _sx = e.clientX; _sy = e.clientY; _ox = r.left; _oy = r.top; _ow = r.width; _oh = r.height;
+            e.preventDefault(); e.stopPropagation();
+        });
+    });
+    bdt(document, 'mousemove', function(e){
+        if (!_action) return;
+        var dx = e.clientX - _sx, dy = e.clientY - _sy;
+        if (_action === 'drag') {
+            win.style.left = Math.max(0, _ox + dx) + 'px';
+            win.style.top  = Math.max(0, _oy + dy) + 'px';
+        } else {
+            var l = _ox, t = _oy, w = _ow, h = _oh;
+            if (_action.indexOf('e') > -1) { w = Math.max(MIN_W, _ow + dx); }
+            if (_action.indexOf('s') > -1) { h = Math.max(MIN_H, _oh + dy); }
+            if (_action.indexOf('w') > -1) { var nw = Math.max(MIN_W, _ow - dx); l = _ox + (_ow - nw); w = nw; }
+            if (_action.indexOf('n') > -1) { var nh = Math.max(MIN_H, _oh - dy); t = _oy + (_oh - nh); h = nh; }
+            win.style.left = l + 'px'; win.style.top = t + 'px';
+            win.style.width = w + 'px'; win.style.height = h + 'px';
+        }
+    }, { passive: false });
+    bdt(document, 'mouseup', function(){ _action = null; });
+})();
 
 function renderCdBars(){
     renderCdProjectBar();
@@ -1704,7 +4937,83 @@ function doKpi(k){
     doCapacity(k);
     doTaskQty(k.tasks);
     doRes(k.tasks);
+    doResourceCapacity(k.resource_latest);
 }
+
+// ── Resource Capacity: latest reported qty per resource, one bar each
+// (not grouped by type — two resources of the same type each get their own
+// bar), labelled underneath by Resource Type. Hover a bar for a Resource
+// Name / Quantity tooltip. ──
+var _pdResData = [];
+function doResourceCapacity(items){
+    var el = document.getElementById('pd-g7'); if (!el) return;
+    var cols = ['#3461b8','#d4845a','#27afc4','#7c5cbf','#f0c419','#8fa3bc','#ec407a','#26a69a'];
+    items = items || [];
+    _pdResData = items;
+    if (!items.length){
+        el.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No data</div>';
+        return;
+    }
+    var maxVal = 0;
+    items.forEach(function(r){ maxVal = Math.max(maxVal, +r.qty || 0); });
+    if (!maxVal) maxVal = 1;
+    var gridLines = 4;
+    var step = maxVal / gridLines;
+    var chartH = 90;
+
+    var axis = '<div style="display:flex;flex-direction:column;justify-content:space-between;height:' + chartH + 'px;padding-right:4px;text-align:right;font-size:9px;color:#8ab4d8;">';
+    for (var g = gridLines; g >= 0; g--) axis += '<span>' + Math.round(step * g) + '</span>';
+    axis += '</div>';
+
+    var grids = '<div style="position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none;">';
+    for (var g2 = 0; g2 <= gridLines; g2++) {
+        grids += '<div style="position:absolute;left:0;right:0;top:' + ((gridLines - g2) / gridLines * 100).toFixed(1) + '%;border-top:1px solid #e8ecf3;"></div>';
+    }
+    grids += '</div>';
+
+    var bars = '', labels = '';
+    items.forEach(function(r, i){
+        var qty = +r.qty || 0;
+        var col = cols[i % cols.length];
+        var pct = Math.max(3, (qty / maxVal * 100)).toFixed(1) + '%';
+        bars   += '<div class="rescol pd-res-bar-col" data-idx="' + i + '" style="height:100%;cursor:default"><div class="resb" style="width:16px;height:' + pct + ';min-height:3px;background:' + col + ';border:1px solid rgba(0,0,0,.15);"></div></div>';
+        labels += '<div class="reslbl" style="color:#111">' + sh(r.type_name || '', 24) + '</div>';
+    });
+
+    el.innerHTML = '<div style="display:flex;gap:0;">'
+        + axis
+        + '<div style="flex:1;position:relative;min-width:0;"><div class="resbars" style="height:' + chartH + 'px;">' + grids + bars + '</div></div>'
+        + '</div>'
+        + '<div class="reslabels" style="margin-left:26px;">' + labels + '</div>';
+}
+
+(function(){
+    function _pdResTip(){
+        var t = document.getElementById('pd-res-tip');
+        if (!t) { t = document.createElement('div'); t.id = 'pd-res-tip'; t.className = 'pd-res-tip'; document.body.appendChild(t); }
+        return t;
+    }
+    $(document).on('mouseenter', '.pd-res-bar-col', function(e){
+        var idx = +this.dataset.idx;
+        var r = _pdResData[idx];
+        if (!r) return;
+        var tip = _pdResTip();
+        tip.innerHTML = '<table><thead><tr><th>Resource Name</th><th style="text-align:right;">Quantity</th></tr></thead>'
+            + '<tbody><tr><td>' + $('<div>').text(r.name || '').html() + '</td>'
+            + '<td style="text-align:right;font-weight:700;">' + (+r.qty || 0) + '</td></tr></tbody></table>';
+        var rect = this.getBoundingClientRect();
+        tip.style.display = 'block';
+        var tw = tip.offsetWidth || 180, th = tip.offsetHeight || 60;
+        var left = Math.min(rect.left, window.innerWidth - tw - 8);
+        var top = rect.top - th - 6;
+        if (top < 4) top = rect.bottom + 6;
+        tip.style.left = Math.max(4, left) + 'px';
+        tip.style.top = top + 'px';
+    }).on('mouseleave', '.pd-res-bar-col', function(){
+        var tip = document.getElementById('pd-res-tip');
+        if (tip) tip.style.display = 'none';
+    });
+})();
 
 // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SVG Needle Gauge ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 function gauge(gwId, val, maxVal, trackStyle, targetFrac, lbl1, v1, lbl2, v2, actName){

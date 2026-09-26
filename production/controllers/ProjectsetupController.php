@@ -420,29 +420,31 @@ class ProjectsetupController extends Controller
 	        $act_id = $_POST['activity_id'];
         }
  
-		$sql="	SELECT Resource_Id,Name,Unit,fuel_unit,Price,ResourceType_Id,Resource_group_Id,Resource_Location,Vendor_Id,asset_register_item_id 
-				FROM resources 
-				WHERE Status='0' AND pricing_status=0";
+		$sql="	SELECT r.Resource_Id,r.Name,r.Unit,r.fuel_unit,r.Price,r.ResourceType_Id,r.Resource_group_Id,r.Resource_Location,r.Vendor_Id,r.asset_register_item_id,
+					rg.Resource_group_Name AS GroupName
+				FROM resources r
+				LEFT JOIN resource_group rg ON rg.Resource_group_Id = r.Resource_group_Id
+				WHERE r.Status='0' AND r.pricing_status=0";
 
 		if($restypeid!='')
-			$sql.=" AND ResourceType_Id ='".$restypeid."' ";
+			$sql.=" AND r.ResourceType_Id ='".$restypeid."' ";
 
 		if(isset($_POST['resgroup']) && $_POST['resgroup']!='' )
-			$sql.=" AND Name LIKE '%".$_POST['resgroup']."%' ";
+			$sql.=" AND r.Name LIKE '%".$_POST['resgroup']."%' ";
 
         if($vendorid!='none' && $vendorid!='')
-            $sql.=" AND Vendor_Id ='".$vendorid."' ";
-        
+            $sql.=" AND r.Vendor_Id ='".$vendorid."' ";
+
         if(isset($_POST['name']) && $_POST['name']!='')
-			$sql .= " AND Name LIKE '%" . $_POST['name'] . "%'";
+			$sql .= " AND r.Name LIKE '%" . $_POST['name'] . "%'";
 
 
 		if($restypeid == 26)//P&M
-			$sql .= " AND asset_register_item_id !=0 GROUP BY asset_register_item_id";
+			$sql .= " AND r.asset_register_item_id !=0 GROUP BY r.asset_register_item_id";
 		else
-			$sql .= " GROUP BY Name";
+			$sql .= " GROUP BY r.Name";
 
-		$sql.=" ORDER BY Resource_Id DESC, Name DESC";
+		$sql.=" ORDER BY rg.Resource_group_Name ASC, r.Resource_Id DESC, r.Name DESC";
 
 		$command=$connection->createCommand($sql);
 		$dataReader=$command->query();
@@ -510,6 +512,10 @@ class ProjectsetupController extends Controller
 
 		if(count($dataProvider)>0):
 			$sno=0;
+			$currentResGroup=null;
+			$groupChildRows='';
+			$groupSno=0;
+			$totalRows=count($dataProvider);
 			foreach($dataProvider AS $key=>$data):
 				$sno++;
 				$sql1='SELECT Resource_Id,Name,Unit,fuel_unit,Price,ResourceType_Id,Resource_group_Id,Resource_Location,Vendor_Id,rate,consumption,maintenance,machinecost,asset_register_item_id FROM resources WHERE Status="0" AND pricing_status=0 AND Name="'.$data['Name'].'" ';
@@ -1095,49 +1101,40 @@ class ProjectsetupController extends Controller
 						else
 						{
 
-							$childdatarows.='<div class="row">
+							$childdatarows.='<div class="row" style="padding:10px 0;">
 												<div class="col-md-12 type">
 													<span class="c-name">'.$vendorname.'</span>
 												</div>
-												<div class="col-md-5">
-													<div class="row">
-														<div class="col-md-4 type">
-															<label>Location</label>
-															<span>'.$childdata['Resource_Location'].'</span>
-														</div>
-														<div class="col-md-4 type">
-															<label>Unit</label>
-															<span>'.$childdata['Unit'].'</span>
-														</div>
-														<div class="col-md-4 type">
-															<label>Rate</label>
-															<span>'.number_format($childdata['Price'],2).'</span>
-															<input type="hidden" id="estimate-resourceprice'.$childdata['Resource_Id'].'" value="'.$childdata['Price'].'">
-														</div>
+												<div class="col-md-4 type" style="padding:0 12px;">
+													<label>Resource Name</label>
+													<span style="font-size:14px;">'.htmlspecialchars($childdata['Name'], ENT_QUOTES).'</span>
+												</div>
+												<div class="col-md-1 type" style="padding:0 12px;">
+													<label>Unit</label>
+													<span style="font-size:14px;">'.$childdata['Unit'].'</span>
+												</div>
+												<div class="col-md-1 type" style="padding:0 12px;">
+													<label>Rate</label>
+													<span style="font-size:14px;">'.number_format($childdata['Price'],2).'</span>
+													<input type="hidden" id="estimate-resourceprice'.$childdata['Resource_Id'].'" value="'.$childdata['Price'].'">
+												</div>
+												<div class="col-md-2 type" style="padding:0 12px;">
+													<div class="form-group">
+														<label>Specific Rate</label>
+														<input style="text-align: right;height:32px;font-size:13px;width:100%;" id="estimate-specificrate'.$childdata['Resource_Id'].'" type="text" class="form-control" value="'.number_format($childdata['Price'],2).'" />
 													</div>
 												</div>
-												<div class="col-md-7">
-													<div class="row">
-														<div class="col-md-5 type">
-															<div class="form-group">
-																<label>Specific Rate</label>
-																<input style="text-align: right;" id="estimate-specificrate'.$childdata['Resource_Id'].'" type="text" class="form-control" value="'.number_format($childdata['Price'],2).'" />
-															</div>
-															
-														</div>
-														<div class="col-md-4 type">
-															<div class="form-group">
-																<label>Quantity</label>
-																<input id="estimate-resourcequantity'.$childdata['Resource_Id'].'" type="text" class="form-control" value="" placeholder="Quantity" />
-																<span style="font-size:11px; color: red;font-weight: normal;"  class="error" style="display: none;"></span>
-															</div>
-														</div>
-														<div class="col-md-3 type">
-															<div class="form-group">
-																<label>&nbsp;</label>
-																<button value="'.$childdata['Resource_Id'].'" class="btn btn-primary add-alloc-item estimate-addresource" ><span class="icon-add"></span>Add</button>
-															</div>
-														</div>
+												<div class="col-md-2 type" style="padding:0 12px;">
+													<div class="form-group">
+														<label>Quantity</label>
+														<input style="height:32px;font-size:13px;" id="estimate-resourcequantity'.$childdata['Resource_Id'].'" type="text" class="form-control" value="" placeholder="Quantity" />
+														<span style="font-size:11px; color: red;font-weight: normal;"  class="error" style="display: none;"></span>
+													</div>
+												</div>
+												<div class="col-md-2 type" style="padding:0 12px;">
+													<div class="form-group">
+														<label>&nbsp;</label>
+														<button value="'.$childdata['Resource_Id'].'" class="btn btn-primary add-alloc-item estimate-addresource" style="height:32px;font-size:13px;padding:5px 16px;" ><span class="icon-add"></span>Add</button>
 													</div>
 												</div>
 											</div>';
@@ -1514,49 +1511,40 @@ class ProjectsetupController extends Controller
 						}
 						else{
 
-							$childdatarows.='<div class="row">
+							$childdatarows.='<div class="row" style="padding:10px 0;">
 												<div class="col-md-12 type">
 													<span class="c-name">'.$vendorname.'</span>
 												</div>
-												<div class="col-md-5">
-													<div class="row">
-														<div class="col-md-4 type">
-															<label>Location</label>
-															<span>'.$childdata['Resource_Location'].'</span>
-														</div>
-														<div class="col-md-4 type">
-															<label>Unit</label>
-															<span>'.$childdata['Unit'].'</span>
-														</div>
-														<div class="col-md-4 type">
-															<label>Rate</label>
-															<span>'.number_format($childdata['Price'],2).'</span>
-															<input type="hidden" id="master-resourceprice'.$childdata['Resource_Id'].'" value="'.$childdata['Price'].'">
-														</div>
+												<div class="col-md-4 type" style="padding:0 12px;">
+													<label>Resource Name</label>
+													<span style="font-size:14px;">'.htmlspecialchars($childdata['Name'], ENT_QUOTES).'</span>
+												</div>
+												<div class="col-md-1 type" style="padding:0 12px;">
+													<label>Unit</label>
+													<span style="font-size:14px;">'.$childdata['Unit'].'</span>
+												</div>
+												<div class="col-md-1 type" style="padding:0 12px;">
+													<label>Rate</label>
+													<span style="font-size:14px;">'.number_format($childdata['Price'],2).'</span>
+													<input type="hidden" id="master-resourceprice'.$childdata['Resource_Id'].'" value="'.$childdata['Price'].'">
+												</div>
+												<div class="col-md-2 type" style="padding:0 12px;">
+													<div class="form-group">
+														<label>Specific Rate</label>
+														<input style="text-align: right;height:32px;font-size:13px;width:100%;" id="estimate-specificrate'.$childdata['Resource_Id'].'" type="text" class="form-control" value="'.number_format($childdata['Price'],2).'" />
 													</div>
 												</div>
-												<div class="col-md-7">
-													<div class="row">
-														<div class="col-md-5 type">
-															<div class="form-group">
-																<label>Specific Rate</label>
-																<input style="text-align: right;" id="estimate-specificrate'.$childdata['Resource_Id'].'" type="text" class="form-control" value="'.number_format($childdata['Price'],2).'" />
-															</div>
-															
-														</div>
-														<div class="col-md-4 type">
-															<div class="form-group">
-																<label>Quantity</label>
-																<input id="estimate-resourcequantity'.$childdata['Resource_Id'].'" type="text" class="form-control" value="" placeholder="Quantity" />
-																<span style="font-size:11px; color: red;font-weight: normal;"  class="error" style="display: none;"></span>
-															</div>
-														</div>
-														<div class="col-md-3 type">
-															<div class="form-group">
-																<label>&nbsp;</label>
-																<button value="'.$childdata['Resource_Id'].'" data-id="'.$restypeid.'" class="btn btn-primary add-alloc-item master-addresource" ><span class="icon-add"></span>Add</button>
-															</div>
-														</div>
+												<div class="col-md-2 type" style="padding:0 12px;">
+													<div class="form-group">
+														<label>Quantity</label>
+														<input style="height:32px;font-size:13px;" id="estimate-resourcequantity'.$childdata['Resource_Id'].'" type="text" class="form-control" value="" placeholder="Quantity" />
+														<span style="font-size:11px; color: red;font-weight: normal;"  class="error" style="display: none;"></span>
+													</div>
+												</div>
+												<div class="col-md-2 type" style="padding:0 12px;">
+													<div class="form-group">
+														<label>&nbsp;</label>
+														<button value="'.$childdata['Resource_Id'].'" data-id="'.$restypeid.'" class="btn btn-primary add-alloc-item master-addresource" style="height:32px;font-size:13px;padding:5px 16px;" ><span class="icon-add"></span>Add</button>
 													</div>
 												</div>
 											</div>';
@@ -1567,42 +1555,53 @@ class ProjectsetupController extends Controller
 					
 					
 				endforeach;
-				//$groupname=ResourceGroup::find($data['Resource_group_Id'])->one()->Resource_group_Name; 
-				if($key==0)
-					$datarows.='<div class="panel panel-default">';
-					//$datarows.='<div class="panel panel-default active">';
-				else
-					$datarows.='<div class="panel panel-default">';
+				//$groupname=ResourceGroup::find($data['Resource_group_Id'])->one()->Resource_group_Name;
+				$resGroupName = $data['GroupName'] ?: 'Unassigned';
 
-				if($restypeid==26){//P&M
-                  $asset_register_item = AssetRegisterItem::findOne($data['asset_register_item_id']);
-                  $resourceName = $asset_register_item['item_name'];
-                }
-				else
-					$resourceName = $data['Name'];
-
-				$datarows.='<div class="panel-heading">
-										  <h4 class="panel-title">
-											<a data-toggle="collapse" class="resourceAccordion" data-id="'.$data['Resource_Id'].'" data-parent="#accordionmast" href="#collapseact'.$sno.'">'.($key+1).'.&nbsp;&nbsp;'.$resourceName.'</a>
-										  </h4>
-										</div>';
-				if($key==0)
-				{
-					//$datarows.='<div id="collapseact'.$sno.'" class="panel-collapse collapse in">';
-					$datarows.='<div id="collapseact'.$sno.'" class="panel-collapse collapse">';
+				if($currentResGroup===null){
+					$currentResGroup = $resGroupName;
+					$groupSno++;
 				}
-				else
-				{
-					$datarows.='<div id="collapseact'.$sno.'" class="panel-collapse collapse">';
-				}
-										
 
-					$datarows.='<div class="panel-body">
-										  '.$childdatarows.'
-										  </div>
-										 </div>
-										 </div>';
-                        //$datarows.=$childdatarows;
+				if($resGroupName !== $currentResGroup){
+					// group changed: flush the previous group's accordion panel
+					$safeResGroup = htmlspecialchars($currentResGroup, ENT_QUOTES);
+					$datarows.='<div class="panel panel-default">
+									<div class="panel-heading">
+									  <h4 class="panel-title">
+										<a data-toggle="collapse" class="resourceAccordion" data-parent="#accordionmast" href="#collapseact'.$groupSno.'">'.$safeResGroup.'</a>
+									  </h4>
+									</div>
+									<div id="collapseact'.$groupSno.'" class="panel-collapse collapse">
+									  <div class="panel-body">
+										'.$groupChildRows.'
+									  </div>
+									</div>
+								</div>';
+
+					$currentResGroup = $resGroupName;
+					$groupSno++;
+					$groupChildRows='';
+				}
+
+				$groupChildRows .= $childdatarows;
+
+				if($key == $totalRows-1){
+					// last resource: flush the final group's accordion panel
+					$safeResGroup = htmlspecialchars($currentResGroup, ENT_QUOTES);
+					$datarows.='<div class="panel panel-default">
+									<div class="panel-heading">
+									  <h4 class="panel-title">
+										<a data-toggle="collapse" class="resourceAccordion" data-parent="#accordionmast" href="#collapseact'.$groupSno.'">'.$safeResGroup.'</a>
+									  </h4>
+									</div>
+									<div id="collapseact'.$groupSno.'" class="panel-collapse collapse">
+									  <div class="panel-body">
+										'.$groupChildRows.'
+									  </div>
+									</div>
+								</div>';
+				}
 			endforeach;
 		else:
 			$datarows= '<tr id="nodata"><td colspan="10" style="text-align: center;">No Resources Found</td></tr>';

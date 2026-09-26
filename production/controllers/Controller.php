@@ -129,6 +129,9 @@ class Controller extends CController
 					$user=User::model()->findByPk($notification->assigned_user);
 					$notfhtml.='<a href="'.Yii::app()->createUrl('DoccumentManager/PurchaseOrderApprove/'.$notification->itemid.'').'" style="color: #555;text-align: left;" class="list-group-item '.($notification->status!='2'?'unread':'').' readnotification"  data-id="'.$notification->notf_id.'">'.$user->username.' has created a new Purchase Order for approval</a>';
 					break;
+				case "ROI Health":
+					$notfhtml.='<a href="'.Yii::app()->createUrl('Projectsmain/index').'" style="color: #555;text-align: left;" class="list-group-item '.($notification->status!='2'?'unread':'').' readnotification"  data-id="'.$notification->notf_id.'">'.$notification->remarks.'</a>';
+					break;
 			}
 			$notfhtml.='</div>';
 		endforeach;

@@ -51,8 +51,12 @@ $config = [
     
 ];
 
-if (YII_ENV_DEV) {
-    // configuration adjustments for 'dev' environment
+if (YII_ENV_DEV && class_exists('yii\gii\Module')) {
+    // configuration adjustments for 'dev' environment.
+    // Guarded on class_exists() because some deployments (e.g. GOSPL)
+    // run YII_ENV=dev without the gii package in vendor/ — without this
+    // guard, bootstrapping gii there fails and takes down every
+    // console command (php yii ...), not just gii itself.
     $config['bootstrap'][] = 'gii';
     $config['modules']['gii'] = [
         'class' => 'yii\gii\Module',

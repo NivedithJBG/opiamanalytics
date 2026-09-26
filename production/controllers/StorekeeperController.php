@@ -4,6 +4,7 @@ namespace app\controllers;
 use Yii;
 use yii\web\Controller;
 use app\models\ProjuserSelection;
+use app\components\ResourceTypeCategories;
 
 class StorekeeperController extends Controller
 {
@@ -21,6 +22,42 @@ class StorekeeperController extends Controller
         return $this->render('index');
     }
 
+    public function actionMobileindent()
+    {
+        $this->layout = '@app/views/layouts/mobile';
+        $uid = Yii::$app->user->id;
+        $projectName = 'No Project Selected';
+        if ($projuser = ProjuserSelection::find()->where(['userid' => $uid])->one()) {
+            $proj = Yii::$app->db->createCommand(
+                "SELECT Name FROM projects WHERE Project_Id=:pid", [':pid' => $projuser->projectid]
+            )->queryOne();
+            if ($proj) $projectName = $proj['Name'];
+        }
+        return $this->render('mobile_indent', ['projectName' => $projectName]);
+    }
+
+    public function actionMobilegrn()
+    {
+        $this->layout = '@app/views/layouts/mobile';
+        $uid = Yii::$app->user->id;
+        $projectName = 'No Project Selected';
+        if ($projuser = ProjuserSelection::find()->where(['userid' => $uid])->one()) {
+            $proj = Yii::$app->db->createCommand(
+                "SELECT Name FROM projects WHERE Project_Id=:pid", [':pid' => $projuser->projectid]
+            )->queryOne();
+            if ($proj) $projectName = $proj['Name'];
+        }
+        return $this->render('mobile_grn', ['projectName' => $projectName]);
+    }
+
+    public function actionMobilebilling()
+    {
+        // M.Book is now a tab inside the combined mobile Report/M.Book screen
+        // rather than its own page — keep this route defined (don't 404 any
+        // old links/bookmarks) but forward straight to that tab.
+        return $this->redirect(Yii::$app->urlManager->createUrl('report/mobile') . '?tab=mbook');
+    }
+
     public function actionIndents()
     {
         $uid      = Yii::$app->user->id;
@@ -32,6 +69,16 @@ class StorekeeperController extends Controller
 
         $projectid = $projuser->projectid;
         $db = Yii::$app->db;
+
+        $indentTypeNames = ResourceTypeCategories::names('po');
+        $typeParams = [];
+        $typeKeys   = [];
+        foreach ($indentTypeNames as $i => $name) {
+            $key = ":t$i";
+            $typeKeys[] = $key;
+            $typeParams[$key] = $name;
+        }
+        $typeInClause = implode(',', $typeKeys);
 
         $sql = "
             SELECT
@@ -52,6 +99,9 @@ class StorekeeperController extends Controller
                                         AND pe.project_Id  = p.project_id
             JOIN resources r             ON p.resource_Id  = r.Resource_Id
             JOIN resourcetype rt         ON p.resourcetype_Id = rt.ResourceType_Id
+            JOIN scheduleactivities sag  ON sag.activity_id = p.activity_id
+                                         AND sag.projectId   = p.project_id
+                                         AND sag.status      = 0
             LEFT JOIN resource_parameters rp ON rp.resource_id = r.Resource_Id
                                              AND rp.project_id = :pid1
             LEFT JOIN (
@@ -75,18 +125,18 @@ class StorekeeperController extends Controller
             ) cq ON r.Resource_Id = cq.resource_Id
             WHERE p.project_id       = :pid4
               AND p.pricing_status   = 0
-              AND rt.Name IN ('Materials', 'Consumables', 'Purchased Inputs')
+              AND rt.Name IN ($typeInClause)
             GROUP BY r.Resource_Id, rt.Name, r.Name, r.Unit,
                      rp.reorder_level, rp.lot_size
             ORDER BY rt.Name ASC, r.Name ASC
         ";
 
-        $rows = $db->createCommand($sql, [
+        $rows = $db->createCommand($sql, array_merge([
             ':pid1' => $projectid,
             ':pid2' => $projectid,
             ':pid3' => $projectid,
             ':pid4' => $projectid,
-        ])->queryAll();
+        ], $typeParams))->queryAll();
 
         return json_encode(['error' => 'No', 'rows' => $rows]);
     }
@@ -245,13 +295,20 @@ class StorekeeperController extends Controller
                 $avgConsumption = $plannedConsumption; // null if no estimate data
             }
 
+            $pricingResourceId = (int)($db->createCommand(
+                'SELECT pricing_resourceid FROM pricing_estimate_resources_new
+                 WHERE resource_Id = :rid AND activity_id = :aid AND project_id = :pid AND pricing_status = 0
+                 LIMIT 1',
+                [':rid' => $rid, ':aid' => $activityId, ':pid' => $projectid]
+            )->queryScalar() ?: 0);
+
             $exists = $db->createCommand(
                 'SELECT id FROM store_indents WHERE project_id = :pid AND resource_id = :rid AND activity_id = :aid',
                 [':pid' => $projectid, ':rid' => $rid, ':aid' => $activityId]
             )->queryOne();
             if ($exists) {
                 $db->createCommand()->update('store_indents',
-                    ['task_id' => $taskId, 'task_name' => $taskName, 'stock_at_site' => $stock, 'avg_consumption' => $avgConsumption, 'reorder_quantity' => $reorder, 'raised_by' => $uid, 'raised_at' => date('Y-m-d H:i:s')],
+                    ['task_id' => $taskId, 'task_name' => $taskName, 'stock_at_site' => $stock, 'avg_consumption' => $avgConsumption, 'reorder_quantity' => $reorder, 'pricing_resourceid' => $pricingResourceId, 'raised_by' => $uid, 'raised_at' => date('Y-m-d H:i:s')],
                     ['id' => $exists['id']]
                 )->execute();
                 $saved++;
@@ -272,7 +329,7 @@ class StorekeeperController extends Controller
                 'resource_id'        => $rid,
                 'task_id'            => $taskId,
                 'task_name'          => $taskName,
-                'pricing_resourceid' => 0,
+                'pricing_resourceid' => $pricingResourceId,
                 'resource_name'      => $res['Name'],
                 'resource_type'      => $res['rt_name'],
                 'unit'               => $res['Unit'],

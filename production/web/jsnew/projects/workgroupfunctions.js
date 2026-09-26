@@ -927,32 +927,46 @@ $(document).on('click','.savewbsscheduleitembutton',function(){
     }
 });
 
-$(document).on('click','.deleteworkgroupbutton',function(){ 
-    var workid=$(this).val();
-    var r = confirm("Are you sure you want to delete this Work Group?");
-    if (r == true) {
-        $.ajax({
-            type: 'POST',
-            url: '../workgroups1/deleteworkgroup',
-            beforeSend : function(){
-                $('#deleteworkgroupbutton'+workid).attr("disabled", true);
-            },
-            dataType: "json",
-            data: {workid:workid},
-            success: function(data){
-                if(data.error=='No')
-                {
-                    $('#workgrouprow'+data.Id).remove();
+function doDeleteWorkgroup(workid, force){
+    $.ajax({
+        type: 'POST',
+        url: '../workgroups1/deleteworkgroup',
+        beforeSend : function(){
+            $('#deleteworkgroupbutton'+workid).attr("disabled", true);
+        },
+        dataType: "json",
+        data: {workid:workid, force: force ? 1 : 0},
+        success: function(data){
+            $('#deleteworkgroupbutton'+data.Id).attr("disabled", false);
+            if(data.conflict){
+                // Step 1: show exactly what will be destroyed.
+                alert('WARNING\n\n' + data.errortext);
+                // Step 2: a separate, explicit final confirmation.
+                if(confirm('Are you sure you want to permanently delete this IOW and everything listed above?')){
+                    doDeleteWorkgroup(workid, true);
                 }
-                else
-                {
-                    alert(data.errortext);
-                }
-
-                $('#deleteworkgroupbutton'+data.Id).attr("disabled", false);
+                return;
             }
-        });
-    }
+            if(data.error=='No')
+            {
+                $('#workgrouprow'+data.Id).remove();
+            }
+            else
+            {
+                alert(data.errortext);
+            }
+        },
+        error: function(){
+            $('#deleteworkgroupbutton'+workid).attr("disabled", false);
+            alert('Delete failed. Please try again.');
+        }
+    });
+}
+
+$(document).on('click','.deleteworkgroupbutton',function(){
+    var workid=$(this).val();
+    if(!confirm("Permanently delete this Item of Work? This cannot be undone.")) return;
+    doDeleteWorkgroup(workid, false);
 });
 
 $(document).on('click','.deleterelation',function(){

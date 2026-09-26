@@ -77,17 +77,17 @@ div.gtaskpurple.gplan {
 }
 
 .gDepFS, .gDepSS, .gDepSF, .gDepFF {
-    border-color: #000000;
+    border-color: #4B0082;
 }
 
 .gDepFSArw,
 .gDepSSArw {
-  border-left: 4px solid #000000;
+  border-left: 7px solid #4B0082;
 }
 
 .gDepFFArw,
 .gDepSFArw {
-  border-right: 4px solid #000000;
+  border-right: 7px solid #4B0082;
 }
 
 .gtaskcellcurrent {
@@ -350,13 +350,13 @@ div.gtaskbarcontainer.gplan{
 
 .criticalPath{
   /*border-style: groove;*/
-  border: solid 1px #00838f;
+  border: solid 2px #00838f;
 }
 .criticalPathArwLeft{
-  border-left: 4px solid #00838f;
+  border-left: 7px solid #00838f;
 }
 .criticalPathArwRight{
-  border-right: 4px solid #00838f;
+  border-right: 7px solid #00838f;
 }
 
 /* ── Explicit row/column gridlines ──────────────────────────────────────

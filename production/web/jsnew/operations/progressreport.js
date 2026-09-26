@@ -612,11 +612,20 @@ $(document).on('click', '.savetaskprogressrpt', function () {
     }
     var $btn = $(this);
     $btn.html('Reporting...').attr('disabled', true);
+    // The form's own "Report Date" field (name="reportdate", inside
+    // #schedule-task-reporting{actid}) is already included by .serialize()
+    // below — appending &reportdate=$('#select_report_date').val() here
+    // used to OVERRIDE it with a completely different, page-level date
+    // filter field (not even part of this popup), so whatever the user
+    // actually typed into the popup's Report Date box was silently
+    // discarded and today's/the filter's date was submitted instead. This
+    // is why editing the Report Date field appeared to have no effect —
+    // removed so the form's real reportdate value is what gets submitted.
     $.ajax({
         type: 'POST',
         url: '../report/simplereportprogress',
         dataType: 'json',
-        data: $('#schedule-task-reporting' + actid).serialize() + '&reportdate=' + encodeURIComponent($('#select_report_date').val()),
+        data: $('#schedule-task-reporting' + actid).serialize(),
         success: function (data) {
             if (data.error === 'No') {
                 $btn.html('Report').removeAttr('disabled');
