@@ -1219,22 +1219,6 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
     g.Draw();
 
-    // Inject format selector (Day/Week/Month buttons) into toolbar
-    var _toolbarDiv = document.getElementById('gantt-toolbar');
-    if (_toolbarDiv) {
-      var _fmtSpan = document.createElement('span');
-      _fmtSpan.style.cssText = 'display:flex;gap:6px;align-items:center;';
-      ['Day', 'Week', 'Month'].forEach(function(fmt) {
-        var _btn = document.createElement('button');
-        _btn.textContent = fmt;
-        _btn.style.cssText = 'padding:4px 8px;border:1px solid #ccc;border-radius:3px;background:#fff;cursor:pointer;font-size:12px;';
-        // jsgantt compares vFormat against lowercase names ('day', 'week', 'month')
-        _btn.onclick = function() { g.setFormat(fmt.toLowerCase()); };
-        _fmtSpan.appendChild(_btn);
-      });
-      _toolbarDiv.insertBefore(_fmtSpan, _toolbarDiv.firstChild);
-    }
-
     // Exposed so the #gantt-win resize handler (main.php) can switch
     // Day/Week/Month zoom level to fit the window's new width — same
     // g.setFormat() the Format radio buttons already call, just
