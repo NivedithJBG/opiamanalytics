@@ -1464,6 +1464,19 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     // goes through setFormat(), so re-apply the decorations after it redraws.
     var _origSetFormat = g.setFormat;
     g.setFormat = function(f) { _origSetFormat.call(g, f); _decorateGantt(); };
+
+    // The scroll-fix above clones the left header, which strips the click
+    // listeners from the chart's own Format links (Day/Week/Month). Handle those
+    // clicks by delegation on the container, which survives the clone.
+    var _gcFmt = document.getElementById('gantt-container');
+    if (_gcFmt && !_gcFmt._fmtDelegated) {
+      _gcFmt._fmtDelegated = true;
+      _gcFmt.addEventListener('click', function(e) {
+        var el = e.target && e.target.closest ? e.target.closest('[id*="format"]') : null;
+        var m = el ? /format(hour|day|week|month|quarter)/.exec(el.id || '') : null;
+        if (m && window._ganttChartObj) window._ganttChartObj.setFormat(m[1]);
+      });
+    }
   }
 
   // ── Reorder activities within one WBS item — press-and-hold drag ───────────
