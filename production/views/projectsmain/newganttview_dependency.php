@@ -807,8 +807,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     g.setDayMajorDateDisplayFormat('mon yyyy - Week ww');
     g.setWeekMinorDateDisplayFormat('dd mon');
     g.setUseSingleCell(10000);
-    // Columns: B.Duration, A.Duration — Status/KPI/Cost injected via DOM after Draw()
-    g.vColumnOrder = ['vShowDur', 'vShowRes'];
+    // Columns: Unit, Quantity, B.Duration, A.Duration — Status/KPI/Cost injected via DOM after Draw()
+    g.vColumnOrder = ['vAdditionalHeaders', 'vShowDur', 'vShowRes'];
+    g.setAdditionalHeaders({
+      unit: { title: 'Unit', class: 'gantt-col-unit' },
+      qty:  { title: 'Quantity', class: 'gantt-col-qty' }
+    });
 
     // Root project row — pID = projectId (never 0; JSGantt reserves 0 as virtual root)
     var _projTi = new JSGantt.TaskItem(
@@ -1111,7 +1115,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     _depParentId, 1,
                     act.depends || null,
                     '', '', g, null,
-                    null, null
+                    null, null, null, '',
+                    { unit: act.unit || '', qty: (act.quantity != null ? act.quantity : '') }
                   );
                   window._ganttActRealId[_ti.getID()] = act.id;
                   // Status dot data

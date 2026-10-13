@@ -297,7 +297,7 @@ class ProjectsmainController extends Controller
         $groupId   = (int)\Yii::$app->request->post('groupId');
         $iowGroupId = (int)\Yii::$app->request->post('iowGroupId');
         if (!$typeId && !$groupId && !$iowGroupId) return ['items' => []];
-        $sql  = "SELECT ea.activity_id AS id, ea.activity_name AS name
+        $sql  = "SELECT ea.activity_id AS id, ea.activity_name AS name, ea.activity_unit AS unit
                  FROM estimateactivities ea
                  WHERE ea.activity_status = 0";
         if ($typeId)     $sql .= " AND ea.work_type = " . $typeId;
@@ -305,6 +305,7 @@ class ProjectsmainController extends Controller
         if ($iowGroupId) $sql .= " AND ea.iow_group_id = " . $iowGroupId;
         $sql .= " ORDER BY ea.activity_name ASC";
         $rows = \Yii::$app->db->createCommand($sql)->queryAll();
+
         return ['items' => $rows];
     }
 
@@ -2571,7 +2572,7 @@ class ProjectsmainController extends Controller
             if ($accountType === 8) { continue; }
             $balance = $this->_cfAccountDebitBalance($acctId, $pid);
             if ($balance > 0) {
-                $total += $amt;
+                $total += $balance;
             }
         }
 
@@ -2626,7 +2627,7 @@ class ProjectsmainController extends Controller
                 )->queryScalar();
                 $rows[] = [
                     'name' => $name ?: ('Account #' . $acctId),
-                    'amount' => round($amt, 2),
+                    'amount' => round($balance, 2),
                     'members' => $this->_cfAccountTransactionsDetail($acctId, $pid),
                 ];
             }
@@ -2870,7 +2871,7 @@ class ProjectsmainController extends Controller
                 ? $this->_cfAccountDebitBalanceAsOf($acctId, $pid, $uptoDate)
                 : $this->_cfAccountDebitBalance($acctId, $pid);
             if ($balance > 0) {
-                $investments += $amt;
+                $investments += $balance;
             }
         }
 
@@ -11411,7 +11412,7 @@ class ProjectsmainController extends Controller
             SELECT sa.id, sa.name,
                    sa.activity_id AS wan_id,
                    sa.start_date, sa.act_start_date, sa.actual_start_date, sa.actual_end_date,
-                   sa.old_duration, sa.quantity,
+                   sa.old_duration, sa.quantity, sa.unit,
                    sa.scheduleitem_id, sa.critical_status,
                    sa.completed_status,
                    CASE
