@@ -101,15 +101,16 @@ class ReportController extends Controller
                 spr.start_date,
                 spr.cumulated_qty AS cum_qty,
                 COALESCE(MAX(sprl.report_date), spr.updated_at) AS last_date,
-                wn.Name AS iow
+                ig.name AS iow
             FROM workgroup_activities_new wa
             JOIN scheduleactivities sa ON sa.activity_id = wa.id AND sa.projectId = :pid
-            JOIN workgroups_new wn ON wn.Workgroup_Id = wa.wbs_id AND wn.Project_Id = :pid2
+            LEFT JOIN iow_group_order go ON go.iow_group_id = sa.iow_group_id AND go.project_id = :pid2
+            LEFT JOIN iow_groups ig ON ig.id = sa.iow_group_id AND ig.status = 0
             LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
             LEFT JOIN schedule_progress_report_log sprl ON sprl.activity_id = sa.id
-            WHERE wa.project_Id = :pid3 AND wn.Status = 0 AND sa.status = 0 AND sa.completed_status = 0
-            GROUP BY sa.id, wa.activity_Name, sa.unit, wa.activity_Unit, sa.quantity, sa.completed_status, spr.start_date, spr.cumulated_qty, spr.updated_at, wn.Name
-            ORDER BY wn.sortorder ASC, wa.sortorder ASC
+            WHERE wa.project_Id = :pid3 AND sa.status = 0 AND sa.completed_status = 0
+            GROUP BY sa.id, wa.activity_Name, sa.unit, wa.activity_Unit, sa.quantity, sa.completed_status, spr.start_date, spr.cumulated_qty, spr.updated_at, ig.name
+            ORDER BY COALESCE(go.sortorder, 999999) ASC, wa.sortorder ASC
         ", [':pid' => $projectid, ':pid2' => $projectid, ':pid3' => $projectid])->queryAll();
 
         foreach ($rows as &$r) {
@@ -138,9 +139,13 @@ class ReportController extends Controller
 
         $db = Yii::$app->db;
 
-        // Get all workgroups for this project
+        // Get all IOW Groups used in this project
         $workgroups = $db->createCommand(
-            "SELECT Workgroup_Id, Name FROM workgroups_new WHERE Project_Id = :pid AND Status = 0 ORDER BY sortorder ASC",
+            "SELECT go.iow_group_id AS Workgroup_Id, ig.name AS Name
+             FROM iow_group_order go
+             LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0
+             WHERE go.project_id = :pid
+             ORDER BY COALESCE(go.sortorder, 999999) ASC",
             [':pid' => $projectid]
         )->queryAll();
 
@@ -171,12 +176,12 @@ class ReportController extends Controller
                        spr.start_date AS report_start_date,
                        spr.cumulated_qty,
                        spr.updated_at AS last_updated
-                FROM workgroup_activities_new wa
-                JOIN scheduleactivities sa ON sa.activity_id = wa.id AND sa.projectId = :pid AND sa.status = 0
+                FROM scheduleactivities sa
+                JOIN workgroup_activities_new wa ON wa.id = sa.activity_id
                 LEFT JOIN schedule_progress_report spr ON spr.activity_id = sa.id
-                WHERE wa.wbs_id = :wgid AND wa.project_Id = :pid2
+                WHERE sa.iow_group_id = :wgid AND sa.projectId = :pid2 AND sa.status = 0
                 ORDER BY wa.sortorder ASC
-            ", [':pid' => $projectid, ':wgid' => $wgId, ':pid2' => $projectid])->queryAll();
+            ", [':wgid' => $wgId, ':pid2' => $projectid])->queryAll();
 
             if (empty($activities)) continue;
 

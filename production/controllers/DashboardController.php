@@ -78,19 +78,19 @@ class DashboardController extends Controller
 
             /* Estimate cost calculation start*/
 
-            $sqltemvals1 = "SELECT * FROM workgroups_new WHERE Project_Id=' ".$projectid." ' AND Status=0 ORDER BY sortorder ASC, Workgroup_Id ASC, Name ASC";
+            $sqltemvals1 = "SELECT go.iow_group_id AS Workgroup_Id, go.project_id AS Project_Id, ig.name AS Name, go.sortorder AS sortorder FROM iow_group_order go LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0 WHERE go.project_id='".$projectid."' ORDER BY go.sortorder ASC, go.iow_group_id ASC, ig.name ASC";
             $command = $connection->createCommand($sqltemvals1);
             $dataReader1 = $command->query();
             $structures = $dataReader1->readAll();
             $pricesum=0;
             if($structures){
                 foreach($structures AS $structure):
-                     $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND wbs_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
+                     $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND iow_group_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
                      $command = $connection->createCommand($sql);
                      $dataReader = $command->query();
                      $wbsactivities = $dataReader->readAll();
                      if($wbsactivities){
-                       //$datarows.="<tr id='tempprodrow' style='background: white;'><th colspan='9' style='font-size: 16px;background: white;'>".$structure['Name']."</th></tr>";  
+                       //$datarows.="<tr id='tempprodrow' style='background: white;'><th colspan='9' style='font-size: 16px;background: white;'>".$structure['Name']."</th></tr>";
                         $subtot=0;
                         foreach($wbsactivities as $key=> $wbsactivity):
                             $pricingestimate=PricingEstimateNew::find()->where(['project_Id' => $projectid])->andWhere(['activity_Id' =>$wbsactivity['id']])->andWhere(['pricing_status' =>0])->one();
@@ -106,7 +106,7 @@ class DashboardController extends Controller
                             $subtot = $subtot + $amount;
                             }
                         endforeach;
-                         $pricesum=$pricesum + $subtot; 
+                         $pricesum=$pricesum + $subtot;
                     }
                  endforeach;
             }
@@ -153,14 +153,14 @@ class DashboardController extends Controller
 
             $iowlist = '';
 
-            $sqltemvals1 = "SELECT * FROM workgroups_new WHERE Project_Id=' ".$projectid." ' AND Status=0 ORDER BY sortorder ASC, Workgroup_Id ASC, Name ASC";
+            $sqltemvals1 = "SELECT go.iow_group_id AS Workgroup_Id, go.project_id AS Project_Id, ig.name AS Name, go.sortorder AS sortorder FROM iow_group_order go LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0 WHERE go.project_id='".$projectid."' ORDER BY go.sortorder ASC, go.iow_group_id ASC, ig.name ASC";
             $command = $connection->createCommand($sqltemvals1);
             $dataReader1 = $command->query();
             $structures = $dataReader1->readAll();
             $pricesum=0;
             if($structures){
                 foreach($structures AS $structure):
-                    $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND wbs_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
+                    $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND iow_group_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
                     $command = $connection->createCommand($sql);
                     $dataReader = $command->query();
                     $wbsactivities = $dataReader->readAll();
@@ -229,13 +229,13 @@ class DashboardController extends Controller
 
             $activitylist = '';
 
-            $sqltemvals1 = "SELECT * FROM workgroups_new WHERE Name LIKE '%".$_POST['iowname']."%' AND Project_Id='".$projectid."' AND Status=0 ORDER BY sortorder ASC, Workgroup_Id ASC, Name ASC";
+            $sqltemvals1 = "SELECT go.iow_group_id AS Workgroup_Id, go.project_id AS Project_Id, ig.name AS Name, go.sortorder AS sortorder FROM iow_group_order go LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0 WHERE ig.name LIKE '%".$_POST['iowname']."%' AND go.project_id='".$projectid."' ORDER BY go.sortorder ASC, go.iow_group_id ASC, ig.name ASC";
             $command = $connection->createCommand($sqltemvals1);
             $dataReader1 = $command->query();
             $structure = $dataReader1->read();
             $pricesum=0;
 
-            $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND wbs_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
+            $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND iow_group_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
             $command = $connection->createCommand($sql);
             $dataReader = $command->query();
             $wbsactivities = $dataReader->readAll();
@@ -310,14 +310,14 @@ class DashboardController extends Controller
 
             foreach($resourcetypes AS $resourcetype):
 
-                $sqltemvals1 = "SELECT * FROM workgroups_new WHERE Project_Id=' ".$projectid." ' AND Status=0 ORDER BY sortorder ASC, Workgroup_Id ASC, Name ASC";
+                $sqltemvals1 = "SELECT go.iow_group_id AS Workgroup_Id, go.project_id AS Project_Id, ig.name AS Name, go.sortorder AS sortorder FROM iow_group_order go LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0 WHERE go.project_id='".$projectid."' ORDER BY go.sortorder ASC, go.iow_group_id ASC, ig.name ASC";
                 $command = $connection->createCommand($sqltemvals1);
                 $dataReader1 = $command->query();
                 $structures = $dataReader1->readAll();
                 if($structures){
                     $restypecost = 0;
                     foreach($structures AS $structure):
-                        $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND wbs_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
+                        $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND iow_group_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
                         $command = $connection->createCommand($sql);
                         $dataReader = $command->query();
                         $wbsactivities = $dataReader->readAll();
@@ -400,14 +400,14 @@ class DashboardController extends Controller
 
                 $resnamearr=array();
 
-                $sqltemvals1 = "SELECT * FROM workgroups_new WHERE Project_Id=' ".$projectid." ' AND Status=0 ORDER BY sortorder ASC, Workgroup_Id ASC, Name ASC";
+                $sqltemvals1 = "SELECT go.iow_group_id AS Workgroup_Id, go.project_id AS Project_Id, ig.name AS Name, go.sortorder AS sortorder FROM iow_group_order go LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0 WHERE go.project_id='".$projectid."' ORDER BY go.sortorder ASC, go.iow_group_id ASC, ig.name ASC";
                 $command = $connection->createCommand($sqltemvals1);
                 $dataReader1 = $command->query();
                 $structures = $dataReader1->readAll();
                 if($structures){
                     $restypecost = 0;
                     foreach($structures AS $structure):
-                        $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND wbs_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
+                        $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND iow_group_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
                         $command = $connection->createCommand($sql);
                         $dataReader = $command->query();
                         $wbsactivities = $dataReader->readAll();
@@ -540,7 +540,7 @@ class DashboardController extends Controller
 
         $resourcelist = '';
 
-        $sqltemvals1 = "SELECT * FROM workgroups_new WHERE Project_Id=' ".$projectid." ' AND Status=0 ORDER BY sortorder ASC, Workgroup_Id ASC, Name ASC";
+        $sqltemvals1 = "SELECT go.iow_group_id AS Workgroup_Id, go.project_id AS Project_Id, ig.name AS Name, go.sortorder AS sortorder FROM iow_group_order go LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0 WHERE go.project_id='".$projectid."' ORDER BY go.sortorder ASC, go.iow_group_id ASC, ig.name ASC";
         $command = $connection->createCommand($sqltemvals1);
         $dataReader1 = $command->query();
         $structures = $dataReader1->readAll();
@@ -556,7 +556,7 @@ class DashboardController extends Controller
         if($structures){
             $restypecost = 0;
             foreach($structures AS $structure):
-                $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND wbs_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
+                $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND iow_group_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
                 $command = $connection->createCommand($sql);
                 $dataReader = $command->query();
                 $wbsactivities = $dataReader->readAll();
@@ -662,14 +662,14 @@ class DashboardController extends Controller
 
             foreach($resourcetypes AS $resourcetype):
 
-                $sqltemvals1 = "SELECT * FROM workgroups_new WHERE Project_Id=' ".$projectid." ' AND Status=0 ORDER BY sortorder ASC, Workgroup_Id ASC, Name ASC";
+                $sqltemvals1 = "SELECT go.iow_group_id AS Workgroup_Id, go.project_id AS Project_Id, ig.name AS Name, go.sortorder AS sortorder FROM iow_group_order go LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0 WHERE go.project_id='".$projectid."' ORDER BY go.sortorder ASC, go.iow_group_id ASC, ig.name ASC";
                 $command = $connection->createCommand($sqltemvals1);
                 $dataReader1 = $command->query();
                 $structures = $dataReader1->readAll();
                 if($structures){
                     $restypecost = 0;
                     foreach($structures AS $structure):
-                        $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND wbs_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
+                        $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND iow_group_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
                         $command = $connection->createCommand($sql);
                         $dataReader = $command->query();
                         $wbsactivities = $dataReader->readAll();
@@ -752,14 +752,14 @@ class DashboardController extends Controller
 
             foreach($resourcetypes AS $resourcetype):
 
-                $sqltemvals1 = "SELECT * FROM workgroups_new WHERE Project_Id=' ".$projectid." ' AND Status=0 ORDER BY sortorder ASC, Workgroup_Id ASC, Name ASC";
+                $sqltemvals1 = "SELECT go.iow_group_id AS Workgroup_Id, go.project_id AS Project_Id, ig.name AS Name, go.sortorder AS sortorder FROM iow_group_order go LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0 WHERE go.project_id='".$projectid."' ORDER BY go.sortorder ASC, go.iow_group_id ASC, ig.name ASC";
                 $command = $connection->createCommand($sqltemvals1);
                 $dataReader1 = $command->query();
                 $structures = $dataReader1->readAll();
                 if($structures){
                     $restypecost = 0;
                     foreach($structures AS $structure):
-                        $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND wbs_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
+                        $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND iow_group_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
                         $command = $connection->createCommand($sql);
                         $dataReader = $command->query();
                         $wbsactivities = $dataReader->readAll();
@@ -820,7 +820,7 @@ class DashboardController extends Controller
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         $projectid= $projuser->projectid;
 
-        $sql = "SELECT * FROM scheduleactivities AS a INNER JOIN wbsscheduleitems AS b ON  a.scheduleitem_id=b.scheduleitem_id WHERE a.projectId='".$projectid."' AND a.status=0 AND b.status=0 ORDER BY actual_start_date ASC";
+        $sql = "SELECT * FROM scheduleactivities AS a WHERE a.projectId='".$projectid."' AND a.status=0 ORDER BY actual_start_date ASC";
         $command = $connection->createCommand($sql);
         $dataReader = $command->query();
         $activitystart = $dataReader->read();
@@ -829,7 +829,7 @@ class DashboardController extends Controller
 
         if($activitystartdate!='' && $activitystartdate!='0000-00-00'){
 
-            $sql = "SELECT * FROM scheduleactivities AS a INNER JOIN wbsscheduleitems AS b ON  a.scheduleitem_id=b.scheduleitem_id WHERE a.projectId='".$projectid."' AND a.status=0 AND b.status=0 ORDER BY actual_end_date DESC";
+            $sql = "SELECT * FROM scheduleactivities AS a WHERE a.projectId='".$projectid."' AND a.status=0 ORDER BY actual_end_date DESC";
             $command = $connection->createCommand($sql);
             $dataReader = $command->query();
             $activityend = $dataReader->read();
@@ -839,14 +839,14 @@ class DashboardController extends Controller
         }
         else{
 
-            $sql = "SELECT * FROM scheduleactivities AS a INNER JOIN wbsscheduleitems AS b ON  a.scheduleitem_id=b.scheduleitem_id WHERE a.projectId='".$projectid."' AND a.status=0 AND b.status=0 ORDER BY start_date ASC";
+            $sql = "SELECT * FROM scheduleactivities AS a WHERE a.projectId='".$projectid."' AND a.status=0 ORDER BY start_date ASC";
             $command = $connection->createCommand($sql);
             $dataReader = $command->query();
             $activitystart = $dataReader->read();
 
             $activitystartdate = $activitystart['start_date'];
 
-            $sql = "SELECT * FROM scheduleactivities AS a INNER JOIN wbsscheduleitems AS b ON  a.scheduleitem_id=b.scheduleitem_id WHERE a.projectId='".$projectid."' AND a.status=0 AND b.status=0 ORDER BY end_date DESC";
+            $sql = "SELECT * FROM scheduleactivities AS a WHERE a.projectId='".$projectid."' AND a.status=0 ORDER BY end_date DESC";
             $command = $connection->createCommand($sql);
             $dataReader = $command->query();
             $activityend = $dataReader->read();
@@ -1129,14 +1129,14 @@ class DashboardController extends Controller
 
             foreach($resourcetypes AS $resourcetype):
 
-                $sqltemvals1 = "SELECT * FROM workgroups_new WHERE Project_Id=' ".$projectid." ' AND Status=0 ORDER BY sortorder ASC, Workgroup_Id ASC, Name ASC";
+                $sqltemvals1 = "SELECT go.iow_group_id AS Workgroup_Id, go.project_id AS Project_Id, ig.name AS Name, go.sortorder AS sortorder FROM iow_group_order go LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0 WHERE go.project_id='".$projectid."' ORDER BY go.sortorder ASC, go.iow_group_id ASC, ig.name ASC";
                 $command = $connection->createCommand($sqltemvals1);
                 $dataReader1 = $command->query();
                 $structures = $dataReader1->readAll();
                 if($structures){
                     $restypecost = 0;
                     foreach($structures AS $structure):
-                        $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND wbs_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
+                        $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND iow_group_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
                         $command = $connection->createCommand($sql);
                         $dataReader = $command->query();
                         $wbsactivities = $dataReader->readAll();
@@ -1175,14 +1175,14 @@ class DashboardController extends Controller
 
         /* Estimate cost calculation start*/
 
-        $sqltemvals1 = "SELECT * FROM workgroups_new WHERE Project_Id=' ".$projectid." ' AND Status=0 ORDER BY sortorder ASC, Workgroup_Id ASC, Name ASC";
+        $sqltemvals1 = "SELECT go.iow_group_id AS Workgroup_Id, go.project_id AS Project_Id, ig.name AS Name, go.sortorder AS sortorder FROM iow_group_order go LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0 WHERE go.project_id='".$projectid."' ORDER BY go.sortorder ASC, go.iow_group_id ASC, ig.name ASC";
         $command = $connection->createCommand($sqltemvals1);
         $dataReader1 = $command->query();
         $structures = $dataReader1->readAll();
         $pricesum=0;
         if($structures){
             foreach($structures AS $structure):
-                 $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND wbs_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
+                 $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND iow_group_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
                  $command = $connection->createCommand($sql);
                  $dataReader = $command->query();
                  $wbsactivities = $dataReader->readAll();
@@ -1765,14 +1765,13 @@ class DashboardController extends Controller
         if($pricingestimateres):
             foreach($pricingestimateres AS $pricingestimatere):
                 $item = WorkgroupActivitiesNew::findOne($pricingestimatere->activity_id);
-                $iow = WorkgroupsNew::findOne($item->wbs_id);
-                if($iow->Status==0 && $item->pricing_status==0){
+                if($item->pricing_status==0){
                     $pricingestimate=PricingEstimateNew::find()->where(['project_Id' => $projectid])->andWhere(['activity_Id' =>$pricingestimatere->activity_id])->andWhere(['pricing_status' =>0])->one();
                     if($pricingestimate){
                         $specrate=$specrate + $pricingestimatere['rate'];
                         $specqty = $specqty + ($pricingestimate->activity_qty*$pricingestimatere['quantity']);
                     }
-                    $reportedacts=ActivityReportWrkactvty::find()->where(['iow_id' => $iow->Workgroup_Id])->andWhere(['activity_id' => $pricingestimatere->activity_id])->andWhere(['projectid' => $projectid])->andWhere(['status' => 0])->all();
+                    $reportedacts=ActivityReportWrkactvty::find()->where(['iow_id' => $item->iow_group_id])->andWhere(['activity_id' => $pricingestimatere->activity_id])->andWhere(['projectid' => $projectid])->andWhere(['status' => 0])->all();
 
                     $client_bills=ClientBill::find()->where(['projectid' => $projectid])->andWhere(['boq_id' => $item->boq_slno])->andWhere(['status' => 0])->all();
 
@@ -1913,12 +1912,15 @@ class DashboardController extends Controller
 
         $activitycount = 0;
 
-        $workgroups=WorkgroupsNew::find()->where(['Project_Id' => $projectid])->andWhere(['Status' => 0])->all();
-        if($workgroups):
+        $iowGroupIds = $connection->createCommand(
+            "SELECT iow_group_id FROM iow_group_order WHERE project_id = :p",
+            [':p' => $projectid]
+        )->queryColumn();
+        if($iowGroupIds):
 
-            foreach($workgroups AS $workgroup):
+            foreach($iowGroupIds AS $iowGroupId):
 
-                $wbsactivities=WorkgroupActivitiesNew::find()->where(['wbs_id' => $workgroup->Workgroup_Id])->andWhere(['pricing_status' =>0])->all();
+                $wbsactivities=WorkgroupActivitiesNew::find()->where(['iow_group_id' => $iowGroupId])->andWhere(['pricing_status' =>0])->all();
 
                 if($wbsactivities):
 
@@ -1950,7 +1952,7 @@ class DashboardController extends Controller
                                 $issuedqnty = 0;
                             }
 
-                            $reportedacts=ActivityReportWrkactvty::find()->where(['iow_id' => $workgroup->Workgroup_Id])->andWhere(['activity_id' => $wbsactivity->id])->andWhere(['projectid' => $projectid])->andWhere(['status' => 0])->all();
+                            $reportedacts=ActivityReportWrkactvty::find()->where(['iow_id' => $iowGroupId])->andWhere(['activity_id' => $wbsactivity->id])->andWhere(['projectid' => $projectid])->andWhere(['status' => 0])->all();
 
                             $totrepqty = 0;
 
@@ -2059,7 +2061,7 @@ class DashboardController extends Controller
                     // echo $projexptot;exit;
 
 
-            $sqltemvals1 = "SELECT * FROM workgroups_new WHERE Project_Id=' ".$projectid." ' AND Status=0 ORDER BY sortorder ASC, Workgroup_Id ASC, Name ASC";
+            $sqltemvals1 = "SELECT go.iow_group_id AS Workgroup_Id, go.project_id AS Project_Id, ig.name AS Name, go.sortorder AS sortorder FROM iow_group_order go LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0 WHERE go.project_id='".$projectid."' ORDER BY go.sortorder ASC, go.iow_group_id ASC, ig.name ASC";
             $command = $connection->createCommand($sqltemvals1);
             $dataReader1 = $command->query();
             $structures = $dataReader1->readAll();
@@ -2068,7 +2070,7 @@ class DashboardController extends Controller
             $estimateValuelastbill=0;
             if($structures){
                 foreach($structures AS $structure):
-                    $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND wbs_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
+                    $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND iow_group_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
                     $command = $connection->createCommand($sql);
                     $dataReader = $command->query();
                     $wbsactivities = $dataReader->readAll();
@@ -2538,7 +2540,7 @@ class DashboardController extends Controller
                     // echo $projexptot;exit;
 
 
-            $sqltemvals1 = "SELECT * FROM workgroups_new WHERE Project_Id=' ".$projectid." ' AND Status=0 ORDER BY sortorder ASC, Workgroup_Id ASC, Name ASC";
+            $sqltemvals1 = "SELECT go.iow_group_id AS Workgroup_Id, go.project_id AS Project_Id, ig.name AS Name, go.sortorder AS sortorder FROM iow_group_order go LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0 WHERE go.project_id='".$projectid."' ORDER BY go.sortorder ASC, go.iow_group_id ASC, ig.name ASC";
             $command = $connection->createCommand($sqltemvals1);
             $dataReader1 = $command->query();
             $structures = $dataReader1->readAll();
@@ -2547,7 +2549,7 @@ class DashboardController extends Controller
             $estimateValuelastbill=0;
             if($structures){
                 foreach($structures AS $structure):
-                    $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND wbs_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
+                    $sql = "SELECT * FROM workgroup_activities_new WHERE project_Id='".$structure['Project_Id']."' AND iow_group_id='".$structure['Workgroup_Id']."' AND estimate=1 AND pricing_status=0 ORDER BY sortorder ASC ";
                     $command = $connection->createCommand($sql);
                     $dataReader = $command->query();
                     $wbsactivities = $dataReader->readAll();

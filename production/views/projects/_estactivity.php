@@ -84,7 +84,6 @@ use app\models\Resources;
                         <div class="search-and-actions-wrpr" id="AR-allocate-body-one-head" style="display:flex;align-items:center;gap:3px;padding:4px 0;flex-wrap:wrap;justify-content:flex-start;">
                             <a href="#alProjTypePopup" class="btn btn-default" id="alOpenProjTypePopup" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ Project Type</a>
                             <a href="#alIowGroupPopup" class="btn btn-default" id="alOpenIowGroupPopup" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ IOW Group</a>
-                            <a href="#alActTypePopup" class="btn btn-default" id="alOpenActTypePopup" data-toggle="modal" data-target="#alActTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ Activity Type</a>
                             <a href="#alAddActivityPopup" class="btn" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-add"></span> Activity</a>
                             <a href="#" class="btn list-accountType" id="listestactivity" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-th-list"></span> List</a>
                             <select id="searchestworktypelist" class="form-control" style="margin-left:10px;width:120px;border-radius:20px;height:34px;display:inline-block;">
@@ -291,9 +290,9 @@ use app\models\Resources;
                 <form id="estactivityform">
                     <input type="hidden" id="editingActivityId" name="activity_id" value="">
                     <div class="row" id="estactivityaddrow">
-                        <!-- Project Type + IOW Group + Activity Type -->
+                        <!-- Project Type + IOW Group -->
                         <div class="row" style="margin-top:6px;">
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Project Type</label>
                                     <select id="estworktypelistss1" data-id="1" class="form-control estworktypelistses" name="worktypeid">
@@ -308,7 +307,7 @@ use app\models\Resources;
                                     <span style="color:red;"></span>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <div class="form-group">
                                     <label>IOW Group</label>
                                     <select class="form-control" id="actIowGroupId" name="iow_group_id">
@@ -317,7 +316,7 @@ use app\models\Resources;
                                     <span style="color:red;"></span>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-4" style="display:none;">
                                 <div class="form-group">
                                     <label>Activity Type</label>
                                     <select class="form-control" id="estactivitytypeid" name="activitytypeid">
@@ -368,18 +367,22 @@ use app\models\Resources;
                         </div>
                         <div class="row" style="margin-bottom:4px;">
                             <div class="col-md-1"></div>
-                            <div class="col-md-4"><label style="color:#777;font-size:12px;">Task Name</label></div>
+                            <div class="col-md-3"><label style="color:#777;font-size:12px;">Task Name</label></div>
                             <div class="col-md-2"><label style="color:#777;font-size:12px;">Unit</label></div>
+                            <div class="col-md-2"><label style="color:#777;font-size:12px;">Qty/Unit</label></div>
                             <div class="col-md-3"><label style="color:#777;font-size:12px;">Productivity/day</label></div>
                         </div>
                         <div id="task-rows-container">
                             <div class="row task-row" id="task-row-1" style="margin-top:4px;">
                                 <div class="col-md-1"></div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name">
                                 </div>
                                 <div class="col-md-2">
                                     <input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit" oninput="this.value=this.value.replace(/[0-9]/g,'')">
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" step="0.001" min="0" class="form-control task-qty" name="task_qty[]" placeholder="Qty/Unit">
                                 </div>
                                 <div class="col-md-3">
                                     <input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day">

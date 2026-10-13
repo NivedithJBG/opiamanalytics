@@ -297,7 +297,7 @@ class ProjectsmainController extends Controller
         $groupId   = (int)\Yii::$app->request->post('groupId');
         $iowGroupId = (int)\Yii::$app->request->post('iowGroupId');
         if (!$typeId && !$groupId && !$iowGroupId) return ['items' => []];
-        $sql  = "SELECT ea.activity_id AS id, ea.activity_name AS name
+        $sql  = "SELECT ea.activity_id AS id, ea.activity_name AS name, ea.activity_unit AS unit
                  FROM estimateactivities ea
                  WHERE ea.activity_status = 0";
         if ($typeId)     $sql .= " AND ea.work_type = " . $typeId;
@@ -305,6 +305,7 @@ class ProjectsmainController extends Controller
         if ($iowGroupId) $sql .= " AND ea.iow_group_id = " . $iowGroupId;
         $sql .= " ORDER BY ea.activity_name ASC";
         $rows = \Yii::$app->db->createCommand($sql)->queryAll();
+
         return ['items' => $rows];
     }
 
@@ -434,12 +435,12 @@ class ProjectsmainController extends Controller
 
     /**
      * actionWbsactivitiesbyiow — lists the activities already attached to
-     * one IOW (scheduleactivities rows under it), each with its tasks, for
-     * the "edit attached activities" popup opened by clicking an existing
-     * IOW row/bar. Purpose-built read-only endpoint — actionGanttactivities
-     * exists but is keyed by scheduleitem_id (not wg_id) and is shaped for
-     * Gantt-bar rendering (progress/critical-path fields this popup has no
-     * use for), so a lighter query is clearer than reusing/extending it.
+     * one IOW Group (scheduleactivities rows under it, for this project),
+     * each with its tasks, for the "edit attached activities" popup opened
+     * by clicking an existing IOW Group row/bar. Purpose-built read-only
+     * endpoint — actionGanttactivities is shaped for Gantt-bar rendering
+     * (progress/critical-path fields this popup has no use for), so a
+     * lighter query is clearer than reusing/extending it.
      */
     public function actionWbsactivitiesbyiow()
     {
@@ -447,23 +448,17 @@ class ProjectsmainController extends Controller
         $uid      = Yii::$app->user->Id;
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) return ['error' => 'No project selected', 'items' => []];
-        $pid  = (int)$projuser->projectid;
-        $wgId = (int)(\Yii::$app->request->post('wg_id', 0));
-        if (!$wgId) return ['error' => 'No wg_id', 'items' => []];
+        $pid        = (int)$projuser->projectid;
+        $iowGroupId = (int)(\Yii::$app->request->post('iow_group_id', 0));
+        if (!$iowGroupId) return ['error' => 'No iow_group_id', 'items' => []];
         $db = \Yii::$app->db;
 
-        $scheduleItemId = $db->createCommand(
-            "SELECT scheduleitem_id FROM wbsscheduleitems WHERE wbsid=:w AND projectId=:p AND status=0 LIMIT 1",
-            [':w' => $wgId, ':p' => $pid]
-        )->queryScalar();
-        if (!$scheduleItemId) return ['error' => 'No', 'items' => []];
-
         $rows = $db->createCommand(
-            "SELECT sa.id, sa.name, sa.unit, sa.quantity, sa.duration, sa.activity_id AS wan_id
+            "SELECT sa.id, sa.name, sa.unit, sa.quantity, sa.duration, sa.activity_id AS wan_id, sa.resource_units AS r_unit
              FROM scheduleactivities sa
-             WHERE sa.scheduleitem_id=:si AND sa.status=0
+             WHERE sa.iow_group_id=:g AND sa.projectId=:p AND sa.status=0
              ORDER BY sa.sortorder ASC, sa.id ASC",
-            [':si' => $scheduleItemId]
+            [':g' => $iowGroupId, ':p' => $pid]
         )->queryAll();
 
         $items = [];
@@ -484,6 +479,7 @@ class ProjectsmainController extends Controller
                 'quantity' => (float)$r['quantity'],
                 'duration' => (int)$r['duration'],
                 'wan_id'   => (int)$r['wan_id'],
+                'r_unit'   => (float)$r['r_unit'] ?: 1.0,
                 'tasks'    => array_map(function ($t) {
                     return [
                         'id' => (int)$t['id'], 'name' => $t['name'], 'qty' => (float)$t['qty'],
@@ -525,30 +521,30 @@ class ProjectsmainController extends Controller
         $qty   = (float)($p['qty'] ?? 0);
         $name  = trim($p['name'] ?? '');
         $unit  = trim($p['unit'] ?? '');
+        $rUnit = (float)($p['r_unit'] ?? 1) ?: 1.0;
         $tasks = $p['tasks'] ?? [];
         if (!$saId) return ['error' => 'No sa_id'];
         if (!$qty)  return ['error' => 'Qty is required'];
         if ($name === '') return ['error' => 'Activity name is required'];
 
-        // Ownership check — the row must belong to the current project,
-        // via scheduleitem_id -> wbsscheduleitems.wbsid -> workgroups_new,
-        // same chain every other WBS action in this controller scopes by.
+        // Ownership check — the row must belong to the current project.
         $sa = $db->createCommand(
             "SELECT sa.id, sa.start_date, sa.activity_id AS wan_id FROM scheduleactivities sa WHERE sa.id=:id AND sa.projectId=:p AND sa.status=0 LIMIT 1",
             [':id' => $saId, ':p' => $pid]
         )->queryOne();
         if (!$sa) return ['error' => 'Activity not found'];
 
-        // Same duration formula addActivityToGantt() uses on the add side:
-        // duration = ceil(qty * sum(task durPerUnit)), durPerUnit = (task.qty / task.productivity) / task.resunits.
+        // Same duration formula Create WBS's Add button uses:
+        // duration = ceil((qty * sum(task durPerUnit)) / r_unit),
+        // durPerUnit = task.qty / task.productivity (summed across tasks,
+        // no per-task division — r_unit divides the whole row total).
         $sumDurPerUnit = 0.0;
         foreach ($tasks as $t) {
             $tProd = (float)($t['productivity'] ?? 0);
             $tQty  = (float)($t['qty'] ?? 0);
-            $tRes  = (float)($t['resunits'] ?? 1) ?: 1;
-            if ($tProd > 0) $sumDurPerUnit += ($tQty / $tProd) / $tRes;
+            if ($tProd > 0) $sumDurPerUnit += ($tQty / $tProd);
         }
-        $duration = ($qty > 0 && $sumDurPerUnit > 0) ? (int)ceil($qty * $sumDurPerUnit) : 1;
+        $duration = ($qty > 0 && $sumDurPerUnit > 0) ? (int)ceil(($qty * $sumDurPerUnit) / $rUnit) : 1;
 
         $saStart = $sa['start_date'] ?: date('Y-m-d');
         $saEnd   = date('Y-m-d', strtotime($saStart . ' + ' . ($duration - 1) . ' days'));
@@ -560,8 +556,8 @@ class ProjectsmainController extends Controller
         // unaffected. Matches the user's explicit ask: a project-specific
         // display name for this Gantt activity, not a library rename.
         $db->createCommand(
-            "UPDATE scheduleactivities SET name=:n, unit=:u, quantity=:q, duration=:d, old_duration=:d, end_date=:ed WHERE id=:id",
-            [':n' => $name, ':u' => $unit, ':q' => $qty, ':d' => $duration, ':ed' => $saEnd, ':id' => $saId]
+            "UPDATE scheduleactivities SET name=:n, unit=:u, quantity=:q, duration=:d, old_duration=:d, end_date=:ed, resource_units=:ru WHERE id=:id",
+            [':n' => $name, ':u' => $unit, ':q' => $qty, ':d' => $duration, ':ed' => $saEnd, ':ru' => $rUnit, ':id' => $saId]
         )->execute();
 
         $wanId = (int)$sa['wan_id'];
@@ -613,7 +609,7 @@ class ProjectsmainController extends Controller
             }
         }
 
-        return ['error' => 'No', 'sa_id' => $saId, 'duration' => $duration];
+        return ['error' => 'No', 'sa_id' => $saId, 'duration' => $duration, 'duration_is_fallback' => ($sumDurPerUnit <= 0)];
     }
 
     /**
@@ -1057,6 +1053,10 @@ class ProjectsmainController extends Controller
     /**
      * actionWbsadd — saves WBS data and creates a Gantt bar in one step.
      * Accepts the full form payload; wan_id may be 0 (new) or set (existing).
+     *
+     * Structure is Project → IOW Group → Activity, no WBS-item tier in
+     * between (workgroups_new removed) — an activity attaches directly
+     * to iow_group_id everywhere below.
      */
     public function actionWbsadd()
     {
@@ -1076,15 +1076,14 @@ class ProjectsmainController extends Controller
         $wanId        = (int)($p['wan_id']         ?? 0);
         $iowGroupId   = (int)($p['iow_group_id']   ?? 0);
         $iowGroupName = trim($p['iow_group_name']  ?? ($p['iow_group'] ?? ''));
-        $iowName      = trim($p['iow_name']        ?? ($p['iow_group'] ?? ''));
         $iowActId     = (int)($p['iow_act_id']     ?? 0);
-        $wgIdInput    = (int)($p['wg_id']           ?? 0);
         $actNameInput = trim($p['act_name']         ?? '');
         $unit         = trim($p['unit']             ?? '');
         $schUnit      = trim($p['sch_unit']         ?? '');
         $qty          = (float)($p['qty']            ?? 0);
         $schQty       = (float)($p['sch_qty']        ?? 0);
         $duration     = max(1, (int)($p['duration']  ?? 1));
+        $rUnit        = (float)($p['r_unit']         ?? 1) ?: 1.0;
         $tasks        = $p['tasks']     ?? [];
         $resources    = $p['resources'] ?? [];
         $projTypeId   = (int)($p['proj_type_id']    ?? 0);
@@ -1109,69 +1108,7 @@ class ProjectsmainController extends Controller
                     $iowGroupId = (int)$db->lastInsertID;
                 }
             }
-            $now = date('Y-m-d H:i:s');
-            $wgId = 0;
-            if ($wgIdInput) {
-                $wgExists = $db->createCommand(
-                    "SELECT Workgroup_Id FROM workgroups_new WHERE Workgroup_Id=:id AND Project_Id=:p AND Status=0 LIMIT 1",
-                    [':id' => $wgIdInput, ':p' => $pid]
-                )->queryScalar();
-                if ($wgExists) {
-                    $wgId = (int)$wgExists;
-                    // Only rename/re-group an EXISTING IOW if the caller
-                    // actually supplied a real iow_name — never fall back
-                    // to the activity name here. That fallback is only
-                    // valid for a brand-new IOW (below), where a blank
-                    // name genuinely means "name it after the activity".
-                    // Silently renaming an EXISTING IOW to whatever
-                    // activity happens to be added under it next
-                    // corrupted the WBS tree every time a caller (e.g.
-                    // the Gantt's Activity Picker) omitted iow_name —
-                    // see docs/... this comment marks the fix.
-                    if ($iowName !== '') {
-                        $db->createCommand(
-                            "UPDATE workgroups_new SET Name=:n, iowGroupid=:g, Updated_On=:t WHERE Workgroup_Id=:id",
-                            [':n' => $iowName, ':g' => $iowGroupId ?: null, ':t' => $now, ':id' => $wgId]
-                        )->execute();
-                    } elseif ($iowGroupId) {
-                        // Name not supplied, but a group was — still
-                        // safe to update just the group, name untouched.
-                        $db->createCommand(
-                            "UPDATE workgroups_new SET iowGroupid=:g, Updated_On=:t WHERE Workgroup_Id=:id",
-                            [':g' => $iowGroupId, ':t' => $now, ':id' => $wgId]
-                        )->execute();
-                    }
-                }
-            }
-            if ($iowName === '') $iowName = $actNameInput;
-            if (!$wgId && $iowGroupId) {
-                $wgRow = $db->createCommand(
-                    "SELECT Workgroup_Id FROM workgroups_new WHERE Project_Id=:p AND iowGroupid=:g AND Name=:n AND Status=0 LIMIT 1",
-                    [':p' => $pid, ':g' => $iowGroupId, ':n' => $iowName]
-                )->queryOne();
-                if (!$wgRow) {
-                    // Excludes the Overhead IOW group (17/18, pinned at
-                    // sortorder 999999 to always sort last — see
-                    // ProjectsController::_seedProjectOverheadActivity)
-                    // so real IOW groups keep a normal small sortorder
-                    // range.
-                    $nextSort = (int)($db->createCommand(
-                        "SELECT COALESCE(MAX(sortorder),0)+1 AS s FROM workgroups_new WHERE Project_Id=:p AND iowGroupid NOT IN (17, 18)", [':p'=>$pid]
-                    )->queryOne()['s'] ?? 0);
-                    $db->createCommand(
-                        "INSERT INTO workgroups_new
-                         (Project_Id, Name, iowGroupid, Status, sortorder, Added_On, Updated_On, Added_By,
-                          start_date, end_date, duration, progress, open, parent, itemtype, worktype, worktypegroup,
-                          wbs_estimate_id, pricing_status, notes, primavera_id)
-                         VALUES (:p, :n, :g, 0, :s, :t, :t, :uid,
-                          :t, :t, 0, 0, 0, 0, '', 0, 0, 0, 0, '', 0)",
-                        [':p'=>$pid, ':n'=>$iowName, ':g'=>$iowGroupId, ':s'=>$nextSort, ':t'=>$now, ':uid'=>$uid]
-                    )->execute();
-                    $wgId = (int)$db->lastInsertID;
-                } else {
-                    $wgId = (int)$wgRow['Workgroup_Id'];
-                }
-            }
+            if (!$iowGroupId) return ['error' => 'IOW Group is required'];
 
             if (!$iowActId) {
                 $existAct = $db->createCommand(
@@ -1250,10 +1187,10 @@ class ProjectsmainController extends Controller
             // the equivalent write in actionWbssave). Defer this insert/update
             // until $wanId is known.
 
-            if ($iowActId && $wgId) {
+            if ($iowActId && $iowGroupId) {
                 $wanRow2 = $db->createCommand(
-                    "SELECT id FROM workgroup_activities_new WHERE project_Id=:p AND activity_Id=:a AND wbs_id=:w LIMIT 1",
-                    [':p' => $pid, ':a' => $iowActId, ':w' => $wgId]
+                    "SELECT id FROM workgroup_activities_new WHERE project_Id=:p AND activity_Id=:a AND iow_group_id=:g LIMIT 1",
+                    [':p' => $pid, ':a' => $iowActId, ':g' => $iowGroupId]
                 )->queryOne();
                 if ($wanRow2) {
                     $wanId = (int)$wanRow2['id'];
@@ -1266,15 +1203,15 @@ class ProjectsmainController extends Controller
                     )->execute();
                 } else {
                     $lastSort = $db->createCommand(
-                        "SELECT COALESCE(MAX(sortorder),0) AS s FROM workgroup_activities_new WHERE wbs_id=:w", [':w' => $wgId]
+                        "SELECT COALESCE(MAX(sortorder),0) AS s FROM workgroup_activities_new WHERE iow_group_id=:g", [':g' => $iowGroupId]
                     )->queryOne();
                     $db->createCommand(
                         "INSERT INTO workgroup_activities_new
-                         (project_Id, wbs_id, worktype_Id, activitytype_id, activity_Id, activity_Unit,
+                         (project_Id, iow_group_id, worktype_Id, activitytype_id, activity_Id, activity_Unit,
                           estimate, amount, sortorder, type, activity_Name, process_Id, schedule, duration,
                           cycle_Unit, cycle_Quantity, pr_status, pricing_status, operations_status, wbs_estimate_id)
-                         VALUES (:p, :w, 0, 0, :ia, :u, 1, :amt, :s, 0, :n, 0, 1, :d, :cu, :cq, 0, 0, 0, 0)",
-                        [':p' => $pid, ':w' => $wgId, ':ia' => $iowActId, ':u' => $unit ?: $schUnit,
+                         VALUES (:p, :g, 0, 0, :ia, :u, 1, :amt, :s, 0, :n, 0, 1, :d, :cu, :cq, 0, 0, 0, 0)",
+                        [':p' => $pid, ':g' => $iowGroupId, ':ia' => $iowActId, ':u' => $unit ?: $schUnit,
                          ':amt' => round($qty * $calcRate, 2), ':s' => ((int)($lastSort['s'] ?? 0)) + 1,
                          ':n' => $actNameInput, ':d' => $duration, ':cu' => $schUnit, ':cq' => $schQty]
                     )->execute();
@@ -1308,13 +1245,13 @@ class ProjectsmainController extends Controller
 
         // ── Now fetch the wan row and create the scheduleactivities bar ───────
         $wanRow = $db->createCommand(
-            "SELECT wbs_id, activity_Name, activity_Unit, cycle_Unit, cycle_Quantity, duration
+            "SELECT iow_group_id, activity_Name, activity_Unit, cycle_Unit, cycle_Quantity, duration
              FROM workgroup_activities_new WHERE id=:id LIMIT 1",
             [':id' => $wanId]
         )->queryOne();
         if (!$wanRow) return ['error' => 'WAN row not found'];
 
-        $wgId        = (int)$wanRow['wbs_id'];
+        $savedIowGroupId = (int)$wanRow['iow_group_id'];
         $savedName   = $wanRow['activity_Name'] ?: $actNameInput;
         $savedUnit   = $wanRow['cycle_Unit']    ?: ($schUnit ?: $unit);
         $savedSchQty = (float)$wanRow['cycle_Quantity'] ?: $schQty;
@@ -1375,21 +1312,6 @@ class ProjectsmainController extends Controller
             return ['error' => 'No', 'sa_id' => (int)$existingSa, 'already_exists' => true];
         }
 
-        $wbsItem = $db->createCommand(
-            "SELECT scheduleitem_id FROM wbsscheduleitems WHERE wbsid=:w AND projectId=:p AND status=0 LIMIT 1",
-            [':w' => $wgId, ':p' => $pid]
-        )->queryOne();
-        if (!$wbsItem) {
-            $db->createCommand(
-                "INSERT INTO wbsscheduleitems (name, projectId, wbsid, schedulegrp_id, status)
-                 VALUES (:n, :p, :w, 0, 0)",
-                [':n' => $iowName ?: $savedName, ':p' => $pid, ':w' => $wgId]
-            )->execute();
-            $scheduleItemId = (int)$db->lastInsertID;
-        } else {
-            $scheduleItemId = (int)$wbsItem['scheduleitem_id'];
-        }
-
         $today   = date('Y-m-d');
         $endDate = date('Y-m-d', strtotime($today . ' + ' . ($savedDur - 1) . ' days'));
 
@@ -1403,8 +1325,8 @@ class ProjectsmainController extends Controller
             "INSERT INTO scheduleactivities
              (name, activity_id, unit, quantity, start_date, end_date,
               actual_start_date, actual_end_date, duration, old_duration,
-              scheduleitem_id, projectId, status, sortorder, resource_units)
-             VALUES (:n, :aid, :u, :q, :sd, :ed, :sd, :ed, :dur, :dur, :si, :p, 0, :so, 1)",
+              iow_group_id, projectId, status, sortorder, resource_units)
+             VALUES (:n, :aid, :u, :q, :sd, :ed, :sd, :ed, :dur, :dur, :g, :p, 0, :so, :ru)",
             [
                 ':n'   => $savedName,
                 ':aid' => $wanId,
@@ -1413,12 +1335,31 @@ class ProjectsmainController extends Controller
                 ':sd'  => $today,
                 ':ed'  => $endDate,
                 ':dur' => $savedDur,
-                ':si'  => $scheduleItemId,
+                ':g'   => $savedIowGroupId,
                 ':p'   => $pid,
                 ':so'  => $schSort,
+                ':ru'  => $rUnit,
             ]
         )->execute();
         $saId = (int)$db->lastInsertID;
+
+        // Maintain per-project IOW Group display order (workgroups_new.sortorder's
+        // replacement, since there is no longer a WBS-item row to hold it) —
+        // first activity added under a group in this project stakes its
+        // position at the end of the project's current group ordering.
+        $groupOrderExists = $db->createCommand(
+            "SELECT 1 FROM iow_group_order WHERE project_id=:p AND iow_group_id=:g LIMIT 1",
+            [':p' => $pid, ':g' => $savedIowGroupId]
+        )->queryScalar();
+        if (!$groupOrderExists) {
+            $nextGroupSort = (int)($db->createCommand(
+                "SELECT COALESCE(MAX(sortorder),0)+1 AS s FROM iow_group_order WHERE project_id=:p", [':p' => $pid]
+            )->queryOne()['s'] ?? 1);
+            $db->createCommand(
+                "INSERT INTO iow_group_order (project_id, iow_group_id, sortorder) VALUES (:p, :g, :s)",
+                [':p' => $pid, ':g' => $savedIowGroupId, ':s' => $nextGroupSort]
+            )->execute();
+        }
 
         // Save this activity's resource allocation into pricing_estimate_resources_new
         // (the per-project table Storekeeper/Procurement read). This only runs on
@@ -1513,12 +1454,25 @@ class ProjectsmainController extends Controller
         // client sent no tasks at all (an integration that never builds a
         // task list), fall back to activity_tasks so those callers keep
         // working exactly as before.
-        $taskSource = !empty($tasks) ? $tasks : array_map(function($wt){
+        // When $tasks came from the client payload, each task object has
+        // no real activity_tasks.id of its own (the client never had one
+        // to send — see cwbsLoadActivities()/addOne() in main.php, which
+        // build { name, qty, prod, resunits } from getactivityresources()
+        // with no id field). $taskOrdinalToId (built above, same ordinal
+        // order, same blank-name skip) is the only reliable map from this
+        // submitted list back to the real activity_tasks row just
+        // inserted for it — using a nonexistent $wt['id'] here always
+        // evaluated to 0, leaving every schedule_task_new.task_Id
+        // permanently unlinked (LEFT JOIN activity_tasks never matched,
+        // so the Edit Activities Task popup showed blank task names).
+        $usingSubmittedTasks = !empty($tasks);
+        $taskSource = $usingSubmittedTasks ? $tasks : array_map(function($wt){
             return ['id' => (int)$wt['id'], 'name' => $wt['task_name'], 'qty' => (float)$wt['task_qty'], 'prod' => (float)$wt['productivity'], 'resunits' => 1];
         }, $db->createCommand(
             "SELECT id, task_name, task_qty, productivity FROM activity_tasks WHERE activity_id=:id",
             [':id' => $iowActId]
         )->queryAll());
+        $ord = 0;
         foreach ($taskSource as $wt) {
             $tName = trim($wt['name'] ?? '');
             if ($tName === '') continue;
@@ -1526,11 +1480,13 @@ class ProjectsmainController extends Controller
             $tProd = (float)($wt['prod'] ?? 0);
             $tRes  = (float)($wt['resunits'] ?? 1) ?: 1;
             $budgetedDuration = ($tQty > 0 && $tProd > 0) ? round($tQty / $tProd, 4) : 0;
+            $taskId = $usingSubmittedTasks ? (int)($taskOrdinalToId[$ord] ?? 0) : (int)($wt['id'] ?? 0);
+            $ord++;
             $db->createCommand()->insert('schedule_task_new', [
                 'wbs_id'           => 0,
                 'activity_Id'      => $saId,
                 'process_Id'       => 0,
-                'task_Id'          => (int)($wt['id'] ?? 0),
+                'task_Id'          => $taskId,
                 'Budgeted_Duration'=> $budgetedDuration,
                 'End_Duration'     => 0,
                 'status'           => 0,
@@ -1753,27 +1709,10 @@ class ProjectsmainController extends Controller
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $saId  = (int)\Yii::$app->request->post('sa_id', 0);
-        $wgId  = (int)\Yii::$app->request->post('wg_id', 0);
         $force = (bool)\Yii::$app->request->post('force', false);
-        if (!$saId && !$wgId) return ['error' => 'No activity id'];
+        if (!$saId) return ['error' => 'No activity id'];
 
         $db = \Yii::$app->db;
-
-        // WBS item was only "Saved" (never "Added to Gantt"), so it has no
-        // scheduleactivities row to key off — hard-delete the workgroups_new
-        // row directly instead of going through the schedule-bar cascade below.
-        if (!$saId && $wgId) {
-            $uid      = Yii::$app->user->Id;
-            $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
-            $pid      = $projuser ? (int)$projuser->projectid : 0;
-            $owned = $db->createCommand(
-                "SELECT Workgroup_Id FROM workgroups_new WHERE Workgroup_Id=:id AND Project_Id=:p AND Status=0 LIMIT 1",
-                [':id' => $wgId, ':p' => $pid]
-            )->queryScalar();
-            if (!$owned) return ['error' => 'WBS item not found'];
-            $db->createCommand()->delete('workgroups_new', ['Workgroup_Id' => $wgId])->execute();
-            return ['ok' => true];
-        }
 
         // Check for any active relationships (as predecessor or successor)
         $relCount = (int)$db->createCommand(
@@ -1786,10 +1725,9 @@ class ProjectsmainController extends Controller
             return ['error' => 'Please remove the relation before deleting this activity'];
         }
 
-        // Get parent wbsscheduleitems id (and the linked workgroup_activities_new
-        // id) before deleting
+        // Get the linked workgroup_activities_new id before deleting
         $sa = $db->createCommand(
-            "SELECT scheduleitem_id, activity_id FROM scheduleactivities WHERE id = :id",
+            "SELECT activity_id FROM scheduleactivities WHERE id = :id",
             [':id' => $saId]
         )->queryOne();
 
@@ -1815,13 +1753,13 @@ class ProjectsmainController extends Controller
     }
 
     /**
-     * actionWbsdeleteiow — deletes an entire IOW: every activity attached
-     * to it (via the same cascade actionWbsdelete uses per-activity) plus
-     * the IOW (workgroups_new) row itself. Never touches the IOW's parent
-     * IOW Group (iow_groups) — that table is shared across many IOWs.
-     * Blocks with a conflict list (same shape actionWbsdelete returns) if
-     * any attached activity has active relationships or downstream
-     * progress/procurement data, unless force=1.
+     * actionWbsdeleteiow — deletes every activity attached to an IOW Group
+     * within this project (via the same cascade actionWbsdelete uses
+     * per-activity). Never touches the IOW Group itself (iow_groups) — that
+     * table is a shared library, reused across projects. Blocks with a
+     * conflict list (same shape actionWbsdelete returns) if any attached
+     * activity has active relationships or downstream progress/procurement
+     * data, unless force=1.
      */
     public function actionWbsdeleteiow()
     {
@@ -1829,24 +1767,18 @@ class ProjectsmainController extends Controller
         $uid      = Yii::$app->user->Id;
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) return ['error' => 'No project selected'];
-        $pid   = (int)$projuser->projectid;
-        $wgId  = (int)\Yii::$app->request->post('wg_id', 0);
-        $force = (bool)\Yii::$app->request->post('force', false);
-        if (!$wgId) return ['error' => 'No wg_id'];
+        $pid        = (int)$projuser->projectid;
+        $iowGroupId = (int)\Yii::$app->request->post('iow_group_id', 0);
+        $force      = (bool)\Yii::$app->request->post('force', false);
+        if (!$iowGroupId) return ['error' => 'No iow_group_id'];
 
         $db = \Yii::$app->db;
-        $owned = $db->createCommand(
-            "SELECT Workgroup_Id FROM workgroups_new WHERE Workgroup_Id=:id AND Project_Id=:p AND Status=0 LIMIT 1",
-            [':id' => $wgId, ':p' => $pid]
-        )->queryScalar();
-        if (!$owned) return ['error' => 'IOW not found'];
 
         $saRows = $db->createCommand(
-            "SELECT sa.id, sa.scheduleitem_id, sa.activity_id
+            "SELECT sa.id, sa.activity_id
              FROM scheduleactivities sa
-             JOIN wbsscheduleitems wsi ON wsi.scheduleitem_id = sa.scheduleitem_id
-             WHERE wsi.wbsid=:w AND wsi.projectId=:p AND wsi.status=0 AND sa.status=0",
-            [':w' => $wgId, ':p' => $pid]
+             WHERE sa.iow_group_id=:g AND sa.projectId=:p AND sa.status=0",
+            [':g' => $iowGroupId, ':p' => $pid]
         )->queryAll();
 
         if (!$force) {
@@ -1858,7 +1790,7 @@ class ProjectsmainController extends Controller
                     [':id' => $sa['id']]
                 )->queryScalar();
                 if ($relCount > 0) {
-                    return ['error' => 'Please remove the relation on "' . $sa['id'] . '" before deleting this IOW'];
+                    return ['error' => 'Please remove the relation on "' . $sa['id'] . '" before deleting this IOW Group'];
                 }
                 $wanId = (int)$sa['activity_id'];
                 if ($wanId) {
@@ -1869,7 +1801,7 @@ class ProjectsmainController extends Controller
                 return [
                     'error'     => 'Yes',
                     'conflict'  => true,
-                    'errortext' => 'Deleting this IOW will also permanently delete: ' . implode('; ', array_unique($conflicts)) . '. This cannot be undone.',
+                    'errortext' => 'Deleting this IOW Group will also permanently delete: ' . implode('; ', array_unique($conflicts)) . '. This cannot be undone.',
                 ];
             }
         }
@@ -1878,59 +1810,9 @@ class ProjectsmainController extends Controller
             $this->hardDeleteScheduleActivity((int)$sa['id'], $sa, (int)$sa['activity_id']);
         }
 
-        // hardDeleteScheduleActivity already removes workgroups_new once its
-        // last wbsscheduleitems row is gone — but an IOW with NO activities
-        // at all (never had a Gantt bar) has no scheduleactivities/
-        // wbsscheduleitems rows to trigger that cleanup, so it's handled
-        // directly here too.
-        $db->createCommand()->delete('workgroups_new', ['Workgroup_Id' => $wgId])->execute();
+        $db->createCommand()->delete('iow_group_order', ['project_id' => $pid, 'iow_group_id' => $iowGroupId])->execute();
 
         return ['ok' => true];
-    }
-
-    /**
-     * actionWbsupdateiow — renames an IOW and/or moves it to a different
-     * IOW Group, edited in place from the Edit Activities popup's own IOW
-     * row. Never creates or renames the IOW Group itself (iow_groups) —
-     * only the workgroups_new row's Name/iowGroupid, same two fields the
-     * Add IOW tab sets when first creating one.
-     */
-    public function actionWbsupdateiow()
-    {
-        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $uid      = Yii::$app->user->Id;
-        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
-        if (!$projuser) return ['error' => 'No project selected'];
-        $pid = (int)$projuser->projectid;
-        $db  = \Yii::$app->db;
-
-        $wgId       = (int)\Yii::$app->request->post('wg_id', 0);
-        $name       = trim(\Yii::$app->request->post('name', ''));
-        $iowGroupId = (int)\Yii::$app->request->post('iow_group_id', 0);
-        if (!$wgId) return ['error' => 'No wg_id'];
-        if ($name === '') return ['error' => 'IOW name is required'];
-        if (!$iowGroupId) return ['error' => 'IOW Group is required'];
-
-        $owned = $db->createCommand(
-            "SELECT Workgroup_Id FROM workgroups_new WHERE Workgroup_Id=:id AND Project_Id=:p AND Status=0 LIMIT 1",
-            [':id' => $wgId, ':p' => $pid]
-        )->queryScalar();
-        if (!$owned) return ['error' => 'IOW not found'];
-
-        $db->createCommand(
-            "UPDATE workgroups_new SET Name=:n, iowGroupid=:g, Updated_On=:t WHERE Workgroup_Id=:id",
-            [':n' => $name, ':g' => $iowGroupId, ':t' => date('Y-m-d H:i:s'), ':id' => $wgId]
-        )->execute();
-
-        // Mirror the name onto this IOW's own wbsscheduleitems row too —
-        // actionWbsadd() seeds that row's name from the IOW name at
-        // creation time, so keep it in sync on rename.
-        $db->createCommand(
-            "UPDATE wbsscheduleitems SET name=:n WHERE wbsid=:w AND projectId=:p AND status=0",
-            [':n' => $name, ':w' => $wgId, ':p' => $pid]
-        )->execute();
-
-        return ['error' => 'No', 'ok' => true];
     }
 
     // Shared cascade used by every path that permanently removes a single
@@ -1944,7 +1826,7 @@ class ProjectsmainController extends Controller
 
         if ($sa === null) {
             $sa = $db->createCommand(
-                "SELECT scheduleitem_id, activity_id FROM scheduleactivities WHERE id = :id",
+                "SELECT activity_id FROM scheduleactivities WHERE id = :id",
                 [':id' => $saId]
             )->queryOne();
         }
@@ -2003,49 +1885,11 @@ class ProjectsmainController extends Controller
             'or', ['precedent_activity' => $saId], ['dependent_activity' => $saId]
         ])->execute();
 
-        // Permanently remove the scheduleactivities row
+        // Permanently remove the scheduleactivities row. Its parent IOW
+        // Group (iow_groups) is a shared library table, never touched here —
+        // even if this was the last activity under it in this project, the
+        // group itself persists (it may be in use by other projects).
         $db->createCommand()->delete('scheduleactivities', ['id' => $saId])->execute();
-
-        if ($sa) {
-            $wsiId = (int)$sa['scheduleitem_id'];
-
-            // If no activities remain under this wbsscheduleitems row, remove it too
-            $remainAct = (int)$db->createCommand(
-                "SELECT COUNT(*) FROM scheduleactivities WHERE scheduleitem_id = :w",
-                [':w' => $wsiId]
-            )->queryScalar();
-
-            if ($remainAct === 0) {
-                // Get the workgroup (IOW) linked to this wbsscheduleitems before
-                // removing it. wbsid is the reliable FK — schedulegrp_id is
-                // always written as a literal 0 on insert (actionWbsadd,
-                // actionGanttitems), never the real IOW id, so it can't be
-                // used here despite the column name suggesting otherwise.
-                $wsi = $db->createCommand(
-                    "SELECT wbsid FROM wbsscheduleitems WHERE scheduleitem_id = :w",
-                    [':w' => $wsiId]
-                )->queryOne();
-
-                $db->createCommand()->delete('wbsscheduleitems', ['scheduleitem_id' => $wsiId])->execute();
-
-                if ($wsi) {
-                    $wgId = (int)$wsi['wbsid'];
-
-                    // If no wbsscheduleitems remain under this IOW, remove it
-                    // too — deletes only this one workgroups_new row; its
-                    // parent IOW Group (iow_groups) is a separate, shared
-                    // table never touched here.
-                    $remainWsi = (int)$db->createCommand(
-                        "SELECT COUNT(*) FROM wbsscheduleitems WHERE wbsid = :g",
-                        [':g' => $wgId]
-                    )->queryScalar();
-
-                    if ($remainWsi === 0) {
-                        $db->createCommand()->delete('workgroups_new', ['Workgroup_Id' => $wgId])->execute();
-                    }
-                }
-            }
-        }
     }
 
     // Shared conflict check used before permanently deleting an activity —
@@ -2571,7 +2415,7 @@ class ProjectsmainController extends Controller
             if ($accountType === 8) { continue; }
             $balance = $this->_cfAccountDebitBalance($acctId, $pid);
             if ($balance > 0) {
-                $total += $amt;
+                $total += $balance;
             }
         }
 
@@ -2626,7 +2470,7 @@ class ProjectsmainController extends Controller
                 )->queryScalar();
                 $rows[] = [
                     'name' => $name ?: ('Account #' . $acctId),
-                    'amount' => round($amt, 2),
+                    'amount' => round($balance, 2),
                     'members' => $this->_cfAccountTransactionsDetail($acctId, $pid),
                 ];
             }
@@ -2870,7 +2714,7 @@ class ProjectsmainController extends Controller
                 ? $this->_cfAccountDebitBalanceAsOf($acctId, $pid, $uptoDate)
                 : $this->_cfAccountDebitBalance($acctId, $pid);
             if ($balance > 0) {
-                $investments += $amt;
+                $investments += $balance;
             }
         }
 
@@ -10073,6 +9917,10 @@ class ProjectsmainController extends Controller
 
         //echo $duration_first; exit;
 
+        if(ActivityRelations::find()->where(['status' => 0, 'precedent_activity' => (int)$_POST['firstActivity'], 'dependent_activity' => (int)$_POST['secondActivity']])->exists()){
+            return json_encode(['error' => 'Yes', 'errortext' => 'A relationship between these two activities already exists.']);
+        }
+
         if($projdur >= $duration_first){
 
             $model = New ActivityRelations();
@@ -10601,6 +10449,7 @@ class ProjectsmainController extends Controller
             // Deleting a relationship is an explicit user action — Planned
             // recalculates so the dependent's baseline is no longer derived
             // from a relation that no longer exists.
+            Yii::$app->helper->ResetUnlinkedDependentToToday($model->projectId, $model->dependent_activity);
             Yii::$app->helper->RecalculatePlannedDates($model->projectId);
             Yii::$app->helper->GetRelationcorrect($model->projectId);
 
@@ -11206,6 +11055,7 @@ class ProjectsmainController extends Controller
         if (!$dependentAct1) {
             return json_encode(['error' => 'Yes', 'errortext' => 'Activity not found.']);
         }
+        Yii::$app->helper->RecalculatePlannedDates($dependentAct1->projectId);
         Yii::$app->helper->GetRelationcorrect($dependentAct1->projectId);
 
         $criticalids = Scheduleactivities::find()
@@ -11320,13 +11170,12 @@ class ProjectsmainController extends Controller
     {
         $projectId = (int)$_POST['projectid'];
         $rows = \Yii::$app->db->createCommand("
-            SELECT a.scheduleitem_id, b.Name AS name,
+            SELECT go.iow_group_id,
                    MIN(s.actual_start_date)       AS start_date,
                    MAX(s.actual_end_date)         AS end_date,
-                   b.iowGroupid,
+                   go.iow_group_id                AS iowGroupid,
                    COALESCE(ig.name, '')          AS iow_group_name,
-                   COALESCE(b.sortorder, 999999)  AS wg_sortorder,
-                   b.Workgroup_Id,
+                   COALESCE(go.sortorder, 999999) AS wg_sortorder,
                    MIN(COALESCE(act_a.a_start, s.actual_start_date)) AS a_min_start,
                    MAX(COALESCE(
                        act_a.a_end_computed,
@@ -11359,11 +11208,11 @@ class ProjectsmainController extends Controller
                           ) + 1
                      ELSE NULL
                    END AS a_duration
-            FROM workgroups_new AS b
-            LEFT JOIN wbsscheduleitems AS a ON a.wbsid = b.Workgroup_Id AND a.status = 0
-            LEFT JOIN iow_groups AS ig ON ig.id = b.iowGroupid AND ig.status = 0
+            FROM iow_group_order AS go
+            LEFT JOIN iow_groups AS ig ON ig.id = go.iow_group_id AND ig.status = 0
             LEFT JOIN scheduleactivities AS s
-                 ON s.scheduleitem_id = a.scheduleitem_id
+                 ON s.iow_group_id = go.iow_group_id
+                 AND s.projectId = go.project_id
                  AND s.status = 0
                  AND s.actual_start_date IS NOT NULL
                  AND s.actual_start_date != '0000-00-00'
@@ -11396,23 +11245,24 @@ class ProjectsmainController extends Controller
                 ) AS rpt_i ON rpt_i.activity_id = spr_i.activity_id
                 WHERE spr_i.start_date IS NOT NULL AND spr_i.start_date != '0000-00-00'
             ) AS act_a ON act_a.activity_id = s.id
-            WHERE b.Project_Id = :projectId AND b.Status = 0
-              AND b.iowGroupid NOT IN (17, 18)
-            GROUP BY b.Workgroup_Id
-            ORDER BY COALESCE(b.sortorder, 999999) ASC, b.Workgroup_Id ASC, a.scheduleitem_id ASC
+            WHERE go.project_id = :projectId
+              AND go.iow_group_id NOT IN (17, 18)
+            GROUP BY go.iow_group_id
+            ORDER BY COALESCE(go.sortorder, 999999) ASC, go.iow_group_id ASC
         ", [':projectId' => $projectId])->queryAll();
         return json_encode(['result' => $rows, 'error' => 'No']);
     }
 
     public function actionGanttactivities()
     {
-        $itemId = (int)$_POST['itemId'];
+        $iowGroupId = (int)($_POST['iowGroupId'] ?? $_POST['itemId'] ?? 0);
+        $projectId  = (int)($_POST['projectId'] ?? 0);
         $rows = \Yii::$app->db->createCommand("
             SELECT sa.id, sa.name,
                    sa.activity_id AS wan_id,
                    sa.start_date, sa.act_start_date, sa.actual_start_date, sa.actual_end_date,
-                   sa.old_duration, sa.quantity,
-                   sa.scheduleitem_id, sa.critical_status,
+                   sa.old_duration, sa.quantity, sa.unit,
+                   sa.iow_group_id, sa.critical_status,
                    sa.completed_status,
                    CASE
                      WHEN rpt.cumulated_qty > 0
@@ -11459,10 +11309,10 @@ class ProjectsmainController extends Controller
             LEFT JOIN activity_relations AS ar
                    ON ar.dependent_activity = sa.id AND ar.status = 0 AND ar.projectId = sa.projectId
             LEFT JOIN workgroup_activities_new AS wa ON wa.id = sa.activity_id
-            WHERE sa.scheduleitem_id = :itemId AND sa.status = 0
+            WHERE sa.iow_group_id = :g AND sa.projectId = :p AND sa.status = 0
             GROUP BY sa.id
             ORDER BY COALESCE(wa.sortorder, 999999) ASC, sa.id ASC
-        ", [':itemId' => $itemId])->queryAll();
+        ", [':g' => $iowGroupId, ':p' => $projectId])->queryAll();
         return json_encode(['result' => $rows, 'error' => 'No']);
     }
 
@@ -11534,9 +11384,10 @@ class ProjectsmainController extends Controller
        relationship check is needed here. */
     public function actionReordertaskswithinwbs()
     {
-        $scheduleitemId = (int)($_POST['scheduleitem_id'] ?? 0);
+        $iowGroupId = (int)($_POST['iow_group_id'] ?? 0);
+        $projectId  = (int)($_POST['project_id'] ?? 0);
         $wanIds = $_POST['wan_ids'] ?? [];
-        if (!$scheduleitemId || !is_array($wanIds) || !count($wanIds)) {
+        if (!$iowGroupId || !$projectId || !is_array($wanIds) || !count($wanIds)) {
             return json_encode(['error' => 'Yes', 'errortext' => 'Invalid request.']);
         }
         $wanIds = array_map('intval', $wanIds);
@@ -11544,13 +11395,14 @@ class ProjectsmainController extends Controller
         $db = \Yii::$app->db;
 
         // Resolve each wan_id to its live scheduleactivities.id within this
-        // WBS item — reject the whole request if any wan_id doesn't
-        // resolve (stale client-side state, e.g. an activity removed from
-        // the Gantt after the page was loaded but before the drag).
+        // IOW Group (and project) — reject the whole request if any wan_id
+        // doesn't resolve (stale client-side state, e.g. an activity
+        // removed from the Gantt after the page was loaded but before the
+        // drag).
         foreach ($wanIds as $wanId) {
             $saId = $db->createCommand(
-                "SELECT id FROM scheduleactivities WHERE activity_id = :w AND scheduleitem_id = :s AND status = 0 LIMIT 1",
-                [':w' => $wanId, ':s' => $scheduleitemId]
+                "SELECT id FROM scheduleactivities WHERE activity_id = :w AND iow_group_id = :g AND projectId = :p AND status = 0 LIMIT 1",
+                [':w' => $wanId, ':g' => $iowGroupId, ':p' => $projectId]
             )->queryScalar();
             if (!$saId) {
                 return json_encode(['error' => 'Yes', 'errortext' => 'Could not reorder — the activity list has changed. Please refresh and try again.']);
@@ -11569,62 +11421,113 @@ class ProjectsmainController extends Controller
         return json_encode(['error' => 'No']);
     }
 
-    /* Moves one activity from its current WBS item/IOW to a different one
-       (dragged onto a row belonging to another IOW on the Gantt chart).
-       Only scheduleactivities.scheduleitem_id and
-       workgroup_activities_new.wbs_id are repointed — dates, quantities,
-       tasks and resources are untouched. Both the source and target WBS
-       items' activity lists are re-sequenced afterwards (source to close
-       the gap, target to place the moved activity at drop_after_wan_id's
-       position, or at the end if omitted/not found). */
+    /* Reorders whole IOW Groups (and everything under them) within a
+       project's Gantt — dragging an IOW Group header onto another one's
+       header, same drag mechanism as reordering activities within a
+       group. Only iow_group_order.sortorder changes; no activity's own
+       sortorder, dates, or iow_group_id are touched — the groups' own
+       internal activity order is untouched, the groups themselves just
+       move as a block. */
+    public function actionReorderiowgroups()
+    {
+        $projectId   = (int)($_POST['project_id'] ?? 0);
+        $iowGroupIds = $_POST['iow_group_ids'] ?? [];
+        if (!$projectId || !is_array($iowGroupIds) || !count($iowGroupIds)) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Invalid request.']);
+        }
+        $iowGroupIds = array_map('intval', $iowGroupIds);
+
+        $db = \Yii::$app->db;
+
+        // Every id must already have an iow_group_order row for this
+        // project — reject the whole request otherwise (stale client-side
+        // state, e.g. a group removed after the page was loaded).
+        foreach ($iowGroupIds as $gid) {
+            $exists = $db->createCommand(
+                "SELECT 1 FROM iow_group_order WHERE project_id=:p AND iow_group_id=:g LIMIT 1",
+                [':p' => $projectId, ':g' => $gid]
+            )->queryScalar();
+            if (!$exists) {
+                return json_encode(['error' => 'Yes', 'errortext' => 'Could not reorder — the group list has changed. Please refresh and try again.']);
+            }
+        }
+
+        $sort = 1;
+        foreach ($iowGroupIds as $gid) {
+            $db->createCommand(
+                "UPDATE iow_group_order SET sortorder = :s WHERE project_id=:p AND iow_group_id=:g",
+                [':s' => $sort, ':p' => $projectId, ':g' => $gid]
+            )->execute();
+            $sort++;
+        }
+
+        return json_encode(['error' => 'No']);
+    }
+
+    /* Moves one activity from its current IOW Group to a different one
+       (dragged onto a row belonging to another IOW Group on the Gantt
+       chart, within the same project). Only scheduleactivities.iow_group_id
+       and workgroup_activities_new.iow_group_id are repointed — dates,
+       quantities, tasks and resources are untouched. Both the source and
+       target groups' activity lists are re-sequenced afterwards (source to
+       close the gap, target to place the moved activity at
+       drop_after_wan_id's position, or at the end if omitted/not found). */
     public function actionMoveactivitytoiow()
     {
         $wanId          = (int)($_POST['wan_id'] ?? 0);
-        $targetItemId   = (int)($_POST['target_scheduleitem_id'] ?? 0);
+        $targetGroupId  = (int)($_POST['target_iow_group_id'] ?? 0);
         $dropAfterWanId = (int)($_POST['drop_after_wan_id'] ?? 0);
-        if (!$wanId || !$targetItemId) {
+        if (!$wanId || !$targetGroupId) {
             return json_encode(['error' => 'Yes', 'errortext' => 'Invalid request.']);
         }
 
         $db = \Yii::$app->db;
 
         $saRow = $db->createCommand(
-            "SELECT id, scheduleitem_id FROM scheduleactivities WHERE activity_id = :w AND status = 0 LIMIT 1",
+            "SELECT id, projectId, iow_group_id FROM scheduleactivities WHERE activity_id = :w AND status = 0 LIMIT 1",
             [':w' => $wanId]
         )->queryOne();
         if (!$saRow) {
             return json_encode(['error' => 'Yes', 'errortext' => 'Could not move — the activity list has changed. Please refresh and try again.']);
         }
-        $sourceItemId = (int)$saRow['scheduleitem_id'];
-        if ($sourceItemId === $targetItemId) {
-            return json_encode(['error' => 'Yes', 'errortext' => 'Activity is already in this IOW.']);
-        }
-
-        $targetWgId = $db->createCommand(
-            "SELECT wbsid FROM wbsscheduleitems WHERE scheduleitem_id = :s AND status = 0 LIMIT 1",
-            [':s' => $targetItemId]
-        )->queryScalar();
-        if (!$targetWgId) {
-            return json_encode(['error' => 'Yes', 'errortext' => 'Target IOW not found.']);
+        $projectId      = (int)$saRow['projectId'];
+        $sourceGroupId  = (int)$saRow['iow_group_id'];
+        if ($sourceGroupId === $targetGroupId) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'Activity is already in this IOW Group.']);
         }
 
         // Repoint the activity itself
         $db->createCommand(
-            "UPDATE scheduleactivities SET scheduleitem_id = :s WHERE activity_id = :w AND status = 0",
-            [':s' => $targetItemId, ':w' => $wanId]
+            "UPDATE scheduleactivities SET iow_group_id = :g WHERE activity_id = :w AND status = 0",
+            [':g' => $targetGroupId, ':w' => $wanId]
         )->execute();
         $db->createCommand(
-            "UPDATE workgroup_activities_new SET wbs_id = :g WHERE id = :id",
-            [':g' => $targetWgId, ':id' => $wanId]
+            "UPDATE workgroup_activities_new SET iow_group_id = :g WHERE id = :id",
+            [':g' => $targetGroupId, ':id' => $wanId]
         )->execute();
 
-        // Re-sequence the source WBS item's remaining activities (close the gap)
+        // Ensure the target group has a display-order entry in this project
+        $targetOrderExists = $db->createCommand(
+            "SELECT 1 FROM iow_group_order WHERE project_id=:p AND iow_group_id=:g LIMIT 1",
+            [':p' => $projectId, ':g' => $targetGroupId]
+        )->queryScalar();
+        if (!$targetOrderExists) {
+            $nextGroupSort = (int)($db->createCommand(
+                "SELECT COALESCE(MAX(sortorder),0)+1 AS s FROM iow_group_order WHERE project_id=:p", [':p' => $projectId]
+            )->queryOne()['s'] ?? 1);
+            $db->createCommand(
+                "INSERT INTO iow_group_order (project_id, iow_group_id, sortorder) VALUES (:p, :g, :s)",
+                [':p' => $projectId, ':g' => $targetGroupId, ':s' => $nextGroupSort]
+            )->execute();
+        }
+
+        // Re-sequence the source group's remaining activities (close the gap)
         $sourceWanIds = $db->createCommand(
             "SELECT wan.id FROM scheduleactivities sa
              JOIN workgroup_activities_new wan ON wan.id = sa.activity_id
-             WHERE sa.scheduleitem_id = :s AND sa.status = 0
+             WHERE sa.iow_group_id = :g AND sa.projectId = :p AND sa.status = 0
              ORDER BY wan.sortorder ASC, wan.id ASC",
-            [':s' => $sourceItemId]
+            [':g' => $sourceGroupId, ':p' => $projectId]
         )->queryColumn();
         $sort = 1;
         foreach ($sourceWanIds as $id) {
@@ -11632,14 +11535,14 @@ class ProjectsmainController extends Controller
             $sort++;
         }
 
-        // Re-sequence the target WBS item's activities, placing the moved
+        // Re-sequence the target group's activities, placing the moved
         // one right after drop_after_wan_id (or at the end if not given/found)
         $targetWanIds = $db->createCommand(
             "SELECT wan.id FROM scheduleactivities sa
              JOIN workgroup_activities_new wan ON wan.id = sa.activity_id
-             WHERE sa.scheduleitem_id = :s AND sa.status = 0
+             WHERE sa.iow_group_id = :g AND sa.projectId = :p AND sa.status = 0
              ORDER BY wan.sortorder ASC, wan.id ASC",
-            [':s' => $targetItemId]
+            [':g' => $targetGroupId, ':p' => $projectId]
         )->queryColumn();
         $targetWanIds = array_map('intval', $targetWanIds);
         $movedIdx = array_search($wanId, $targetWanIds, true);

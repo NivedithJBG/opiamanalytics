@@ -631,12 +631,9 @@ class HelperComponent extends Component
             if ($isCompleted[$act->id] && $act->act_start_date && $act->act_start_date != '0000-00-00') {
                 $anchor[$act->id] = $act->act_start_date;           // frozen — never recomputed below
             } elseif (!empty($preds[$act->id])) {
-                // Dependent: anchor off the precedent's CURRENT ACTUAL position
-                // (start_date), not Planned — re-planning forward from a
-                // precedent takes its real, current state into account.
-                $anchor[$act->id] = ($act->start_date && $act->start_date != '0000-00-00')
-                    ? $act->start_date
-                    : (($act->act_start_date && $act->act_start_date != '0000-00-00') ? $act->act_start_date : date('Y-m-d'));
+                // Dependent: its links alone place it. A floor date means the
+                // old position can never hold it later than its links require.
+                $anchor[$act->id] = '2000-01-01';
             } elseif ($act->act_start_date && $act->act_start_date != '0000-00-00') {
                 $anchor[$act->id] = $act->act_start_date;
             } else {
@@ -709,6 +706,32 @@ class HelperComponent extends Component
             $act->act_start_date = $ES[$act->id];
             $act->save(false);
         }
+    }
+
+    // After a relationship is deleted: a dependent left with no predecessor at
+    // all goes back to today's (next working) date. Its old planned start was
+    // derived from the deleted link, so it must not be kept.
+    public function ResetUnlinkedDependentToToday($projectid, $dependentId)
+    {
+        $dependentId = (int)$dependentId;
+        if (!$dependentId) return;
+
+        $hasPred = ActivityRelations::find()
+            ->where(['projectId' => $projectid, 'status' => 0, 'dependent_activity' => $dependentId])
+            ->exists();
+        if ($hasPred) return;
+
+        $act = Scheduleactivities::findOne($dependentId);
+        if (!$act || (int)$act->status !== 0 || (int)$act->completed_status === 1) return;
+
+        $spr = Yii::$app->db->createCommand(
+            "SELECT start_date FROM schedule_progress_report WHERE activity_id = :aid LIMIT 1",
+            [':aid' => $dependentId]
+        )->queryOne();
+        if ($spr && $spr['start_date'] && $spr['start_date'] != '0000-00-00') return;   // already started — real dates govern
+
+        $act->act_start_date = date('Y-m-d', strtotime($this->getDateAfterHoliday(date('d-m-Y'), $projectid)));
+        $act->save(false);
     }
 
     // Working days between $from (exclusive) and $to (inclusive) — the number of
