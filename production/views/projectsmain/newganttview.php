@@ -570,6 +570,13 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 .gact-reorder-handle:hover { color: #1a6fc4; }
 .gact-reorder-handle.gact-dragging { cursor: grabbing; }
+.giow-reorder-handle {
+  display: inline-block; cursor: grab; color: #cfd4db; font-size: 11px;
+  letter-spacing: -2px; vertical-align: middle; margin-left: 3px;
+  user-select: none;
+}
+.giow-reorder-handle:hover { color: #fff; }
+.giow-reorder-handle.giow-dragging { cursor: grabbing; }
 /* Ghost row that follows the cursor while dragging */
 #gact-drag-ghost {
   display: none; position: fixed; z-index: 300000; pointer-events: none;
@@ -580,6 +587,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 /* Highlight the row currently under the cursor as the drop target */
 #gantt-container .gtasktablewrapper tr.gact-drop-target td {
   background: #eef4fb !important; outline: 1px dashed #4a6fa5; outline-offset: -1px;
+}
+#gantt-container .gtasktablewrapper tr.giow-drop-target td {
+  background: #3a4a5e !important; outline: 1px dashed #cfd4db; outline-offset: -1px;
 }
 .btn-opiam {
   position: relative;
@@ -1012,14 +1022,13 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     var _groupBDur   = {};
     var _groupBStart = {};
     var _groupBEnd   = {};
-    var iowActDates  = {};
-    var iowBDates    = {};
     var iowHashedIds = {};
     // Project row: min/max dates across all WBS items; duration = span of those dates
     var _projBStartMin = null, _projBEndMax = null;
     var _projAStartMin = null, _projAEndMax = null;
 
-    // Load WBS items synchronously
+    // Load IOW Groups used in this project synchronously — one row per
+    // group (no WBS-item tier in between: Project → IOW Group → Activity).
     $.ajax({
       type: 'POST',
       url: _base + '/ganttitems',
@@ -1028,100 +1037,61 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       data: { projectid: projectId },
       success: function(data) {
         if (!data.result) return;
-        var iowGroups = {};
         for (var i = 0; i < data.result.length; i++) {
           var item = data.result[i];
 
-          // IOW Group tier
-          var wbsParent;
-          if (item.iowGroupid) {
-            var iowPid = 'iow_' + item.iowGroupid;
-            if (!iowGroups[item.iowGroupid]) {
-              var _iowTi = new JSGantt.TaskItem(
-                iowPid, item.iow_group_name,
-                '', '', 'ggroupblack', '', 0, '', 0, 1, projectId, 1, '', '', '', g
-              );
-              iowHashedIds[item.iowGroupid] = _iowTi.getID();
-              g.AddTaskItem(_iowTi);
-              iowGroups[item.iowGroupid] = true;
-            }
-            wbsParent = iowPid;
-          } else {
-            wbsParent = projectId;
-          }
-
-          // WBS Item tier — capture TaskItem to get hashed ID for A. Duration patching
-          var _wbsADur   = (item.a_duration !== null && item.a_duration !== undefined) ? item.a_duration : null;
-          var _wbsAStart = safeDate(item.a_min_start) || null;
-          var _wbsAEnd   = (_wbsAStart && _wbsADur !== null) ? addDays(_wbsAStart, _wbsADur - 1) : null;
-          // WBS bar uses A. dates when available, falls back to B. dates
-          var _wbsBarS = _wbsAStart || safeDate(item.start_date);
-          var _wbsBarE = _wbsAEnd ? addOneDay(_wbsAEnd) : (item.end_date ? addOneDay(item.end_date) : '');
-          // A bare IOW (no activity added under it yet) has no
-          // wbsscheduleitems row, so scheduleitem_id is null — use a
-          // synthetic, stable row id instead so JSGantt still gets a
-          // unique identifier. Marked so the child-activity fetch below
-          // is skipped for it (there is nothing to fetch).
-          var _wbsIsBare = (item.scheduleitem_id === null || item.scheduleitem_id === undefined);
-          var _wbsRowId = _wbsIsBare ? ('wg_' + item.Workgroup_Id) : item.scheduleitem_id;
-          var _wbsTi = new JSGantt.TaskItem(
-            _wbsRowId,
-            item.name,
-            _wbsBarS, _wbsBarE,
-            'ggroupblack', '', 0, '', 0, 1, wbsParent, 1, '', '', '', g
+          // IOW Group tier — the bar itself (B./A. Duration patched onto
+          // this same hashed id below; there is no separate child row for
+          // the group's own span anymore).
+          var iowPid = 'iow_' + item.iowGroupid;
+          var _iowADur   = (item.a_duration !== null && item.a_duration !== undefined) ? item.a_duration : null;
+          var _iowAStart = safeDate(item.a_min_start) || null;
+          var _iowAEnd   = (_iowAStart && _iowADur !== null) ? addDays(_iowAStart, _iowADur - 1) : null;
+          var _iowBarS = _iowAStart || safeDate(item.start_date);
+          var _iowBarE = _iowAEnd ? addOneDay(_iowAEnd) : (item.end_date ? addOneDay(item.end_date) : '');
+          var _iowTi = new JSGantt.TaskItem(
+            iowPid, item.iow_group_name,
+            _iowBarS, _iowBarE,
+            'ggroupblack', '', 0, '', 0, 1, projectId, 1, '', '', '', g
           );
-          var _wbsHid = _wbsTi.getID();
-          // Always populated (bare or already-scheduled) — any IOW row
-          // can open the Activity Picker to add more activities.
-          _wbsRowWgId[_wbsHid] = { wgId: item.Workgroup_Id, iowGroupId: item.iowGroupid || 0 };
+          var _iowHid = _iowTi.getID();
+          iowHashedIds[item.iowGroupid] = _iowHid;
+          // Any IOW Group row can open the Edit Activities popup, scoped
+          // to this group, to add/edit/delete its activities.
+          _wbsRowWgId[_iowHid] = { iowGroupId: item.iowGroupid || 0 };
           // B. duration span = span of child schedule dates
-          var _wbsBDur = (item.start_date && item.end_date)
+          var _iowBDur = (item.start_date && item.end_date)
               ? Math.round((new Date(item.end_date) - new Date(item.start_date)) / 86400000) + 1
               : null;
-          _groupActDur  [_wbsHid] = _wbsADur   !== null ? _wbsADur   : _wbsBDur;
-          _groupActStart[_wbsHid] = _wbsAStart          || safeDate(item.start_date);
-          _groupActEnd  [_wbsHid] = _wbsAEnd            || safeDate(item.end_date);
+          _groupActDur  [_iowHid] = _iowADur   !== null ? _iowADur   : _iowBDur;
+          _groupActStart[_iowHid] = _iowAStart          || safeDate(item.start_date);
+          _groupActEnd  [_iowHid] = _iowAEnd            || safeDate(item.end_date);
           // B. columns always show schedule values regardless of bar position
-          _groupBDur  [_wbsHid] = _wbsBDur;
-          _groupBStart[_wbsHid] = safeDate(item.start_date);
-          _groupBEnd  [_wbsHid] = safeDate(item.end_date);
+          _groupBDur  [_iowHid] = _iowBDur;
+          _groupBStart[_iowHid] = safeDate(item.start_date);
+          _groupBEnd  [_iowHid] = safeDate(item.end_date);
           // Accumulate min/max dates into project totals
-          if (_wbsBDur !== null) {
+          if (_iowBDur !== null) {
             var _pbs = safeDate(item.start_date), _pbe = safeDate(item.end_date);
             if (_pbs && (!_projBStartMin || _pbs < _projBStartMin)) _projBStartMin = _pbs;
             if (_pbe && (!_projBEndMax   || _pbe > _projBEndMax  )) _projBEndMax   = _pbe;
           }
-          var _wbsADurEff = _wbsADur !== null ? _wbsADur : _wbsBDur;
-          if (_wbsADurEff !== null) {
-            var _pas = _wbsAStart || safeDate(item.start_date);
-            var _pae = _wbsAEnd   || safeDate(item.end_date);
+          var _iowADurEff = _iowADur !== null ? _iowADur : _iowBDur;
+          if (_iowADurEff !== null) {
+            var _pas = _iowAStart || safeDate(item.start_date);
+            var _pae = _iowAEnd   || safeDate(item.end_date);
             if (_pas && (!_projAStartMin || _pas < _projAStartMin)) _projAStartMin = _pas;
             if (_pae && (!_projAEndMax   || _pae > _projAEndMax  )) _projAEndMax   = _pae;
           }
-          g.AddTaskItem(_wbsTi);
-          // Accumulate IOW group min/max dates; group duration = span of these
-          if (item.iowGroupid) {
-            var _iod = iowActDates[item.iowGroupid];
-            if (!_iod) { _iod = { minStart: null, maxEnd: null }; iowActDates[item.iowGroupid] = _iod; }
-            if (item.a_min_start && (!_iod.minStart || item.a_min_start < _iod.minStart)) _iod.minStart = item.a_min_start;
-            if (item.a_max_end   && (!_iod.maxEnd   || item.a_max_end   > _iod.maxEnd  )) _iod.maxEnd   = item.a_max_end;
+          g.AddTaskItem(_iowTi);
 
-            var _ibd = iowBDates[item.iowGroupid];
-            if (!_ibd) { _ibd = { minStart: null, maxEnd: null }; iowBDates[item.iowGroupid] = _ibd; }
-            var _bS = safeDate(item.start_date), _bE = safeDate(item.end_date);
-            if (_bS && (!_ibd.minStart || _bS < _ibd.minStart)) _ibd.minStart = _bS;
-            if (_bE && (!_ibd.maxEnd   || _bE > _ibd.maxEnd  )) _ibd.maxEnd   = _bE;
-          }
-
-          // Load activities for this WBS item synchronously — skipped
-          // for a bare IOW (no scheduleitem_id yet, so nothing to fetch).
-          if (_wbsIsBare) continue;
+          // Load activities for this IOW Group (in this project) synchronously.
           $.ajax({
             type: 'POST',
             url: _base + '/ganttactivities',
             dataType: 'json',
             async: false,
-            data: { itemId: item.scheduleitem_id },
+            data: { iowGroupId: item.iowGroupid, projectId: projectId },
             success: (function(parentId) {
               return function(actData) {
                 if (!actData.result) return;
@@ -1221,7 +1191,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     actdur: actDur,
                     astart: aStart || act.actual_start_date,
                     aend:   aEndComputed || act.actual_end_date,
-                    scheduleitemId: parentId,
+                    iowGroupId: act.iow_group_id,
                     rawId:  act.id,
                     wanId:  act.wan_id,
                     hasProgress: hasProgress
@@ -1229,7 +1199,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                   g.AddTaskItem(_ti);
                 }
               };
-            })(item.scheduleitem_id)
+            })(_iowHid)
           });
         }
       }
@@ -1245,28 +1215,6 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       _groupActDur  [_projHid] = spanDays(_projAStartMin, _projAEndMax);
       _groupActStart[_projHid] = _projAStartMin;
       _groupActEnd  [_projHid] = _projAEndMax;
-    }
-
-    // IOW group: duration = span of earliest child start to latest child end
-    for (var _iowId in iowHashedIds) {
-      var _iowHid = iowHashedIds[_iowId];
-      var _iod = iowActDates[_iowId] || { minStart: null, maxEnd: null };
-      var _ibd = iowBDates[_iowId]   || { minStart: null, maxEnd: null };
-
-      // A. columns: span of A. dates, falling back to B. dates
-      if (_iod.minStart || _ibd.minStart) {
-        var _iaS = _iod.minStart || _ibd.minStart;
-        var _iaE = _iod.maxEnd   || _ibd.maxEnd;
-        _groupActDur  [_iowHid] = spanDays(_iaS, _iaE);
-        _groupActStart[_iowHid] = _iaS;
-        _groupActEnd  [_iowHid] = _iaE;
-      }
-      // B. columns: span of B. dates
-      if (_ibd.minStart) {
-        _groupBDur  [_iowHid] = spanDays(_ibd.minStart, _ibd.maxEnd);
-        _groupBStart[_iowHid] = _ibd.minStart;
-        _groupBEnd  [_iowHid] = _ibd.maxEnd;
-      }
     }
 
     g.Draw();
@@ -1317,10 +1265,14 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var _row = document.getElementById('gantt-container' + 'child_' + _tid);
       if (!_row) continue;
 
-      // Indentation on the activity name cell
+      // Indentation on the activity name cell. Project -> IOW Group ->
+      // Activity is only 3 levels now (no WBS-item tier in between).
+      // Activity (level 2) sits a step further right than its parent
+      // IOW Group (level 1), same convention as the project row above
+      // it — just a smaller step now that there's one less tier.
       var _cell = _row.querySelector('td.gtaskname');
       if (_cell) {
-        var _indent = [0, 4, 18, 32, 46][_t.getLevel()] || 4;
+        var _indent = [0, 18, 60, 60, 60][_t.getLevel()] || 60;
         _cell.style.paddingLeft = _indent + 'px';
       }
 
@@ -1357,6 +1309,22 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           }
           _dotCell.appendChild(_dot);
         }
+      }
+
+      // IOW Group row: drag handle for reordering whole groups (and
+      // everything under them) within the project — same press-and-hold
+      // mechanism as the activity drag handle below, just moving a
+      // group instead of a single activity. Placed in the same
+      // dedicated dot/handle column so both row types line up.
+      var _groupInfo = _wbsRowWgId[_tid];
+      if (_groupInfo && _dotCell && !_dotCell.querySelector('.giow-reorder-handle')) {
+        var _gHandle = document.createElement('span');
+        _gHandle.className = 'giow-reorder-handle';
+        _gHandle.title = 'Press and drag to reorder this IOW Group';
+        _gHandle.textContent = '⋮⋮';
+        _gHandle.setAttribute('data-tid', _tid);
+        _gHandle.setAttribute('data-iowgroupid', _groupInfo.iowGroupId);
+        _dotCell.appendChild(_gHandle);
       }
 
       // Leaf activity: patch B. Duration and A. Duration
@@ -1499,7 +1467,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   // no relationship-based restriction (see actionReordertaskswithinwbs).
   (function(){
     var $ghost = $('#gact-drag-ghost');
-    var _dragTid = null, _dragScheduleitemId = null, _dragRow = null;
+    var _dragTid = null, _dragIowGroupId = null, _dragRow = null;
     var _dropRow = null;
 
     function _rowFromPoint(x, y) {
@@ -1530,7 +1498,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       if (!row) return;
 
       _dragTid = tid;
-      _dragScheduleitemId = db.scheduleitemId;
+      _dragIowGroupId = db.iowGroupId;
       _dragRow = row;
       $(this).addClass('gact-dragging');
 
@@ -1567,8 +1535,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       $ghost.css('display', 'none');
       if (_dropRow) $(_dropRow).removeClass('gact-drop-target');
 
-      var dragTid = _dragTid, scheduleitemId = _dragScheduleitemId, dropRow = _dropRow;
-      _dragTid = null; _dragScheduleitemId = null; _dragRow = null; _dropRow = null;
+      var dragTid = _dragTid, iowGroupId = _dragIowGroupId, dropRow = _dropRow;
+      _dragTid = null; _dragIowGroupId = null; _dragRow = null; _dropRow = null;
       if (!dropRow) return; // released outside a valid activity row — no-op
 
       var cells = window._ganttActCells || {};
@@ -1576,16 +1544,17 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var dropDb = cells[dropTid];
       if (!dropDb) return;
 
-      if (dropDb.scheduleitemId === scheduleitemId) {
-        // Same WBS item — reorder within it. Build the new order: every
-        // activity in this WBS item, in current DOM order, with the
-        // dragged one removed and reinserted at the drop row's position.
+      if (dropDb.iowGroupId === iowGroupId) {
+        // Same IOW Group — reorder within it. Build the new order: every
+        // activity in this group (this project), in current DOM order,
+        // with the dragged one removed and reinserted at the drop row's
+        // position.
         var orderedTids = [];
         $('#gantt-container .gtasktablewrapper tr[id*="child_"]').each(function() {
           if (this.id.indexOf('childrow_') !== -1) return;
           var rowTid = this.id.slice(this.id.indexOf('child_') + 'child_'.length);
           var rowDb = cells[rowTid];
-          if (rowDb && rowDb.scheduleitemId === scheduleitemId) orderedTids.push(rowTid);
+          if (rowDb && rowDb.iowGroupId === iowGroupId) orderedTids.push(rowTid);
         });
         var fromIdx = orderedTids.indexOf(dragTid);
         var toIdx = orderedTids.indexOf(dropTid);
@@ -1600,7 +1569,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           type: 'POST',
           url: _base + '/reordertaskswithinwbs',
           dataType: 'json',
-          data: { scheduleitem_id: scheduleitemId, wan_ids: wanIds },
+          data: { iow_group_id: iowGroupId, project_id: projectId, wan_ids: wanIds },
           success: function(resp) {
             if (!resp || resp.error !== 'No') {
               alert((resp && resp.errortext) || 'Could not reorder — please try again.');
@@ -1613,7 +1582,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           }
         });
       } else {
-        // Different WBS item/IOW — move the activity there, placed right
+        // Different IOW Group — move the activity there, placed right
         // after the row it was dropped on.
         $.ajax({
           type: 'POST',
@@ -1621,7 +1590,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           dataType: 'json',
           data: {
             wan_id: cells[dragTid].wanId,
-            target_scheduleitem_id: dropDb.scheduleitemId,
+            target_iow_group_id: dropDb.iowGroupId,
             drop_after_wan_id: dropDb.wanId
           },
           success: function(resp) {
@@ -1636,6 +1605,114 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           }
         });
       }
+    });
+  })();
+
+  // ── Reorder whole IOW Groups — press-and-hold drag ──────────────────────────
+  // Same raw mousedown/mousemove/mouseup shape as the activity-reorder drag
+  // above, moving an entire IOW Group (header row + all its activities)
+  // instead of a single activity. Only iow_group_order.sortorder changes —
+  // no activity dates, relationships, or iow_group_id are touched.
+  (function(){
+    var $ghost = $('#gact-drag-ghost');
+    var _dragGid = null, _dragRow = null;
+    var _dropRow = null;
+
+    function _groupRowFromPoint(x, y) {
+      var listRows = document.querySelectorAll('#gantt-container .gtasktablewrapper tr[id*="child_"]');
+      for (var i = 0; i < listRows.length; i++) {
+        var r = listRows[i];
+        if (r.id.indexOf('childrow_') !== -1) continue;
+        var rect = r.getBoundingClientRect();
+        if (y >= rect.top && y < rect.bottom) return r;
+      }
+      return null;
+    }
+
+    $(document).off('mousedown.giowdrag').on('mousedown.giowdrag', '#gantt-container .giow-reorder-handle', function(e) {
+      var tid = $(this).attr('data-tid');
+      var gid = $(this).attr('data-iowgroupid');
+      var row = document.getElementById('gantt-container' + 'child_' + tid);
+      if (!row || !gid) return;
+
+      _dragGid = gid;
+      _dragRow = row;
+      $(this).addClass('giow-dragging');
+
+      var nameCell = row.querySelector('td.gtaskname');
+      $ghost.text(nameCell ? nameCell.textContent.trim() : 'IOW Group')
+        .css({ left: (e.clientX + 14) + 'px', top: (e.clientY + 10) + 'px', display: 'block' });
+
+      e.preventDefault();
+    });
+
+    $(document).off('mousemove.giowdrag').on('mousemove.giowdrag', function(e) {
+      if (!_dragGid) return;
+      $ghost.css({ left: (e.clientX + 14) + 'px', top: (e.clientY + 10) + 'px' });
+
+      if (_dropRow) { $(_dropRow).removeClass('giow-drop-target'); _dropRow = null; }
+      var row = _groupRowFromPoint(e.clientX, e.clientY);
+      if (row && row !== _dragRow) {
+        var rowTid = row.id.slice(row.id.indexOf('child_') + 'child_'.length);
+        var rowInfo = (window._ganttWbsBareRowWgId || {})[rowTid];
+        // Only another IOW Group header row is a valid drop target —
+        // dropping on an activity row does nothing.
+        if (rowInfo) {
+          _dropRow = row;
+          $(row).addClass('giow-drop-target');
+        }
+      }
+    });
+
+    $(document).off('mouseup.giowdrag').on('mouseup.giowdrag', function(e) {
+      if (!_dragGid) return;
+      $('.giow-reorder-handle.giow-dragging').removeClass('giow-dragging');
+      $ghost.css('display', 'none');
+      if (_dropRow) $(_dropRow).removeClass('giow-drop-target');
+
+      var dragGid = _dragGid, dropRow = _dropRow;
+      _dragGid = null; _dragRow = null; _dropRow = null;
+      if (!dropRow) return; // released outside a valid IOW Group row — no-op
+
+      var dropTid = dropRow.id.slice(dropRow.id.indexOf('child_') + 'child_'.length);
+      var dropInfo = (window._ganttWbsBareRowWgId || {})[dropTid];
+      if (!dropInfo || !dropInfo.iowGroupId) return;
+      var dropGid = String(dropInfo.iowGroupId);
+      if (dropGid === dragGid) return;
+
+      // Build the new group order: every IOW Group header currently in
+      // the DOM, top to bottom, with the dragged one removed and
+      // reinserted at the drop row's position.
+      var orderedGids = [];
+      $('#gantt-container .gtasktablewrapper tr[id*="child_"]').each(function() {
+        if (this.id.indexOf('childrow_') !== -1) return;
+        var rowTid = this.id.slice(this.id.indexOf('child_') + 'child_'.length);
+        var info = (window._ganttWbsBareRowWgId || {})[rowTid];
+        if (info && info.iowGroupId) orderedGids.push(String(info.iowGroupId));
+      });
+      var fromIdx = orderedGids.indexOf(dragGid);
+      var toIdx = orderedGids.indexOf(dropGid);
+      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+      orderedGids.splice(fromIdx, 1);
+      toIdx = orderedGids.indexOf(dropGid);
+      orderedGids.splice(toIdx, 0, dragGid);
+
+      $.ajax({
+        type: 'POST',
+        url: _base + '/reorderiowgroups',
+        dataType: 'json',
+        data: { project_id: projectId, 'iow_group_ids[]': orderedGids },
+        success: function(resp) {
+          if (!resp || resp.error !== 'No') {
+            alert((resp && resp.errortext) || 'Could not reorder — please try again.');
+            return;
+          }
+          if (typeof window.loadGantt === 'function') window.loadGantt();
+        },
+        error: function() {
+          alert('Network error — could not save the new order.');
+        }
+      });
     });
   })();
 
@@ -1937,10 +2014,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var maxVal = 0;
       rows.forEach(function(r) {
         if (opts.estAct) maxVal = Math.max(maxVal, +r.est || 0, +r.act || 0);
-        else maxVal = Math.max(maxVal, +r.value || 0);
+        else maxVal = Math.max(maxVal, (+r.value || 0) + (opts.showOverrun ? (+r.overCount || 0) : 0));
       });
       if (maxVal <= 0) maxVal = 1;
       var step = _ucrNiceStep(maxVal, 5);
+      if (opts.integerTicks) step = Math.max(1, Math.round(step));
       var axisMax = Math.ceil(maxVal / step) * step;
       if (axisMax <= 0) axisMax = step;
       var ticks = [];
@@ -1976,26 +2054,35 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           // value on top in red, Estimate below — so the higher figure
           // always reads first, and the bar's own colour signal is echoed
           // in the number itself.
-          var estLbl = '<span class="gm-vchart-barval">' + fmt(est) + '</span>';
+          var hideVal = opts.hideBarVal ? true : false;
+          var estLbl = hideVal ? '' : '<span class="gm-vchart-barval">' + fmt(est) + '</span>';
           var actLblCol = over ? '#e64a19' : (under ? '#1b9e8e' : '#1a2540');
-          var actLbl = (r.hasActual) ? '<span class="gm-vchart-barval-diff" style="color:' + actLblCol + ';">' + fmt(act) + '</span>' : '';
+          var actLbl = hideVal ? '' : ((r.hasActual) ? '<span class="gm-vchart-barval-diff" style="color:' + actLblCol + ';">' + fmt(act) + '</span>' : '');
           var barValHtml = over ? (actLbl + estLbl) : (estLbl + actLbl);
+          var colCls = opts.onClick ? (' ' + opts.onClick + '-bar') : '';
+          var colAttr = opts.onClick ? (' data-name="' + $('<span>').text(r.name).html() + '" style="cursor:pointer;"') : '';
           // Each resource keeps its own base colour (from the orange/teal-
           // free _UCR_ESTACT_COLS palette) so bars stay visually distinct,
           // while the over/under overlay colour never collides with it.
           var baseCol = _UCR_ESTACT_COLS[i % _UCR_ESTACT_COLS.length];
-          html += '<div class="gm-vchart-col">'
+          html += '<div class="gm-vchart-col' + colCls + '"' + colAttr + ' title="' + $('<span>').text(r.name).html() + ': ' + fmt(est) + (r.hasActual ? ' (Act: ' + fmt(act) + ')' : '') + '">'
             + '<div class="gm-vchart-bar-wrap" style="height:' + totalPct + '%;">'
             +   barValHtml
             +   '<div class="gm-vchart-bar" style="background:' + (opts.singleColor || baseCol) + ';">' + diffSeg + '</div>'
             + '</div></div>';
         } else {
           var val = +r.value || 0;
-          var pct = Math.max(0, Math.min(100, (val / axisMax) * 100));
-          html += '<div class="gm-vchart-col">'
+          var overCnt = opts.showOverrun ? (+r.overCount || 0) : 0;
+          var pct = Math.max(0, Math.min(100, ((val + overCnt) / axisMax) * 100));
+          var overPctOfBar = (val + overCnt) > 0 ? (overCnt / (val + overCnt)) * 100 : 0;
+          var overSeg = overCnt > 0 ? '<div class="gm-vchart-diff" style="height:' + overPctOfBar + '%;background:#e64a19;" title="' + overCnt + ' over estimate"></div>' : '';
+          var colCls = opts.onClick ? (' ' + opts.onClick + '-bar') : '';
+          var colAttr = opts.onClick ? (' data-name="' + $('<span>').text(r.name).html() + '" style="cursor:pointer;"') : '';
+          var hideVal = opts.hideBarVal ? true : false;
+          html += '<div class="gm-vchart-col' + colCls + '"' + colAttr + ' title="' + $('<span>').text(r.name).html() + ': ' + fmt(val) + (overCnt > 0 ? ' + ' + overCnt : '') + '">'
             + '<div class="gm-vchart-bar-wrap" style="height:' + pct + '%;">'
-            +   '<span class="gm-vchart-barval">' + fmt(val) + '</span>'
-            +   '<div class="gm-vchart-bar" style="background:' + (opts.singleColor || col) + ';"></div>'
+            +   (hideVal ? '' : '<span class="gm-vchart-barval">' + fmt(val) + (overCnt > 0 ? ' + ' + overCnt : '') + '</span>')
+            +   '<div class="gm-vchart-bar" style="background:' + (opts.singleColor || col) + ';">' + overSeg + '</div>'
             + '</div></div>';
         }
       });
@@ -2024,8 +2111,14 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       // more Resource Types are added — growing evenly instead of pinned
       // to the top. overflow-y:auto covers the case where it eventually
       // outgrows the panel's own height.
-      html += '<div data-metric="' + metric + '" style="width:100%;box-sizing:border-box;padding:8px 10px;flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;overflow-y:auto;">'
-        + _renderHBarChart(rows, { onClick: 'gm-ucr-type', labelW: 90, bigLabels: true, smallFont: true, integerTicks: true, showOverrun: true, xTitle: 'No. of Resources' })
+      var chartOpts = { onClick: 'gm-ucr-type', integerTicks: true, showOverrun: true, hideBarVal: true };
+      var anyOver = rows.some(function(r){ return (+r.overCount || 0) > 0; });
+      var chartHtml = '<div style="display:flex;flex-direction:column;flex:1;min-height:150px;">'
+        + _renderVBarChart(rows, chartOpts)
+        + (anyOver ? '<div class="gm-vchart-legend gm-vchart-legend-sm"><span><i style="background:#e64a19;"></i>Over estimate</span></div>' : '')
+        + '</div>';
+      html += '<div data-metric="' + metric + '" style="width:100%;box-sizing:border-box;padding:8px 10px;flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:center;overflow-y:auto;">'
+        + chartHtml
         + '</div>';
       el.innerHTML = html;
     }
@@ -2232,10 +2325,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         return { name: name, value: resRows.length, overCount: resRows.filter(m.isOver).length };
       });
       var typeColor = _ucrColorForType(metric, typeName);
+      var anyOver = rows.some(function(r){ return (+r.overCount || 0) > 0; });
       return {
         title: $('<span>').text(typeName).html() + ' — Resource Groups',
-        body: '<div class="gm-ucr-drill-body">'
-          + _renderHBarChart(rows, { onClick: 'gm-ucr-group', labelW: 110, bigLabels: true, integerTicks: true, showOverrun: true, xTitle: 'No. of Resources', yTitle: 'Resource Group', singleColor: typeColor })
+        body: '<div class="gm-ucr-drill-body" style="display:flex;flex-direction:column;align-items:center;">'
+          + _renderVBarChart(rows, { onClick: 'gm-ucr-group', integerTicks: true, showOverrun: true, hideBarVal: true, singleColor: typeColor })
+          + (anyOver ? '<div class="gm-vchart-legend gm-vchart-legend-sm"><span><i style="background:#e64a19;"></i>Over estimate</span></div>' : '')
           + '</div>'
       };
     }
@@ -4366,14 +4461,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
         var wgMap = window._ganttWbsBareRowWgId || {};
         var info = wgMap[tid];
-        if (!info) return; // not a WBS-tier IOW row/bar — ignore (e.g. IOW-Group tier, or a leaf activity row/bar)
+        if (!info) return; // not an IOW Group row/bar — ignore (e.g. a leaf activity row/bar)
 
-        // Always resolve the IOW's current name from ITS OWN name row —
-        // not from whichever element happened to receive the click.
-        // Clicking the BAR (a separate DOM tree from the name/list rows,
-        // see the comment above) previously left this blank, which made
-        // actionWbsadd() fall back to renaming the IOW to the activity's
-        // own name — the exact bug this replaced.
+        // Resolve the IOW Group's own name from its name row.
         var iowName = '';
         document.querySelectorAll('#gantt-container tr[id*="child_"]').forEach(function(r){
           if (iowName) return; // already found
@@ -4384,7 +4474,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           if (nc && nc.textContent.trim()) iowName = nc.textContent.trim();
         });
 
-        if (typeof window.openEditActivitiesModal === 'function') window.openEditActivitiesModal(info.wgId, iowName, info.iowGroupId);
+        if (typeof window.openEditActivitiesModal === 'function') window.openEditActivitiesModal(iowName, info.iowGroupId);
       }, true);
     })();
   })();

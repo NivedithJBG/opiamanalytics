@@ -13,17 +13,16 @@ class EstimatereportController extends Controller
     }
 
     /* IOW-grouped estimate (BOQ-style) for a project: each activity's Unit,
-       Quantity, Rate and Amount, grouped under its IOW (workgroups_new.Name —
-       the per-project schedule item, e.g. "Excavation"), not the broader IOW
-       Group library category (iow_groups.name, e.g. "Civil Works").
+       Quantity, Rate and Amount, grouped under its IOW Group
+       (iow_groups.name, e.g. "Civil Works") — the only grouping tier now
+       that there is no separate per-project IOW-item name.
 
-       Every IOW and activity created for this project shows here immediately
-       — an IOW with no activities yet still gets its own (empty) section, and
-       an activity with no schedule bar / no rate yet still shows as a row
-       with Quantity/Rate/Amount at 0, rather than being silently excluded
-       until pricing is entered. All three joins below are LEFT JOINs for
-       exactly this reason (previously INNER JOINs, which is why newly
-       created IOWs/activities via the "+" popups never appeared here). */
+       Every IOW Group and activity created for this project shows here
+       immediately — a group with no activities yet still gets its own
+       (empty) section, and an activity with no schedule bar / no rate yet
+       still shows as a row with Quantity/Rate/Amount at 0, rather than
+       being silently excluded until pricing is entered. All joins below
+       are LEFT JOINs for exactly this reason. */
     public function actionGet()
     {
         $projectId = (int)$_POST['projectid'];
@@ -38,9 +37,9 @@ class EstimatereportController extends Controller
 
         $rows = $db->createCommand("
             SELECT
-                wg.Workgroup_Id                              AS iow_id,
-                wg.Name                                      AS iow_name,
-                wg.sortorder                                 AS iow_sortorder,
+                go.iow_group_id                              AS iow_id,
+                ig.name                                      AS iow_name,
+                go.sortorder                                 AS iow_sortorder,
                 wa.id                                        AS activity_row_id,
                 wa.activity_Id                                AS lib_activity_id,
                 sa.id                                          AS sched_id,
@@ -52,15 +51,15 @@ class EstimatereportController extends Controller
                     (SELECT ea.activity_rate FROM estimateactivities ea WHERE ea.activity_id = wa.activity_Id),
                     0
                 )                                              AS rate
-            FROM workgroups_new wg
-            LEFT JOIN iow_groups ig ON ig.id = wg.iowGroupid
-            LEFT JOIN workgroup_activities_new wa ON wa.wbs_id = wg.Workgroup_Id AND wa.pr_status = 0
-            LEFT JOIN scheduleactivities sa ON sa.activity_id = wa.id AND sa.projectId = wg.Project_Id AND sa.status = 0
+            FROM iow_group_order go
+            LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0
+            LEFT JOIN workgroup_activities_new wa ON wa.iow_group_id = go.iow_group_id AND wa.project_Id = go.project_id AND wa.pr_status = 0
+            LEFT JOIN scheduleactivities sa ON sa.activity_id = wa.id AND sa.projectId = go.project_id AND sa.status = 0
             LEFT JOIN pricing_estimate_new pe
-                   ON pe.activity_Id = wa.id AND pe.project_Id = wg.Project_Id AND pe.pricing_status = 0
-            WHERE wg.Project_Id = :pid AND wg.Status = 0
-            GROUP BY wg.Workgroup_Id, wa.id
-            ORDER BY wg.sortorder ASC, wg.Workgroup_Id ASC, wa.sortorder ASC, wa.id ASC
+                   ON pe.activity_Id = wa.id AND pe.project_Id = go.project_id AND pe.pricing_status = 0
+            WHERE go.project_id = :pid
+            GROUP BY go.iow_group_id, wa.id
+            ORDER BY COALESCE(go.sortorder, 999999) ASC, go.iow_group_id ASC, wa.sortorder ASC, wa.id ASC
         ", [':pid' => $projectId])->queryAll();
 
         // Cost-of-work-done figures reuse the exact same formula as the Cost
@@ -70,17 +69,15 @@ class EstimatereportController extends Controller
         $costCtrl = new \app\controllers\ProjectsmainController('projectsmain', Yii::$app);
         $origPost = $_POST;
 
-        /* Group into IOW sections with subtotal, plus a grand total.
-           Multiple workgroups_new rows can share the same IOW Name (the WBS
-           allows the same IOW to be split across rows), so sections are
-           keyed by name here — not Workgroup_Id — to avoid showing the same
-           IOW heading more than once with only some of its activities. */
+        /* Group into IOW Group sections with subtotal, plus a grand total.
+           Each section is keyed by iow_group_id, now the sole grouping
+           tier (no per-project IOW-item name to split/merge across). */
         $groups   = [];
         $byIow    = [];
         $grandTotal = 0.0;
         $grandTotalActual = 0.0;
         foreach ($rows as $r) {
-            $iowKey = $r['iow_name'];
+            $iowKey = (int)$r['iow_id'];
             if (!isset($byIow[$iowKey])) {
                 $byIow[$iowKey] = [
                     'iow_id'           => (int)$r['iow_id'],

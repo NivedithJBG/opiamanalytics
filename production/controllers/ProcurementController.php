@@ -913,13 +913,15 @@ class ProcurementController extends Controller
                 ), 0)                               AS sc_estimated_value,
                 COALESCE(wdq.work_done_qty, 0)  AS work_done_qty,
                 eat.activitytype_name           AS activity_type,
-                wn.Name                         AS workgroup_name,
+                ig.name                         AS workgroup_name,
                 sa.id                           AS schedule_activity_id
             FROM workgroup_activities_new wa
-            JOIN workgroups_new wn
-                ON  wn.Workgroup_Id = wa.wbs_id
-                AND wn.Project_Id   = :pid
-                AND wn.Status       = 0
+            LEFT JOIN iow_group_order go
+                ON  go.iow_group_id = wa.iow_group_id
+                AND go.project_id   = :pid
+            LEFT JOIN iow_groups ig
+                ON  ig.id = wa.iow_group_id
+                AND ig.status = 0
             LEFT JOIN estimateactivities ea
                 ON  ea.activity_id = wa.activity_Id
             LEFT JOIN estimateactivitytypes eat
@@ -944,7 +946,7 @@ class ProcurementController extends Controller
                     AND pr.resourcetype_Id = :sctype
                     AND pr.pricing_status  = 0
               )
-            ORDER BY COALESCE(wn.sortorder, 999999) ASC, COALESCE(wa.sortorder, 999999) ASC, sa.id ASC
+            ORDER BY COALESCE(go.sortorder, 999999) ASC, COALESCE(wa.sortorder, 999999) ASC, sa.id ASC
         ";
 
         $rows = $db->createCommand($sql, [':pid' => $projectid, ':pid2' => $projectid, ':pid3' => $projectid, ':pid4' => $projectid, ':pid5' => $projectid, ':pid6' => $projectid, ':sctype' => $this->_subContractorTypeId()])->queryAll();

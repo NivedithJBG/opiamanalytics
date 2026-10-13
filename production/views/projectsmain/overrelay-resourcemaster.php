@@ -154,15 +154,15 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 
     <div class="edit-form edit-resource-group-form">
       <div class="row"><div class="col-md-1"></div>
-        <div class="col-md-4"><div class="form-group"><label>Resource Group Name</label>
-          <input class="form-control" id="resgroupnames" placeholder="Enter resource group name" type="text">
-          <span class="error" style="display:none;color:red;"></span></div></div>
         <div class="col-md-4"><div class="form-group"><label>Resource Type</label>
           <select id="editresgrouptype" class="form-control"><option value="0">-- Select Type --</option>
             <?php foreach ($resourceTypes as $rt): ?>
             <option value="<?php echo $rt->ResourceType_Id; ?>"><?php echo htmlspecialchars($rt->Name, ENT_QUOTES); ?></option>
             <?php endforeach; ?>
           </select></div></div>
+        <div class="col-md-4"><div class="form-group"><label>Resource Group</label>
+          <input class="form-control" id="resgroupnames" placeholder="Enter resource group" type="text">
+          <span class="error" style="display:none;color:red;"></span></div></div>
         <div class="col-md-3 text-left"><label>&nbsp;</label><br>
           <button type="button" class="btn btn-danger" id="cancelresgroups"><span class="icon-close"></span> Cancel</button>
           <button type="button" class="btn btn-primary" id="saveresgroupbutton"><span class="icon-check"></span> Save Changes</button>
@@ -172,9 +172,6 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 
     <div class="edit-form edit-resource-form">
       <div class="row">
-        <div class="col-md-2"><div class="form-group"><label>Resource Name</label>
-          <input class="form-control" id="editresourcename" placeholder="Enter resource name" type="text">
-          <span class="error" style="display:none;color:red;"></span></div></div>
         <div class="col-md-2"><div class="form-group"><label>Resource Type</label>
           <select id="editresourcetype" class="form-control"><option value="0">-- Select Type --</option>
             <?php foreach ($resourceTypes as $rt): ?>
@@ -187,6 +184,9 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
             <option value="<?php echo $rg->Resource_group_Id; ?>"><?php echo htmlspecialchars($rg->Resource_group_Name, ENT_QUOTES); ?></option>
             <?php endforeach; ?>
           </select></div></div>
+        <div class="col-md-2"><div class="form-group"><label>Resource Name</label>
+          <input class="form-control" id="editresourcename" placeholder="Enter resource name" type="text">
+          <span class="error" style="display:none;color:red;"></span></div></div>
         <div class="col-md-1"><div class="form-group"><label>Unit</label>
           <input class="form-control" id="editresourceunit" placeholder="e.g. kg, m, nos" type="text"></div></div>
         <div class="col-md-2"><div class="form-group"><label>Rate</label>
@@ -255,11 +255,6 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
   <div class="rl-sw-body">
     <div class="row rl-resgroup-add-row">
       <div class="col-md-4">
-        <label>Resource Group Name</label>
-        <input type="text" class="form-control" id="resgroupname1" placeholder="Group name">
-        <span class="error" style="color:red;display:none;"></span>
-      </div>
-      <div class="col-md-4">
         <label>Resource Type</label>
         <select id="addresgrouptype" class="form-control">
           <option value="0">-- Select Type --</option>
@@ -267,6 +262,11 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
           <option value="<?php echo $rt->ResourceType_Id; ?>"><?php echo htmlspecialchars($rt->Name, ENT_QUOTES); ?></option>
           <?php endforeach; ?>
         </select>
+      </div>
+      <div class="col-md-4">
+        <label>Resource Group</label>
+        <input type="text" class="form-control" id="resgroupname1" placeholder="Group name">
+        <span class="error" style="color:red;display:none;"></span>
       </div>
       <div class="col-md-4" style="padding-top:25px;">
         <button type="button" id="saveresgroup" class="btn rl-modal-save"><span class="icon-check"></span> Add Resource Group</button>
@@ -293,9 +293,6 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
   <div class="rl-sw-body">
     <form id="addresourceform">
       <div class="row">
-        <div class="col-md-4"><div class="form-group"><label>Resource Name</label>
-          <input id="resourcename1" type="text" class="form-control" placeholder="Resource Name">
-          <span class="error" style="display:none;color:red;"></span></div></div>
         <div class="col-md-4"><div class="form-group"><label>Resource Type</label>
           <select id="addresourcetype" class="form-control"><option value="0">-- Select Type --</option>
             <?php foreach ($resourceTypes as $rt): ?>
@@ -308,6 +305,9 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
             <option value="<?php echo $rg->Resource_group_Id; ?>"><?php echo htmlspecialchars($rg->Resource_group_Name, ENT_QUOTES); ?></option>
             <?php endforeach; ?>
           </select></div></div>
+        <div class="col-md-4"><div class="form-group"><label>Resource Name</label>
+          <input id="resourcename1" type="text" class="form-control" placeholder="Resource Name">
+          <span class="error" style="display:none;color:red;"></span></div></div>
       </div>
       <div class="row" style="margin-top:12px;">
         <div class="col-md-6"><div class="form-group"><label>Unit</label>
@@ -320,7 +320,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     </form>
   </div>
   <div class="rl-sw-footer">
-    <button type="button" class="btn rl-sw-close" data-target="rlResourcePopup" id="cancelresource" style="background:#d9534f;color:#fff;border-color:#d43f3a;border-radius:4px;"><span class="icon-close"></span> Cancel</button>
+    <button type="button" class="btn rl-sw-close" data-target="rlResourcePopup" id="cancelresource" style="background:#d9534f;color:#fff;border-color:#d43f3a;border-radius:4px;"><span class="icon-close"></span> Close</button>
     <button type="button" id="saveresource" class="btn rl-modal-save"><span class="icon-check"></span> Add Resource</button>
   </div>
 </div>

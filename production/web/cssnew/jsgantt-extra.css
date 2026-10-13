@@ -359,6 +359,7 @@ div.gtaskbarcontainer.gplan{
   border-right: 7px solid #00838f;
 }
 
+
 /* ── Explicit row/column gridlines ──────────────────────────────────────
    Forced visible regardless of whatever was suppressing the base
    jsgantt.css borders — covers both the task-list (left) and the

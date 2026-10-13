@@ -152,7 +152,8 @@ $subDomain = array_shift(($HTTP_HOST));
 
         .round-icons .perf-dashboard-btn,
         .round-icons .cost-dashboard-btn,
-        .round-icons #add-project-nav-btn { color: #fff !important; }
+        .round-icons #add-project-nav-btn,
+        .round-icons .pwt-nav-btn { color: #fff !important; }
 
         .round-icons .icon-chart3            { background-color: #003580 !important; }
         .round-icons .rel-nav-btn            { background-color: #5c3d8f !important; }
@@ -185,6 +186,8 @@ $subDomain = array_shift(($HTTP_HOST));
         .round-icons .pdoc-btn:hover,               .round-icons .pdoc-btn:focus               { background: #0d47a1 !important; }
         .round-icons #add-project-nav-btn           { background-color: #0277BD !important; }
         .round-icons #add-project-nav-btn:hover,    .round-icons #add-project-nav-btn:focus    { background: #01579B !important; }
+        .round-icons .pwt-nav-btn                   { background: linear-gradient(135deg,#0d3b4f,#0f5c52) !important; }
+        .round-icons .pwt-nav-btn:hover,            .round-icons .pwt-nav-btn:focus            { background: linear-gradient(135deg,#0a2e3d,#0c463f) !important; }
 
         /* ── Project Documents Floating Popup ── */
         #pdoc-popup {
@@ -258,11 +261,242 @@ $subDomain = array_shift(($HTTP_HOST));
         #pdoc-popup .ui-resizable-se { background:#1565C0; opacity:.4; border-radius:0 0 8px 0; }
         #pdoc-popup .ui-resizable-se:hover { opacity:.7; }
 
+        /* ── Project Workflow Tools Floating Popup ── */
+        #pwt-popup {
+            display:none; flex-direction:column;
+            position:fixed;
+            width:640px; height:420px; min-width:420px; min-height:280px;
+            z-index:100000;
+            background:#fff; border-radius:10px; overflow:hidden;
+            box-shadow:0 8px 40px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.12);
+        }
+        #pwt-popup.pwt-open { display:flex; }
+        #pwt-header {
+            background:linear-gradient(135deg,#0d3b4f,#0f5c52);
+            color:#fff; padding:10px 16px; display:flex; align-items:center; gap:8px;
+            cursor:move; user-select:none; flex-shrink:0;
+        }
+        #pwt-header h4 { margin:0; font-size:14px; font-weight:700; flex:1; }
+        #pwt-close-x {
+            background:rgba(255,255,255,0.2); border:none; color:#fff; border-radius:50%;
+            width:24px; height:24px; font-size:15px; cursor:pointer; line-height:24px; text-align:center; flex-shrink:0;
+        }
+        #pwt-close-x:hover { background:rgba(255,255,255,0.35); }
+        #pwt-tabs {
+            display:flex; flex-wrap:wrap; gap:6px; background:#eef5f3;
+            border-bottom:1px solid #d6e3e0; padding:10px 14px; flex-shrink:0;
+        }
+        #pwt-tabs .pwt-tab {
+            background:linear-gradient(135deg,#0d3b4f,#0f5c52); color:#fff;
+            border:none; border-radius:20px; padding:7px 16px; font-size:12px; font-weight:600;
+            cursor:pointer; opacity:.6; transition:opacity .15s;
+        }
+        #pwt-tabs .pwt-tab:hover { opacity:.85; }
+        #pwt-tabs .pwt-tab.active { opacity:1; box-shadow:0 2px 6px rgba(13,59,79,.4); }
+        #pwt-body { flex:1; overflow-y:auto; padding:18px; min-height:0; }
+        .pwt-pane { display:none; }
+        .pwt-pane.active { display:block; }
+        .pwt-placeholder { text-align:center; color:#888; padding:40px 20px; font-size:13px; }
+        #pwt-popup .ui-resizable-se { background:#0f5c52; opacity:.4; border-radius:0 0 8px 0; }
+        #pwt-popup .ui-resizable-se:hover { opacity:.7; }
+
+        /* ── Create WBS Floating Popup ── */
+        #cwbs-popup {
+            display:none; flex-direction:column;
+            position:fixed;
+            width:680px; height:640px; min-width:460px; min-height:400px;
+            z-index:100000;
+            background:#fff; border-radius:10px; overflow:hidden;
+            box-shadow:0 8px 40px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.12);
+        }
+        #cwbs-popup.cwbs-open { display:flex; }
+        #cwbs-header {
+            background:linear-gradient(135deg,#0d3b4f,#0f5c52);
+            color:#fff; padding:10px 16px; display:flex; align-items:center; gap:8px;
+            cursor:move; user-select:none; flex-shrink:0;
+        }
+        #cwbs-header h4 { margin:0; font-size:14px; font-weight:700; flex:1; }
+        #cwbs-close-x {
+            background:rgba(255,255,255,0.2); border:none; color:#fff; border-radius:50%;
+            width:24px; height:24px; font-size:15px; cursor:pointer; line-height:24px; text-align:center; flex-shrink:0;
+        }
+        #cwbs-close-x:hover { background:rgba(255,255,255,0.35); }
+        #cwbs-boq-toggle {
+            display:flex; align-items:center; gap:8px; background:#fff;
+            border:none; border-bottom:1px solid #d6e3e0; padding:10px 16px;
+            font-size:12.5px; font-weight:700; color:#0d3b4f; cursor:pointer; width:100%; text-align:left; flex-shrink:0;
+        }
+        #cwbs-boq-toggle:hover { background:#f6faf9; }
+        #cwbs-boq-toggle .cwbs-boq-caret { transition:transform .15s; font-size:10px; }
+        #cwbs-boq-toggle.cwbs-boq-open .cwbs-boq-caret { transform:rotate(90deg); }
+        #cwbs-boq-section {
+            display:none; background:#fafcfc; border-bottom:1px solid #d6e3e0;
+            padding:12px 16px; flex-shrink:0; max-height:200px; overflow-y:auto;
+            gap:20px;
+        }
+        #cwbs-boq-section.cwbs-boq-open { display:flex; }
+        #cwbs-boq-upload-col { flex:0 0 320px; display:flex; flex-direction:column; }
+        #cwbs-boq-list-col { flex:1; min-width:0; }
+        #cwbs-boq-dropzone {
+            display:inline-flex; align-items:center; gap:10px; max-width:320px;
+            border:2px dashed #8fb8ae; border-radius:8px; background:#fff;
+            padding:10px 14px; text-align:left; cursor:pointer; transition:border-color .15s,background .15s;
+        }
+        #cwbs-boq-dropzone:hover, #cwbs-boq-dropzone.cwbs-boq-drag-over { border-color:#0f5c52; background:#eef5f3; }
+        #cwbs-boq-dropzone .cwbs-boq-dz-icon { font-size:18px; color:#5c7a73; flex-shrink:0; }
+        #cwbs-boq-dropzone .cwbs-boq-dz-text { font-size:12.5px; color:#2d333b; font-weight:600; }
+        #cwbs-boq-dropzone .cwbs-boq-dz-sub { font-size:10.5px; color:#8aa39c; margin-top:1px; }
+        #cwbs-boq-file-input { display:none; }
+        #cwbs-boq-selected-file {
+            display:none; align-items:center; gap:10px; margin-top:10px;
+            background:#eef5f3; border:1px solid #c7ded8; border-radius:8px; padding:9px 12px;
+        }
+        #cwbs-boq-selected-file.show { display:flex; }
+        #cwbs-boq-selected-file .cwbs-boq-sf-name { flex:1; min-width:0; font-size:12.5px; font-weight:600; color:#2d333b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        #cwbs-boq-selected-file .cwbs-boq-sf-remove { background:none; border:none; color:#c0392b; font-size:16px; cursor:pointer; padding:0 4px; }
+        #cwbs-boq-upload-btn {
+            margin-top:10px; padding:8px 20px; border:none; border-radius:20px; align-self:flex-start;
+            background:linear-gradient(135deg,#0d3b4f,#0f5c52); color:#fff; font-size:12.5px; font-weight:700; cursor:pointer;
+        }
+        #cwbs-boq-upload-btn:hover { opacity:.88; }
+        #cwbs-boq-upload-btn:disabled { opacity:.5; cursor:not-allowed; }
+        #cwbs-boq-list-hdr { font-size:11px; font-weight:700; color:#5c7a73; text-transform:uppercase; letter-spacing:.5px; margin:0 0 8px; }
+        #cwbs-boq-list { display:flex; flex-direction:column; gap:6px; max-height:170px; overflow-y:auto; }
+        .cwbs-boq-file-row { display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #d6e3e0; border-radius:8px; padding:8px 12px; }
+        .cwbs-boq-file-row .cwbs-boq-fr-icon { font-size:15px; color:#0d3b4f; flex-shrink:0; }
+        .cwbs-boq-file-row .cwbs-boq-fr-info { flex:1; min-width:0; }
+        .cwbs-boq-file-row .cwbs-boq-fr-name { font-size:12.5px; font-weight:600; color:#2d333b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .cwbs-boq-file-row .cwbs-boq-fr-date { font-size:10.5px; color:#8aa39c; margin-top:2px; }
+        .cwbs-boq-file-row .cwbs-boq-fr-view {
+            background:#0f5c52; color:#fff; border:none; border-radius:14px; padding:4px 12px;
+            font-size:11px; font-weight:700; cursor:pointer; flex-shrink:0;
+        }
+        .cwbs-boq-file-row .cwbs-boq-fr-view:hover { background:#0a3f38; }
+        .cwbs-boq-file-row .cwbs-boq-fr-del { background:#e57373; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:11px; cursor:pointer; flex-shrink:0; }
+        #cwbs-boq-empty { color:#aaa; font-size:12.5px; text-align:center; padding:10px 0; }
+        #cwbs-main { flex:1; display:flex; min-height:0; }
+        #cwbs-right { flex:1; min-width:0; display:flex; flex-direction:column; }
+        #cwbs-filters {
+            display:flex; gap:12px; background:#eef5f3; border-bottom:1px solid #d6e3e0;
+            padding:12px 16px; flex-shrink:0; flex-wrap:wrap;
+        }
+        .cwbs-f { display:flex; flex-direction:column; gap:3px; flex:1; min-width:160px; }
+        .cwbs-f label { font-size:11px; font-weight:700; color:#0d3b4f; }
+        .cwbs-f select {
+            border:1px solid #bcd0cc; border-radius:5px; padding:6px 8px; font-size:12px;
+            height:32px; background:#fff; outline:none;
+        }
+        .cwbs-f select:focus { border-color:#0f5c52; }
+        #cwbs-msg { font-size:12px; color:#c0392b; padding:0 16px; flex-shrink:0; min-height:0; }
+        #cwbs-msg:empty { display:none; }
+        #cwbs-list-wrap { flex:1; overflow-y:auto; padding:10px 16px; min-height:0; }
+        .cwbs-placeholder { text-align:center; color:#888; padding:40px 20px; font-size:13px; }
+        #cwbs-table { width:100%; border-collapse:collapse; font-size:13px; border:1px solid #8fb8ae; }
+        #cwbs-table thead th {
+            background:#cfe8e0; color:#0d3b4f; font-weight:700; font-size:11px;
+            text-align:left; padding:8px 10px; border:1px solid #8fb8ae;
+            position:sticky; top:0; z-index:1;
+        }
+        #cwbs-table tbody tr:nth-child(even) { background:#eaf5f1; }
+        #cwbs-table tbody tr:hover { background:#d7ede6; }
+        #cwbs-table td { padding:8px 10px; vertical-align:middle; border:1px solid #bcdcd2; }
+        .cwbs-sno-td { width:40px; text-align:center; color:#6c7a89; }
+        .cwbs-act-name { color:#1a1a1a; }
+        .cwbs-unit-td { width:70px; text-align:center; color:#6c7a89; }
+        .cwbs-qty-td { width:90px; text-align:center; }
+        .cwbs-runits-td { width:90px; text-align:center; }
+        .cwbs-qty-input, .cwbs-runits-input {
+            width:100%; box-sizing:border-box; border:1px solid #bcd0cc; border-radius:5px;
+            padding:5px 6px; font-size:12px; text-align:center; outline:none;
+        }
+        .cwbs-qty-input:focus, .cwbs-runits-input:focus { border-color:#0f5c52; }
+        .cwbs-edit-td { width:40px; text-align:center; }
+        .cwbs-tick-td { width:36px; text-align:center; }
+        .cwbs-edit-btn {
+            background:#fff; border:2px solid #b7c4c1; color:#5c7a73;
+            border-radius:50%; width:26px; height:26px; cursor:pointer; flex-shrink:0;
+            font-size:12px; line-height:1; transition:background .12s, border-color .12s, color .12s;
+        }
+        .cwbs-edit-btn:hover { border-color:#0f5c52; color:#0f5c52; }
+        .cwbs-tick-btn {
+            background:#fff; border:2px solid #b7c4c1; color:transparent;
+            border-radius:50%; width:26px; height:26px; cursor:pointer; flex-shrink:0;
+            font-size:14px; line-height:1; transition:background .12s, border-color .12s, color .12s;
+        }
+        .cwbs-tick-btn:hover { border-color:#0f5c52; }
+        .cwbs-tick-btn.cwbs-selected { background:#0f5c52; border-color:#0f5c52; color:#fff; }
+        #cwbs-footer {
+            display:flex; justify-content:flex-end; gap:10px; padding:12px 16px;
+            border-top:1px solid #eee; flex-shrink:0;
+        }
+        .cwbs-btn { border:none; border-radius:20px; padding:8px 20px; font-size:13px; font-weight:700; cursor:pointer; }
+        .cwbs-btn-cancel { background:#eee; color:#444; }
+        .cwbs-btn-cancel:hover { background:#e0e0e0; }
+        .cwbs-btn-add { background:linear-gradient(135deg,#0d3b4f,#0f5c52); color:#fff; }
+        .cwbs-btn-add:hover { opacity:.88; }
+        .cwbs-btn-add:disabled { opacity:.5; cursor:default; }
+        #cwbs-popup .ui-resizable-se { background:#0f5c52; opacity:.4; border-radius:0 0 8px 0; }
+        #cwbs-popup .ui-resizable-se:hover { opacity:.7; }
+
+        /* ── Create WBS: Edit Activity Floating Popup ── */
+        #cwbsed-popup {
+            display:none; flex-direction:column;
+            position:fixed;
+            width:700px; height:520px; min-width:460px; min-height:360px;
+            z-index:100000;
+            background:#fff; border-radius:10px; overflow:hidden;
+            box-shadow:0 8px 40px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.12);
+        }
+        #cwbsed-popup.cwbsed-open { display:flex; }
+        #cwbsed-header {
+            background:linear-gradient(135deg,#0d3b4f,#0f5c52);
+            color:#fff; padding:10px 16px; display:flex; align-items:center; gap:8px;
+            cursor:move; user-select:none; flex-shrink:0;
+        }
+        #cwbsed-header h4 { margin:0; font-size:14px; font-weight:700; flex:1; }
+        #cwbsed-close-x {
+            background:rgba(255,255,255,0.2); border:none; color:#fff; border-radius:50%;
+            width:24px; height:24px; font-size:15px; cursor:pointer; line-height:24px; text-align:center; flex-shrink:0;
+        }
+        #cwbsed-close-x:hover { background:rgba(255,255,255,0.35); }
+        #cwbsed-body { flex:1; overflow-y:auto; padding:16px; min-height:0; }
+        .cwbsed-row { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+        .cwbsed-f { display:flex; flex-direction:column; gap:3px; min-width:140px; }
+        .cwbsed-f label { font-size:11px; font-weight:700; color:#0d3b4f; }
+        .cwbsed-f select, .cwbsed-f input {
+            border:1px solid #bcd0cc; border-radius:5px; padding:6px 8px; font-size:12px;
+            height:32px; background:#fff; outline:none; width:100%; box-sizing:border-box;
+        }
+        .cwbsed-f select:focus, .cwbsed-f input:focus { border-color:#0f5c52; }
+        .cwbsed-tasks-hdr { border-top:1px solid #eee; padding-top:10px; margin-top:4px; }
+        .cwbsed-task-col-hdr { display:flex; gap:6px; margin-top:8px; font-size:11px; color:#777; }
+        .cwbsed-task-col-hdr span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .cwbsed-task-row { display:flex; gap:6px; margin-top:6px; align-items:center; }
+        .cwbsed-task-row input {
+            border:1px solid #bcd0cc; border-radius:5px; padding:5px 6px; font-size:11.5px;
+            height:30px; outline:none; box-sizing:border-box; min-width:0; width:100%;
+        }
+        .cwbsed-task-row input:focus { border-color:#0f5c52; }
+        .cwbsed-task-row .cwbsed-task-name { flex:2.2; min-width:0; }
+        .cwbsed-task-row .cwbsed-task-unit { flex:1; min-width:0; }
+        .cwbsed-task-row .cwbsed-task-qty { flex:1; min-width:0; }
+        .cwbsed-task-row .cwbsed-task-prod { flex:1.2; min-width:0; }
+        .cwbsed-task-remove {
+            width:28px; height:28px; flex-shrink:0; background:none; border:none;
+            color:#d9534f; font-size:18px; cursor:pointer; line-height:1;
+        }
+        #cwbsed-footer {
+            display:flex; justify-content:flex-end; gap:10px; padding:12px 16px;
+            border-top:1px solid #eee; flex-shrink:0;
+        }
+        #cwbsed-popup .ui-resizable-se { background:#0f5c52; opacity:.4; border-radius:0 0 8px 0; }
+        #cwbsed-popup .ui-resizable-se:hover { opacity:.7; }
+
         /* ── File Viewer Floating Popup ── */
         #pdoc-viewer-popup {
             display:none; flex-direction:column;
             position:fixed;
-            width:90vw; height:90vh; min-width:400px; min-height:320px;
+            width:680px; height:760px; min-width:320px; min-height:280px;
             z-index:100100;
             background:#fff; border-radius:10px; overflow:hidden;
             box-shadow:0 12px 48px rgba(0,0,0,0.4);
@@ -467,6 +701,9 @@ if($action=='login')
                     <a class="icon-add" id="add-project-nav-btn" title="Projects" href="#" style="font-size:18px;"></a>
                 </li>
                 <li>
+                    <a class="icon-rocket pwt-nav-btn" id="pwt-nav-btn" title="Project Workflow Tools" href="#"></a>
+                </li>
+                <li>
                     <a class="icon-document pdoc-btn" id="pdoc-nav-btn" title="Project Documents" href="#"></a>
                 </li>
                 <li>
@@ -474,9 +711,6 @@ if($action=='login')
                 </li>
                 <li>
                     <a class="icon-sitemap rel-nav-btn" id="btn-gantt-relations" title="Activity Relationships" href="#" data-projectid="<?php echo $ProjectId?>"></a>
-                </li>
-                <li>
-                    <a class="icon-flow-parallel" id="gantt-win-dep-open" title="Dependency View (experimental)" href="#" data-projectid="<?php echo $ProjectId?>"></a>
                 </li>
                 <li>
                     <a class="icon-file-text estreport-btn" id="btn-estimate-report" title="Project Estimate" href="#" data-projectid="<?php echo $ProjectId?>"></a>
@@ -554,7 +788,6 @@ if($action=='login')
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-moneybag cashflow-dashboard-btn" title="Cashflow" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-plus" id="iow-btn-test" title="Add IOWs, Activities &amp; BOQ" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -576,7 +809,6 @@ if($action=='login')
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-moneybag cashflow-dashboard-btn" title="Cashflow" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-plus" id="iow-btn-test" title="Add IOWs, Activities &amp; BOQ" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1555" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -655,7 +887,6 @@ if($action=='login')
                     <li><a class="icon-stats perf-dashboard-btn" title="KPI" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-stats cost-dashboard-btn" title="Cost Dashboard" href="#" style="cursor:pointer;"> </a></li>
                     <li><a class="icon-moneybag cashflow-dashboard-btn" title="Cashflow" href="#" style="cursor:pointer;"> </a></li>
-                    <li><a class="icon-plus" id="iow-btn-test" title="Add IOWs, Activities &amp; BOQ" href="#" style="cursor:pointer;"> </a></li>
                     <?php if(!$user->account_type || $user->account_type == 'normal'){ ?>
                     <!-- <li><a class="icon-flickr overNow1" title="Project Report" href="<?php //echo Yii::$app->urlManager->createUrl('projectsmain/reports')?>">
                         </a>
@@ -1965,7 +2196,7 @@ if($action=='login')
             <div class="col-md-4">
               <div class="form-group">
                 <label>Duration (days) <span style="color:red">*</span></label>
-                <input id="gpm_duration" type="number" min="1" class="form-control" placeholder="e.g. 180">
+                <input id="gpm_duration" type="number" min="1" class="form-control" placeholder="">
                 <span class="text-danger gpm-err" id="gpm_duration_err" style="display:none;font-size:12px;"></span>
               </div>
             </div>
@@ -1987,7 +2218,7 @@ if($action=='login')
             <div class="col-md-4">
               <div class="form-group">
                 <label>Project Value <span style="color:red">*</span></label>
-                <input id="gpm_value" type="text" class="form-control" placeholder="e.g. 5000000">
+                <input id="gpm_value" type="text" class="form-control" placeholder="">
                 <span class="text-danger gpm-err" id="gpm_value_err" style="display:none;font-size:12px;"></span>
               </div>
             </div>
@@ -2337,6 +2568,150 @@ if($action=='login')
 </script>
 <!-- ── End Projects Manager Overlay ───────────────────────────────────── -->
 
+<!-- ── Project Workflow Tools Floating Popup ─────────────────────────── -->
+<div id="pwt-popup">
+  <div id="pwt-header">
+    <span style="font-size:15px;opacity:.85;">&#128640;</span>
+    <h4>Project Workflow Tools</h4>
+    <button id="pwt-close-x" style="margin-left:auto;">&times;</button>
+  </div>
+  <div id="pwt-tabs">
+    <button type="button" id="cwbs-open-btn" class="pwt-tab">Create WBS</button>
+    <button type="button" class="pwt-tab" data-pwt-pane="pwt-pane-schedule">Schedule Project</button>
+    <button type="button" class="pwt-tab" data-pwt-pane="pwt-pane-estimate">Estimate Project</button>
+    <button type="button" class="pwt-tab" data-pwt-pane="pwt-pane-optimise">Optimise Project</button>
+  </div>
+  <div id="pwt-body">
+    <div class="pwt-pane" id="pwt-pane-schedule">
+      <div class="pwt-placeholder">Schedule Project — coming soon.</div>
+    </div>
+    <div class="pwt-pane" id="pwt-pane-estimate">
+      <div class="pwt-placeholder">Estimate Project — coming soon.</div>
+    </div>
+    <div class="pwt-pane" id="pwt-pane-optimise">
+      <div class="pwt-placeholder">Optimise Project — coming soon.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Create WBS Floating Popup ──────────────────────────────────────── -->
+<div id="cwbs-popup">
+  <div id="cwbs-header">
+    <span style="font-size:15px;opacity:.85;">&#128640;</span>
+    <h4>Create WBS</h4>
+    <button id="cwbs-close-x" style="margin-left:auto;">&times;</button>
+  </div>
+  <button type="button" id="cwbs-boq-toggle">
+    <span class="cwbs-boq-caret">&#9656;</span> Upload BOQ
+  </button>
+  <div id="cwbs-boq-section">
+    <div id="cwbs-boq-upload-col">
+      <div id="cwbs-boq-dropzone">
+        <div class="cwbs-boq-dz-icon">&#x2B06;</div>
+        <div>
+          <div class="cwbs-boq-dz-text">Click or drag file here</div>
+          <div class="cwbs-boq-dz-sub">Excel (.xlsx, .xls) or PDF</div>
+        </div>
+      </div>
+      <input type="file" id="cwbs-boq-file-input" accept=".xlsx,.xls,.pdf">
+      <div id="cwbs-boq-selected-file">
+        <span class="cwbs-boq-sf-name" id="cwbs-boq-sf-name"></span>
+        <button type="button" class="cwbs-boq-sf-remove" id="cwbs-boq-sf-remove" title="Remove">&times;</button>
+      </div>
+      <button type="button" id="cwbs-boq-upload-btn" disabled>Upload BOQ</button>
+    </div>
+    <div id="cwbs-boq-list-col">
+      <div id="cwbs-boq-list-hdr">Uploaded BOQs</div>
+      <div id="cwbs-boq-list"><p id="cwbs-boq-empty">Loading&hellip;</p></div>
+    </div>
+  </div>
+  <div id="cwbs-main">
+    <div id="cwbs-right">
+      <div id="cwbs-filters">
+        <div class="cwbs-f">
+          <label>Project Type</label>
+          <select id="cwbs-proj-type"><option value="">Select Project Type</option></select>
+        </div>
+        <div class="cwbs-f">
+          <label>IOW Group</label>
+          <select id="cwbs-iow-group"><option value="">Select IOW Group</option></select>
+        </div>
+      </div>
+      <div id="cwbs-msg"></div>
+      <div id="cwbs-list-wrap">
+        <div id="cwbs-empty" class="cwbs-placeholder">Select a Project Type and IOW Group to list activities.</div>
+        <div id="cwbs-loading" class="cwbs-placeholder" style="display:none;">Loading activities&hellip;</div>
+        <table id="cwbs-table" style="display:none;">
+          <thead>
+            <tr>
+              <th class="cwbs-sno-td">#</th>
+              <th>Activity Name</th>
+              <th class="cwbs-unit-td">Unit</th>
+              <th class="cwbs-qty-td">Qty</th>
+              <th class="cwbs-runits-td">R.Unit</th>
+              <th class="cwbs-edit-td">Edit</th>
+              <th class="cwbs-tick-td">Select</th>
+            </tr>
+          </thead>
+          <tbody id="cwbs-tbody"></tbody>
+        </table>
+      </div>
+      <div id="cwbs-footer">
+        <button type="button" id="cwbs-cancel-btn" class="cwbs-btn cwbs-btn-cancel">Cancel</button>
+        <button type="button" id="cwbs-add-btn" class="cwbs-btn cwbs-btn-add">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Create WBS: Edit Activity Floating Popup ──────────────────────── -->
+<div id="cwbsed-popup">
+  <div id="cwbsed-header">
+    <span style="font-size:15px;opacity:.85;">&#9998;</span>
+    <h4>Edit Activity</h4>
+    <button id="cwbsed-close-x" style="margin-left:auto;">&times;</button>
+  </div>
+  <div id="cwbsed-body">
+    <input type="hidden" id="cwbsed-activity-id" value="">
+    <div class="cwbsed-row">
+      <div class="cwbsed-f" style="flex:1;">
+        <label>Project Type</label>
+        <select id="cwbsed-proj-type"><option value="0">Select Project Type</option></select>
+      </div>
+      <div class="cwbsed-f" style="flex:1;">
+        <label>IOW Group</label>
+        <select id="cwbsed-iow-group"><option value="">Select IOW Group</option></select>
+      </div>
+    </div>
+    <div class="cwbsed-row">
+      <div class="cwbsed-f" style="flex:3;">
+        <label>Activity Name</label>
+        <input type="text" id="cwbsed-act-name" placeholder="Activity Name">
+      </div>
+      <div class="cwbsed-f" style="flex:1;">
+        <label>Unit</label>
+        <input type="text" id="cwbsed-act-unit" placeholder="Unit">
+      </div>
+    </div>
+    <div class="cwbsed-tasks-hdr">
+      <span style="font-weight:700;color:#0d3b4f;font-size:12px;">Tasks</span>
+    </div>
+    <div class="cwbsed-task-col-hdr">
+      <span style="flex:2.2;">Task Name</span>
+      <span style="flex:1;">Unit</span>
+      <span style="flex:1;">Qty/Unit</span>
+      <span style="flex:1.2;">Productivity/day</span>
+      <span style="width:28px;flex-shrink:0;"></span>
+    </div>
+    <div id="cwbsed-task-rows"></div>
+    <button type="button" id="cwbsed-add-task-row" class="cwbs-btn" style="background:#eef5f3;color:#0d3b4f;margin-top:8px;">+ Add Task</button>
+  </div>
+  <div id="cwbsed-footer">
+    <button type="button" id="cwbsed-cancel-btn" class="cwbs-btn cwbs-btn-cancel">Close</button>
+    <button type="button" id="cwbsed-save-btn" class="cwbs-btn cwbs-btn-add">Save</button>
+  </div>
+</div>
+
 <!-- ── Project Documents Floating Popup ──────────────────────────────── -->
 <div id="pdoc-popup">
   <div id="pdoc-header">
@@ -2554,16 +2929,22 @@ if($action=='login')
         });
     }
 
-    function pdocViewFile(filename, displayName){
+    window.pdocViewFile = function pdocViewFile(filename, displayName, fullUrl){
         document.dispatchEvent(new Event('pdocv:open'));
-        var url = PDOC_FILE_BASE + filename;
+        var url = fullUrl || (PDOC_FILE_BASE + filename);
         var ext = filename.split('.').pop().toLowerCase();
         var $body = $('#pdoc-viewer-body');
         var $vp   = $('#pdoc-viewer-popup');
         $body.empty();
         $('#pdoc-viewer-title').text(displayName);
         if(ext==='pdf'){
-            $body.html('<iframe src="'+url+'" style="width:100%;height:100%;border:none;display:block;"></iframe>');
+            // #toolbar=0&navpanes=0&scrollbar=0 suppresses the browser's
+            // built-in PDF viewer chrome (toolbar/side panel) in Chrome —
+            // that chrome, not our own CSS, is what renders as a dark bar
+            // around the page since the PDF is handed off to the browser's
+            // own internal viewer inside the iframe, outside our DOM/CSS
+            // reach. This is the one lever PHP/CSS has over it.
+            $body.html('<iframe src="'+url+'#toolbar=0&navpanes=0&scrollbar=0" style="width:100%;height:100%;border:none;display:block;"></iframe>');
         } else if(['jpg','jpeg','png','gif','bmp','webp','svg'].indexOf(ext)>=0){
             $body.html('<img src="'+url+'" alt="'+displayName+'" style="max-width:100%;max-height:100%;object-fit:contain;display:block;margin:auto;">');
         } else {
@@ -2574,8 +2955,24 @@ if($action=='login')
             var vw = $vp.outerWidth(), vh = $vp.outerHeight();
             var ww = $(window).width(), wh = $(window).height();
             $vp.css({ visibility:'', top: Math.max(40, (wh - vh) / 2), left: Math.max(0, (ww - vw) / 2) });
-            $vp.draggable({ handle:'#pdoc-viewer-header', containment:'window', scroll:false });
-            $vp.resizable({ minWidth:320, minHeight:260, handles:'all' });
+            // The PDF <iframe> captures its own mouse events, so dragging
+            // the popup by its header loses sync with the cursor the
+            // instant the pointer crosses over the PDF content area
+            // (the iframe is a separate document — mousemove events
+            // inside it never reach jQuery UI's drag handler). Disabling
+            // pointer-events on the iframe for the duration of the drag
+            // keeps the document-level mousemove listener receiving every
+            // move, same fix this class of bug always needs.
+            $vp.draggable({
+                handle:'#pdoc-viewer-header', containment:'window', scroll:false,
+                start: function(){ $vp.find('iframe').css('pointer-events', 'none'); },
+                stop: function(){ $vp.find('iframe').css('pointer-events', ''); }
+            });
+            $vp.resizable({
+                minWidth:320, minHeight:260, handles:'all',
+                start: function(){ $vp.find('iframe').css('pointer-events', 'none'); },
+                stop: function(){ $vp.find('iframe').css('pointer-events', ''); }
+            });
             pdocViewerInited = true;
         } else {
             $vp.addClass('pdoc-open');
@@ -2668,6 +3065,541 @@ if($action=='login')
         $('#pdoc-up-addressee,#pdoc-up-subject').val('');
         $('#pdoc-up-corr-meta').slideUp(150);
         $('#pdoc-up-corr-msg').text('');
+    });
+
+    /* ── Project Workflow Tools popup ── */
+    var pwtInited = false;
+    function pwtShow(){
+        document.dispatchEvent(new Event('pwt:open'));
+        var $p = $('#pwt-popup');
+        if(!pwtInited){
+            $p.css({ visibility:'hidden', top:0, left:0 }).addClass('pwt-open');
+            var pw = $p.outerWidth(), ph = $p.outerHeight();
+            var ww = $(window).width(), wh = $(window).height();
+            $p.css({ visibility:'', top: Math.max(60, (wh - ph) / 2), left: Math.max(0, (ww - pw) / 2) });
+            $p.draggable({ handle:'#pwt-header', containment:'window', scroll:false });
+            $p.resizable({ minWidth:420, minHeight:280, handles:'all' });
+            pwtInited = true;
+        } else {
+            $p.addClass('pwt-open');
+        }
+    }
+    function pwtHide(){
+        $('#pwt-popup').removeClass('pwt-open');
+    }
+    $(document).on('click','#pwt-nav-btn',  function(e){ e.preventDefault(); pwtShow(); });
+    $(document).on('click','#pwt-close-x',  function(){ pwtHide(); });
+    $(document).on('click','#pwt-tabs .pwt-tab[data-pwt-pane]', function(){
+        var pane = $(this).data('pwt-pane');
+        $('#pwt-tabs .pwt-tab[data-pwt-pane]').removeClass('active');
+        $(this).addClass('active');
+        $('.pwt-pane').removeClass('active');
+        $('#' + pane).addClass('active');
+    });
+
+    /* ── Create WBS popup ──
+       Project Type + IOW Group pickers -> tick-select activities ->
+       batch "Add" writes each selected activity into the Gantt via the
+       same actionWbsadd() endpoint the existing Activity Picker tick
+       button uses, all resolving to ONE shared IOW (named after the
+       selected IOW Group) so the whole batch lands under a single WBS
+       row instead of one IOW per activity. Both this popup and the
+       Gantt window are left open afterward so the additions are visible
+       immediately — reloadGantt() only refreshes the Gantt's own
+       content, it doesn't touch this popup. */
+    var cwbsInited = false;
+    var cwbsSelected = {};   // activity_id -> {id, name}
+    var cwbsResCache = {};   // activity_id -> actionGetactivityresources() result
+
+    function cwbsShow(){
+        var $p = $('#cwbs-popup');
+        if(!cwbsInited){
+            $p.css({ visibility:'hidden', top:0, left:0 }).addClass('cwbs-open');
+            var pw = $p.outerWidth(), ph = $p.outerHeight();
+            var ww = $(window).width(), wh = $(window).height();
+            $p.css({ visibility:'', top: Math.max(60, (wh - ph) / 2), left: Math.max(0, (ww - pw) / 2) });
+            $p.draggable({ handle:'#cwbs-header', containment:'window', scroll:false });
+            $p.resizable({ minWidth:460, minHeight:400, handles:'all' });
+            cwbsInited = true;
+        } else {
+            $p.addClass('cwbs-open');
+        }
+        if(typeof window.popupBringToFront === 'function') window.popupBringToFront('cwbs-popup');
+        if($('#cwbs-proj-type option').length <= 1){
+            $.ajax({ type:'POST', url:'../projectsmain/getwbtypelist', dataType:'json', success:function(d){
+                var sel = $('#cwbs-proj-type');
+                (d.items||[]).forEach(function(it){
+                    sel.append('<option value="'+it.id+'">'+$('<div>').text(it.name).html()+'</option>');
+                });
+            }});
+        }
+        if($('#cwbs-iow-group option').length <= 1 && typeof window.loadIowGroupOptions === 'function'){
+            window.loadIowGroupOptions(document.getElementById('cwbs-iow-group'));
+        }
+        cwbsLoadBoqList();
+    }
+    function cwbsHide(){
+        $('#cwbs-popup').removeClass('cwbs-open');
+    }
+
+    /* ── Upload BOQ section (collapsible) ──
+       Same uploadboq/listboq/deleteboq endpoints the existing #iow-modal
+       "Upload BOQ" tab already uses, reused here under their own cwbs-*
+       ids/classes so both features' JS stay fully independent. Project id
+       is resolved the same way that tab's JS does — from #gantt-win-open's
+       data-projectid attribute, a global layout element always present
+       regardless of which popup is open. View reuses the Project
+       Documents viewer popup (window.pdocViewFile), pointed at the BOQ's
+       own storage folder via an explicit full URL (its 3rd, optional arg)
+       since BOQs live under /uploads/boq/, not /uploads/projects/ — that
+       viewer is its own separate draggable/resizable popup already
+       registered in the app's floaters list, so it and Create WBS (and
+       the Gantt) all stay open together. */
+    var _cwbsBoqSelectedFile = null;
+    var CWBS_BOQ_ALLOWED_EXT = ['xlsx', 'xls', 'pdf'];
+    var CWBS_BOQ_FILE_BASE = '<?php echo \yii\helpers\Url::base(true); ?>/uploads/boq/';
+
+    function cwbsBoqProjectId(){
+        var el = document.getElementById('gantt-win-open');
+        return el ? el.getAttribute('data-projectid') : '';
+    }
+    function cwbsBoqExtOf(name){
+        var parts = (name || '').split('.');
+        return parts.length > 1 ? parts.pop().toLowerCase() : '';
+    }
+    function cwbsBoqSetSelectedFile(file){
+        if(!file){
+            _cwbsBoqSelectedFile = null;
+            $('#cwbs-boq-selected-file').removeClass('show');
+            $('#cwbs-boq-upload-btn').prop('disabled', true);
+            return;
+        }
+        if(CWBS_BOQ_ALLOWED_EXT.indexOf(cwbsBoqExtOf(file.name)) === -1){
+            alert('Only Excel (.xlsx, .xls) or PDF files are allowed.');
+            return;
+        }
+        _cwbsBoqSelectedFile = file;
+        $('#cwbs-boq-sf-name').text(file.name);
+        $('#cwbs-boq-selected-file').addClass('show');
+        $('#cwbs-boq-upload-btn').prop('disabled', false);
+    }
+    function cwbsBoqFmtDate(s){
+        if(!s) return '';
+        var d = new Date(s.replace(' ', 'T'));
+        if(isNaN(d.getTime())) return s;
+        return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) + ' ' +
+               d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+    }
+    function cwbsBoqRenderList(rows){
+        if(!rows.length){ $('#cwbs-boq-list').html('<p id="cwbs-boq-empty">No BOQ uploaded yet.</p>'); return; }
+        var html = '';
+        rows.forEach(function(r){
+            html += '<div class="cwbs-boq-file-row" data-id="'+r.id+'" data-filename="'+$('<div>').text(r.filename).html()+'" data-name="'+$('<div>').text(r.original_name).html()+'">'
+                + '<span class="cwbs-boq-fr-icon">&#x1F4C4;</span>'
+                + '<div class="cwbs-boq-fr-info">'
+                +   '<div class="cwbs-boq-fr-name">'+$('<span>').text(r.original_name).html()+'</div>'
+                +   '<div class="cwbs-boq-fr-date">'+$('<span>').text(cwbsBoqFmtDate(r.uploaded_at)).html()+'</div>'
+                + '</div>'
+                + '<button type="button" class="cwbs-boq-fr-view" data-id="'+r.id+'" title="View">View</button>'
+                + '<button type="button" class="cwbs-boq-fr-del" data-id="'+r.id+'" title="Delete">&times;</button>'
+                + '</div>';
+        });
+        $('#cwbs-boq-list').html(html);
+    }
+    function cwbsLoadBoqList(){
+        var pid = cwbsBoqProjectId();
+        if(!pid){ $('#cwbs-boq-list').html('<p id="cwbs-boq-empty">No project selected.</p>'); return; }
+        $.ajax({
+            type:'POST', url:'../projectsmain/listboq', dataType:'json', data:{ project_id: pid },
+            success:function(d){
+                if(d.error && d.error !== 'No'){ $('#cwbs-boq-list').html('<p id="cwbs-boq-empty">'+$('<span>').text(d.errortext || 'Error loading files.').html()+'</p>'); return; }
+                cwbsBoqRenderList(d.rows || []);
+            },
+            error:function(){ $('#cwbs-boq-list').html('<p id="cwbs-boq-empty">Failed to load.</p>'); }
+        });
+    }
+    $(document).on('click','#cwbs-boq-toggle', function(){
+        $(this).toggleClass('cwbs-boq-open');
+        $('#cwbs-boq-section').toggleClass('cwbs-boq-open');
+    });
+    $(document).on('click','#cwbs-boq-dropzone', function(){ $('#cwbs-boq-file-input').trigger('click'); });
+    $(document).on('change','#cwbs-boq-file-input', function(){
+        if(this.files && this.files[0]) cwbsBoqSetSelectedFile(this.files[0]);
+    });
+    $(document).on('dragover','#cwbs-boq-dropzone', function(e){ e.preventDefault(); e.stopPropagation(); $(this).addClass('cwbs-boq-drag-over'); });
+    $(document).on('dragleave','#cwbs-boq-dropzone', function(e){ e.preventDefault(); e.stopPropagation(); $(this).removeClass('cwbs-boq-drag-over'); });
+    $(document).on('drop','#cwbs-boq-dropzone', function(e){
+        e.preventDefault(); e.stopPropagation();
+        $(this).removeClass('cwbs-boq-drag-over');
+        var files = e.originalEvent.dataTransfer ? e.originalEvent.dataTransfer.files : null;
+        if(files && files[0]) cwbsBoqSetSelectedFile(files[0]);
+    });
+    $(document).on('click','#cwbs-boq-sf-remove', function(e){
+        e.stopPropagation();
+        cwbsBoqSetSelectedFile(null);
+        $('#cwbs-boq-file-input').val('');
+    });
+    $(document).on('click','#cwbs-boq-upload-btn', function(){
+        var pid = cwbsBoqProjectId();
+        if(!pid){ alert('No project selected.'); return; }
+        if(!_cwbsBoqSelectedFile) return;
+        var fd = new FormData();
+        fd.append('project_id', pid);
+        fd.append('boq_file', _cwbsBoqSelectedFile);
+        var $btn = $('#cwbs-boq-upload-btn').prop('disabled', true).text('Uploading…');
+        $.ajax({
+            type:'POST', url:'../projectsmain/uploadboq', data:fd,
+            processData:false, contentType:false, dataType:'json',
+            success:function(d){
+                $btn.prop('disabled', false).text('Upload BOQ');
+                if(d.error && d.error !== 'No'){ alert(d.errortext || 'Upload failed.'); return; }
+                cwbsBoqSetSelectedFile(null);
+                $('#cwbs-boq-file-input').val('');
+                cwbsLoadBoqList();
+            },
+            error:function(){
+                $btn.prop('disabled', false).text('Upload BOQ');
+                alert('Upload failed. Please try again.');
+            }
+        });
+    });
+    // Opens the shared, already-draggable/resizable file viewer popup
+    // (#pdoc-viewer-popup — the same one Project Documents uses) as its
+    // OWN floating window, separate from Create WBS, so both can be
+    // moved/stay open independently at once. Pointed at the BOQ's own
+    // storage folder via the explicit full-URL argument since BOQs live
+    // under /uploads/boq/, not /uploads/projects/.
+    $(document).on('click','.cwbs-boq-fr-view', function(){
+        var $row = $(this).closest('.cwbs-boq-file-row');
+        var filename = $row.data('filename');
+        var displayName = $row.data('name');
+        if(typeof window.pdocViewFile === 'function'){
+            window.pdocViewFile(filename, displayName, CWBS_BOQ_FILE_BASE + filename);
+        }
+    });
+
+    $(document).on('click','.cwbs-boq-fr-del', function(){
+        if(!confirm('Delete this BOQ file?')) return;
+        var id = $(this).data('id');
+        $.ajax({
+            type:'POST', url:'../projectsmain/deleteboq', dataType:'json', data:{ id:id },
+            success:function(d){
+                if(d.error && d.error !== 'No'){ alert(d.errortext || 'Delete failed.'); return; }
+                cwbsLoadBoqList();
+            },
+            error:function(){ alert('Delete failed. Please try again.'); }
+        });
+    });
+    function cwbsResetList(msg){
+        cwbsSelected = {};
+        $('#cwbs-tbody').empty();
+        $('#cwbs-table').hide();
+        $('#cwbs-loading').hide();
+        $('#cwbs-empty').text(msg || 'Select a Project Type and IOW Group to list activities.').show();
+        $('#cwbs-msg').text('');
+        $('#cwbs-add-btn').prop('disabled', true);
+    }
+    function cwbsLoadActivities(){
+        var typeId = $('#cwbs-proj-type').val();
+        var groupId = $('#cwbs-iow-group').val();
+        if(!typeId || !groupId){ cwbsResetList(); return; }
+        $('#cwbs-empty').hide();
+        $('#cwbs-table').hide();
+        $('#cwbs-loading').show();
+        $.ajax({
+            type:'POST', url:'../projectsmain/getactivitiesbytypeandgroup', dataType:'json',
+            data:{ typeId:typeId, iowGroupId:groupId },
+            success:function(d){
+                $('#cwbs-loading').hide();
+                cwbsSelected = {};
+                $('#cwbs-add-btn').prop('disabled', true);
+                var items = d.items || [];
+                if(!items.length){ cwbsResetList('No activities found under this IOW Group.'); return; }
+                var rows = '';
+                items.forEach(function(it, idx){
+                    rows += '<tr data-actid="'+it.id+'">'
+                        + '<td class="cwbs-sno-td">'+(idx+1)+'</td>'
+                        + '<td class="cwbs-act-name">'+$('<div>').text(it.name).html()+'</td>'
+                        + '<td class="cwbs-unit-td">'+$('<div>').text(it.unit || '').html()+'</td>'
+                        + '<td class="cwbs-qty-td"><input type="text" inputmode="decimal" class="cwbs-qty-input" data-actid="'+it.id+'" placeholder="Qty" value="" oninput="this.value=this.value.replace(/[^0-9.]/g,\'\')"></td>'
+                        + '<td class="cwbs-runits-td"><input type="text" inputmode="decimal" class="cwbs-runits-input" data-actid="'+it.id+'" placeholder="R.Unit" value="1" oninput="this.value=this.value.replace(/[^0-9.]/g,\'\')"></td>'
+                        + '<td class="cwbs-edit-td"><button type="button" class="cwbs-edit-btn" data-actid="'+it.id+'" data-actname="'+String(it.name).replace(/"/g,'&quot;')+'" title="Edit Activity">&#9998;</button></td>'
+                        + '<td class="cwbs-tick-td"><button type="button" class="cwbs-tick-btn" data-actid="'+it.id+'" data-actname="'+String(it.name).replace(/"/g,'&quot;')+'" title="Select">&#10003;</button></td>'
+                        + '</tr>';
+                });
+                $('#cwbs-tbody').html(rows);
+                $('#cwbs-table').show();
+            },
+            error:function(){
+                $('#cwbs-loading').hide();
+                cwbsResetList('Failed to load activities. Please try again.');
+            }
+        });
+    }
+    $(document).on('click','#cwbs-open-btn', function(){ cwbsShow(); });
+    $(document).on('click','#cwbs-close-x, #cwbs-cancel-btn', function(){ cwbsHide(); });
+    $(document).on('change','#cwbs-proj-type, #cwbs-iow-group', function(){ cwbsLoadActivities(); });
+    $(document).on('click','.cwbs-tick-btn', function(){
+        var id = $(this).data('actid');
+        var name = $(this).data('actname');
+        if(cwbsSelected[id]){
+            delete cwbsSelected[id];
+            $(this).removeClass('cwbs-selected');
+        } else {
+            cwbsSelected[id] = { id:id, name:name };
+            $(this).addClass('cwbs-selected');
+        }
+        $('#cwbs-add-btn').prop('disabled', !Object.keys(cwbsSelected).length);
+    });
+    $(document).on('click','#cwbs-add-btn', function(){
+        var ids = Object.keys(cwbsSelected);
+        if(!ids.length) return;
+
+        // Qty is mandatory for every selected activity — the Activity
+        // Library has no resource_units field, so Create WBS's own R.Unit
+        // input is the only source for that part of the formula, and Qty
+        // is what the whole duration calculation is driven by.
+        var missingQty = [];
+        ids.forEach(function(id){
+            var q = parseFloat($('.cwbs-qty-input[data-actid="'+id+'"]').val());
+            if(!(q > 0)) missingQty.push(cwbsSelected[id].name);
+        });
+        if(missingQty.length){
+            alert('Please enter a Qty for: ' + missingQty.join(', '));
+            return;
+        }
+
+        var groupId = $('#cwbs-iow-group').val();
+        var iowName = $('#cwbs-iow-group option:selected').text();
+        var $btn = $(this).prop('disabled', true);
+        $('#cwbs-msg').css('color','#555').text('Adding ' + ids.length + ' activity/activities…');
+
+        function addOne(i){
+            if(i >= ids.length){
+                $btn.prop('disabled', false);
+                $('#cwbs-msg').css('color','#197a3a').text('Added ' + ids.length + ' activity/activities to the Gantt.');
+                cwbsSelected = {};
+                $('.cwbs-tick-btn').removeClass('cwbs-selected');
+                $('#cwbs-add-btn').prop('disabled', true);
+                if(typeof window.reloadGantt === 'function') window.reloadGantt();
+                return;
+            }
+            var act = cwbsSelected[ids[i]];
+            var rowQty = parseFloat($('.cwbs-qty-input[data-actid="'+act.id+'"]').val());
+            var rowRUnit = parseFloat($('.cwbs-runits-input[data-actid="'+act.id+'"]').val()) || 1;
+            $.ajax({
+                type:'POST', url:'../projectsmain/getactivityresources', dataType:'json',
+                data:{ activity_id: act.id },
+                success:function(res){
+                    var tasks = (res.tasks || []).map(function(t){
+                        return { name:t.task_name, qty:t.task_qty, prod:t.productivity, resunits:t.resunits };
+                    });
+                    // Time to do 1 unit of the activity = sum over tasks of
+                    // (Qty/Unit ÷ Productivity/day) — the Activity Library
+                    // has no resource_units field, so R.Unit here is the
+                    // single value entered on this Create WBS row and
+                    // divides the WHOLE total (not per task).
+                    var sumDurPerUnit = 0;
+                    (res.tasks || []).forEach(function(t){
+                        var dpu = (t.productivity > 0) ? ((t.task_qty || 0) / t.productivity) : 0;
+                        sumDurPerUnit += dpu;
+                    });
+                    var qty = rowQty;
+                    var duration = (sumDurPerUnit > 0) ? Math.ceil((sumDurPerUnit * qty) / rowRUnit) : 1;
+                    var payload = {
+                        iow_name: iowName,
+                        iow_group_id: groupId,
+                        iow_act_id: act.id,
+                        act_name: act.name,
+                        sch_unit: res.sch_unit || res.unit || '',
+                        sch_qty: qty,
+                        qty: qty,
+                        unit: res.unit || '',
+                        duration: duration,
+                        r_unit: rowRUnit,
+                        tasks: tasks,
+                        resources: []
+                    };
+                    $.ajax({
+                        type:'POST', url:'../projectsmain/wbsadd', dataType:'json',
+                        data:{ payload: JSON.stringify(payload) },
+                        success:function(){ addOne(i + 1); },
+                        error:function(){
+                            $('#cwbs-msg').css('color','#c00').text('Failed to add "' + act.name + '". Stopped.');
+                            $btn.prop('disabled', false);
+                        }
+                    });
+                },
+                error:function(){
+                    $('#cwbs-msg').css('color','#c00').text('Failed to load details for "' + act.name + '". Stopped.');
+                    $btn.prop('disabled', false);
+                }
+            });
+        }
+        addOne(0);
+    });
+
+    /* ── Create WBS: Edit Activity popup ──
+       Opened from the pencil icon on a Create WBS row. Prefills Project
+       Type + IOW Group (same two filters already selected in the Create
+       WBS popup), Activity Name + Unit, and the activity's Tasks — with
+       the activity itself seeded as the first task row when the activity
+       has no tasks yet, per explicit direction. Saves via the same
+       createactivity/updateactivitywithtasks endpoints the real Activity
+       Library "Add Activity" modal uses, so edits made here are fully
+       equivalent to editing it from the Library directly. */
+    var cwbsedInited = false;
+    var cwbsedTaskRowSeq = 0;
+
+    function cwbsedShow(){
+        var $p = $('#cwbsed-popup');
+        if(!cwbsedInited){
+            $p.css({ visibility:'hidden', top:0, left:0 }).addClass('cwbsed-open');
+            var pw = $p.outerWidth(), ph = $p.outerHeight();
+            var ww = $(window).width(), wh = $(window).height();
+            $p.css({ visibility:'', top: Math.max(60, (wh - ph) / 2), left: Math.max(0, (ww - pw) / 2) });
+            $p.draggable({ handle:'#cwbsed-header', containment:'window', scroll:false });
+            $p.resizable({ minWidth:460, minHeight:360, handles:'all' });
+            cwbsedInited = true;
+        } else {
+            $p.addClass('cwbsed-open');
+        }
+        if(typeof window.popupBringToFront === 'function') window.popupBringToFront('cwbsed-popup');
+    }
+    function cwbsedHide(){
+        $('#cwbsed-popup').removeClass('cwbsed-open');
+    }
+    function cwbsedTaskRowHtml(name, unit, qty, prod, taskId){
+        cwbsedTaskRowSeq++;
+        return '<div class="cwbsed-task-row" data-seq="'+cwbsedTaskRowSeq+'">'
+            + '<input type="hidden" class="cwbsed-task-id" value="'+(taskId||0)+'">'
+            + '<input type="text" class="cwbsed-task-name" placeholder="Task Name" value="'+$('<div>').text(name||'').html()+'">'
+            + '<input type="text" class="cwbsed-task-unit" placeholder="Unit" value="'+$('<div>').text(unit||'').html()+'">'
+            + '<input type="number" step="0.001" min="0" class="cwbsed-task-qty" placeholder="Qty/Unit" value="'+$('<div>').text(qty||'').html()+'">'
+            + '<input type="number" step="0.001" min="0" class="cwbsed-task-prod" placeholder="Productivity/day" value="'+$('<div>').text(prod||'').html()+'">'
+            + '<button type="button" class="cwbsed-task-remove" title="Remove">&times;</button>'
+            + '</div>';
+    }
+
+    $(document).on('click','.cwbs-edit-btn', function(){
+        var actId = $(this).data('actid');
+        var actName = $(this).data('actname');
+        var typeId = $('#cwbs-proj-type').val();
+        var groupId = $('#cwbs-iow-group').val();
+
+        $('#cwbsed-activity-id').val(actId);
+        $('#cwbsed-act-name').val(actName);
+        $('#cwbsed-act-unit').val('');
+        $('#cwbsed-task-rows').empty();
+
+        if($('#cwbsed-proj-type option').length <= 1){
+            $.ajax({ type:'POST', url:'../projectsmain/getwbtypelist', dataType:'json', success:function(d){
+                var sel = $('#cwbsed-proj-type');
+                (d.items||[]).forEach(function(it){
+                    sel.append('<option value="'+it.id+'">'+$('<div>').text(it.name).html()+'</option>');
+                });
+                sel.val(typeId || '0');
+            }});
+        } else {
+            $('#cwbsed-proj-type').val(typeId || '0');
+        }
+        if(typeof window.loadIowGroupOptions === 'function'){
+            window.loadIowGroupOptions(document.getElementById('cwbsed-iow-group'), function(){
+                $('#cwbsed-iow-group').val(groupId || '');
+            });
+        }
+
+        cwbsedShow();
+        $('#cwbsed-task-rows').html('<div class="cwbsed-placeholder" style="padding:10px 0;color:#888;font-size:12px;">Loading tasks&hellip;</div>');
+        $.ajax({
+            type:'POST', url:'../projectsmain/getactivityresources', dataType:'json',
+            data:{ activity_id: actId },
+            success:function(res){
+                $('#cwbsed-act-unit').val(res.unit || '');
+                var tasks = res.tasks || [];
+                var rows = '';
+                if(tasks.length){
+                    tasks.forEach(function(t){
+                        rows += cwbsedTaskRowHtml(t.task_name, t.task_unit, t.task_qty, t.productivity, t.id);
+                    });
+                } else {
+                    // No tasks on this activity yet — seed the first task
+                    // row with the activity itself (name/unit), per spec.
+                    rows += cwbsedTaskRowHtml(actName, res.unit || '', '', '', 0);
+                }
+                $('#cwbsed-task-rows').html(rows);
+            },
+            error:function(){
+                $('#cwbsed-task-rows').html(cwbsedTaskRowHtml(actName, '', '', '', 0));
+            }
+        });
+    });
+    $(document).on('click','#cwbsed-close-x, #cwbsed-cancel-btn', function(){ cwbsedHide(); });
+    $(document).on('click','#cwbsed-add-task-row', function(){
+        $('#cwbsed-task-rows').append(cwbsedTaskRowHtml('', '', '', ''));
+    });
+    $(document).on('click','.cwbsed-task-remove', function(){
+        $(this).closest('.cwbsed-task-row').remove();
+    });
+    $(document).on('click','#cwbsed-save-btn', function(){
+        var actId = $('#cwbsed-activity-id').val();
+        var actName = $.trim($('#cwbsed-act-name').val());
+        var actUnit = $.trim($('#cwbsed-act-unit').val());
+        if(!actName){ alert('Activity Name is required.'); return; }
+        if(!actUnit){ alert('Unit is required.'); return; }
+
+        var taskIds = [], taskNames = [], taskUnits = [], taskQtys = [], taskProds = [];
+        var taskError = false;
+        $('#cwbsed-task-rows .cwbsed-task-row').each(function(){
+            var $row = $(this);
+            var name = $.trim($row.find('.cwbsed-task-name').val());
+            var unit = $.trim($row.find('.cwbsed-task-unit').val());
+            var qty  = $.trim($row.find('.cwbsed-task-qty').val());
+            var prod = $.trim($row.find('.cwbsed-task-prod').val());
+            if(!name && !unit && !qty && !prod) return; // skip fully blank rows
+            if(!name || !unit || !qty || !prod){ taskError = true; }
+            taskIds.push($row.find('.cwbsed-task-id').val() || 0);
+            taskNames.push(name);
+            taskUnits.push(unit);
+            taskQtys.push(qty);
+            taskProds.push(prod);
+        });
+        if(taskError){ alert('Please fill in Task Name, Unit, Qty/Unit and Productivity/day for every task row (or remove the empty row).'); return; }
+
+        var $btn = $(this).prop('disabled', true);
+        var postData = {
+            activity_id:          actId,
+            activitytypeid:       0,
+            worktypeid:           $('#cwbsed-proj-type').val() || 0,
+            iow_group_id:         $('#cwbsed-iow-group').val() || 0,
+            working_hours:        8,
+            'estactivityname[]':  [actName],
+            'estactivityunit[]':  [actUnit],
+            'task_id[]':          taskIds,
+            'task_name[]':        taskNames,
+            'task_unit[]':        taskUnits,
+            'task_qty[]':         taskQtys,
+            'task_productivity[]':taskProds
+        };
+        $.ajax({
+            type:'POST', url:'../projects/updateactivitywithtasks', dataType:'json',
+            data: postData,
+            success:function(d){
+                $btn.prop('disabled', false);
+                if(d.error === 'No'){
+                    cwbsedHide();
+                    // Refresh the Create WBS list behind it so the edited
+                    // name/unit is reflected immediately.
+                    if(typeof cwbsLoadActivities === 'function') cwbsLoadActivities();
+                } else {
+                    alert('Save failed: ' + (d.msg || 'Unknown error'));
+                }
+            },
+            error:function(xhr){
+                $btn.prop('disabled', false);
+                alert('Save failed. Please try again. (' + xhr.status + ')');
+            }
+        });
     });
 
     $(document).on('click','#pdoc-nav-btn',  function(e){ e.preventDefault(); pdocShow(); });
@@ -3227,745 +4159,33 @@ if($action=='login')
 })();
 </script>
 
-
-<!-- ── Add IOWs popup — simplified WBS entry (the old qe-modal form has
-     been removed; this is the only WBS/activity entry point now) ──────
-     Creates bare IOWs (workgroups_new rows) only, no activity/estimate/
-     schedule bar. Adding an activity under an IOW is a separate, later
-     step. Triggered by #iow-btn-test. -->
-<style>
-#iow-bk{
-  display:none;position:fixed;inset:0;background:transparent;z-index:200700;
-}
-#iow-bk.iow-open{display:block}
-#iow-modal{
-  display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-  width:950px;height:560px;max-width:97vw;max-height:92vh;min-width:500px;min-height:300px;
-  background:#fff;border-radius:8px;
-  box-shadow:0 8px 32px rgba(0,0,0,.35);z-index:200701;flex-direction:column;overflow:hidden;
-  font-family:'Nunito',sans-serif;
-}
-#iow-modal.iow-open{display:flex}
-.iow-rs{position:absolute;z-index:10;background:transparent;}
-.iow-rs-e {right:0;top:6px;bottom:6px;width:6px;cursor:e-resize;}
-.iow-rs-w {left:0;top:6px;bottom:6px;width:6px;cursor:w-resize;}
-.iow-rs-s {bottom:0;left:6px;right:6px;height:6px;cursor:s-resize;}
-.iow-rs-n {top:0;left:6px;right:6px;height:6px;cursor:n-resize;}
-.iow-rs-se{right:0;bottom:0;width:14px;height:14px;cursor:se-resize;}
-.iow-rs-sw{left:0;bottom:0;width:14px;height:14px;cursor:sw-resize;}
-.iow-rs-ne{right:0;top:0;width:14px;height:14px;cursor:ne-resize;}
-.iow-rs-nw{left:0;top:0;width:14px;height:14px;cursor:nw-resize;}
-#iow-hdr{
-  background:#fff;color:#333;padding:8px 14px;display:flex;justify-content:space-between;
-  align-items:center;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;
-  border-bottom:2px solid #b0b4b9;flex-shrink:0;cursor:move;
-}
-#iow-hdr-title-suffix{font-size:13px;font-weight:700;color:#00838f;margin-left:8px;}
-#iow-close{background:none;border:none;color:#333;font-size:20px;line-height:1;cursor:pointer;padding:0 4px;opacity:.6;}
-#iow-close:hover{opacity:1;}
-#iow-body{padding:14px 18px;overflow-y:auto;flex:1;display:flex;flex-direction:column;}
-#iow-body .qe-label{display:block;font-size:13px;font-weight:700;color:#4a5568;text-transform:uppercase;margin-bottom:6px;}
-
-/* ── Tabs — Tab 1 "Add IOW" (batch-create IOWs under one Group) and
-     Tab 2 "Add Activity" (pick an existing IOW, attach activities to
-     it). Independent panes/state; switching tabs never loses either
-     pane's in-progress entry. ── */
-#iow-tabs{display:flex;background:#f2f3f4;flex-shrink:0;border-bottom:1px solid #ddd;}
-.iow-tab{
-  flex:1;background:#f2f3f4;border:none;padding:11px 10px;font-size:13px;font-weight:700;color:#777;cursor:pointer;
-  text-transform:uppercase;letter-spacing:.3px;border-bottom:3px solid transparent;
-}
-.iow-tab:hover{background:#e6e8ea;}
-.iow-tab.active{background:#f2f3f4;color:#333;border-bottom-color:#00838f;}
-.iow-tab-pane{display:none;flex-direction:column;flex:1;min-height:0;}
-.iow-tab-pane.active{display:flex;}
-
-/* ── Tab 3 "Upload BOQ" ── */
-#iow-tab-boq{padding:14px 16px;overflow-y:auto;}
-#boq-dropzone{
-  display:inline-flex; align-items:center; gap:10px; max-width:320px;
-  border:2px dashed #b7c0cc; border-radius:8px; background:#fff;
-  padding:10px 14px; text-align:left; cursor:pointer; transition:border-color .15s,background .15s; flex-shrink:0;
-}
-#boq-dropzone:hover, #boq-dropzone.boq-drag-over{ border-color:#00838f; background:#eef1f4; }
-#boq-dropzone .boq-dz-icon{ font-size:18px; color:#8a94a0; flex-shrink:0; }
-#boq-dropzone .boq-dz-copy{ min-width:0; }
-#boq-dropzone .boq-dz-text{ font-size:12.5px; color:#4a5560; font-weight:600; }
-#boq-dropzone .boq-dz-sub{ font-size:10.5px; color:#94a3b8; margin-top:1px; }
-#boq-file-input{ display:none; }
-#boq-selected-file{
-  display:none; align-items:center; gap:10px; margin-top:10px;
-  background:#eef1f4; border:1px solid #d7dee6; border-radius:8px; padding:9px 12px; flex-shrink:0;
-}
-#boq-selected-file.show{ display:flex; }
-#boq-selected-file .boq-sf-icon{ font-size:16px; color:#37475a; }
-#boq-selected-file .boq-sf-name{ flex:1; min-width:0; font-size:12.5px; font-weight:600; color:#2d333b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#boq-selected-file .boq-sf-remove{ background:none; border:none; color:#c0392b; font-size:16px; cursor:pointer; padding:0 4px; }
-#boq-upload-btn{
-  margin-top:10px; width:100%; padding:9px; border:none; border-radius:6px; flex-shrink:0;
-  background:#0a1f44; color:#fff; font-size:13px; font-weight:700; cursor:pointer;
-}
-#boq-upload-btn:hover{ background:#061530; }
-#boq-upload-btn:disabled{ opacity:.5; cursor:not-allowed; }
-#boq-list-hdr{ font-size:11px; font-weight:700; color:#8a94a0; text-transform:uppercase; letter-spacing:.5px; margin:18px 0 8px; flex-shrink:0; }
-#boq-list{ display:flex; flex-direction:column; gap:6px; }
-.boq-file-row{ display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #e5e7ea; border-radius:8px; padding:8px 12px; }
-.boq-file-row .boq-fr-icon{ font-size:15px; color:#37475a; flex-shrink:0; }
-.boq-file-row .boq-fr-info{ flex:1; min-width:0; }
-.boq-file-row .boq-fr-name{ font-size:12.5px; font-weight:600; color:#2d333b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.boq-file-row .boq-fr-date{ font-size:10.5px; color:#94a3b8; margin-top:2px; }
-.boq-file-row .boq-fr-del{
-  background:#e57373; color:#fff; border:none; border-radius:50%; width:22px; height:22px;
-  font-size:11px; cursor:pointer; flex-shrink:0;
-}
-#boq-empty{ color:#aaa; font-size:12.5px; text-align:center; padding:10px 0; }
-#boq-action-row{ display:flex; gap:10px; margin-top:18px; flex-shrink:0; }
-.boq-action-btn{
-  flex:1; padding:10px; border:none; border-radius:6px; font-size:12.5px; font-weight:700;
-  cursor:pointer; text-transform:uppercase; letter-spacing:.3px;
-}
-.boq-action-btn:disabled{ opacity:.5; cursor:not-allowed; }
-#boq-create-wbs-btn{ background:#37475a; color:#fff; }
-#boq-create-wbs-btn:hover:not(:disabled){ background:#28323f; }
-#boq-create-sched-btn{ background:#27ae60; color:#fff; }
-#boq-create-sched-btn:hover:not(:disabled){ background:#1e8449; }
-
-#iow-group-select{width:100%;height:32px;border:1px solid #ccc;border-radius:4px;padding:0 10px;font-size:13px;}
-#iow-rows{display:flex;flex-direction:column;gap:6px;margin:8px 0 8px;}
-.iow-row{display:flex;gap:10px;align-items:center;}
-.iow-row input{flex:1;height:32px;border:1px solid #ccc;border-radius:4px;padding:0 10px;font-size:13px;box-sizing:border-box;}
-.iow-row-add{
-  background:#00838f;color:#fff;border:none;border-radius:50%;width:30px;height:30px;flex-shrink:0;
-  font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
-}
-.iow-row-add:hover{background:#005f6b}
-.iow-row-remove{
-  background:none;border:none;color:#c0392b;font-size:20px;cursor:pointer;width:26px;flex-shrink:0;
-}
-#iow-add-msg{font-size:12px;font-weight:700;min-height:16px;}
-#iow-btn-addiow{
-  background:#27ae60;color:#fff;border:none;border-radius:999px;padding:8px 28px;font-size:13px;
-  font-weight:700;cursor:pointer;letter-spacing:.3px;text-transform:uppercase;
-}
-#iow-btn-addiow:hover{background:#1e8449}
-#iow-btn-addiow:disabled{background:#aaa;cursor:default}
-
-/* Tab 2 top row — Group + IOW dropdowns side by side, above the
-   always-visible activity list. */
-#ap-top-row{display:flex;gap:12px;align-items:flex-end;margin-bottom:8px;flex-shrink:0;}
-#ap-top-row .iow-field{flex:1;}
-#ap-top-row .qe-label{margin-bottom:6px;}
-#ap-group-select, #ap-iow-select{width:100%;height:32px;border:1px solid #ccc;border-radius:4px;padding:0 10px;font-size:13px;box-sizing:border-box;}
-#ap-select-msg{font-size:12px;font-weight:700;color:#c0392b;margin:-6px 0 12px;min-height:16px;flex-shrink:0;}
-
-#iow-footer{
-  background:#fff;border-top:1px solid #ddd;padding:10px 16px;display:flex;align-items:center;
-  gap:12px;flex-shrink:0;
-}
-#iow-footer-spacer{flex:1;}
-#iow-btn-cancel{
-  background:#fff;color:#e67e22;border:1px solid #e67e22;border-radius:999px;padding:7px 24px;font-size:13px;
-  font-weight:700;cursor:pointer;letter-spacing:.3px;text-transform:uppercase;
-}
-#iow-btn-close{
-  background:#e67e22;color:#fff;border:none;border-radius:999px;padding:8px 24px;font-size:13px;
-  font-weight:700;cursor:pointer;letter-spacing:.3px;text-transform:uppercase;
-}
-
-/* ── Activity list — always visible on Tab 2, full list on open, further
-     filtered as Group/IOW are picked. Same ap-* ids/classes as before so
-     all existing list-loading/Task-popup/tick-to-add JS keeps working
-     unchanged. ── */
-#ap-toolbar{padding:0 0 10px;display:flex;gap:6px;flex-shrink:0;align-items:center;}
-#ap-search{
-  height:34px;width:280px;border-radius:20px;padding:0 12px;font-size:13px;
-  border:1px solid #ccc;font-family:'Nunito',sans-serif;
-}
-#ap-body{overflow-y:auto;overflow-x:hidden;flex:1;}
-#ap-body table{table-layout:fixed;width:100%;border-collapse:collapse;}
-#ap-body thead{position:sticky;top:0;z-index:1;}
-#ap-body th, #ap-body td{white-space:normal;overflow:hidden;text-overflow:ellipsis;word-break:break-word;}
-#ap-body th:nth-child(1), #ap-body td:nth-child(1){width:5%;}
-#ap-body th:nth-child(2), #ap-body td:nth-child(2){width:14%;}
-#ap-body th:nth-child(3), #ap-body td:nth-child(3){width:9%;}
-#ap-body th:nth-child(4), #ap-body td:nth-child(4){width:auto;padding-right:8px;}
-#ap-body th:nth-child(5), #ap-body td:nth-child(5){width:10%;}
-#ap-body th:nth-child(6), #ap-body td:nth-child(6){width:15%;}
-#ap-body th:nth-child(7), #ap-body td:nth-child(7){width:9%;}
-#ap-body th:nth-child(8), #ap-body td:nth-child(8){width:7%;}
-/* Strips the boxed-grid look this table gets from listestactivity()'s
-   inline styles (shared with the real Activity Library page) — this
-   popup gets a clean, borderless look with just a row separator and a
-   plain header, without touching the real page's own markup/endpoint. */
-#ap-body table{border:none !important;}
-#ap-body th{background:#555 !important;color:#fff !important;border:none !important;padding:3px 6px !important;font-weight:600 !important;font-size:11px !important;line-height:1 !important;}
-#ap-body td{border:none !important;border-bottom:1px solid #888 !important;}
-#ap-body tbody tr:last-child td{border-bottom:none !important;}
-#ap-body .ap-col-schunit input{width:100%;height:28px;border:1px solid #ccc;border-radius:4px;padding:0 6px;font-size:12px;box-sizing:border-box;}
-#ap-body .ap-col-qty input{width:100%;height:28px;border:1px solid #ccc;border-radius:4px;padding:0 4px;font-size:12px;box-sizing:border-box;-moz-appearance:textfield;}
-#ap-body .ap-col-qty input::-webkit-outer-spin-button,
-#ap-body .ap-col-qty input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
-.ap-task-btn{
-  background:#888;border:1px solid #777;color:#fff;border-radius:4px;padding:4px 6px;
-  font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;max-width:100%;
-}
-.ap-task-btn.ap-has-tasks{background:#6c7a89;border-color:#5a6672;color:#fff;}
-.ap-tick-btn{
-  background:#27ae60;color:#fff;border:none;border-radius:50%;width:28px;height:28px;
-  font-size:14px;cursor:pointer;flex-shrink:0;
-}
-.ap-tick-btn:hover{background:#1e8449}
-.ap-tick-btn.ap-added{background:#2878c0;cursor:default;}
-.ap-tick-btn.ap-added:hover{background:#2878c0;}
-</style>
-
-<div id="iow-bk"></div>
-<div id="iow-modal">
-  <div class="iow-rs iow-rs-e"  data-dir="e"></div>
-  <div class="iow-rs iow-rs-w"  data-dir="w"></div>
-  <div class="iow-rs iow-rs-s"  data-dir="s"></div>
-  <div class="iow-rs iow-rs-n"  data-dir="n"></div>
-  <div class="iow-rs iow-rs-se" data-dir="se"></div>
-  <div class="iow-rs iow-rs-sw" data-dir="sw"></div>
-  <div class="iow-rs iow-rs-ne" data-dir="ne"></div>
-  <div class="iow-rs iow-rs-nw" data-dir="nw"></div>
-  <div id="iow-hdr">
-    <span id="iow-hdr-title">Add IOWs &amp; Activities</span><span id="iow-hdr-title-suffix"></span>
-    <button id="iow-close">&times;</button>
-  </div>
-  <div id="iow-tabs">
-    <button type="button" class="iow-tab iow-tab-addiow active" data-tab="addiow">Add IOW</button>
-    <button type="button" class="iow-tab iow-tab-addactivity" data-tab="addactivity">Add Activity</button>
-    <button type="button" class="iow-tab iow-tab-boq" data-tab="boq">Upload BOQ</button>
-  </div>
-  <div id="iow-body">
-    <!-- Tab 1: Add IOW — batch-create any number of IOWs under one IOW
-         Group. Independent of Tab 2; this pane never auto-switches away
-         after saving, so the user can keep adding more IOWs or flip to
-         Tab 2 to attach activities to what they just created. -->
-    <div class="iow-tab-pane active" id="iow-tab-addiow">
-      <span class="qe-label">IOW Group</span>
-      <select id="iow-group-select">
-        <option value="">— Select IOW Group —</option>
-      </select>
-      <span class="qe-label" style="margin-top:8px;">IOWs</span>
-      <div id="iow-rows">
-        <div class="iow-row">
-          <input type="text" class="iow-name-input" placeholder="Enter IOW name">
-          <button type="button" class="iow-row-add" title="Add another IOW">&#43;</button>
-          <button type="button" class="iow-row-remove" title="Remove">&times;</button>
-        </div>
-      </div>
-      <div id="iow-add-msg"></div>
-    </div>
-
-    <!-- Tab 2: Add Activity — pick an existing IOW (via Group, then IOW
-         dropdown), attach activities to it from the always-visible list
-         below. The list shows ALL activities immediately on open/tab-
-         switch, filtering further once a Group is picked. Ticking before
-         an IOW is selected is blocked with #ap-select-msg. -->
-    <div class="iow-tab-pane" id="iow-tab-addactivity">
-      <div id="ap-top-row">
-        <div class="iow-field">
-          <span class="qe-label">IOW Group</span>
-          <select id="ap-group-select">
-            <option value="">— All Groups —</option>
-          </select>
-        </div>
-        <div class="iow-field">
-          <span class="qe-label">IOW</span>
-          <select id="ap-iow-select">
-            <option value="">— Select IOW —</option>
-          </select>
-        </div>
-      </div>
-      <div id="ap-select-msg"></div>
-      <div id="ap-toolbar">
-        <input type="text" id="ap-search" placeholder="Search...">
-      </div>
-      <div id="ap-body">
-        <div id="ap-list-target"><p style="color:#aaa;font-size:13px;text-align:center;padding:30px 0;">Loading…</p></div>
-      </div>
-    </div>
-
-    <!-- Tab 3: Upload BOQ — a simple file store for now (Excel/PDF), one
-         BOQ list per project. What happens with an uploaded BOQ (e.g.
-         auto-creating IOWs/Activities from it) is intentionally not wired
-         up yet, pending scope. -->
-    <div class="iow-tab-pane" id="iow-tab-boq">
-      <div id="boq-dropzone">
-        <div class="boq-dz-icon">&#x2B06;</div>
-        <div class="boq-dz-copy">
-          <div class="boq-dz-text">Click or drag file here</div>
-          <div class="boq-dz-sub">Excel (.xlsx, .xls) or PDF</div>
-        </div>
-      </div>
-      <input type="file" id="boq-file-input" accept=".xlsx,.xls,.pdf">
-
-      <div id="boq-selected-file">
-        <span class="boq-sf-icon">&#x1F4CE;</span>
-        <span class="boq-sf-name" id="boq-sf-name"></span>
-        <button type="button" class="boq-sf-remove" id="boq-sf-remove" title="Remove">&times;</button>
-      </div>
-
-      <button type="button" id="boq-upload-btn" disabled>Upload BOQ</button>
-
-      <div id="boq-list-hdr">Uploaded BOQs</div>
-      <div id="boq-list"><p id="boq-empty">Loading&hellip;</p></div>
-
-      <div id="boq-action-row">
-        <button type="button" id="boq-create-wbs-btn" class="boq-action-btn" disabled>Create WBS</button>
-        <button type="button" id="boq-create-sched-btn" class="boq-action-btn" disabled>Create Schedule and Estimate</button>
-      </div>
-    </div>
-  </div>
-  <div id="iow-footer">
-    <button type="button" id="iow-btn-addiow">Add</button>
-    <span id="iow-footer-spacer"></span>
-    <button id="iow-btn-cancel">Cancel</button>
-    <button id="iow-btn-close">Close</button>
-  </div>
-</div>
-
 <script>
-(function(){
-  // Populates a <select> with the project's IOW Groups. Used by both
-  // Tab 1 (#iow-group-select, required, no "All" option) and Tab 2
-  // (#ap-group-select, optional filter, keeps its "All Groups" option).
-  window.loadIowGroupOptions = function(selectEl, cb){
-    var placeholder = selectEl.options[0] ? selectEl.options[0].outerHTML : '<option value="">— Select IOW Group —</option>';
-    $.ajax({
-      type:'POST', url:'../projects/getiowgrouplist', dataType:'json',
-      success: function(d){
-        selectEl.innerHTML = placeholder;
-        (d.items||[]).forEach(function(item){
-          var o = document.createElement('option');
-          o.value = item.id; o.textContent = item.name;
-          selectEl.appendChild(o);
-        });
-        if(typeof cb === 'function') cb();
-      }
-    });
-  };
-
-  var IOW_MODAL_H = 560;
-
-  function iowRowHtml(){
-    return '<input type="text" class="iow-name-input" placeholder="Enter IOW name">'
-      + '<button type="button" class="iow-row-add" title="Add another IOW">&#43;</button>'
-      + '<button type="button" class="iow-row-remove" title="Remove">&times;</button>';
-  }
-
-  function addIowRow(afterEl){
-    var wrap = document.createElement('div');
-    wrap.className = 'iow-row';
-    wrap.innerHTML = iowRowHtml();
-    if(afterEl && afterEl.nextSibling) afterEl.parentNode.insertBefore(wrap, afterEl.nextSibling);
-    else document.getElementById('iow-rows').appendChild(wrap);
-    wrap.querySelector('input').focus();
-  }
-
-  document.getElementById('iow-rows').addEventListener('click', function(e){
-    if(e.target.classList.contains('iow-row-add')){
-      addIowRow(e.target.closest('.iow-row'));
-    } else if(e.target.classList.contains('iow-row-remove')){
-      var rows = document.querySelectorAll('#iow-rows .iow-row');
-      if(rows.length > 1){ e.target.closest('.iow-row').remove(); }
-      else e.target.closest('.iow-row').querySelector('input').value = '';
-    }
-  });
-
-  // Tab switching — both panes keep their state when hidden (no reset on
-  // switch), so in-progress entry on either tab survives flipping back
-  // and forth. Tab 2 lazy-loads its group list + full activity list only
-  // the first time it's opened in this popup session.
-  var _ap2Loaded = false;
-
-  // The footer's Add button only applies to Tab 1 (batch-saves the typed
-  // IOW rows) — Tab 2 has no equivalent bulk action, activities are added
-  // one at a time via each row's own tick, so it's hidden there.
-  function eamSyncAddBtnVisibility(activeTab){
-    document.getElementById('iow-btn-addiow').style.display = (activeTab === 'addiow') ? '' : 'none';
-  }
-
-  document.querySelectorAll('.iow-tab').forEach(function(tabBtn){
-    tabBtn.addEventListener('click', function(){
-      document.querySelectorAll('.iow-tab').forEach(function(b){ b.classList.remove('active'); });
-      document.querySelectorAll('.iow-tab-pane').forEach(function(p){ p.classList.remove('active'); });
-      tabBtn.classList.add('active');
-      var tabName = tabBtn.getAttribute('data-tab');
-      document.getElementById('iow-tab-' + tabName).classList.add('active');
-      eamSyncAddBtnVisibility(tabName);
-      if(tabName === 'addactivity' && !_ap2Loaded){
-        _ap2Loaded = true;
-        window.loadIowGroupOptions(document.getElementById('ap-group-select'));
-        window.loadActivityList();
-      }
-      if(tabName === 'boq' && typeof window.loadBoqList === 'function'){
-        window.loadBoqList();
-      }
-    });
-  });
-
-  // Resets #iow-modal fully back to a fresh, empty state — both tabs'
-  // fields cleared, Tab 1 active. Called every time the popup is opened
-  // fresh via the toolbar icon, so a previous session never leaks in.
-  window.resetIowModalToCreateMode = function(){
-    document.getElementById('iow-hdr-title').textContent = 'Add IOWs & Activities';
-    document.getElementById('iow-hdr-title-suffix').textContent = '';
-    document.getElementById('iow-modal').style.height = IOW_MODAL_H + 'px';
-    document.getElementById('iow-modal').style.width = '';
-
-    document.getElementById('iow-group-select').value = '';
-    document.getElementById('iow-rows').innerHTML = '<div class="iow-row">' + iowRowHtml() + '</div>';
-    document.getElementById('iow-add-msg').textContent = '';
-    document.getElementById('iow-btn-addiow').disabled = false;
-    document.getElementById('iow-btn-addiow').textContent = 'Add';
-
-    document.getElementById('ap-group-select').value = '';
-    document.getElementById('ap-iow-select').innerHTML = '<option value="">— Select IOW —</option>';
-    document.getElementById('ap-select-msg').textContent = '';
-    window._apCurrentWgId = null; window._apCurrentIowName = ''; window._apCurrentIowGroupId = 0;
-    _ap2Loaded = false;
-
-    document.querySelectorAll('.iow-tab').forEach(function(b){ b.classList.remove('active'); });
-    document.querySelectorAll('.iow-tab-pane').forEach(function(p){ p.classList.remove('active'); });
-    document.querySelector('.iow-tab[data-tab="addiow"]').classList.add('active');
-    document.getElementById('iow-tab-addiow').classList.add('active');
-    eamSyncAddBtnVisibility('addiow');
-
-    _apReloadPendingFromCreate = false;
-  }
-
-  window.openIowModal = function(){
-    window.resetIowModalToCreateMode();
-    window.loadIowGroupOptions(document.getElementById('iow-group-select'));
-    document.getElementById('iow-bk').classList.add('iow-open');
-    document.getElementById('iow-modal').classList.add('iow-open');
-  };
-
-  // Toolbar icon ("Add IOWs, Activities & BOQ", #iow-btn-test) — the icon
-  // itself and its title/comment referencing it have existed since this
-  // modal was built, but no click handler was ever actually attached
-  // anywhere in the codebase, so the icon has never done anything. This id
-  // is duplicated (3 copies, one per nav-menu variant rendered
-  // conditionally by user role), so this binds via delegation on
-  // `document` matching the id, rather than getElementById on a single
-  // instance, so it fires no matter which of the three copies is actually
-  // present/visible for this user.
-  document.addEventListener('click', function(e){
-    var btn = e.target.closest('#iow-btn-test');
-    if (!btn) return;
-    e.preventDefault();
-    window.openIowModal();
-  });
-
-  function closeIowModal(){
-    document.getElementById('iow-bk').classList.remove('iow-open');
-    document.getElementById('iow-modal').classList.remove('iow-open');
-    if(window._apReloadPending || _apReloadPendingFromCreate){
-      window._apReloadPending = false;
-      _apReloadPendingFromCreate = false;
-      if(typeof window.reloadGantt === 'function') window.reloadGantt();
-    }
-  }
-  // Close: just exits, keeping whatever was already saved (Add already
-  // wrote it to the server — nothing to "undo" on close).
-  document.getElementById('iow-close').addEventListener('click', closeIowModal);
-  document.getElementById('iow-btn-close').addEventListener('click', closeIowModal);
-  document.getElementById('iow-bk').addEventListener('click', closeIowModal);
-  // Cancel: discards whatever's currently typed in Tab 1's IOW name
-  // row(s) (back to one blank row) before closing — same as Close
-  // otherwise, since a completed Add can't be "undone" here either.
-  document.getElementById('iow-btn-cancel').addEventListener('click', function(){
-    document.getElementById('iow-rows').innerHTML = '<div class="iow-row">' + iowRowHtml() + '</div>';
-    document.getElementById('iow-add-msg').textContent = '';
-    closeIowModal();
-  });
-
-  // Drag + resize for the combined window — same pattern as the KPI
-  // float panel. Bound once here (not duplicated per mode) since both
-  // create and edit mode share the same #iow-modal element.
-  (function(){
-    var win = document.getElementById('iow-modal');
-    var hdr = document.getElementById('iow-hdr');
-    var MIN_W=500, MIN_H=300, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0;
-    function _anchor(){
-      var r=win.getBoundingClientRect();
-      win.style.left=r.left+'px'; win.style.top=r.top+'px';
-      win.style.width=r.width+'px'; win.style.height=r.height+'px';
-      win.style.transform='none';
-      return r;
-    }
-    bindDragTouch(hdr, 'mousedown', function(e){
-      if(e.target.id==='iow-close') return;
-      var r=_anchor(); _action='drag'; _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top;
-      e.preventDefault();
-    });
-    document.querySelectorAll('.iow-rs').forEach(function(el){
-      bindDragTouch(el, 'mousedown', function(e){
-        var r=_anchor(); _action=el.getAttribute('data-dir');
-        _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height;
-        e.preventDefault(); e.stopPropagation();
+// Populates a <select> with the project's IOW Groups. Used by the Create
+// WBS popup's own IOW Group dropdowns.
+window.loadIowGroupOptions = function(selectEl, cb){
+  var placeholder = selectEl.options[0] ? selectEl.options[0].outerHTML : '<option value="">— Select IOW Group —</option>';
+  $.ajax({
+    type:'POST', url:'../projects/getiowgrouplist', dataType:'json',
+    success: function(d){
+      selectEl.innerHTML = placeholder;
+      (d.items||[]).forEach(function(item){
+        var o = document.createElement('option');
+        o.value = item.id; o.textContent = item.name;
+        selectEl.appendChild(o);
       });
-    });
-    bindDragTouch(document, 'mousemove', function(e){
-      if(!_action) return;
-      var dx=e.clientX-_sx, dy=e.clientY-_sy;
-      if(_action==='drag'){
-        win.style.left=Math.max(0,_ox+dx)+'px'; win.style.top=Math.max(0,_oy+dy)+'px';
-      } else {
-        var l=_ox,t=_oy,w=_ow,h=_oh;
-        if(_action.indexOf('e')>-1){ w=Math.max(MIN_W,_ow+dx); }
-        if(_action.indexOf('s')>-1){ h=Math.max(MIN_H,_oh+dy); }
-        if(_action.indexOf('w')>-1){ var nw=Math.max(MIN_W,_ow-dx); l=_ox+(_ow-nw); w=nw; }
-        if(_action.indexOf('n')>-1){ var nh=Math.max(MIN_H,_oh-dy); t=_oy+(_oh-nh); h=nh; }
-        win.style.left=l+'px'; win.style.top=t+'px'; win.style.width=w+'px'; win.style.height=h+'px';
-      }
-    }, { passive: false });
-    bindDragTouch(document, 'mouseup', function(){ _action=null; });
-  })();
-
-  var _apReloadPendingFromCreate = false; // no longer set true anywhere — Add IOW now reloads the Gantt instantly on click instead of deferring to Close. Kept (always false) so closeIowModal()'s check stays harmless.
-
-  // Tab 1 — batch-create any number of IOWs (one row each) under a
-  // single selected Group. Stays on Tab 1 after saving (no auto-switch);
-  // the rows are cleared back to one blank row so more can be added
-  // immediately, and a confirmation message lists what was created.
-  document.getElementById('iow-btn-addiow').addEventListener('click', function(){
-    var groupSel = document.getElementById('iow-group-select');
-    var groupId = groupSel.value;
-    var groupName = groupSel.options[groupSel.selectedIndex] ? groupSel.options[groupSel.selectedIndex].textContent : '';
-    var msg = document.getElementById('iow-add-msg');
-    if(!groupId){ msg.style.color = '#c0392b'; msg.textContent = 'Please select an IOW Group.'; return; }
-
-    var names = [];
-    document.querySelectorAll('.iow-name-input').forEach(function(inp){
-      var v = inp.value.trim();
-      if(v) names.push(v);
-    });
-    if(!names.length){ msg.style.color = '#c0392b'; msg.textContent = 'Enter at least one IOW name.'; return; }
-
-    var btn = document.getElementById('iow-btn-addiow');
-    btn.disabled = true; btn.textContent = 'Saving…';
-    msg.textContent = '';
-
-    $.ajax({
-      type: 'POST',
-      url: '../projectsmain/wbsaddiows',
-      dataType: 'json',
-      data: { payload: JSON.stringify({ iow_group_id: groupId, iow_group_name: groupName, iow_names: names }) },
-      success: function(d){
-        btn.disabled = false; btn.textContent = 'Add';
-        if(d.error && d.error !== 'No'){
-          msg.style.color = '#c0392b'; msg.textContent = d.error;
-          return;
-        }
-        var created = d.created || [];
-        var skipped = d.skipped || [];
-        var parts = [];
-        if(created.length) parts.push(created.length + ' IOW' + (created.length > 1 ? 's' : '') + ' added.');
-        if(skipped.length)  parts.push(skipped.length + ' already existed.');
-        msg.style.color = created.length ? '#1e8449' : '#c0392b';
-        msg.textContent = parts.length ? parts.join(' ') : 'Nothing was added.';
-        document.getElementById('iow-rows').innerHTML = '<div class="iow-row">' + iowRowHtml() + '</div>';
-        // Applies to the Gantt instantly (not deferred to Close) — same
-        // accepted flicker tradeoff as the Edit Activities popup's
-        // edit/delete, so a new IOW is never in doubt.
-        if(created.length && typeof window.reloadGantt === 'function') window.reloadGantt();
-        // If Tab 2 already loaded its IOW-by-group list this session and
-        // is currently scoped to the same Group just added to, refresh
-        // it so the new IOW(s) show up in the picker without reopening.
-        if(_ap2Loaded && document.getElementById('ap-group-select').value === groupId){
-          window.loadApIowOptions(groupId);
-          window.loadActivityList();
-        }
-      },
-      error: function(){
-        btn.disabled = false; btn.textContent = 'Add';
-        msg.style.color = '#c0392b'; msg.textContent = 'Save failed. Please try again.';
-      }
-    });
-  });
-
-  // Tab 2 — Group filters the IOW dropdown (and re-filters the activity
-  // list, via iow_group_id already supported by loadActivityList/
-  // listestactivity); IOW selects the actual attach target.
-  window.loadApIowOptions = function(groupId, cb){
-    var sel = document.getElementById('ap-iow-select');
-    sel.innerHTML = '<option value="">— Select IOW —</option>';
-    $.ajax({
-      type: 'POST', url: '../projectsmain/listiowbygroup', dataType: 'json',
-      data: { iow_group_id: groupId || 0 },
-      success: function(d){
-        (d.items || []).forEach(function(item){
-          var o = document.createElement('option');
-          o.value = item.id; o.textContent = item.name;
-          o.setAttribute('data-group', item.iow_group_id);
-          sel.appendChild(o);
-        });
-        if(typeof cb === 'function') cb();
-      }
-    });
-  };
-
-  document.getElementById('ap-group-select').addEventListener('change', function(){
-    var groupId = this.value;
-    window.loadApIowOptions(groupId);
-    window._apCurrentWgId = null; window._apCurrentIowName = ''; window._apCurrentIowGroupId = groupId ? parseInt(groupId, 10) : 0;
-    document.getElementById('ap-select-msg').textContent = '';
-    window.loadActivityList();
-  });
-
-  document.getElementById('ap-iow-select').addEventListener('change', function(){
-    var opt = this.options[this.selectedIndex];
-    if(!this.value){
-      window._apCurrentWgId = null; window._apCurrentIowName = '';
-      return;
+      if(typeof cb === 'function') cb();
     }
-    window._apCurrentWgId = parseInt(this.value, 10);
-    window._apCurrentIowName = opt.textContent;
-    document.getElementById('ap-select-msg').textContent = '';
   });
-
-  /* ── Tab 3: Upload BOQ ── */
-  var _boqSelectedFile = null;
-  var $boqDropzone = $('#boq-dropzone');
-  var $boqFileInput = $('#boq-file-input');
-  var $boqSelectedFileRow = $('#boq-selected-file');
-  var $boqUploadBtn = $('#boq-upload-btn');
-  var BOQ_ALLOWED_EXT = ['xlsx', 'xls', 'pdf'];
-
-  function boqExtOf(name){
-    var parts = (name || '').split('.');
-    return parts.length > 1 ? parts.pop().toLowerCase() : '';
-  }
-
-  function boqSetSelectedFile(file){
-    if (!file) { _boqSelectedFile = null; $boqSelectedFileRow.removeClass('show'); $boqUploadBtn.prop('disabled', true); return; }
-    if (BOQ_ALLOWED_EXT.indexOf(boqExtOf(file.name)) === -1) {
-      alert('Only Excel (.xlsx, .xls) or PDF files are allowed.');
-      return;
-    }
-    _boqSelectedFile = file;
-    $('#boq-sf-name').text(file.name);
-    $boqSelectedFileRow.addClass('show');
-    $boqUploadBtn.prop('disabled', false);
-  }
-
-  $boqDropzone.on('click', function(){ $boqFileInput.trigger('click'); });
-  $boqFileInput.on('change', function(){
-    if (this.files && this.files[0]) boqSetSelectedFile(this.files[0]);
-  });
-  $boqDropzone.on('dragover', function(e){ e.preventDefault(); e.stopPropagation(); $boqDropzone.addClass('boq-drag-over'); });
-  $boqDropzone.on('dragleave', function(e){ e.preventDefault(); e.stopPropagation(); $boqDropzone.removeClass('boq-drag-over'); });
-  $boqDropzone.on('drop', function(e){
-    e.preventDefault(); e.stopPropagation();
-    $boqDropzone.removeClass('boq-drag-over');
-    var files = e.originalEvent.dataTransfer ? e.originalEvent.dataTransfer.files : null;
-    if (files && files[0]) boqSetSelectedFile(files[0]);
-  });
-  $('#boq-sf-remove').on('click', function(e){
-    e.stopPropagation();
-    boqSetSelectedFile(null);
-    $boqFileInput.val('');
-  });
-
-  $boqUploadBtn.on('click', function(){
-    var pid = (document.getElementById('gantt-win-open') || {}).getAttribute
-      ? document.getElementById('gantt-win-open').getAttribute('data-projectid') : '';
-    if (!pid) { alert('No project selected.'); return; }
-    if (!_boqSelectedFile) return;
-
-    var fd = new FormData();
-    fd.append('project_id', pid);
-    fd.append('boq_file', _boqSelectedFile);
-
-    $boqUploadBtn.prop('disabled', true).text('Uploading…');
-    $.ajax({
-      type: 'POST', url: '../projectsmain/uploadboq', data: fd,
-      processData: false, contentType: false, dataType: 'json',
-      success: function(d){
-        $boqUploadBtn.prop('disabled', false).text('Upload BOQ');
-        if (d.error && d.error !== 'No') { alert(d.errortext || 'Upload failed.'); return; }
-        boqSetSelectedFile(null);
-        $boqFileInput.val('');
-        window.loadBoqList();
-      },
-      error: function(){
-        $boqUploadBtn.prop('disabled', false).text('Upload BOQ');
-        alert('Upload failed. Please try again.');
-      }
-    });
-  });
-
-  function boqFmtDate(s){
-    if (!s) return '';
-    var d = new Date(s.replace(' ', 'T'));
-    if (isNaN(d.getTime())) return s;
-    return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) + ' ' +
-           d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
-  }
-
-  window.loadBoqList = function(){
-    var pid = (document.getElementById('gantt-win-open') || {}).getAttribute
-      ? document.getElementById('gantt-win-open').getAttribute('data-projectid') : '';
-    if (!pid) { $('#boq-list').html('<p id="boq-empty">No project selected.</p>'); return; }
-    $.ajax({
-      type: 'POST', url: '../projectsmain/listboq', dataType: 'json', data: { project_id: pid },
-      success: function(d){
-        if (d.error && d.error !== 'No') { $('#boq-list').html('<p id="boq-empty">' + $('<span>').text(d.errortext || 'Error loading files.').html() + '</p>'); return; }
-        boqRenderList(d.rows || []);
-      },
-      error: function(){ $('#boq-list').html('<p id="boq-empty">Failed to load.</p>'); }
-    });
-  };
-
-  function boqRenderList(rows){
-    document.getElementById('boq-create-wbs-btn').disabled = !rows.length;
-    document.getElementById('boq-create-sched-btn').disabled = !rows.length;
-    if (!rows.length) { $('#boq-list').html('<p id="boq-empty">No BOQ uploaded yet.</p>'); return; }
-    var html = '';
-    rows.forEach(function(r){
-      html += '<div class="boq-file-row" data-id="' + r.id + '">'
-        + '<span class="boq-fr-icon">&#x1F4C4;</span>'
-        + '<div class="boq-fr-info">'
-        +   '<div class="boq-fr-name">' + $('<span>').text(r.original_name).html() + '</div>'
-        +   '<div class="boq-fr-date">' + $('<span>').text(boqFmtDate(r.uploaded_at)).html() + '</div>'
-        + '</div>'
-        + '<button type="button" class="boq-fr-del" data-id="' + r.id + '" title="Delete">&times;</button>'
-        + '</div>';
-    });
-    $('#boq-list').html(html);
-  }
-
-  $(document).on('click', '.boq-fr-del', function(){
-    if (!confirm('Delete this BOQ file?')) return;
-    var id = $(this).data('id');
-    $.ajax({
-      type: 'POST', url: '../projectsmain/deleteboq', dataType: 'json', data: { id: id },
-      success: function(d){
-        if (d.error && d.error !== 'No') { alert(d.errortext || 'Delete failed.'); return; }
-        window.loadBoqList();
-      },
-      error: function(){ alert('Delete failed. Please try again.'); }
-    });
-  });
-
-  // Placeholder actions — behavior not yet defined, wire up once scoped.
-  document.getElementById('boq-create-wbs-btn').addEventListener('click', function(){
-    alert('Create WBS — coming soon.');
-  });
-  document.getElementById('boq-create-sched-btn').addEventListener('click', function(){
-    alert('Create Schedule and Estimate — coming soon.');
-  });
-})();
+};
 </script>
 
-<!-- Task sub-popup — reuses the same Task table columns/duration-per-unit
-     formula as the old WBS Quick Entry form (name, qty, productivity,
-     duration/unit, resource units). Prefilled from the picked activity's
-     library default tasks (activity_tasks, via getactivityresources). -->
+<!-- Task sub-popup — shared by any caller that edits an activity's task
+     list (Create WBS's Edit Activity popup has its own separate inline
+     task editor; this one is used by the Gantt's Edit Activities popup's
+     Task button). Duration formula matches Create WBS's Add button and
+     Edit Activities' save path: duration = ceil((qty * sum(task
+     qty/productivity)) / r_unit) — r_unit divides the whole row total,
+     not applied per task. -->
 <style>
 #apt-bk{display:none;position:fixed;inset:0;background:transparent;z-index:200900;}
 #apt-bk.apt-open{display:block}
@@ -4011,7 +4231,7 @@ if($action=='login')
     <table>
       <thead><tr>
         <th>Task</th><th id="apt-qty-hdr" style="width:70px;">Qnty/Unit</th><th style="width:80px;">Productivity/day</th>
-        <th style="width:75px;">Dur/Unit</th><th style="width:75px;">Res Units</th><th style="width:30px;"></th>
+        <th style="width:75px;">Dur/Unit</th><th style="width:30px;"></th>
       </tr></thead>
       <tbody id="apt-task-body"></tbody>
     </table>
@@ -4025,229 +4245,29 @@ if($action=='login')
 
 <script>
 (function(){
-  window._apCurrentWgId = null;
-  window._apCurrentIowName = '';   // selected/clicked IOW's own current name — MUST be resent on every wbsadd call, or actionWbsadd() falls back to renaming the IOW to the activity's name (see the iow_name/iowGroupId bug this replaced)
-  var _apActivityUnits = {};  // activity_id -> library unit (prefill for Schd Unit)
-  var _apActivityTasks = {};  // activity_id -> [{name, qty, productivity, resunits}], edited copy per activity
-  window._apCurrentIowGroupId = 0; // selected/clicked IOW's parent IOW Group — filters the list to activities already tagged with it, and MUST be resent on wbsadd so the IOW's own group is preserved (not reset to 0)
-
-  // Edit mode entry point — called by newganttview.php when an existing
-  // IOW row/bar is clicked. Kept as window.openActivityPicker (name
-  // unchanged) so the Gantt-side click handler needs no changes. Opens
-  // the SAME popup straight onto Tab 2, with that IOW's Group and IOW
-  // dropdowns pre-selected — no separate "edit mode" screen, this is
-  // just Tab 2 pre-filled to skip the manual pick.
-  window.openActivityPicker = function(wgId, iowName, iowGroupId){
-    window.resetIowModalToCreateMode(); // start clean, then immediately switch — avoids stale state from a previous session
-    document.getElementById('iow-bk').classList.add('iow-open');
-    document.getElementById('iow-modal').classList.add('iow-open');
-
-    document.querySelectorAll('.iow-tab').forEach(function(b){ b.classList.remove('active'); });
-    document.querySelectorAll('.iow-tab-pane').forEach(function(p){ p.classList.remove('active'); });
-    document.querySelector('.iow-tab[data-tab="addactivity"]').classList.add('active');
-    document.getElementById('iow-tab-addactivity').classList.add('active');
-
-    window._apCurrentWgId = wgId;
-    window._apCurrentIowName = iowName || '';
-    window._apCurrentIowGroupId = iowGroupId || 0;
-    document.getElementById('iow-hdr-title-suffix').textContent = iowName ? ('— ' + iowName) : '';
-
-    window.loadIowGroupOptions(document.getElementById('ap-group-select'), function(){
-      document.getElementById('ap-group-select').value = iowGroupId || '';
-      window.loadApIowOptions(iowGroupId, function(){
-        document.getElementById('ap-iow-select').value = wgId || '';
-      });
-    });
-    window.loadActivityList();
-  };
-
-  window._apReloadPending = false; // no longer set true anywhere — each tick now reloads the Gantt instantly instead of deferring to Close. Kept (always false) so closeIowModal()'s check stays harmless.
-
-  window.loadActivityList = function(){
-    var target = document.getElementById('ap-list-target');
-    target.innerHTML = '<p style="color:#aaa;font-size:13px;text-align:center;padding:30px 0;">Loading…</p>';
-    $.ajax({
-      type: 'POST', url: '../projects/listestactivity', dataType: 'json', timeout: 30000,
-      data: { estactivityname: document.getElementById('ap-search').value, estactivitytype: '', estworktype: '', iow_group_id: window._apCurrentIowGroupId },
-      success: function(d){
-        target.innerHTML = d.result || '<p style="color:#aaa;font-size:13px;text-align:center;padding:30px 0;">No activities found.</p>';
-        augmentActivityRows();
-      },
-      error: function(xhr){
-        if(xhr && xhr.status === 403){
-          target.innerHTML = '<p style="color:#c0392b;font-size:13px;text-align:center;padding:30px 0;">Your session has expired. <a href="#" id="ap-relogin-reload" style="color:#00838f;font-weight:700;">Reload the page</a> and log in again.</p>';
-          var reloadBtn = document.getElementById('ap-relogin-reload');
-          if(reloadBtn) reloadBtn.addEventListener('click', function(e){ e.preventDefault(); window.location.reload(); });
-          return;
-        }
-        target.innerHTML = '<p style="color:#c0392b;font-size:13px;text-align:center;padding:30px 0;">Failed to load activities. <a href="#" id="ap-retry-load" style="color:#00838f;font-weight:700;">Retry</a></p>';
-        var retryBtn = document.getElementById('ap-retry-load');
-        if(retryBtn) retryBtn.addEventListener('click', function(e){ e.preventDefault(); window.loadActivityList(); });
-      }
-    });
-  };
-
-  var _apSearchTimer = null;
-  document.getElementById('ap-search').addEventListener('input', function(){
-    clearTimeout(_apSearchTimer);
-    _apSearchTimer = setTimeout(window.loadActivityList, 300);
-  });
-
-  // Injects Schd Unit / Qty / Task / Tick cells into each row of the
-  // (unmodified) Activity Library list HTML — see the "inject client-
-  // side" decision: listestactivity's own HTML/markup stays untouched,
-  // this only appends extra <td> cells onto its existing <tr> rows.
-  // Transforms the (unmodified) Activity Library list HTML in place:
-  // relabels the existing "Unit" header/cell as "Schd Unit" (made
-  // editable) and replaces the existing "Rate" header/cell with an
-  // editable "Quantity" column — does NOT touch the real Activity
-  // Library screen's own markup/endpoint, only this popup's copy of the
-  // returned HTML. Column order: # | Project Type | Type | Activity |
-  // Schd Unit | Quantity | Task | Allocate/Edit/Delete (unchanged) |
-  // Tick (appended last).
-  // This popup is a pure pick-and-add list — no edit/delete/resource-
-  // allocation here (those belong to the real Activity Library, and to
-  // the separate edit-attached-activities popup for an IOW's own
-  // activities). Cell 6, the Activity Library's Allocate/Edit/Delete
-  // icon cell, is dropped entirely rather than kept.
-  function augmentActivityRows(){
-    var table = document.querySelector('#ap-list-target table');
-    if(!table) return;
-    var headRow = table.querySelector('thead tr');
-    if(headRow && headRow.cells.length >= 6){
-      headRow.cells[4].textContent = 'Schd Unit';
-      headRow.cells[5].textContent = 'Quantity';
-      if(headRow.cells[6]) headRow.removeChild(headRow.cells[6]);
-      var thTask = document.createElement('th');
-      thTask.style.cssText = 'background:#555;color:#fff;font-weight:600;font-size:11px;padding:3px 6px;border:1px solid #444;text-align:center;width:60px;';
-      thTask.textContent = 'Task';
-      headRow.appendChild(thTask);
-      var thTick = document.createElement('th');
-      thTick.style.cssText = 'background:#555;color:#fff;font-weight:600;font-size:11px;padding:3px 6px;border:1px solid #444;text-align:center;width:40px;';
-      headRow.appendChild(thTick);
-    }
-    var prefillQueue = [];
-    table.querySelectorAll('tbody tr[data-id]').forEach(function(tr){
-      if(tr.cells.length < 6) return;
-      var actId = tr.getAttribute('data-id');
-      var actName = (tr.querySelector('input[id^="activity"]') || {}).value || tr.cells[3].textContent.trim();
-      var libUnit = (tr.querySelector('input[id^="activityunit"]') || {}).value || '';
-
-      // Cell 4 (was read-only Unit text) -> editable Schd Unit input.
-      var unitCell = tr.cells[4];
-      unitCell.className = 'ap-col-schunit';
-      unitCell.innerHTML = '<input type="text" class="ap-schunit-input" value="' + libUnit.replace(/"/g,'&quot;') + '">';
-
-      // Cell 5 (was read-only Rate text) -> editable Quantity input.
-      var rateCell = tr.cells[5];
-      rateCell.className = 'ap-col-qty';
-      rateCell.innerHTML = '<input type="number" class="ap-qty-input" placeholder="0" step="0.01" min="0">';
-
-      // Cell 6 — Activity Library's own Allocate/Edit/Delete icons —
-      // dropped, this list only ever adds, never edits/deletes/allocates.
-      if(tr.cells[6]) tr.removeChild(tr.cells[6]);
-
-      // Task button — grey, appended after Quantity.
-      var tdTask = document.createElement('td');
-      tdTask.style.cssText = 'border:1px solid #ddd;padding:4px;text-align:center;';
-      tdTask.innerHTML = '<button type="button" class="ap-task-btn" data-actid="' + actId + '" data-actname="' + actName.replace(/"/g,'&quot;') + '">Task</button>';
-      tr.appendChild(tdTask);
-
-      // Tick (add to Gantt) — appended last.
-      var tdTick = document.createElement('td');
-      tdTick.style.cssText = 'border:1px solid #ddd;padding:4px;text-align:center;';
-      tdTick.innerHTML = '<button type="button" class="ap-tick-btn" data-actid="' + actId + '" data-actname="' + actName.replace(/"/g,'&quot;') + '" title="Add to Gantt">&#10003;</button>';
-      tr.appendChild(tdTick);
-
-      prefillQueue.push({ tr: tr, actId: actId });
-    });
-
-    // Prefill Schd Unit / tasks from the project's own existing
-    // workgroup_activities_new + activity_tasks defaults, if any (same
-    // source the old WBS form used via getactivityresources). Run a few
-    // at a time instead of firing one request per row simultaneously —
-    // a full-table burst (e.g. 25 rows) was overwhelming shared hosting's
-    // concurrent PHP worker limit and intermittently breaking the main
-    // list request itself.
-    var PREFILL_CONCURRENCY = 4;
-    var qIndex = 0, qActive = 0;
-    function runNextPrefill(){
-      if(qIndex >= prefillQueue.length) return;
-      var item = prefillQueue[qIndex++];
-      qActive++;
-      var tr = item.tr, actId = item.actId;
-      $.ajax({
-        type:'POST', url:'../projectsmain/getactivityresources', dataType:'json',
-        data:{ activity_id: actId },
-        success: function(d){
-          if(d.sch_unit) tr.querySelector('.ap-schunit-input').value = d.sch_unit;
-          if(d.sch_qty)  tr.querySelector('.ap-qty-input').value = d.sch_qty;
-          _apActivityTasks[actId] = (d.tasks || []).map(function(t){
-            return { name: t.task_name, qty: t.task_qty, productivity: t.productivity, resunits: t.resunits || 1 };
-          });
-          if(_apActivityTasks[actId].length){
-            var btn = tr.querySelector('.ap-task-btn');
-            if(btn) btn.classList.add('ap-has-tasks');
-          }
-        },
-        complete: function(){
-          qActive--;
-          runNextPrefill();
-        }
-      });
-    }
-    for(var qi = 0; qi < PREFILL_CONCURRENCY; qi++) runNextPrefill();
-  }
-
-  document.getElementById('ap-list-target').addEventListener('click', function(e){
-    var taskBtn = e.target.closest('.ap-task-btn');
-    if(taskBtn){
-      var actId = taskBtn.getAttribute('data-actid');
-      var row = taskBtn.closest('tr');
-      var qtyInput = row ? row.querySelector('.ap-qty-input') : null;
-      var schUnitInput = row ? row.querySelector('.ap-schunit-input') : null;
-      window.openTaskPopupFor(actId, taskBtn.getAttribute('data-actname'), _apActivityTasks[actId] || [], function(updatedTasks, dur){
-        _apActivityTasks[actId] = updatedTasks;
-        taskBtn.classList.toggle('ap-has-tasks', updatedTasks.length > 0);
-      }, function(){ return qtyInput ? (parseFloat(qtyInput.value) || 0) : 0; }, schUnitInput ? schUnitInput.value.trim() : '');
-      return;
-    }
-    var tickBtn = e.target.closest('.ap-tick-btn');
-    if(tickBtn){
-      addActivityToGantt(tickBtn);
-      return;
-    }
-  });
-
-  /* ── Task sub-popup — shared by the Add Activity picker (keyed by
-       library activity_id, _apActivityTasks) and the Edit Activities
-       popup (keyed by sa_id, _eamTasksByAct). Generic: takes the current
-       task list + a save callback, has no knowledge of either caller's
-       own state. ── */
   function taskRowHtml(t){
     t = t || {};
     return '<td data-taskid="' + (t.id != null ? t.id : '') + '"><input type="text" class="apt-task-name" value="' + (t.name||'').replace(/"/g,'&quot;') + '" placeholder="Task name"></td>'
       + '<td><input type="number" class="apt-task-qty" value="' + (t.qty!=null?t.qty:1) + '" step="0.01" min="0"></td>'
       + '<td><input type="number" class="apt-task-prod" value="' + (t.productivity!=null?t.productivity:'') + '" step="0.01" min="0"></td>'
       + '<td><input type="text" class="apt-task-durunit" readonly></td>'
-      + '<td><input type="number" class="apt-task-resunits" value="' + (t.resunits!=null?t.resunits:1) + '" step="1" min="1"></td>'
       + '<td style="text-align:center;"><button type="button" class="apt-del-btn" title="Remove">&times;</button></td>';
   }
 
   function apRecalcTaskRow(tr){
     var qty = parseFloat(tr.querySelector('.apt-task-qty').value) || 0;
     var prod = parseFloat(tr.querySelector('.apt-task-prod').value) || 0;
-    var resUnits = parseFloat(tr.querySelector('.apt-task-resunits').value) || 1;
-    var durPerUnit = prod > 0 ? (qty / prod) / resUnits : 0;
-    tr.querySelector('.apt-task-durunit').value = durPerUnit > 0 ? durPerUnit.toFixed(4) : '';
+    var durPerUnit = prod > 0 ? (qty / prod) : 0;
+    tr.querySelector('.apt-task-durunit').value = durPerUnit ? durPerUnit.toFixed(3) : '';
     return durPerUnit;
   }
 
   function apRecalcDuration(){
     var schQty = (typeof _apTaskGetQty === 'function') ? _apTaskGetQty() : 0;
+    var rUnit = (typeof _apTaskGetRUnit === 'function') ? (_apTaskGetRUnit() || 1) : 1;
     var sum = 0;
     document.querySelectorAll('#apt-task-body tr').forEach(function(tr){ sum += apRecalcTaskRow(tr); });
-    var dur = (schQty > 0 && sum > 0) ? Math.ceil(schQty * sum) : 0;
+    var dur = (schQty > 0 && sum > 0) ? Math.ceil((schQty * sum) / rUnit) : 0;
     document.getElementById('apt-dur-val').textContent = dur > 0 ? dur : '—';
     return dur;
   }
@@ -4256,7 +4276,7 @@ if($action=='login')
     var tr = document.createElement('tr');
     tr.innerHTML = taskRowHtml(t);
     tbody.appendChild(tr);
-    tr.querySelectorAll('.apt-task-qty,.apt-task-prod,.apt-task-resunits').forEach(function(inp){
+    tr.querySelectorAll('.apt-task-qty,.apt-task-prod').forEach(function(inp){
       inp.addEventListener('input', apRecalcDuration);
     });
     tr.querySelector('.apt-del-btn').addEventListener('click', function(){
@@ -4267,18 +4287,18 @@ if($action=='login')
 
   var _apTaskOnSave = null;   // caller's save callback for the currently-open Task popup
   var _apTaskGetQty  = null;  // caller's fn returning the current row's Qty, for the live duration preview
+  var _apTaskGetRUnit = null; // caller's fn returning the current row's R.Unit, for the live duration preview
 
-  // Generic entry point — any caller (Add Activity picker, Edit
-  // Activities popup) opens this with: a label, the current task list,
-  // an onSave(updatedTasks, duration) callback, and a getQty() callback
-  // for the live duration display. Neither caller's own state is
-  // touched here — onSave is where the caller decides what to do with
-  // the edited list.
-  window.openTaskPopupFor = function(id, label, tasks, onSave, getQty, unit){
+  // Generic entry point — any caller opens this with: a label, the
+  // current task list, an onSave(updatedTasks, duration) callback, a
+  // getQty() callback and an optional getRUnit() callback for the live
+  // duration display.
+  window.openTaskPopupFor = function(id, label, tasks, onSave, getQty, unit, getRUnit){
     document.getElementById('apt-hdr-act').textContent = label ? ('— ' + label) : '';
     document.getElementById('apt-qty-hdr').textContent = unit ? ('Qty/' + unit) : 'Qnty/Unit';
     _apTaskOnSave = onSave;
     _apTaskGetQty = getQty || function(){ return 0; };
+    _apTaskGetRUnit = getRUnit || function(){ return 1; };
 
     var tbody = document.getElementById('apt-task-body');
     tbody.innerHTML = '';
@@ -4302,13 +4322,14 @@ if($action=='login')
         name: name,
         qty: parseFloat(tr.querySelector('.apt-task-qty').value) || 0,
         productivity: parseFloat(tr.querySelector('.apt-task-prod').value) || 0,
-        resunits: parseFloat(tr.querySelector('.apt-task-resunits').value) || 1
+        resunits: 1
       });
     });
     var dur = apRecalcDuration();
     if(typeof _apTaskOnSave === 'function') _apTaskOnSave(tasks, dur);
     _apTaskOnSave = null;
     _apTaskGetQty = null;
+    _apTaskGetRUnit = null;
     document.getElementById('apt-bk').classList.remove('apt-open');
     document.getElementById('apt-modal').classList.remove('apt-open');
   }
@@ -4317,97 +4338,10 @@ if($action=='login')
   document.getElementById('apt-add-row-btn').addEventListener('click', function(){
     addTaskRowTo(document.getElementById('apt-task-body'), {});
   });
-
-  /* ── Add to Gantt (tick) ── */
-  function addActivityToGantt(tickBtn){
-    if(!window._apCurrentWgId){
-      document.getElementById('ap-select-msg').textContent = 'Select an IOW before adding activities.';
-      return;
-    }
-    var actId = tickBtn.getAttribute('data-actid');
-    var actName = tickBtn.getAttribute('data-actname');
-    var row = tickBtn.closest('tr');
-    var schUnit = row.querySelector('.ap-schunit-input').value.trim();
-    var schQty = parseFloat(row.querySelector('.ap-qty-input').value) || 0;
-    var tasks = _apActivityTasks[actId] || [];
-
-    if(!schQty){ alert('Please enter a Qty before adding this activity.'); return; }
-
-    // Same duration formula as the old WBS form's recalcDuration():
-    // duration = ceil(schQty * sum(task durPerUnit)), durPerUnit = (task.qty / task.productivity) / task.resunits.
-    var sumDurPerUnit = 0;
-    tasks.forEach(function(t){
-      var dpu = (t.productivity > 0) ? ((t.qty || 0) / t.productivity) / (t.resunits || 1) : 0;
-      sumDurPerUnit += dpu;
-    });
-    var duration = (schQty > 0 && sumDurPerUnit > 0) ? Math.ceil(schQty * sumDurPerUnit) : 1;
-
-    // sumDurPerUnit === 0 means every task either has no Productivity/day
-    // set or there are no tasks at all — duration silently falls back to
-    // the 1-day minimum with no indication anything's wrong (this is
-    // exactly how "Project Overhead" ended up stuck at 1 day instead of
-    // 180: its task's Qty/Productivity were still 0 the moment this tick
-    // was clicked). Ask for confirmation instead of proceeding silently —
-    // the user can go back, set Productivity/day on the Task popup, then
-    // add, or explicitly accept a 1-day placeholder if that's intended.
-    if (sumDurPerUnit === 0 && !window.confirm(
-      'No task on "' + actName + '" has a Productivity/day set, so its duration will default to 1 day.\n\n' +
-      'Click Cancel to go back and set Productivity/day on the Task popup first, or OK to add it anyway as a 1-day activity.'
-    )) {
-      return;
-    }
-
-    tickBtn.disabled = true;
-    var payload = {
-      wg_id: window._apCurrentWgId,
-      // iow_name / iow_group_id: the SELECTED IOW's own current identity,
-      // resent unchanged on every add — actionWbsadd() re-writes
-      // workgroups_new's Name/iowGroupid from these fields whenever
-      // wg_id already exists, so omitting them renames the IOW to the
-      // activity name and resets its group to none.
-      iow_name: window._apCurrentIowName,
-      iow_group_id: window._apCurrentIowGroupId,
-      iow_act_id: actId,
-      act_name: actName,
-      sch_unit: schUnit,
-      sch_qty: schQty,
-      qty: schQty,
-      unit: schUnit,
-      duration: duration,
-      tasks: tasks.map(function(t){
-        return { name: t.name, qty: t.qty, prod: t.productivity, resunits: t.resunits };
-      }),
-      resources: []
-    };
-    $.ajax({
-      type: 'POST', url: '../projectsmain/wbsadd', dataType: 'json',
-      data: { payload: JSON.stringify(payload) },
-      success: function(d){
-        tickBtn.disabled = false;
-        if(d.error && d.error !== 'No'){ alert(d.errortext || d.error); return; }
-        // Applies to the Gantt instantly on this tick (not deferred to
-        // Close) — same accepted flicker tradeoff as Add IOW, so the
-        // activity is never in doubt. Popup stays open — the user keeps
-        // adding more activities under the same IOW without it closing.
-        if(typeof window.reloadGantt === 'function') window.reloadGantt();
-        // Tick stays clickable even after the first add (no 'ap-added'
-        // inert state) — re-clicking it after editing Task Name/Unit/
-        // Productivity/Qty on an already-added activity is how those
-        // edits actually reach the server; see actionWbsadd()'s
-        // already_exists branch, which now syncs tasks/unit/qty instead
-        // of silently no-op'ing.
-        tickBtn.innerHTML = '&#10003;';
-        tickBtn.title = d.already_exists ? 'Updated — click again to re-sync Task/Unit/Qty changes' : 'Added to Gantt (click again to sync Task/Unit/Qty changes)';
-        tickBtn.classList.add('ap-added');
-      },
-      error: function(){
-        tickBtn.disabled = false;
-        alert('Failed to add activity. Please try again.');
-      }
-    });
-  }
 })();
 </script>
+
+
 
 <!-- Edit Activities popup — opened by clicking an existing IOW row/bar on
      the Gantt. Shows only the activities ALREADY attached to that IOW
@@ -4448,21 +4382,20 @@ if($action=='login')
   border-bottom:2px solid #ccc;flex-shrink:0;font-size:14px;
 }
 #eam-iow-name{font-weight:700;color:#222;}
-#eam-iow-group{font-size:12px;color:#00838f;font-weight:700;}
-#eam-iow-name-input{height:30px;border:1px solid #ccc;border-radius:4px;padding:0 8px;font-size:13px;box-sizing:border-box;min-width:200px;}
-#eam-iow-group-select{height:30px;border:1px solid #ccc;border-radius:4px;padding:0 8px;font-size:13px;box-sizing:border-box;min-width:180px;}
 #eam-iow-spacer{flex:1;}
 #eam-body{padding:14px 18px;overflow:auto;flex:1;scroll-snap-type:y proximity;}
-#eam-body table{table-layout:auto;width:100%;min-width:600px;border-collapse:collapse;}
+#eam-body table{table-layout:auto;width:100%;min-width:600px;border-collapse:collapse;border:1px solid #8fb8ae;}
 #eam-body tbody tr{scroll-snap-align:start;}
-#eam-body th, #eam-body td{white-space:nowrap;padding:8px 10px;border:none;border-bottom:1px solid #888;font-size:13px;}
-#eam-body th{background:#e9ebed;color:#555;font-weight:700;border-bottom:2px solid #ccc;text-align:left;}
-#eam-body tbody tr:last-child td{border-bottom:none;}
+#eam-body tbody tr:nth-child(even){background:#eaf5f1;}
+#eam-body tbody tr:hover{background:#d7ede6;}
+#eam-body th, #eam-body td{white-space:nowrap;padding:8px 10px;border:1px solid #bcdcd2;font-size:13px;vertical-align:middle;}
+#eam-body th{background:#e9ebed;color:#555;font-weight:700;text-align:left;}
 #eam-body td.eam-col-sno{color:#999;text-align:center;width:36px;}
 #eam-body td.eam-col-name{white-space:normal;}
 .eam-name-input{width:100%;height:28px;border:1px solid #ccc;border-radius:4px;padding:0 6px;font-size:12px;box-sizing:border-box;}
 .eam-unit-input{width:70px;height:28px;border:1px solid #ccc;border-radius:4px;padding:0 6px;font-size:12px;box-sizing:border-box;}
 #eam-col-qty input{width:80px;height:28px;border:1px solid #ccc;border-radius:4px;padding:0 6px;font-size:12px;box-sizing:border-box;}
+#eam-col-runit input{width:60px;height:28px;border:1px solid #ccc;border-radius:4px;padding:0 6px;font-size:12px;box-sizing:border-box;}
 .eam-task-btn{
   background:#888;border:1px solid #777;color:#fff;border-radius:4px;padding:4px 10px;
   font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;
@@ -4505,12 +4438,10 @@ if($action=='login')
     <span>Edit Activities<span id="eam-hdr-title-suffix"></span></span>
     <button id="eam-close">&times;</button>
   </div>
-  <div id="eam-iow-row" data-wgid="">
+  <div id="eam-iow-row">
     <span id="eam-iow-name"></span>
-    <span id="eam-iow-group"></span>
     <span id="eam-iow-spacer"></span>
-    <button type="button" class="eam-edit-btn" id="eam-iow-edit-btn" title="Edit IOW">&#9998;</button>
-    <button type="button" class="eam-del-btn" id="eam-iow-del-btn" title="Delete IOW">&times;</button>
+    <button type="button" class="eam-del-btn" id="eam-iow-del-btn" title="Delete all activities under this IOW Group">&times;</button>
   </div>
   <div id="eam-body">
     <div id="eam-list-target"><p id="eam-empty">Loading…</p></div>
@@ -4522,7 +4453,6 @@ if($action=='login')
 
 <script>
 (function(){
-  var _eamWgId = null;
   var _eamIowName = '';
   var _eamIowGroupId = 0;
   var _eamReloadPending = false;
@@ -4533,20 +4463,19 @@ if($action=='login')
   }
 
   var _eamTasksByAct = {}; // sa_id -> [{id, name, qty, productivity, resunits}], edited copy per row
+  var _eamRUnitByAct = {}; // sa_id -> current R.Unit value (row-level, divides the whole task-duration sum)
 
-  function eamRecalcDuration(schQty, tasks){
+  function eamRecalcDuration(schQty, tasks, rUnit){
     var sumDurPerUnit = 0;
     (tasks || []).forEach(function(t){
-      var dpu = (t.productivity > 0) ? ((t.qty || 0) / t.productivity) / (t.resunits || 1) : 0;
+      var dpu = (t.productivity > 0) ? ((t.qty || 0) / t.productivity) : 0;
       sumDurPerUnit += dpu;
     });
-    return (schQty > 0 && sumDurPerUnit > 0) ? Math.ceil(schQty * sumDurPerUnit) : 1;
+    rUnit = rUnit || 1;
+    return (schQty > 0 && sumDurPerUnit > 0) ? Math.ceil((schQty * sumDurPerUnit) / rUnit) : 1;
   }
 
-  var _eamGroupNamesById = {}; // populated from getiowgrouplist, id -> name, for the IOW row's group label
-
-  window.openEditActivitiesModal = function(wgId, iowName, iowGroupId){
-    _eamWgId = wgId;
+  window.openEditActivitiesModal = function(iowName, iowGroupId){
     _eamIowName = iowName || '';
     _eamIowGroupId = iowGroupId || 0;
     _eamReloadPending = false;
@@ -4555,33 +4484,24 @@ if($action=='login')
     document.getElementById('eam-bk').classList.add('eam-open');
     document.getElementById('eam-modal').classList.add('eam-open');
     eamLoadList();
-    $.ajax({
-      type: 'POST', url: '../projects/getiowgrouplist', dataType: 'json',
-      success: function(d){
-        _eamGroupNamesById = {};
-        (d.items || []).forEach(function(g){ _eamGroupNamesById[g.id] = g.name; });
-        eamRenderIowRowView();
-      }
-    });
   };
 
   function eamRenderIowRowView(){
-    document.getElementById('eam-iow-row').setAttribute('data-wgid', _eamWgId);
     document.getElementById('eam-iow-name').textContent = _eamIowName;
-    var groupName = _eamGroupNamesById[_eamIowGroupId] || '';
-    document.getElementById('eam-iow-group').textContent = groupName ? ('— ' + groupName) : '';
   }
 
   function eamViewCellsHtml(it){
     return '<td class="eam-col-name">' + $('<div>').text(it.name).html() + '</td>'
       + '<td>' + $('<div>').text(it.unit).html() + '</td>'
-      + '<td id="eam-col-qty">' + it.quantity + '</td>';
+      + '<td id="eam-col-qty">' + it.quantity + '</td>'
+      + '<td id="eam-col-runit">' + (it.r_unit != null ? it.r_unit : 1) + '</td>';
   }
 
   function eamEditCellsHtml(it){
     return '<td class="eam-col-name"><input type="text" class="eam-name-input" value="' + $('<div>').text(it.name).html() + '"></td>'
       + '<td><input type="text" class="eam-unit-input" value="' + $('<div>').text(it.unit).html() + '"></td>'
-      + '<td id="eam-col-qty"><input type="number" class="eam-qty-input" value="' + it.quantity + '" step="0.01" min="0"></td>';
+      + '<td id="eam-col-qty"><input type="number" class="eam-qty-input" value="' + it.quantity + '" step="0.01" min="0"></td>'
+      + '<td id="eam-col-runit"><input type="number" class="eam-runit-input" value="' + (it.r_unit != null ? it.r_unit : 1) + '" step="0.01" min="0.01"></td>';
   }
 
   function eamLoadList(){
@@ -4589,7 +4509,7 @@ if($action=='login')
     target.innerHTML = '<p id="eam-empty">Loading…</p>';
     $.ajax({
       type: 'POST', url: '../projectsmain/wbsactivitiesbyiow', dataType: 'json',
-      data: { wg_id: _eamWgId },
+      data: { iow_group_id: _eamIowGroupId },
       success: function(d){
         var items = d.items || [];
         _eamTasksByAct = {};
@@ -4598,11 +4518,12 @@ if($action=='login')
           return;
         }
         var html = '<table><thead><tr>'
-          + '<th style="width:36px;">#</th><th>Activity</th><th style="width:70px;">Unit</th><th style="width:110px;">Quantity</th>'
+          + '<th style="width:36px;">#</th><th>Activity</th><th style="width:70px;">Unit</th><th style="width:90px;">Quantity</th><th style="width:80px;">R.Unit</th>'
           + '<th style="width:90px;">Task</th><th style="width:44px;"></th><th style="width:40px;"></th>'
           + '</tr></thead><tbody>';
         items.forEach(function(it, idx){
           _eamTasksByAct[it.sa_id] = it.tasks || [];
+          _eamRUnitByAct[it.sa_id] = it.r_unit != null ? it.r_unit : 1;
           html += '<tr data-said="' + it.sa_id + '">'
             + '<td class="eam-col-sno">' + (idx + 1) + '</td>'
             + eamViewCellsHtml(it)
@@ -4628,16 +4549,15 @@ if($action=='login')
         var row = taskBtn.closest('tr');
         var qtyInput = row ? row.querySelector('.eam-qty-input') : null;
         var unitInput = row ? row.querySelector('.eam-unit-input') : null;
+        var rUnitInput = row ? row.querySelector('.eam-runit-input') : null;
         // Row is normally in view mode here (plain <td> text, no input) —
         // same fallback eamSaveActivity already uses: read cells[2]'s text
-        // directly instead of assuming an .eam-unit-input exists. Qty needs
-        // the identical fallback (was missing before: qtyInput was always
-        // null in view mode, so getQty() always returned 0 and the Task
-        // popup's live Duration preview showed "—" no matter what
-        // Productivity/Qty the user typed, even though Dur/Unit per row
-        // computed correctly).
+        // directly instead of assuming an .eam-unit-input exists. Qty/
+        // R.Unit need the identical fallback (qtyInput/rUnitInput are
+        // always null in view mode).
         var unitVal = unitInput ? unitInput.value.trim() : (row ? row.cells[2].textContent.trim() : '');
         var qtyVal = qtyInput ? qtyInput.value : (row ? row.querySelector('#eam-col-qty').textContent.trim() : '0');
+        var rUnitVal = rUnitInput ? rUnitInput.value : (row ? row.querySelector('#eam-col-runit').textContent.trim() : '1');
         window.openTaskPopupFor(saId, taskBtn.getAttribute('data-actname'), _eamTasksByAct[saId] || [], function(updatedTasks){
           _eamTasksByAct[saId] = updatedTasks;
           taskBtn.textContent = eamTaskRowHtml(saId);
@@ -4647,9 +4567,9 @@ if($action=='login')
           // clicked twice afterward, so edits like Productivity silently
           // never persisted (no Budgeted_Duration, no Gantt bar). Save
           // immediately here instead, using the row's current Activity/
-          // Unit/Qty exactly as eamToggleEdit's own save branch does.
+          // Unit/Qty/R.Unit exactly as eamToggleEdit's own save branch does.
           eamSaveActivity(saId, row);
-        }, function(){ return parseFloat(qtyVal) || 0; }, unitVal);
+        }, function(){ return parseFloat(qtyVal) || 0; }, unitVal, function(){ return parseFloat(rUnitVal) || 1; });
       }
       return;
     }
@@ -4672,17 +4592,19 @@ if($action=='login')
       var current = {
         name: row.cells[1].textContent.trim(),
         unit: row.cells[2].textContent.trim(),
-        quantity: row.cells[3].textContent.trim()
+        quantity: row.cells[3].textContent.trim(),
+        r_unit: row.cells[4].textContent.trim()
       };
       var wrap = document.createElement('tbody');
       wrap.innerHTML = '<tr>' + eamEditCellsHtml(current) + '</tr>';
-      // Snapshot the 3 new cells BEFORE replacing anything — each
+      // Snapshot the 4 new cells BEFORE replacing anything — each
       // replaceChild below mutates row.cells' live indices, so reading
       // them from a separate, untouched NodeList avoids off-by-one bugs.
       var editCells = [].slice.call(wrap.querySelector('tr').cells);
       row.replaceChild(editCells[0], row.cells[1]);
       row.replaceChild(editCells[1], row.cells[2]);
       row.replaceChild(editCells[2], row.cells[3]);
+      row.replaceChild(editCells[3], row.cells[4]);
       editBtn.classList.add('eam-editing');
       editBtn.title = 'Save';
       return;
@@ -4705,15 +4627,18 @@ if($action=='login')
     var unit = unitInput ? unitInput.value.trim() : row.cells[2].textContent.trim();
     var qtyInput = row.querySelector('.eam-qty-input');
     var qty = qtyInput ? (parseFloat(qtyInput.value) || 0) : (parseFloat(row.cells[3].textContent) || 0);
+    var rUnitInput = row.querySelector('.eam-runit-input');
+    var rUnit = rUnitInput ? (parseFloat(rUnitInput.value) || 1) : (parseFloat(row.cells[4].textContent) || 1);
     if (!name) { alert('Activity name is required.'); return; }
     if (!qty)  { alert('Please enter a Qty before saving.'); return; }
 
     var tasks = _eamTasksByAct[saId] || [];
+    _eamRUnitByAct[saId] = rUnit;
     if (editBtn) editBtn.disabled = true;
     $.ajax({
       type: 'POST', url: '../projectsmain/wbsactivityupdate', dataType: 'json',
       data: { payload: JSON.stringify({
-        sa_id: saId, name: name, unit: unit, qty: qty,
+        sa_id: saId, name: name, unit: unit, qty: qty, r_unit: rUnit,
         tasks: tasks.map(function(t){ return { id: t.id, name: t.name, qty: t.qty, productivity: t.productivity, resunits: t.resunits }; })
       }) },
       success: function(d){
@@ -4729,10 +4654,19 @@ if($action=='login')
           cells[2].outerHTML = '<td>' + $('<div>').text(unit).html() + '</td>';
           cells = row.cells;
           cells[3].outerHTML = '<td id="eam-col-qty">' + qty + '</td>';
+          cells = row.cells;
+          cells[4].outerHTML = '<td id="eam-col-runit">' + rUnit + '</td>';
         }
         if (editBtn) { editBtn.classList.remove('eam-editing'); editBtn.title = 'Edit'; }
         var taskBtn = row.querySelector('.eam-task-btn');
         if(taskBtn) taskBtn.setAttribute('data-actname', name);
+        // Duration fell back to the 1-day minimum because no task has both
+        // a Qty/Unit and a Productivity/day set — flag it instead of
+        // saving silently, so a missing task value is never mistaken for
+        // an intentional 1-day activity.
+        if(d.duration_is_fallback){
+          alert('Saved — but duration defaulted to 1 day because no task on "' + name + '" has both a Qty/Unit and Productivity/day set. Open the Task button to fill those in.');
+        }
       },
       error: function(){
         if (editBtn) editBtn.disabled = false;
@@ -4768,67 +4702,19 @@ if($action=='login')
     });
   }
 
-  // IOW row's own pencil — same view/edit toggle pattern as an activity
-  // row: first click swaps Name/Group into editable inputs, second click
-  // saves via wbsupdateiow and reverts to plain text.
-  document.getElementById('eam-iow-edit-btn').addEventListener('click', function(){
-    var btn = this;
-    var isEditing = btn.classList.contains('eam-editing');
-    if (!isEditing) {
-      var nameSpan = document.getElementById('eam-iow-name');
-      nameSpan.outerHTML = '<input type="text" id="eam-iow-name-input" value="' + $('<div>').text(_eamIowName).html() + '">';
-      var groupSpan = document.getElementById('eam-iow-group');
-      var opts = '<option value="">— Select IOW Group —</option>';
-      Object.keys(_eamGroupNamesById).forEach(function(id){
-        opts += '<option value="' + id + '"' + (parseInt(id,10) === _eamIowGroupId ? ' selected' : '') + '>' + $('<div>').text(_eamGroupNamesById[id]).html() + '</option>';
-      });
-      groupSpan.outerHTML = '<select id="eam-iow-group-select">' + opts + '</select>';
-      btn.classList.add('eam-editing');
-      btn.title = 'Save';
-      return;
-    }
-
-    var name = document.getElementById('eam-iow-name-input').value.trim();
-    var groupId = document.getElementById('eam-iow-group-select').value;
-    if (!name) { alert('IOW name is required.'); return; }
-    if (!groupId) { alert('Please select an IOW Group.'); return; }
-
-    btn.disabled = true;
-    $.ajax({
-      type: 'POST', url: '../projectsmain/wbsupdateiow', dataType: 'json',
-      data: { wg_id: _eamWgId, name: name, iow_group_id: groupId },
-      success: function(d){
-        btn.disabled = false;
-        if(d.error && d.error !== 'No'){ alert(d.error); return; }
-        _eamIowName = name;
-        _eamIowGroupId = parseInt(groupId, 10);
-        document.getElementById('eam-hdr-title-suffix').textContent = ' — ' + _eamIowName;
-        document.getElementById('eam-iow-name-input').outerHTML = '<span id="eam-iow-name"></span>';
-        document.getElementById('eam-iow-group-select').outerHTML = '<span id="eam-iow-group"></span>';
-        eamRenderIowRowView();
-        btn.classList.remove('eam-editing');
-        btn.title = 'Edit IOW';
-        if(typeof window.reloadGantt === 'function') window.reloadGantt();
-      },
-      error: function(){
-        btn.disabled = false;
-        alert('Failed to save. Please try again.');
-      }
-    });
-  });
-
-  // IOW row's delete — removes the whole IOW and every activity under
-  // it. Same conflict/force confirmation pattern as a single activity's
-  // delete, via actionWbsdeleteiow.
+  // IOW Group row's delete — removes every activity under this IOW Group
+  // within the current project (the group itself, a shared library entry,
+  // is untouched). Same conflict/force confirmation pattern as a single
+  // activity's delete, via actionWbsdeleteiow.
   document.getElementById('eam-iow-del-btn').addEventListener('click', function(){
-    if(!confirm('Delete this entire IOW and all its activities?')) return;
+    if(!confirm('Delete all activities under this IOW Group (for this project)?')) return;
     eamDoDeleteIow(false);
   });
 
   function eamDoDeleteIow(force){
     $.ajax({
       type: 'POST', url: '../projectsmain/wbsdeleteiow', dataType: 'json',
-      data: { wg_id: _eamWgId, force: force ? 1 : 0 },
+      data: { iow_group_id: _eamIowGroupId, force: force ? 1 : 0 },
       success: function(d){
         if(d.conflict && !force){
           if(confirm((d.errortext || 'This will also delete related data.') + ' Continue?')){
@@ -5171,174 +5057,8 @@ if($action=='login')
      wholesale (this block + the icon above + the controller action +
      the view file) if the idea doesn't prove useful.
 ════════════════════════════════════════════════════════════════════════ -->
-<style>
-#gantt-win-dep {
-  display:none; position:fixed; top:90px; left:40px;
-  width:1040px; height:calc(100vh - 110px);
-  min-width:420px; min-height:300px;
-  z-index:100000; background:#fff; border-radius:6px;
-  border:1px solid #d0d0d0;
-  box-shadow:0 4px 16px rgba(0,0,0,.15);
-  flex-direction:column; overflow:hidden;
-}
-#gantt-win-dep.gw-open { display:flex; }
-#gantt-win-dep-hdr {
-  background:#4a5a6a; color:#fff; padding:10px 15px;
-  display:flex; align-items:center; justify-content:space-between;
-  cursor:move; user-select:none; flex-shrink:0;
-  font-family:'Nunito',sans-serif;
-  border-bottom:1px solid #e0e0e0;
-}
-#gantt-win-dep-hdr-btns { display:flex; align-items:center; gap:8px; }
-#gantt-win-dep-hdr-btns button {
-  background:none; border:none; color:#fff; font-size:20px;
-  cursor:pointer; line-height:1; padding:0 4px;
-}
-#gantt-win-dep-body { flex:1; min-height:0; overflow:auto; }
-#gantt-win-dep-loading { padding:50px; text-align:center; color:#666; font-size:14px; }
-.gwd-rs { position:absolute; z-index:10; background:transparent; }
-.gwd-rs-e  { right:0;  top:6px;    bottom:6px; width:6px;  cursor:e-resize; }
-.gwd-rs-w  { left:0;   top:6px;    bottom:6px; width:6px;  cursor:w-resize; }
-.gwd-rs-s  { bottom:0; left:6px;   right:6px;  height:6px; cursor:s-resize; }
-.gwd-rs-n  { top:0;    left:6px;   right:6px;  height:6px; cursor:n-resize; }
-.gwd-rs-se { right:0;  bottom:0; width:14px; height:14px; cursor:se-resize; }
-.gwd-rs-sw { left:0;   bottom:0; width:14px; height:14px; cursor:sw-resize; }
-.gwd-rs-ne { right:0;  top:0;    width:14px; height:14px; cursor:ne-resize; }
-.gwd-rs-nw { left:0;   top:0;    width:14px; height:14px; cursor:nw-resize; }
-</style>
 
-<div id="gantt-win-dep">
-  <div class="gwd-rs gwd-rs-n" data-dir="n"></div>
-  <div class="gwd-rs gwd-rs-s" data-dir="s"></div>
-  <div class="gwd-rs gwd-rs-e" data-dir="e"></div>
-  <div class="gwd-rs gwd-rs-w" data-dir="w"></div>
-  <div class="gwd-rs gwd-rs-ne" data-dir="ne"></div>
-  <div class="gwd-rs gwd-rs-nw" data-dir="nw"></div>
-  <div class="gwd-rs gwd-rs-se" data-dir="se"></div>
-  <div class="gwd-rs gwd-rs-sw" data-dir="sw"></div>
-  <div id="gantt-win-dep-hdr">
-    <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:nowrap;">
-      <span style="font-size:15px;font-weight:700;color:#fff;">Dependency View</span>
-      <span style="font-size:11px;font-weight:400;color:#c9c9c9;">(experimental)</span>
-      <span style="font-size:12px;font-weight:500;color:#c9c9c9;padding:3px 6px;border-radius:4px;" id="gantt-win-dep-proj-name"><?php echo htmlspecialchars($ProjectName); ?></span>
-    </div>
-    <div id="gantt-win-dep-hdr-btns">
-      <button id="gantt-win-dep-expand" title="Fullscreen">&#x26F6;</button>
-      <button id="gantt-win-dep-close" title="Close">&times;</button>
-    </div>
-  </div>
-  <div id="gantt-win-dep-body">
-    <div id="gantt-win-dep-loading">Loading Dependency view&hellip;</div>
-  </div>
-</div>
 
-<script>
-(function(){
-  var win = document.getElementById('gantt-win-dep');
-  var hdr = document.getElementById('gantt-win-dep-hdr');
-  var MIN_W=500, MIN_H=300, _action=null, _sx=0, _sy=0, _ox=0, _oy=0, _ow=0, _oh=0, _saved=null;
-  var _loaded = false;
-
-  function _anchor(){
-    var r=win.getBoundingClientRect();
-    win.style.right='auto'; win.style.left=r.left+'px';
-    win.style.top=r.top+'px'; win.style.width=r.width+'px';
-    win.style.height=r.height+'px'; return r;
-  }
-
-  var _ganttDepPid = (document.getElementById('gantt-win-dep-open') || {}).getAttribute ? document.getElementById('gantt-win-dep-open').getAttribute('data-projectid') : '';
-  var _ganttDepUrl = '<?php echo Yii::$app->urlManager->createUrl("projectsmain/newganttchartdep")?>' + '?layout=false';
-
-  function _loadGanttDepWin(pid) {
-    var url = _ganttDepUrl + '&id=' + (pid || _ganttDepPid);
-    $('#gantt-win-dep-body').html('<div id="gantt-win-dep-loading">Loading Dependency view&hellip;</div>');
-    $.ajax({ url: url, cache: false, success: function(html){
-      $('#gantt-win-dep-body').html(html);
-    }, error: function(){
-      $('#gantt-win-dep-body').html('<div style="padding:30px;color:red;">Failed to load Dependency view.</div>');
-    }});
-  }
-
-  // Open
-  var openBtn = document.getElementById('gantt-win-dep-open');
-  if(openBtn){
-    openBtn.addEventListener('click', function(e){
-      e.preventDefault();
-      var pid = this.getAttribute('data-projectid');
-      if(!pid){
-        win.classList.add('gw-open');
-        document.dispatchEvent(new Event('gantt-dep:open'));
-        document.getElementById('gantt-win-dep-body').innerHTML = '<div style="padding:50px;text-align:center;color:#888;font-size:14px;">Please select a project first.</div>';
-        return;
-      }
-      win.classList.add('gw-open');
-      document.dispatchEvent(new Event('gantt-dep:open'));
-      if(!_loaded){
-        _loaded = true;
-        _loadGanttDepWin(pid);
-      }
-    });
-  }
-
-  // Close
-  document.getElementById('gantt-win-dep-close').addEventListener('click', function(){
-    win.classList.remove('gw-open');
-  });
-
-  // Expand / restore
-  document.getElementById('gantt-win-dep-expand').addEventListener('click', function(){
-    if(_saved){
-      win.style.left=_saved.left; win.style.top=_saved.top;
-      win.style.width=_saved.width; win.style.height=_saved.height;
-      _saved=null; this.innerHTML='&#x26F6;'; this.title='Fullscreen';
-    } else {
-      var r=win.getBoundingClientRect();
-      _saved={left:win.style.left,top:win.style.top,width:win.style.width,height:win.style.height};
-      win.style.left='0'; win.style.top='0';
-      win.style.width='100vw'; win.style.height='100vh';
-      this.innerHTML='&#x2716;'; this.title='Restore';
-    }
-  });
-
-  // Drag
-  bindDragTouch(hdr, 'mousedown', function(e){
-    if(e.target.closest('#gantt-win-dep-hdr-btns')) return;
-    var r=_anchor(); _action='drag';
-    _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; e.preventDefault();
-  });
-
-  // Resize
-  document.querySelectorAll('.gwd-rs').forEach(function(el){
-    bindDragTouch(el, 'mousedown', function(e){
-      var r=_anchor(); _action=el.getAttribute('data-dir');
-      _sx=e.clientX; _sy=e.clientY; _ox=r.left; _oy=r.top; _ow=r.width; _oh=r.height;
-      e.preventDefault(); e.stopPropagation();
-    });
-  });
-
-  bindDragTouch(document, 'mousemove', function(e){
-    if(!_action) return;
-    e.preventDefault();
-    var dx=e.clientX-_sx, dy=e.clientY-_sy;
-    if(_action==='drag'){
-      var x=Math.max(0,Math.min(_ox+dx,window.innerWidth-win.offsetWidth));
-      var y=Math.max(0,Math.min(_oy+dy,window.innerHeight-win.offsetHeight));
-      win.style.left=x+'px'; win.style.top=y+'px';
-    } else {
-      var l=_ox,t=_oy,w=_ow,h=_oh;
-      if(_action.indexOf('e')>-1){w=Math.max(MIN_W,_ow+dx);}
-      if(_action.indexOf('s')>-1){h=Math.max(MIN_H,_oh+dy);}
-      if(_action.indexOf('w')>-1){var nw=Math.max(MIN_W,_ow-dx);l=_ox+(_ow-nw);w=nw;}
-      if(_action.indexOf('n')>-1){var nh=Math.max(MIN_H,_oh-dy);t=_oy+(_oh-nh);h=nh;}
-      win.style.left=l+'px'; win.style.top=t+'px';
-      win.style.width=w+'px'; win.style.height=h+'px';
-    }
-  });
-  bindDragTouch(document, 'mouseup', function(){
-    _action=null;
-  });
-})();
-</script>
 
 <!-- ══════════════════════════════════════════════════════════════════════
      PROCUREMENT FLOATING WINDOW
@@ -5819,7 +5539,7 @@ if($action=='login')
 /* Ensure all floating popups are direct children of <body> so they
    are never trapped inside a parent stacking context */
 (function(){
-  var ids = ['pdoc-popup','pdoc-viewer-popup','gpm-overlay','gantt-win','gantt-win-dep','cb-win','cb-btn','reslib-win','vendorlib-win','rel-win','estreport-win','menu4-popup-cntnr','procurement-win','storeoffice-win','userpermissions-win'];
+  var ids = ['pwt-popup','cwbs-popup','cwbsed-popup','pdoc-popup','pdoc-viewer-popup','gpm-overlay','gantt-win','cb-win','cb-btn','reslib-win','vendorlib-win','rel-win','estreport-win','menu4-popup-cntnr','procurement-win','storeoffice-win','userpermissions-win'];
   ids.forEach(function(id){
     var el = document.getElementById(id) || document.querySelector('.' + id);
     if(el && el.parentNode !== document.body) document.body.appendChild(el);
@@ -5837,7 +5557,7 @@ if($action=='login')
   var SUB_POPUP_GAP = 5000; /* sub-popups (Resource Library / Relationships
     "+add"-type popups) always sit at parent-floater-ceiling + this gap, so
     they can never end up under a repeatedly-clicked parent window. */
-  var floaters = ['pdoc-popup','pdoc-viewer-popup','gantt-win','gantt-win-dep','cb-win','reslib-win','vendorlib-win','rel-win','estreport-win','menu4-popup-cntnr','procurement-win','storeoffice-win','userpermissions-win','cd-modal','cf-modal','pd-modal','gkp-popup','gkm-modal','gcm-popup','gpm-overlay'];
+  var floaters = ['pwt-popup','cwbs-popup','cwbsed-popup','pdoc-popup','pdoc-viewer-popup','gantt-win','cb-win','reslib-win','vendorlib-win','rel-win','estreport-win','menu4-popup-cntnr','procurement-win','storeoffice-win','userpermissions-win','cd-modal','cf-modal','pd-modal','gkp-popup','gkm-modal','gcm-popup','gpm-overlay'];
 
   window.popupBringToFront = function(id){
     var el = document.getElementById(id) || document.querySelector('.' + id);
@@ -5957,13 +5677,13 @@ if($action=='login')
   document.addEventListener('pdoc:open',   function(){ window.popupBringToFront('pdoc-popup'); window.popupCascade('pdoc-popup'); });
   document.addEventListener('pdocv:open',  function(){ window.popupBringToFront('pdoc-viewer-popup'); window.popupCascade('pdoc-viewer-popup'); });
   document.addEventListener('gantt:open',  function(){ window.popupBringToFront('gantt-win'); window.popupCascade('gantt-win'); });
-  document.addEventListener('gantt-dep:open', function(){ window.popupBringToFront('gantt-win-dep'); window.popupCascade('gantt-win-dep'); });
   document.addEventListener('chat:open',   function(){ window.popupBringToFront('cb-win'); window.popupCascade('cb-win'); });
   document.addEventListener('reslib:open', function(){ window.popupBringToFront('reslib-win'); window.popupCascade('reslib-win'); });
   document.addEventListener('vendorlib:open', function(){ window.popupBringToFront('vendorlib-win'); window.popupCascade('vendorlib-win'); });
   document.addEventListener('rel:open',    function(){ window.popupBringToFront('rel-win'); window.popupCascade('rel-win'); });
   document.addEventListener('estreport:open', function(){ window.popupBringToFront('estreport-win'); window.popupCascade('estreport-win'); });
   document.addEventListener('actlib:open', function(){ window.popupBringToFront('menu4-popup-cntnr'); window.popupCascade('menu4-popup-cntnr'); });
+  document.addEventListener('pwt:open',    function(){ window.popupBringToFront('pwt-popup'); window.popupCascade('pwt-popup'); });
 })();
 </script>
 
@@ -5978,7 +5698,6 @@ if($action=='login')
     #pdoc-viewer-popup,
     #gpm-dialog,
     #gantt-win,
-    #gantt-win-dep,
     #procurement-win,
     #storeoffice-win,
     #userpermissions-win,

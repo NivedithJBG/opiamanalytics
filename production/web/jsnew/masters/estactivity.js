@@ -71,8 +71,9 @@ $(function() {
         taskRowCount++;
         var row = '<div class="row task-row" id="task-row-' + taskRowCount + '" style="margin-top:4px;">' +
             '<div class="col-md-1"></div>' +
-            '<div class="col-md-4"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name"></div>' +
+            '<div class="col-md-3"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name"></div>' +
             '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit" oninput="this.value=this.value.replace(/[0-9]/g,\'\')"></div>' +
+            '<div class="col-md-2"><input type="number" step="0.001" min="0" class="form-control task-qty" name="task_qty[]" placeholder="Qty/Unit"></div>' +
             '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day"></div>' +
             '<div class="col-md-1"><button type="button" class="remove-task-row" style="background:none;border:none;padding:6px 4px;"><span class="icon-minus" style="color:#d9534f;font-size:18px;"></span></button></div>' +
             '</div>';
@@ -109,10 +110,6 @@ $(function() {
             $('#actIowGroupId').next('span').html('Select IOW Group').show('slow');
             error = 1;
         }
-        if(!$('#estactivitytypeid').val() || $('#estactivitytypeid').val() === '0'){
-            $('#estactivitytypeid').next('span').html('Select Activity Type').show('slow');
-            error = 1;
-        }
         $('.estactivityname').each(function(){
             var id=$(this).attr('data-id');
             if($(this).val()=='')
@@ -131,24 +128,25 @@ $(function() {
         });
 
         // Every task row currently on the form must be fully filled in
-        // (Task Name, Unit, Productivity/day) — a half-filled row (e.g.
-        // productivity left blank) silently saved as 0 before, which is
-        // exactly the "productivity not saving" confusion from earlier;
-        // now it's caught here instead.
+        // (Task Name, Unit, Qty/Unit, Productivity/day) — a half-filled
+        // row (e.g. productivity left blank) silently saved as 0 before,
+        // which is exactly the "productivity not saving" confusion from
+        // earlier; now it's caught here instead.
         $('#task-rows-container .task-row').each(function(){
             var $row = $(this);
             var $name = $row.find('.task-name');
             var $unit = $row.find('.task-unit');
+            var $qty = $row.find('.task-qty');
             var $prod = $row.find('.task-productivity');
-            if($name.val() === '' || $unit.val() === '' || $prod.val() === ''){
-                $row.find('.task-name, .task-unit, .task-productivity').css('border-color', '#d9534f');
+            if($name.val() === '' || $unit.val() === '' || $qty.val() === '' || $prod.val() === ''){
+                $row.find('.task-name, .task-unit, .task-qty, .task-productivity').css('border-color', '#d9534f');
                 error = 1;
             } else {
-                $row.find('.task-name, .task-unit, .task-productivity').css('border-color', '');
+                $row.find('.task-name, .task-unit, .task-qty, .task-productivity').css('border-color', '');
             }
         });
         if(error && $('#task-rows-container .task-row').length && !$('#task-rows-error').length){
-            $('#task-rows-container').after('<div id="task-rows-error" style="color:red;font-size:12px;margin-top:4px;">Please fill in Task Name, Unit and Productivity/day for every task row (or remove the empty row).</div>');
+            $('#task-rows-container').after('<div id="task-rows-error" style="color:red;font-size:12px;margin-top:4px;">Please fill in Task Name, Unit, Qty/Unit and Productivity/day for every task row (or remove the empty row).</div>');
         }
         if(!error){ $('#task-rows-error').remove(); }
 
@@ -156,11 +154,12 @@ $(function() {
             var editingId = $('#editingActivityId').val();
             var url = editingId ? '../projects/updateactivitywithtasks' : '../projects/createactivity';
 
-            var taskIds = [], taskNames = [], taskUnits = [], taskProds = [];
+            var taskIds = [], taskNames = [], taskUnits = [], taskQtys = [], taskProds = [];
             $('#task-rows-container .task-row').each(function(){
                 taskIds.push($(this).find('.task-id').val() || 0);
                 taskNames.push($(this).find('.task-name').val());
                 taskUnits.push($(this).find('.task-unit').val());
+                taskQtys.push($(this).find('.task-qty').val());
                 taskProds.push($(this).find('.task-productivity').val());
             });
             var postData = {
@@ -174,6 +173,7 @@ $(function() {
                 'task_id[]':          taskIds,
                 'task_name[]':        taskNames,
                 'task_unit[]':        taskUnits,
+                'task_qty[]':         taskQtys,
                 'task_productivity[]':taskProds
             };
 
@@ -189,16 +189,34 @@ $(function() {
                     if(data.error=='No')
                     {
                         $('#saveestactivity').attr("disabled", false);
-
-                        // Both Add and Edit now close the modal on success
-                        // (closeAlAddActivityModal — same teardown/reset for
-                        // both, not the old inline panel's elements which
-                        // don't apply here) and refresh the list behind it
-                        // so the new/updated activity is visible immediately.
                         $(".search-and-actions-wrpr").show();
-                        closeAlAddActivityModal();
                         $('#listestactivity').trigger('click');
                         $('.panel-default').removeClass('add-form-active');
+
+                        if(editingId){
+                            // Editing an existing activity is a one-off
+                            // action on a specific record — close as before.
+                            closeAlAddActivityModal();
+                        } else {
+                            // Adding a brand-new activity: stay open so the
+                            // user can keep adding more under the same
+                            // Project Type / IOW Group without reselecting
+                            // them each time. Only Activity Name, Unit and
+                            // Tasks are cleared; Project Type, IOW Group,
+                            // Activity Type and Working Hours are left as-is.
+                            $('#estactivityname1, #estactivityunit1').val('');
+                            $('#task-rows-container .task-row:not(#task-row-1)').remove();
+                            $('#task-rows-container .task-row:first .task-name, #task-rows-container .task-row:first .task-unit, #task-rows-container .task-row:first .task-qty, #task-rows-container .task-row:first .task-productivity').val('');
+                            taskRowCount = 1;
+                            $('.error').hide();
+                            if(!$('#al-add-activity-saved-msg').length){
+                                $('#saveestactivity').after('<span id="al-add-activity-saved-msg" style="color:#197a3a;font-weight:700;margin-left:10px;">Added.</span>');
+                            } else {
+                                $('#al-add-activity-saved-msg').show();
+                            }
+                            setTimeout(function(){ $('#al-add-activity-saved-msg').fadeOut(400); }, 2000);
+                            $('#estactivityname1').focus();
+                        }
                     } else {
                         alert('Save failed: ' + (data.msg || 'Unknown error'));
                         $('#saveestactivity').attr("disabled", false);
@@ -350,8 +368,9 @@ $(document).on('click', '.al-edit-activity-btn', function(){
                             '<div class="row task-row" id="task-row-'+taskRowCount+'" style="margin-top:4px;">' +
                             '<input type="hidden" class="task-id" name="task_id[]" value="'+(task.id||0)+'">' +
                             '<div class="col-md-1"></div>' +
-                            '<div class="col-md-4"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name" value="'+$('<div/>').text(task.task_name).html()+'"></div>' +
+                            '<div class="col-md-3"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name" value="'+$('<div/>').text(task.task_name).html()+'"></div>' +
                             '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit" value="'+$('<div/>').text(task.task_unit||'').html()+'" oninput="this.value=this.value.replace(/[0-9]/g,\'\')"></div>' +
+                            '<div class="col-md-2"><input type="number" step="0.001" min="0" class="form-control task-qty" name="task_qty[]" placeholder="Qty/Unit" value="'+parseFloat(task.task_qty||0).toFixed(3)+'"></div>' +
                             '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day" value="'+parseFloat(task.productivity||0).toFixed(3)+'"></div>' +
                             '<div class="col-md-1">'+btnHtml+'</div></div>'
                         );
@@ -361,8 +380,9 @@ $(document).on('click', '.al-edit-activity-btn', function(){
                     $('#task-rows-container').append(
                         '<div class="row task-row" id="task-row-1" style="margin-top:4px;">' +
                         '<div class="col-md-1"></div>' +
-                        '<div class="col-md-4"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name"></div>' +
+                        '<div class="col-md-3"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name"></div>' +
                         '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit" oninput="this.value=this.value.replace(/[0-9]/g,\'\')"></div>' +
+                        '<div class="col-md-2"><input type="number" step="0.001" min="0" class="form-control task-qty" name="task_qty[]" placeholder="Qty/Unit"></div>' +
                         '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day"></div>' +
                         '<div class="col-md-1"><button type="button" class="add-task-row" style="background:none;border:none;padding:6px 4px;"><span class="icon-add" style="color:#337ab7;font-size:18px;"></span></button></div></div>'
                     );
@@ -389,7 +409,7 @@ function closeAlAddActivityModal(){
     // stays open — they must not carry over the next time it's opened.
     $('#estactivityform')[0].reset();
     $('#task-rows-container .task-row:not(#task-row-1)').remove();
-    $('#task-rows-container .task-row:first .task-name, #task-rows-container .task-row:first .task-unit, #task-rows-container .task-row:first .task-productivity').val('');
+    $('#task-rows-container .task-row:first .task-name, #task-rows-container .task-row:first .task-unit, #task-rows-container .task-row:first .task-qty, #task-rows-container .task-row:first .task-productivity').val('');
     taskRowCount = 1;
     $('#actIowGroupId').html('<option value="">Select IOW Group</option>');
     $('#editingActivityId').val('');
@@ -402,7 +422,6 @@ $(document).on('click', '[data-dismiss="modal"], .cancelactivity', closeAlAddAct
 
 $(document).on( "click", "#addestactivity", function(){
     $(".estactivityname").val('');
-    $(".search-and-actions-wrpr").hide();
     $(".estactivityunit").val('');
     $(".remove_field").trigger('click');
     $('#estactivitytypeid').val('0');

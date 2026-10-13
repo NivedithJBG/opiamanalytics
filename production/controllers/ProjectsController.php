@@ -463,14 +463,11 @@ class ProjectsController extends Controller
      * Seeds the fixed "Project Overhead" and "Project General Expenses"
      * activities (Activity Library activity_id=87 and 89 respectively) as
      * Estimate-only line items of a newly created project, under the
-     * global IOW Group "Support Activities" (iow_groups.id=17) and a
-     * single shared per-project IOW named "Overhead" (workgroups_new is
-     * always project-scoped, so this IOW is created fresh for every
-     * project even though the Group/Activities above are shared library
-     * entries). Both library rows use activity_status=1 (the same soft-
-     * delete flag used everywhere else in estimateactivities), which is
-     * exactly why neither ever shows up in the normal Activity Library
-     * screen (actionListestactivity filters activity_status=0) — they are
+     * global IOW Group "Support Activities" (iow_groups.id=17). Both
+     * library rows use activity_status=1 (the same soft-delete flag used
+     * everywhere else in estimateactivities), which is exactly why neither
+     * ever shows up in the normal Activity Library screen
+     * (actionListestactivity filters activity_status=0) — they are
      * intentionally Estimate-only, never meant to be picked/edited like a
      * normal library activity.
      *
@@ -491,13 +488,12 @@ class ProjectsController extends Controller
         if (!$pid) return;
 
         $overheadIowGroupId = 17;   // "Support Activities" (global)
-        $overheadIowName    = 'Overhead';
-        // Very high fixed sortorder so this IOW always sorts LAST in the
+        // Very high fixed sortorder so this group always sorts LAST in the
         // Project Estimate report, regardless of how many real IOW groups
-        // get added to the project afterward (those use
-        // MAX(sortorder)+1 — see actionWbsaddiows — so they'll never
-        // reach this value in practice). Per explicit direction: Overhead
-        // must appear as the last IOW/activities section in the Estimate.
+        // get added to the project afterward (those use MAX(sortorder)+1
+        // — see actionWbsadd — so they'll never reach this value in
+        // practice). Per explicit direction: Overhead must appear as the
+        // last IOW Group section in the Estimate.
         $overheadSortorder = 999999;
 
         $s = strtotime($startDate);
@@ -517,27 +513,22 @@ class ProjectsController extends Controller
             [89, 'Project General Expenses',  1, 1,                'L.S'],
         ];
 
-        $now = date('Y-m-d H:i:s');
-
-        // 1. Per-project IOW "Overhead" under the global "Support Activities" group — shared by both activities.
-        $wgId = $db->createCommand(
-            "SELECT Workgroup_Id FROM workgroups_new WHERE Project_Id=:p AND iowGroupid=:g AND Name=:n AND Status=0 LIMIT 1",
-            [':p' => $pid, ':g' => $overheadIowGroupId, ':n' => $overheadIowName]
+        // Register this project's "Support Activities" group display order
+        // (iow_group_order.sortorder's the replacement for the old
+        // workgroups_new.sortorder) — pinned at $overheadSortorder, same
+        // as before.
+        $groupOrderExists = $db->createCommand(
+            "SELECT 1 FROM iow_group_order WHERE project_id=:p AND iow_group_id=:g LIMIT 1",
+            [':p' => $pid, ':g' => $overheadIowGroupId]
         )->queryScalar();
-        if (!$wgId) {
+        if (!$groupOrderExists) {
             $db->createCommand(
-                "INSERT INTO workgroups_new
-                 (Project_Id, Name, iowGroupid, Status, sortorder, Added_On, Updated_On, Added_By,
-                  start_date, end_date, duration, progress, open, parent, itemtype, worktype, worktypegroup,
-                  wbs_estimate_id, pricing_status, notes, primavera_id)
-                 VALUES (:p, :n, :g, 0, :so, :t, :t, 0,
-                  :t, :t, 0, 0, 0, 0, '', 0, 0, 0, 0, '', 0)",
-                [':p' => $pid, ':n' => $overheadIowName, ':g' => $overheadIowGroupId, ':so' => $overheadSortorder, ':t' => $now]
+                "INSERT INTO iow_group_order (project_id, iow_group_id, sortorder) VALUES (:p, :g, :s)",
+                [':p' => $pid, ':g' => $overheadIowGroupId, ':s' => $overheadSortorder]
             )->execute();
-            $wgId = (int)$db->lastInsertID;
         }
 
-        // 2. Project-instance activity row (workgroup_activities_new) per
+        // Project-instance activity row (workgroup_activities_new) per
         // seed activity, plus its pricing_estimate_new row — the Project
         // Estimate report (EstimatereportController::actionGet) reads
         // Quantity from pricing_estimate_new.activity_qty, NOT from
@@ -546,17 +537,17 @@ class ProjectsController extends Controller
         // Quantity stuck at 0 regardless of the project's real duration.
         foreach ($seedActivities as [$overheadActivityId, $displayName, $sortOrder, $qty, $unit]) {
             $wanId = $db->createCommand(
-                "SELECT id FROM workgroup_activities_new WHERE project_Id=:p AND activity_Id=:a AND wbs_id=:w LIMIT 1",
-                [':p' => $pid, ':a' => $overheadActivityId, ':w' => $wgId]
+                "SELECT id FROM workgroup_activities_new WHERE project_Id=:p AND activity_Id=:a AND iow_group_id=:g LIMIT 1",
+                [':p' => $pid, ':a' => $overheadActivityId, ':g' => $overheadIowGroupId]
             )->queryScalar();
             if (!$wanId) {
                 $db->createCommand(
                     "INSERT INTO workgroup_activities_new
-                     (project_Id, wbs_id, worktype_Id, activitytype_id, activity_Id, activity_Unit,
+                     (project_Id, iow_group_id, worktype_Id, activitytype_id, activity_Id, activity_Unit,
                       estimate, amount, sortorder, type, activity_Name, process_Id, schedule, duration,
                       cycle_Unit, cycle_Quantity, pr_status, pricing_status, operations_status, wbs_estimate_id)
-                     VALUES (:p, :w, 0, 0, :a, :u, :q, 0, :so, 0, :n, 0, 1, :q, :u, :q, 0, 0, 0, 0)",
-                    [':p' => $pid, ':w' => $wgId, ':a' => $overheadActivityId, ':so' => $sortOrder, ':n' => $displayName, ':q' => $qty, ':u' => $unit]
+                     VALUES (:p, :g, 0, 0, :a, :u, :q, 0, :so, 0, :n, 0, 1, :q, :u, :q, 0, 0, 0, 0)",
+                    [':p' => $pid, ':g' => $overheadIowGroupId, ':a' => $overheadActivityId, ':so' => $sortOrder, ':n' => $displayName, ':q' => $qty, ':u' => $unit]
                 )->execute();
                 $wanId = (int)$db->lastInsertID;
             }
@@ -21261,6 +21252,7 @@ public function actionActivitymusterprocess()
                             'activity_id'  => $activityId,
                             'task_name'    => $taskName,
                             'task_unit'    => $_POST['task_unit'][$j] ?? '',
+                            'task_qty'     => $_POST['task_qty'][$j] ?? 0,
                             'productivity' => $_POST['task_productivity'][$j] ?? 0,
                             'sort_order'   => $j,
                         ])->execute();
@@ -21406,10 +21398,12 @@ public function actionActivitymusterprocess()
                 $existingId = (int)($_POST['task_id'][$j] ?? 0);
                 if ($existingId > 0) {
                     $newUnit = $_POST['task_unit'][$j] ?? '';
+                    $newQty  = (float)($_POST['task_qty'][$j] ?? 0);
                     $newProd = (float)($_POST['task_productivity'][$j] ?? 0);
                     $connection->createCommand()->update('activity_tasks', [
                         'task_name'    => $taskName,
                         'task_unit'    => $newUnit,
+                        'task_qty'     => $newQty,
                         'productivity' => $newProd,
                         'sort_order'   => $j,
                     ], 'id = ' . $existingId)->execute();

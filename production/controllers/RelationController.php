@@ -21,42 +21,35 @@ class RelationController extends Controller
 
         $db = \Yii::$app->db;
 
-        /* WBS/IOW groups that have scheduled activities. scheduleactivities.
-           scheduleitem_id references wbsscheduleitems.scheduleitem_id, NOT
-           workgroups_new.Workgroup_Id directly — wbsscheduleitems.wbsid is
-           the actual FK to workgroups_new. Skipping that hop (the previous
-           bug here) meant this EXISTS check could never match, so newly
-           added IOWs/activities never appeared as selectable in the
-           Relationships window despite being live on the Gantt chart. */
+        /* IOW Groups that have scheduled activities, for this project —
+           scheduleactivities.iow_group_id is the direct FK (no WBS-item
+           tier/bridge table in between). */
         $groups = $db->createCommand("
-            SELECT wn.Workgroup_Id, wn.Name AS iow_name, ig.name AS iow_group_name
-            FROM workgroups_new wn
-            LEFT JOIN iow_groups ig ON ig.id = wn.iowGroupid AND ig.status = 0
-            WHERE wn.Project_Id = :pid AND wn.Status = 0
+            SELECT go.iow_group_id AS Workgroup_Id, ig.name AS iow_name, ig.name AS iow_group_name
+            FROM iow_group_order go
+            LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0
+            WHERE go.project_id = :pid
               AND EXISTS (
-                  SELECT 1 FROM wbsscheduleitems wsi
-                  JOIN scheduleactivities sa ON sa.scheduleitem_id = wsi.scheduleitem_id
-                  WHERE wsi.wbsid = wn.Workgroup_Id
-                    AND wsi.status = 0
+                  SELECT 1 FROM scheduleactivities sa
+                  WHERE sa.iow_group_id = go.iow_group_id
+                    AND sa.projectId = go.project_id
                     AND sa.status = 0
                     AND sa.actual_start_date IS NOT NULL
                     AND sa.actual_start_date != '0000-00-00'
               )
-            ORDER BY wn.sortorder ASC, wn.Workgroup_Id ASC
+            ORDER BY COALESCE(go.sortorder, 999999) ASC, go.iow_group_id ASC
         ", [':pid' => $projectId])->queryAll();
 
-        /* Activities per group — scheduleitem_id here is remapped to the
-           workgroups_new.Workgroup_Id (via wbsscheduleitems.wbsid) so the
-           frontend can match each activity to a group from the list above
-           using the same key. */
+        /* Activities per group — scheduleitem_id here (frontend-facing key
+           name, unchanged) now holds the activity's iow_group_id directly,
+           matching the Workgroup_Id key in the groups list above. */
         $activities = $db->createCommand("
-            SELECT sa.id, sa.name, wsi.wbsid AS scheduleitem_id
+            SELECT sa.id, sa.name, sa.iow_group_id AS scheduleitem_id
             FROM scheduleactivities sa
-            JOIN wbsscheduleitems wsi ON wsi.scheduleitem_id = sa.scheduleitem_id AND wsi.status = 0
             WHERE sa.projectId = :pid AND sa.status = 0
               AND sa.actual_start_date IS NOT NULL
               AND sa.actual_start_date != '0000-00-00'
-            ORDER BY wsi.wbsid ASC, sa.id ASC
+            ORDER BY sa.iow_group_id ASC, sa.id ASC
         ", [':pid' => $projectId])->queryAll();
 
         return json_encode(['error' => 'No', 'groups' => $groups, 'activities' => $activities]);
@@ -75,6 +68,9 @@ class RelationController extends Controller
         }
 
         $inserted = $this->saveRelationRows($projectId, $rows);
+        if ($inserted === 0) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'A relationship between these two activities already exists.']);
+        }
         return json_encode(['error' => 'No', 'inserted' => $inserted]);
     }
 
@@ -95,12 +91,12 @@ class RelationController extends Controller
             $lagDays  = (int)$r['lag_days'];
             if (!$precAct || !$depAct || $precAct === $depAct) continue;
 
-            /* Avoid exact duplicates */
+            /* One active relationship per precedent→dependent pair, whatever its type or lag */
             $exists = $db->createCommand("
                 SELECT COUNT(*) FROM activity_relations
                 WHERE precedent_activity = :pa AND dependent_activity = :da
-                  AND relation_type = :rt AND projectId = :pid AND status = 0
-            ", [':pa'=>$precAct,':da'=>$depAct,':rt'=>$relType,':pid'=>$projectId])->queryScalar();
+                  AND projectId = :pid AND status = 0
+            ", [':pa'=>$precAct,':da'=>$depAct,':pid'=>$projectId])->queryScalar();
             if ($exists) continue;
 
             $precedentAct = \app\models\Scheduleactivities::findOne($precAct);
@@ -146,6 +142,91 @@ class RelationController extends Controller
         return $inserted;
     }
 
+    /**
+     * Relationship Agent — Task 1 (see docs/relationship-agent.md).
+     * Purely mechanical copy, no inference: for every activity currently
+     * scheduled in this project, look up its library-level established
+     * relationships (activity_library_relations, matched by
+     * estimateactivities.activity_id — "library id", not name), and copy
+     * a match into activity_relations for THIS project only when both the
+     * precedent and dependent activity are actually present in the
+     * current Gantt. No new relationship types or lags are invented here
+     * — only exact copies of what's already recorded as an established
+     * pattern. Matches that don't resolve on both sides are silently
+     * skipped (left for Task 2, not yet built).
+     */
+    public function actionRelationshipagentTask1()
+    {
+        $projectId = (int)$_POST['projectid'];
+        if (!$projectId) return json_encode(['error' => 'Yes', 'errortext' => 'No project.']);
+
+        $db = \Yii::$app->db;
+
+        // Every scheduled activity in this project, with its library id —
+        // the join chain already used throughout this controller/
+        // ProjectsmainController (sa.activity_id -> workgroup_activities_new.id
+        // -> workgroup_activities_new.activity_Id -> estimateactivities.activity_id).
+        $rows = $db->createCommand("
+            SELECT sa.id AS sa_id, sa.iow_group_id, wa.activity_Id AS lib_id
+            FROM scheduleactivities sa
+            JOIN workgroup_activities_new wa ON wa.id = sa.activity_id
+            WHERE sa.projectId = :pid AND sa.status = 0
+        ", [':pid' => $projectId])->queryAll();
+
+        if (empty($rows)) {
+            return json_encode(['error' => 'No', 'copied' => 0, 'checked' => 0]);
+        }
+
+        // libId -> [sa_id, iow_group_id] — a library activity could in
+        // theory appear more than once in the same project; first match
+        // wins, same as every other "one bar per activity" assumption
+        // this controller already makes elsewhere.
+        $saByLibId = [];
+        foreach ($rows as $r) {
+            $libId = (int)$r['lib_id'];
+            if ($libId && !isset($saByLibId[$libId])) {
+                $saByLibId[$libId] = ['sa_id' => (int)$r['sa_id'], 'iow_group_id' => (int)$r['iow_group_id']];
+            }
+        }
+        $libIds = array_keys($saByLibId);
+        if (empty($libIds)) {
+            return json_encode(['error' => 'No', 'copied' => 0, 'checked' => count($rows)]);
+        }
+
+        // Every library-level established relationship touching at least
+        // one activity in this project, on either side.
+        $libIdList = implode(',', array_map('intval', $libIds));
+        $libRels = $db->createCommand("
+            SELECT precedent_activity_id, dependent_activity_id, relation_type, lag_days
+            FROM activity_library_relations
+            WHERE status = 0
+              AND (precedent_activity_id IN ($libIdList) OR dependent_activity_id IN ($libIdList))
+        ")->queryAll();
+
+        $toCopy = [];
+        foreach ($libRels as $lr) {
+            $precLib = (int)$lr['precedent_activity_id'];
+            $depLib  = (int)$lr['dependent_activity_id'];
+            // Both sides must be present in THIS project's Gantt — skip otherwise.
+            if (!isset($saByLibId[$precLib]) || !isset($saByLibId[$depLib])) continue;
+
+            $prec = $saByLibId[$precLib];
+            $dep  = $saByLibId[$depLib];
+            $toCopy[] = [
+                'precedent_activity'      => $prec['sa_id'],
+                'dependent_activity'      => $dep['sa_id'],
+                'precedent_schedule_item' => $prec['iow_group_id'],
+                'dependent_schedule_item' => $dep['iow_group_id'],
+                'relation_type'           => (int)$lr['relation_type'],
+                'lag_days'                => (int)$lr['lag_days'],
+            ];
+        }
+
+        $copied = empty($toCopy) ? 0 : $this->saveRelationRows($projectId, $toCopy);
+
+        return json_encode(['error' => 'No', 'copied' => $copied, 'checked' => count($rows)]);
+    }
+
     /* List all active relationships for a project with names */
     public function actionList()
     {
@@ -155,17 +236,15 @@ class RelationController extends Controller
         $rows = \Yii::$app->db->createCommand("
             SELECT ar.id,
                    ar.precedent_activity, sa_p.name AS prec_name,
-                   wn_p.Name AS prec_iow, wsi_p.wbsid AS precedent_schedule_item,
+                   ig_p.name AS prec_iow, sa_p.iow_group_id AS precedent_schedule_item,
                    ar.dependent_activity, sa_d.name AS dep_name,
-                   wn_d.Name AS dep_iow, wsi_d.wbsid AS dependent_schedule_item,
+                   ig_d.name AS dep_iow, sa_d.iow_group_id AS dependent_schedule_item,
                    ar.relation_type, ar.lag_days
             FROM activity_relations ar
             JOIN scheduleactivities sa_p ON sa_p.id = ar.precedent_activity
             JOIN scheduleactivities sa_d ON sa_d.id = ar.dependent_activity
-            LEFT JOIN wbsscheduleitems wsi_p ON wsi_p.scheduleitem_id = sa_p.scheduleitem_id AND wsi_p.status = 0
-            LEFT JOIN workgroups_new wn_p ON wn_p.Workgroup_Id = wsi_p.wbsid
-            LEFT JOIN wbsscheduleitems wsi_d ON wsi_d.scheduleitem_id = sa_d.scheduleitem_id AND wsi_d.status = 0
-            LEFT JOIN workgroups_new wn_d ON wn_d.Workgroup_Id = wsi_d.wbsid
+            LEFT JOIN iow_groups ig_p ON ig_p.id = sa_p.iow_group_id AND ig_p.status = 0
+            LEFT JOIN iow_groups ig_d ON ig_d.id = sa_d.iow_group_id AND ig_d.status = 0
             WHERE ar.projectId = :pid AND ar.status = 0
             ORDER BY ar.id ASC
         ", [':pid' => $projectId])->queryAll();
@@ -234,7 +313,7 @@ class RelationController extends Controller
         $db = \Yii::$app->db;
         $findSa = function ($libId) use ($db, $projectId) {
             return $db->createCommand("
-                SELECT sa.id, sa.scheduleitem_id, wa.activity_Name AS name
+                SELECT sa.id, sa.iow_group_id, wa.activity_Name AS name
                 FROM scheduleactivities sa
                 JOIN workgroup_activities_new wa ON wa.id = sa.activity_id
                 WHERE wa.activity_Id = :lid AND sa.projectId = :pid AND sa.status = 0
@@ -251,20 +330,11 @@ class RelationController extends Controller
             return json_encode(['error' => 'Yes', 'errortext' => 'The Dependent activity isn\'t scheduled in this project yet.']);
         }
 
-        $precWbsId = $db->createCommand(
-            "SELECT wbsid FROM wbsscheduleitems WHERE scheduleitem_id=:si AND status=0 LIMIT 1",
-            [':si' => $precSa['scheduleitem_id']]
-        )->queryScalar();
-        $depWbsId = $db->createCommand(
-            "SELECT wbsid FROM wbsscheduleitems WHERE scheduleitem_id=:si AND status=0 LIMIT 1",
-            [':si' => $depSa['scheduleitem_id']]
-        )->queryScalar();
-
         $row = [
             'precedent_activity'      => (int)$precSa['id'],
             'dependent_activity'      => (int)$depSa['id'],
-            'precedent_schedule_item' => (int)$precWbsId,
-            'dependent_schedule_item' => (int)$depWbsId,
+            'precedent_schedule_item' => (int)$precSa['iow_group_id'],
+            'dependent_schedule_item' => (int)$depSa['iow_group_id'],
             'relation_type'           => $relType ?: 2,
             'lag_days'                => $lagDays,
         ];
@@ -307,6 +377,14 @@ class RelationController extends Controller
         $dependentAct = \app\models\Scheduleactivities::findOne($depAct);
         if (!$precedentAct || !$dependentAct) {
             return json_encode(['error' => 'Yes', 'errortext' => 'Activity not found.']);
+        }
+
+        $duplicate = \app\models\ActivityRelations::find()
+            ->where(['projectId' => $projectId, 'status' => 0, 'precedent_activity' => $precAct, 'dependent_activity' => $depAct])
+            ->andWhere(['<>', 'id', $id])
+            ->exists();
+        if ($duplicate) {
+            return json_encode(['error' => 'Yes', 'errortext' => 'A relationship between these two activities already exists.']);
         }
 
         /* Seed the precedent's Planned baseline if it has none yet —
@@ -370,6 +448,7 @@ class RelationController extends Controller
         /* Deleting a relationship is an explicit user action — Planned
            recalculates so the dependent's baseline is no longer derived
            from a relation that no longer exists. */
+        Yii::$app->helper->ResetUnlinkedDependentToToday($model->projectId, $model->dependent_activity);
         Yii::$app->helper->RecalculatePlannedDates($model->projectId);
         Yii::$app->helper->GetRelationcorrect($model->projectId);
 

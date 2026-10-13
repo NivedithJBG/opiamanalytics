@@ -335,11 +335,8 @@ function _cfInvestDialSvg(target, actual){
         var p1 = ptF(f1), p2 = ptF(f2);
         return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
     }
-    // Up to target (first half of the 0-2x scale) = dark blue; beyond
-    // target (second half) = orange. Target always sits at the dial's
-    // midpoint (see targetF below), so this split is fixed, not
-    // actual-dependent.
-    var arcPath = arc(0, 0.5, '#0d3f7a') + arc(0.5, 1, '#b5540a');
+    // Base dial arc: uniform dark blue-grey
+    var arcPath = arc(0, 1, '#3a4a5f');
     var targetF = 0.5;
     var ta = Math.PI * (1 - targetF);
     var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
@@ -347,6 +344,11 @@ function _cfInvestDialSvg(target, actual){
     var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
     var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
         + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    // Gap arc: colored based on performance. For Investment (spending):
+    // - Orange-red if actual > target (overspent - bad)
+    // - Blue-green if actual < target (under budget - good)
+    var gapCol = actual > targetCr ? '#d84a30' : '#2ba899';
+    var gapPath = (targetCr > 0 && actual > 0) ? (f < targetF ? arc(f, targetF, gapCol) : arc(targetF, f, gapCol)) : '';
     var nr = r - 14, na = Math.PI * (1 - f);
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
     // Target is typed directly in Lakhs (the input box's fixed
@@ -356,13 +358,13 @@ function _cfInvestDialSvg(target, actual){
     // unit the user chose by using this box is never second-guessed.
     var fmt = { unit: 'Lakhs' };
     var divisor = 100;
-    var centerCol = actual > targetCr ? '#c62828' : '#000';
     var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
         + arcPath
+        + gapPath
         + targetLine
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
-        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="' + centerCol + '" font-family="Barlow Condensed,Arial">' + (actual * divisor).toFixed(2) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + (actual * divisor).toFixed(2) + '</text>'
         + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">' + fmt.unit + '</text>'
         + '</svg>';
     return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
@@ -736,12 +738,16 @@ function _cfIndianComma(n){
         if (!t) {
             t = document.createElement('div');
             t.id = 'cf-breakdown-tip';
-            t.style.cssText = 'display:none;position:fixed;z-index:200700;background:#fff;border:1px solid #b0bec5;border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.25);padding:14px 16px;font-family:Barlow Condensed,Arial;max-width:900px;min-width:420px;';
+            t.style.cssText = 'display:none;position:fixed;z-index:200700;background:#fff;border:1px solid #b0bec5;border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.25);font-family:Barlow Condensed,Arial;max-width:900px;min-width:420px;max-height:80vh;overflow-y:auto;';
             document.body.appendChild(t);
         }
         return t;
     }
-    $(document).on('mouseenter', '.cf-breakdown-bar-col', function(e){
+    $(document).on('click', '#cf-breakdown-tip-close', function(){
+        var tip = document.getElementById('cf-breakdown-tip');
+        if (tip) tip.style.display = 'none';
+    });
+    $(document).on('click', '.cf-breakdown-bar-col', function(e){
         var win = $(this).closest('[id$="-breakdown-win"]');
         var stateKeys = { 'cf-wip-breakdown-win': '_cfWipBreakdownState', 'cf-projexp-breakdown-win': '_cfProjExpBreakdownState', 'cf-invest-breakdown-win': '_cfInvestBreakdownState', 'cf-currliab-breakdown-win': '_cfCurrLiabBreakdownState', 'cf-netinv-breakdown-win': '_cfNetInvBreakdownState', 'cf-billsrecv-breakdown-win': '_cfBillsRecvBreakdownState', 'cf-c2c-breakdown-win': '_cfC2cBreakdownState', 'cf-ci-breakdown-win': '_cfContractIncomeBreakdownState' };
         var stateKey = stateKeys[win.attr('id')];
@@ -760,21 +766,32 @@ function _cfIndianComma(n){
         }
         rowsHtml += '<tr><td style="padding:6px 20px 6px 10px;font-size:15px;font-weight:700;color:#251840;white-space:nowrap;border:1px solid #d5dae2;background:#f4f6fa;">Net</td>'
             + '<td style="padding:6px 10px;font-size:15px;font-weight:700;color:#251840;text-align:right;border:1px solid #d5dae2;background:#f4f6fa;">' + _cfIndianComma(netTotal) + '</td></tr>';
-        tip.innerHTML = '<div style="font-size:16px;font-weight:700;color:#251840;margin-bottom:6px;border-bottom:1px solid #e0e4ea;padding-bottom:6px;">' + $('<div>').text(acct.name || '').html() + '</div>'
+        tip.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #e0e4ea;">'
+            + '<span style="font-size:16px;font-weight:700;color:#251840;">' + $('<div>').text(acct.name || '').html() + '</span>'
+            + '<button id="cf-breakdown-tip-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#5a6e8c;line-height:1;">&times;</button>'
+            + '</div>'
+            + '<div style="padding:10px 16px 14px;">'
             + '<table style="border-collapse:collapse;width:100%;">'
             + '<thead><tr><th style="padding:6px 20px 6px 10px;font-size:14px;color:#5a6e8c;text-align:left;border:1px solid #d5dae2;background:#f4f6fa;">Account Head</th><th style="padding:6px 10px;font-size:14px;color:#5a6e8c;text-align:right;border:1px solid #d5dae2;background:#f4f6fa;">Amount</th></tr></thead>'
-            + '<tbody>' + rowsHtml + '</tbody></table>';
+            + '<tbody>' + rowsHtml + '</tbody></table>'
+            + '</div>';
         var rect = this.getBoundingClientRect();
         tip.style.display = 'block';
         var tw = tip.offsetWidth || 200, th = tip.offsetHeight || 60;
         var left = Math.min(rect.left, window.innerWidth - tw - 8);
-        var top = rect.top - th - 8;
-        if (top < 4) top = rect.bottom + 8;
+        // Prefer placing above the bar; if it doesn't fully fit above OR
+        // below, pick whichever side has more room so a tall table (many
+        // transaction rows) isn't blindly pinned off-screen either way.
+        var spaceAbove = rect.top - 8, spaceBelow = window.innerHeight - rect.bottom - 8;
+        var top;
+        if (th <= spaceAbove || spaceAbove >= spaceBelow) {
+            top = rect.top - th - 8;
+        } else {
+            top = rect.bottom + 8;
+        }
+        top = Math.max(4, Math.min(top, window.innerHeight - th - 4));
         tip.style.left = Math.max(4, left) + 'px';
         tip.style.top = top + 'px';
-    }).on('mouseleave', '.cf-breakdown-bar-col', function(){
-        var tip = document.getElementById('cf-breakdown-tip');
-        if (tip) tip.style.display = 'none';
     });
 })();
 
@@ -945,7 +962,7 @@ function _cfCurrLiabDialSvg(sumVal){
     var cx = 105, cy = 82, r = 76, sw = 15;
     function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
     var p1 = ptF(0), p2 = ptF(1);
-    var arcPath = '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="#5a5f68" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    var arcPath = '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="#3a4a5f" stroke-width="' + sw + '" stroke-linecap="butt"/>';
     var nr = r - 14, na = Math.PI * (1 - f);
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
     var fmt = _cfFmtMoney(Math.abs(sumVal) * 10000000);
@@ -1160,7 +1177,7 @@ function _cfCurrLiabDialSvg2(actual){
     var cx = 105, cy = 82, r = 76, sw = 15;
     function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
     var p1 = ptF(0), p2 = ptF(1);
-    var arcPath = '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="#4a4f57" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    var arcPath = '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="#3a4a5f" stroke-width="' + sw + '" stroke-linecap="butt"/>';
     var maxV = actual > 0 ? actual * 1.5 : 1;
     var f = Math.max(0, Math.min(1, actual / maxV));
     var nr = r - 14, na = Math.PI * (1 - f);
@@ -1382,7 +1399,8 @@ function _cfProjExpDialSvg(targetCr, actual){
         var p1 = ptF(f1), p2 = ptF(f2);
         return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
     }
-    var arcPath = arc(0, 0.5, '#251840') + arc(0.5, 1, '#b5540a');
+    // Base dial arc: uniform dark blue-grey
+    var arcPath = arc(0, 1, '#3a4a5f');
     var targetF = 0.5;
     var ta = Math.PI * (1 - targetF);
     var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
@@ -1390,6 +1408,9 @@ function _cfProjExpDialSvg(targetCr, actual){
     var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
     var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
         + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    // Gap arc: colored based on performance (only render if target > 0 AND actual has meaningful value)
+    var gapCol = actual > targetCr ? '#d84a30' : '#2ba899';
+    var gapPath = (targetCr > 0 && actual > 0) ? (f < targetF ? arc(f, targetF, gapCol) : arc(targetF, f, gapCol)) : '';
     var nr = r - 14, na = Math.PI * (1 - f);
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
     // Target is typed directly in Lakhs (the input box's fixed
@@ -1399,13 +1420,13 @@ function _cfProjExpDialSvg(targetCr, actual){
     // unit the user chose by using this box is never second-guessed.
     var fmt = { unit: 'Lakhs' };
     var divisor = 100;
-    var centerCol = actual > targetCr ? '#c62828' : '#000';
     var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
         + arcPath
+        + gapPath
         + targetLine
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
-        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="' + centerCol + '" font-family="Barlow Condensed,Arial">' + (actual * divisor).toFixed(2) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + (actual * divisor).toFixed(2) + '</text>'
         + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">' + fmt.unit + '</text>'
         + '</svg>';
     return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
@@ -1614,6 +1635,12 @@ function _cfWipDialSvg(target, currentWip){
     var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
     var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
         + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    // Base dial arc: uniform dark blue-grey
+    var arcPath = arc(0, 1, '#3a4a5f');
+    // Gap arc: colored based on performance (only render if target > 0 AND currentWip has meaningful value)
+    // WIP: orange-red if actual < target (work not completed), blue-green if actual > target (more done)
+    var gapCol = currentWip < targetCr ? '#d84a30' : '#2ba899';
+    var gapPath = (targetCr > 0 && currentWip > 0) ? (f < targetF ? arc(f, targetF, gapCol) : arc(targetF, f, gapCol)) : '';
     var nr = r - 14, na = Math.PI * (1 - f);
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
     // Target is typed directly in Lakhs (the input box's fixed
@@ -1623,13 +1650,13 @@ function _cfWipDialSvg(target, currentWip){
     // unit the user chose by using this box is never second-guessed.
     var fmt = { unit: 'Lakhs' };
     var divisor = 100;
-    var centerCol = currentWip > targetCr ? '#c62828' : '#000';
     var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
-        + arc(0, 0.5, '#e07b00') + arc(0.5, 1, '#71797e')
+        + arcPath
+        + gapPath
         + targetLine
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
-        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="' + centerCol + '" font-family="Barlow Condensed,Arial">' + (currentWip * divisor).toFixed(2) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + (currentWip * divisor).toFixed(2) + '</text>'
         + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">' + fmt.unit + '</text>'
         + '</svg>';
     return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
@@ -1731,7 +1758,8 @@ function _cfContribMarginDialSvg(target, percent, valueLabel){
         var p1 = ptF(f1), p2 = ptF(f2);
         return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
     }
-    var arcPath = arc(0, 0.5, '#b5540a') + arc(0.5, 1, '#00838f');
+    // Base dial arc: uniform dark blue-grey
+    var arcPath = arc(0, 1, '#3a4a5f');
     var targetF = maxV > 0 ? Math.max(0, Math.min(1, target / maxV)) : 0.5;
     var ta = Math.PI * (1 - targetF);
     var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
@@ -1739,6 +1767,10 @@ function _cfContribMarginDialSvg(target, percent, valueLabel){
     var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
     var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
         + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    // Gap arc: colored based on performance. Contribution Margin:
+    // - Blue-green if percent > target (good - higher margin), orange-red if less
+    var gapCol = percent < target ? '#d84a30' : '#2ba899';
+    var gapPath = (target > 0) ? (f < targetF ? arc(f, targetF, gapCol) : arc(targetF, f, gapCol)) : '';
     var nr = r - 14, na = Math.PI * (1 - f);
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
     // Percentage label sits just outside the needle's own tip, along the
@@ -1749,6 +1781,7 @@ function _cfContribMarginDialSvg(target, percent, valueLabel){
     var labelAnchor = Math.cos(na) > 0.15 ? 'start' : (Math.cos(na) < -0.15 ? 'end' : 'middle');
     var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
         + arcPath
+        + gapPath
         + targetLine
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
@@ -1840,7 +1873,8 @@ function _cfFreeCashDialSvg(target, percent, centerLabel){
         var p1 = ptF(f1), p2 = ptF(f2);
         return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
     }
-    var arcPath = arc(0, 0.5, '#b5540a') + arc(0.5, 1, '#2e7d32');
+    // Base dial arc: uniform dark blue-grey
+    var arcPath = arc(0, 1, '#3a4a5f');
     var targetF = maxV > 0 ? Math.max(0, Math.min(1, target / maxV)) : 0.5;
     var ta = Math.PI * (1 - targetF);
     var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
@@ -1848,15 +1882,18 @@ function _cfFreeCashDialSvg(target, percent, centerLabel){
     var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
     var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
         + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    // Gap arc: colored based on performance (only render if target > 0)
+    var gapCol = percent > target ? '#d84a30' : '#2ba899';
+    var gapPath = (target > 0) ? (f < targetF ? arc(f, targetF, gapCol) : arc(targetF, f, gapCol)) : '';
     var nr = r - 14, na = Math.PI * (1 - f);
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
-    var centerCol = percent > target ? '#c62828' : '#000';
     var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
         + arcPath
+        + gapPath
         + targetLine
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
-        + '<text x="' + cx + '" y="' + (cy - 22) + '" text-anchor="middle" font-size="22" font-weight="700" fill="' + centerCol + '" font-family="Barlow Condensed,Arial">' + centerLabel + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 22) + '" text-anchor="middle" font-size="22" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + centerLabel + '</text>'
         + '</svg>';
     return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
 }
@@ -1957,7 +1994,8 @@ function _cfRoiDialSvg(target, percent){
         var p1 = ptF(f1), p2 = ptF(f2);
         return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
     }
-    var arcPath = arc(0, 0.5, '#b5540a') + arc(0.5, 1, '#00838f');
+    // Base dial arc: uniform dark blue-grey
+    var arcPath = arc(0, 1, '#3a4a5f');
     var targetF = maxV > 0 ? Math.max(0, Math.min(1, target / maxV)) : 0.5;
     var ta = Math.PI * (1 - targetF);
     var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
@@ -1965,10 +2003,15 @@ function _cfRoiDialSvg(target, percent){
     var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
     var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
         + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    // Gap arc: colored based on performance. ROI:
+    // - Blue-green if percent > target (good - higher ROI), orange-red if less
+    var gapCol = percent < target ? '#d84a30' : '#2ba899';
+    var gapPath = (target > 0) ? (f < targetF ? arc(f, targetF, gapCol) : arc(targetF, f, gapCol)) : '';
     var nr = r - 14, na = Math.PI * (1 - f);
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
     var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
         + arcPath
+        + gapPath
         + targetLine
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
@@ -2195,9 +2238,8 @@ function _cfBillsRecvDialSvg(target, actual){
         var p1 = ptF(f1), p2 = ptF(f2);
         return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
     }
-    // Up to target (first half) = deep orange; beyond target (second
-    // half) = the panel's original yellow-green.
-    var arcPath = arc(0, 0.5, '#b5540a') + arc(0.5, 1, '#6b8e23');
+    // Base dial arc: uniform dark blue-grey
+    var arcPath = arc(0, 1, '#3a4a5f');
     var targetF = 0.5;
     var ta = Math.PI * (1 - targetF);
     var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
@@ -2205,6 +2247,9 @@ function _cfBillsRecvDialSvg(target, actual){
     var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
     var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
         + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    // Gap arc: colored based on performance (only render if target > 0, inverted for bills receivable: less than target is underperformance)
+    var gapCol = actual < targetCr ? '#d84a30' : '#2ba899';
+    var gapPath = (targetCr > 0) ? (f < targetF ? arc(f, targetF, gapCol) : arc(targetF, f, gapCol)) : '';
     var nr = r - 14, na = Math.PI * (1 - f);
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
     // Target is typed directly in Lakhs (the input box's fixed
@@ -2214,16 +2259,13 @@ function _cfBillsRecvDialSvg(target, actual){
     // unit the user chose by using this box is never second-guessed.
     var fmt = { unit: 'Lakhs' };
     var divisor = 100;
-    // More Bills Receivable collected is good, so falling SHORT of
-    // target is the bad outcome — center value turns red when actual is
-    // below target, same convention as Contract Income.
-    var centerCol = actual < targetCr ? '#c62828' : '#000';
     var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
         + arcPath
+        + gapPath
         + targetLine
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
-        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="' + centerCol + '" font-family="Barlow Condensed,Arial">' + (actual * divisor).toFixed(2) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + (actual * divisor).toFixed(2) + '</text>'
         + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">' + fmt.unit + '</text>'
         + '</svg>';
     return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
@@ -2480,6 +2522,11 @@ function _cfBankDialSvg(wcapital, availed){
     var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
     var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
         + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
+    // Base dial arc: uniform dark blue-grey
+    var arcPath = arc(0, 1, '#3a4a5f');
+    // Gap arc: colored based on performance (only render if target > 0)
+    var gapCol = availed > wcapitalCr ? '#d84a30' : '#2ba899';
+    var gapPath = (wcapitalCr > 0) ? (f < targetF ? arc(f, targetF, gapCol) : arc(targetF, f, gapCol)) : '';
     var nr = r - 14, na = Math.PI * (1 - f);
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
     // Center shows the actual (Availed) value + unit, same treatment as
@@ -2489,13 +2536,13 @@ function _cfBankDialSvg(wcapital, availed){
     // falls back to Availed's own magnitude only when Allocated is 0.
     var fmt = wcapitalCr !== 0 ? _cfFmtMoney(Math.abs(wcapitalCr) * 10000000) : _cfFmtMoney(Math.abs(availed) * 10000000);
     var divisor = fmt.unit === 'Crores' ? 1 : 100;
-    var centerCol = availed > wcapitalCr ? '#c62828' : '#000';
     var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
-        + arc(0, 0.5, '#00838f') + arc(0.5, 1, '#e07b00')
+        + arcPath
+        + gapPath
         + targetLine
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
-        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="' + centerCol + '" font-family="Barlow Condensed,Arial">' + (availed * divisor).toFixed(2) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + (availed * divisor).toFixed(2) + '</text>'
         + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">' + fmt.unit + '</text>'
         + '</svg>';
     return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
@@ -2779,6 +2826,7 @@ function _cfDialSvg(target, actual, unit, unitFontSize, reverseColors, actualDis
     unitFontSize = unitFontSize || 16;
     var maxV = target > 0 ? target * 2 : 1;
     var f = Math.max(0, Math.min(1, actual / maxV));
+    var targetF = 0.5;
     var cx = 105, cy = 82, r = 76, sw = 15;
     function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
     function arc(f1, f2, col){
@@ -2786,17 +2834,20 @@ function _cfDialSvg(target, actual, unit, unitFontSize, reverseColors, actualDis
         var p1 = ptF(f1), p2 = ptF(f2);
         return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
     }
-    // solidColor: single-colour arc (no orange/red second half) — used
-    // by Contract Income, per explicit request, since crossing target
-    // there is always a good outcome, not something to flag visually.
-    var firstCol = solidColor || (reverseColors ? '#b5540a' : '#00838f');
-    var secondCol = solidColor || (reverseColors ? '#00838f' : '#b5540a');
+    // Dark blue-grey base dial color for all metrics (no metric-specific colors)
+    var dialBaseColor = '#3a4a5f';
+    // Gap color: orange-red if actual < target, blue-green if actual > target
+    var gapColor = (actual > target) ? '#d84a30' : '#2ba899';
+    // Render base dial as single solid color
+    var dialSvg = arc(0, 1, dialBaseColor);
+    // Render gap arc between needle and target (only render if target > 0)
+    var gapSvg = '';
+    if (actual !== target && target > 0) {
+        var minF = Math.min(f, targetF);
+        var maxF = Math.max(f, targetF);
+        gapSvg = arc(minF, maxF, gapColor);
+    }
     // Target marker: bright yellow band at the dial's fixed midpoint
-    // (target always sits at 50% of the 0-2x scale) — same treatment as
-    // every other Cashflow dial (Investments, Bills Receivable, etc.),
-    // EXCEPT Contract Income (solidColor set), which omits it per
-    // explicit request.
-    var targetF = 0.5;
     var ta = Math.PI * (1 - targetF);
     var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
     var tx1 = (cx + tr1 * Math.cos(ta)).toFixed(1), ty1 = (cy - tr1 * Math.sin(ta)).toFixed(1);
@@ -2807,15 +2858,10 @@ function _cfDialSvg(target, actual, unit, unitFontSize, reverseColors, actualDis
     );
     var nr = r - 14, na = Math.PI * (1 - f);
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
-    // Center value turns red whenever Actual sits on the "bad" side of
-    // Target. For normal dials (e.g. Cash-to-Cash Cycle, longer is
-    // worse) that's actual > target. For reverseColors dials (e.g.
-    // Contract Income, where MORE is good) it's the opposite — falling
-    // SHORT of target is the bad outcome, so red triggers on
-    // actual < target instead.
-    var centerCol = (reverseColors ? (actual < target) : (actual > target)) ? '#c62828' : '#000';
+    var centerCol = '#000';
     var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
-        + arc(0, 0.5, firstCol) + arc(0.5, 1, secondCol)
+        + dialSvg
+        + gapSvg
         + targetLine
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'

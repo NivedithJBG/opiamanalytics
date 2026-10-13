@@ -840,8 +840,7 @@
       });
     } else if(pTarget.actId !== undefined){
       $rows = $all.filter(function(){
-        return String($(this).data('precact')) === String(pTarget.actId)
-            || String($(this).data('depact'))  === String(pTarget.actId);
+        return String($(this).data('precact')) === String(pTarget.actId);
       });
     } else {
       return;
@@ -924,7 +923,7 @@
       // all relationships" link (added once, same as _jumpToEdit's)
       // brings them back on demand.
       var $existing = $table.find('tbody tr[data-id]');
-      $existing.hide();
+      $existing.filter(function(){ return String($(this).data('precact')) !== String(actId); }).hide();
       $table.find('tbody tr td[colspan]').closest('tr').remove();
       $table.find('tbody').prepend($row);
       $row[0].scrollIntoView({ block: 'center' });
