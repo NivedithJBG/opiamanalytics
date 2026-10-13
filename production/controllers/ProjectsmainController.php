@@ -310,6 +310,29 @@ class ProjectsmainController extends Controller
     }
 
     /**
+     * actionGetiowgroupsbytype — IOW groups that have at least one active
+     * activity of the given Project Type (estimateactivities.work_type).
+     * Feeds the Create WBS "IOW Group" dropdown so it only lists groups
+     * belonging to the selected type.
+     */
+    public function actionGetiowgroupsbytype()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $typeId = (int)\Yii::$app->request->post('typeId');
+        if (!$typeId) return ['items' => []];
+        $rows = \Yii::$app->db->createCommand(
+            "SELECT g.id, g.name FROM iow_groups g
+             WHERE g.status = 0
+               AND g.id IN (SELECT DISTINCT ea.iow_group_id FROM estimateactivities ea
+                            WHERE ea.activity_status = 0 AND ea.work_type = :typeId
+                              AND ea.iow_group_id IS NOT NULL)
+             ORDER BY g.name ASC",
+            [':typeId' => $typeId]
+        )->queryAll();
+        return ['items' => $rows];
+    }
+
+    /**
      * actionWbsaddiows — creates one or more bare IOWs (workgroups_new
      * rows) under a single IOW Group, with no activity/estimate/schedule
      * bar attached. This is the entry point for the simplified "Add

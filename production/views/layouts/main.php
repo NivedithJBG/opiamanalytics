@@ -3133,9 +3133,7 @@ if($action=='login')
                 });
             }});
         }
-        if($('#cwbs-iow-group option').length <= 1 && typeof window.loadIowGroupOptions === 'function'){
-            window.loadIowGroupOptions(document.getElementById('cwbs-iow-group'));
-        }
+        cwbsLoadIowGroups();
         cwbsLoadBoqList();
     }
     function cwbsHide(){
@@ -3338,7 +3336,25 @@ if($action=='login')
     }
     $(document).on('click','#cwbs-open-btn', function(){ cwbsShow(); });
     $(document).on('click','#cwbs-close-x, #cwbs-cancel-btn', function(){ cwbsHide(); });
-    $(document).on('change','#cwbs-proj-type, #cwbs-iow-group', function(){ cwbsLoadActivities(); });
+    // IOW Group list depends on the selected Project Type: only groups that
+    // have activities of that type are shown.
+    function cwbsLoadIowGroups(){
+        var typeId = $('#cwbs-proj-type').val();
+        var sel = $('#cwbs-iow-group');
+        sel.html('<option value="">Select IOW Group</option>');
+        if(!typeId){ cwbsResetList(); return; }
+        $.ajax({ type:'POST', url:'../projectsmain/getiowgroupsbytype', dataType:'json', data:{ typeId:typeId },
+            success:function(d){
+                if($('#cwbs-proj-type').val() !== typeId) return; // type changed meanwhile
+                (d.items||[]).forEach(function(it){
+                    sel.append('<option value="'+it.id+'">'+$('<div>').text(it.name).html()+'</option>');
+                });
+                cwbsLoadActivities();
+            }
+        });
+    }
+    $(document).on('change','#cwbs-proj-type', function(){ cwbsLoadIowGroups(); });
+    $(document).on('change','#cwbs-iow-group', function(){ cwbsLoadActivities(); });
     $(document).on('click','.cwbs-tick-btn', function(){
         var id = $(this).data('actid');
         var name = $(this).data('actname');
