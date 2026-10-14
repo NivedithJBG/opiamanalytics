@@ -3614,7 +3614,7 @@ if($action=='login')
                     cwbsedHide();
                     // Refresh the Create WBS list behind it so the edited
                     // name/unit is reflected immediately.
-                    if(typeof cwbsLoadActivities === 'function') cwbsLoadActivities();
+                    $('#cwbs-iow-group').trigger('change');
                 } else {
                     alert('Save failed: ' + (d.msg || 'Unknown error'));
                 }
