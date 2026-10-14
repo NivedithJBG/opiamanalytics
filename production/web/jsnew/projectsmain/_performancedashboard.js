@@ -1608,7 +1608,7 @@ $(document).on('click', '#cf-projexp-breakdown-close', function(){ $('#cf-projex
 // of Bank/Cash payment transactions for the selected project whose
 // debited counterparty is an Expense-type account head
 // (accounts_item.account_type = 8) — see actionCfwip.
-var _cfWipState = { target: 0, currentWip: 0, editing: false, avgDays: null };
+var _cfWipState = { target: 0, currentWip: 0, editing: false, avgDays: null, cycles: [], currentCycle: 0, cycleTargetRupees: 0 };
 
 function _cfWipDialSvg(target, currentWip){
     // target is the raw number the user typed (e.g. "19"); reinterpret it
@@ -1667,12 +1667,14 @@ function _cfDrawWipDial(){
     if (!el) return;
     el.style.justifyContent = 'center';
     el.style.cursor = 'pointer';
-    el.title = 'Click to see group breakdown';
+    el.title = 'Click to see cycle targets';
     var s = _cfWipState;
     // s.target is the raw number the user typed; reinterpret it via the
     // magnitude rule (< 100 = Lakhs, >= 100 = Crores) before comparing it
     // against currentWip, which is already a Crores-scale float.
-    var targetCr = _cfEnteredToRupees(s.target) / 10000000;
+    // Per-cycle target (Billing Cycle) when available, in rupees; otherwise
+    // the manually typed target.
+    var targetCr = (s.cycleTargetRupees > 0 ? s.cycleTargetRupees : _cfEnteredToRupees(s.target)) / 10000000;
     // Target is typed directly in Lakhs (the input box's fixed
     // convention -- see _cfEnteredToRupees) and Actual is shown in
     // that SAME fixed Lakhs unit, never auto-converted to Crores by
@@ -1700,12 +1702,51 @@ function _cfDrawWipDial(){
         + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
 }
 
+// Per-cycle target bars for the WIP breakdown popup: one vertical bar per
+// payment cycle (Billing Cycle), each bar = that cycle's target in Lakhs,
+// X axis = cycle end month. The current cycle's bar is highlighted.
+function _cfWipCycleBarsHtml(){
+    var s = _cfWipState;
+    var cyc = s.cycles || [];
+    if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycle targets.</div>';
+    var maxV = 0;
+    cyc.forEach(function(c){ if (c.target > maxV) maxV = c.target; });
+    // Drawn in a fixed 600 x 300 viewBox that scales to the popup width, so the
+    // bars fill the window. Each cycle gets an equal slot, with the bar
+    // occupying 60% of it, leaving clear space between bars.
+    var W = 600, H = 300, base = 262, top = 40, pad = 20;
+    var slot = (W - 2 * pad) / cyc.length;
+    var barW = slot * 0.6;
+    var bars = '';
+    cyc.forEach(function(c, i){
+        var h = maxV > 0 ? Math.round((c.target / maxV) * (base - top)) : 0;
+        var x = pad + i * slot + (slot - barW) / 2;
+        var col = (i + 1 === s.currentCycle) ? '#2ba899' : '#3a4a5f';
+        bars += '<rect x="' + x.toFixed(1) + '" y="' + (base - h) + '" width="' + barW.toFixed(1) + '" height="' + h + '" fill="' + col + '"/>'
+            + '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (base - h - 6) + '" text-anchor="middle" font-size="12" fill="#111">' + (c.target / 100000).toFixed(1) + '</text>'
+            + '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (base + 18) + '" text-anchor="middle" font-size="12" fill="#333">' + c.end_label + '</text>';
+    });
+    return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
+        + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg>'
+        + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;">Cycle target (Lakhs) · highlighted = current cycle</div>';
+}
+
 function renderCfWipDial(){
     var gen = _cfLoadGen;
-    _cfWipState = { target: 0, currentWip: 0, editing: false, avgDays: null, avgAllCycles: null };
+    _cfWipState = { target: 0, currentWip: 0, editing: false, avgDays: null, avgAllCycles: null, cycles: [], currentCycle: 0, cycleTargetRupees: 0 };
     _cfDrawWipDial();
-    _cfFetchTarget('wip_target', function(d){
-        if (gen === _cfLoadGen) { _cfWipState.target = +d.target || 0; _cfDrawWipDial(); }
+    // Target for the dial = the bar of the current payment cycle (see
+    // actionCfwipcycles). Replaces the manually typed WIP target.
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfwipcycles', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfWipState.cycles = d.cycles || [];
+                _cfWipState.currentCycle = +d.current_cycle || 0;
+                _cfWipState.cycleTargetRupees = +d.current_target || 0;
+                _cfDrawWipDial();
+            }
+        }
     });
     // C.WIP = sum of Bank/Cash payment transactions whose debited
     // counterparty is an Expense-type account head — see actionCfwip.
@@ -2086,21 +2127,16 @@ $(document).on('click', '.cf-roi-pencil', function(e){
 function _cfRedrawWipBreakdown(){
     var s = window._cfWipBreakdownState;
     if (!s) return;
-    var chartH = Math.max(120, $('#cf-wip-breakdown-win').height() - 130);
-    var r = _cfInvestBreakdownChartHtml(s.accounts, chartH);
     $('#cf-wip-breakdown-unit').html(
-        '<span style="font-weight:700;color:#081142;">Amount in ' + r.unit + '</span>'
-        + '<span style="float:right;font-weight:700;color:#081142;">Total: ' + r.total + ' ' + r.unit + '</span>'
-        + (s.avgAllCycles != null
-            ? '<div style="clear:both;padding-top:4px;color:#5a6e8c;">Average time in WIP: <b style="color:#081142;">' + s.avgAllCycles.toFixed(1) + ' days</b></div>'
-            : '')
+        '<span style="font-weight:700;color:#081142;">Target per billing cycle (Lakhs)</span>'
+        + '<span style="float:right;font-weight:700;color:#081142;">Total: ' + (_cfWipState.cycles.reduce(function(sum, c){ return sum + (+c.target || 0); }, 0) / 100000).toFixed(2) + ' Lakhs</span>'
     );
-    $('#cf-wip-breakdown-chart').html(r.body);
+    $('#cf-wip-breakdown-chart').html(_cfWipCycleBarsHtml());
 }
 
-function _cfShowWipBreakdown(accounts){
+function _cfShowWipBreakdown(){
     $('#cf-wip-breakdown-win').remove();
-    window._cfWipBreakdownState = { accounts: accounts, avgDays: _cfWipState.avgDays, avgAllCycles: _cfWipState.avgAllCycles };
+    window._cfWipBreakdownState = { cycles: _cfWipState.cycles, currentCycle: _cfWipState.currentCycle };
 
     var winW = 640, winH = 380, MIN_W = 340, MIN_H = 240;
     var left = Math.max(10, (window.innerWidth - winW) / 2);
@@ -2125,7 +2161,7 @@ function _cfShowWipBreakdown(accounts){
     var html = '<div id="cf-wip-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
         + '<div id="cf-wip-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#081142;cursor:move;user-select:none;">'
-        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Work In Progress — Group Breakdown</span>'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Work In Progress — Cycle Targets</span>'
         + '<button id="cf-wip-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
         + '<div id="cf-wip-breakdown-unit" style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;"></div>'
@@ -2191,9 +2227,13 @@ function _cfShowWipBreakdown(accounts){
 $(document).on('click', '#cf-billsreceivable', function(e){
     if ($(e.target).closest('.cf-wip-pencil, .cf-wip-input').length) return;
     $.ajax({
-        type: 'POST', url: '../projectsmain/cfwipbreakdown', dataType: 'json',
+        type: 'POST', url: '../projectsmain/cfwipcycles', dataType: 'json',
         success: function(d){
-            if (d && d.error === 'No') { _cfShowWipBreakdown(d.accounts || []); }
+            if (d && d.error === 'No') {
+                _cfWipState.cycles = d.cycles || [];
+                _cfWipState.currentCycle = +d.current_cycle || 0;
+                _cfShowWipBreakdown();
+            }
         }
     });
 });
@@ -2278,7 +2318,9 @@ function _cfDrawBillsRecvDial(){
     el.style.cursor = 'pointer';
     el.title = 'Click to see per-cycle breakdown';
     var s = _cfBillsRecvState;
-    var targetCr = _cfEnteredToRupees(s.target) / 10000000;
+    // Per-cycle target (WIP target x project value / total cost), in rupees;
+    // otherwise the manually typed target.
+    var targetCr = (s.cycleTargetRupees > 0 ? s.cycleTargetRupees : _cfEnteredToRupees(s.target)) / 10000000;
     // Target is typed directly in Lakhs (the input box's fixed
     // convention -- see _cfEnteredToRupees) and Actual is shown in
     // that SAME fixed Lakhs unit, never auto-converted to Crores by
@@ -2308,10 +2350,18 @@ function _cfDrawBillsRecvDial(){
 
 function renderCfBillsReceivableDial(){
     var gen = _cfLoadGen;
-    _cfBillsRecvState = { target: 0, actual: 0, editing: false, avgDays: null, avgAllCycles: null };
+    _cfBillsRecvState = { target: 0, actual: 0, editing: false, avgDays: null, avgAllCycles: null, cycleTargetRupees: 0 };
     _cfDrawBillsRecvDial();
-    _cfFetchTarget('bills_receivable_target', function(d){
-        if (gen === _cfLoadGen) { _cfBillsRecvState.target = +d.target || 0; _cfDrawBillsRecvDial(); }
+    // Dial target = current cycle's Bills Receivable target (see
+    // actionCfbillsreceivablecycles). Replaces the manually typed target.
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfbillsreceivablecycles', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') {
+                _cfBillsRecvState.cycleTargetRupees = +d.current_target || 0;
+                _cfDrawBillsRecvDial();
+            }
+        }
     });
     // Actual = sum of transactions where the debit side is a Party
     // account (Other Parties) and the credit side is Contract Income —
@@ -2347,24 +2397,52 @@ function renderCfBillsReceivableDial(){
 // balance, the current open cycle valued as of today (see
 // actionCfbillsreceivablebreakdown). Also shows the average across all
 // cycles.
+// Per-cycle Bills Receivable bars: grey = target for the cycle, overlaid by the
+// actual credited to Contract Income. A shortfall (actual below target) is shown
+// in orange-red, an excess (actual above target) in blue-green.
+function _cfBillsRecvBarsHtml(){
+    var s = window._cfBillsRecvBreakdownState || {};
+    var cyc = s.cycles || [];
+    if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration, Billing Cycle, Project Value and an estimate to see the cycle targets.</div>';
+    var maxV = 0;
+    cyc.forEach(function(c){ maxV = Math.max(maxV, c.target, c.actual); });
+    var W = 600, H = 300, base = 262, top = 40, pad = 20;
+    var slot = (W - 2 * pad) / cyc.length;
+    var barW = slot * 0.6;
+    var scale = function(v){ return maxV > 0 ? (v / maxV) * (base - top) : 0; };
+    var out = '';
+    cyc.forEach(function(c, i){
+        var x = pad + i * slot + (slot - barW) / 2;
+        var tH = scale(c.target), aH = scale(c.actual);
+        var lo = Math.min(tH, aH), hi = Math.max(tH, aH);
+        var diffCol = (c.actual >= c.target) ? '#2ba899' : '#d84a30';
+        out += '<rect x="' + x.toFixed(1) + '" y="' + (base - tH).toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + tH.toFixed(1) + '" fill="#d0d7e2"/>';
+        out += '<rect x="' + x.toFixed(1) + '" y="' + (base - lo).toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + lo.toFixed(1) + '" fill="#3a4a5f"/>';
+        if (hi > lo) {
+            out += '<rect x="' + x.toFixed(1) + '" y="' + (base - hi).toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + (hi - lo).toFixed(1) + '" fill="' + diffCol + '"/>';
+        }
+        out += '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (base - Math.max(tH, aH) - 6).toFixed(1) + '" text-anchor="middle" font-size="12" fill="#111">' + (c.target / 100000).toFixed(1) + '</text>';
+        out += '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (base + 18) + '" text-anchor="middle" font-size="12" fill="#333">' + c.end_label + '</text>';
+    });
+    return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
+        + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + out + '</svg>'
+        + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;">Grey = target · dark = actual · orange-red = shortfall · blue-green = excess (Lakhs)</div>';
+}
+
 function _cfRedrawBillsRecvBreakdown(){
     var s = window._cfBillsRecvBreakdownState;
     if (!s) return;
-    var chartH = Math.max(120, $('#cf-billsrecv-breakdown-win').height() - 130);
-    var r = _cfInvestBreakdownChartHtml(s.accounts, chartH);
+    var tot = (s.cycles || []).reduce(function(sum, c){ return sum + (+c.actual || 0); }, 0);
     $('#cf-billsrecv-breakdown-unit').html(
-        '<span style="font-weight:700;color:#251840;">Amount in ' + r.unit + '</span>'
-        + '<span style="float:right;font-weight:700;color:#251840;">Average: ' + _cfIndianComma(s.average / (r.unit === 'Crores' ? 10000000 : 100000)) + ' ' + r.unit + '</span>'
-        + (s.avgAllCycles != null
-            ? '<div style="clear:both;padding-top:4px;color:#5a6e8c;">Average collection time: <b style="color:#251840;">' + s.avgAllCycles.toFixed(1) + ' days</b></div>'
-            : '')
+        '<span style="font-weight:700;color:#251840;">Target per billing cycle (Lakhs)</span>'
+        + '<span style="float:right;font-weight:700;color:#251840;">Total credited: ' + (tot / 100000).toFixed(2) + ' Lakhs</span>'
     );
-    $('#cf-billsrecv-breakdown-chart').html(r.body);
+    $('#cf-billsrecv-breakdown-chart').html(_cfBillsRecvBarsHtml());
 }
 
-function _cfShowBillsRecvBreakdown(accounts, average){
+function _cfShowBillsRecvBreakdown(){
     $('#cf-billsrecv-breakdown-win').remove();
-    window._cfBillsRecvBreakdownState = { accounts: accounts, average: average, avgDays: _cfBillsRecvState.avgDays, avgAllCycles: _cfBillsRecvState.avgAllCycles };
+    window._cfBillsRecvBreakdownState = { cycles: _cfBillsRecvState.cycles || [], currentCycle: _cfBillsRecvState.currentCycle || 0 };
 
     var winW = 640, winH = 380, MIN_W = 340, MIN_H = 240;
     var left = Math.max(10, (window.innerWidth - winW) / 2);
@@ -2389,7 +2467,7 @@ function _cfShowBillsRecvBreakdown(accounts, average){
     var html = '<div id="cf-billsrecv-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
         + '<div id="cf-billsrecv-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#334455;cursor:move;user-select:none;">'
-        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bills Receivable — Per-Cycle Breakdown</span>'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bills Receivable — Cycle Targets</span>'
         + '<button id="cf-billsrecv-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
         + '<div id="cf-billsrecv-breakdown-unit" style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;"></div>'
@@ -2455,9 +2533,13 @@ function _cfShowBillsRecvBreakdown(accounts, average){
 $(document).on('click', '#cf-contract-income', function(e){
     if ($(e.target).closest('.cf-billsrecv-pencil, .cf-billsrecv-input').length) return;
     _cfQueueAjax({
-        type: 'POST', url: '../projectsmain/cfbillsreceivablebreakdown', dataType: 'json',
+        type: 'POST', url: '../projectsmain/cfbillsreceivablecycles', dataType: 'json',
         success: function(d){
-            if (d && d.error === 'No') { _cfShowBillsRecvBreakdown(d.accounts || [], +d.average || 0); }
+            if (d && d.error === 'No') {
+                _cfBillsRecvState.cycles = d.cycles || [];
+                _cfBillsRecvState.currentCycle = +d.current_cycle || 0;
+                _cfShowBillsRecvBreakdown();
+            }
         }
     });
 });

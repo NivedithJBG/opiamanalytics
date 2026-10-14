@@ -2270,6 +2270,12 @@ if($action=='login')
                 </select>
               </div>
             </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>Billing Cycle (days)</label>
+                <input type="number" min="0" step="1" id="gpm_billingcycle" class="form-control" placeholder="e.g. 45">
+              </div>
+            </div>
           </div>
           <div style="text-align:right;margin-top:12px;">
             <button type="button" id="gpm-form-cancel" class="btn btn-default" style="border-radius:20px;margin-right:6px;"><span class="icon-close"></span> Cancel</button>
@@ -2489,6 +2495,7 @@ if($action=='login')
                 $('#gpm_location').val(d.location);
                 $('#gpm_wrkhrs').val(d.wrkhours);
                 $('#gpm_bankaccount').val(d.bank_account_id || '');
+                $('#gpm_billingcycle').val(d.billing_cycle || '');
                 $('.gpm-err').hide();
                 gpmShowFormPanel(true);
                 gpmLoadFiles(d.Project_Id);
@@ -2546,6 +2553,7 @@ if($action=='login')
         fd.append('location', $('#gpm_location').val());
         fd.append('wrkhrss', hrs);
         fd.append('bankaccount', $('#gpm_bankaccount').val());
+        fd.append('billingcycle', $('#gpm_billingcycle').val());
         if(isEdit) fd.append('project_id', pid);
 
         var btn=$('#gpm-form-save').prop('disabled',true).text('Saving…');

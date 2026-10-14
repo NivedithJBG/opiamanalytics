@@ -3585,6 +3585,168 @@ class ProjectsmainController extends Controller
         ]);
     }
 
+    // WIP dial target, per payment cycle (Billing Cycle).
+    // cycles = ceil(duration / billing cycle days). Cycle k covers project
+    // days [(k-1)B, min(kB, duration) - 1] counted from the project start.
+    // An activity counts in a cycle in proportion to the planned Gantt days
+    // it has inside that cycle: quantity * (overlap days / planned days)
+    // * estimate rate. The cycle's bar is the sum over activities. The dial
+    // target is the bar of the cycle that contains today.
+    public function actionCfwipcycles()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return ['error' => 'No project selected']; }
+        $pid = (int)$projuser->projectid;
+        $db = Yii::$app->db;
+
+        $proj = $db->createCommand(
+            "SELECT start_date, duration FROM projects WHERE Project_Id=:pid", [':pid' => $pid]
+        )->queryOne();
+        $billing = (float)$db->createCommand(
+            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key='billing_cycle'",
+            [':pid' => $pid]
+        )->queryScalar();
+        if (!$proj || empty($proj['start_date']) || $proj['start_date'] === '0000-00-00'
+            || (int)$proj['duration'] <= 0 || $billing <= 0) {
+            return ['error' => 'No', 'cycles' => [], 'current_cycle' => 0, 'current_target' => 0];
+        }
+
+        $base     = strtotime($proj['start_date']);
+        $duration = (int)$proj['duration'];
+        $cycleLen = (int)round($billing);
+        $n        = (int)ceil($duration / $cycleLen);
+        $dayOf    = function ($date) use ($base) { return (int)round((strtotime($date) - $base) / 86400); };
+
+        $acts = $db->createCommand(
+            "SELECT s.start_date, s.duration, s.quantity, COALESCE(ea.activity_rate, 0) AS rate
+             FROM scheduleactivities s
+             LEFT JOIN pricing_estimate_new p ON p.project_Id = s.projectId AND p.activity_Id = s.activity_id
+             LEFT JOIN estimateactivities ea ON ea.activity_id = p.est_activity_Id
+             WHERE s.projectId = :pid
+               AND s.start_date IS NOT NULL AND s.end_date IS NOT NULL
+               AND s.start_date <> '0000-00-00' AND s.end_date <> '0000-00-00'",
+            [':pid' => $pid]
+        )->queryAll();
+
+        // Overlap method: an activity's value (quantity x rate) is spread over
+        // its current duration in days. Each cycle gets the value of the days
+        // the activity spends inside that cycle. Days before the project start
+        // count in cycle 1, and days after the project end count in the last cycle.
+        $bars = array_fill(1, $n, 0.0);
+        foreach ($acts as $a) {
+            $curDuration = max(1, (int)$a['duration']);
+            $value = (float)$a['quantity'] * (float)$a['rate'];
+            if ($value == 0) continue;
+            $aStart = $dayOf($a['start_date']);
+            $aEnd = $aStart + $curDuration - 1;
+            for ($k = 1; $k <= $n; $k++) {
+                $cStart = ($k === 1) ? -100000000 : ($k - 1) * $cycleLen;
+                $cEnd   = ($k === $n) ? 100000000 : min($k * $cycleLen, $duration) - 1;
+                $overlap = min($aEnd, $cEnd) - max($aStart, $cStart) + 1;
+                if ($overlap > 0) {
+                    $bars[$k] += $value * $overlap / $curDuration;
+                }
+            }
+        }
+
+        $cycles = [];
+        for ($k = 1; $k <= $n; $k++) {
+            $labelDay = min($k * $cycleLen, $duration) - 1;
+            $cycles[] = [
+                'cycle'     => $k,
+                'end_date'  => date('Y-m-d', $base + $labelDay * 86400),
+                'end_label' => date('M', $base + $labelDay * 86400),
+                'target'    => round($bars[$k], 2),
+            ];
+        }
+
+        $today = $dayOf(date('Y-m-d'));
+        $current = max(1, min($n, (int)floor(max(0, $today) / $cycleLen) + 1));
+
+        $totalCost = 0.0;
+        foreach ($acts as $a) {
+            $totalCost += (float)$a['quantity'] * (float)$a['rate'];
+        }
+
+        return [
+            'error'          => 'No',
+            'cycles'         => $cycles,
+            'current_cycle'  => $current,
+            'current_target' => $cycles[$current - 1]['target'],
+            'total_cost'     => round($totalCost, 2),
+        ];
+    }
+
+    // Bills Receivable, per payment cycle.
+    // target(k) = WIP target of cycle k / total estimate cost x project value.
+    // actual(k) = amount credited to Contract Income with a date in cycle k.
+    // Cycle 1 is open at the start and the last cycle is open at the end, the
+    // same as the WIP cycles.
+    public function actionCfbillsreceivablecycles()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return ['error' => 'No project selected']; }
+        $pid = (int)$projuser->projectid;
+        $db = Yii::$app->db;
+
+        $wip = $this->actionCfwipcycles();
+        $proj = $db->createCommand(
+            "SELECT start_date, duration, project_value FROM projects WHERE Project_Id=:pid", [':pid' => $pid]
+        )->queryOne();
+        $totalCost = (float)($wip['total_cost'] ?? 0);
+        $projectValue = (float)($proj['project_value'] ?? 0);
+        $wipCycles = $wip['cycles'] ?? [];
+        if (!$proj || empty($wipCycles) || $totalCost <= 0 || $projectValue <= 0) {
+            return ['error' => 'No', 'cycles' => [], 'current_cycle' => 0, 'current_target' => 0];
+        }
+
+        $contractIncomeId = $db->createCommand(
+            "SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1"
+        )->queryScalar();
+
+        $base = strtotime($proj['start_date']);
+        $duration = (int)$proj['duration'];
+        $cycleLen = (int)round((float)$db->createCommand(
+            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key='billing_cycle'",
+            [':pid' => $pid]
+        )->queryScalar());
+        $n = count($wipCycles);
+
+        $cycles = [];
+        foreach ($wipCycles as $i => $c) {
+            $k = $i + 1;
+            $from = ($k === 1) ? '1900-01-01' : date('Y-m-d', $base + (($k - 1) * $cycleLen) * 86400);
+            $to   = ($k === $n) ? '2999-12-31' : date('Y-m-d', $base + (min($k * $cycleLen, $duration) - 1) * 86400);
+            $actual = 0.0;
+            if ($contractIncomeId) {
+                $actual = (float)$db->createCommand(
+                    "SELECT COALESCE(SUM(amount), 0) FROM journalvoucher
+                     WHERE creditacnt = :cid AND project_id = :pid AND COALESCE(delete_status, 0) = 0
+                       AND date BETWEEN :from AND :to",
+                    [':cid' => (int)$contractIncomeId, ':pid' => $pid, ':from' => $from, ':to' => $to]
+                )->queryScalar();
+            }
+            $cycles[] = [
+                'cycle'     => $k,
+                'end_label' => $c['end_label'],
+                'target'    => round($c['target'] / $totalCost * $projectValue, 2),
+                'actual'    => round($actual, 2),
+            ];
+        }
+
+        $current = max(1, min($n, (int)$wip['current_cycle']));
+        return [
+            'error'          => 'No',
+            'cycles'         => $cycles,
+            'current_cycle'  => $current,
+            'current_target' => $cycles[$current - 1]['target'],
+        ];
+    }
+
     // WIP-to-billing cycle time (Cashflow Dashboard, WIP panel): the
     // length in days of the MOST RECENT CLOSED WIP accrual cycle — NOT
     // an average across every cycle, and NOT extended to today. Cycle 1

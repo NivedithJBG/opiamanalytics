@@ -691,7 +691,19 @@ class ProjectsController extends Controller
             'location'      => $p->location,
             'wrkhours'      => $p->wrkhours,
             'bank_account_id' => $bankAccount ? $bankAccount->id : '',
+            'billing_cycle'   => $this->_billingCycleTarget($id),
         ]);
+    }
+
+    /* Billing Cycle = length of one payment cycle in days
+     * (cf_dashboard_targets, metric_key='billing_cycle'). Returns '' when unset. */
+    private function _billingCycleTarget($pid)
+    {
+        $v = \Yii::$app->db->createCommand(
+            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key='billing_cycle'",
+            [':pid' => $pid]
+        )->queryScalar();
+        return ($v === false || $v === null) ? '' : (int)round((float)$v);
     }
 
     /* Global popup: update a project */
@@ -716,6 +728,20 @@ class ProjectsController extends Controller
             // Clear any account currently linked to this project, then
             // re-link the newly selected one — covers switching banks, and
             // clearing the selection entirely (bankaccount posted empty).
+            // Billing Cycle = length of one payment cycle in days (see
+            // ProjectsmainController::_billingCycleCount). Blank clears it.
+            $billingCycle = trim($_POST['billingcycle'] ?? '');
+            if ($billingCycle === '') {
+                $connection->createCommand("DELETE FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key='billing_cycle'", [':pid' => $id])->execute();
+            } else {
+                $connection->createCommand(
+                    "INSERT INTO cf_dashboard_targets (project_id, metric_key, target_value, updated_by)
+                     VALUES (:pid, 'billing_cycle', :val, :uid)
+                     ON DUPLICATE KEY UPDATE target_value=:val, updated_by=:uid",
+                    [':pid' => $id, ':val' => (float)$billingCycle, ':uid' => Yii::$app->user->Id]
+                )->execute();
+            }
+
             $connection->createCommand("UPDATE accounts_item SET projectid=0 WHERE projectid=:pid AND account_type=2", [':pid' => $id])->execute();
             if (!empty($_POST['bankaccount'])) {
                 $connection->createCommand("UPDATE accounts_item SET projectid=:pid WHERE id=:aid", [':pid' => $id, ':aid' => $_POST['bankaccount']])->execute();
@@ -21467,7 +21493,8 @@ public function actionActivitymusterprocess()
              JOIN projects p ON p.Project_Id = w.project_Id
              JOIN scheduleactivities sa ON sa.activity_id = w.id AND sa.status = 0
              WHERE w.activity_Id = :id
-               AND w.pricing_status = 0",
+               AND w.pricing_status = 0
+               AND p.Project_Delete_Status = 0",
             [':id' => $activityid]
         )->queryColumn();
 
