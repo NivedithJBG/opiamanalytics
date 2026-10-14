@@ -3514,29 +3514,15 @@ if($action=='login')
         window.cwbsEntries[id] = window.cwbsEntries[id] || {};
         window.cwbsEntries[id][$(this).hasClass('cwbs-qty-input') ? 'qty' : 'run'] = $(this).val();
     });
-    // TEMP DEBUG: on-screen log for the Create WBS save (remove once fixed).
-    function cwbsDbg(msg){
-        var box = document.getElementById('cwbs-dbg-box');
-        if(!box){
-            box = document.createElement('div');
-            box.id = 'cwbs-dbg-box';
-            box.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:200999;background:#fff3cd;border:1px solid #d39e00;color:#333;font:12px monospace;padding:6px 8px;max-width:420px;max-height:200px;overflow:auto;border-radius:4px;';
-            document.body.appendChild(box);
-        }
-        box.innerHTML += '<div>' + new Date().toLocaleTimeString() + ' ' + $('<div>').text(msg).html() + '</div>';
-    }
     function cwbsRestoreEntries(){
-        var q = 0, r = 0, n = 0;
         $('#cwbs-tbody .cwbs-qty-input').each(function(){
-            n++;
             var e = window.cwbsEntries[$(this).data('actid')];
-            if (e && e.qty !== undefined && $(this).val() === '') { $(this).val(e.qty); q++; }
+            if (e && e.qty !== undefined && $(this).val() === '') $(this).val(e.qty);
         });
         $('#cwbs-tbody .cwbs-runits-input').each(function(){
             var e = window.cwbsEntries[$(this).data('actid')];
-            if (e && e.run !== undefined && $(this).val() === '') { $(this).val(e.run); r++; }
+            if (e && e.run !== undefined && $(this).val() === '') $(this).val(e.run);
         });
-        cwbsDbg('restore: qty rows ' + n + ', qty restored ' + q + ', R.Unit restored ' + r + ', memory ' + JSON.stringify(window.cwbsEntries));
     }
     function cwbsedTaskRowHtml(name, unit, qty, prod, taskId){
         cwbsedTaskRowSeq++;
@@ -3655,7 +3641,6 @@ if($action=='login')
             data: postData,
             success:function(d){
                 $btn.prop('disabled', false);
-                cwbsDbg('save response: ' + JSON.stringify(d));
                 if(d.error === 'No'){
                     cwbsedHide();
                     // Update only the edited row in the Create WBS list, so the
@@ -3670,7 +3655,6 @@ if($action=='login')
             },
             error:function(xhr){
                 $btn.prop('disabled', false);
-                cwbsDbg('save error: HTTP ' + xhr.status + ' ' + (xhr.responseText || '').slice(0, 200));
                 alert('Save failed. Please try again. (' + xhr.status + ')');
             }
         });
