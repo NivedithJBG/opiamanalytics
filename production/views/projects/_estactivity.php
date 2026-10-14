@@ -447,6 +447,9 @@ use app\models\Resources;
                         <label>Project Type <span style="color:red;">*</span></label>
                         <select class="form-control" id="alIowGroupType">
                             <option value="">Select Project Type</option>
+                            <?php foreach (\Yii::$app->db->createCommand("SELECT estworktype_id AS id, estworktype_name AS name FROM estimateworktypes WHERE estworktype_status = 0 ORDER BY sortorder ASC, estworktype_name ASC")->queryAll() as $wt): ?>
+                            <option value="<?php echo (int)$wt['id']; ?>"><?php echo htmlspecialchars($wt['name']); ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="col-md-8">
@@ -468,6 +471,9 @@ use app\models\Resources;
                         <label style="font-size:12px;">Show groups for project type</label>
                         <select class="form-control" id="alIowGroupFilterType">
                             <option value="">All project types</option>
+                            <?php foreach (\Yii::$app->db->createCommand("SELECT estworktype_id AS id, estworktype_name AS name FROM estimateworktypes WHERE estworktype_status = 0 ORDER BY sortorder ASC, estworktype_name ASC")->queryAll() as $wt): ?>
+                            <option value="<?php echo (int)$wt['id']; ?>"><?php echo htmlspecialchars($wt['name']); ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                 </div>
@@ -881,32 +887,9 @@ $(document).on('click', '#alOpenIowGroupPopup', function(){
 });
 $('#alIowGroupPopup').on('shown.bs.modal', function(){
     $('#alIowGroupName').val('');
-    alLoadWorkTypeSelects();
     alLoadIowGroupList();
 });
 
-// Project type dropdowns in the Add IOW Group popup: one for the add form and one
-// for filtering the list below.
-function alLoadWorkTypeSelects(){
-    $.ajax({
-        type: 'POST',
-        url: '<?php echo \yii\helpers\Url::to(["/projectsmain/getwbtypelist"]); ?>',
-        dataType: 'json',
-        success: function(d){
-            var addSel = $('#alIowGroupType'), filSel = $('#alIowGroupFilterType');
-            var addCur = addSel.val(), filCur = filSel.val();
-            addSel.html('<option value="">Select Project Type</option>');
-            filSel.html('<option value="">All project types</option>');
-            (d.items || []).forEach(function(t){
-                var opt = '<option value="' + t.id + '">' + $('<div>').text(t.name).html() + '</option>';
-                addSel.append(opt);
-                filSel.append(opt);
-            });
-            if (addCur) addSel.val(addCur);
-            if (filCur) filSel.val(filCur);
-        }
-    });
-}
 $(document).on('change', '#alIowGroupFilterType', function(){ alLoadIowGroupList(); });
 
 function alLoadIowGroupList(){
