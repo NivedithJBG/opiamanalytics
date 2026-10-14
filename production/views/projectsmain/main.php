@@ -3323,6 +3323,10 @@ if($action=='login')
             data:{ typeId:typeId, iowGroupId:groupId },
             success:function(d){
                 $('#cwbs-loading').hide();
+                // Keep what's already entered (Qty, R.Unit, ticks) across the refresh.
+                var keepQty = {}, keepRun = {}, keepSel = cwbsSelected;
+                $('#cwbs-tbody .cwbs-qty-input').each(function(){ keepQty[$(this).data('actid')] = $(this).val(); });
+                $('#cwbs-tbody .cwbs-runits-input').each(function(){ keepRun[$(this).data('actid')] = $(this).val(); });
                 cwbsSelected = {};
                 $('#cwbs-add-btn').prop('disabled', true);
                 var items = d.items || [];
@@ -3340,6 +3344,13 @@ if($action=='login')
                         + '</tr>';
                 });
                 $('#cwbs-tbody').html(rows);
+                $('#cwbs-tbody .cwbs-qty-input').each(function(){ var v = keepQty[$(this).data('actid')]; if (v !== undefined) $(this).val(v); });
+                $('#cwbs-tbody .cwbs-runits-input').each(function(){ var v = keepRun[$(this).data('actid')]; if (v !== undefined) $(this).val(v); });
+                Object.keys(keepSel).forEach(function(id){
+                    var btn = $('#cwbs-tbody .cwbs-tick-btn[data-actid="' + id + '"]');
+                    if (btn.length) { cwbsSelected[id] = keepSel[id]; btn.addClass('cwbs-selected'); }
+                });
+                $('#cwbs-add-btn').prop('disabled', Object.keys(cwbsSelected).length === 0);
                 $('#cwbs-table').show();
             },
             error:function(){
