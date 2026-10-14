@@ -865,6 +865,24 @@ $(document).on('change', '#estworktypelistss1', function(){
     window.alRefreshActIowGroupDropdown('');
 });
 
+// The first task copies the activity name and unit, until it's typed into by hand.
+// Its Qty/Unit defaults to 1.
+$(document).on('input', '#estactivityname1', function(){
+    var t = $('#alAddActivityPopup .task-name').first();
+    if (!t.val() || t.data('auto')) { t.val(this.value).data('auto', true); }
+});
+$(document).on('input', '#estactivityunit1', function(){
+    var t = $('#alAddActivityPopup .task-unit').first();
+    if (!t.val() || t.data('auto')) { t.val(this.value).data('auto', true); }
+});
+$(document).on('input', '#alAddActivityPopup .task-name, #alAddActivityPopup .task-unit', function(){
+    $(this).data('auto', false);
+});
+$(document).on('shown.bs.modal', '#alAddActivityPopup', function(){
+    var q = $('#alAddActivityPopup .task-qty').first();
+    if (!q.val()) { q.val(1); }
+});
+
 /* Edit handler is in estactivity.js alongside the delete handler */;
 
 /* Intercept estactivity.js showing .add-activity-form (edit flow) → open modal instead */
