@@ -1254,7 +1254,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     for (var _ni = 0; _ni < _nameHdrs.length; _ni++) {
       var _nr = _nameHdrs[_ni].closest('tr');
       if (_nr && _nr.querySelector('.gtaskheading')) {
-        _nameHdrs[_ni].textContent = 'Activities';
+        _nameHdrs[_ni].textContent = '';
         _nameHdrs[_ni].style.cssText = 'font-weight:600;font-size:11px;text-align:left;padding-left:4px;';
         break;
       }
