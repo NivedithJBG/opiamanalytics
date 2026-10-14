@@ -446,9 +446,14 @@ use app\models\Resources;
                     <div class="col-md-2"></div>
                     <div class="col-md-8">
                         <label>Project Type <span style="color:red;">*</span></label>
-                        <select class="form-control" id="alIowGroupType" style="margin-bottom:8px;">
-                            <option value="">Select Project Type</option>
-                        </select>
+                        <div class="input-group" style="margin-bottom:8px;">
+                            <select class="form-control" id="alIowGroupType">
+                                <option value="">Select Project Type</option>
+                            </select>
+                            <span class="input-group-btn">
+                                <button type="button" class="btn btn-primary" style="visibility:hidden;"><span class="icon-check"></span> Add</button>
+                            </span>
+                        </div>
                         <label>IOW Group</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="alIowGroupName" placeholder="IOW Group">
