@@ -3503,6 +3503,26 @@ if($action=='login')
     }
     function cwbsedHide(){
         $('#cwbsed-popup').removeClass('cwbsed-open');
+        cwbsRestoreEntries();
+    }
+    // Qty and R.Unit typed on the Create WBS list, kept in memory per activity so
+    // they can be put back if the list's inputs are cleared (e.g. after the Edit
+    // Activity popup is used).
+    window.cwbsEntries = window.cwbsEntries || {};
+    $(document).on('input', '#cwbs-tbody .cwbs-qty-input, #cwbs-tbody .cwbs-runits-input', function(){
+        var id = $(this).data('actid');
+        window.cwbsEntries[id] = window.cwbsEntries[id] || {};
+        window.cwbsEntries[id][$(this).hasClass('cwbs-qty-input') ? 'qty' : 'run'] = $(this).val();
+    });
+    function cwbsRestoreEntries(){
+        $('#cwbs-tbody .cwbs-qty-input').each(function(){
+            var e = window.cwbsEntries[$(this).data('actid')];
+            if (e && e.qty !== undefined && $(this).val() === '') $(this).val(e.qty);
+        });
+        $('#cwbs-tbody .cwbs-runits-input').each(function(){
+            var e = window.cwbsEntries[$(this).data('actid')];
+            if (e && e.run !== undefined && $(this).val() === '') $(this).val(e.run);
+        });
     }
     function cwbsedTaskRowHtml(name, unit, qty, prod, taskId){
         cwbsedTaskRowSeq++;
