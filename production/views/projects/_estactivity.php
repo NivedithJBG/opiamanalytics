@@ -445,6 +445,10 @@ use app\models\Resources;
                 <div class="row">
                     <div class="col-md-2"></div>
                     <div class="col-md-8">
+                        <label>Project Type <span style="color:red;">*</span></label>
+                        <select class="form-control" id="alIowGroupType" style="margin-bottom:8px;">
+                            <option value="">Select Project Type</option>
+                        </select>
                         <label>IOW Group</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="alIowGroupName" placeholder="IOW Group">
@@ -457,6 +461,14 @@ use app\models\Resources;
                     <div class="col-md-2"></div>
                 </div>
                 <hr>
+                <div class="row" style="margin-bottom:8px;">
+                    <div class="col-md-4 col-md-offset-4">
+                        <label style="font-size:12px;">Show groups for project type</label>
+                        <select class="form-control" id="alIowGroupFilterType">
+                            <option value="">All project types</option>
+                        </select>
+                    </div>
+                </div>
                 <div id="alIowGroupListContainer" class="row"></div>
             </div>
             <div class="modal-footer">
@@ -867,14 +879,41 @@ $(document).on('click', '#alOpenIowGroupPopup', function(){
 });
 $('#alIowGroupPopup').on('shown.bs.modal', function(){
     $('#alIowGroupName').val('');
+    alLoadWorkTypeSelects();
     alLoadIowGroupList();
 });
+
+// Project type dropdowns in the Add IOW Group popup: one for the add form and one
+// for filtering the list below.
+function alLoadWorkTypeSelects(){
+    $.ajax({
+        type: 'POST',
+        url: '<?php echo \yii\helpers\Url::to(["/projectsmain/getwbtypelist"]); ?>',
+        dataType: 'json',
+        success: function(d){
+            var addSel = $('#alIowGroupType'), filSel = $('#alIowGroupFilterType');
+            var addCur = addSel.val(), filCur = filSel.val();
+            addSel.html('<option value="">Select Project Type</option>');
+            filSel.html('<option value="">All project types</option>');
+            (d.items || []).forEach(function(t){
+                var opt = '<option value="' + t.id + '">' + $('<div>').text(t.name).html() + '</option>';
+                addSel.append(opt);
+                filSel.append(opt);
+            });
+            if (addCur) addSel.val(addCur);
+            if (filCur) filSel.val(filCur);
+        }
+    });
+}
+$(document).on('change', '#alIowGroupFilterType', function(){ alLoadIowGroupList(); });
 
 function alLoadIowGroupList(){
     $('#alIowGroupListContainer').html('<div style="padding:8px 15px;color:#999;">Loading…</div>');
     $.ajax({
+        type: 'POST',
         url: '<?php echo \yii\helpers\Url::to(["/projects/getiowgrouplist"]); ?>',
         dataType: 'json',
+        data: { worktype_id: $('#alIowGroupFilterType').val() || 0 },
         success: function(data){
             if(data.result){
                 $('#alIowGroupListContainer').html(data.result);
@@ -948,6 +987,8 @@ $(document).on('click', '.al-delete-iowgroup', function(e){
 
 $(document).on('click', '#alSaveIowGroup', function(){
     var name = $('#alIowGroupName').val().trim();
+    var typeId = $('#alIowGroupType').val();
+    if(!typeId){ $('#alIowGroupErr').html('Select a project type').show(); return; }
     if(!name){ $('#alIowGroupErr').html('Enter IOW group name').show(); return; }
     $('#alIowGroupErr').hide();
     var btn = $(this).attr('disabled', true);
@@ -955,7 +996,7 @@ $(document).on('click', '#alSaveIowGroup', function(){
         type: 'POST',
         url: '<?php echo \yii\helpers\Url::to(["/workgroups1/iowgroupcreate"]); ?>',
         dataType: 'json',
-        data: { iowgroupname: name },
+        data: { iowgroupname: name, worktype_id: typeId },
         success: function(data){
             btn.attr('disabled', false);
             if(data.error === 'No'){

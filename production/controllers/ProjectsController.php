@@ -25023,9 +25023,19 @@ public function actionActivitymusterprocess()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         try {
-            $rows = \Yii::$app->db->createCommand(
-                "SELECT id, name FROM iow_groups WHERE status = 0 ORDER BY name ASC"
-            )->queryAll();
+            // Optional project type filter: only groups mapped to that type
+            // (iow_group_worktypes). Without it, all active groups are returned.
+            $worktypeId = (int)\Yii::$app->request->post('worktype_id', 0);
+            $rows = $worktypeId > 0
+                ? \Yii::$app->db->createCommand(
+                    "SELECT g.id, g.name FROM iow_groups g
+                     JOIN iow_group_worktypes m ON m.iow_group_id = g.id
+                     WHERE g.status = 0 AND m.worktype_id = :w ORDER BY g.name ASC",
+                    [':w' => $worktypeId]
+                )->queryAll()
+                : \Yii::$app->db->createCommand(
+                    "SELECT id, name FROM iow_groups WHERE status = 0 ORDER BY name ASC"
+                )->queryAll();
             /* Also return items array for dropdowns (alRefreshIowGroupDropdown) */
             $items = [];
             if (empty($rows)) {

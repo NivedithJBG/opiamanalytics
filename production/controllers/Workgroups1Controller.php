@@ -490,6 +490,13 @@ class Workgroups1Controller extends \yii\web\Controller
 
     public function actionIowgroupcreate()
     {
+        // The project type (work type) is required: it's stored in iow_group_worktypes
+        // so the group can be picked under that project type.
+        $worktypeId = (int)($_POST['worktype_id'] ?? 0);
+        if($worktypeId <= 0){
+            return json_encode(array('error'=>'Yes','errortext'=>'Select a project type'));
+        }
+
         $iowGroup = IowGroup::find()->where(['name' => $_POST['iowgroupname']])->one();
         if($iowGroup){
             $arr = array('error'=>'Yes','errortext'=>'IOW group already exists!');
@@ -502,6 +509,10 @@ class Workgroups1Controller extends \yii\web\Controller
             $model->name=$_POST['iowgroupname'];
             $model->project_id = 0;
             if($model->save(false)):
+                \Yii::$app->db->createCommand(
+                    "INSERT IGNORE INTO iow_group_worktypes (iow_group_id, worktype_id) VALUES (:g, :w)",
+                    [':g' => (int)$model->id, ':w' => $worktypeId]
+                )->execute();
                 $arr = array('error'=>'No');
                 return json_encode($arr);
             else:

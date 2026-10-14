@@ -322,10 +322,8 @@ class ProjectsmainController extends Controller
         if (!$typeId) return ['items' => []];
         $rows = \Yii::$app->db->createCommand(
             "SELECT g.id, g.name FROM iow_groups g
-             WHERE g.status = 0
-               AND g.id IN (SELECT DISTINCT ea.iow_group_id FROM estimateactivities ea
-                            WHERE ea.activity_status = 0 AND ea.work_type = :typeId
-                              AND ea.iow_group_id IS NOT NULL)
+             JOIN iow_group_worktypes m ON m.iow_group_id = g.id
+             WHERE g.status = 0 AND m.worktype_id = :typeId
              ORDER BY g.name ASC",
             [':typeId' => $typeId]
         )->queryAll();
