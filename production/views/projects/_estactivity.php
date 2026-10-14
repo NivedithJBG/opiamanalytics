@@ -443,17 +443,13 @@ use app\models\Resources;
             </div>
             <div class="modal-body">
                 <div class="row">
-                    <div class="col-md-2"></div>
-                    <div class="col-md-8">
+                    <div class="col-md-4">
                         <label>Project Type <span style="color:red;">*</span></label>
-                        <div class="input-group" style="margin-bottom:8px;">
-                            <select class="form-control" id="alIowGroupType">
-                                <option value="">Select Project Type</option>
-                            </select>
-                            <span class="input-group-btn">
-                                <button type="button" class="btn btn-primary" style="visibility:hidden;"><span class="icon-check"></span> Add</button>
-                            </span>
-                        </div>
+                        <select class="form-control" id="alIowGroupType">
+                            <option value="">Select Project Type</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8">
                         <label>IOW Group</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="alIowGroupName" placeholder="IOW Group">
@@ -461,9 +457,10 @@ use app\models\Resources;
                                 <button type="button" class="btn btn-primary" id="alSaveIowGroup"><span class="icon-check"></span> Add</button>
                             </span>
                         </div>
+                    </div>
+                    <div class="col-md-12">
                         <span class="error" id="alIowGroupErr" style="color:red;display:none;"></span>
                     </div>
-                    <div class="col-md-2"></div>
                 </div>
                 <hr>
                 <div class="row" style="margin-bottom:8px;">
