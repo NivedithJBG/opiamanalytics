@@ -843,9 +843,13 @@ $(document).on('click', '#addestactivity', function(){
    skipped, leaving the IOW Group field blank on every edit. */
 window.alRefreshActIowGroupDropdown = function(selectVal){
     var cur = (selectVal !== undefined) ? selectVal : $('#actIowGroupId').val();
+    // Only IOW groups of the selected Project Type (the work type dropdown in this form).
+    var worktypeId = $('#estworktypelistss1').val() || 0;
     $.ajax({
+        type: 'POST',
         url: '<?php echo \yii\helpers\Url::to(["/projects/getiowgrouplist"]); ?>',
         dataType: 'json',
+        data: { worktype_id: worktypeId },
         success: function(data){
             var sel = $('#actIowGroupId');
             sel.html('<option value="">Select IOW Group</option>');
@@ -856,6 +860,10 @@ window.alRefreshActIowGroupDropdown = function(selectVal){
         }
     });
 };
+// Changing the Project Type clears the IOW Group and lists only that type's groups.
+$(document).on('change', '#estworktypelistss1', function(){
+    window.alRefreshActIowGroupDropdown('');
+});
 
 /* Edit handler is in estactivity.js alongside the delete handler */;
 
