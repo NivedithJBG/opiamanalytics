@@ -3628,9 +3628,12 @@ if($action=='login')
                 $btn.prop('disabled', false);
                 if(d.error === 'No'){
                     cwbsedHide();
-                    // Refresh the Create WBS list behind it so the edited
-                    // name/unit is reflected immediately.
-                    $('#cwbs-iow-group').trigger('change');
+                    // Update only the edited row in the Create WBS list, so the
+                    // Qty/R.Unit/ticks entered on the other rows are untouched.
+                    var $ed = $('#cwbs-tbody tr[data-actid="' + actId + '"]');
+                    $ed.find('.cwbs-act-name').html($('<div>').text(actName).html());
+                    $ed.find('.cwbs-unit-td').html($('<div>').text(actUnit).html());
+                    $ed.find('.cwbs-edit-btn, .cwbs-tick-btn').attr('data-actname', actName).data('actname', actName);
                 } else {
                     alert('Save failed: ' + (d.msg || 'Unknown error'));
                 }
