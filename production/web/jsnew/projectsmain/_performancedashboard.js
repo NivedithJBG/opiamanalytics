@@ -258,13 +258,56 @@ function _cfFetchTarget(metricKey, onOk){
 // fresh load, but a click that arrives while a load is still in
 // progress is ignored rather than piling up another concurrent batch.
 var _cfLoading = false;
+// Three separate Cashflow windows, side by side, opened together by the Cashflow
+// button. Each has its own title bar and close button. The panels are moved from the
+// old single window into them; their IDs are kept, so the drawing code is unchanged.
+var _cfSegWins = [
+    { id: 'cf-win-value', title: 'Value Drivers',       cols: 1, head: '#4a4f57', left: '2vw',  width: '22vw', panels: [1] },
+    { id: 'cf-win-c2c',   title: 'Cash-to-Cash Cycle',  cols: 2, head: '#4a4f57', left: '26vw', width: '36vw', panels: [3, 4] },
+    { id: 'cf-win-roi',   title: 'ROI and Free Cash',   cols: 2, head: '#1a0a2e', left: '64vw', width: '34vw', panels: [6, 7] }
+];
+function cfBuildSegmentWindows(){
+    if (document.getElementById('cf-win-value')) return;
+    var panels = $('#cf-grid > .panel').toArray();
+    _cfSegWins.forEach(function(w){
+        $('body').append(
+            '<div id="' + w.id + '" class="cf-seg-win" style="display:none;position:fixed;top:12vh;left:' + w.left + ';width:' + w.width + ';height:72vh;min-width:240px;min-height:300px;background:#f0f2f7;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.7);flex-direction:column;overflow:hidden;z-index:100200;">'
+            + '<div class="cf-seg-hdr" style="flex:none;display:flex;align-items:center;justify-content:space-between;background:' + w.head + ';color:#fff;padding:6px 10px;cursor:move;user-select:none;font-family:Nunito,Arial,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;">'
+            + '<span>' + w.title + '</span>'
+            + '<button type="button" class="cf-seg-close" data-win="' + w.id + '" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;padding:0 3px;">&times;</button>'
+            + '</div>'
+            + '<div class="cf-seg-body" style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(' + w.cols + ',1fr);grid-template-rows:repeat(3,1fr);"></div>'
+            + '</div>'
+        );
+    });
+    // Move each panel into its window, renumbering its column from 1.
+    panels.forEach(function(p){
+        var col = parseInt(p.style.gridColumnStart, 10);
+        var row = parseInt(p.style.gridRowStart, 10);
+        var w = _cfSegWins.filter(function(x){ return x.panels.indexOf(col) !== -1; })[0];
+        if (!w) return;
+        p.style.gridColumn = String(w.panels.indexOf(col) + 1);
+        p.style.gridRow = String(row);
+        $('#' + w.id + ' .cf-seg-body').append(p);
+    });
+    // The C2C legend (T / A days) sits in the Cash-to-Cash window header.
+    var legend = document.getElementById('cf-c2c-legend');
+    if (legend) $('#cf-win-c2c .cf-seg-hdr').append(legend);
+    _cfSegWins.forEach(function(w){
+        var $win = $('#' + w.id);
+        $win.draggable({ handle: '.cf-seg-hdr', containment: 'window', scroll: false });
+        $win.resizable({ minWidth: 240, minHeight: 300, handles: 'all' });
+    });
+}
 $(document).on('click', '.cashflow-dashboard-btn', function(e){
     e.preventDefault();
-    $('#cf-modal, #cf-bk').addClass('cf-open');
-    if (typeof window.popupBringToFront === 'function') window.popupBringToFront('cf-modal');
-    if (typeof window.popupCascade === 'function') window.popupCascade('cf-modal');
-    if (typeof window.popupFitPortrait === 'function') window.popupFitPortrait('cf-modal');
+    cfBuildSegmentWindows();
+    _cfSegWins.forEach(function(w){ $('#' + w.id).css('display', 'flex'); });
     if (!_cfLoading) { renderCfBars(); }
+});
+// Each window closes only itself.
+$(document).on('click', '.cf-seg-close', function(){
+    $('#' + $(this).data('win')).css('display', 'none');
 });
 // Only the X button closes this — clicking elsewhere (or another dashboard
 // button) must never dismiss an already-open dashboard.

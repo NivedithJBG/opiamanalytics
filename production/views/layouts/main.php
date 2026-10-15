@@ -4098,8 +4098,9 @@ if($action=='login')
 #cf-body{flex:1;min-height:0;overflow:hidden;padding:6px 10px 0;display:flex;flex-direction:column;background:#e2e4e8}
 #cf-grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 26px 1fr 1fr 26px 1fr 1fr;grid-template-rows:repeat(3, 1fr);row-gap:0;column-gap:0}
 #cf-subhdr{display:grid !important;grid-template-columns:1fr 26px 1fr 1fr 26px 1fr 1fr}
-#cf-modal .ph{background:#5a5a5a;font-size:11px;}
-#cf-modal .panel{border-right:3px solid #a0aec0}
+#cf-modal .ph,.cf-seg-win .ph{background:#5a5a5a;font-size:11px;}
+#cf-modal .panel,.cf-seg-win .panel{border-right:3px solid #a0aec0}
+.cf-seg-win.cf-seg-on{display:flex}
 
 </style>
 <div id="cd-bk"></div>
