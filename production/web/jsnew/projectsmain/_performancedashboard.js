@@ -290,7 +290,7 @@ var _cfLoadGen = 0;
 // Project Duration dial: the planned duration sits at the centre (yellow marker at
 // the top), the needle shows the actual (forecast) duration. Actual above target is
 // orange-red, at or below target blue-green, as on the other dials.
-function _cfDurationDialSvg(target, actual){
+function _cfDurationDialSvg(target, actual, centerLabel){
     var maxV = target > 0 ? target * 2 : 100;
     var f = Math.max(0, Math.min(1, actual / maxV));
     var cx = 105, cy = 82, r = 76, sw = 15;
@@ -315,19 +315,33 @@ function _cfDurationDialSvg(target, actual){
         + arc(0, 1, '#3a4a5f') + gapPath + targetLine
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
-        + '<text x="' + cx + '" y="' + (cy - 22) + '" text-anchor="middle" font-size="22" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + actual + ' d</text>'
+        + '<text x="' + cx + '" y="' + (cy - 22) + '" text-anchor="middle" font-size="22" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + centerLabel + '</text>'
         + '</svg>';
     return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
 }
 
+// Dial plus its labels row, used by all three VALUE DRIVERS panels.
+function _cfValueDialHtml(target, actual, centerLabel, targetLabel, actualLabel){
+    return _cfDurationDialSvg(target, actual, centerLabel)
+        + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
+        + '<span style="font-size:13px;color:#1a2540;font-weight:700;">' + actualLabel + '</span>'
+        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>' + targetLabel + '</span>'
+        + '</div>';
+}
+
 // VALUE DRIVERS (left segment of the Cashflow dashboard): Project Duration, Project
-// Cost and Procurement.
+// Cost and Procurement. All three are dials.
 function renderCfValueDrivers(){
     var gen = _cfLoadGen;
     var durEl  = document.getElementById('cf-value-duration');
     var costEl = document.getElementById('cf-value-cost');
     var procEl = document.getElementById('cf-value-procurement');
-    if (procEl) procEl.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No data yet</div>';
+    if (procEl) {
+        procEl.style.display = 'flex';
+        procEl.style.flexDirection = 'column';
+        procEl.style.justifyContent = 'center';
+        procEl.innerHTML = _cfValueDialHtml(0, 0, '-', 'Target: -', 'Actual: -');
+    }
     _cfQueueAjax({
         type: 'POST', url: '../projectsmain/cfprojectduration', dataType: 'json',
         success: function(d){
@@ -336,22 +350,19 @@ function renderCfValueDrivers(){
             durEl.style.display = 'flex';
             durEl.style.flexDirection = 'column';
             durEl.style.justifyContent = 'center';
-            durEl.innerHTML = _cfDurationDialSvg(t, a)
-                + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
-                + '<span style="font-size:13px;color:#1a2540;font-weight:700;">Actual: ' + a + ' d</span>'
-                + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Target: ' + t + ' d</span>'
-                + '</div>';
+            durEl.innerHTML = _cfValueDialHtml(t, a, a + ' d', 'Target: ' + t + ' d', 'Actual: ' + a + ' d');
         }
     });
     _cfQueueAjax({
         type: 'POST', url: '../projectsmain/cfprojectcost', dataType: 'json',
         success: function(d){
             if (gen !== _cfLoadGen || !d || d.error !== 'No' || !costEl) return;
-            var lakhs = (+d.estimated || 0) / 100000;
-            costEl.innerHTML = '<div style="padding:8px 10px;font-family:Barlow Condensed,sans-serif;">'
-                + '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#1a2540;"><span>Estimated</span><span>' + lakhs.toFixed(2) + ' Lakhs</span></div>'
-                + '<div style="display:flex;justify-content:space-between;font-size:12px;color:#5a6e8c;margin-top:4px;"><span>Actual</span><span>Using estimate</span></div>'
-                + '</div>';
+            // Actual cost is taken as the estimate until cost of work done is wired in.
+            var est = (+d.estimated || 0) / 100000;
+            costEl.style.display = 'flex';
+            costEl.style.flexDirection = 'column';
+            costEl.style.justifyContent = 'center';
+            costEl.innerHTML = _cfValueDialHtml(est, est, est.toFixed(2) + ' L', 'Target: ' + est.toFixed(2) + ' L', 'Actual: ' + est.toFixed(2) + ' L');
         }
     });
 }
