@@ -4096,8 +4096,8 @@ if($action=='login')
 #cf-close{background:none;border:none;color:#fff;opacity:.85;font-size:18px;line-height:1;cursor:pointer;padding:0 3px;margin-left:6px}
 #cf-close:hover{opacity:1}
 #cf-body{flex:1;min-height:0;overflow:hidden;padding:6px 10px 0;display:flex;flex-direction:column;background:#e2e4e8}
-#cf-grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 14px 1fr 1fr 14px 1fr 1fr;grid-template-rows:repeat(3, 1fr);row-gap:0;column-gap:0}
-#cf-subhdr{display:grid !important;grid-template-columns:1fr 14px 1fr 1fr 14px 1fr 1fr}
+#cf-grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 26px 1fr 1fr 26px 1fr 1fr;grid-template-rows:repeat(3, 1fr);row-gap:0;column-gap:0}
+#cf-subhdr{display:grid !important;grid-template-columns:1fr 26px 1fr 1fr 26px 1fr 1fr}
 #cf-modal .ph{background:#5a5a5a;font-size:11px;}
 #cf-modal .panel{border-right:3px solid #a0aec0}
 
