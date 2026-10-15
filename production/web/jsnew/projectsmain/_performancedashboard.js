@@ -506,83 +506,196 @@ function renderCfValueDrivers(){
     });
 }
 
-// Project Duration dial tooltip: snapshot of the ongoing activities (scheduled
-// window covers today). Hover shows it; click pins it open until closed.
+// Project Duration dial tooltip: a small Gantt snapshot of the ongoing activities
+// (due to start today or already started, not completed). Click anywhere in the
+// Project Duration panel to open or close it; click an activity bar for its metrics.
 var _cfDayMs = 86400000;
-var _cfDurTipPinned = false, _cfDurTipTimer = null;
-var _cfOngoingCache = null, _cfOngoingGen = -1;
+var _cfMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var _cfDurTipOpen = false, _cfOngoingCache = null, _cfOngoingGen = -1;
+var _cfTipActs = [], _cfTipToday = '';
 
-function _cfEsc(s){ return $('<div>').text(s || '').html(); }
-function _cfDayT(s){ var p = String(s).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).getTime(); }
+function _cfEsc(s){ return $('<div>').text(s == null ? '' : String(s)).html(); }
+function _cfDayT(s){ var p = String(s).slice(0, 10).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).getTime(); }
+function _cfFmtD(s){ if (!s || s === '0000-00-00') return '-'; var p = String(s).slice(0, 10).split('-'); return p[2] + '-' + p[1] + '-' + p[0]; }
+function _cfFmtN(v){ v = +v || 0; return (+v.toFixed(2)).toLocaleString('en-IN'); }
 
 function _cfDurTipEl(){
     var t = document.getElementById('cf-gantt-tip');
     if (!t) {
         t = document.createElement('div');
         t.id = 'cf-gantt-tip';
-        t.style.cssText = 'display:none;position:fixed;z-index:100300;background:#fff;color:#111;border:1px solid #081142;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.25);padding:8px 10px;width:340px;max-width:92vw;box-sizing:border-box;font-family:Nunito,Arial,sans-serif;font-size:12px;';
+        t.style.cssText = 'display:none;position:fixed;z-index:100300;background:#fff;color:#111;border:1px solid #081142;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.25);padding:10px 12px;width:460px;max-width:94vw;box-sizing:border-box;font-family:Nunito,Arial,sans-serif;font-size:12px;';
         document.body.appendChild(t);
     }
     return t;
 }
 
 function _cfPlaceDurTip(){
-    var anchor = document.querySelector('#cf-value-duration svg');
+    var anchor = document.getElementById('cf-value-duration');
     if (!anchor) return;
     var r = anchor.getBoundingClientRect();
     var t = _cfDurTipEl();
     var w = t.offsetWidth;
-    var left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8));
-    t.style.left = left + 'px';
-    t.style.top = (r.bottom - 4) + 'px';
+    t.style.left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8)) + 'px';
+    t.style.top = (r.bottom + 6) + 'px';
 }
 
-function _cfOngoingHtml(d, pinned){
-    var acts = d.activities || [];
-    var closeBtn = pinned ? '<button id="cf-gantt-tip-x" type="button" style="float:right;border:0;background:none;font-size:18px;line-height:1;cursor:pointer;color:#081142;">&times;</button>' : '';
-    var head = closeBtn + '<div style="font-weight:700;color:#081142;margin-bottom:6px;">Ongoing activities &middot; ' + _cfEsc(d.today) + '</div>';
-    if (!acts.length) return head + '<div style="color:#666;">No activities scheduled for today.</div>';
+// Actual work end (days from actual start + projected duration - 1), null if not started.
+function _cfActEnd(a){
+    var k = a.kpi || {};
+    if (!(k.actual_qty > 0) || !k.act_start_date) return null;
+    var pd = Math.max(1, +k.projected_duration || +k.b_duration || 1);
+    return _cfDayT(k.act_start_date) + (pd - 1) * _cfDayMs;
+}
 
-    var minS = Infinity, maxE = -Infinity;
-    acts.forEach(function(a){ minS = Math.min(minS, _cfDayT(a.start)); maxE = Math.max(maxE, _cfDayT(a.end)); });
-    var span = Math.max(1, Math.round((maxE - minS) / _cfDayMs) + 1);
-    function pos(t){ return (t - minS) / _cfDayMs / span * 100; }
-    function wid(t1, t2){ return Math.max(0, (t2 - t1) / _cfDayMs + 1) / span * 100; }
-    var todayT = _cfDayT(d.today);
-    var todayPct = Math.max(0, Math.min(100, pos(todayT) + 0.5 / span * 100));
+// Shared time scale for the snapshot rows: spans all planned/actual dates and today.
+function _cfTimeline(acts, todayT){
+    var minT = todayT, maxT = todayT;
+    acts.forEach(function(a){
+        var k = a.kpi || {};
+        minT = Math.min(minT, _cfDayT(a.start));
+        maxT = Math.max(maxT, _cfDayT(a.end));
+        if (k.actual_qty > 0 && k.act_start_date) minT = Math.min(minT, _cfDayT(k.act_start_date));
+        var ae = _cfActEnd(a);
+        if (ae) maxT = Math.max(maxT, ae);
+    });
+    var span = Math.round((maxT - minT) / _cfDayMs) + 2;
+    var tl = {
+        pos: function(t){ return Math.round((t - minT) / _cfDayMs) / span * 100; },
+        wid: function(t1, t2){ return Math.max(0, Math.round((t2 - t1) / _cfDayMs) + 1) / span * 100; },
+        span: span,
+        grid: []
+    };
+    var g = new Date(minT);
+    g.setDate(g.getDate() + ((8 - g.getDay()) % 7));
+    for (; g.getTime() <= maxT; g.setDate(g.getDate() + 7)) tl.grid.push(g.getTime());
+    return tl;
+}
 
-    var rows = acts.map(function(a){
-        var s = _cfDayT(a.start), e = _cfDayT(a.end);
-        var left = Math.max(0, pos(s)), width = wid(s, e);
-        var actual = '';
-        if (a.a_start) {
-            var a0 = _cfDayT(a.a_start);
-            actual = '<div style="position:absolute;top:4px;height:4px;background:#081142;left:' + Math.max(0, pos(a0)).toFixed(2) + '%;width:' + Math.min(wid(a0, todayT), 100).toFixed(2) + '%;"></div>';
-        }
-        return '<div style="display:flex;align-items:center;gap:8px;margin:5px 0;">'
-            + '<div title="' + _cfEsc(a.name) + '" style="flex:none;width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _cfEsc(a.name) + '</div>'
-            + '<div style="position:relative;flex:1;height:12px;background:#e5ebf3;border-radius:2px;">'
-            + '<div style="position:absolute;top:0;height:12px;background:#2ba899;border-radius:2px;left:' + left.toFixed(2) + '%;width:' + width.toFixed(2) + '%;"></div>'
-            + actual
-            + '<div style="position:absolute;top:-2px;bottom:-2px;width:2px;background:#d9480f;left:' + todayPct.toFixed(2) + '%;"></div>'
-            + '</div></div>';
+function _cfGridLines(tl){
+    return tl.grid.map(function(t){
+        return '<div style="position:absolute;top:0;bottom:0;width:1px;background:#d5dce8;left:' + tl.pos(t).toFixed(2) + '%;"></div>';
     }).join('');
-
-    var legend = '<div style="margin-top:8px;font-size:11px;color:#555;">'
-        + '<span style="display:inline-block;width:10px;height:6px;background:#2ba899;vertical-align:middle;"></span> Planned &nbsp; '
-        + '<span style="display:inline-block;width:10px;height:4px;background:#081142;vertical-align:middle;"></span> Actual start to today &nbsp; '
-        + '<span style="display:inline-block;width:2px;height:10px;background:#d9480f;vertical-align:middle;"></span> Today</div>';
-    return head + rows + legend;
 }
 
-function _cfShowDurTip(){
+function _cfOngoingHtml(d){
+    var acts = _cfTipActs;
+    var todayT = _cfDayT(d.today);
+    var head = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+        + '<span style="font-weight:700;color:#081142;font-size:13px;">Ongoing activities &middot; ' + _cfEsc(d.today) + '</span>'
+        + '<button id="cf-gantt-tip-x" type="button" title="Close" style="border:0;background:none;font-size:18px;line-height:1;cursor:pointer;color:#081142;padding:0 2px;">&times;</button></div>';
+    if (!acts.length) return head + '<div style="color:#666;">No ongoing activities today.</div>';
+
+    var tl = _cfTimeline(acts, todayT);
+    var labels = tl.grid.map(function(t){
+        var dt = new Date(t);
+        return '<span style="position:absolute;top:0;left:' + tl.pos(t).toFixed(2) + '%;transform:translateX(-50%);font-size:9px;color:#5a6e8c;white-space:nowrap;">' + dt.getDate() + ' ' + _cfMonths[dt.getMonth()] + '</span>';
+    }).join('');
+    var html = head
+        + '<div style="display:flex;gap:8px;margin-bottom:2px;"><div style="flex:none;width:150px;"></div>'
+        + '<div style="position:relative;flex:1;height:12px;">' + labels + '</div></div>';
+
+    acts.forEach(function(a, i){
+        var s = _cfDayT(a.start), e = _cfDayT(a.end), k = a.kpi || {};
+        var started = k.actual_qty > 0 && !!k.act_start_date;
+        var ae = _cfActEnd(a);
+        var plan = '<div style="position:absolute;top:3px;height:8px;border-radius:2px;background:#2ba899;left:' + tl.pos(s).toFixed(2) + '%;width:' + tl.wid(s, e).toFixed(2) + '%;"></div>';
+        var act = '';
+        function seg(t1, t2, col){
+            if (t2 < t1) return '';
+            return '<div style="position:absolute;top:13px;height:8px;border-radius:2px;background:' + col + ';left:' + tl.pos(t1).toFixed(2) + '%;width:' + tl.wid(t1, t2).toFixed(2) + '%;"></div>';
+        }
+        if (started) {
+            var as = _cfDayT(k.act_start_date);
+            act += seg(s, as - _cfDayMs, '#ff2800');          // start delay (planned start to actual start)
+            act += seg(as, Math.min(ae, e), k.completed ? '#00842e' : '#081142');
+            if (ae > e) act += seg(e + _cfDayMs, ae, '#ff2800'); // work running past planned end
+        } else if (s < todayT) {
+            act += seg(s, todayT, '#ff2800');                    // due to start, not started: start delay
+        }
+        var todayPct = (tl.pos(todayT) + 50 / tl.span).toFixed(2);
+        html += '<div class="cf-gt-row" data-idx="' + i + '" style="display:flex;gap:8px;align-items:center;padding:3px 0;border-top:1px solid #eef2f8;cursor:pointer;">'
+            + '<div title="' + _cfEsc(a.name) + '" style="flex:none;width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1a2540;">' + _cfEsc(a.name) + '</div>'
+            + '<div style="position:relative;flex:1;height:24px;background:#f5f7fb;border-radius:2px;overflow:hidden;">'
+            + _cfGridLines(tl) + plan + act
+            + '<div style="position:absolute;top:0;bottom:0;width:2px;background:#1a2540;left:' + todayPct + '%;"></div>'
+            + '</div></div>';
+    });
+
+    html += '<div style="margin-top:8px;font-size:11px;color:#555;">'
+        + '<span style="display:inline-block;width:10px;height:6px;background:#2ba899;vertical-align:middle;"></span> Planned &nbsp; '
+        + '<span style="display:inline-block;width:10px;height:6px;background:#081142;vertical-align:middle;"></span> Actual &nbsp; '
+        + '<span style="display:inline-block;width:10px;height:6px;background:#00842e;vertical-align:middle;"></span> Completed &nbsp; '
+        + '<span style="display:inline-block;width:10px;height:6px;background:#ff2800;vertical-align:middle;"></span> Over target / start delay &nbsp; '
+        + '<span style="display:inline-block;width:2px;height:10px;background:#1a2540;vertical-align:middle;"></span> Today</div>';
+    return html;
+}
+
+function _cfRenderTip(d){
+    _cfTipToday = d.today;
+    _cfTipActs = (d.activities || []).filter(function(a){ return a.start && a.end; });
+    var t = _cfDurTipEl();
+    t.innerHTML = _cfOngoingHtml(d);
+    _cfPlaceDurTip();
+}
+
+function _cfHideActPop(){
+    var p = document.getElementById('cf-act-pop');
+    if (p) p.style.display = 'none';
+}
+
+// Activity metrics popup: opened by clicking an activity bar in the snapshot.
+function _cfShowActPop(i){
+    var a = _cfTipActs[i];
+    if (!a) return;
+    var k = a.kpi || {};
+    var pop = document.getElementById('cf-act-pop');
+    if (!pop) {
+        pop = document.createElement('div');
+        pop.id = 'cf-act-pop';
+        pop.style.cssText = 'display:none;position:fixed;z-index:100310;background:#fff;color:#111;border:1px solid #081142;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.25);padding:10px 12px;width:300px;box-sizing:border-box;font-family:Nunito,Arial,sans-serif;font-size:12px;';
+        document.body.appendChild(pop);
+    }
+    var unit = k.unit ? ' ' + _cfEsc(k.unit) : '';
+    var status = k.completed ? 'Completed' : (k.actual_qty > 0 ? 'In progress' : (a.start < _cfTipToday ? 'Start delayed' : 'Not started'));
+    var rows = [
+        ['Planned start', _cfFmtD(a.start)],
+        ['Planned end', _cfFmtD(a.end)],
+        ['Actual start', _cfFmtD(k.reported_start_date)],
+        ['Target duration', (k.b_duration || 0) + ' d'],
+        ['Projected duration', k.projected_duration ? k.projected_duration + ' d' : '-'],
+        ['Start delay', (k.start_delay || 0) + ' d'],
+        ['Elapsed', (k.elapsed || 0) + ' d'],
+        ['Target qty', _cfFmtN(k.target_qty) + unit],
+        ['Actual qty', _cfFmtN(k.actual_qty) + unit],
+        ['Work done', (k.work_done_pct || 0) + ' %'],
+        ['Target productivity', _cfFmtN(k.target_productivity) + unit + '/d'],
+        ['Actual productivity', _cfFmtN(k.actual_productivity) + unit + '/d'],
+        ['Target cycle time', _cfFmtN(k.target_cycle_time) + ' Hrs'],
+        ['Actual cycle time', _cfFmtN(k.actual_cycle_time) + ' Hrs'],
+        ['Critical', k.critical ? 'Yes' : 'No'],
+        ['Status', status]
+    ];
+    (k.cause_of_delay || []).forEach(function(c){ rows.push(['Delay: ' + _cfEsc(c.name), c.pct + '%']); });
+    var body = rows.map(function(r){
+        return '<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid #eef2f8;">'
+            + '<span style="color:#5a6e8c;">' + r[0] + '</span><b style="color:#1a2540;text-align:right;">' + r[1] + '</b></div>';
+    }).join('');
+    pop.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+        + '<span style="font-weight:700;color:#081142;">' + _cfEsc(a.name) + '</span>'
+        + '<button id="cf-act-pop-x" type="button" title="Close" style="border:0;background:none;font-size:18px;line-height:1;cursor:pointer;color:#081142;padding:0 2px;">&times;</button></div>'
+        + body;
+    var tip = _cfDurTipEl().getBoundingClientRect();
+    pop.style.top = tip.top + 'px';
+    pop.style.left = (tip.right + 300 + 16 > window.innerWidth ? tip.left - 316 : tip.right + 10) + 'px';
+    pop.style.display = 'block';
+}
+
+function _cfOpenDurTip(){
+    _cfDurTipOpen = true;
     var t = _cfDurTipEl();
     t.style.display = 'block';
-    if (_cfOngoingGen === _cfLoadGen && _cfOngoingCache) {
-        t.innerHTML = _cfOngoingHtml(_cfOngoingCache, _cfDurTipPinned);
-        _cfPlaceDurTip();
-        return;
-    }
+    if (_cfOngoingGen === _cfLoadGen && _cfOngoingCache) { _cfRenderTip(_cfOngoingCache); return; }
     t.innerHTML = '<div style="color:#666;">Loading...</div>';
     _cfPlaceDurTip();
     var gen = _cfLoadGen;
@@ -591,48 +704,30 @@ function _cfShowDurTip(){
         success: function(d){
             if (gen !== _cfLoadGen || !d || d.error !== 'No') return;
             _cfOngoingCache = d; _cfOngoingGen = gen;
-            if (t.style.display !== 'none') {
-                t.innerHTML = _cfOngoingHtml(d, _cfDurTipPinned);
-                _cfPlaceDurTip();
-            }
+            if (_cfDurTipOpen) _cfRenderTip(d);
         }
     });
 }
 
-function _cfHideDurTip(){
-    _cfDurTipPinned = false;
-    clearTimeout(_cfDurTipTimer);
+function _cfCloseDurTip(){
+    _cfDurTipOpen = false;
+    _cfHideActPop();
     var t = document.getElementById('cf-gantt-tip');
     if (t) t.style.display = 'none';
 }
 
 $(function(){
-    $(document).on('mouseenter', '#cf-value-duration svg', function(){
-        clearTimeout(_cfDurTipTimer);
-        if (!_cfDurTipPinned) _cfShowDurTip();
-    });
-    $(document).on('mouseleave', '#cf-value-duration svg', function(){
-        if (_cfDurTipPinned) return;
-        _cfDurTipTimer = setTimeout(_cfHideDurTip, 200);
-    });
-    $(document).on('mouseenter', '#cf-gantt-tip', function(){ clearTimeout(_cfDurTipTimer); });
-    $(document).on('mouseleave', '#cf-gantt-tip', function(){
-        if (_cfDurTipPinned) return;
-        _cfDurTipTimer = setTimeout(_cfHideDurTip, 200);
-    });
-    $(document).on('click', '#cf-value-duration svg', function(e){
+    $(document).on('click', '#cf-value-duration', function(e){
         e.stopPropagation();
-        _cfDurTipPinned = !_cfDurTipPinned;
-        if (_cfDurTipPinned) _cfShowDurTip(); else _cfHideDurTip();
+        if (_cfDurTipOpen) _cfCloseDurTip(); else _cfOpenDurTip();
     });
-    $(document).on('click', '#cf-gantt-tip-x', function(e){
-        e.stopPropagation();
-        _cfHideDurTip();
-    });
+    $(document).on('click', '#cf-gantt-tip-x', function(e){ e.stopPropagation(); _cfCloseDurTip(); });
+    $(document).on('click', '.cf-gt-row', function(e){ e.stopPropagation(); _cfShowActPop(+$(this).attr('data-idx')); });
+    $(document).on('click', '#cf-act-pop-x', function(e){ e.stopPropagation(); _cfHideActPop(); });
     $(document).on('mousedown', function(e){
-        if (!_cfDurTipPinned) return;
-        if ($(e.target).closest('#cf-gantt-tip, #cf-value-duration').length) return;
-        _cfHideDurTip();
+        var $t = $(e.target);
+        if (!$t.closest('#cf-act-pop, .cf-gt-row').length) _cfHideActPop();
+        if (_cfDurTipOpen && !$t.closest('#cf-gantt-tip, #cf-value-duration, #cf-act-pop').length) _cfCloseDurTip();
     });
 });
 

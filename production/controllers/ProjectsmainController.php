@@ -3730,8 +3730,10 @@ class ProjectsmainController extends Controller
         ];
     }
 
-    // Cashflow dashboard, VALUE DRIVERS: ongoing activities shown in the Project
-    // Duration dial tooltip. Ongoing = scheduled window covers today (status 0).
+    // Cashflow dashboard, VALUE DRIVERS: ongoing activities for the Project
+    // Duration dial snapshot. Ongoing = not completed and due to start today or
+    // already started. Each row carries the activity's KPI data (same builder as
+    // the Gantt bar popup) so clicking a bar can show its metrics.
     public function actionCfongoingactivities()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -3741,24 +3743,26 @@ class ProjectsmainController extends Controller
         $pid = (int)$projuser->projectid;
         $db = Yii::$app->db;
 
-        $rows = $db->createCommand(
-            "SELECT sa.name, sa.start_date, sa.end_date,
-                    (SELECT MIN(spr.start_date) FROM schedule_progress_report spr
-                     WHERE spr.activity_id = sa.id AND spr.start_date IS NOT NULL
-                       AND spr.start_date <> '0000-00-00') AS a_start
-             FROM scheduleactivities sa
-             WHERE sa.projectId = :p AND sa.status = 0
-               AND sa.start_date <= CURDATE() AND sa.end_date >= CURDATE()
-             ORDER BY sa.start_date, sa.id", [':p' => $pid]
-        )->queryAll();
+        $ids = $db->createCommand(
+            "SELECT id FROM scheduleactivities
+             WHERE projectId = :p AND status = 0 AND completed_status = 0
+               AND start_date <= CURDATE()
+             ORDER BY start_date, id", [':p' => $pid]
+        )->queryColumn();
 
         $acts = [];
-        foreach ($rows as $r) {
+        foreach ($ids as $id) {
+            $act = $db->createCommand(
+                "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, act_start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status
+                 FROM scheduleactivities WHERE id = :id AND projectId = :p", [':id' => (int)$id, ':p' => $pid]
+            )->queryOne();
+            if (!$act) { continue; }
             $acts[] = [
-                'name'    => $r['name'],
-                'start'   => substr($r['start_date'], 0, 10),
-                'end'     => substr($r['end_date'], 0, 10),
-                'a_start' => $r['a_start'] ? substr($r['a_start'], 0, 10) : '',
+                'id'    => (int)$act['id'],
+                'name'  => $act['name'],
+                'start' => substr((string)$act['start_date'], 0, 10),
+                'end'   => substr((string)$act['end_date'], 0, 10),
+                'kpi'   => $this->_buildKpi($act, $pid, $db),
             ];
         }
         return ['error' => 'No', 'today' => date('Y-m-d'), 'activities' => $acts];
