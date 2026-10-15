@@ -287,6 +287,35 @@ $(document).on('mousedown touchstart', '#cf-modal', function(){
 // refresh.
 var _cfLoadGen = 0;
 
+// VALUE DRIVERS (left segment of the Cashflow dashboard): Project Duration, Project
+// Cost and Procurement. Duration reuses the project bar drawing used elsewhere.
+function renderCfValueDrivers(){
+    var gen = _cfLoadGen;
+    var durEl  = document.getElementById('cf-value-duration');
+    var costEl = document.getElementById('cf-value-cost');
+    var procEl = document.getElementById('cf-value-procurement');
+    if (procEl) procEl.innerHTML = '<div style="text-align:center;font-size:12px;color:#5a6e8c;padding:18px 0">No data yet</div>';
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfprojectduration', dataType: 'json',
+        success: function(d){
+            if (gen !== _cfLoadGen || !d || d.error !== 'No') return;
+            renderProjectBar(durEl, +d.budgeted || 0, +d.actual || 0, +d.delay || 0, d.project_name || 'Project',
+                d.b_start_date || '', d.b_end_date || '', d.proj_end_date || '', d.actual_start || '');
+        }
+    });
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfprojectcost', dataType: 'json',
+        success: function(d){
+            if (gen !== _cfLoadGen || !d || d.error !== 'No' || !costEl) return;
+            var lakhs = (+d.estimated || 0) / 100000;
+            costEl.innerHTML = '<div style="padding:8px 10px;font-family:Barlow Condensed,sans-serif;">'
+                + '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#1a2540;"><span>Estimated</span><span>' + lakhs.toFixed(2) + ' Lakhs</span></div>'
+                + '<div style="display:flex;justify-content:space-between;font-size:12px;color:#5a6e8c;margin-top:4px;"><span>Actual</span><span>Using estimate</span></div>'
+                + '</div>';
+        }
+    });
+}
+
 function renderCfBars(){
     _cfLoadGen++;
     _cfLoading = true;
@@ -308,6 +337,7 @@ function renderCfBars(){
     renderCfContribMarginDial();
     renderCfFreeCashDial();
     renderCfRoiDial();
+    renderCfValueDrivers();
 }
 
 // Investments panel — single flat dial with an editable target (yellow

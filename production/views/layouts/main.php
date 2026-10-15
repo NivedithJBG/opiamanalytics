@@ -4096,7 +4096,8 @@ if($action=='login')
 #cf-close{background:none;border:none;color:#fff;opacity:.85;font-size:18px;line-height:1;cursor:pointer;padding:0 3px;margin-left:6px}
 #cf-close:hover{opacity:1}
 #cf-body{flex:1;min-height:0;overflow:hidden;padding:6px 10px 0;display:flex;flex-direction:column;background:#e2e4e8}
-#cf-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(4, 1fr);grid-template-rows:repeat(3, 1fr);row-gap:0;column-gap:0}
+#cf-grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 14px 1fr 1fr 14px 1fr 1fr;grid-template-rows:repeat(3, 1fr);row-gap:0;column-gap:0}
+#cf-subhdr{display:grid !important;grid-template-columns:1fr 14px 1fr 1fr 14px 1fr 1fr}
 #cf-modal .ph{background:#5a5a5a;font-size:11px;}
 #cf-modal .panel{border-right:3px solid #a0aec0}
 
@@ -4139,22 +4140,26 @@ if($action=='login')
   <div id="cf-body">
     <div id="cf-subhdr-wrap" style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column;">
       <div id="cf-subhdr" style="display:flex;flex-shrink:0;border:1px solid #4a4f57;margin-bottom:6px;">
-        <div style="flex:1;background:#4a4f57;color:#fff;font-family:'Nunito',Arial,sans-serif;font-size:12px;font-weight:400;text-transform:uppercase;letter-spacing:.02em;text-align:center;padding:2px 0;">Cash-to-Cash Cycle&nbsp;&nbsp;&nbsp;<span id="cf-c2c-legend" style="text-transform:none;letter-spacing:normal;font-weight:400;"></span></div>
-        <div style="flex:1;background:#1a0a2e;color:#fff;font-family:'Nunito',Arial,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;text-align:center;padding:2px 0;border-left:1px solid #4a4f57;">ROI and Free Cash</div>
+        <div style="grid-column:1;background:#4a4f57;color:#fff;font-family:'Nunito',Arial,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;text-align:center;padding:2px 0;">Value Drivers</div>
+        <div style="grid-column:3 / span 2;background:#4a4f57;color:#fff;font-family:'Nunito',Arial,sans-serif;font-size:12px;font-weight:400;text-transform:uppercase;letter-spacing:.02em;text-align:center;padding:2px 0;">Cash-to-Cash Cycle&nbsp;&nbsp;&nbsp;<span id="cf-c2c-legend" style="text-transform:none;letter-spacing:normal;font-weight:400;"></span></div>
+        <div style="grid-column:6 / span 2;background:#1a0a2e;color:#fff;font-family:'Nunito',Arial,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;text-align:center;padding:2px 0;">ROI and Free Cash</div>
       </div>
       <div id="cf-grid">
-      <div class="panel" style="grid-column:1;grid-row:1;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Investments</div><div class="gp" style="background:#e3e5e8;" id="cf-currentassets"></div></div>
-      <div class="panel" style="grid-column:1;grid-row:2;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Work In Progress</div><div class="gp" style="background:#e3e5e8;" id="cf-billsreceivable"></div></div>
-      <div class="panel" style="grid-column:1;grid-row:3;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Bills Receivable</div><div class="gp" style="background:#e3e5e8;" id="cf-contract-income"></div></div>
-      <div class="panel" style="grid-column:2;grid-row:1;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Bank-Working Capital</div><div class="gp" style="background:#e3e5e8;" id="cf-bankdial"></div></div>
-      <div class="panel" style="grid-column:2;grid-row:2;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Current Liabilities</div><div class="gp" style="background:#e3e5e8;" id="cf-bank"></div></div>
-      <div class="panel" style="grid-column:2;grid-row:3;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Total Investment</div><div class="gp" style="background:#e3e5e8;" id="cf-netinvestment"></div></div>
-      <div class="panel" style="grid-column:3;grid-row:1;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">Contract Income</div><div class="gp" style="background:#eceef0;" id="cf-contractincome"></div></div>
-      <div class="panel" style="grid-column:3;grid-row:2;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">Project Expenditure</div><div class="gp" style="background:#eceef0;" id="cf-projectexpenditure"></div></div>
-      <div class="panel" style="grid-column:3;grid-row:3;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">Contribution Margin</div><div class="gp" style="background:#eceef0;" id="cf-contribmargin"></div></div>
-      <div class="panel" style="grid-column:4;grid-row:1;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">ROI</div><div class="gp" style="background:#eceef0;" id="cf-roi"></div></div>
-      <div class="panel" style="grid-column:4;grid-row:2;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">FREE CASH</div><div class="gp" style="background:#eceef0;" id="cf-expenses"></div></div>
-      <div class="panel" style="grid-column:4;grid-row:3;background:#eceef0;"><div class="ph" style="background:#1a0a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Investments &amp; Liabilities</div><div class="gp" style="background:#eceef0;" id="cf-currentliabilities"></div></div>
+      <div class="panel" style="grid-column:1;grid-row:1;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Project Duration</div><div class="gp" style="background:#e3e5e8;" id="cf-value-duration"></div></div>
+      <div class="panel" style="grid-column:1;grid-row:2;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Project Cost</div><div class="gp" style="background:#e3e5e8;" id="cf-value-cost"></div></div>
+      <div class="panel" style="grid-column:1;grid-row:3;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Procurement</div><div class="gp" style="background:#e3e5e8;" id="cf-value-procurement"></div></div>
+      <div class="panel" style="grid-column:3;grid-row:1;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Investments</div><div class="gp" style="background:#e3e5e8;" id="cf-currentassets"></div></div>
+      <div class="panel" style="grid-column:3;grid-row:2;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Work In Progress</div><div class="gp" style="background:#e3e5e8;" id="cf-billsreceivable"></div></div>
+      <div class="panel" style="grid-column:3;grid-row:3;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Bills Receivable</div><div class="gp" style="background:#e3e5e8;" id="cf-contract-income"></div></div>
+      <div class="panel" style="grid-column:4;grid-row:1;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Bank-Working Capital</div><div class="gp" style="background:#e3e5e8;" id="cf-bankdial"></div></div>
+      <div class="panel" style="grid-column:4;grid-row:2;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Current Liabilities</div><div class="gp" style="background:#e3e5e8;" id="cf-bank"></div></div>
+      <div class="panel" style="grid-column:4;grid-row:3;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Total Investment</div><div class="gp" style="background:#e3e5e8;" id="cf-netinvestment"></div></div>
+      <div class="panel" style="grid-column:6;grid-row:1;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">Contract Income</div><div class="gp" style="background:#eceef0;" id="cf-contractincome"></div></div>
+      <div class="panel" style="grid-column:6;grid-row:2;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">Project Expenditure</div><div class="gp" style="background:#eceef0;" id="cf-projectexpenditure"></div></div>
+      <div class="panel" style="grid-column:6;grid-row:3;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">Contribution Margin</div><div class="gp" style="background:#eceef0;" id="cf-contribmargin"></div></div>
+      <div class="panel" style="grid-column:7;grid-row:1;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">ROI</div><div class="gp" style="background:#eceef0;" id="cf-roi"></div></div>
+      <div class="panel" style="grid-column:7;grid-row:2;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">FREE CASH</div><div class="gp" style="background:#eceef0;" id="cf-expenses"></div></div>
+      <div class="panel" style="grid-column:7;grid-row:3;background:#eceef0;"><div class="ph" style="background:#1a0a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Investments &amp; Liabilities</div><div class="gp" style="background:#eceef0;" id="cf-currentliabilities"></div></div>
     </div>
     </div>
   </div>

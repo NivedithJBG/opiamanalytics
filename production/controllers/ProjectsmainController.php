@@ -3683,6 +3683,71 @@ class ProjectsmainController extends Controller
         ];
     }
 
+    // Cashflow dashboard, VALUE DRIVERS: Project Duration panel.
+    // Plan = the project's own start, end and duration (Project creation panel).
+    // Actual = from the project start to the latest scheduled activity end.
+    public function actionCfprojectduration()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return ['error' => 'No project selected']; }
+        $pid = (int)$projuser->projectid;
+        $db = Yii::$app->db;
+
+        $proj = $db->createCommand(
+            "SELECT Name, start_date, end_date, duration FROM projects WHERE Project_Id = :p", [':p' => $pid]
+        )->queryOne();
+        if (!$proj) { return ['error' => 'No project']; }
+
+        $forecastEnd = $db->createCommand(
+            "SELECT MAX(end_date) FROM scheduleactivities WHERE projectId = :p AND status = 0", [':p' => $pid]
+        )->queryScalar();
+        $actualStart = $db->createCommand(
+            "SELECT MIN(spr.start_date) FROM schedule_progress_report spr
+             JOIN scheduleactivities sa ON sa.id = spr.activity_id
+             WHERE sa.projectId = :p AND sa.status = 0
+               AND spr.start_date IS NOT NULL AND spr.start_date <> '0000-00-00'", [':p' => $pid]
+        )->queryScalar();
+
+        $budgeted = (int)$proj['duration'];
+        $startDay = substr($proj['start_date'], 0, 10);
+        $endDay   = (!empty($forecastEnd) && $forecastEnd !== '0000-00-00 00:00:00')
+            ? substr($forecastEnd, 0, 10) : '';
+        $actual = $endDay
+            ? max(0, (int)round((strtotime($endDay) - strtotime($startDay)) / 86400) + 1) : 0;
+
+        return [
+            'error'         => 'No',
+            'project_name'  => $proj['Name'],
+            'budgeted'      => $budgeted,
+            'actual'        => $actual,
+            'delay'         => max(0, $actual - $budgeted),
+            'b_start_date'  => $startDay,
+            'b_end_date'    => substr($proj['end_date'], 0, 10),
+            'proj_end_date' => $endDay,
+            'actual_start'  => $actualStart ? substr($actualStart, 0, 10) : '',
+        ];
+    }
+
+    // Cashflow dashboard, VALUE DRIVERS: Project Cost panel.
+    // Estimated = sum of project quantity x library rate over the project's estimate.
+    public function actionCfprojectcost()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return ['error' => 'No project selected']; }
+        $pid = (int)$projuser->projectid;
+        $estimated = Yii::$app->db->createCommand(
+            "SELECT COALESCE(SUM(pe.activity_qty * ea.activity_rate), 0)
+             FROM pricing_estimate_new pe
+             JOIN estimateactivities ea ON ea.activity_id = pe.est_activity_Id
+             WHERE pe.project_Id = :p AND pe.pricing_status = 0", [':p' => $pid]
+        )->queryScalar();
+        return ['error' => 'No', 'estimated' => round((float)$estimated, 2)];
+    }
+
     // Bills Receivable, per payment cycle.
     // target(k) = WIP target of cycle k / total estimate cost x project value.
     // actual(k) = amount credited to Contract Income with a date in cycle k.
