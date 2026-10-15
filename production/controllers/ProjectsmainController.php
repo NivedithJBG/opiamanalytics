@@ -3730,10 +3730,11 @@ class ProjectsmainController extends Controller
         ];
     }
 
-    // Cashflow dashboard, VALUE DRIVERS: ongoing activities for the Project
-    // Duration dial snapshot. Ongoing = not completed and due to start today or
-    // already started. Each row carries the activity's KPI data (same builder as
-    // the Gantt bar popup) so clicking a bar can show its metrics.
+    // Cashflow dashboard, VALUE DRIVERS: current activities for the Project
+    // Duration dial snapshot. Current = not completed and due to start today or
+    // already started. Listed IOW group wise (project order of the IOW groups).
+    // Each row carries the activity's KPI data (same builder as the Gantt bar
+    // popup) so clicking a bar can show its metrics.
     public function actionCfongoingactivities()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -3743,23 +3744,27 @@ class ProjectsmainController extends Controller
         $pid = (int)$projuser->projectid;
         $db = Yii::$app->db;
 
-        $ids = $db->createCommand(
-            "SELECT id FROM scheduleactivities
-             WHERE projectId = :p AND status = 0 AND completed_status = 0
-               AND start_date <= CURDATE()
-             ORDER BY start_date, id", [':p' => $pid]
-        )->queryColumn();
+        $rows = $db->createCommand(
+            "SELECT sa.id, sa.iow_group_id AS group_id, ig.name AS group_name
+             FROM scheduleactivities sa
+             LEFT JOIN iow_groups ig ON ig.id = sa.iow_group_id
+             LEFT JOIN iow_group_order go ON go.iow_group_id = sa.iow_group_id AND go.project_id = sa.projectId
+             WHERE sa.projectId = :p AND sa.status = 0 AND sa.completed_status = 0
+               AND sa.start_date <= CURDATE()
+             ORDER BY COALESCE(go.sortorder, 999999), ig.name, sa.start_date, sa.id", [':p' => $pid]
+        )->queryAll();
 
         $acts = [];
-        foreach ($ids as $id) {
+        foreach ($rows as $r) {
             $act = $db->createCommand(
                 "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, act_start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status
-                 FROM scheduleactivities WHERE id = :id AND projectId = :p", [':id' => (int)$id, ':p' => $pid]
+                 FROM scheduleactivities WHERE id = :id AND projectId = :p", [':id' => (int)$r['id'], ':p' => $pid]
             )->queryOne();
             if (!$act) { continue; }
             $acts[] = [
                 'id'    => (int)$act['id'],
                 'name'  => $act['name'],
+                'group' => $r['group_name'] ?: 'Ungrouped',
                 'start' => substr((string)$act['start_date'], 0, 10),
                 'end'   => substr((string)$act['end_date'], 0, 10),
                 'kpi'   => $this->_buildKpi($act, $pid, $db),

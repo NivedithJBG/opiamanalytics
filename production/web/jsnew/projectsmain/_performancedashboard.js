@@ -567,8 +567,8 @@ function _cfTimeline(acts, todayT){
         grid: []
     };
     var g = new Date(minT);
-    g.setDate(g.getDate() + ((8 - g.getDay()) % 7));
-    for (; g.getTime() <= maxT; g.setDate(g.getDate() + 7)) tl.grid.push(g.getTime());
+    g.setDate(1); if (g.getTime() < minT) g.setMonth(g.getMonth() + 1);
+    for (; g.getTime() <= maxT; g.setMonth(g.getMonth() + 1)) tl.grid.push(g.getTime());
     return tl;
 }
 
@@ -582,20 +582,25 @@ function _cfOngoingHtml(d){
     var acts = _cfTipActs;
     var todayT = _cfDayT(d.today);
     var head = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
-        + '<span style="font-weight:700;color:#081142;font-size:13px;">Ongoing activities &middot; ' + _cfEsc(d.today) + '</span>'
+        + '<span style="font-weight:700;color:#081142;font-size:13px;">Current activities &middot; ' + _cfEsc(d.today) + '</span>'
         + '<button id="cf-gantt-tip-x" type="button" title="Close" style="border:0;background:none;font-size:18px;line-height:1;cursor:pointer;color:#081142;padding:0 2px;">&times;</button></div>';
     if (!acts.length) return head + '<div style="color:#666;">No ongoing activities today.</div>';
 
     var tl = _cfTimeline(acts, todayT);
     var labels = tl.grid.map(function(t){
         var dt = new Date(t);
-        return '<span style="position:absolute;top:0;left:' + tl.pos(t).toFixed(2) + '%;transform:translateX(-50%);font-size:9px;color:#5a6e8c;white-space:nowrap;">' + dt.getDate() + ' ' + _cfMonths[dt.getMonth()] + '</span>';
+        return '<span style="position:absolute;top:0;left:' + tl.pos(t).toFixed(2) + '%;transform:translateX(-50%);font-size:9px;color:#5a6e8c;white-space:nowrap;">' + _cfMonths[dt.getMonth()] + ' ' + String(dt.getFullYear()).slice(2) + '</span>';
     }).join('');
     var html = head
         + '<div style="display:flex;gap:8px;margin-bottom:2px;"><div style="flex:none;width:150px;"></div>'
         + '<div style="position:relative;flex:1;height:12px;">' + labels + '</div></div>';
 
+    var lastGroup = null;
     acts.forEach(function(a, i){
+        if (a.group !== lastGroup) {
+            lastGroup = a.group;
+            html += '<div style="font-weight:700;color:#081142;background:#eef2f8;padding:3px 6px;margin-top:6px;border-radius:2px;font-size:11px;text-transform:uppercase;letter-spacing:.03em;">' + _cfEsc(a.group) + '</div>';
+        }
         var s = _cfDayT(a.start), e = _cfDayT(a.end), k = a.kpi || {};
         var started = k.actual_qty > 0 && !!k.act_start_date;
         var ae = _cfActEnd(a);
@@ -681,7 +686,7 @@ function _cfShowActPop(i){
         return '<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid #eef2f8;">'
             + '<span style="color:#5a6e8c;">' + r[0] + '</span><b style="color:#1a2540;text-align:right;">' + r[1] + '</b></div>';
     }).join('');
-    pop.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+    pop.innerHTML = '<div id="cf-act-pop-hdr" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;cursor:move;user-select:none;">'
         + '<span style="font-weight:700;color:#081142;">' + _cfEsc(a.name) + '</span>'
         + '<button id="cf-act-pop-x" type="button" title="Close" style="border:0;background:none;font-size:18px;line-height:1;cursor:pointer;color:#081142;padding:0 2px;">&times;</button></div>'
         + body;
@@ -724,6 +729,16 @@ $(function(){
     $(document).on('click', '#cf-gantt-tip-x', function(e){ e.stopPropagation(); _cfCloseDurTip(); });
     $(document).on('click', '.cf-gt-row', function(e){ e.stopPropagation(); _cfShowActPop(+$(this).attr('data-idx')); });
     $(document).on('click', '#cf-act-pop-x', function(e){ e.stopPropagation(); _cfHideActPop(); });
+    // Drag the activity popup by its header.
+    $(document).on('mousedown', '#cf-act-pop-hdr', function(e){
+        if ($(e.target).closest('button').length) return;
+        var pop = document.getElementById('cf-act-pop');
+        var sx = e.clientX, sy = e.clientY, ox = pop.offsetLeft, oy = pop.offsetTop;
+        function mv(ev){ pop.style.left = (ox + ev.clientX - sx) + 'px'; pop.style.top = (oy + ev.clientY - sy) + 'px'; }
+        function up(){ $(document).off('mousemove', mv).off('mouseup', up); }
+        $(document).on('mousemove', mv).on('mouseup', up);
+        e.preventDefault();
+    });
     $(document).on('mousedown', function(e){
         var $t = $(e.target);
         if (!$t.closest('#cf-act-pop, .cf-gt-row').length) _cfHideActPop();
