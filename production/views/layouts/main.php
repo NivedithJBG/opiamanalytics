@@ -4101,6 +4101,8 @@ if($action=='login')
 #cf-modal .ph,.cf-seg-win .ph{background:#5a5a5a;font-size:11px;}
 #cf-modal .panel,.cf-seg-win .panel{border-right:3px solid #a0aec0}
 .cf-seg-win.cf-seg-on{display:flex}
+.cf-seg-hdr{touch-action:none}
+.cf-seg-win button,.cf-seg-win .gp{touch-action:manipulation}
 
 </style>
 <div id="cd-bk"></div>

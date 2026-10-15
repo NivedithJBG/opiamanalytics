@@ -311,6 +311,34 @@ $(document).on('click', '.cashflow-dashboard-btn', function(e){
     _cfSegWins.forEach(function(w){ $('#' + w.id).css('display', 'flex'); });
     if (!_cfLoading) { renderCfBars(); }
 });
+// Touch dragging for the Cashflow windows (jQuery UI drag responds to the mouse only).
+// Dragging the title bar moves that window; the page does not scroll while dragging.
+$(document).on('touchstart', '.cf-seg-hdr', function(e){
+    var oe = e.originalEvent;
+    if (!oe || !oe.touches || oe.touches.length !== 1) return;
+    var win = $(this).closest('.cf-seg-win');
+    var t0 = oe.touches[0];
+    var startX = t0.clientX, startY = t0.clientY;
+    var startLeft = win[0].offsetLeft, startTop = win[0].offsetTop;
+    function onMove(ev){
+        if (!ev.touches || ev.touches.length !== 1) return;
+        var t = ev.touches[0];
+        var nl = startLeft + (t.clientX - startX);
+        var nt = startTop + (t.clientY - startY);
+        nl = Math.max(0, Math.min(window.innerWidth - win.outerWidth(), nl));
+        nt = Math.max(0, Math.min(window.innerHeight - 40, nt));
+        win.css({ left: nl + 'px', top: nt + 'px' });
+        ev.preventDefault();
+    }
+    function onEnd(){
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
+        document.removeEventListener('touchcancel', onEnd);
+    }
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+    document.addEventListener('touchcancel', onEnd);
+});
 // Each window closes only itself.
 $(document).on('click', '.cf-seg-close', function(){
     $('#' + $(this).data('win')).css('display', 'none');
