@@ -592,7 +592,7 @@ function _cfOngoingHtml(d){
         return '<span style="position:absolute;top:0;left:' + tl.pos(t).toFixed(2) + '%;transform:translateX(-50%);font-size:9px;color:#5a6e8c;white-space:nowrap;">' + _cfMonths[dt.getMonth()] + ' ' + String(dt.getFullYear()).slice(2) + '</span>';
     }).join('');
     var html = head
-        + '<div style="display:flex;gap:8px;margin-bottom:2px;"><div style="flex:none;width:150px;"></div>'
+        + '<div style="display:flex;gap:8px;margin-bottom:2px;"><div style="flex:none;width:150px;"></div><div style="flex:none;width:46px;text-align:center;font-size:9px;color:#5a6e8c;">Budget (d)</div><div style="flex:none;width:46px;text-align:center;font-size:9px;color:#5a6e8c;">Actual (d)</div>'
         + '<div style="position:relative;flex:1;height:12px;">' + labels + '</div></div>';
 
     var lastGroup = null;
@@ -620,7 +620,7 @@ function _cfOngoingHtml(d){
         }
         var todayPct = (tl.pos(todayT) + 50 / tl.span).toFixed(2);
         html += '<div class="cf-gt-row" data-idx="' + i + '" style="display:flex;gap:8px;align-items:center;padding:3px 0;border-top:1px solid #eef2f8;cursor:pointer;">'
-            + '<div title="' + _cfEsc(a.name) + '" style="flex:none;width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1a2540;">' + _cfEsc(a.name) + '</div>'
+            + '<div title="' + _cfEsc(a.name) + '" style="flex:none;width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1a2540;">' + _cfEsc(a.name) + '</div><div style="flex:none;width:46px;text-align:center;font-size:11px;color:#1a2540;">' + (k.b_duration || 0) + '</div><div style="flex:none;width:46px;text-align:center;font-size:11px;color:#1a2540;">' + (k.projected_duration || '-') + '</div>'
             + '<div style="position:relative;flex:1;height:24px;background:#f5f7fb;border-radius:2px;overflow:hidden;">'
             + _cfGridLines(tl) + plan + act
             + '<div style="position:absolute;top:0;bottom:0;width:2px;background:#1a2540;left:' + todayPct + '%;"></div>'
