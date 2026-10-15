@@ -268,8 +268,43 @@ var _cfSegWins = [
     { id: 'cf-win-c2c',   title: 'Cash-to-Cash Cycle',  cols: 2, head: '#4a4f57', left: 'calc(50% - 273px)', width: '364px', panels: [3, 4] },
     { id: 'cf-win-roi',   title: 'ROI and Free Cash',   cols: 2, head: '#1a0a2e', left: 'calc(50% + 117px)', width: '364px', panels: [6, 7], center: true }
 ];
+// Moves all three Cashflow windows by the same amount (used by the shared header).
+function cfMoveSegmentWindows(dx, dy){
+    _cfSegWins.forEach(function(w){
+        var el = document.getElementById(w.id);
+        if (!el) return;
+        el.style.left = (el.offsetLeft + dx) + 'px';
+        el.style.top  = (el.offsetTop + dy) + 'px';
+    });
+}
+function cfShowSegmentWindows(){
+    _cfSegWins.forEach(function(w){ $('#' + w.id).css('display', 'flex'); });
+    $('#cf-shared-hdr').css('display', 'flex');
+}
+function cfHideSegmentWindows(){
+    _cfSegWins.forEach(function(w){ $('#' + w.id).css('display', 'none'); });
+    $('#cf-shared-hdr').css('display', 'none');
+}
 function cfBuildSegmentWindows(){
     if (document.getElementById('cf-win-value')) return;
+    // Shared header above the three windows: "Project Management" and the project name.
+    // Dragging it (or touching it) moves all three windows together; its × closes all.
+    $('body').append(
+        '<div id="cf-shared-hdr" style="display:none;position:fixed;left:calc(50% - 481px);top:calc(12vh - 30px);width:962px;height:30px;box-sizing:border-box;background:#081142;color:#fff;padding:0 12px;align-items:center;justify-content:space-between;cursor:move;user-select:none;touch-action:none;z-index:100200;font-family:Nunito,Arial,sans-serif;">'
+        + '<span><span style="font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;">Project Management</span>'
+        + '<span id="cf-shared-name" style="font-size:12px;margin-left:12px;opacity:.9;"></span></span>'
+        + '<button type="button" id="cf-shared-close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;padding:0 3px;">&times;</button>'
+        + '</div>'
+    );
+    var $sh = $('#cf-shared-hdr');
+    $sh.draggable({
+        containment: 'window', scroll: false,
+        start: function(e, ui){ $sh.data('lx', ui.position.left); $sh.data('ly', ui.position.top); },
+        drag: function(e, ui){
+            cfMoveSegmentWindows(ui.position.left - $sh.data('lx'), ui.position.top - $sh.data('ly'));
+            $sh.data('lx', ui.position.left); $sh.data('ly', ui.position.top);
+        }
+    });
     var panels = $('#cf-grid > .panel').toArray();
     _cfSegWins.forEach(function(w){
         $('body').append(
@@ -303,12 +338,9 @@ function cfBuildSegmentWindows(){
 // The Cashflow button opens the three windows, or closes them if they are open.
 $(document).on('click', '.cashflow-dashboard-btn', function(e){
     e.preventDefault();
-    if ($('#cf-win-value').is(':visible')) {
-        _cfSegWins.forEach(function(w){ $('#' + w.id).css('display', 'none'); });
-        return;
-    }
+    if ($('#cf-win-value').is(':visible')) { cfHideSegmentWindows(); return; }
     cfBuildSegmentWindows();
-    _cfSegWins.forEach(function(w){ $('#' + w.id).css('display', 'flex'); });
+    cfShowSegmentWindows();
     if (!_cfLoading) { renderCfBars(); }
 });
 // Touch dragging for the Cashflow windows (jQuery UI drag responds to the mouse only).
@@ -328,6 +360,33 @@ $(document).on('touchstart', '.cf-seg-hdr', function(e){
         nl = Math.max(0, Math.min(window.innerWidth - win.outerWidth(), nl));
         nt = Math.max(0, Math.min(window.innerHeight - 40, nt));
         win.css({ left: nl + 'px', top: nt + 'px' });
+        ev.preventDefault();
+    }
+    function onEnd(){
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
+        document.removeEventListener('touchcancel', onEnd);
+    }
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+    document.addEventListener('touchcancel', onEnd);
+});
+// The shared header's × closes all three windows.
+$(document).on('click', '#cf-shared-close', function(){ cfHideSegmentWindows(); });
+// Touch dragging of the shared header moves all three windows together.
+$(document).on('touchstart', '#cf-shared-hdr', function(e){
+    var oe = e.originalEvent;
+    if (!oe || !oe.touches || oe.touches.length !== 1) return;
+    var hdr = this;
+    var lx = oe.touches[0].clientX, ly = oe.touches[0].clientY;
+    function onMove(ev){
+        if (!ev.touches || ev.touches.length !== 1) return;
+        var t = ev.touches[0];
+        var dx = t.clientX - lx, dy = t.clientY - ly;
+        lx = t.clientX; ly = t.clientY;
+        cfMoveSegmentWindows(dx, dy);
+        hdr.style.left = (hdr.offsetLeft + dx) + 'px';
+        hdr.style.top  = (hdr.offsetTop + dy) + 'px';
         ev.preventDefault();
     }
     function onEnd(){
@@ -423,6 +482,7 @@ function renderCfValueDrivers(){
         type: 'POST', url: '../projectsmain/cfprojectduration', dataType: 'json',
         success: function(d){
             if (gen !== _cfLoadGen || !d || d.error !== 'No' || !durEl) return;
+            $('#cf-shared-name').text(d.project_name || '');
             var t = +d.budgeted || 0, a = +d.actual || 0;
             durEl.style.display = 'flex';
             durEl.style.flexDirection = 'column';
