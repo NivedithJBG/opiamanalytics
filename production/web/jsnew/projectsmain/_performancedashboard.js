@@ -506,6 +506,15 @@ function renderCfValueDrivers(){
     });
 }
 
+// Clicking the Project Duration panel opens the Gantt window exactly as the
+// Gantt Chart icon on the top toolbar does (same element, same click handler).
+$(function(){
+    $(document).on('click', '#cf-value-duration', function(){
+        var btn = document.getElementById('gantt-win-open');
+        if (btn) btn.click();
+    });
+});
+
 function renderCfBars(){
     _cfLoadGen++;
     _cfLoading = true;
