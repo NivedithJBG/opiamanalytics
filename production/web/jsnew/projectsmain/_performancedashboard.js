@@ -287,8 +287,41 @@ $(document).on('mousedown touchstart', '#cf-modal', function(){
 // refresh.
 var _cfLoadGen = 0;
 
+// Project Duration dial: the planned duration sits at the centre (yellow marker at
+// the top), the needle shows the actual (forecast) duration. Actual above target is
+// orange-red, at or below target blue-green, as on the other dials.
+function _cfDurationDialSvg(target, actual){
+    var maxV = target > 0 ? target * 2 : 100;
+    var f = Math.max(0, Math.min(1, actual / maxV));
+    var cx = 105, cy = 82, r = 76, sw = 15;
+    function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
+    function arc(f1, f2, col){
+        if (f2 <= f1) return '';
+        var p1 = ptF(f1), p2 = ptF(f2);
+        return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    }
+    var targetF = 0.5;
+    var ta = Math.PI * (1 - targetF);
+    var tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
+    var tx1 = (cx + tr1 * Math.cos(ta)).toFixed(1), ty1 = (cy - tr1 * Math.sin(ta)).toFixed(1);
+    var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
+    var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8"/>'
+        + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6"/>';
+    var gapCol = actual > target ? '#d84a30' : '#2ba899';
+    var gapPath = f < targetF ? arc(f, targetF, gapCol) : arc(targetF, f, gapCol);
+    var nr = r - 14, na = Math.PI * (1 - f);
+    var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
+    var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+        + arc(0, 1, '#3a4a5f') + gapPath + targetLine
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
+        + '<text x="' + cx + '" y="' + (cy - 22) + '" text-anchor="middle" font-size="22" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + actual + ' d</text>'
+        + '</svg>';
+    return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;">' + svg + '</div>';
+}
+
 // VALUE DRIVERS (left segment of the Cashflow dashboard): Project Duration, Project
-// Cost and Procurement. Duration reuses the project bar drawing used elsewhere.
+// Cost and Procurement.
 function renderCfValueDrivers(){
     var gen = _cfLoadGen;
     var durEl  = document.getElementById('cf-value-duration');
@@ -298,9 +331,16 @@ function renderCfValueDrivers(){
     _cfQueueAjax({
         type: 'POST', url: '../projectsmain/cfprojectduration', dataType: 'json',
         success: function(d){
-            if (gen !== _cfLoadGen || !d || d.error !== 'No') return;
-            renderProjectBar(durEl, +d.budgeted || 0, +d.actual || 0, +d.delay || 0, d.project_name || 'Project',
-                d.b_start_date || '', d.b_end_date || '', d.proj_end_date || '', d.actual_start || '');
+            if (gen !== _cfLoadGen || !d || d.error !== 'No' || !durEl) return;
+            var t = +d.budgeted || 0, a = +d.actual || 0;
+            durEl.style.display = 'flex';
+            durEl.style.flexDirection = 'column';
+            durEl.style.justifyContent = 'center';
+            durEl.innerHTML = _cfDurationDialSvg(t, a)
+                + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
+                + '<span style="font-size:13px;color:#1a2540;font-weight:700;">Actual: ' + a + ' d</span>'
+                + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Target: ' + t + ' d</span>'
+                + '</div>';
         }
     });
     _cfQueueAjax({
