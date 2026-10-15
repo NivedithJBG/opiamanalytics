@@ -450,7 +450,7 @@ function _cfDurationDialSvg(target, actual, centerLabel, tipLabel){
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
     var svg = '<svg width="140" height="82" viewBox="-10 -20 230 110" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
         + arc(0, 1, '#3a4a5f') + targetPath + gapPath + targetLine
-        + (tipLabel ? '<text x="' + (cx + (r + 18) * Math.cos(na)).toFixed(1) + '" y="' + (cy - (r + 18) * Math.sin(na) + 4).toFixed(1) + '" text-anchor="' + (Math.cos(na) < -0.3 ? 'end' : Math.cos(na) > 0.3 ? 'start' : 'middle') + '" font-size="12" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + tipLabel + '</text>' : '')
+        + (tipLabel ? '<text x="' + (cx + (r + 18) * Math.cos(na)).toFixed(1) + '" y="' + (cy - (r + 18) * Math.sin(na) + 4).toFixed(1) + '" text-anchor="' + (Math.cos(na) < -0.3 ? 'end' : Math.cos(na) > 0.3 ? 'start' : 'middle') + '" font-size="20" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + tipLabel + '</text>' : '')
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
         + '<text x="' + cx + '" y="' + (cy - 22) + '" text-anchor="middle" font-size="22" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + centerLabel + '</text>'
@@ -505,6 +505,136 @@ function renderCfValueDrivers(){
         }
     });
 }
+
+// Project Duration dial tooltip: snapshot of the ongoing activities (scheduled
+// window covers today). Hover shows it; click pins it open until closed.
+var _cfDayMs = 86400000;
+var _cfDurTipPinned = false, _cfDurTipTimer = null;
+var _cfOngoingCache = null, _cfOngoingGen = -1;
+
+function _cfEsc(s){ return $('<div>').text(s || '').html(); }
+function _cfDayT(s){ var p = String(s).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).getTime(); }
+
+function _cfDurTipEl(){
+    var t = document.getElementById('cf-gantt-tip');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'cf-gantt-tip';
+        t.style.cssText = 'display:none;position:fixed;z-index:100300;background:#fff;color:#111;border:1px solid #081142;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.25);padding:8px 10px;width:340px;max-width:92vw;box-sizing:border-box;font-family:Nunito,Arial,sans-serif;font-size:12px;';
+        document.body.appendChild(t);
+    }
+    return t;
+}
+
+function _cfPlaceDurTip(){
+    var anchor = document.querySelector('#cf-value-duration svg');
+    if (!anchor) return;
+    var r = anchor.getBoundingClientRect();
+    var t = _cfDurTipEl();
+    var w = t.offsetWidth;
+    var left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8));
+    t.style.left = left + 'px';
+    t.style.top = (r.bottom - 4) + 'px';
+}
+
+function _cfOngoingHtml(d, pinned){
+    var acts = d.activities || [];
+    var closeBtn = pinned ? '<button id="cf-gantt-tip-x" type="button" style="float:right;border:0;background:none;font-size:18px;line-height:1;cursor:pointer;color:#081142;">&times;</button>' : '';
+    var head = closeBtn + '<div style="font-weight:700;color:#081142;margin-bottom:6px;">Ongoing activities &middot; ' + _cfEsc(d.today) + '</div>';
+    if (!acts.length) return head + '<div style="color:#666;">No activities scheduled for today.</div>';
+
+    var minS = Infinity, maxE = -Infinity;
+    acts.forEach(function(a){ minS = Math.min(minS, _cfDayT(a.start)); maxE = Math.max(maxE, _cfDayT(a.end)); });
+    var span = Math.max(1, Math.round((maxE - minS) / _cfDayMs) + 1);
+    function pos(t){ return (t - minS) / _cfDayMs / span * 100; }
+    function wid(t1, t2){ return Math.max(0, (t2 - t1) / _cfDayMs + 1) / span * 100; }
+    var todayT = _cfDayT(d.today);
+    var todayPct = Math.max(0, Math.min(100, pos(todayT) + 0.5 / span * 100));
+
+    var rows = acts.map(function(a){
+        var s = _cfDayT(a.start), e = _cfDayT(a.end);
+        var left = Math.max(0, pos(s)), width = wid(s, e);
+        var actual = '';
+        if (a.a_start) {
+            var a0 = _cfDayT(a.a_start);
+            actual = '<div style="position:absolute;top:4px;height:4px;background:#081142;left:' + Math.max(0, pos(a0)).toFixed(2) + '%;width:' + Math.min(wid(a0, todayT), 100).toFixed(2) + '%;"></div>';
+        }
+        return '<div style="display:flex;align-items:center;gap:8px;margin:5px 0;">'
+            + '<div title="' + _cfEsc(a.name) + '" style="flex:none;width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _cfEsc(a.name) + '</div>'
+            + '<div style="position:relative;flex:1;height:12px;background:#e5ebf3;border-radius:2px;">'
+            + '<div style="position:absolute;top:0;height:12px;background:#2ba899;border-radius:2px;left:' + left.toFixed(2) + '%;width:' + width.toFixed(2) + '%;"></div>'
+            + actual
+            + '<div style="position:absolute;top:-2px;bottom:-2px;width:2px;background:#d9480f;left:' + todayPct.toFixed(2) + '%;"></div>'
+            + '</div></div>';
+    }).join('');
+
+    var legend = '<div style="margin-top:8px;font-size:11px;color:#555;">'
+        + '<span style="display:inline-block;width:10px;height:6px;background:#2ba899;vertical-align:middle;"></span> Planned &nbsp; '
+        + '<span style="display:inline-block;width:10px;height:4px;background:#081142;vertical-align:middle;"></span> Actual start to today &nbsp; '
+        + '<span style="display:inline-block;width:2px;height:10px;background:#d9480f;vertical-align:middle;"></span> Today</div>';
+    return head + rows + legend;
+}
+
+function _cfShowDurTip(){
+    var t = _cfDurTipEl();
+    t.style.display = 'block';
+    if (_cfOngoingGen === _cfLoadGen && _cfOngoingCache) {
+        t.innerHTML = _cfOngoingHtml(_cfOngoingCache, _cfDurTipPinned);
+        _cfPlaceDurTip();
+        return;
+    }
+    t.innerHTML = '<div style="color:#666;">Loading...</div>';
+    _cfPlaceDurTip();
+    var gen = _cfLoadGen;
+    $.ajax({
+        type: 'POST', url: '../projectsmain/cfongoingactivities', dataType: 'json',
+        success: function(d){
+            if (gen !== _cfLoadGen || !d || d.error !== 'No') return;
+            _cfOngoingCache = d; _cfOngoingGen = gen;
+            if (t.style.display !== 'none') {
+                t.innerHTML = _cfOngoingHtml(d, _cfDurTipPinned);
+                _cfPlaceDurTip();
+            }
+        }
+    });
+}
+
+function _cfHideDurTip(){
+    _cfDurTipPinned = false;
+    clearTimeout(_cfDurTipTimer);
+    var t = document.getElementById('cf-gantt-tip');
+    if (t) t.style.display = 'none';
+}
+
+$(function(){
+    $(document).on('mouseenter', '#cf-value-duration svg', function(){
+        clearTimeout(_cfDurTipTimer);
+        if (!_cfDurTipPinned) _cfShowDurTip();
+    });
+    $(document).on('mouseleave', '#cf-value-duration svg', function(){
+        if (_cfDurTipPinned) return;
+        _cfDurTipTimer = setTimeout(_cfHideDurTip, 200);
+    });
+    $(document).on('mouseenter', '#cf-gantt-tip', function(){ clearTimeout(_cfDurTipTimer); });
+    $(document).on('mouseleave', '#cf-gantt-tip', function(){
+        if (_cfDurTipPinned) return;
+        _cfDurTipTimer = setTimeout(_cfHideDurTip, 200);
+    });
+    $(document).on('click', '#cf-value-duration svg', function(e){
+        e.stopPropagation();
+        _cfDurTipPinned = !_cfDurTipPinned;
+        if (_cfDurTipPinned) _cfShowDurTip(); else _cfHideDurTip();
+    });
+    $(document).on('click', '#cf-gantt-tip-x', function(e){
+        e.stopPropagation();
+        _cfHideDurTip();
+    });
+    $(document).on('mousedown', function(e){
+        if (!_cfDurTipPinned) return;
+        if ($(e.target).closest('#cf-gantt-tip, #cf-value-duration').length) return;
+        _cfHideDurTip();
+    });
+});
 
 function renderCfBars(){
     _cfLoadGen++;

@@ -3730,6 +3730,40 @@ class ProjectsmainController extends Controller
         ];
     }
 
+    // Cashflow dashboard, VALUE DRIVERS: ongoing activities shown in the Project
+    // Duration dial tooltip. Ongoing = scheduled window covers today (status 0).
+    public function actionCfongoingactivities()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return ['error' => 'No project selected']; }
+        $pid = (int)$projuser->projectid;
+        $db = Yii::$app->db;
+
+        $rows = $db->createCommand(
+            "SELECT sa.name, sa.start_date, sa.end_date,
+                    (SELECT MIN(spr.start_date) FROM schedule_progress_report spr
+                     WHERE spr.activity_id = sa.id AND spr.start_date IS NOT NULL
+                       AND spr.start_date <> '0000-00-00') AS a_start
+             FROM scheduleactivities sa
+             WHERE sa.projectId = :p AND sa.status = 0
+               AND sa.start_date <= CURDATE() AND sa.end_date >= CURDATE()
+             ORDER BY sa.start_date, sa.id", [':p' => $pid]
+        )->queryAll();
+
+        $acts = [];
+        foreach ($rows as $r) {
+            $acts[] = [
+                'name'    => $r['name'],
+                'start'   => substr($r['start_date'], 0, 10),
+                'end'     => substr($r['end_date'], 0, 10),
+                'a_start' => $r['a_start'] ? substr($r['a_start'], 0, 10) : '',
+            ];
+        }
+        return ['error' => 'No', 'today' => date('Y-m-d'), 'activities' => $acts];
+    }
+
     // Cashflow dashboard, VALUE DRIVERS: Project Cost panel.
     // Estimated = sum of project quantity x library rate over the project's estimate.
     public function actionCfprojectcost()
