@@ -286,7 +286,7 @@ function cfFitLayout(){
     var vw = window.innerWidth, vh = window.innerHeight;
     var s = Math.min(1, (vw - 24) / GROUP_W);
     var top = Math.max(64, Math.round(vh * 0.10));          // windows start below the toolbar
-    var winH = Math.min(vh * 0.68, vh - top - 16);          // visible window height
+    var winH = Math.min(vh * 0.68, vh - top - 16, GROUP_W * s * 0.72); // capped to the landscape proportion, so portrait is not elongated
     var groupLeft = (vw - GROUP_W * s) / 2;
     var hdr = document.getElementById('cf-shared-hdr');
     if (hdr) {
