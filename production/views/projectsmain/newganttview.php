@@ -1192,6 +1192,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     astart: aStart || act.actual_start_date,
                     aend:   aEndComputed || act.actual_end_date,
                     iowGroupId: act.iow_group_id,
+                    schedStart: act.start_date,
+                    schedEnd:   act.end_date,
                     rawId:  act.id,
                     wanId:  act.wan_id,
                     hasProgress: hasProgress
@@ -1396,6 +1398,31 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var _overlay = document.createElement('div');
       _overlay.style.cssText = 'position:absolute;left:' + _budgetedPx + 'px;width:' + _delayPx + 'px;top:1px;height:13px;background:rgba(255,40,0,0.9);pointer-events:none;z-index:2;border-radius:0 3px 3px 0;';
       _barDiv.appendChild(_overlay);
+    }
+
+    // Overrun: the part of an activity's scheduled dates after the project's end
+    // date (Project creation panel) is shown in solid red, so the plan can be
+    // corrected or rescheduled to finish within the project duration.
+    var _projEndStr = '<?= ($project && $project->end_date) ? substr($project->end_date, 0, 10) : '' ?>';
+    if (_projEndStr) {
+      var _dayMs = 86400000;
+      var _daysBetween = function(a, b) { return Math.round((new Date(b) - new Date(a)) / _dayMs); };
+      for (var _oid in _actCells) {
+        var _oc = _actCells[_oid];
+        var _os = safeDate(_oc.schedStart), _oe = safeDate(_oc.schedEnd);
+        if (!_os || !_oe || _oe <= _projEndStr) continue;
+        var _obar = document.getElementById('gantt-container' + 'bardiv_' + _oid);
+        if (!_obar) continue;
+        var _obarW = parseInt(_obar.style.width) || 0;
+        var _totalDays = _daysBetween(_os, _oe) + 1;
+        var _overDays = _daysBetween(_projEndStr, _oe);
+        if (!_obarW || _totalDays <= 0 || _overDays <= 0) continue;
+        var _overPx = Math.min(_obarW, Math.round(_obarW * _overDays / _totalDays));
+        var _redOv = document.createElement('div');
+        _redOv.title = 'Scheduled beyond the project end date (' + _projEndStr + ')';
+        _redOv.style.cssText = 'position:absolute;left:' + (_obarW - _overPx) + 'px;width:' + _overPx + 'px;top:0;height:100%;background:#d32f2f;pointer-events:none;z-index:3;';
+        _obar.appendChild(_redOv);
+      }
     }
 
     // Colour completed activity bars green
