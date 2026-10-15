@@ -511,7 +511,8 @@ function renderCfValueDrivers(){
 $(function(){
     $(document).on('click', '#cf-value-duration', function(){
         var btn = document.getElementById('gantt-win-open');
-        if (btn) btn.click();
+        if (typeof window.openGanttWin === 'function') window.openGanttWin('current');
+        else if (btn) btn.click();
     });
 });
 

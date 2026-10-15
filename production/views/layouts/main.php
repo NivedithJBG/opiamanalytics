@@ -4971,7 +4971,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
   }
 
   function _loadGanttWin(pid) {
-    var url = _ganttUrl + '&id=' + (pid || _ganttPid);
+    var url = _ganttUrl + '&id=' + (pid || _ganttPid) + (_loadedMode === 'current' ? '&current=1' : '');
     _removeStaleGcmPopups();
     $('#gantt-win-body').html('<div id="gantt-win-loading">Loading Gantt chart&hellip;</div>');
     $.ajax({ url: url, cache: false, success: function(html){
@@ -5020,23 +5020,35 @@ window.loadIowGroupOptions = function(selectEl, cb){
   };
 
   // Open
+  // Opens the window in 'full' (toolbar icon) or 'current' (Cashflow Project
+  // Duration panel: smaller window, monthly format, only due/reported activities).
+  var _loadedMode = null;
+  window.openGanttWin = function(mode){
+    var want = (mode === 'current') ? 'current' : 'full';
+    var pid = openBtn ? openBtn.getAttribute('data-projectid') : '';
+    if(want !== _loadedMode){
+      if(want === 'current'){ win.style.width='760px'; win.style.height='520px'; }
+      else { win.style.width=''; win.style.height=''; }
+    }
+    win.classList.add('gw-open');
+    document.dispatchEvent(new Event('gantt:open'));
+    if(!pid){
+      document.getElementById('gantt-win-body').innerHTML = '<div style="padding:50px;text-align:center;color:#888;font-size:14px;">Please select a project first.</div>';
+      return;
+    }
+    if(want !== _loadedMode) _loaded = false;
+    if(!_loaded){
+      _loaded = true;
+      _loadedMode = want;
+      _loadGanttWin(pid);
+    }
+  };
+
   var openBtn = document.getElementById('gantt-win-open');
   if(openBtn){
     openBtn.addEventListener('click', function(e){
       e.preventDefault();
-      var pid = this.getAttribute('data-projectid');
-      if(!pid){
-        win.classList.add('gw-open');
-        document.dispatchEvent(new Event('gantt:open'));
-        document.getElementById('gantt-win-body').innerHTML = '<div style="padding:50px;text-align:center;color:#888;font-size:14px;">Please select a project first.</div>';
-        return;
-      }
-      win.classList.add('gw-open');
-      document.dispatchEvent(new Event('gantt:open'));
-      if(!_loaded){
-        _loaded = true;
-        _loadGanttWin(pid);
-      }
+      window.openGanttWin('full');
     });
   }
 

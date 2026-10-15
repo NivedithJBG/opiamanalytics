@@ -958,6 +958,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   function loadGanttInner() {
     $('#gantt-container').empty();
 
+    // "Current" view (opened from the Cashflow Project Duration panel): only
+    // activities due to start today or already started (reported), shown monthly.
+    window._ganttCurrentOnly = <?php echo Yii::$app->request->get('current') ? 'true' : 'false'; ?>;
+    var _ganttTodayStr = (function(){ var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); })();
+
     var g = new JSGantt.GanttChart(document.getElementById('gantt-container'), 'week');
     if (!g.getDivId()) return;
 
@@ -1156,6 +1161,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                       : act.actual_duration;
                   }
 
+                  // Current view: skip activities not yet due (no progress and planned start after today).
+                  if (window._ganttCurrentOnly && !hasProgress && !(plannedStart && plannedStart <= _ganttTodayStr)) continue;
                   // Bar position uses A. dates when available, falls back to B. dates
                   var barStart = aStart       || act.actual_start_date;
                   var barEnd   = aEndComputed ? addOneDay(aEndComputed) : addOneDay(act.actual_end_date);
@@ -1497,6 +1504,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     // goes through setFormat(), so re-apply the decorations after it redraws.
     var _origSetFormat = g.setFormat;
     g.setFormat = function(f) { _origSetFormat.call(g, f); _decorateGantt(); };
+    if (window._ganttCurrentOnly) { g.setFormat('month'); }
 
     // The scroll-fix above clones the left header, which strips the click
     // listeners from the chart's own Format links (Day/Week/Month). Handle those
