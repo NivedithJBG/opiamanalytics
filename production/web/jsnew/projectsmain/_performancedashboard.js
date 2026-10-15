@@ -443,12 +443,13 @@ function _cfDurationDialSvg(target, actual, centerLabel){
     var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
     var targetLine = '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8"/>'
         + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6"/>';
-    var gapCol = actual > target ? '#d84a30' : '#2ba899';
-    var gapPath = f < targetF ? arc(f, targetF, gapCol) : arc(targetF, f, gapCol);
+    var gapCol = '#d9480f';
+    var targetPath = arc(0, targetF, '#2ba899');
+    var gapPath = arc(targetF, 1, gapCol);
     var nr = r - 14, na = Math.PI * (1 - f);
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
     var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
-        + arc(0, 1, '#3a4a5f') + gapPath + targetLine
+        + arc(0, 1, '#3a4a5f') + targetPath + gapPath + targetLine
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
         + '<text x="' + cx + '" y="' + (cy - 22) + '" text-anchor="middle" font-size="22" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + centerLabel + '</text>'
