@@ -4009,13 +4009,13 @@ if($action=='login')
 #pd-right{flex:2.2;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(4,1fr);gap:8px;}
 #pd-tip{position:fixed;z-index:100300;background:#0c1535;color:#e8ecf4;font-family:'Barlow Condensed',sans-serif;font-size:12px;line-height:1.4;padding:6px 18px;border-radius:4px;pointer-events:none;display:none;white-space:pre;box-shadow:0 3px 12px rgba(0,0,0,.4);min-width:320px;max-width:420px;}
 /* ── Panel ────────────────────────────────────────────────────────────────── */
-.dash-modal .panel{background:#fff;border:none;border-right:1px solid #c8d0e0;overflow:hidden;display:flex;flex-direction:column;min-height:0}
-.dash-modal .ph{background:linear-gradient(180deg,#0c1535 0%,#05091c 100%);padding:3px 6px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;letter-spacing:.7px;text-align:center;text-transform:uppercase;color:#fff;flex-shrink:0}
-.dash-modal .pb{flex:1;min-height:0;overflow:hidden;padding:4px 7px 3px}
+.dash-modal .panel,.cf-seg-win .panel{background:#fff;border:none;border-right:1px solid #c8d0e0;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.dash-modal .ph,.cf-seg-win .ph{background:linear-gradient(180deg,#0c1535 0%,#05091c 100%);padding:3px 6px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;letter-spacing:.7px;text-align:center;text-transform:uppercase;color:#fff;flex-shrink:0}
+.dash-modal .pb,.cf-seg-win .pb{flex:1;min-height:0;overflow:hidden;padding:4px 7px 3px}
 #pd-c2{overflow:auto !important;}
 /* ── Legend ───────────────────────────────────────────────────────────────── */
-.dash-modal .leg{display:flex;gap:6px;align-items:center;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#4a5a72;margin-bottom:3px}
-.dash-modal .leg span{display:flex;align-items:center;gap:3px}
+.dash-modal .leg,.cf-seg-win .leg{display:flex;gap:6px;align-items:center;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#4a5a72;margin-bottom:3px}
+.dash-modal .leg span,.cf-seg-win .leg span{display:flex;align-items:center;gap:3px}
 .dash-modal .ld{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 /* ── Bar rows ─────────────────────────────────────────────────────────────── */
 .dash-modal .brow{display:flex;align-items:center;margin-bottom:3px}
