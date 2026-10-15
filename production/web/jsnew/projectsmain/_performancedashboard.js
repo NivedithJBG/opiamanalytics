@@ -277,9 +277,46 @@ function cfMoveSegmentWindows(dx, dy){
         el.style.top  = (el.offsetTop + dy) + 'px';
     });
 }
+// Fits the three Cashflow windows to the iPad (or any) screen, in both orientations.
+// The group is 962px wide; it is scaled down only when the screen is narrower than that
+// (13" iPad portrait 1024px, landscape 1366px). Scaling uses transform, so the window
+// positions stay in screen pixels and the jQuery UI drag and touch drag keep working.
+function cfFitLayout(){
+    var GROUP_W = 962;
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var s = Math.min(1, (vw - 24) / GROUP_W);
+    var top = Math.max(64, Math.round(vh * 0.10));          // windows start below the toolbar
+    var winH = Math.min(vh * 0.68, vh - top - 16);          // visible window height
+    var groupLeft = (vw - GROUP_W * s) / 2;
+    var hdr = document.getElementById('cf-shared-hdr');
+    if (hdr) {
+        hdr.style.transformOrigin = '0 0';
+        hdr.style.transform = 'scale(' + s + ')';
+        hdr.style.width = GROUP_W + 'px';
+        hdr.style.left = groupLeft + 'px';
+        hdr.style.top = (top - 44 * s) + 'px';
+    }
+    // Each window's offset from the start of the group (same as its calc(50% ...) left).
+    var offsets = { 'cf-win-value': 0, 'cf-win-c2c': 208, 'cf-win-roi': 598 };
+    _cfSegWins.forEach(function(w){
+        var el = document.getElementById(w.id);
+        if (!el) return;
+        el.style.transformOrigin = '0 0';
+        el.style.transform = 'scale(' + s + ')';
+        el.style.left = (groupLeft + offsets[w.id] * s) + 'px';
+        el.style.top = top + 'px';
+        el.style.height = (winH / s) + 'px';
+    });
+}
+$(window).on('resize orientationchange', function(){
+    if ($('#cf-win-value').is(':visible')) cfFitLayout();
+});
+// Larger touch targets for the close buttons and title bars on touch screens (iPad).
+$('head').append('<style>@media (pointer:coarse){#cf-shared-close,.cf-seg-close{min-width:36px;min-height:36px;font-size:22px !important;}.cf-seg-hdr{padding:10px 12px !important;}}</style>');
 function cfShowSegmentWindows(){
     _cfSegWins.forEach(function(w){ $('#' + w.id).css('display', 'flex'); });
     $('#cf-shared-hdr').css('display', 'flex');
+    cfFitLayout();
 }
 function cfHideSegmentWindows(){
     _cfSegWins.forEach(function(w){ $('#' + w.id).css('display', 'none'); });
