@@ -587,6 +587,12 @@ class ProjectsmainController extends Controller
                 "UPDATE workgroup_activities_new SET activity_Name=:n, activity_Unit=:u, cycle_Unit=:u, cycle_Quantity=:q, duration=:d WHERE id=:id",
                 [':n' => $name, ':u' => $unit, ':q' => $qty, ':d' => $duration, ':id' => $wanId]
             )->execute();
+            // The Estimate report takes the quantity from the project's pricing row,
+            // so keep it in step with the Gantt quantity (this project only).
+            $db->createCommand(
+                "UPDATE pricing_estimate_new SET activity_qty=:q WHERE activity_Id=:w AND project_Id=:p AND pricing_status=0",
+                [':q' => $qty, ':w' => $wanId, ':p' => $pid]
+            )->execute();
         }
 
         $db->createCommand("DELETE FROM schedule_task_new WHERE activity_Id=:id", [':id' => $saId])->execute();
