@@ -290,7 +290,7 @@ function cfBuildSegmentWindows(){
     // Shared header above the three windows: "Project Management" and the project name.
     // Dragging it (or touching it) moves all three windows together; its × closes all.
     $('body').append(
-        '<div id="cf-shared-hdr" style="display:none;position:fixed;left:calc(50% - 481px);top:calc(12vh - 30px);width:962px;height:30px;box-sizing:border-box;background:#081142;color:#fff;padding:0 12px;align-items:center;justify-content:space-between;cursor:move;user-select:none;touch-action:none;z-index:100200;font-family:Nunito,Arial,sans-serif;">'
+        '<div id="cf-shared-hdr" style="display:none;position:fixed;left:calc(50% - 481px);top:calc(12vh - 44px);width:962px;height:30px;box-sizing:border-box;background:#081142;color:#fff;padding:0 12px;align-items:center;justify-content:space-between;cursor:move;user-select:none;touch-action:none;z-index:100200;font-family:Nunito,Arial,sans-serif;">'
         + '<span><span style="font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;">Project Management</span>'
         + '<span id="cf-shared-name" style="font-size:12px;margin-left:12px;opacity:.9;"></span></span>'
         + '<button type="button" id="cf-shared-close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;padding:0 3px;">&times;</button>'
