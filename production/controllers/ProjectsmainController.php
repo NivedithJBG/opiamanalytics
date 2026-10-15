@@ -4251,7 +4251,7 @@ class ProjectsmainController extends Controller
 
         // Project info
         $project = $connection->createCommand(
-            "SELECT Name, start_date FROM projects WHERE Project_Id=$pid"
+            "SELECT Name, start_date, end_date, duration FROM projects WHERE Project_Id=$pid"
         )->queryOne();
         $proj_start = $project ? $project['start_date'] : date('Y-m-d');
 
@@ -4482,10 +4482,16 @@ class ProjectsmainController extends Controller
         // of this code sourced Planned Duration from projects.duration
         // instead; reverted per explicit direction that "as per the Gantt
         // chart" is the correct answer for how long the project takes.
-        $proj_budgeted    = max(1, (int)($dur_row['budgeted']  ?? 0));
+        // Plan duration and dates are the project's own (Project creation panel):
+        // the end date stays fixed unless it is changed manually.
+        $proj_budgeted    = ($project && (int)($project['duration'] ?? 0) > 0)
+            ? (int)$project['duration']
+            : max(1, (int)($dur_row['budgeted']  ?? 0));
         $proj_actual      = max(0, (int)($dur_row['actual']    ?? 0));
         $proj_b_start_raw = $dur_row['b_start_date'] ?? '';
-        $proj_b_end_date  = $dur_row['b_end_date'] ?? '';
+        $proj_b_end_date  = ($project && !empty($project['end_date']) && $project['end_date'] !== '0000-00-00 00:00:00')
+            ? substr($project['end_date'], 0, 10)
+            : ($dur_row['b_end_date'] ?? '');
         $proj_a_end_date  = $dur_row['a_end_date'] ?? '';
 
         // Project delay = DATEDIFF(actual_end, planned_end) of critical activities
@@ -4507,8 +4513,10 @@ class ProjectsmainController extends Controller
         $proj_delay = ($proj_planned_end && $proj_actual_end)
             ? max(0, (int)((strtotime($proj_actual_end) - strtotime($proj_planned_end)) / 86400))
             : 0;
-        // Start date = planned start date (no adjustment)
-        $proj_b_start_date = $proj_b_start_raw;
+        // Plan start = the project's start date (Project creation panel)
+        $proj_b_start_date = ($project && !empty($project['start_date']) && $project['start_date'] !== '0000-00-00 00:00:00')
+            ? substr($project['start_date'], 0, 10)
+            : $proj_b_start_raw;
         // Actual start = earliest reported start date across all activities
         $actual_start_row = $connection->createCommand(
             "SELECT MIN(spr.start_date) AS actual_start
