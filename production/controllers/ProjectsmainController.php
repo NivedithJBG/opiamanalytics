@@ -3730,49 +3730,6 @@ class ProjectsmainController extends Controller
         ];
     }
 
-    // Cashflow dashboard, VALUE DRIVERS: current activities for the Project
-    // Duration dial snapshot. Current = not completed and due to start today or
-    // already started. Listed IOW group wise (project order of the IOW groups).
-    // Each row carries the activity's KPI data (same builder as the Gantt bar
-    // popup) so clicking a bar can show its metrics.
-    public function actionCfongoingactivities()
-    {
-        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $uid = Yii::$app->user->Id;
-        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
-        if (!$projuser) { return ['error' => 'No project selected']; }
-        $pid = (int)$projuser->projectid;
-        $db = Yii::$app->db;
-
-        $rows = $db->createCommand(
-            "SELECT sa.id, sa.iow_group_id AS group_id, ig.name AS group_name
-             FROM scheduleactivities sa
-             LEFT JOIN iow_groups ig ON ig.id = sa.iow_group_id
-             LEFT JOIN iow_group_order go ON go.iow_group_id = sa.iow_group_id AND go.project_id = sa.projectId
-             WHERE sa.projectId = :p AND sa.status = 0 AND sa.completed_status = 0
-               AND sa.start_date <= CURDATE()
-             ORDER BY COALESCE(go.sortorder, 999999), ig.name, sa.start_date, sa.id", [':p' => $pid]
-        )->queryAll();
-
-        $acts = [];
-        foreach ($rows as $r) {
-            $act = $db->createCommand(
-                "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, act_start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status
-                 FROM scheduleactivities WHERE id = :id AND projectId = :p", [':id' => (int)$r['id'], ':p' => $pid]
-            )->queryOne();
-            if (!$act) { continue; }
-            $acts[] = [
-                'id'    => (int)$act['id'],
-                'name'  => $act['name'],
-                'group' => $r['group_name'] ?: 'Ungrouped',
-                'start' => substr((string)$act['start_date'], 0, 10),
-                'end'   => substr((string)$act['end_date'], 0, 10),
-                'kpi'   => $this->_buildKpi($act, $pid, $db),
-            ];
-        }
-        return ['error' => 'No', 'today' => date('Y-m-d'), 'activities' => $acts];
-    }
-
     // Cashflow dashboard, VALUE DRIVERS: Project Cost panel.
     // Estimated = sum of project quantity x library rate over the project's estimate.
     public function actionCfprojectcost()

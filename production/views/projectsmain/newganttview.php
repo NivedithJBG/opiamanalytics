@@ -4120,10 +4120,6 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       });
     }
 
-    // Exposed for the Cashflow dashboard's Duration snapshot: clicking one of its
-    // activity bars opens this same Manage Schedule popup for that activity.
-    window._ganttShowKpiForAct = function(actId, positionFn) { _showKpiForAct(actId, positionFn); };
-
     // Row click — KPI popup. Bound to #gantt-container itself (not the row
     // element directly) so it also catches clicks on nested cells/backdrop
     // divs inside the row whose own delegated-selector match might not be
