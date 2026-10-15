@@ -574,7 +574,7 @@ function _cfTimeline(acts, todayT){
 
 function _cfGridLines(tl){
     return tl.grid.map(function(t){
-        return '<div style="position:absolute;top:0;bottom:0;width:1px;background:#d5dce8;left:' + tl.pos(t).toFixed(2) + '%;"></div>';
+        return '<div style="position:absolute;top:0;bottom:0;width:1px;background:#9fb0c8;left:' + tl.pos(t).toFixed(2) + '%;"></div>';
     }).join('');
 }
 
@@ -727,7 +727,21 @@ $(function(){
         if (_cfDurTipOpen) _cfCloseDurTip(); else _cfOpenDurTip();
     });
     $(document).on('click', '#cf-gantt-tip-x', function(e){ e.stopPropagation(); _cfCloseDurTip(); });
-    $(document).on('click', '.cf-gt-row', function(e){ e.stopPropagation(); _cfShowActPop(+$(this).attr('data-idx')); });
+    $(document).on('click', '.cf-gt-row', function(e){
+        e.stopPropagation();
+        var i = +$(this).attr('data-idx'), a = _cfTipActs[i];
+        _cfHideActPop();
+        // Same Manage Schedule popup as the Gantt bar click when the Gantt is open on this page.
+        if (a && typeof window._ganttShowKpiForAct === 'function') {
+            window._ganttShowKpiForAct(a.id, function(){
+                var pop = document.getElementById('gkp-popup'), r = _cfDurTipEl().getBoundingClientRect();
+                pop.style.left = Math.max(8, Math.min(r.right + 12, window.innerWidth - pop.offsetWidth - 8)) + 'px';
+                pop.style.top = r.top + 'px';
+            });
+        } else {
+            _cfShowActPop(i);
+        }
+    });
     $(document).on('click', '#cf-act-pop-x', function(e){ e.stopPropagation(); _cfHideActPop(); });
     // Drag the activity popup by its header.
     $(document).on('mousedown', '#cf-act-pop-hdr', function(e){
@@ -742,7 +756,7 @@ $(function(){
     $(document).on('mousedown', function(e){
         var $t = $(e.target);
         if (!$t.closest('#cf-act-pop, .cf-gt-row').length) _cfHideActPop();
-        if (_cfDurTipOpen && !$t.closest('#cf-gantt-tip, #cf-value-duration, #cf-act-pop').length) _cfCloseDurTip();
+        if (_cfDurTipOpen && !$t.closest('#cf-gantt-tip, #cf-value-duration, #cf-act-pop, #gkp-popup').length) _cfCloseDurTip();
     });
 });
 
