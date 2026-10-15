@@ -1192,8 +1192,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     astart: aStart || act.actual_start_date,
                     aend:   aEndComputed || act.actual_end_date,
                     iowGroupId: act.iow_group_id,
-                    schedStart: act.start_date,
-                    schedEnd:   act.end_date,
+                    drawStart:  barStart,
+                    drawEnd:    barEnd,
                     rawId:  act.id,
                     wanId:  act.wan_id,
                     hasProgress: hasProgress
@@ -1409,7 +1409,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var _daysBetween = function(a, b) { return Math.round((new Date(b) - new Date(a)) / _dayMs); };
       for (var _oid in _actCells) {
         var _oc = _actCells[_oid];
-        var _os = safeDate(_oc.schedStart), _oe = safeDate(_oc.schedEnd);
+        // barEnd is the day after the bar's last day, so the last day is barEnd - 1.
+        var _os = safeDate(_oc.drawStart);
+        var _oe = safeDate(_oc.drawEnd) ? String(addDays(safeDate(_oc.drawEnd), -1)).substr(0, 10) : '';
+        _os = String(_os).substr(0, 10);
         if (!_os || !_oe || _oe <= _projEndStr) continue;
         var _obar = document.getElementById('gantt-container' + 'bardiv_' + _oid);
         if (!_obar) continue;
