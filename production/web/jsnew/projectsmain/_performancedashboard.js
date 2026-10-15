@@ -448,9 +448,9 @@ function _cfDurationDialSvg(target, actual, centerLabel, tipLabel){
     var gapPath = arc(targetF, 1, gapCol);
     var nr = r - 14, na = Math.PI * (1 - f);
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
-    var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+    var svg = '<svg width="140" height="82" viewBox="-10 -20 230 110" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
         + arc(0, 1, '#3a4a5f') + targetPath + gapPath + targetLine
-        + (tipLabel ? '<text x="' + (cx + (r - 30) * Math.cos(na)).toFixed(1) + '" y="' + (cy - (r - 30) * Math.sin(na) + 4).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + tipLabel + '</text>' : '')
+        + (tipLabel ? '<text x="' + (cx + (r + 18) * Math.cos(na)).toFixed(1) + '" y="' + (cy - (r + 18) * Math.sin(na) + 4).toFixed(1) + '" text-anchor="' + (Math.cos(na) < -0.3 ? 'end' : Math.cos(na) > 0.3 ? 'start' : 'middle') + '" font-size="12" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + tipLabel + '</text>' : '')
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
         + '<text x="' + cx + '" y="' + (cy - 22) + '" text-anchor="middle" font-size="22" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + centerLabel + '</text>'
