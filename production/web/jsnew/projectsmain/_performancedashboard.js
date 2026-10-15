@@ -264,9 +264,9 @@ var _cfLoading = false;
 var _cfSegWins = [
     // Same segment widths as the single window at medium size: 960px in total,
     // 182px per panel column, with 26px gaps between the segments.
-    { id: 'cf-win-value', title: 'Value Drivers',       cols: 1, head: '#4a4f57', left: 'calc(50% - 481px)', width: '182px', panels: [1] },
+    { id: 'cf-win-value', title: 'Value Drivers',       cols: 1, head: '#4a4f57', left: 'calc(50% - 481px)', width: '182px', panels: [1], center: true },
     { id: 'cf-win-c2c',   title: 'Cash-to-Cash Cycle',  cols: 2, head: '#4a4f57', left: 'calc(50% - 273px)', width: '364px', panels: [3, 4] },
-    { id: 'cf-win-roi',   title: 'ROI and Free Cash',   cols: 2, head: '#1a0a2e', left: 'calc(50% + 117px)', width: '364px', panels: [6, 7] }
+    { id: 'cf-win-roi',   title: 'ROI and Free Cash',   cols: 2, head: '#1a0a2e', left: 'calc(50% + 117px)', width: '364px', panels: [6, 7], center: true }
 ];
 function cfBuildSegmentWindows(){
     if (document.getElementById('cf-win-value')) return;
@@ -275,7 +275,7 @@ function cfBuildSegmentWindows(){
         $('body').append(
             '<div id="' + w.id + '" class="cf-seg-win" style="display:none;position:fixed;top:12vh;left:' + w.left + ';width:' + w.width + ';height:68vh;color:#fff;background:#f0f2f7;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.7);flex-direction:column;overflow:hidden;z-index:100200;">'
             + '<div class="cf-seg-hdr" style="flex:none;display:flex;align-items:center;justify-content:space-between;background:' + w.head + ';color:#fff;padding:6px 10px;cursor:move;user-select:none;font-family:Nunito,Arial,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;">'
-            + '<span>' + w.title + '</span>'
+            + '<span style="' + (w.center ? 'flex:1;text-align:center;' : '') + '">' + w.title + '</span>'
             + '<button type="button" class="cf-seg-close" data-win="' + w.id + '" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;padding:0 3px;">&times;</button>'
             + '</div>'
             + '<div class="cf-seg-body" style="flex:1;min-height:0;box-sizing:border-box;padding-top:8px;display:grid;grid-template-columns:repeat(' + w.cols + ',1fr);grid-template-rows:repeat(3,1fr);"></div>'
