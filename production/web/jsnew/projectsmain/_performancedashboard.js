@@ -278,7 +278,7 @@ function cfBuildSegmentWindows(){
             + '<span>' + w.title + '</span>'
             + '<button type="button" class="cf-seg-close" data-win="' + w.id + '" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;padding:0 3px;">&times;</button>'
             + '</div>'
-            + '<div class="cf-seg-body" style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(' + w.cols + ',1fr);grid-template-rows:repeat(3,1fr);"></div>'
+            + '<div class="cf-seg-body" style="flex:1;min-height:0;box-sizing:border-box;padding-top:8px;display:grid;grid-template-columns:repeat(' + w.cols + ',1fr);grid-template-rows:repeat(3,1fr);"></div>'
             + '</div>'
         );
     });
@@ -300,8 +300,13 @@ function cfBuildSegmentWindows(){
         $win.draggable({ handle: '.cf-seg-hdr', containment: 'window', scroll: false });
     });
 }
+// The Cashflow button opens the three windows, or closes them if they are open.
 $(document).on('click', '.cashflow-dashboard-btn', function(e){
     e.preventDefault();
+    if ($('#cf-win-value').is(':visible')) {
+        _cfSegWins.forEach(function(w){ $('#' + w.id).css('display', 'none'); });
+        return;
+    }
     cfBuildSegmentWindows();
     _cfSegWins.forEach(function(w){ $('#' + w.id).css('display', 'flex'); });
     if (!_cfLoading) { renderCfBars(); }
