@@ -426,7 +426,7 @@ var _cfLoadGen = 0;
 // Project Duration dial: the planned duration sits at the centre (yellow marker at
 // the top), the needle shows the actual (forecast) duration. Actual above target is
 // orange-red, at or below target blue-green, as on the other dials.
-function _cfDurationDialSvg(target, actual, centerLabel){
+function _cfDurationDialSvg(target, actual, centerLabel, tipLabel){
     var maxV = target > 0 ? target * 2 : 100;
     var f = Math.max(0, Math.min(1, actual / maxV));
     var cx = 105, cy = 82, r = 76, sw = 15;
@@ -450,6 +450,7 @@ function _cfDurationDialSvg(target, actual, centerLabel){
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
     var svg = '<svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
         + arc(0, 1, '#3a4a5f') + targetPath + gapPath + targetLine
+        + (tipLabel ? '<text x="' + (cx + (r - 30) * Math.cos(na)).toFixed(1) + '" y="' + (cy - (r - 30) * Math.sin(na) + 4).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + tipLabel + '</text>' : '')
         + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
         + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
         + '<text x="' + cx + '" y="' + (cy - 22) + '" text-anchor="middle" font-size="22" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + centerLabel + '</text>'
@@ -458,8 +459,8 @@ function _cfDurationDialSvg(target, actual, centerLabel){
 }
 
 // Dial plus its labels row, used by all three VALUE DRIVERS panels.
-function _cfValueDialHtml(target, actual, centerLabel, targetLabel, actualLabel){
-    return _cfDurationDialSvg(target, actual, centerLabel)
+function _cfValueDialHtml(target, actual, centerLabel, targetLabel, actualLabel, tipLabel){
+    return _cfDurationDialSvg(target, actual, centerLabel, tipLabel)
         + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
         + '<span style="font-size:13px;color:#1a2540;font-weight:700;">' + actualLabel + '</span>'
         + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>' + targetLabel + '</span>'
@@ -488,7 +489,7 @@ function renderCfValueDrivers(){
             durEl.style.display = 'flex';
             durEl.style.flexDirection = 'column';
             durEl.style.justifyContent = 'center';
-            durEl.innerHTML = _cfValueDialHtml(t, a, a + ' d', 'Target: ' + t + ' d', 'Actual: ' + a + ' d');
+            durEl.innerHTML = _cfValueDialHtml(t, a, a + ' d', 'Target: ' + t + ' d', 'Actual: ' + a + ' d', (a - t >= 0 ? '+' : '') + (a - t) + ' d');
         }
     });
     _cfQueueAjax({
