@@ -1117,6 +1117,28 @@
      handlers) so this popup doesn't interfere with the real Activity
      Library page if both happen to be open at once.
   ═══════════════════════════════════════════════════════════════ */
+  // Drag the Resource Allocation popup by its header (mouse and touch).
+  // Clears the centring transform on the first drag so the window moves freely.
+  (function(){
+    var win = document.getElementById('erra-popup');
+    var drag = null;
+    bindDragTouch(document.getElementById('erra-hdr'), 'mousedown', function(e){
+      if(e.target.closest('#erra-close')) return;
+      var r = win.getBoundingClientRect();
+      win.style.transform = 'none';
+      win.style.left = r.left + 'px'; win.style.top = r.top + 'px';
+      drag = { sx: e.clientX, sy: e.clientY, ox: r.left, oy: r.top };
+      e.preventDefault();
+    });
+    bindDragTouch(document, 'mousemove', function(e){
+      if(!drag) return;
+      e.preventDefault();
+      win.style.left = Math.max(0, drag.ox + e.clientX - drag.sx) + 'px';
+      win.style.top  = Math.max(0, drag.oy + e.clientY - drag.sy) + 'px';
+    }, { passive: false });
+    bindDragTouch(document, 'mouseup', function(){ drag = null; });
+  })();
+
   var _erraActivityId = 0;
   var _erraActiveTypeId = 0;
   var _erraWanId = 0; // project-scoped workgroup_activities_new.id — needed so
