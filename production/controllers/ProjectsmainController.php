@@ -493,6 +493,20 @@ class ProjectsmainController extends Controller
                  ORDER BY stn.id ASC",
                 [':sa' => $r['id']]
             )->queryAll();
+            // No task values saved on this Gantt activity yet: fall back to the
+            // library's tasks for the same activity, so the Task popup and Save
+            // use the library Qty/Productivity instead of an empty task (which
+            // made the save fall back to a 1-day duration).
+            if (!$tasks) {
+                $tasks = $db->createCommand(
+                    "SELECT at.id AS id, at.task_name AS name, at.task_qty AS qty,
+                            at.productivity AS productivity, at.resource_units AS resunits
+                     FROM activity_tasks at
+                     WHERE at.activity_id = (SELECT activity_Id FROM workgroup_activities_new WHERE id = :w)
+                     ORDER BY at.sort_order ASC, at.id ASC",
+                    [':w' => $r['wan_id']]
+                )->queryAll();
+            }
             $items[] = [
                 'sa_id'    => (int)$r['id'],
                 'name'     => $r['name'],
