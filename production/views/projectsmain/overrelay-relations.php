@@ -856,6 +856,10 @@
     // itself was already correct. A "Show all" link (prepended once,
     // above the table) brings the full list back on demand.
     $all.not($rows).hide();
+    // Clicking an activity (not a specific arrow) must never edit its existing
+    // relationship: that overwrote the row on save, so a second relationship
+    // replaced the first. Show the existing rows read-only and open a new Add row.
+    if(pTarget.precAct === undefined && pTarget.actId !== undefined){ _openAddWithPrecedent(pTarget.actId); return; }
     $rows.show().each(function(){ $(this).find('.rl2-live-edit-btn').trigger('click'); });
     $rows[0].scrollIntoView({ block: 'center' });
 
