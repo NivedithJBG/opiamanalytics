@@ -487,7 +487,11 @@ class ProjectsController extends Controller
         $pid = (int)$pid;
         if (!$pid) return;
 
-        $overheadIowGroupId = 17;   // "Support Activities" (global)
+        // "Support Activities" (global IOW group). Looked up by name, because its id
+        // has changed over time; 17 is only a fallback for older databases.
+        $overheadIowGroupId = (int)$db->createCommand(
+            "SELECT id FROM iow_groups WHERE name = 'Support Activities' AND status = 0 ORDER BY id LIMIT 1"
+        )->queryScalar() ?: 17;
         // Very high fixed sortorder so this group always sorts LAST in the
         // Project Estimate report, regardless of how many real IOW groups
         // get added to the project afterward (those use MAX(sortorder)+1
