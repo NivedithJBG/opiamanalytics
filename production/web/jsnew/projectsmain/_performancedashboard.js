@@ -265,7 +265,7 @@ var _cfSegWins = [
     // Same segment widths as the single window at medium size: 960px in total,
     // 182px per panel column, with 26px gaps between the segments.
     { id: 'cf-win-value', title: 'Value Drivers',       cols: 1, head: '#4a4f57', left: 'calc(50% - 572px)', width: '182px', panels: [1], center: true },
-    { id: 'cf-win-c2c',   title: 'Cash-to-Cash Cycle',  cols: 3, head: '#4a4f57', left: 'calc(50% - 364px)', width: '546px', panels: [3, 4, 5] },
+    { id: 'cf-win-c2c',   title: 'Cash-to-Cash Cycle',  cols: 3, head: '#4a4f57', left: 'calc(50% - 364px)', width: '546px', panels: [3, 4, 5], center: true },
     { id: 'cf-win-roi',   title: 'ROI and Free Cash',   cols: 2, head: '#1a0a2e', left: 'calc(50% + 208px)', width: '364px', panels: [6, 7], center: true }
 ];
 // Moves all three Cashflow windows by the same amount (used by the shared header).
