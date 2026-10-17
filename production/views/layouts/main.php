@@ -4150,7 +4150,7 @@ if($action=='login')
       <div id="cf-grid">
       <div class="panel" style="grid-column:1;grid-row:1;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Project Duration</div><div class="gp" style="background:#e3e5e8;" id="cf-value-duration"></div></div>
       <div class="panel" style="grid-column:1;grid-row:2;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Project Cost</div><div class="gp" style="background:#e3e5e8;" id="cf-value-cost"></div></div>
-      <div class="panel" style="grid-column:1;grid-row:3;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Procurement</div><div class="gp" style="background:#e3e5e8;" id="cf-value-procurement"></div></div>
+      <div class="panel" style="grid-column:1;grid-row:3;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Project Resources</div><div class="gp" style="background:#e3e5e8;" id="cf-value-procurement"></div></div>
       <div class="panel" style="grid-column:3;grid-row:1;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Investments</div><div class="gp" style="background:#e3e5e8;" id="cf-currentassets"></div></div>
       <div class="panel" style="grid-column:3;grid-row:2;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Work In Progress</div><div class="gp" style="background:#e3e5e8;" id="cf-billsreceivable"></div></div>
       <div class="panel" style="grid-column:3;grid-row:3;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Bills Receivable</div><div class="gp" style="background:#e3e5e8;" id="cf-contract-income"></div></div>
