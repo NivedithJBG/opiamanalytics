@@ -264,9 +264,9 @@ var _cfLoading = false;
 var _cfSegWins = [
     // Same segment widths as the single window at medium size: 960px in total,
     // 182px per panel column, with 26px gaps between the segments.
-    { id: 'cf-win-value', title: 'Value Drivers',       cols: 1, head: '#4a4f57', left: 'calc(50% - 481px)', width: '182px', panels: [1], center: true },
-    { id: 'cf-win-c2c',   title: 'Cash-to-Cash Cycle',  cols: 2, head: '#4a4f57', left: 'calc(50% - 273px)', width: '364px', panels: [3, 4] },
-    { id: 'cf-win-roi',   title: 'ROI and Free Cash',   cols: 2, head: '#1a0a2e', left: 'calc(50% + 117px)', width: '364px', panels: [6, 7], center: true }
+    { id: 'cf-win-value', title: 'Value Drivers',       cols: 1, head: '#4a4f57', left: 'calc(50% - 572px)', width: '182px', panels: [1], center: true },
+    { id: 'cf-win-c2c',   title: 'Cash-to-Cash Cycle',  cols: 3, head: '#4a4f57', left: 'calc(50% - 364px)', width: '546px', panels: [3, 4, 5] },
+    { id: 'cf-win-roi',   title: 'ROI and Free Cash',   cols: 2, head: '#1a0a2e', left: 'calc(50% + 208px)', width: '364px', panels: [6, 7], center: true }
 ];
 // Moves all three Cashflow windows by the same amount (used by the shared header).
 function cfMoveSegmentWindows(dx, dy){
@@ -282,7 +282,7 @@ function cfMoveSegmentWindows(dx, dy){
 // (13" iPad portrait 1024px, landscape 1366px). Scaling uses transform, so the window
 // positions stay in screen pixels and the jQuery UI drag and touch drag keep working.
 function cfFitLayout(){
-    var GROUP_W = 962;
+    var GROUP_W = 1144;
     var vw = window.innerWidth, vh = window.innerHeight;
     var s = Math.min(1, (vw - 24) / GROUP_W);
     var top = Math.max(64, Math.round(vh * 0.10));          // windows start below the toolbar
@@ -297,7 +297,7 @@ function cfFitLayout(){
         hdr.style.top = (top - 44 * s) + 'px';
     }
     // Each window's offset from the start of the group (same as its calc(50% ...) left).
-    var offsets = { 'cf-win-value': 0, 'cf-win-c2c': 208, 'cf-win-roi': 598 };
+    var offsets = { 'cf-win-value': 0, 'cf-win-c2c': 208, 'cf-win-roi': 780 };
     _cfSegWins.forEach(function(w){
         var el = document.getElementById(w.id);
         if (!el) return;
@@ -327,7 +327,7 @@ function cfBuildSegmentWindows(){
     // Shared header above the three windows: "Project Management" and the project name.
     // Dragging it (or touching it) moves all three windows together; its × closes all.
     $('body').append(
-        '<div id="cf-shared-hdr" style="display:none;position:fixed;left:calc(50% - 481px);top:calc(12vh - 44px);width:962px;height:30px;box-sizing:border-box;background:#081142;color:#fff;padding:0 12px;align-items:center;justify-content:space-between;cursor:move;user-select:none;touch-action:none;z-index:100200;font-family:Nunito,Arial,sans-serif;">'
+        '<div id="cf-shared-hdr" style="display:none;position:fixed;left:calc(50% - 572px);top:calc(12vh - 44px);width:1144px;height:30px;box-sizing:border-box;background:#081142;color:#fff;padding:0 12px;align-items:center;justify-content:space-between;cursor:move;user-select:none;touch-action:none;z-index:100200;font-family:Nunito,Arial,sans-serif;">'
         + '<span><span style="font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;">Project Management</span>'
         + '<span id="cf-shared-name" style="font-size:12px;margin-left:12px;opacity:.9;"></span></span>'
         + '<button type="button" id="cf-shared-close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;padding:0 3px;">&times;</button>'
@@ -366,7 +366,7 @@ function cfBuildSegmentWindows(){
     });
     // The C2C legend (T / A days) sits in the Cash-to-Cash window header.
     var legend = document.getElementById('cf-c2c-legend');
-    if (legend) $('#cf-win-c2c .cf-seg-hdr').append(legend);
+    // The C2C figures now sit in the Cash-to-Cash dial, not in the window header.
     _cfSegWins.forEach(function(w){
         var $win = $('#' + w.id);
         $win.draggable({ handle: '.cf-seg-hdr', containment: 'window', scroll: false });
@@ -553,6 +553,44 @@ $(function(){
     });
 });
 
+// Cash-to-Cash Cycle dial (third stack, top): target = the c2c_cycle target
+// (yellow band at the centre), actual = average cycle days (see actionCfactualc2c).
+function renderCfC2cDial(){
+    var gen = _cfLoadGen;
+    var el = document.getElementById('cf-c2cdial');
+    if (!el) return;
+    var t = 0, a = 0;
+    function draw(){
+        el.style.display = 'flex';
+        el.style.flexDirection = 'column';
+        el.style.justifyContent = 'center';
+        el.innerHTML = _cfValueDialHtml(t, a, a.toFixed(1) + ' d', 'Target: ' + t.toFixed(1) + ' d', 'Actual: ' + a.toFixed(1) + ' d');
+    }
+    draw();
+    _cfFetchTarget('c2c_cycle', function(d){
+        if (gen === _cfLoadGen) { t = +d.target || 0; draw(); }
+    });
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfactualc2c', dataType: 'json',
+        success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No') { a = +d.total || 0; draw(); }
+        }
+    });
+}
+
+// Stock and Working Capital Efficiency: formulas to follow, so they show a
+// placeholder dial until then (same treatment as Project Resources).
+function renderCfPlaceholderDials(){
+    ['cf-stock', 'cf-wceff'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.style.display = 'flex';
+        el.style.flexDirection = 'column';
+        el.style.justifyContent = 'center';
+        el.innerHTML = _cfValueDialHtml(0, 0, '-', 'Target: -', 'Actual: -');
+    });
+}
+
 function renderCfBars(){
     _cfLoadGen++;
     _cfLoading = true;
@@ -569,6 +607,8 @@ function renderCfBars(){
     renderCfCurrentLiabilitiesDial();
     renderCfCurrLiabDial2();
     renderCfC2cLegend();
+    renderCfC2cDial();
+    renderCfPlaceholderDials();
     renderCfProjExpDial();
     renderCfNetInvDial();
     renderCfContribMarginDial();
