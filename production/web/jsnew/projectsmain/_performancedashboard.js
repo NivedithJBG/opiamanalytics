@@ -547,6 +547,54 @@ function renderCfValueDrivers(){
     });
 }
 
+// Project Cost panel popup: the activities in the current billing cycle and each
+// one's cost in that cycle (same overlap formula as the WIP cycle bars, from
+// cfwipcycles). The total equals the current cycle's bar in the WIP popup.
+function _cfShowCostCyclePopup(d){
+    $('#cf-costcycle-win').remove();
+    var cyc = (d.cycles || [])[(d.current_cycle || 1) - 1] || {};
+    var items = d.current_items || [];
+    function n2(v){ return (+v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function esc(s){ return $('<div>').text(s == null ? '' : String(s)).html(); }
+    var total = 0;
+    var rows = items.map(function(it, i){
+        total += +it.cost || 0;
+        return '<tr><td>' + (i + 1) + '</td><td style="text-align:left;">' + esc(it.name) + '</td><td>' + esc(it.unit) + '</td>'
+            + '<td>' + n2(it.quantity) + '</td><td>' + n2(it.rate) + '</td><td>' + it.days + ' / ' + it.duration + '</td>'
+            + '<td style="font-weight:700;">' + n2(it.cost) + '</td></tr>';
+    }).join('');
+    if (!items.length) rows = '<tr><td colspan="7" style="text-align:center;color:#666;padding:12px;">' + ((d.cycles || []).length ? 'No activities in the current billing cycle.' : 'Set Project Duration and Billing Cycle to see the cycle.') + '</td></tr>';
+    var th = 'style="background:#4a4f57;color:#fff;padding:6px 8px;font-weight:700;white-space:nowrap;"';
+    var html = '<div id="cf-costcycle-win" style="position:fixed;z-index:100300;left:50%;top:14vh;transform:translateX(-50%);width:760px;max-width:94vw;max-height:72vh;display:flex;flex-direction:column;background:#fff;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.45);font-family:Nunito,Arial,sans-serif;font-size:12px;color:#111;">'
+        + '<div id="cf-costcycle-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;background:#081142;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;cursor:move;user-select:none;touch-action:none;">'
+        + '<span style="font-weight:700;">PROJECT COST &middot; Current billing cycle ' + (d.current_cycle || '') + (cyc.end_date ? ' (ends ' + esc(cyc.end_date) + ')' : '') + '</span>'
+        + '<button type="button" id="cf-costcycle-close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;">&times;</button></div>'
+        + '<div style="flex:1;min-height:0;overflow:auto;padding:8px 10px;">'
+        + '<table style="width:100%;border-collapse:collapse;text-align:right;">'
+        + '<thead><tr><th ' + th + '>#</th><th style="background:#4a4f57;color:#fff;padding:6px 8px;font-weight:700;text-align:left;">Activity</th><th ' + th + '>Unit</th><th ' + th + '>Quantity</th><th ' + th + '>Rate</th><th ' + th + ' title="Days of the activity inside this cycle / its duration">Days in cycle</th><th ' + th + '>Cost in cycle</th></tr></thead>'
+        + '<tbody>' + rows + '</tbody>'
+        + '<tfoot><tr><td colspan="6" style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">Total (= WIP target of this cycle)</td><td style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">' + n2(total) + '</td></tr></tfoot>'
+        + '</table></div>'
+        + '<div style="flex:none;padding:4px 12px 8px;color:#5a6e8c;font-size:11px;">Cost in cycle = Quantity &times; Rate &times; Days in cycle &divide; Duration</div>'
+        + '</div>';
+    $('body').append(html);
+    $('#cf-costcycle-win td').css({ padding: '5px 8px', borderBottom: '1px solid #e5ebf3' });
+    // Drag by the header (mouse and touch).
+    var win = document.getElementById('cf-costcycle-win'), drag = null;
+    function start(x, y){ var r = win.getBoundingClientRect(); win.style.transform = 'none'; win.style.left = r.left + 'px'; win.style.top = r.top + 'px'; drag = { sx: x, sy: y, ox: r.left, oy: r.top }; }
+    function move(x, y){ if (!drag) return; win.style.left = Math.max(0, drag.ox + x - drag.sx) + 'px'; win.style.top = Math.max(0, drag.oy + y - drag.sy) + 'px'; }
+    $('#cf-costcycle-hdr').on('mousedown', function(e){ if ($(e.target).closest('button').length) return; start(e.clientX, e.clientY); e.preventDefault(); });
+    $(document).on('mousemove.cfcost', function(e){ move(e.clientX, e.clientY); }).on('mouseup.cfcost', function(){ drag = null; });
+    document.getElementById('cf-costcycle-hdr').addEventListener('touchstart', function(e){ if (e.touches.length !== 1 || $(e.target).closest('button').length) return; start(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    document.addEventListener('touchmove', function(e){ if (drag && e.touches.length === 1) { move(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); } }, { passive: false });
+    document.addEventListener('touchend', function(){ drag = null; });
+}
+$(document).on('click', '#cf-costcycle-close', function(){ $('#cf-costcycle-win').remove(); $(document).off('.cfcost'); });
+$(document).on('click', '#cf-value-cost', function(){
+    $.ajax({ type: 'POST', url: '../projectsmain/cfwipcycles', dataType: 'json',
+        success: function(d){ if (d && d.error === 'No') _cfShowCostCyclePopup(d); } });
+});
+
 // Clicking the Project Duration panel opens the Gantt window exactly as the
 // Gantt Chart icon on the top toolbar does (same element, same click handler).
 $(function(){

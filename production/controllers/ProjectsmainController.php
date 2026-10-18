@@ -3638,7 +3638,7 @@ class ProjectsmainController extends Controller
         $dayOf    = function ($date) use ($base) { return (int)round((strtotime($date) - $base) / 86400); };
 
         $acts = $db->createCommand(
-            "SELECT s.start_date, s.duration, s.quantity, COALESCE(ea.activity_rate, 0) AS rate
+            "SELECT s.name, s.unit, s.start_date, s.duration, s.quantity, COALESCE(ea.activity_rate, 0) AS rate
              FROM scheduleactivities s
              LEFT JOIN pricing_estimate_new p ON p.project_Id = s.projectId AND p.activity_Id = s.activity_id
              LEFT JOIN estimateactivities ea ON ea.activity_id = p.est_activity_Id
@@ -3656,11 +3656,17 @@ class ProjectsmainController extends Controller
         // its current duration in days. Each cycle gets the value of the days
         // the activity spends inside that cycle. Days before the project start
         // count in cycle 1, and days after the project end count in the last cycle.
+        $today = $dayOf(date('Y-m-d'));
+        $current = max(1, min($n, (int)floor(max(0, $today) / $cycleLen) + 1));
+
+        // current_items: each activity's share of the current cycle (same overlap
+        // formula), listed in the Project Cost panel popup. Their costs add up to
+        // the current cycle's bar.
         $bars = array_fill(1, $n, 0.0);
+        $currentItems = [];
         foreach ($acts as $a) {
             $curDuration = max(1, (int)$a['duration']);
             $value = (float)$a['quantity'] * (float)$a['rate'];
-            if ($value == 0) continue;
             $aStart = $dayOf($a['start_date']);
             $aEnd = $aStart + $curDuration - 1;
             for ($k = 1; $k <= $n; $k++) {
@@ -3668,7 +3674,19 @@ class ProjectsmainController extends Controller
                 $cEnd   = ($k === $n) ? 100000000 : min($k * $cycleLen, $duration) - 1;
                 $overlap = min($aEnd, $cEnd) - max($aStart, $cStart) + 1;
                 if ($overlap > 0) {
-                    $bars[$k] += $value * $overlap / $curDuration;
+                    $part = $value * $overlap / $curDuration;
+                    $bars[$k] += $part;
+                    if ($k === $current) {
+                        $currentItems[] = [
+                            'name'     => $a['name'],
+                            'unit'     => $a['unit'],
+                            'quantity' => (float)$a['quantity'],
+                            'rate'     => (float)$a['rate'],
+                            'days'     => $overlap,
+                            'duration' => $curDuration,
+                            'cost'     => round($part, 2),
+                        ];
+                    }
                 }
             }
         }
@@ -3684,9 +3702,6 @@ class ProjectsmainController extends Controller
             ];
         }
 
-        $today = $dayOf(date('Y-m-d'));
-        $current = max(1, min($n, (int)floor(max(0, $today) / $cycleLen) + 1));
-
         $totalCost = 0.0;
         foreach ($acts as $a) {
             $totalCost += (float)$a['quantity'] * (float)$a['rate'];
@@ -3697,6 +3712,7 @@ class ProjectsmainController extends Controller
             'cycles'         => $cycles,
             'current_cycle'  => $current,
             'current_target' => $cycles[$current - 1]['target'],
+            'current_items'  => $currentItems,
             'total_cost'     => round($totalCost, 2),
         ];
     }
