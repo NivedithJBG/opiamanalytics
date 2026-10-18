@@ -2775,7 +2775,59 @@ class ProjectsmainController extends Controller
 
         $billsReceivable = $this->_cfBillsReceivableAsOf($pid, $uptoDate);
 
-        return max(0, $investments + $wip + $billsReceivable);
+        // Net Investment = (Investments + WIP + Stock + Bills Receivable) - Current
+        // Liabilities, as of the same date. Can be negative (project funded by its
+        // creditors). Stock has no formula yet, so it counts as 0 for now.
+        $stock = 0;
+        $currentLiabilities = $this->_cfCurrentLiabilitiesAsOf($pid, $uptoDate);
+
+        return ($investments + $wip + $stock + $billsReceivable) - $currentLiabilities;
+    }
+
+    // Current Liabilities as of a date (null = today, the same as the live
+    // Current Liabilities dial). Same rule as _cfCurrentLiabilitiesTotal, with
+    // every balance taken up to $uptoDate.
+    private function _cfCurrentLiabilitiesAsOf($pid, $uptoDate)
+    {
+        if (!$uptoDate) { return $this->_cfCurrentLiabilitiesTotal($pid); }
+        // Called once per day by the per-cycle daily averages, so every account's
+        // balance is read in one query (same rules as _cfAccountDebitBalanceAsOf).
+        $rows = Yii::$app->db->createCommand(
+            "SELECT acct, SUM(amt) AS bal FROM (
+                SELECT account_id AS acct,  amount AS amt FROM voucher WHERE contra=0 AND project_id=:p1 AND date(date) <= :u1
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=0 AND project_id=:p2 AND date(date) <= :u2
+                UNION ALL SELECT account_id,  amount FROM voucher WHERE contra=1 AND type='Receipt' AND project_id=:p3 AND date(date) <= :u3
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=1 AND type='Payment' AND project_id=:p4 AND date(date) <= :u4
+                UNION ALL SELECT debitacnt,   amount FROM journalvoucher WHERE project_id=:p5 AND date(date) <= :u5
+                UNION ALL SELECT creditacnt, -amount FROM journalvoucher WHERE project_id=:p6 AND date(date) <= :u6
+             ) t GROUP BY acct",
+            [':p1' => $pid, ':u1' => $uptoDate, ':p2' => $pid, ':u2' => $uptoDate, ':p3' => $pid, ':u3' => $uptoDate,
+             ':p4' => $pid, ':u4' => $uptoDate, ':p5' => $pid, ':u5' => $uptoDate, ':p6' => $pid, ':u6' => $uptoDate]
+        )->queryAll();
+        $bal = [];
+        foreach ($rows as $r) { $bal[(int)$r['acct']] = (float)$r['bal']; }
+
+        static $types = null;
+        if ($types === null) {
+            $types = [];
+            foreach (Yii::$app->db->createCommand("SELECT id, account_type FROM accounts_item")->queryAll() as $t) {
+                $types[(int)$t['id']] = (int)$t['account_type'];
+            }
+        }
+
+        $total = 0;
+        foreach ($this->_cfGstAccountPairs() as $pair) {
+            $net = ($bal[$pair[0]] ?? 0) + ($bal[$pair[1]] ?? 0);
+            if ($net < 0) { $total += -$net; }
+        }
+        $gstPairedIds = $this->_cfGstPairedAccountIds();
+        foreach ($bal as $acctId => $balance) {
+            if (in_array($acctId, $gstPairedIds, true)) { continue; }
+            $accountType = $types[$acctId] ?? 0;
+            if ($accountType === 2 || $accountType === 4) { continue; }
+            if ($balance < 0) { $total += -$balance; }
+        }
+        return $total;
     }
 
     // Total Investment panel breakdown (Cashflow Dashboard popup): one
