@@ -996,6 +996,16 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     window._ganttProjectRowHid = _projHid; // used by the project-row click handler to open the Relationships popup
     g.AddTaskItem(_projTi);
 
+    // Current view (from the Project Duration panel): two sections under the project,
+    // "Commenced" (progress reported) and "Not yet Commenced" (due, no progress).
+    // Rows are buffered per section and added after loading, so each section's
+    // IOW groups and activities stay together. A group can appear in both sections.
+    var _secBuf = { c: [], n: [] };
+    var _secTi = {
+      c: new JSGantt.TaskItem('sec_c', 'Commenced', '', '', 'ggroupblack', '', 0, '', 0, 1, projectId, 1, '', '', '', g),
+      n: new JSGantt.TaskItem('sec_n', 'Not yet Commenced', '', '', 'ggroupblack', '', 0, '', 0, 1, projectId, 1, '', '', '', g)
+    };
+
     // Map from hashed task ID → status for dot column
     var _actStatus = {};
     // Map from hashed task ID → raw DB values, used after Draw() to patch B. columns
@@ -1088,7 +1098,22 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
             if (_pas && (!_projAStartMin || _pas < _projAStartMin)) _projAStartMin = _pas;
             if (_pae && (!_projAEndMax   || _pae > _projAEndMax  )) _projAEndMax   = _pae;
           }
-          g.AddTaskItem(_iowTi);
+          if (!window._ganttCurrentOnly) g.AddTaskItem(_iowTi);
+          // Current view: makes this group's row inside a section on first use,
+          // with the same duration columns as the group row.
+          var _mkSecGroup = (function(gPid, gName, gS, gE, gHid){
+            var made = {};
+            return function(b){
+              if (made[b]) return made[b];
+              var t = new JSGantt.TaskItem(gPid + '_' + b, gName, gS, gE, 'ggroupblack', '', 0, '', 0, 1, 'sec_' + b, 1, '', '', '', g);
+              var h = t.getID();
+              [_groupActDur, _groupActStart, _groupActEnd, _groupBDur, _groupBStart, _groupBEnd].forEach(function(m){ if (m[gHid] !== undefined) m[h] = m[gHid]; });
+              if (_wbsRowWgId[gHid]) _wbsRowWgId[h] = _wbsRowWgId[gHid];
+              _secBuf[b].push(t);
+              made[b] = h;
+              return h;
+            };
+          })(iowPid, item.iow_group_name, _iowBarS, _iowBarE, _iowHid);
 
           // Load activities for this IOW Group (in this project) synchronously.
           $.ajax({
@@ -1097,7 +1122,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
             dataType: 'json',
             async: false,
             data: { iowGroupId: item.iowGroupid, projectId: projectId },
-            success: (function(parentId) {
+            success: (function(parentId, _mkSecGroup) {
               return function(actData) {
                 // Current view only: drop the IOW group row if none of its activities pass the filter.
                 var _shownInGroup = 0;
@@ -1170,11 +1195,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                   var barStart = aStart       || act.actual_start_date;
                   var barEnd   = aEndComputed ? addOneDay(aEndComputed) : addOneDay(act.actual_end_date);
 
+                  var _secKey = hasProgress ? 'c' : 'n';
                   var _ti = new JSGantt.TaskItem(
                     pId, act.name,
                     barStart, barEnd,
                     pClass, '', 0, actDur, 0, 0,
-                    parentId, 1,
+                    window._ganttCurrentOnly ? _mkSecGroup(_secKey) : parentId, 1,
                     act.depends || null,
                     '', '', g, null,
                     null, null, null, '',
@@ -1208,16 +1234,25 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     wanId:  act.wan_id,
                     hasProgress: hasProgress
                   };
-                  g.AddTaskItem(_ti);
+                  if (window._ganttCurrentOnly) _secBuf[_secKey].push(_ti); else g.AddTaskItem(_ti);
                   _shownInGroup++;
                 }
                 _dropEmptyGroup();
               };
-            })(_iowHid)
+            })(_iowHid, _mkSecGroup)
           });
         }
       }
     });
+
+    // Current view: add each non-empty section, then its groups and activities in order.
+    if (window._ganttCurrentOnly) {
+      ['c', 'n'].forEach(function(b){
+        if (!_secBuf[b].length) return;
+        g.AddTaskItem(_secTi[b]);
+        _secBuf[b].forEach(function(t){ g.AddTaskItem(t); });
+      });
+    }
 
     // Store project row totals (duration = span of earliest start to latest end)
     if (_projBStartMin && _projBEndMax) {
