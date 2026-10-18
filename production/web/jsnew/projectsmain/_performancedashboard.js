@@ -948,7 +948,7 @@ function _cfShowNetInvBreakdown(accounts, average){
     var html = '<div id="cf-netinv-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
         + '<div id="cf-netinv-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#251840;cursor:move;user-select:none;">'
-        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Total Investment — Per-Cycle Breakdown</span>'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Net Investment — Per-Cycle Breakdown</span>'
         + '<button id="cf-netinv-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
         + '<div id="cf-netinv-breakdown-unit" style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;"></div>'
@@ -1446,7 +1446,7 @@ function _cfCurrLiabBarSvg(actual, netInvActual){
     }
     var col1X = padL + plotW * 0.28, col2X = padL + plotW * 0.72;
     var barsHtml = bar(dispVal, col1X, '#3d7a6e', 'Current Liabilities', 'cl')
-        + bar(dispNetInv, col2X, '#0d3f7a', 'Total Investment', 'ti');
+        + bar(dispNetInv, col2X, '#0d3f7a', 'Net Investment', 'ti');
 
     var axisY = (padT + plotH).toFixed(1);
     // preserveAspectRatio="none": this panel should fill the entire
@@ -1468,13 +1468,13 @@ function _cfDrawCurrLiabDial(){
     if (!el) return;
     el.style.justifyContent = 'center';
     el.style.cursor = 'pointer';
-    el.title = 'Click to compare with Total Investment';
+    el.title = 'Click to compare with Net Investment';
     var s = _cfCurrLiabState;
     var sumVal = s.actual + s.netInvActual;
     el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
         + _cfCurrLiabDialSvg(sumVal)
         + '<div style="display:flex;justify-content:center;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
-        + '<span style="font-size:12px;color:#5a5a5a;">Current Liabilities + Total Investment</span>'
+        + '<span style="font-size:12px;color:#5a5a5a;">Current Liabilities + Net Investment</span>'
         + '</div>'
         + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
     // Re-draw the tooltip in place if it's already open, so it stays in
@@ -1507,7 +1507,7 @@ function _cfShowCurrLiabTip(){
     if (top < 10) top = 10;
     var html = '<div id="cf-currliab-tip-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + '<div id="cf-currliab-tip-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:#251840;cursor:move;user-select:none;">'
-        + '<span style="font-family:Barlow Condensed,Arial;font-size:14px;font-weight:700;color:#fff;">Current Liabilities vs Total Investment</span>'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:14px;font-weight:700;color:#fff;">Current Liabilities vs Net Investment</span>'
         + '<button id="cf-currliab-tip-close" style="background:none;border:none;font-size:18px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
         + '<div id="cf-currliab-tip-chart" style="flex:1;min-height:0;display:flex;padding:6px 10px;"></div>'
