@@ -529,7 +529,9 @@ function renderCfValueDrivers(){
             durEl.innerHTML = _cfValueDialHtml(t, a, a + ' d', 'Target: ' + t + ' d', 'Actual: ' + a + ' d', (a - t >= 0 ? '+' : '') + (a - t) + ' d');
         }
     });
-    _cfQueueAjax({
+    // Project Cost builds the whole estimate (the slowest request), so it is
+    // queued after every other panel's requests instead of ahead of them.
+    setTimeout(function(){ _cfQueueAjax({
         type: 'POST', url: '../projectsmain/cfprojectcost', dataType: 'json',
         success: function(d){
             if (gen !== _cfLoadGen || !d || d.error !== 'No' || !costEl) return;
@@ -542,7 +544,7 @@ function renderCfValueDrivers(){
             costEl.style.justifyContent = 'center';
             costEl.innerHTML = _cfValueDialHtml(est, act, act.toFixed(2) + ' L', 'Target: ' + est.toFixed(2) + ' L', 'Actual: ' + act.toFixed(2) + ' L');
         }
-    });
+    }); }, 0);
 }
 
 // Clicking the Project Duration panel opens the Gantt window exactly as the
@@ -601,6 +603,8 @@ function renderCfBars(){
     // every panel's fetches (including a retry) comfortable room to
     // settle before the next click is allowed to start a new load.
     setTimeout(function(){ _cfLoading = false; }, 2500);
+    // Value Drivers first, so Project Duration is not stuck behind every other request.
+    renderCfValueDrivers();
     _cfDials.forEach(function(d){ renderCfDial(d.elId, d.metricKey, d.unit, d.unitFontSize, d.reverseColors); });
     renderCfBankDial();
     renderCfWipDial();
@@ -616,7 +620,6 @@ function renderCfBars(){
     renderCfContribMarginDial();
     renderCfFreeCashDial();
     renderCfRoiDial();
-    renderCfValueDrivers();
 }
 
 // Investments panel — single flat dial with an editable target (yellow
