@@ -571,7 +571,7 @@ function _cfShowCostCyclePopup(d){
         no++;
         sub += +it.cost || 0;
         total += +it.cost || 0;
-        rows += '<tr><td>' + no + '</td><td style="text-align:left;">' + esc(it.name) + '</td><td>' + esc(it.unit) + '</td>'
+        rows += '<tr class="cf-cc-row" data-schedid="' + (+it.sched_id || 0) + '" style="cursor:pointer;" title="Open the Cost Dashboard"><td>' + no + '</td><td style="text-align:left;">' + esc(it.name) + '</td><td>' + esc(it.unit) + '</td>'
             + '<td>' + n2(it.quantity) + '</td><td>' + n2(it.rate) + '</td>'
             + '<td style="font-weight:700;">' + n2(it.cost) + '</td></tr>';
     });
@@ -604,6 +604,21 @@ function _cfShowCostCyclePopup(d){
     document.addEventListener('touchmove', function(e){ if (drag && e.touches.length === 1) { move(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); } }, { passive: false });
     document.addEventListener('touchend', function(){ drag = null; });
 }
+// Clicking an activity opens the same Cost Dashboard as a row click in the
+// Project Estimate window (loads the Gantt functions silently if needed).
+$(document).on('click', '.cf-cc-row', function(){
+    var schedId = +$(this).data('schedid');
+    if (!schedId) return;
+    var anchorEl = this;
+    function open(){
+        if (typeof window.showCostDashboardPopup !== 'function') return;
+        window.showCostDashboardPopup(schedId, anchorEl, false);
+        // Keep it above the Cashflow windows and this popup.
+        setTimeout(function(){ $('#gcm-popup').css('z-index', 100500); }, 0);
+    }
+    if (typeof window.showCostDashboardPopup === 'function') open();
+    else if (typeof window.ensureGanttLoaded === 'function') window.ensureGanttLoaded(open);
+});
 $(document).on('click', '#cf-costcycle-close', function(){ $('#cf-costcycle-win').remove(); $(document).off('.cfcost'); });
 $(document).on('click', '#cf-value-cost', function(){
     // Uses the cycle data already loaded for the WIP dial, so it opens at once;
