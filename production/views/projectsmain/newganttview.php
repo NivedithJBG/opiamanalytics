@@ -1191,6 +1191,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
                   // Current view: skip activities not yet due (no progress and planned start after today).
                   if (window._ganttCurrentOnly && !hasProgress && !(plannedStart && plannedStart <= _ganttTodayStr)) continue;
+                  // Current view: completed activities are hidden.
+                  if (window._ganttCurrentOnly && parseInt(act.completed_status) === 1) continue;
                   // Bar position uses A. dates when available, falls back to B. dates
                   var barStart = aStart       || act.actual_start_date;
                   var barEnd   = aEndComputed ? addOneDay(aEndComputed) : addOneDay(act.actual_end_date);
@@ -1248,8 +1250,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     // Current view: add each non-empty section, then its groups and activities in order.
     if (window._ganttCurrentOnly) {
       ['c', 'n'].forEach(function(b){
-        if (!_secBuf[b].length) return;
-        g.AddTaskItem(_secTi[b]);
+        g.AddTaskItem(_secTi[b]);   // both headings always shown, even when a section is empty
         _secBuf[b].forEach(function(t){ g.AddTaskItem(t); });
       });
     }
@@ -1543,7 +1544,18 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     // Any format change (toolbar buttons, header Format links, window resize)
     // goes through setFormat(), so re-apply the decorations after it redraws.
     var _origSetFormat = g.setFormat;
-    g.setFormat = function(f) { _origSetFormat.call(g, f); _decorateGantt(); };
+    // Current view: section headings in colour (Commenced blue, Not yet Commenced orange).
+    // Re-applied after every redraw, like the other decorations.
+    function _colorSections() {
+      if (!window._ganttCurrentOnly) return;
+      var cols = { 'Commenced': '#1565c0', 'Not yet Commenced': '#e65100' };
+      var gc = document.getElementById('gantt-container');
+      if (!gc) return;
+      var w = document.createTreeWalker(gc, NodeFilter.SHOW_TEXT, null, false), n, hits = [];
+      while ((n = w.nextNode())) { var t = n.nodeValue.trim(); if (cols[t]) hits.push([n.parentNode, cols[t]]); }
+      hits.forEach(function(h){ h[0].style.color = h[1]; h[0].style.fontWeight = '700'; });
+    }
+    g.setFormat = function(f) { _origSetFormat.call(g, f); _decorateGantt(); _colorSections(); };
     if (window._ganttCurrentOnly) { g.setFormat('month'); }
 
     // The scroll-fix above clones the left header, which strips the click
