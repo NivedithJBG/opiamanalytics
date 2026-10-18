@@ -3763,7 +3763,14 @@ class ProjectsmainController extends Controller
              JOIN estimateactivities ea ON ea.activity_id = pe.est_activity_Id
              WHERE pe.project_Id = :p AND pe.pricing_status = 0", [':p' => $pid]
         )->queryScalar();
-        return ['error' => 'No', 'estimated' => round((float)$estimated, 2)];
+        // Actual project cost = sum of the Actual Cost of every activity in the
+        // Project Estimate window (same calculation, taken from that report).
+        $origPost = $_POST;
+        $_POST = ['projectid' => $pid];
+        $est = json_decode((new \app\controllers\EstimatereportController('estimatereport', Yii::$app))->actionGet(), true) ?: [];
+        $_POST = $origPost;
+        $actual = (float)($est['grand_total_actual'] ?? 0);
+        return ['error' => 'No', 'estimated' => round((float)$estimated, 2), 'actual' => round($actual, 2)];
     }
 
     // Bills Receivable, per payment cycle.

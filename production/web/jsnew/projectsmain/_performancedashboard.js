@@ -533,12 +533,14 @@ function renderCfValueDrivers(){
         type: 'POST', url: '../projectsmain/cfprojectcost', dataType: 'json',
         success: function(d){
             if (gen !== _cfLoadGen || !d || d.error !== 'No' || !costEl) return;
-            // Actual cost is taken as the estimate until cost of work done is wired in.
+            // Target = estimated cost; actual = sum of the activities' Actual Cost
+            // in the Project Estimate window. Both in lakhs.
             var est = (+d.estimated || 0) / 100000;
+            var act = (+d.actual || 0) / 100000;
             costEl.style.display = 'flex';
             costEl.style.flexDirection = 'column';
             costEl.style.justifyContent = 'center';
-            costEl.innerHTML = _cfValueDialHtml(est, est, est.toFixed(2) + ' L', 'Target: ' + est.toFixed(2) + ' L', 'Actual: ' + est.toFixed(2) + ' L');
+            costEl.innerHTML = _cfValueDialHtml(est, act, act.toFixed(2) + ' L', 'Target: ' + est.toFixed(2) + ' L', 'Actual: ' + act.toFixed(2) + ' L');
         }
     });
 }
