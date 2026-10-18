@@ -3638,8 +3638,10 @@ class ProjectsmainController extends Controller
         $dayOf    = function ($date) use ($base) { return (int)round((strtotime($date) - $base) / 86400); };
 
         $acts = $db->createCommand(
-            "SELECT s.name, s.unit, s.start_date, s.duration, s.quantity, COALESCE(ea.activity_rate, 0) AS rate
+            "SELECT s.name, s.unit, s.start_date, s.duration, s.quantity, COALESCE(ea.activity_rate, 0) AS rate,
+                    COALESCE(ig.name, 'Other') AS group_name
              FROM scheduleactivities s
+             LEFT JOIN iow_groups ig ON ig.id = s.iow_group_id
              LEFT JOIN pricing_estimate_new p ON p.project_Id = s.projectId AND p.activity_Id = s.activity_id
              LEFT JOIN estimateactivities ea ON ea.activity_id = p.est_activity_Id
              WHERE s.projectId = :pid
@@ -3648,7 +3650,9 @@ class ProjectsmainController extends Controller
                -- Only activities listed in the Gantt chart: active, with a quantity,
                -- under one of the project's IOW groups.
                AND s.status = 0 AND s.quantity > 0
-               AND s.iow_group_id IN (SELECT iow_group_id FROM iow_group_order WHERE project_id = :pid2)",
+               AND s.iow_group_id IN (SELECT iow_group_id FROM iow_group_order WHERE project_id = :pid2)
+             ORDER BY (SELECT MIN(o.sortorder) FROM iow_group_order o WHERE o.iow_group_id = s.iow_group_id AND o.project_id = s.projectId),
+                      s.iow_group_id, s.sortorder, s.id",
             [':pid' => $pid, ':pid2' => $pid]
         )->queryAll();
 
@@ -3678,6 +3682,7 @@ class ProjectsmainController extends Controller
                     $bars[$k] += $part;
                     if ($k === $current) {
                         $currentItems[] = [
+                            'group'    => $a['group_name'],
                             'name'     => $a['name'],
                             'unit'     => $a['unit'],
                             'quantity' => (float)$a['quantity'],

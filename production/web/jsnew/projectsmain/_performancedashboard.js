@@ -556,13 +556,26 @@ function _cfShowCostCyclePopup(d){
     var items = d.current_items || [];
     function n2(v){ return (+v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
     function esc(s){ return $('<div>').text(s == null ? '' : String(s)).html(); }
-    var total = 0;
-    var rows = items.map(function(it, i){
+    // Grouped by IOW group (items arrive in the project's group order), each with a subtotal.
+    var total = 0, rows = '', grp = null, sub = 0, no = 0;
+    function closeGroup(){
+        if (grp === null) return;
+        rows += '<tr><td colspan="6" style="text-align:right;font-weight:700;color:#081142;">Subtotal &mdash; ' + esc(grp) + '</td><td style="font-weight:700;color:#081142;">' + n2(sub) + '</td></tr>';
+    }
+    items.forEach(function(it){
+        if (it.group !== grp) {
+            closeGroup();
+            grp = it.group; sub = 0;
+            rows += '<tr><td colspan="7" style="text-align:left;font-weight:700;background:#e8ecf3;color:#081142;">' + esc(grp) + '</td></tr>';
+        }
+        no++;
+        sub += +it.cost || 0;
         total += +it.cost || 0;
-        return '<tr><td>' + (i + 1) + '</td><td style="text-align:left;">' + esc(it.name) + '</td><td>' + esc(it.unit) + '</td>'
+        rows += '<tr><td>' + no + '</td><td style="text-align:left;">' + esc(it.name) + '</td><td>' + esc(it.unit) + '</td>'
             + '<td>' + n2(it.quantity) + '</td><td>' + n2(it.rate) + '</td><td>' + it.days + ' / ' + it.duration + '</td>'
             + '<td style="font-weight:700;">' + n2(it.cost) + '</td></tr>';
-    }).join('');
+    });
+    closeGroup();
     if (!items.length) rows = '<tr><td colspan="7" style="text-align:center;color:#666;padding:12px;">' + ((d.cycles || []).length ? 'No activities in the current billing cycle.' : 'Set Project Duration and Billing Cycle to see the cycle.') + '</td></tr>';
     var th = 'style="background:#4a4f57;color:#fff;padding:6px 8px;font-weight:700;white-space:nowrap;"';
     var html = '<div id="cf-costcycle-win" style="position:fixed;z-index:100300;left:50%;top:14vh;transform:translateX(-50%);width:760px;max-width:94vw;max-height:72vh;display:flex;flex-direction:column;background:#fff;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.45);font-family:Nunito,Arial,sans-serif;font-size:12px;color:#111;">'
