@@ -1014,6 +1014,8 @@
     document.getElementById('eriow-popup').classList.add('eriow-open');
     renderEriowList(sec);
   }
+  // Also opened from the Cashflow Project Cost popup (group heading click).
+  window.openEriowPopup = openEriowPopup;
 
   function eriowViewCells(it){
     return '<td>' + esc(it.unit) + '</td>';

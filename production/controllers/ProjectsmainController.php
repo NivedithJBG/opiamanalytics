@@ -3638,7 +3638,9 @@ class ProjectsmainController extends Controller
         $dayOf    = function ($date) use ($base) { return (int)round((strtotime($date) - $base) / 86400); };
 
         $acts = $db->createCommand(
-            "SELECT s.id, s.name, s.unit, s.start_date, s.duration, s.quantity, COALESCE(ea.activity_rate, 0) AS rate,
+            "SELECT s.id, s.activity_id AS wan_id,
+                    (SELECT w.activity_Id FROM workgroup_activities_new w WHERE w.id = s.activity_id) AS lib_activity_id,
+                    s.name, s.unit, s.start_date, s.duration, s.quantity, COALESCE(ea.activity_rate, 0) AS rate,
                     COALESCE(ig.name, 'Other') AS group_name
              FROM scheduleactivities s
              LEFT JOIN iow_groups ig ON ig.id = s.iow_group_id
@@ -3683,6 +3685,8 @@ class ProjectsmainController extends Controller
                     if ($k === $current) {
                         $currentItems[] = [
                             'sched_id' => (int)$a['id'],
+                            'wan_id'   => (int)$a['wan_id'],
+                            'lib_activity_id' => (int)$a['lib_activity_id'],
                             'group'    => $a['group_name'],
                             'name'     => $a['name'],
                             'unit'     => $a['unit'],

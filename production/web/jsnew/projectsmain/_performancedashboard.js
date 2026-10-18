@@ -562,12 +562,19 @@ function _cfShowCostCyclePopup(d){
         if (grp === null) return;
         rows += '<tr><td colspan="5" style="text-align:right;font-weight:700;color:#081142;">Subtotal &mdash; ' + esc(grp) + '</td><td style="font-weight:700;color:#081142;">' + n2(sub) + '</td></tr>';
     }
+    // Group sections kept for the Activities popup (group heading click).
+    window._cfCostGroups = [];
     items.forEach(function(it){
         if (it.group !== grp) {
             closeGroup();
             grp = it.group; sub = 0;
-            rows += '<tr><td colspan="6" style="text-align:left;font-weight:700;background:#e8ecf3;color:#081142;">' + esc(grp) + '</td></tr>';
+            window._cfCostGroups.push({ iow_name: grp, items: [] });
+            rows += '<tr class="cf-cc-grp" data-grp="' + (window._cfCostGroups.length - 1) + '" style="cursor:pointer;" title="Show the activities and their resource allocation"><td colspan="6" style="text-align:left;font-weight:700;background:#e8ecf3;color:#081142;">' + esc(grp) + '</td></tr>';
         }
+        window._cfCostGroups[window._cfCostGroups.length - 1].items.push({
+            wan_id: it.wan_id, sched_id: it.sched_id, lib_activity_id: it.lib_activity_id,
+            activity_name: it.name, unit: it.unit
+        });
         no++;
         sub += +it.cost || 0;
         total += +it.cost || 0;
@@ -604,6 +611,12 @@ function _cfShowCostCyclePopup(d){
     document.addEventListener('touchmove', function(e){ if (drag && e.touches.length === 1) { move(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); } }, { passive: false });
     document.addEventListener('touchend', function(){ drag = null; });
 }
+// Clicking a group heading opens the same Activities popup as the Project
+// Estimate window, with its Resource Allocation buttons.
+$(document).on('click', '.cf-cc-grp', function(){
+    var sec = (window._cfCostGroups || [])[+$(this).data('grp')];
+    if (sec && typeof window.openEriowPopup === 'function') window.openEriowPopup(sec);
+});
 // Clicking an activity opens the same Cost Dashboard as a row click in the
 // Project Estimate window (loads the Gantt functions silently if needed).
 $(document).on('click', '.cf-cc-row', function(){
