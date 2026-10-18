@@ -529,9 +529,9 @@ function renderCfValueDrivers(){
             durEl.innerHTML = _cfValueDialHtml(t, a, a + ' d', 'Target: ' + t + ' d', 'Actual: ' + a + ' d', (a - t >= 0 ? '+' : '') + (a - t) + ' d');
         }
     });
-    // Project Cost builds the whole estimate (the slowest request), so it is
-    // queued after every other panel's requests instead of ahead of them.
-    setTimeout(function(){ _cfQueueAjax({
+    // Queued right after Project Duration (it takes about 0.1 s on the server;
+    // what made it slow was waiting behind every other panel's requests).
+    _cfQueueAjax({
         type: 'POST', url: '../projectsmain/cfprojectcost', dataType: 'json',
         success: function(d){
             if (gen !== _cfLoadGen || !d || d.error !== 'No' || !costEl) return;
@@ -544,7 +544,7 @@ function renderCfValueDrivers(){
             costEl.style.justifyContent = 'center';
             costEl.innerHTML = _cfValueDialHtml(est, act, act.toFixed(2) + ' L', 'Target: ' + est.toFixed(2) + ' L', 'Actual: ' + act.toFixed(2) + ' L');
         }
-    }); }, 0);
+    });
 }
 
 // Clicking the Project Duration panel opens the Gantt window exactly as the
