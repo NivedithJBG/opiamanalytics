@@ -619,6 +619,13 @@ $(document).on('click', '.cf-cc-row', function(){
     if (typeof window.showCostDashboardPopup === 'function') open();
     else if (typeof window.ensureGanttLoaded === 'function') window.ensureGanttLoaded(open);
 });
+// The Cost Dashboard re-raises itself through the app's stacking order when it is
+// clicked or dragged, which is below the Cashflow windows. While a Cashflow
+// window is open, put it back on top after each press.
+$(document).on('mousedown touchstart', '#gcm-popup', function(){
+    if (!$('#cf-win-value').is(':visible') && !$('#cf-costcycle-win').length) return;
+    setTimeout(function(){ $('#gcm-popup').css('z-index', 100500); }, 0);
+});
 $(document).on('click', '#cf-costcycle-close', function(){ $('#cf-costcycle-win').remove(); $(document).off('.cfcost'); });
 $(document).on('click', '#cf-value-cost', function(){
     // Uses the cycle data already loaded for the WIP dial, so it opens at once;
