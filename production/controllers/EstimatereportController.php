@@ -59,7 +59,7 @@ class EstimatereportController extends Controller
                    ON pe.activity_Id = wa.id AND pe.project_Id = go.project_id AND pe.pricing_status = 0
             WHERE go.project_id = :pid
             GROUP BY go.iow_group_id, wa.id
-            ORDER BY COALESCE(go.sortorder, 999999) ASC, go.iow_group_id ASC, wa.sortorder ASC, wa.id ASC
+            ORDER BY (ig.name = 'Support Activities') ASC, COALESCE(go.sortorder, 999999) ASC, go.iow_group_id ASC, wa.sortorder ASC, wa.id ASC
         ", [':pid' => $projectId])->queryAll();
 
         // Cost-of-work-done figures reuse the exact same formula as the Cost
