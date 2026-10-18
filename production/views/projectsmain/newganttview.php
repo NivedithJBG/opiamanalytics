@@ -1099,7 +1099,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
             data: { iowGroupId: item.iowGroupid, projectId: projectId },
             success: (function(parentId) {
               return function(actData) {
-                if (!actData.result) return;
+                // Current view only: drop the IOW group row if none of its activities pass the filter.
+                var _shownInGroup = 0;
+                var _dropEmptyGroup = function(){ if (window._ganttCurrentOnly && !_shownInGroup) g.RemoveTaskItem(parentId); };
+                if (!actData.result) { _dropEmptyGroup(); return; }
                 for (var j = 0; j < actData.result.length; j++) {
                   var act = actData.result[j];
                   if (!safeDate(act.actual_start_date) || !safeDate(act.actual_end_date)) continue;
@@ -1206,7 +1209,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     hasProgress: hasProgress
                   };
                   g.AddTaskItem(_ti);
+                  _shownInGroup++;
                 }
+                _dropEmptyGroup();
               };
             })(_iowHid)
           });
