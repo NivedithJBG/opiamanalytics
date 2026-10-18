@@ -5030,7 +5030,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
     var want = (mode === 'current') ? 'current' : 'full';
     var pid = openBtn ? openBtn.getAttribute('data-projectid') : '';
     if(want !== _loadedMode){
-      if(want === 'current'){ win.style.width='760px'; win.style.height='520px'; }
+      if(want === 'current'){ win.style.width='min(920px, 96vw)'; win.style.height='520px'; }
       else { win.style.width=''; win.style.height=''; }
     }
     win.classList.add('gw-open');
