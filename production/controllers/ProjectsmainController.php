@@ -3644,8 +3644,12 @@ class ProjectsmainController extends Controller
              LEFT JOIN estimateactivities ea ON ea.activity_id = p.est_activity_Id
              WHERE s.projectId = :pid
                AND s.start_date IS NOT NULL AND s.end_date IS NOT NULL
-               AND s.start_date <> '0000-00-00' AND s.end_date <> '0000-00-00'",
-            [':pid' => $pid]
+               AND s.start_date <> '0000-00-00' AND s.end_date <> '0000-00-00'
+               -- Only activities listed in the Gantt chart: active, with a quantity,
+               -- under one of the project's IOW groups.
+               AND s.status = 0 AND s.quantity > 0
+               AND s.iow_group_id IN (SELECT iow_group_id FROM iow_group_order WHERE project_id = :pid2)",
+            [':pid' => $pid, ':pid2' => $pid]
         )->queryAll();
 
         // Overlap method: an activity's value (quantity x rate) is spread over
