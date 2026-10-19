@@ -11,7 +11,7 @@ use app\models\Resourcetype;
     <div class="panel-heading" >
       <h4 class="panel-title acc_trigger" id="acc-subgrps">
         <a data-toggle="collapse" data-parent="#accordionfinmaster" href="#collapseaccntsubgrp">
-        <span class="icon-calculator4 acc_trigger"></span>Account Group<!-- Account Sub Group --></a>
+        <span class="icon-calculator4 acc_trigger"></span>Sub Groups</a>
       </h4>
     </div>
 
