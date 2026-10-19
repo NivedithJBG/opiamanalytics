@@ -1037,13 +1037,10 @@ class AccountsitemController extends Controller
                                             }
                                         }
 
-                                        if($data['account_type']==8){
-
-                                            //$scheduleitems = '<button type="button" class="editschedule_item" value="'.$data['id'].'" id="editschedule_item'.$data['id'].'"><a title="Schedule Items" href="#" class="account-subgroup-btn">Schedule Items</a></button>';
-                                            $scheduleitems = '<button type="button" class="editschedule_item" value="'.$data['id'].'" id="editschedule_item'.$data['id'].'"><a title="Account Subgroups" href="#" class="account-subgroup-btn">Account Subgroups</a></button>';
-
-                                        }
-                                        else{
+                                        // Expense heads used to get an "Account Subgroups" (balance sheet
+                                        // schedule items) button here instead of Edit; that list is retired,
+                                        // so every account type now gets the same Edit button.
+                                        {
 
                                             $scheduleitems = '
                                                 <button type="button" class="editaccountsbutton" value="'.$data['id'].'" id="editaccountsbutton'.$data['id'].'"> <a title="Edit Account Heads" href="#" class="icon-pencil"></a>
