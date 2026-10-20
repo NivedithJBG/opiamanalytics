@@ -1249,6 +1249,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
     // Current view: add each non-empty section, then its groups and activities in order.
     if (window._ganttCurrentOnly) {
+      // Serial numbers on activity rows (not section or group rows), counted
+      // straight through both sections in display order.
+      var _sn = 0;
+      ['c', 'n'].forEach(function(b){
+        _secBuf[b].forEach(function(t){ if (!t.getGroup()) t.setName((++_sn) + '. ' + t.getName()); });
+      });
       ['c', 'n'].forEach(function(b){
         g.AddTaskItem(_secTi[b]);   // both headings always shown, even when a section is empty
         _secBuf[b].forEach(function(t){ g.AddTaskItem(t); });
