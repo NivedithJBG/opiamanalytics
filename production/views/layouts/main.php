@@ -4881,7 +4881,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
 #gantt-win.gw-current #gantt-win-cur-title { display:inline; }
 #gantt-win.gw-current .gw-std-title { display:none; }
 /* ...with a thinner title bar and no icons (only the close × stays). */
-#gantt-win.gw-current #gantt-win-hdr { padding:7px 12px; }
+#gantt-win.gw-current #gantt-win-hdr { padding:7px 12px; background:#1a0a2e; }
 #gantt-win.gw-current #gantt-win-cur-title { font-size:13px; }
 #gantt-win.gw-current #btn-project-duration,
 #gantt-win.gw-current #btn-gantt-calendar-inline,
@@ -4889,7 +4889,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
 #gantt-win.gw-current #gantt-win-close { font-size:17px; }
 /* Activity bars purple-dark blue (critical activities keep their own colour). */
 #gantt-win.gw-current div.gtaskblue,
-#gantt-win.gw-current div.gtaskblue.gplan { background:#3b2d8f !important; border-color:#2a1f6b !important; }
+#gantt-win.gw-current div.gtaskblue.gplan { background:#1a0a2e !important; border-color:#1a0a2e !important; }
 #gantt-win-hdr {
   background:#4a5a6a; color:#fff; padding:10px 15px;
   display:flex; align-items:center; justify-content:space-between;
