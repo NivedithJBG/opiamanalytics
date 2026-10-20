@@ -4880,6 +4880,13 @@ window.loadIowGroupOptions = function(selectEl, cb){
 #gantt-win-cur-title { display:none; font-size:15px; font-weight:700; color:#fff; }
 #gantt-win.gw-current #gantt-win-cur-title { display:inline; }
 #gantt-win.gw-current .gw-std-title { display:none; }
+/* ...with a thinner title bar and no icons (only the close × stays). */
+#gantt-win.gw-current #gantt-win-hdr { padding:4px 12px; }
+#gantt-win.gw-current #gantt-win-cur-title { font-size:13px; }
+#gantt-win.gw-current #btn-project-duration,
+#gantt-win.gw-current #btn-gantt-calendar-inline,
+#gantt-win.gw-current #gantt-win-expand { display:none !important; }
+#gantt-win.gw-current #gantt-win-close { font-size:17px; }
 #gantt-win-hdr {
   background:#4a5a6a; color:#fff; padding:10px 15px;
   display:flex; align-items:center; justify-content:space-between;
