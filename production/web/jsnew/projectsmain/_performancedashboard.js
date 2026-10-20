@@ -711,7 +711,7 @@ function renderCfPlaceholderDials(){
                 caEl.style.flexDirection = 'column';
                 caEl.style.justifyContent = 'center';
                 // Shown as a large figure in lakhs instead of a dial.
-                caEl.style.alignItems = 'center'; caEl.style.flex = '1'; caEl.style.height = '100%'; caEl.style.width = '100%';
+                caEl.style.alignItems = 'center'; caEl.style.flex = '1'; caEl.style.height = '100%'; caEl.style.width = '100%'; caEl.style.cursor = 'pointer'; caEl.title = 'Click to see account breakdown';
                 caEl.innerHTML = '<div style="text-align:center;font-family:Barlow Condensed,Arial;line-height:1;">'
                     + '<div style="font-size:42px;font-weight:700;color:#2e7d32;">' + v.toFixed(2) + '</div>'
                     + '<div style="font-size:14px;font-weight:600;color:#5a6e8c;margin-top:6px;letter-spacing:.04em;">LAKHS</div></div>';
@@ -1752,7 +1752,7 @@ function _cfRedrawCurrLiabBreakdown(){
     $('#cf-currliab-breakdown-chart').html(r.body);
 }
 
-function _cfShowCurrLiabBreakdown(accounts){
+function _cfShowCurrLiabBreakdown(accounts, title){   // title: also used for the Current Assets list
     $('#cf-currliab-breakdown-win').remove();
     window._cfCurrLiabBreakdownState = { accounts: accounts };
 
@@ -1779,7 +1779,7 @@ function _cfShowCurrLiabBreakdown(accounts){
     var html = '<div id="cf-currliab-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
         + '<div id="cf-currliab-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#251840;cursor:move;user-select:none;">'
-        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Current Liabilities — Account Breakdown</span>'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">' + (title || 'Current Liabilities — Account Breakdown') + '</span>'
         + '<button id="cf-currliab-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
         + '<div id="cf-currliab-breakdown-unit" style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;"></div>'
@@ -3658,6 +3658,15 @@ $(document).on('click', '#cf-bank', function(e){
         type: 'POST', url: '../projectsmain/cfcurrentliabilitiesbreakdown', dataType: 'json',
         success: function(d){
             if (d && d.error === 'No') { _cfShowCurrLiabBreakdown(d.accounts || []); }
+        }
+    });
+});
+// Current Assets popup: the same account list behind the Current Assets figure.
+$(document).on('click', '#cf-curassets', function(){
+    $.ajax({
+        type: 'POST', url: '../projectsmain/cfcurrentassetslist', dataType: 'json',
+        success: function(d){
+            if (d && d.error === 'No') { _cfShowCurrLiabBreakdown(d.accounts || [], 'Current Assets — Account Breakdown'); }
         }
     });
 });
