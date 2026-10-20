@@ -4881,7 +4881,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
 #gantt-win.gw-current #gantt-win-cur-title { display:inline; }
 #gantt-win.gw-current .gw-std-title { display:none; }
 /* ...with a thinner title bar and no icons (only the close × stays). */
-#gantt-win.gw-current #gantt-win-hdr { padding:4px 12px; }
+#gantt-win.gw-current #gantt-win-hdr { padding:7px 12px; }
 #gantt-win.gw-current #gantt-win-cur-title { font-size:13px; }
 #gantt-win.gw-current #btn-project-duration,
 #gantt-win.gw-current #btn-gantt-calendar-inline,
