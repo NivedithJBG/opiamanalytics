@@ -1756,7 +1756,8 @@ function _cfShowCurrLiabBreakdown(accounts, title){   // title: also used for th
     $('#cf-currliab-breakdown-win').remove();
     window._cfCurrLiabBreakdownState = { accounts: accounts };
 
-    var winW = 640, winH = 380, MIN_W = 340, MIN_H = 240;
+    // Width grows with the number of accounts (about 95px per bar) so the names stay legible.
+    var winW = Math.max(720, Math.min(window.innerWidth - 40, accounts.length * 95 + 80)), winH = 440, MIN_W = 340, MIN_H = 240;
     var left = Math.max(10, (window.innerWidth - winW) / 2);
     var top = Math.max(10, (window.innerHeight - winH) / 2);
 
