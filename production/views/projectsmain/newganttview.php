@@ -1249,11 +1249,13 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
     // Current view: add each non-empty section, then its groups and activities in order.
     if (window._ganttCurrentOnly) {
-      // Serial numbers on activity rows (not section or group rows), counted
-      // straight through both sections in display order.
+      // Serial numbers for activity rows (not section or group rows), counted
+      // straight through both sections in display order. Drawn as a separate
+      // badge between the status dot and the name (see the decoration loop).
       var _sn = 0;
+      window._ganttSerial = {};
       ['c', 'n'].forEach(function(b){
-        _secBuf[b].forEach(function(t){ if (!t.getGroup()) t.setName((++_sn) + '. ' + t.getName()); });
+        _secBuf[b].forEach(function(t){ if (!t.getGroup()) window._ganttSerial[t.getID()] = ++_sn; });
       });
       ['c', 'n'].forEach(function(b){
         g.AddTaskItem(_secTi[b]);   // both headings always shown, even when a section is empty
@@ -1336,6 +1338,17 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       if (_cell) {
         var _indent = [0, 18, 60, 60, 60][_t.getLevel()] || 60;
         _cell.style.paddingLeft = _indent + 'px';
+        // Current view: serial-number badge in the gap left of the activity name.
+        var _serial = window._ganttCurrentOnly && window._ganttSerial ? window._ganttSerial[_tid] : null;
+        if (_serial && !_cell.querySelector('.gact-serial')) {
+          _cell.style.position = 'relative';
+          var _sb = document.createElement('span');
+          _sb.className = 'gact-serial';
+          _sb.textContent = _serial;
+          _sb.style.cssText = 'position:absolute;left:6px;top:50%;transform:translateY(-50%);min-width:24px;padding:1px 4px;box-sizing:border-box;'
+            + 'text-align:center;font-size:11px;font-weight:700;line-height:15px;color:#081142;background:#e3e8f1;border:1px solid #c5cedd;border-radius:3px;';
+          _cell.insertBefore(_sb, _cell.firstChild);
+        }
       }
 
       // Status dot goes in its own dedicated column (td.gtasklist), leaf activities only
