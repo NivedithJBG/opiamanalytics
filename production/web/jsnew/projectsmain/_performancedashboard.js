@@ -711,9 +711,9 @@ function renderCfPlaceholderDials(){
                 caEl.style.flexDirection = 'column';
                 caEl.style.justifyContent = 'center';
                 // Shown as a large figure in lakhs instead of a dial.
-                caEl.style.alignItems = 'center';
+                caEl.style.alignItems = 'center'; caEl.style.flex = '1'; caEl.style.height = '100%'; caEl.style.width = '100%';
                 caEl.innerHTML = '<div style="text-align:center;font-family:Barlow Condensed,Arial;line-height:1;">'
-                    + '<div style="font-size:42px;font-weight:700;color:#1a0a2e;">' + v.toFixed(2) + '</div>'
+                    + '<div style="font-size:42px;font-weight:700;color:#2e7d32;">' + v.toFixed(2) + '</div>'
                     + '<div style="font-size:14px;font-weight:600;color:#5a6e8c;margin-top:6px;letter-spacing:.04em;">LAKHS</div></div>';
             }
         });
