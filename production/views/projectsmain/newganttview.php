@@ -1345,8 +1345,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           var _sb = document.createElement('span');
           _sb.className = 'gact-serial';
           _sb.textContent = _serial;
-          _sb.style.cssText = 'position:absolute;left:6px;top:50%;transform:translateY(-50%);min-width:24px;padding:1px 4px;box-sizing:border-box;'
-            + 'text-align:center;font-size:11px;font-weight:700;line-height:15px;color:#081142;background:#e3e8f1;border:1px solid #c5cedd;border-radius:3px;';
+          _sb.style.cssText = 'position:absolute;left:28px;top:50%;transform:translateY(-50%);width:26px;box-sizing:border-box;'
+            + 'text-align:right;font-size:11px;font-weight:700;line-height:15px;color:#081142;';
           _cell.insertBefore(_sb, _cell.firstChild);
         }
       }
