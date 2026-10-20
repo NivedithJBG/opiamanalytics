@@ -1425,10 +1425,14 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         var _adEl = _row.querySelector('td.gres div');
         if (_adEl) {
           _adEl.textContent = formatGanttDur(_db.actdur);
-          if (_db.actdur && _db.dur && Number(_db.actdur) > Number(_db.dur)) {
+          if (_db.actdur && _db.dur && Number(_db.actdur) > Number(_db.dur) && !window._ganttCurrentOnly) {
             _adEl.style.color = '#ff2800';
             _adEl.style.fontWeight = '600';
           }
+        }
+        // Current view: activity name, unit, quantity and both durations in black.
+        if (window._ganttCurrentOnly) {
+          _row.querySelectorAll('td:not(.gtasklist), td:not(.gtasklist) div, .gact-serial').forEach(function(el){ el.style.color = '#000'; });
         }
       }
 

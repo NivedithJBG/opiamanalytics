@@ -610,7 +610,7 @@ function _cfShowCostCyclePopup(d){
         + '<div style="flex:none;padding:4px 12px 8px;color:#5a6e8c;font-size:11px;">Cost in cycle = Quantity &times; Rate &times; (activity days in this cycle &divide; activity duration)</div>'
         + '</div>';
     $('body').append(html);
-    $('#cf-costcycle-win td').css({ padding: '5px 8px', borderBottom: '1px solid #e5ebf3', borderRight: '1px solid #b8c2d3' });
+    $('#cf-costcycle-win td').css({ padding: '5px 8px', borderBottom: '1px solid #b8c2d3', borderRight: '1px solid #b8c2d3' });
     $('#cf-costcycle-win th').css({ borderRight: '1px solid #6b7280' });
     $('#cf-costcycle-win tr > :last-child').css({ borderRight: 'none' });
     // Drag by the header (mouse and touch).

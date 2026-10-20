@@ -4887,6 +4887,9 @@ window.loadIowGroupOptions = function(selectEl, cb){
 #gantt-win.gw-current #btn-gantt-calendar-inline,
 #gantt-win.gw-current #gantt-win-expand { display:none !important; }
 #gantt-win.gw-current #gantt-win-close { font-size:17px; }
+/* Activity bars purple-dark blue (critical activities keep their own colour). */
+#gantt-win.gw-current div.gtaskblue,
+#gantt-win.gw-current div.gtaskblue.gplan { background:#3b2d8f !important; border-color:#2a1f6b !important; }
 #gantt-win-hdr {
   background:#4a5a6a; color:#fff; padding:10px 15px;
   display:flex; align-items:center; justify-content:space-between;
