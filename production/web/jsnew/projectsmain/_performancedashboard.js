@@ -698,6 +698,22 @@ function renderCfC2cDial(){
 // Current Assets, Working Capital and Capital efficiency: formulas to follow, so they show a
 // placeholder dial until then (same treatment as Project Resources).
 function renderCfPlaceholderDials(){
+    // Current Assets: actual from cfcurrentassetstotal (no target yet).
+    var caEl = document.getElementById('cf-curassets');
+    if (caEl) {
+        var caGen = _cfLoadGen;
+        _cfQueueAjax({
+            type: 'POST', url: '../projectsmain/cfcurrentassetstotal', dataType: 'json',
+            success: function(d){
+                if (caGen !== _cfLoadGen || !d || d.error !== 'No') return;
+                var v = (+d.total || 0) / 100000;
+                caEl.style.display = 'flex';
+                caEl.style.flexDirection = 'column';
+                caEl.style.justifyContent = 'center';
+                caEl.innerHTML = _cfValueDialHtml(v, v, v.toFixed(2) + ' L', 'Target: -', 'Actual: ' + v.toFixed(2) + ' L');
+            }
+        });
+    }
     ['cf-curassets', 'cf-workcap', 'cf-wceff'].forEach(function(id){
         var el = document.getElementById(id);
         if (!el) return;

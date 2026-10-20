@@ -2546,6 +2546,33 @@ class ProjectsmainController extends Controller
         return $rows;
     }
 
+    // Current Assets panel (agreed 2026-10-20): sum of every account head that is
+    // not Income (4) or Expense (8) type and has a DEBIT balance in the project's
+    // main account (vouchers + journals; contra entries counted once). Input GST is
+    // counted in full (not netted against Output GST).
+    public function actionCfcurrentassetstotal()
+    {
+        $uid = Yii::$app->user->Id;
+        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
+        if (!$projuser) { return json_encode(['error' => 'No project selected']); }
+        $pid = (int)$projuser->projectid;
+        $p = [];
+        for ($i = 1; $i <= 6; $i++) { $p[':p' . $i] = $pid; }
+        $rows = Yii::$app->db->createCommand("SELECT t.a, SUM(t.x) bal FROM (
+                SELECT account_id a, amount x FROM voucher WHERE contra=0 AND project_id=:p1
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=0 AND project_id=:p2
+                UNION ALL SELECT account_id, amount FROM voucher WHERE contra=1 AND type='Receipt' AND project_id=:p3
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=1 AND type='Payment' AND project_id=:p4
+                UNION ALL SELECT debitacnt, amount FROM journalvoucher WHERE project_id=:p5
+                UNION ALL SELECT creditacnt, -amount FROM journalvoucher WHERE project_id=:p6) t
+             JOIN accounts_item ai ON ai.id = t.a
+             WHERE ai.account_type NOT IN (4, 8)
+             GROUP BY t.a HAVING SUM(t.x) > 0", $p)->queryAll();
+        $total = 0;
+        foreach ($rows as $r) { $total += (float)$r['bal']; }
+        return json_encode(['error' => 'No', 'total' => round($total, 2)]);
+    }
+
     public function actionCfcurrentassets()
     {
         $uid = Yii::$app->user->Id;
