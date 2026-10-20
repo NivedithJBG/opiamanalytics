@@ -2442,9 +2442,11 @@ class ProjectsmainController extends Controller
     // accounts are excluded entirely here — they always count as WIP
     // regardless of balance.
     // Cashflow groups, agreed rules (2026-10-20):
-    //  - Built from the project's cash and bank vouchers only (contra entries and
-    //    journals excluded); balance per account head = debit - credit.
-    //  - Bank = bank heads (type 2); Cash = cash heads (type 1).
+    //  - Built from the project's cash and bank vouchers only (journals excluded);
+    //    contra entries (bank-cash transfers) count only for the bank and cash
+    //    balances. Balance per account head = debit - credit.
+    //  - Bank = bank heads (type 2). Cash in hand (cash heads, type 1, debit
+    //    balance) goes into Advances and Deposits.
     //  - Supplier heads (type 7) are split by their MAIN account balance (vouchers +
     //    journals): if the main balance is debit, that excess paid over billed is an
     //    advance and the rest of the payment is work done; if credit or zero, the whole
@@ -2462,8 +2464,8 @@ class ProjectsmainController extends Controller
         $p = [':p1' => $pid, ':p2' => $pid, ':p3' => $pid, ':p4' => $pid];
         $cash = $db->createCommand("SELECT a, SUM(x) FROM (
                 SELECT account_id a, amount x FROM voucher WHERE contra=0 AND project_id=:p1 $dc
-                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=0 AND project_id=:p2 $dc) t GROUP BY a",
-                [':p1' => $pid, ':p2' => $pid])->queryAll(\PDO::FETCH_KEY_PAIR);
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=0 AND project_id=:p2 $dc UNION ALL SELECT account_id, amount FROM voucher WHERE contra=1 AND type='Receipt' AND project_id=:p3 $dc UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=1 AND type='Payment' AND project_id=:p4 $dc) t GROUP BY a",
+                $p)->queryAll(\PDO::FETCH_KEY_PAIR);
         $main = $db->createCommand("SELECT a, SUM(x) FROM (
                 SELECT account_id a, amount x FROM voucher WHERE contra=0 AND project_id=:p1 $dc
                 UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=0 AND project_id=:p2 $dc
@@ -2478,7 +2480,7 @@ class ProjectsmainController extends Controller
         foreach ($cash as $id => $b) {
             $id = (int)$id; $b = (float)$b; $t = (int)($types[$id] ?? 0);
             if ($t === 2)      { $g['bank'] += $b; }
-            elseif ($t === 1)  { $g['cash'] += $b; }
+            elseif ($t === 1)  { $g['cash'] += $b; if ($b > 0) { $g['adv'] += $b; } else { $g['received'] += -$b; } }   // cash in hand is an advance
             elseif ($t === 8)  { $g['wip_cost'] += $b; }
             elseif ($t === 7) {
                 if ($b > 0) {
