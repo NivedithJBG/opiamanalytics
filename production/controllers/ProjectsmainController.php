@@ -3727,6 +3727,23 @@ class ProjectsmainController extends Controller
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
+        // Agreed rule: same list as the Current Liabilities figure (cfcurrentliabilities):
+        // every head except Bank, Income and Expense with a CREDIT main-account balance.
+        $p = [];
+        for ($i = 1; $i <= 6; $i++) { $p[':p' . $i] = $pid; }
+        $clRows = Yii::$app->db->createCommand("SELECT ai.name, -SUM(t.x) amt FROM (
+                SELECT account_id a, amount x FROM voucher WHERE contra=0 AND project_id=:p1
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=0 AND project_id=:p2
+                UNION ALL SELECT account_id, amount FROM voucher WHERE contra=1 AND type='Receipt' AND project_id=:p3
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=1 AND type='Payment' AND project_id=:p4
+                UNION ALL SELECT debitacnt, amount FROM journalvoucher WHERE project_id=:p5
+                UNION ALL SELECT creditacnt, -amount FROM journalvoucher WHERE project_id=:p6) t
+             JOIN accounts_item ai ON ai.id = t.a
+             WHERE ai.account_type NOT IN (2, 4, 8)
+             GROUP BY t.a, ai.name HAVING SUM(t.x) < 0 ORDER BY amt DESC", $p)->queryAll();
+        $out = [];
+        foreach ($clRows as $r) { $out[] = ['name' => $r['name'], 'amount' => round((float)$r['amt'], 2)]; }
+        return json_encode(['error' => 'No', 'accounts' => $out]);
 
         $gstPairedIds = $this->_cfGstPairedAccountIds();
         $rows = [];
