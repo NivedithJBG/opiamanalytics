@@ -4875,6 +4875,11 @@ window.loadIowGroupOptions = function(selectEl, cb){
   flex-direction:column; overflow:hidden;
 }
 #gantt-win.gw-open { display:flex; }
+/* Gantt opened from the Cashflow Project Duration panel: header rows (column titles
+   and timeline) collapsed. Height 0 rather than display:none, so the chart still
+   measures the header's width when it lays out the columns. */
+#gantt-win.gw-current #gantt-containerglisthead,
+#gantt-win.gw-current #gantt-containergcharthead { height:0 !important; min-height:0 !important; overflow:hidden !important; border:0 !important; padding:0 !important; }
 #gantt-win-hdr {
   background:#4a5a6a; color:#fff; padding:10px 15px;
   display:flex; align-items:center; justify-content:space-between;
@@ -5034,6 +5039,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
       else { win.style.width=''; win.style.height=''; }
     }
     win.classList.add('gw-open');
+    win.classList.toggle('gw-current', want === 'current');
     document.dispatchEvent(new Event('gantt:open'));
     if(!pid){
       document.getElementById('gantt-win-body').innerHTML = '<div style="padding:50px;text-align:center;color:#888;font-size:14px;">Please select a project first.</div>';
