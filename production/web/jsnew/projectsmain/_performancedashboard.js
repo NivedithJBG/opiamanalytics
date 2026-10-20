@@ -710,11 +710,15 @@ function renderCfPlaceholderDials(){
                 caEl.style.display = 'flex';
                 caEl.style.flexDirection = 'column';
                 caEl.style.justifyContent = 'center';
-                caEl.innerHTML = _cfValueDialHtml(v, v, v.toFixed(2) + ' L', 'Target: -', 'Actual: ' + v.toFixed(2) + ' L');
+                // Shown as a large figure in lakhs instead of a dial.
+                caEl.style.alignItems = 'center';
+                caEl.innerHTML = '<div style="text-align:center;font-family:Barlow Condensed,Arial;line-height:1;">'
+                    + '<div style="font-size:42px;font-weight:700;color:#1a0a2e;">' + v.toFixed(2) + '</div>'
+                    + '<div style="font-size:14px;font-weight:600;color:#5a6e8c;margin-top:6px;letter-spacing:.04em;">LAKHS</div></div>';
             }
         });
     }
-    ['cf-curassets', 'cf-workcap', 'cf-wceff'].forEach(function(id){
+    ['cf-workcap', 'cf-wceff'].forEach(function(id){
         var el = document.getElementById(id);
         if (!el) return;
         el.style.display = 'flex';
