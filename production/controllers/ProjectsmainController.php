@@ -2455,7 +2455,7 @@ class ProjectsmainController extends Controller
     //  - WIP = expense heads (type 8) + supplier work done, counted from the latest
     //    bill date (the cost up to each bill date is cleared when the bill is
     //    raised), less any non-client money received.
-    //  - Total Investment = Advances + WIP + Bills Receivable outstanding.
+    //  - Total Investment = Advances and Deposits + WIP (Bills Receivable is not added).
     //  - Bills Receivable = balance of the "Bills Receivable" head (0 if credit).
     // $uptoDate (Y-m-d) limits every balance to that date; null = today.
     private function _cfFlowGroups($pid, $uptoDate = null, $costOnly = false)
@@ -2524,7 +2524,7 @@ class ProjectsmainController extends Controller
         $costAtBill = $lastBill ? $this->_cfFlowGroups($pid, $lastBill, true)['wip_cost'] : 0.0;
         $g['last_bill'] = $lastBill;
         $g['wip'] = $g['wip_cost'] - $costAtBill - ($g['received'] - $clientPaid);
-        $g['ti']  = $g['adv'] + $g['wip'] + max(0, $br);
+        $g['ti']  = $g['adv'] + $g['wip'];   // Total Investment = Advances and Deposits + WIP (Bills Receivable not added)
         $g['br']  = max(0, $br);
         return $g;
     }
