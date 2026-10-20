@@ -2547,7 +2547,7 @@ class ProjectsmainController extends Controller
     }
 
     // Current Assets panel (agreed 2026-10-20): sum of every account head that is
-    // not Income (4) or Expense (8) type and has a DEBIT balance in the project's
+    // not Bank (2), Income (4) or Expense (8) type and has a DEBIT balance in the project's
     // main account (vouchers + journals; contra entries counted once). Input GST is
     // counted in full (not netted against Output GST).
     public function actionCfcurrentassetstotal()
@@ -2566,7 +2566,7 @@ class ProjectsmainController extends Controller
                 UNION ALL SELECT debitacnt, amount FROM journalvoucher WHERE project_id=:p5
                 UNION ALL SELECT creditacnt, -amount FROM journalvoucher WHERE project_id=:p6) t
              JOIN accounts_item ai ON ai.id = t.a
-             WHERE ai.account_type NOT IN (4, 8)
+             WHERE ai.account_type NOT IN (2, 4, 8)
              GROUP BY t.a HAVING SUM(t.x) > 0", $p)->queryAll();
         $total = 0;
         foreach ($rows as $r) { $total += (float)$r['bal']; }
@@ -3593,8 +3593,8 @@ class ProjectsmainController extends Controller
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
         // Agreed rule (2026-10-20): Current Liabilities = sum of CREDIT main-account
-        // balances of every head except Income (4) and Expense (8) types. The bank
-        // overdraft and Output GST are counted in full.
+        // balances of every head except Bank (2), Income (4) and Expense (8) types. The
+        // bank is excluded; Output GST is counted in full.
         $p = [];
         for ($i = 1; $i <= 6; $i++) { $p[':p' . $i] = $pid; }
         $rows = Yii::$app->db->createCommand("SELECT t.a, SUM(t.x) bal FROM (
@@ -3605,7 +3605,7 @@ class ProjectsmainController extends Controller
                 UNION ALL SELECT debitacnt, amount FROM journalvoucher WHERE project_id=:p5
                 UNION ALL SELECT creditacnt, -amount FROM journalvoucher WHERE project_id=:p6) t
              JOIN accounts_item ai ON ai.id = t.a
-             WHERE ai.account_type NOT IN (4, 8)
+             WHERE ai.account_type NOT IN (2, 4, 8)
              GROUP BY t.a HAVING SUM(t.x) < 0", $p)->queryAll();
         $clTotal = 0;
         foreach ($rows as $r) { $clTotal += -(float)$r['bal']; }

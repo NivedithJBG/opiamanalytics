@@ -718,7 +718,26 @@ function renderCfPlaceholderDials(){
             }
         });
     }
-    ['cf-workcap', 'cf-wceff'].forEach(function(id){
+    // Working Capital = Current Assets - Current Liabilities, as a large figure
+    // (green when positive, red when negative).
+    var wcEl = document.getElementById('cf-workcap');
+    if (wcEl) {
+        var wcGen = _cfLoadGen, wcCA = null, wcCL = null;
+        var wcDraw = function(){
+            if (wcCA === null || wcCL === null) return;
+            var v = (wcCA - wcCL) / 100000;
+            wcEl.style.display = 'flex'; wcEl.style.flexDirection = 'column'; wcEl.style.justifyContent = 'center';
+            wcEl.style.alignItems = 'center'; wcEl.style.flex = '1'; wcEl.style.height = '100%'; wcEl.style.width = '100%';
+            wcEl.innerHTML = '<div style="text-align:center;font-family:Barlow Condensed,Arial;line-height:1;">'
+                + '<div style="font-size:42px;font-weight:700;color:' + (v < 0 ? '#c62828' : '#2e7d32') + ';">' + v.toFixed(2) + '</div>'
+                + '<div style="font-size:14px;font-weight:600;color:#5a6e8c;margin-top:6px;letter-spacing:.04em;">LAKHS</div></div>';
+        };
+        _cfQueueAjax({ type: 'POST', url: '../projectsmain/cfcurrentassetstotal', dataType: 'json',
+            success: function(d){ if (wcGen === _cfLoadGen && d && d.error === 'No') { wcCA = +d.total || 0; wcDraw(); } } });
+        _cfQueueAjax({ type: 'POST', url: '../projectsmain/cfcurrentliabilities', dataType: 'json',
+            success: function(d){ if (wcGen === _cfLoadGen && d && d.error === 'No') { wcCL = +d.total || 0; wcDraw(); } } });
+    }
+    ['cf-wceff'].forEach(function(id){
         var el = document.getElementById(id);
         if (!el) return;
         el.style.display = 'flex';
