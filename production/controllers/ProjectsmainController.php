@@ -2452,9 +2452,11 @@ class ProjectsmainController extends Controller
     //    advance and the rest of the payment is work done; if credit or zero, the whole
     //    payment is work done (part payment for goods/work received).
     //  - Advances and Deposits = debit balances of other heads + supplier advances.
-    //  - WIP = expense heads (type 8) + supplier work done - cash received (client
-    //    receipts and any other money in), so Total Investment always equals the
-    //    money tied up: Advances + WIP = -(Bank + Cash).
+    //  - WIP = expense heads (type 8) + supplier work done - bills raised (bill
+    //    amount incl. GST, deducted on the bill date) - any other money received.
+    //  - Total Investment = Advances + WIP + Bills Receivable outstanding. It equals
+    //    the bank overdraft, less amounts the client deducted (retention, TDS),
+    //    which are still owed but never reach the bank.
     //  - Bills Receivable = balance of the "Bills Receivable" head (0 if credit).
     // $uptoDate (Y-m-d) limits every balance to that date; null = today.
     private function _cfFlowGroups($pid, $uptoDate = null)
@@ -2497,8 +2499,20 @@ class ProjectsmainController extends Controller
         }
         $br = 0.0;
         foreach ($brIds as $bid) { $br += (float)($main[$bid] ?? 0); }
-        $g['wip'] = $g['wip_cost'] - $g['received'];
-        $g['ti']  = $g['adv'] + $g['wip'];
+        // Bills raised = journal debits to Bills Receivable (bill amount incl. GST).
+        // Client payments credit Bills Receivable, so they are already reflected in
+        // its outstanding balance; any other money received reduces WIP directly.
+        $billed = 0.0; $clientPaid = 0.0;
+        foreach ($brIds as $bid) {
+            $billed += (float)$db->createCommand(
+                "SELECT COALESCE(SUM(amount),0) FROM journalvoucher WHERE project_id=:p AND debitacnt=:b" . $dc,
+                [':p' => $pid, ':b' => $bid])->queryScalar();
+            $cb = (float)($cash[$bid] ?? 0);
+            if ($cb < 0) { $clientPaid += -$cb; }
+        }
+        $g['billed'] = $billed;
+        $g['wip'] = $g['wip_cost'] - $billed - ($g['received'] - $clientPaid);
+        $g['ti']  = $g['adv'] + $g['wip'] + max(0, $br);
         $g['br']  = max(0, $br);
         return $g;
     }
