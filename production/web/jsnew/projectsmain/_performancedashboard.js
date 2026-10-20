@@ -693,10 +693,10 @@ function renderCfC2cDial(){
     });
 }
 
-// Stock and Working Capital Efficiency: formulas to follow, so they show a
+// Current Assets, Working Capital and Capital efficiency: formulas to follow, so they show a
 // placeholder dial until then (same treatment as Project Resources).
 function renderCfPlaceholderDials(){
-    ['cf-stock', 'cf-wceff'].forEach(function(id){
+    ['cf-curassets', 'cf-workcap', 'cf-wceff'].forEach(function(id){
         var el = document.getElementById(id);
         if (!el) return;
         el.style.display = 'flex';
