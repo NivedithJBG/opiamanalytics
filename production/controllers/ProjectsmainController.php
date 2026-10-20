@@ -2044,6 +2044,10 @@ class ProjectsmainController extends Controller
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
+        // Agreed cashflow rules: Bank = bank heads' balance from cash and bank vouchers (no contra, no journals).
+        $fg = $this->_cfFlowGroups($pid); $bal = $fg['bank'];
+        return json_encode(['error' => 'No', 'has_bank' => abs($bal) > 0.004, 'total_debit' => 0, 'total_credit' => 0,
+            'balance_type' => $bal < 0 ? 'credit' : 'debit', 'availed' => $bal < 0 ? round(-$bal, 2) : 0]);
 
         $sum = function($sql) use ($pid) {
             $v = Yii::$app->db->createCommand($sql, [':pid' => $pid])->queryScalar();
@@ -2437,12 +2441,91 @@ class ProjectsmainController extends Controller
     // advance/deposit, not yet cleared against a liability. Expense-type
     // accounts are excluded entirely here — they always count as WIP
     // regardless of balance.
+    // Cashflow groups, agreed rules (2026-10-20):
+    //  - Built from the project's cash and bank vouchers only (contra entries and
+    //    journals excluded); balance per account head = debit - credit.
+    //  - Bank = bank heads (type 2); Cash = cash heads (type 1).
+    //  - Supplier heads (type 7) are split by their MAIN account balance (vouchers +
+    //    journals): if the main balance is debit, that excess paid over billed is an
+    //    advance and the rest of the payment is work done; if credit or zero, the whole
+    //    payment is work done (part payment for goods/work received).
+    //  - Advances and Deposits = debit balances of other heads + supplier advances.
+    //  - WIP = expense heads (type 8) + supplier work done - cash received (client
+    //    receipts and any other money in), so Total Investment always equals the
+    //    money tied up: Advances + WIP = -(Bank + Cash).
+    //  - Bills Receivable = balance of the "Bills Receivable" head (0 if credit).
+    // $uptoDate (Y-m-d) limits every balance to that date; null = today.
+    private function _cfFlowGroups($pid, $uptoDate = null)
+    {
+        $db = Yii::$app->db;
+        $dc = $uptoDate ? " AND date(date) <= " . $db->quoteValue($uptoDate) : '';
+        $p = [':p1' => $pid, ':p2' => $pid, ':p3' => $pid, ':p4' => $pid];
+        $cash = $db->createCommand("SELECT a, SUM(x) FROM (
+                SELECT account_id a, amount x FROM voucher WHERE contra=0 AND project_id=:p1 $dc
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=0 AND project_id=:p2 $dc) t GROUP BY a",
+                [':p1' => $pid, ':p2' => $pid])->queryAll(\PDO::FETCH_KEY_PAIR);
+        $main = $db->createCommand("SELECT a, SUM(x) FROM (
+                SELECT account_id a, amount x FROM voucher WHERE contra=0 AND project_id=:p1 $dc
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=0 AND project_id=:p2 $dc
+                UNION ALL SELECT debitacnt, amount FROM journalvoucher WHERE project_id=:p3 $dc
+                UNION ALL SELECT creditacnt, -amount FROM journalvoucher WHERE project_id=:p4 $dc) t GROUP BY a", $p)->queryAll(\PDO::FETCH_KEY_PAIR);
+        static $types = null, $brIds = null;
+        if ($types === null) {
+            $types = $db->createCommand("SELECT id, account_type FROM accounts_item")->queryAll(\PDO::FETCH_KEY_PAIR);
+            $brIds = $db->createCommand("SELECT id FROM accounts_item WHERE name='Bills Receivable'")->queryColumn();
+        }
+        $g = ['bank' => 0.0, 'cash' => 0.0, 'adv' => 0.0, 'wip_cost' => 0.0, 'received' => 0.0];
+        foreach ($cash as $id => $b) {
+            $id = (int)$id; $b = (float)$b; $t = (int)($types[$id] ?? 0);
+            if ($t === 2)      { $g['bank'] += $b; }
+            elseif ($t === 1)  { $g['cash'] += $b; }
+            elseif ($t === 8)  { $g['wip_cost'] += $b; }
+            elseif ($t === 7) {
+                if ($b > 0) {
+                    $m = (float)($main[$id] ?? 0);
+                    $a = $m > 0 ? min($m, $b) : 0;
+                    $g['adv'] += $a;
+                    $g['wip_cost'] += $b - $a;
+                } else {
+                    $g['received'] += -$b;
+                }
+            }
+            elseif ($b > 0)    { $g['adv'] += $b; }
+            else               { $g['received'] += -$b; }
+        }
+        $br = 0.0;
+        foreach ($brIds as $bid) { $br += (float)($main[$bid] ?? 0); }
+        $g['wip'] = $g['wip_cost'] - $g['received'];
+        $g['ti']  = $g['adv'] + $g['wip'];
+        $g['br']  = max(0, $br);
+        return $g;
+    }
+
+    // Cycle-to-cycle cash flow: a cycle ends on each date a client payment is
+    // credited to Bills Receivable; the last row is the open cycle up to today.
+    // Each row's amount is Total Investment at the end of the cycle (= money tied up).
+    private function _cfFlowCycles($pid)
+    {
+        $db = Yii::$app->db;
+        $ends = $db->createCommand(
+            "SELECT DISTINCT date(v.date) FROM voucher v JOIN accounts_item ai ON ai.id = v.creditacnt
+             WHERE v.contra=0 AND v.project_id=:p AND ai.name='Bills Receivable' ORDER BY 1", [':p' => $pid]
+        )->queryColumn();
+        $rows = [];
+        foreach ($ends as $i => $e) {
+            $rows[] = ['name' => 'C' . ($i + 1) . ' ' . date('d M', strtotime($e)), 'amount' => round($this->_cfFlowGroups($pid, $e)['ti'], 2)];
+        }
+        return $rows;
+    }
+
     public function actionCfcurrentassets()
     {
         $uid = Yii::$app->user->Id;
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
+        // Agreed cashflow rules: Advances and Deposits (see _cfFlowGroups).
+        return json_encode(['error' => 'No', 'total' => round($this->_cfFlowGroups($pid)['adv'], 2)]);
 
         $byAccount = $this->_cfBankCashPaymentsByDebitAccount($pid, null, null);
         $gstPairedIds = $this->_cfGstPairedAccountIds();
@@ -2713,6 +2796,8 @@ class ProjectsmainController extends Controller
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
+        // Agreed cashflow rules: Total Investment = Advances and Deposits + WIP (= money tied up).
+        return json_encode(['error' => 'No', 'total' => round($this->_cfFlowGroups($pid)['ti'], 2)]);
 
         $total = $this->_cfNetInvestmentAsOf($pid, null);
 
@@ -2848,6 +2933,8 @@ class ProjectsmainController extends Controller
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
+        // Agreed cashflow rules: cycle-to-cycle Total Investment, one bar per client payment; Current = today.
+        return json_encode(['error' => 'No', 'accounts' => $this->_cfFlowCycles($pid), 'average' => round($this->_cfFlowGroups($pid)['ti'], 2)]);
 
         $allRows = $this->_cfNetInvestmentPerCycleRows($pid);
         $rows = array_values(array_filter($allRows, function($r) { return $r['name'] !== 'Current'; }));
@@ -3155,6 +3242,8 @@ class ProjectsmainController extends Controller
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
+        // Agreed cashflow rules: Bills Receivable = balance of the Bills Receivable head (0 if credit).
+        return json_encode(['error' => 'No', 'total' => round($this->_cfFlowGroups($pid)['br'], 2)]);
 
         return json_encode([
             'error' => 'No',
@@ -3645,6 +3734,8 @@ class ProjectsmainController extends Controller
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
+        // Agreed cashflow rules: WIP = expenses + supplier work done - cash received (see _cfFlowGroups).
+        return json_encode(['error' => 'No', 'total' => round($this->_cfFlowGroups($pid)['wip'], 2)]);
 
         $sinceDate = $this->_cfLatestContractIncomeDate($pid);
         $total = $this->_cfWipForWindow($pid, $sinceDate, null);
