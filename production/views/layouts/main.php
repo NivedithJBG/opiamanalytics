@@ -4875,11 +4875,11 @@ window.loadIowGroupOptions = function(selectEl, cb){
   flex-direction:column; overflow:hidden;
 }
 #gantt-win.gw-open { display:flex; }
-/* Gantt opened from the Cashflow Project Duration panel: header rows (column titles
-   and timeline) collapsed. Height 0 rather than display:none, so the chart still
-   measures the header's width when it lays out the columns. */
-#gantt-win.gw-current #gantt-containerglisthead,
-#gantt-win.gw-current #gantt-containergcharthead { height:0 !important; min-height:0 !important; overflow:hidden !important; border:0 !important; padding:0 !important; }
+/* Gantt opened from the Cashflow Project Duration panel: the title shows
+   "Activities in this Cycle" instead of "Schedule Gantt Chart <project>". */
+#gantt-win-cur-title { display:none; font-size:15px; font-weight:700; color:#fff; }
+#gantt-win.gw-current #gantt-win-cur-title { display:inline; }
+#gantt-win.gw-current .gw-std-title { display:none; }
 #gantt-win-hdr {
   background:#4a5a6a; color:#fff; padding:10px 15px;
   display:flex; align-items:center; justify-content:space-between;
@@ -4916,9 +4916,10 @@ window.loadIowGroupOptions = function(selectEl, cb){
   <div class="gw-rs gw-rs-sw" data-dir="sw"></div>
   <div id="gantt-win-hdr">
     <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:nowrap;">
-      <span style="font-size:15px;font-weight:700;color:#fff;">Schedule</span>
-      <span style="font-size:14px;font-weight:700;color:#fff;">Gantt Chart</span>
-      <span style="font-size:12px;font-weight:500;color:#c9c9c9;padding:3px 6px;border-radius:4px;cursor:pointer;" id="gantt-win-proj-name" title="Hover for project snapshot" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='transparent'"><?php echo htmlspecialchars($ProjectName); ?></span>
+      <span class="gw-std-title" style="font-size:15px;font-weight:700;color:#fff;">Schedule</span>
+      <span class="gw-std-title" style="font-size:14px;font-weight:700;color:#fff;">Gantt Chart</span>
+      <span id="gantt-win-cur-title">Activities in this Cycle</span>
+      <span class="gw-std-title" style="font-size:12px;font-weight:500;color:#c9c9c9;padding:3px 6px;border-radius:4px;cursor:pointer;" id="gantt-win-proj-name" title="Hover for project snapshot" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='transparent'"><?php echo htmlspecialchars($ProjectName); ?></span>
     </div>
     <div id="gantt-win-hdr-btns">
       <a class="icon-clock" id="btn-project-duration" title="Project Duration" href="#" style="width:24px;height:24px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#2878c0;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.2);">&#8986;</a>
