@@ -2452,14 +2452,13 @@ class ProjectsmainController extends Controller
     //    advance and the rest of the payment is work done; if credit or zero, the whole
     //    payment is work done (part payment for goods/work received).
     //  - Advances and Deposits = debit balances of other heads + supplier advances.
-    //  - WIP = expense heads (type 8) + supplier work done - bills raised (bill
-    //    amount incl. GST, deducted on the bill date) - any other money received.
-    //  - Total Investment = Advances + WIP + Bills Receivable outstanding. It equals
-    //    the bank overdraft, less amounts the client deducted (retention, TDS),
-    //    which are still owed but never reach the bank.
+    //  - WIP = expense heads (type 8) + supplier work done, counted from the latest
+    //    bill date (the cost up to each bill date is cleared when the bill is
+    //    raised), less any non-client money received.
+    //  - Total Investment = Advances + WIP + Bills Receivable outstanding.
     //  - Bills Receivable = balance of the "Bills Receivable" head (0 if credit).
     // $uptoDate (Y-m-d) limits every balance to that date; null = today.
-    private function _cfFlowGroups($pid, $uptoDate = null)
+    private function _cfFlowGroups($pid, $uptoDate = null, $costOnly = false)
     {
         $db = Yii::$app->db;
         $dc = $uptoDate ? " AND date(date) <= " . $db->quoteValue($uptoDate) : '';
@@ -2497,6 +2496,7 @@ class ProjectsmainController extends Controller
             elseif ($b > 0)    { $g['adv'] += $b; }
             else               { $g['received'] += -$b; }
         }
+        if ($costOnly) { return $g; }
         $br = 0.0;
         foreach ($brIds as $bid) { $br += (float)($main[$bid] ?? 0); }
         // Bills raised = journal debits to Bills Receivable (bill amount incl. GST).
@@ -2511,7 +2511,19 @@ class ProjectsmainController extends Controller
             if ($cb < 0) { $clientPaid += -$cb; }
         }
         $g['billed'] = $billed;
-        $g['wip'] = $g['wip_cost'] - $billed - ($g['received'] - $clientPaid);
+        // On each bill date the cost spent up to that date is cleared from WIP (the
+        // bill amount itself is not deducted), so WIP = cost spent since the latest
+        // bill, less any non-client money received.
+        $lastBill = null;
+        if ($brIds) {
+            $in = implode(',', array_map('intval', $brIds));
+            $lastBill = $db->createCommand(
+                "SELECT MAX(date(date)) FROM journalvoucher WHERE project_id=:p AND debitacnt IN ($in)" . $dc,
+                [':p' => $pid])->queryScalar();
+        }
+        $costAtBill = $lastBill ? $this->_cfFlowGroups($pid, $lastBill, true)['wip_cost'] : 0.0;
+        $g['last_bill'] = $lastBill;
+        $g['wip'] = $g['wip_cost'] - $costAtBill - ($g['received'] - $clientPaid);
         $g['ti']  = $g['adv'] + $g['wip'] + max(0, $br);
         $g['br']  = max(0, $br);
         return $g;
