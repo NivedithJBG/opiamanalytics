@@ -3592,6 +3592,24 @@ class ProjectsmainController extends Controller
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
+        // Agreed rule (2026-10-20): Current Liabilities = sum of CREDIT main-account
+        // balances of every head except Income (4) and Expense (8) types. The bank
+        // overdraft and Output GST are counted in full.
+        $p = [];
+        for ($i = 1; $i <= 6; $i++) { $p[':p' . $i] = $pid; }
+        $rows = Yii::$app->db->createCommand("SELECT t.a, SUM(t.x) bal FROM (
+                SELECT account_id a, amount x FROM voucher WHERE contra=0 AND project_id=:p1
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=0 AND project_id=:p2
+                UNION ALL SELECT account_id, amount FROM voucher WHERE contra=1 AND type='Receipt' AND project_id=:p3
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=1 AND type='Payment' AND project_id=:p4
+                UNION ALL SELECT debitacnt, amount FROM journalvoucher WHERE project_id=:p5
+                UNION ALL SELECT creditacnt, -amount FROM journalvoucher WHERE project_id=:p6) t
+             JOIN accounts_item ai ON ai.id = t.a
+             WHERE ai.account_type NOT IN (4, 8)
+             GROUP BY t.a HAVING SUM(t.x) < 0", $p)->queryAll();
+        $clTotal = 0;
+        foreach ($rows as $r) { $clTotal += -(float)$r['bal']; }
+        return json_encode(['error' => 'No', 'total' => round($clTotal, 2)]);
 
         return json_encode([
             'error' => 'No',

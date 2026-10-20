@@ -1646,6 +1646,13 @@ function _cfDrawCurrLiabDial2(){
     el.style.cursor = 'pointer';
     el.title = 'Click to see account breakdown';
     var s = _cfCurrLiabState2;
+    // Shown as a large figure in lakhs (like Current Assets), in black.
+    el.style.display = 'flex'; el.style.flexDirection = 'column'; el.style.alignItems = 'center';
+    el.style.flex = '1'; el.style.height = '100%'; el.style.width = '100%';
+    el.innerHTML = '<div style="text-align:center;font-family:Barlow Condensed,Arial;line-height:1;">'
+        + '<div style="font-size:42px;font-weight:700;color:#000;">' + (Math.abs(s.actual) * 100).toFixed(2) + '</div>'
+        + '<div style="font-size:14px;font-weight:600;color:#5a6e8c;margin-top:6px;letter-spacing:.04em;">LAKHS</div></div>';
+    return;
     var fmt = _cfFmtMoney(Math.abs(s.actual) * 10000000);
     var divisor = fmt.unit === 'Crores' ? 1 : 100;
     el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
