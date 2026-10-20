@@ -4887,11 +4887,11 @@ window.loadIowGroupOptions = function(selectEl, cb){
 #gantt-win.gw-current #btn-gantt-calendar-inline,
 #gantt-win.gw-current #gantt-win-expand { display:none !important; }
 #gantt-win.gw-current #gantt-win-close { font-size:17px; }
-/* Activity bars purple-dark blue (critical activities keep their own colour). */
-#gantt-win.gw-current div.gtaskblue,
-#gantt-win.gw-current div.gtaskblue.gplan { background:#1a0a2e !important; border-color:#1a0a2e !important; }
+/* Activity bars in the dashboard header colour, in every Gantt (critical activities keep their own colour). */
+#gantt-container div.gtaskblue,
+#gantt-container div.gtaskblue.gplan { background:#1a0a2e !important; border-color:#1a0a2e !important; }
 #gantt-win-hdr {
-  background:#4a5a6a; color:#fff; padding:10px 15px;
+  background:#1a0a2e; color:#fff; padding:10px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   font-family:'Nunito',sans-serif;
