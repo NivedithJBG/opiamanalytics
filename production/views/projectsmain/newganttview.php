@@ -1674,6 +1674,15 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           [_lbClone, _chartBody].forEach(function(el){ el.style.height = _bh + 'px'; el.style.maxHeight = _bh + 'px'; el.style.overflowY = 'auto'; });
           _lbClone.style.scrollbarWidth = 'none';
         };
+        // Window width fitted to the columns plus the cycle timeline (and room
+        // for the quantity labels after the bars), re-fitted on every redraw.
+        var _gwin = document.getElementById('gantt-win');
+        if (_gwin && _mainLeft) {
+          var _extra = _gwin.offsetWidth - _gc.clientWidth;
+          var _ctab = _chartBody.querySelector('table');
+          var _need = _mainLeft.offsetWidth + (_ctab ? _ctab.offsetWidth : _chartBody.scrollWidth) + 60 + _extra;
+          _gwin.style.width = 'min(' + Math.round(_need) + 'px, 96vw)';
+        }
         _fitBodies();
         if (window.ResizeObserver && !_gc._fitObs) {
           _gc._fitObs = new ResizeObserver(function(){ if (window._ganttFitBodies) window._ganttFitBodies(); });
