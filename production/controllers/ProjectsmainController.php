@@ -3872,6 +3872,26 @@ class ProjectsmainController extends Controller
     // the project start, enough to cover the project duration (Project creation).
     // Returns null when either value is missing. 'end' is null for the last cycle
     // (open-ended: days after the project end count there).
+    // Start of billing cycle 1: the earliest start of any of the project's
+    // activities — the start reported in the progress report, otherwise the
+    // scheduled start, never earlier than today for one not yet started (so until
+    // the first activity starts, cycle 1 moves forward a day every day). The first
+    // bill falls at this date + the billing cycle. Falls back to the project start.
+    public static function cfCycleBase($pid, $fallback)
+    {
+        $d = Yii::$app->db->createCommand(
+            "SELECT MIN(COALESCE(
+                        NULLIF((SELECT MIN(NULLIF(r.start_date, '0000-00-00')) FROM schedule_progress_report r WHERE r.activity_id = s.id), ''),
+                        GREATEST(s.actual_start_date, CURDATE())))
+             FROM scheduleactivities s
+             WHERE s.projectId = :pid AND s.status = 0 AND s.quantity > 0
+               AND s.actual_start_date IS NOT NULL AND s.actual_start_date <> '0000-00-00'
+               AND s.iow_group_id IN (SELECT iow_group_id FROM iow_group_order WHERE project_id = :pid2)",
+            [':pid' => (int)$pid, ':pid2' => (int)$pid]
+        )->queryScalar();
+        return $d ? substr($d, 0, 10) : $fallback;
+    }
+
     public static function cfCurrentCycle($pid)
     {
         $db = Yii::$app->db;
@@ -3880,7 +3900,7 @@ class ProjectsmainController extends Controller
             "SELECT target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key='billing_cycle'", [':pid' => (int)$pid]
         )->queryScalar());
         if (!$proj || empty($proj['start_date']) || substr($proj['start_date'], 0, 10) === '0000-00-00' || (int)$proj['duration'] <= 0 || $len <= 0) return null;
-        $base = strtotime(substr($proj['start_date'], 0, 10));
+        $base = strtotime(self::cfCycleBase($pid, substr($proj['start_date'], 0, 10)));
         $duration = (int)$proj['duration'];
         $n = (int)ceil($duration / $len);
         $today = (int)round((strtotime(date('Y-m-d')) - $base) / 86400);
@@ -4002,7 +4022,8 @@ class ProjectsmainController extends Controller
             return ['error' => 'No', 'cycles' => [], 'current_cycle' => 0, 'current_target' => 0];
         }
 
-        $base     = strtotime($proj['start_date']);
+        // Cycles start at the earliest activity start (see cfCycleBase), not the project start.
+        $base     = strtotime(self::cfCycleBase($pid, substr($proj['start_date'], 0, 10)));
         $duration = (int)$proj['duration'];
         $cycleLen = (int)round($billing);
         $n        = (int)ceil($duration / $cycleLen);
