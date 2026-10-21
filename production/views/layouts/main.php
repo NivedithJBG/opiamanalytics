@@ -2102,6 +2102,148 @@ if($action=='login')
 </script>
 <!-- ── End Chatbot ─────────────────────────────────────────────────────── -->
 
+<?php if (!Yii::$app->user->isGuest): ?>
+<!-- ── Notifications (bell next to the chatbot) ───────────────────────────
+     Messages, alerts and action plans for the user / selected project. The bell
+     is grey when nothing is unread, red (alerts) or blue (messages only) with a
+     count when something is. Clicking opens a draggable, resizable window on top
+     of everything (Cashflow dashboard included). Items count as read once their
+     tab has been opened (remembered in this browser). Other code can add an item
+     with window.cfNotify('messages' | 'alerts' | 'action_plans', title, text). -->
+<style>
+#nt-btn{position:fixed;bottom:24px;right:78px;z-index:100000;width:44px;height:44px;border-radius:50%;background:#8a94a6;color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;transition:background .2s}
+#nt-btn.nt-alert{background:#d84a30}
+#nt-btn.nt-msg{background:#1565c0}
+#nt-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:#fff;color:#d84a30;font:700 11px/18px Nunito,Arial,sans-serif;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.3);display:none}
+#nt-win{position:fixed;right:24px;bottom:80px;width:380px;height:480px;min-width:280px;min-height:220px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);z-index:100600;background:#f0f2f7;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.45);display:none;flex-direction:column;overflow:hidden;font-family:Nunito,Arial,sans-serif}
+#nt-hdr{flex:none;display:flex;align-items:center;justify-content:space-between;background:#1a0a2e;color:#fff;padding:8px 12px;cursor:move;user-select:none;touch-action:none;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+#nt-close{background:none;border:none;color:#fff;font-size:20px;line-height:1;cursor:pointer;padding:0 2px}
+#nt-tabs{flex:none;display:flex;background:#fff;border-bottom:1px solid #c8d0e0}
+.nt-tab{flex:1;background:none;border:none;border-bottom:3px solid transparent;padding:8px 4px;font-size:12px;font-weight:700;color:#5a6e8c;cursor:pointer}
+.nt-tab.on{color:#081142;border-bottom-color:#1a0a2e}
+.nt-n{display:inline-block;min-width:16px;padding:0 4px;border-radius:8px;background:#c8d0e0;color:#081142;font-size:10px;line-height:16px;margin-left:3px}
+.nt-n.unread{background:#d84a30;color:#fff}
+#nt-list{flex:1;min-height:0;overflow-y:auto;padding:8px}
+.nt-item{background:#fff;border-left:4px solid #8a94a6;border-radius:4px;padding:8px 10px;margin-bottom:6px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.nt-item b{display:block;font-size:12px;color:#081142;margin-bottom:2px}
+.nt-item span{font-size:12px;color:#333;line-height:1.4}
+#nt-rs{position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;touch-action:none;background:linear-gradient(135deg,transparent 50%,#8a94a6 50%,#8a94a6 60%,transparent 60%,transparent 72%,#8a94a6 72%,#8a94a6 82%,transparent 82%)}
+@media(max-width:600px){#nt-btn{width:42px;height:42px;bottom:16px;right:66px}}
+</style>
+<button type="button" id="nt-btn" title="Notifications"><svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5.5-6.84V3a1.5 1.5 0 0 0-3 0v1.16A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2z"/></svg><span id="nt-badge"></span></button>
+<div id="nt-win">
+  <div id="nt-hdr"><span>Notifications</span><button type="button" id="nt-close" title="Close">&times;</button></div>
+  <div id="nt-tabs">
+    <button type="button" class="nt-tab" data-tab="messages">Messages<span class="nt-n" data-n="messages">0</span></button>
+    <button type="button" class="nt-tab" data-tab="alerts">Alerts<span class="nt-n" data-n="alerts">0</span></button>
+    <button type="button" class="nt-tab" data-tab="action_plans">Action Plans<span class="nt-n" data-n="action_plans">0</span></button>
+  </div>
+  <div id="nt-list"></div>
+  <div id="nt-rs" title="Resize"></div>
+</div>
+<script>
+(function(){
+  var url = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/projectsmain/cfnotifications"]); ?>';
+  var KINDS = ['messages', 'alerts', 'action_plans'];
+  var COL = { messages: '#1565c0', alerts: '#d84a30', action_plans: '#2ba899' };
+  var EMPTY = { messages: 'No messages.', alerts: 'No alerts.', action_plans: 'No action plans.' };
+  var data = { messages: [], alerts: [], action_plans: [] }, tab = null, local = 0;
+  var btn = document.getElementById('nt-btn'), win = document.getElementById('nt-win');
+  function key(kind, it){ return kind + ':' + (it.id != null ? it.id : (it.title || '') + '|' + (it.text || '')); }
+  function seen(){ try { return JSON.parse(localStorage.getItem('ntSeen') || '{}'); } catch (e) { return {}; } }
+  function markSeen(kind){
+    var s = seen(); (data[kind] || []).forEach(function(it){ s[key(kind, it)] = 1; });
+    try { localStorage.setItem('ntSeen', JSON.stringify(s)); } catch (e) {}
+  }
+  function unread(kind){ var s = seen(); return (data[kind] || []).filter(function(it){ return !s[key(kind, it)]; }).length; }
+  function esc(t){ var d = document.createElement('div'); d.textContent = t == null ? '' : String(t); return d.innerHTML; }
+  function render(){
+    var ua = unread('alerts'), um = unread('messages'), up = unread('action_plans'), total = ua + um + up;
+    btn.classList.toggle('nt-alert', ua > 0 || up > 0);
+    btn.classList.toggle('nt-msg', ua === 0 && up === 0 && um > 0);
+    var b = document.getElementById('nt-badge');
+    b.style.display = total ? 'block' : 'none'; b.textContent = total > 99 ? '99+' : total;
+    b.style.color = (ua || up) ? '#d84a30' : '#1565c0';
+    btn.title = total ? total + ' unread notification' + (total > 1 ? 's' : '') : 'Notifications';
+    KINDS.forEach(function(k){
+      var n = win.querySelector('.nt-n[data-n="' + k + '"]'); n.textContent = (data[k] || []).length;
+      n.classList.toggle('unread', unread(k) > 0 && k !== tab);
+    });
+    if (win.style.display !== 'flex') return;
+    win.querySelectorAll('.nt-tab').forEach(function(t){ t.classList.toggle('on', t.getAttribute('data-tab') === tab); });
+    var items = data[tab] || [];
+    document.getElementById('nt-list').innerHTML = items.length ? items.map(function(it){
+      return '<div class="nt-item" style="border-left-color:' + COL[tab] + '"><b>' + esc(it.title) + '</b><span>' + esc(it.text) + '</span></div>';
+    }).join('') : '<div style="text-align:center;color:#8a97ad;font-size:12px;padding:24px 8px;">' + EMPTY[tab] + '</div>';
+  }
+  function load(){
+    var x = new XMLHttpRequest();
+    x.open('POST', url); x.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    x.onload = function(){
+      try { var r = JSON.parse(x.responseText); } catch (e) { return; }
+      if (!r || r.error !== 'No') return;
+      KINDS.forEach(function(k){
+        var mine = (data[k] || []).filter(function(it){ return it._local; });   // keep items added on this page
+        data[k] = mine.concat(r[k] || []);
+      });
+      render();
+    };
+    x.send();
+  }
+  function selectTab(k){ tab = k; markSeen(k); render(); }
+  btn.addEventListener('click', function(){
+    if (win.style.display === 'flex') { win.style.display = 'none'; return; }
+    win.style.display = 'flex';
+    if (!tab) tab = unread('alerts') ? 'alerts' : unread('messages') ? 'messages' : unread('action_plans') ? 'action_plans' : 'alerts';
+    selectTab(tab);
+  });
+  document.getElementById('nt-close').addEventListener('click', function(){ win.style.display = 'none'; });
+  win.querySelectorAll('.nt-tab').forEach(function(t){ t.addEventListener('click', function(){ selectTab(t.getAttribute('data-tab')); }); });
+  // Drag by the title bar and resize from the corner (mouse and touch).
+  function pt(e){ return e.touches ? e.touches[0] : e; }
+  function pin(){ var r = win.getBoundingClientRect(); win.style.left = r.left + 'px'; win.style.top = r.top + 'px'; win.style.right = 'auto'; win.style.bottom = 'auto'; return r; }
+  var op = null;
+  function start(kind, e){
+    if (e.target.closest && e.target.closest('#nt-close')) return;
+    var p = pt(e), r = pin();
+    op = { kind: kind, x: p.clientX, y: p.clientY, l: r.left, t: r.top, w: r.width, h: r.height };
+    if (!e.touches) e.preventDefault();
+  }
+  function move(e){
+    if (!op) return;
+    var p = pt(e), dx = p.clientX - op.x, dy = p.clientY - op.y;
+    if (op.kind === 'drag') {
+      win.style.left = Math.max(0, Math.min(window.innerWidth - 60, op.l + dx)) + 'px';
+      win.style.top = Math.max(0, Math.min(window.innerHeight - 40, op.t + dy)) + 'px';
+    } else {
+      win.style.width = Math.max(280, op.w + dx) + 'px';
+      win.style.height = Math.max(220, op.h + dy) + 'px';
+    }
+    if (e.touches) e.preventDefault();
+  }
+  function end(){ op = null; }
+  var hdr = document.getElementById('nt-hdr'), rs = document.getElementById('nt-rs');
+  hdr.addEventListener('mousedown', function(e){ start('drag', e); });
+  hdr.addEventListener('touchstart', function(e){ if (e.touches.length === 1) start('drag', e); }, { passive: true });
+  rs.addEventListener('mousedown', function(e){ start('size', e); e.stopPropagation(); });
+  rs.addEventListener('touchstart', function(e){ if (e.touches.length === 1) start('size', e); }, { passive: true });
+  document.addEventListener('mousemove', move);
+  document.addEventListener('touchmove', move, { passive: false });
+  document.addEventListener('mouseup', end);
+  document.addEventListener('touchend', end);
+  window.cfNotify = function(kind, title, text){
+    if (!data[kind]) return;
+    data[kind].unshift({ id: 'local' + (++local) + '-' + Date.now(), title: title, text: text, _local: true });
+    render();
+  };
+  window.ntReload = load;
+  load();
+  setInterval(load, 120000);   // refresh every 2 minutes
+})();
+</script>
+<!-- ── End Notifications ──────────────────────────────────────────────────── -->
+<?php endif; ?>
+
 <!-- ── Projects Manager Overlay ───────────────────────────────────────── -->
 <style>
 #gpm-overlay { display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55); }

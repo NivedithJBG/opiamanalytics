@@ -270,7 +270,7 @@ var _cfSegWins = [
 ];
 // Moves all three Cashflow windows by the same amount (used by the shared header).
 function cfMoveSegmentWindows(dx, dy){
-    _cfSegWins.concat([{ id: 'cf-win-notif' }]).forEach(function(w){
+    _cfSegWins.forEach(function(w){
         var el = document.getElementById(w.id);
         if (!el) return;
         el.style.left = (el.offsetLeft + dx) + 'px';
@@ -281,27 +281,13 @@ function cfMoveSegmentWindows(dx, dy){
 // The group is 962px wide; it is scaled down only when the screen is narrower than that
 // (13" iPad portrait 1024px, landscape 1366px). Scaling uses transform, so the window
 // positions stay in screen pixels and the jQuery UI drag and touch drag keep working.
-// Notifications panel to the right of the three windows (messages, alerts and
-// action plans). The whole group, panel included, is centred, so the dashboard
-// sits a little further left than before.
-var CF_NOTIF_W = 340, CF_NOTIF_GAP = 26;
 function cfFitLayout(){
     var GROUP_W = 1144;
-    var TOTAL_W = GROUP_W + CF_NOTIF_GAP + CF_NOTIF_W;
     var vw = window.innerWidth, vh = window.innerHeight;
-    var s = Math.min(1, (vw - 24) / TOTAL_W);
+    var s = Math.min(1, (vw - 24) / GROUP_W);
     var top = Math.max(64, Math.round(vh * 0.10));          // windows start below the toolbar
     var winH = Math.min(vh * 0.68, vh - top - 16, GROUP_W * s * 0.72); // capped to the landscape proportion, so portrait is not elongated
-    var groupLeft = (vw - TOTAL_W * s) / 2;
-    var nw = document.getElementById('cf-win-notif');
-    if (nw) {
-        nw.style.transformOrigin = '0 0';
-        nw.style.transform = 'scale(' + s + ')';
-        nw.style.width = CF_NOTIF_W + 'px';
-        nw.style.left = (groupLeft + (GROUP_W + CF_NOTIF_GAP) * s) + 'px';
-        nw.style.top = (top - 44 * s) + 'px';
-        nw.style.height = (winH / s + 44) + 'px';
-    }
+    var groupLeft = (vw - GROUP_W * s) / 2;
     var hdr = document.getElementById('cf-shared-hdr');
     if (hdr) {
         hdr.style.transformOrigin = '0 0';
@@ -330,68 +316,12 @@ $('head').append('<style>@media (pointer:coarse){#cf-shared-close,.cf-seg-close{
 function cfShowSegmentWindows(){
     _cfSegWins.forEach(function(w){ $('#' + w.id).css('display', 'flex'); });
     $('#cf-shared-hdr').css('display', 'flex');
-    cfBuildNotifWindow();
-    $('#cf-win-notif').css('display', 'flex');
     cfFitLayout();
-    cfLoadNotifications();
 }
 function cfHideSegmentWindows(){
     _cfSegWins.forEach(function(w){ $('#' + w.id).css('display', 'none'); });
     $('#cf-shared-hdr').css('display', 'none');
-    $('#cf-win-notif').css('display', 'none');
 }
-
-// ── Notifications panel ─────────────────────────────────────────────────────
-// Three tabs: Messages, Alerts, Action Plans. Anything generated later can be
-// added with window.cfNotify(kind, title, text), kind = 'messages' | 'alerts' | 'action_plans'.
-var _cfNotif = { tab: null, data: { messages: [], alerts: [], action_plans: [] } };
-function cfBuildNotifWindow(){
-    if (document.getElementById('cf-win-notif')) return;
-    var tabs = [['messages', 'Messages'], ['alerts', 'Alerts'], ['action_plans', 'Action Plans']];
-    $('body').append(
-        '<div id="cf-win-notif" class="cf-seg-win" style="display:none;position:fixed;top:12vh;width:' + CF_NOTIF_W + 'px;height:68vh;background:#f0f2f7;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.7);flex-direction:column;overflow:hidden;z-index:100200;font-family:Nunito,Arial,sans-serif;">'
-        + '<div class="cf-seg-hdr" style="flex:none;display:flex;align-items:center;justify-content:space-between;background:#1a0a2e;color:#fff;padding:6px 10px;cursor:move;user-select:none;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;">'
-        + '<span style="flex:1;text-align:center;">Notifications</span></div>'
-        + '<div id="cf-notif-tabs" style="flex:none;display:flex;background:#fff;border-bottom:1px solid #c8d0e0;">'
-        + tabs.map(function(t){ return '<button type="button" class="cf-notif-tab" data-tab="' + t[0] + '" style="flex:1;background:none;border:none;border-bottom:3px solid transparent;padding:8px 4px;font-size:12px;font-weight:700;color:#5a6e8c;cursor:pointer;">' + t[1] + ' <span class="cf-notif-n" data-n="' + t[0] + '" style="display:inline-block;min-width:16px;padding:0 4px;border-radius:8px;background:#c8d0e0;color:#081142;font-size:10px;line-height:16px;">0</span></button>'; }).join('')
-        + '</div>'
-        + '<div id="cf-notif-list" style="flex:1;min-height:0;overflow-y:auto;padding:8px;"></div>'
-        + '</div>'
-    );
-    $('#cf-win-notif').draggable({ handle: '.cf-seg-hdr', containment: 'window', scroll: false });
-}
-function cfRenderNotifications(){
-    var d = _cfNotif.data;
-    ['messages', 'alerts', 'action_plans'].forEach(function(k){ $('.cf-notif-n[data-n="' + k + '"]').text((d[k] || []).length); });
-    if (!_cfNotif.tab) _cfNotif.tab = (d.alerts || []).length ? 'alerts' : (d.messages || []).length ? 'messages' : 'alerts';
-    $('.cf-notif-tab').each(function(){
-        var on = $(this).data('tab') === _cfNotif.tab;
-        $(this).css({ color: on ? '#081142' : '#5a6e8c', borderBottomColor: on ? '#1a0a2e' : 'transparent' });
-    });
-    var col = { messages: '#1565c0', alerts: '#d84a30', action_plans: '#2ba899' }[_cfNotif.tab];
-    var items = d[_cfNotif.tab] || [];
-    function esc(s){ return $('<div>').text(s == null ? '' : String(s)).html(); }
-    $('#cf-notif-list').html(items.length ? items.map(function(it){
-        return '<div style="background:#fff;border-left:4px solid ' + col + ';border-radius:4px;padding:8px 10px;margin-bottom:6px;box-shadow:0 1px 2px rgba(0,0,0,.08);">'
-            + '<div style="font-size:12px;font-weight:700;color:#081142;margin-bottom:2px;">' + esc(it.title || '') + '</div>'
-            + '<div style="font-size:12px;color:#333;line-height:1.4;">' + esc(it.text || '') + '</div></div>';
-    }).join('') : '<div style="text-align:center;color:#8a97ad;font-size:12px;padding:24px 8px;">No ' + { messages: 'messages', alerts: 'alerts', action_plans: 'action plans' }[_cfNotif.tab] + '.</div>');
-}
-function cfLoadNotifications(){
-    $.ajax({ type: 'POST', url: '../projectsmain/cfnotifications', dataType: 'json',
-        success: function(r){
-            if (!r || r.error !== 'No') return;
-            _cfNotif.data = { messages: r.messages || [], alerts: r.alerts || [], action_plans: r.action_plans || [] };
-            cfRenderNotifications();
-        } });
-    cfRenderNotifications();
-}
-window.cfNotify = function(kind, title, text){
-    if (!_cfNotif.data[kind]) return;
-    _cfNotif.data[kind].unshift({ title: title, text: text });
-    cfRenderNotifications();
-};
-$(document).on('click', '.cf-notif-tab', function(){ _cfNotif.tab = $(this).data('tab'); cfRenderNotifications(); });
 function cfBuildSegmentWindows(){
     if (document.getElementById('cf-win-value')) return;
     // Shared header above the three windows: "Project Management" and the project name.
@@ -441,7 +371,6 @@ function cfBuildSegmentWindows(){
         var $win = $('#' + w.id);
         $win.draggable({ handle: '.cf-seg-hdr', containment: 'window', scroll: false });
     });
-    cfBuildNotifWindow();
 }
 // The Cashflow button opens the three windows, or closes them if they are open.
 $(document).on('click', '.cashflow-dashboard-btn', function(e){
