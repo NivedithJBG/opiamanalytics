@@ -2129,7 +2129,12 @@ if($action=='login')
 .nt-item span{font-size:12px;color:#333;line-height:1.4}
 #nt-rs{position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;touch-action:none;background:linear-gradient(135deg,transparent 50%,#8a94a6 50%,#8a94a6 60%,transparent 60%,transparent 72%,#8a94a6 72%,#8a94a6 82%,transparent 82%)}
 @media(max-width:600px){#nt-btn{width:42px;height:42px;bottom:16px;right:66px}}
+/* WhatsApp button, left of the bell: opens WhatsApp (app on phone/iPad, WhatsApp Web on a PC) to pick a contact */
+#wa-btn{position:fixed;bottom:24px;right:132px;z-index:100000;width:44px;height:44px;border-radius:50%;background:#25d366;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:0;text-decoration:none}
+#wa-btn:hover{background:#1ebe5b}
+@media(max-width:600px){#wa-btn{width:42px;height:42px;bottom:16px;right:116px}}
 </style>
+<a id="wa-btn" href="https://api.whatsapp.com/send" target="_blank" rel="noopener" title="WhatsApp"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91A9.85 9.85 0 0 0 12.04 2zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.22 8.22 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24a8.2 8.2 0 0 1 8.24 8.25c0 4.54-3.7 8.23-8.24 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.24 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.16-.47-.28z"/></svg></a>
 <button type="button" id="nt-btn" title="Notifications"><svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5.5-6.84V3a1.5 1.5 0 0 0-3 0v1.16A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2z"/></svg><span id="nt-badge"></span></button>
 <div id="nt-win">
   <div id="nt-hdr"><span>Notifications</span><button type="button" id="nt-close" title="Close">&times;</button></div>
