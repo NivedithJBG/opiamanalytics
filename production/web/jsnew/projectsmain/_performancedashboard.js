@@ -714,7 +714,7 @@ function _cfShowResourcesPopup(d){
         if (no === 1) window._cfResRows = [];
         window._cfResRows.push(r);
         rows += '<tr><td>' + no + '</td><td style="text-align:left;"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>' + esc(r.name) + '</span>'
-            + '<button type="button" class="cf-res-order" data-i="' + (no - 1) + '" style="flex:none;background:#072c47;color:#fff;border:none;border-radius:12px;padding:2px 12px;font-size:11px;font-weight:700;cursor:pointer;">Order</button></div></td><td>' + esc(r.unit) + '</td>'
+            + '<button type="button" class="cf-res-order" data-i="' + (no - 1) + '" style="flex:none;background:#3d6a8f;color:#fff;border:none;border-radius:12px;padding:2px 12px;font-size:11px;font-weight:700;cursor:pointer;">Order</button></div></td><td>' + esc(r.unit) + '</td>'
             + '<td>' + n2(r.est_qty) + '</td><td>' + n2(r.cycle_qty) + '</td><td>' + n2(r.rate) + '</td>'
             + '<td style="font-weight:700;">' + n2(r.cost) + '</td>'
             + '<td>' + (r.lot_size === null ? '-' : n2(r.lot_size)) + '</td><td>' + esc(opt(r.lead_time)) + '</td><td>' + esc(opt(r.credit_period)) + '</td>'
