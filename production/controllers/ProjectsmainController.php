@@ -3892,13 +3892,102 @@ class ProjectsmainController extends Controller
         ];
     }
 
+    // Project for the cycle endpoints: the user's selected project, or a project
+    // id set by server-side code that calls these actions internally.
+    public $cfPidOverride = null;
+    private function _cfPid()
+    {
+        if ($this->cfPidOverride) return (int)$this->cfPidOverride;
+        $projuser = ProjuserSelection::find()->where(['userid' => Yii::$app->user->Id])->one();
+        return $projuser ? (int)$projuser->projectid : 0;
+    }
+
+    // Cashflow, VALUE DRIVERS: Project Resources popup. The resources allocated to
+    // the activities of the current billing cycle (the same list as the Project
+    // Cost popup and the Gantt "Activities in this Cycle" window), one row per
+    // resource, grouped by resource type. Project Overhead is not in the list.
+    //   E. Quantity   = consumption per unit of activity x activity quantity
+    //   Cycle Qnty    = E. Quantity x activity days in this cycle / activity duration
+    //   Cost in cycle = Cycle Qnty x rate (adds up to the activity's Cost in cycle)
+    //   Purchased     = GRN quantity of the project for the resource
+    //   Used          = average consumption (Cost Dashboard formula) x quantity executed
+    //   Remaining     = Purchased - Used
+    public function actionCfcycleresources()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        if (!$pid) { return ['error' => 'No project selected']; }
+        $db = Yii::$app->db;
+        $w = $this->actionCfwipcycles();
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $origPost = $_POST;
+        $res = [];
+        foreach (($w['current_items'] ?? []) as $it) {
+            if (empty($it['sched_id'])) continue;
+            $_POST = ['actid' => (int)$it['sched_id']];
+            $cd = json_decode($this->actionCostdashboardactivity(), true) ?: [];
+            $share = ((int)$it['duration'] > 0) ? (float)$it['days'] / (float)$it['duration'] : 0.0;
+            $done = (float)($cd['last_report_qty'] ?? 0);
+            foreach (($cd['items'] ?? []) as $ri) {
+                $key = !empty($ri['resource_id']) ? 'r' . (int)$ri['resource_id'] : 'n' . $ri['name'];
+                $perUnit = (float)($ri['planned_consumption'] ?? 0);
+                $estQty = $perUnit * (float)$it['quantity'];
+                $cycQty = $estQty * $share;
+                if (!isset($res[$key])) {
+                    $res[$key] = [
+                        'resource_id' => (int)($ri['resource_id'] ?? 0),
+                        'type' => $ri['type_name'] !== '' ? $ri['type_name'] : 'Other',
+                        'name' => $ri['name'], 'unit' => $ri['unit'], 'rate' => (float)$ri['rate'],
+                        'est_qty' => 0.0, 'cycle_qty' => 0.0, 'cost' => 0.0, 'used' => 0.0,
+                    ];
+                }
+                $res[$key]['est_qty']   += $estQty;
+                $res[$key]['cycle_qty'] += $cycQty;
+                $res[$key]['cost']      += $cycQty * (float)$ri['rate'];
+                $res[$key]['used']      += (float)($ri['actual_consumption'] ?? 0) * $done;
+            }
+        }
+        $_POST = $origPost;
+
+        // Lot size (project resource parameters), lead time, credit period
+        // (resource master; lead time from the parameters when set there) and
+        // the GRN quantity received for the project.
+        $ids = array_values(array_filter(array_map(function($r){ return $r['resource_id']; }, $res)));
+        $meta = []; $grn = [];
+        if ($ids) {
+            $in = implode(',', array_map('intval', $ids));
+            foreach ($db->createCommand(
+                "SELECT r.Resource_Id AS id, rp.lot_size, COALESCE(NULLIF(rp.lead_time, ''), r.lead_time) AS lead_time, r.credit_period
+                 FROM resources r LEFT JOIN resource_parameters rp ON rp.resource_id = r.Resource_Id AND rp.project_id = :pid
+                 WHERE r.Resource_Id IN ($in)", [':pid' => $pid])->queryAll() as $m) $meta[(int)$m['id']] = $m;
+            foreach ($db->createCommand(
+                "SELECT g.GRN_Item AS id, SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))) AS qty
+                 FROM goods_received_note g JOIN purchase_orders po ON po.order_id = g.GRN_Purchase_Order
+                 WHERE po.project_id = :pid AND po.delete_status = 0 AND g.GRN_Item IN ($in)
+                 GROUP BY g.GRN_Item", [':pid' => $pid])->queryAll() as $g) $grn[(int)$g['id']] = (float)$g['qty'];
+        }
+        $rows = [];
+        foreach ($res as $r) {
+            $m = $meta[$r['resource_id']] ?? [];
+            $purchased = $grn[$r['resource_id']] ?? 0.0;
+            $rows[] = $r + [
+                'lot_size' => isset($m['lot_size']) && $m['lot_size'] !== null ? (float)$m['lot_size'] : null,
+                'lead_time' => isset($m['lead_time']) && $m['lead_time'] !== '' ? $m['lead_time'] : null,
+                'credit_period' => isset($m['credit_period']) && $m['credit_period'] !== '' ? $m['credit_period'] : null,
+                'purchased' => $purchased,
+                'remaining' => $purchased - $r['used'],
+            ];
+        }
+        usort($rows, function($a, $b){ return [$a['type'], $b['cost']] <=> [$b['type'], $a['cost']]; });
+        $cyc = (($w['cycles'] ?? [])[($w['current_cycle'] ?? 1) - 1]) ?? [];
+        return ['error' => 'No', 'current_cycle' => $w['current_cycle'] ?? 0, 'cycle' => $cyc, 'resources' => $rows];
+    }
+
     public function actionCfwipcycles()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $uid = Yii::$app->user->Id;
-        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
-        if (!$projuser) { return ['error' => 'No project selected']; }
-        $pid = (int)$projuser->projectid;
+        $pid = $this->_cfPid();
+        if (!$pid) { return ['error' => 'No project selected']; }
         $db = Yii::$app->db;
 
         $proj = $db->createCommand(
@@ -5816,11 +5905,9 @@ class ProjectsmainController extends Controller
 
     public function actionCostdashboardactivity()
     {
-        $uid      = Yii::$app->user->Id;
-        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
-        if (!$projuser) return json_encode(['error' => 'No project selected', 'items' => []]);
+        $pid   = $this->_cfPid();
+        if (!$pid) return json_encode(['error' => 'No project selected', 'items' => []]);
 
-        $pid   = (int)$projuser->projectid;
         $actid = (int)($_POST['actid'] ?? 0);
         $wanIdParam = (int)($_POST['wan_id'] ?? 0);
         if (!$actid && !$wanIdParam) return json_encode(['error' => 'No activity', 'items' => []]);
@@ -5878,6 +5965,7 @@ class ProjectsmainController extends Controller
             $rows = $db->createCommand(
                 "SELECT pern.pricing_resourceid,
                         COALESCE(pern.display_name, r.Name, rt.Name) AS name,
+                        pern.resource_Id AS resource_id,
                         COALESCE(rt.Name, '') AS type_name,
                         pern.rate, pern.quantity,
                         ear.est_resource_quantity AS alloc_qty,
@@ -6129,6 +6217,7 @@ class ProjectsmainController extends Controller
 
                 $items[] = [
                     'name'                 => $r['name'],
+                    'resource_id'          => (int)($r['resource_id'] ?? 0),
                     'type_name'            => $r['type_name'],
                     'group_id'             => (int)($r['group_id'] ?? 0),
                     'group_name'           => $r['group_name'] ?? '',
