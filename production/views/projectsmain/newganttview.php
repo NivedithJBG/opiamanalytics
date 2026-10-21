@@ -1466,6 +1466,27 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       _barDiv.appendChild(_overlay);
     }
 
+    // Pushed start — orange-red lead-in before the bar, from the activity's
+    // baseline start (act_start_date) to where its bar now starts, when a late
+    // predecessor has moved it later. Only for activities not yet started.
+    for (var _tid in _actCells) {
+      var _pc = _actCells[_tid];
+      if (_pc.hasProgress || (_actStatus[_tid] && _actStatus[_tid].completed)) continue;
+      var _ps = String(safeDate(_pc.start) || '').substr(0, 10), _pd = String(safeDate(_pc.drawStart) || '').substr(0, 10);
+      if (!_ps || !_pd || _pd <= _ps) continue;
+      var _pushDays = Math.round((new Date(_pd) - new Date(_ps)) / 86400000);
+      var _pbar = document.getElementById('gantt-container' + 'bardiv_' + _tid);
+      if (!_pbar || _pushDays <= 0) continue;
+      var _pbarW = parseInt(_pbar.style.width) || 0;
+      if (!_pbarW || !Number(_pc.actdur)) continue;
+      var _pushPx = Math.round(_pbarW / Number(_pc.actdur) * _pushDays);
+      var _lead = document.createElement('div');
+      _lead.title = 'Start pushed ' + _pushDays + ' d by a delayed predecessor';
+      _lead.style.cssText = 'position:absolute;left:-' + _pushPx + 'px;width:' + _pushPx + 'px;top:1px;height:13px;background:rgba(255,40,0,0.9);z-index:2;border-radius:3px 0 0 3px;';
+      _pbar.style.overflow = 'visible';
+      _pbar.appendChild(_lead);
+    }
+
     // Overrun: the part of an activity's scheduled dates after the project's end
     // date (Project creation panel) is shown in solid red, so the plan can be
     // corrected or rescheduled to finish within the project duration.
