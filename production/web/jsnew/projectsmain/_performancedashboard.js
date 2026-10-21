@@ -288,9 +288,13 @@ function cfFitLayout(){
     // Portrait (iPad 1024 wide): use nearly the full width, and keep the windows
     // in the same width-to-height proportion as landscape (about 0.61), so the
     // panels look the same instead of tall and narrow.
-    var s = Math.min(1, (vw - (portrait ? 12 : 24)) / GROUP_W);
+    // Touch screens (iPad) in landscape: scale up to the screen width (up to 1.15x)
+    // and keep the windows a little flatter, so the panels are not tall and narrow.
+    var touch = (navigator.maxTouchPoints || 0) > 1;
+    var maxS = (touch && !portrait) ? 1.15 : 1;
+    var s = Math.min(maxS, (vw - (portrait ? 12 : 24)) / GROUP_W);
     var top = Math.max(64, Math.round(vh * 0.10));          // windows start below the toolbar
-    var winH = Math.min(vh * 0.68, vh - top - 16, GROUP_W * s * (portrait ? 0.61 : 0.72));
+    var winH = Math.min(vh * (touch && !portrait ? 0.74 : 0.68), vh - top - 16, GROUP_W * s * (portrait ? 0.61 : (touch ? 0.56 : 0.72)));
     var groupLeft = (vw - GROUP_W * s) / 2;
     var hdr = document.getElementById('cf-shared-hdr');
     if (hdr) {
