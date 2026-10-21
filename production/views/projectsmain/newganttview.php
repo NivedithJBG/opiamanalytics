@@ -1466,9 +1466,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       _barDiv.appendChild(_overlay);
     }
 
-    // Pushed start — orange-red lead-in before the bar, from the activity's
-    // baseline start (act_start_date) to where its bar now starts, when a late
-    // predecessor has moved it later. Only for activities not yet started.
+    // Pushed by a late predecessor — the bar has moved later than its baseline
+    // start (act_start_date), so its completion is late by the same days. That
+    // completion delay is shown orange-red at the END of the bar, as for any
+    // other start delay. Only for activities not yet started.
     for (var _tid in _actCells) {
       var _pc = _actCells[_tid];
       if (_pc.hasProgress || (_actStatus[_tid] && _actStatus[_tid].completed)) continue;
@@ -1479,11 +1480,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       if (!_pbar || _pushDays <= 0) continue;
       var _pbarW = parseInt(_pbar.style.width) || 0;
       if (!_pbarW || !Number(_pc.actdur)) continue;
-      var _pushPx = Math.round(_pbarW / Number(_pc.actdur) * _pushDays);
+      var _pushPx = Math.min(_pbarW, Math.round(_pbarW / Number(_pc.actdur) * _pushDays));
       var _lead = document.createElement('div');
-      _lead.title = 'Start pushed ' + _pushDays + ' d by a delayed predecessor';
-      _lead.style.cssText = 'position:absolute;left:-' + _pushPx + 'px;width:' + _pushPx + 'px;top:1px;height:13px;background:rgba(255,40,0,0.9);z-index:2;border-radius:3px 0 0 3px;';
-      _pbar.style.overflow = 'visible';
+      _lead.title = 'Completion delayed ' + _pushDays + ' d by a delayed predecessor';
+      _lead.style.cssText = 'position:absolute;left:' + (_pbarW - _pushPx) + 'px;width:' + _pushPx + 'px;top:1px;height:13px;background:rgba(255,40,0,0.9);z-index:2;border-radius:0 3px 3px 0;';
       _pbar.appendChild(_lead);
     }
 
