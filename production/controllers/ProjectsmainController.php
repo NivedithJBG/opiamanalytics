@@ -4783,8 +4783,9 @@ class ProjectsmainController extends Controller
                 MAX(wbs.a_end) AS a_end_date
             FROM (
                 SELECT
-                    MIN(sa.start_date) AS b_start_plain,
-                    MAX(sa.end_date)   AS b_end_plain,
+                    MIN(COALESCE(NULLIF(sa.act_start_date, '0000-00-00'), sa.start_date)) AS b_start_plain,
+                    MAX(DATE_ADD(COALESCE(NULLIF(sa.act_start_date, '0000-00-00'), sa.start_date),
+                                 INTERVAL GREATEST(1, COALESCE(sa.old_duration, 1)) - 1 DAY)) AS b_end_plain,
                     MIN(sa.actual_start_date) AS b_start,
                     MAX(sa.actual_end_date)   AS b_end,
                     MIN(COALESCE(
@@ -4821,10 +4822,6 @@ class ProjectsmainController extends Controller
                                           / rpt.cumulated_qty * sa.quantity
                                       ) - 1) DAY
                                   )
-                             WHEN (rpt.cumulated_qty IS NULL OR rpt.cumulated_qty = 0)
-                                  AND sa.act_start_date IS NOT NULL AND sa.act_start_date != '0000-00-00'
-                                  AND sa.act_start_date < CURDATE()
-                             THEN DATE_ADD(sa.end_date, INTERVAL DATEDIFF(CURDATE(), sa.act_start_date) DAY)
                              ELSE NULL END,
                         sa.actual_end_date
                     )) AS a_end
@@ -11742,41 +11739,22 @@ class ProjectsmainController extends Controller
         $projectId = (int)$_POST['projectid'];
         $rows = \Yii::$app->db->createCommand("
             SELECT go.iow_group_id,
-                   MIN(s.actual_start_date)       AS start_date,
-                   MAX(s.actual_end_date)         AS end_date,
+                   -- B. span = baseline (planned start + planned duration); A. span = the
+                   -- current dates. A start delay already moves actual_start/end_date
+                   -- (GetRelationcorrect), so nothing is added on top of them here.
+                   MIN(COALESCE(NULLIF(s.act_start_date, '0000-00-00'), s.actual_start_date)) AS start_date,
+                   MAX(DATE_ADD(COALESCE(NULLIF(s.act_start_date, '0000-00-00'), s.actual_start_date),
+                                INTERVAL GREATEST(1, COALESCE(s.old_duration, 1)) - 1 DAY)) AS end_date,
                    go.iow_group_id                AS iowGroupid,
                    COALESCE(ig.name, '')          AS iow_group_name,
                    COALESCE(go.sortorder, 999999) AS wg_sortorder,
                    MIN(COALESCE(act_a.a_start, s.actual_start_date)) AS a_min_start,
-                   MAX(COALESCE(
-                       act_a.a_end_computed,
-                       CASE WHEN act_a.a_end_computed IS NULL
-                                 AND s.act_start_date IS NOT NULL AND s.act_start_date != '0000-00-00'
-                                 AND s.act_start_date < CURDATE()
-                            THEN DATE_ADD(s.end_date, INTERVAL DATEDIFF(CURDATE(), s.act_start_date) DAY)
-                            ELSE s.actual_end_date END
-                   )) AS a_max_end,
+                   MAX(COALESCE(act_a.a_end_computed, s.actual_end_date)) AS a_max_end,
                    CASE
                      WHEN MIN(COALESCE(act_a.a_start, s.actual_start_date)) IS NOT NULL
-                          AND MAX(COALESCE(
-                              act_a.a_end_computed,
-                              CASE WHEN act_a.a_end_computed IS NULL
-                                        AND s.act_start_date IS NOT NULL AND s.act_start_date != '0000-00-00'
-                                        AND s.act_start_date < CURDATE()
-                                   THEN DATE_ADD(s.end_date, INTERVAL DATEDIFF(CURDATE(), s.act_start_date) DAY)
-                                   ELSE s.actual_end_date END
-                          )) IS NOT NULL
-                     THEN DATEDIFF(
-                            MAX(COALESCE(
-                                act_a.a_end_computed,
-                                CASE WHEN act_a.a_end_computed IS NULL
-                                          AND s.act_start_date IS NOT NULL AND s.act_start_date != '0000-00-00'
-                                          AND s.act_start_date < CURDATE()
-                                     THEN DATE_ADD(s.end_date, INTERVAL DATEDIFF(CURDATE(), s.act_start_date) DAY)
-                                     ELSE s.actual_end_date END
-                            )),
-                            MIN(COALESCE(act_a.a_start, s.actual_start_date))
-                          ) + 1
+                          AND MAX(COALESCE(act_a.a_end_computed, s.actual_end_date)) IS NOT NULL
+                     THEN DATEDIFF(MAX(COALESCE(act_a.a_end_computed, s.actual_end_date)),
+                                   MIN(COALESCE(act_a.a_start, s.actual_start_date))) + 1
                      ELSE NULL
                    END AS a_duration
             FROM iow_group_order AS go

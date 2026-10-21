@@ -349,11 +349,10 @@ class HelperComponent extends Component
         // Every activity anchors off act_start_date (Planned — the live,
         // user-controlled baseline; never written by this pass) or the real
         // reported start where progress exists. A start delay (Planned start
-        // already passed, nothing reported yet) is absorbed by EXTENDING the
-        // duration for THIS pass only (never persisted back into Planned),
-        // so Early Finish = Planned start + (planned duration + overdue
-        // days) - 1 — that inflated EF is what makes the red delay segment
-        // and what correctly cascades to dependents via FS/SS/FF.
+        // already passed, nothing reported yet) moves the start to today for
+        // THIS pass only (never persisted back into Planned); the duration
+        // stays as planned, so Early Finish = today + planned duration - 1.
+        // That later EF cascades to dependents via FS/SS/FF.
         $ids = [];
         foreach ($activities as $act) { $ids[] = $act->id; }
 
@@ -482,9 +481,9 @@ class HelperComponent extends Component
             $act = $actById[$id];
             if ((int)$act->completed_status === 1) continue;
             if (!isset($ES[$id]) || $ES[$id] >= $today) continue;
-            $overdueDays = (int)floor((strtotime($today) - strtotime($ES[$id])) / 86400);
-            if ($overdueDays <= 0) continue;
-            $dur[$id] += $overdueDays;
+            // A start delay moves the START to today; the duration stays as
+            // planned (duration is set by productivity, not by a late start).
+            $anchor[$id] = $today;
             $needsRerun = true;
         }
         if ($needsRerun) {

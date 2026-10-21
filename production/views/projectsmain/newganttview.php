@@ -1213,7 +1213,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                   _actStatus[_ti.getID()] = {
                     completed:   (parseInt(act.completed_status) === 1),
                     hasProgress: (parseFloat(act.cumulated_qty) > 0),
-                    planStart:   safeDate(act.actual_start_date),
+                    planStart:   safeDate(act.act_start_date) || safeDate(act.actual_start_date),
                     critical:    isCritical
                   };
                   // B. Start/End: act_start_date is the true, never-moved baseline
@@ -1446,45 +1446,26 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     }
 
 
-    // Delay overlay — orange-red on bars where A.Duration exceeds B.Duration, skip completed
+    // Completion delay — orange-red at the END of the bar for the days its
+    // A. End falls after its B. End (baseline start + planned duration). One
+    // rule for every cause: a late start, a push from a late predecessor, or
+    // slow progress (productivity). Completed activities are skipped.
     for (var _tid in _actCells) {
       var _db = _actCells[_tid];
-      if (!_db.dur || !_db.actdur || Number(_db.actdur) <= Number(_db.dur)) continue;
       if (_actStatus[_tid] && _actStatus[_tid].completed) continue;
-
+      var _bEnd = String(safeDate(_db.end) || '').substr(0, 10);
+      var _aEnd = String(safeDate(_db.aend) || '').substr(0, 10);
+      if (!_bEnd || !_aEnd || _aEnd <= _bEnd) continue;
+      var _delayDays = Math.round((new Date(_aEnd) - new Date(_bEnd)) / 86400000);
       var _barDiv = document.getElementById('gantt-container' + 'bardiv_' + _tid);
-      if (!_barDiv) continue;
+      if (!_barDiv || _delayDays <= 0 || !Number(_db.actdur)) continue;
       var _barW = parseInt(_barDiv.style.width) || 0;
       if (!_barW) continue;
-
-      var _budgetedPx = Math.round((Number(_db.dur) / Number(_db.actdur)) * _barW);
-      var _delayPx    = _barW - _budgetedPx;
-      if (_delayPx <= 0) continue;
-
+      var _delayPx = Math.min(_barW, Math.round(_barW / Number(_db.actdur) * _delayDays));
       var _overlay = document.createElement('div');
-      _overlay.style.cssText = 'position:absolute;left:' + _budgetedPx + 'px;width:' + _delayPx + 'px;top:1px;height:13px;background:rgba(255,40,0,0.9);pointer-events:none;z-index:2;border-radius:0 3px 3px 0;';
+      _overlay.title = 'Completion delayed ' + _delayDays + ' d';
+      _overlay.style.cssText = 'position:absolute;left:' + (_barW - _delayPx) + 'px;width:' + _delayPx + 'px;top:1px;height:13px;background:rgba(255,40,0,0.9);z-index:2;border-radius:0 3px 3px 0;';
       _barDiv.appendChild(_overlay);
-    }
-
-    // Pushed by a late predecessor — the bar has moved later than its baseline
-    // start (act_start_date), so its completion is late by the same days. That
-    // completion delay is shown orange-red at the END of the bar, as for any
-    // other start delay. Only for activities not yet started.
-    for (var _tid in _actCells) {
-      var _pc = _actCells[_tid];
-      if (_pc.hasProgress || (_actStatus[_tid] && _actStatus[_tid].completed)) continue;
-      var _ps = String(safeDate(_pc.start) || '').substr(0, 10), _pd = String(safeDate(_pc.drawStart) || '').substr(0, 10);
-      if (!_ps || !_pd || _pd <= _ps) continue;
-      var _pushDays = Math.round((new Date(_pd) - new Date(_ps)) / 86400000);
-      var _pbar = document.getElementById('gantt-container' + 'bardiv_' + _tid);
-      if (!_pbar || _pushDays <= 0) continue;
-      var _pbarW = parseInt(_pbar.style.width) || 0;
-      if (!_pbarW || !Number(_pc.actdur)) continue;
-      var _pushPx = Math.min(_pbarW, Math.round(_pbarW / Number(_pc.actdur) * _pushDays));
-      var _lead = document.createElement('div');
-      _lead.title = 'Completion delayed ' + _pushDays + ' d by a delayed predecessor';
-      _lead.style.cssText = 'position:absolute;left:' + (_pbarW - _pushPx) + 'px;width:' + _pushPx + 'px;top:1px;height:13px;background:rgba(255,40,0,0.9);z-index:2;border-radius:0 3px 3px 0;';
-      _pbar.appendChild(_lead);
     }
 
     // Overrun: the part of an activity's scheduled dates after the project's end
