@@ -632,11 +632,11 @@ function _cfShowCostCyclePopup(d){
         + '<button type="button" id="cf-costcycle-close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;">&times;</button></div>'
         + '<div style="flex:1;min-height:0;overflow:auto;padding:8px 10px;">'
         + '<table style="width:100%;border-collapse:collapse;text-align:right;">'
-        + '<thead><tr><th ' + th + '>#</th><th style="background:#4a4f57;color:#fff;padding:6px 8px;font-weight:700;text-align:left;">Activity</th><th ' + th + '>Unit</th><th ' + th + '>Quantity</th><th ' + th + ' title="Total quantity minus quantity executed as per the progress report">Remaining Qty</th><th ' + th + '>Rate</th><th ' + th + '>Cost in cycle</th></tr></thead>'
+        + '<thead><tr><th ' + th + '>#</th><th style="background:#4a4f57;color:#fff;padding:6px 8px;font-weight:700;text-align:left;">Activity</th><th ' + th + '>Unit</th><th ' + th + ' title="Estimated quantity">E. Quantity</th><th ' + th + ' title="Total quantity minus quantity executed as per the progress report">R. Cycle Qnty</th><th ' + th + '>Rate</th><th ' + th + '>Cost in cycle</th></tr></thead>'
         + '<tbody>' + rows + '</tbody>'
         + '<tfoot><tr><td colspan="6" style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">Total</td><td style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">' + n2(total) + '</td></tr></tfoot>'
         + '</table></div>'
-        + '<div style="flex:none;padding:4px 12px 8px;color:#5a6e8c;font-size:11px;">Cost in cycle = Quantity &times; Rate &times; (activity days in this cycle &divide; activity duration). Remaining Qty = Quantity &minus; quantity executed (progress report). Unfinished activities carry forward to the next cycle.</div>'
+        + '<div style="flex:none;padding:4px 12px 8px;color:#5a6e8c;font-size:11px;">Cost in cycle = Quantity &times; Rate &times; (activity days in this cycle &divide; activity duration). R. Cycle Qnty = E. Quantity &minus; quantity executed (progress report). Unfinished activities carry forward to the next cycle.</div>'
         + '</div>';
     $('body').append(html);
     $('#cf-costcycle-win td').css({ padding: '5px 8px', borderBottom: '1px solid #b8c2d3', borderRight: '1px solid #b8c2d3' });

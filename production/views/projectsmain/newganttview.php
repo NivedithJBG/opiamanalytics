@@ -1680,7 +1680,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         if (_gwin && _mainLeft) {
           var _extra = _gwin.offsetWidth - _gc.clientWidth;
           var _ctab = _chartBody.querySelector('table');
-          var _need = _mainLeft.offsetWidth + (_ctab ? _ctab.offsetWidth : _chartBody.scrollWidth) + 60 + _extra;
+          var _need = _mainLeft.offsetWidth + (_ctab ? _ctab.offsetWidth : _chartBody.scrollWidth) + _extra;
           _gwin.style.width = 'min(' + Math.round(_need) + 'px, 96vw)';
         }
         _fitBodies();
