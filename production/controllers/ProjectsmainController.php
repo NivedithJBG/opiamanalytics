@@ -4003,6 +4003,26 @@ class ProjectsmainController extends Controller
         return ['error' => 'No', 'current_cycle' => $w['current_cycle'] ?? 0, 'cycle' => $cyc, 'resources' => $rows];
     }
 
+    // Cashflow dashboard Notifications panel (right of the three windows):
+    // messages to the user, alerts raised for the selected project (e.g. the
+    // chatbot's ROI Health alert in the notifications table), and action plans.
+    public function actionCfnotifications()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        $uid = (int)Yii::$app->user->Id;
+        $db = Yii::$app->db;
+        $messages = $db->createCommand(
+            "SELECT id, title, message AS text, message_read FROM messages
+             WHERE to_user_id = :u AND draft = 0 ORDER BY message_read ASC, id DESC LIMIT 50", [':u' => $uid]
+        )->queryAll();
+        $alerts = $pid ? $db->createCommand(
+            "SELECT notf_id AS id, type AS title, remarks AS text FROM notifications
+             WHERE itemid = :p AND status = 0 AND type LIKE '%Health%' ORDER BY notf_id DESC LIMIT 50", [':p' => $pid]
+        )->queryAll() : [];
+        return ['error' => 'No', 'messages' => $messages, 'alerts' => $alerts, 'action_plans' => []];
+    }
+
     public function actionCfwipcycles()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
