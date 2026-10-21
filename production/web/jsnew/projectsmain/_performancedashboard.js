@@ -284,9 +284,13 @@ function cfMoveSegmentWindows(dx, dy){
 function cfFitLayout(){
     var GROUP_W = 1144;
     var vw = window.innerWidth, vh = window.innerHeight;
-    var s = Math.min(1, (vw - 24) / GROUP_W);
+    var portrait = vh > vw;
+    // Portrait (iPad 1024 wide): use nearly the full width, and keep the windows
+    // in the same width-to-height proportion as landscape (about 0.61), so the
+    // panels look the same instead of tall and narrow.
+    var s = Math.min(1, (vw - (portrait ? 12 : 24)) / GROUP_W);
     var top = Math.max(64, Math.round(vh * 0.10));          // windows start below the toolbar
-    var winH = Math.min(vh * 0.68, vh - top - 16, GROUP_W * s * 0.72); // capped to the landscape proportion, so portrait is not elongated
+    var winH = Math.min(vh * 0.68, vh - top - 16, GROUP_W * s * (portrait ? 0.61 : 0.72));
     var groupLeft = (vw - GROUP_W * s) / 2;
     var hdr = document.getElementById('cf-shared-hdr');
     if (hdr) {
