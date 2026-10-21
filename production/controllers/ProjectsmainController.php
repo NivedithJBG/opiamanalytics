@@ -4002,6 +4002,12 @@ class ProjectsmainController extends Controller
         )->queryOne();
         if (!$proj) { return ['error' => 'No project']; }
 
+        // Recalculate the schedule for today first — the same two passes the Gantt
+        // runs on opening (actionGetcriticalpath) — so this panel and the Gantt
+        // always show the same end date.
+        Yii::$app->helper->RecalculatePlannedDates($pid);
+        Yii::$app->helper->GetRelationcorrect($pid);
+
         $forecastEnd = $db->createCommand(
             "SELECT MAX(end_date) FROM scheduleactivities WHERE projectId = :p AND status = 0", [':p' => $pid]
         )->queryScalar();
