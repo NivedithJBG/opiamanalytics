@@ -3868,6 +3868,30 @@ class ProjectsmainController extends Controller
     // it has inside that cycle: quantity * (overlap days / planned days)
     // * estimate rate. The cycle's bar is the sum over activities. The dial
     // target is the bar of the cycle that contains today.
+    // Current billing cycle of a project: cycles of Billing Cycle days counted from
+    // the project start, enough to cover the project duration (Project creation).
+    // Returns null when either value is missing. 'end' is null for the last cycle
+    // (open-ended: days after the project end count there).
+    public static function cfCurrentCycle($pid)
+    {
+        $db = Yii::$app->db;
+        $proj = $db->createCommand("SELECT start_date, duration FROM projects WHERE Project_Id=:pid", [':pid' => (int)$pid])->queryOne();
+        $len = (int)round((float)$db->createCommand(
+            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key='billing_cycle'", [':pid' => (int)$pid]
+        )->queryScalar());
+        if (!$proj || empty($proj['start_date']) || substr($proj['start_date'], 0, 10) === '0000-00-00' || (int)$proj['duration'] <= 0 || $len <= 0) return null;
+        $base = strtotime(substr($proj['start_date'], 0, 10));
+        $duration = (int)$proj['duration'];
+        $n = (int)ceil($duration / $len);
+        $today = (int)round((strtotime(date('Y-m-d')) - $base) / 86400);
+        $k = max(1, min($n, (int)floor(max(0, $today) / $len) + 1));
+        return [
+            'cycle' => $k, 'count' => $n, 'length' => $len,
+            'start' => date('Y-m-d', $base + ($k - 1) * $len * 86400),
+            'end'   => $k === $n ? null : date('Y-m-d', $base + (min($k * $len, $duration) - 1) * 86400),
+        ];
+    }
+
     public function actionCfwipcycles()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -3899,7 +3923,9 @@ class ProjectsmainController extends Controller
             "SELECT s.id, s.activity_id AS wan_id,
                     (SELECT w.activity_Id FROM workgroup_activities_new w WHERE w.id = s.activity_id) AS lib_activity_id,
                     s.name, s.unit, s.start_date, s.duration, s.quantity, COALESCE(ea.activity_rate, 0) AS rate,
-                    COALESCE(ig.name, 'Other') AS group_name
+                    COALESCE(ig.name, 'Other') AS group_name, s.completed_status,
+                    COALESCE(NULLIF((SELECT MIN(spr.start_date) FROM schedule_progress_report spr WHERE spr.activity_id = s.id), '0000-00-00'), s.actual_start_date) AS bar_start,
+                    COALESCE((SELECT SUM(l.currentqty) FROM schedule_progress_report_log l WHERE l.activity_id = s.id), 0) AS executed
              FROM scheduleactivities s
              LEFT JOIN iow_groups ig ON ig.id = s.iow_group_id
              LEFT JOIN pricing_estimate_new p ON p.project_Id = s.projectId AND p.activity_Id = s.activity_id
@@ -3926,6 +3952,12 @@ class ProjectsmainController extends Controller
         // current_items: each activity's share of the current cycle (same overlap
         // formula), listed in the Project Cost panel popup. Their costs add up to
         // the current cycle's bar.
+        // The list itself is the same as the Gantt "Activities in this Cycle"
+        // window: every activity not completed whose bar starts on or before the
+        // cycle end — started, ongoing, starting during the cycle, or carried
+        // forward unfinished from an earlier cycle.
+        $cyc = self::cfCurrentCycle($pid);
+        $cycEnd = $cyc ? $cyc['end'] : null;
         $bars = array_fill(1, $n, 0.0);
         $currentItems = [];
         foreach ($acts as $a) {
@@ -3933,6 +3965,7 @@ class ProjectsmainController extends Controller
             $value = (float)$a['quantity'] * (float)$a['rate'];
             $aStart = $dayOf($a['start_date']);
             $aEnd = $aStart + $curDuration - 1;
+            $curPart = 0.0; $curDays = 0;
             for ($k = 1; $k <= $n; $k++) {
                 $cStart = ($k === 1) ? -100000000 : ($k - 1) * $cycleLen;
                 $cEnd   = ($k === $n) ? 100000000 : min($k * $cycleLen, $duration) - 1;
@@ -3940,23 +3973,27 @@ class ProjectsmainController extends Controller
                 if ($overlap > 0) {
                     $part = $value * $overlap / $curDuration;
                     $bars[$k] += $part;
-                    if ($k === $current) {
-                        $currentItems[] = [
-                            'sched_id' => (int)$a['id'],
-                            'wan_id'   => (int)$a['wan_id'],
-                            'lib_activity_id' => (int)$a['lib_activity_id'],
-                            'group'    => $a['group_name'],
-                            'name'     => $a['name'],
-                            'unit'     => $a['unit'],
-                            'quantity' => (float)$a['quantity'],
-                            'rate'     => (float)$a['rate'],
-                            'days'     => $overlap,
-                            'duration' => $curDuration,
-                            'cost'     => round($part, 2),
-                        ];
-                    }
+                    if ($k === $current) { $curPart = $part; $curDays = $overlap; }
                 }
             }
+            $barStart = substr((string)$a['bar_start'], 0, 10);
+            if ((int)$a['completed_status'] === 1) continue;
+            if ($cycEnd !== null && $barStart > $cycEnd) continue;
+            $currentItems[] = [
+                'sched_id' => (int)$a['id'],
+                'wan_id'   => (int)$a['wan_id'],
+                'lib_activity_id' => (int)$a['lib_activity_id'],
+                'group'    => $a['group_name'],
+                'name'     => $a['name'],
+                'unit'     => $a['unit'],
+                'quantity' => (float)$a['quantity'],
+                'executed' => (float)$a['executed'],
+                'remaining' => round(max(0, (float)$a['quantity'] - (float)$a['executed']), 3),
+                'rate'     => (float)$a['rate'],
+                'days'     => $curDays,
+                'duration' => $curDuration,
+                'cost'     => round($curPart, 2),
+            ];
         }
 
         $cycles = [];

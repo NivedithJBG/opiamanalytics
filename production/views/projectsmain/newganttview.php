@@ -961,6 +961,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     // "Current" view (opened from the Cashflow Project Duration panel): only
     // activities due to start today or already started (reported), shown monthly.
     window._ganttCurrentOnly = <?php echo Yii::$app->request->get('current') ? 'true' : 'false'; ?>;
+    // Current billing cycle (Project duration / Billing cycle, Project creation
+    // window) — same cycle as the Cashflow Project Cost popup. End '' = open.
+    <?php $_cyc = ($project && $project->Project_Id) ? \app\controllers\ProjectsmainController::cfCurrentCycle($project->Project_Id) : null; ?>
+    var _ganttCycleEnd = '<?= $_cyc && $_cyc['end'] ? $_cyc['end'] : '' ?>';
+    window._ganttCycleQty = {};
     var _ganttTodayStr = (function(){ var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); })();
 
     var g = new JSGantt.GanttChart(document.getElementById('gantt-container'), 'week');
@@ -1189,13 +1194,24 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                       : act.actual_duration;
                   }
 
-                  // Current view: skip activities not yet due (no progress and planned start after today).
-                  if (window._ganttCurrentOnly && !hasProgress && !(plannedStart && plannedStart <= _ganttTodayStr)) continue;
                   // Current view: completed activities are hidden.
                   if (window._ganttCurrentOnly && parseInt(act.completed_status) === 1) continue;
                   // Bar position uses A. dates when available, falls back to B. dates
                   var barStart = aStart       || act.actual_start_date;
                   var barEnd   = aEndComputed ? addOneDay(aEndComputed) : addOneDay(act.actual_end_date);
+                  // Current view: activities whose bar starts on or before the cycle
+                  // end — started, ongoing, starting in this cycle, or carried
+                  // forward unfinished from an earlier cycle.
+                  if (window._ganttCurrentOnly && _ganttCycleEnd && String(safeDate(barStart) || '').substr(0, 10) > _ganttCycleEnd) continue;
+                  // Quantity still to be done this cycle: quantity planned by the cycle
+                  // end (spread evenly over the bar's days) minus quantity reported.
+                  var _cycQty = null;
+                  if (window._ganttCurrentOnly && parseFloat(act.quantity) > 0 && actDur > 0) {
+                    var _bs = String(safeDate(barStart) || '').substr(0, 10);
+                    var _daysIn = _ganttCycleEnd ? Math.round((new Date(_ganttCycleEnd) - new Date(_bs)) / 86400000) + 1 : actDur;
+                    _daysIn = Math.max(0, Math.min(actDur, _daysIn));
+                    _cycQty = Math.max(0, parseFloat(act.quantity) * _daysIn / actDur - (parseFloat(act.cumulated_qty) || 0));
+                  }
 
                   var _secKey = hasProgress ? 'c' : 'n';
                   var _ti = new JSGantt.TaskItem(
@@ -1209,6 +1225,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     { unit: act.unit || '', qty: (act.quantity != null ? act.quantity : '') }
                   );
                   window._ganttActRealId[_ti.getID()] = act.id;
+                  if (_cycQty !== null) window._ganttCycleQty[_ti.getID()] = { qty: _cycQty, unit: act.unit || '' };
                   // Status dot data
                   _actStatus[_ti.getID()] = {
                     completed:   (parseInt(act.completed_status) === 1),
@@ -1471,6 +1488,22 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       _overlay.title = 'Completion delayed ' + _delayDays + ' d';
       _overlay.style.cssText = 'position:absolute;left:' + (_barW - _delayPx) + 'px;width:' + _delayPx + 'px;top:1px;height:13px;background:rgba(255,40,0,0.9);z-index:2;border-radius:0 3px 3px 0;';
       _barDiv.appendChild(_overlay);
+    }
+
+    // Current view: quantity still to be done this cycle, just past each bar's end.
+    for (var _tid in (window._ganttCycleQty || {})) {
+      var _cq = window._ganttCycleQty[_tid];
+      var _qbar = document.getElementById('gantt-container' + 'bardiv_' + _tid);
+      if (!_qbar) continue;
+      var _qw = parseInt(_qbar.style.width) || 0;
+      var _qtxt = (Math.round(_cq.qty * 100) / 100).toLocaleString('en-IN') + (_cq.unit ? ' ' + _cq.unit : '');
+      var _ql = document.createElement('span');
+      _ql.className = 'gact-cycqty';
+      _ql.title = 'Quantity still to be done this cycle';
+      _ql.textContent = _qtxt;
+      _ql.style.cssText = 'position:absolute;left:' + (_qw + 4) + 'px;top:0;line-height:15px;font-size:11px;font-weight:700;color:#000;white-space:nowrap;pointer-events:none;z-index:3;';
+      _qbar.style.overflow = 'visible';
+      _qbar.appendChild(_ql);
     }
 
     // Overrun: the part of an activity's scheduled dates after the project's end
