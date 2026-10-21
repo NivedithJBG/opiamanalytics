@@ -2047,7 +2047,7 @@ class ProjectsmainController extends Controller
         // Agreed cashflow rules: Bank = bank heads' balance from cash and bank vouchers (no contra, no journals).
         $fg = $this->_cfFlowGroups($pid); $bal = $fg['bank'];
         return json_encode(['error' => 'No', 'has_bank' => abs($bal) > 0.004, 'total_debit' => 0, 'total_credit' => 0,
-            'balance_type' => $bal < 0 ? 'credit' : 'debit', 'availed' => $bal < 0 ? round(-$bal, 2) : 0]);
+            'balance_type' => $bal < 0 ? 'credit' : 'debit', 'availed' => $bal < 0 ? round(-$bal, 2) : 0, 'balance' => round($bal, 2)]);
 
         $sum = function($sql) use ($pid) {
             $v = Yii::$app->db->createCommand($sql, [':pid' => $pid])->queryScalar();

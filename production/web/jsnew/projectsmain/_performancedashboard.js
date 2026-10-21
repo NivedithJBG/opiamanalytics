@@ -3058,8 +3058,10 @@ function _cfBankDialSvg(wcapital, availed){
     // Full dial scale = 2x W.Capital, so the target (W.Capital) sits at
     // the dial's center (50%) -- matching the target-vs-actual dials
     // elsewhere on this Cashflow tab (see _cfDialSvg's maxV = target*2).
-    var maxV = wcapitalCr > 0 ? wcapitalCr * 2 : 1;
-    var f = Math.max(0, Math.min(1, availed / maxV));
+    // Zero-centred scale: left tip = -Target, centre (yellow) = 0, right
+    // tip = +Target. "availed" here is the signed bank balance in Crores.
+    var span = wcapitalCr > 0 ? wcapitalCr : (Math.abs(availed) || 1);
+    var f = Math.max(0, Math.min(1, 0.5 + availed / (2 * span)));
     var cx = 105, cy = 82, r = 76, sw = 15;
     function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
     function arc(f1, f2, col){
@@ -3079,9 +3081,10 @@ function _cfBankDialSvg(wcapital, availed){
         + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>';
     // Base dial arc: uniform dark blue-grey
     var arcPath = arc(0, 1, '#3a4a5f');
-    // Gap arc: colored based on performance (only render if target > 0)
-    var gapCol = availed > wcapitalCr ? '#d84a30' : '#2ba899';
-    var gapPath = (wcapitalCr > 0) ? (f < targetF ? arc(f, targetF, gapCol) : arc(targetF, f, gapCol)) : '';
+    // Gap arc from 0 (centre) to the balance: green-blue when positive,
+    // red-orange when negative (overdrawn).
+    var gapCol = availed < 0 ? '#d84a30' : '#2ba899';
+    var gapPath = f < targetF ? arc(f, targetF, gapCol) : arc(targetF, f, gapCol);
     var nr = r - 14, na = Math.PI * (1 - f);
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
     // Center shows the actual (Availed) value + unit, same treatment as
@@ -3128,13 +3131,12 @@ function _cfDrawBankDial(){
     // Actual (Availed) legend colour/swatch always matches whichever arc
     // half the needle is currently pointing into (grey up to target,
     // orange beyond).
-    var maxV = wcapitalRupees > 0 ? wcapitalRupees * 2 : 1;
-    var needleCol = (availedRupees / maxV) <= 0.5 ? '#00838f' : '#e07b00';
+    var needleCol = availedRupees < 0 ? '#d84a30' : '#2ba899';
     el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
         + _cfBankDialSvg(s.wcapital, s.availed)
         + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
         + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:' + needleCol + ';border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Actual: <span style="font-size:13px;color:' + needleCol + ';font-weight:700;">' + (availedRupees / divisor).toFixed(2) + '</span></span>'
-        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Allocated: ' + wcCell + ' <button class="cf-bank-pencil" title="Edit Allocated" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>'
+        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Target: ' + wcCell + ' <button class="cf-bank-pencil" title="Edit Target" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>'
         + '</div>'
         + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
 }
@@ -3153,11 +3155,9 @@ function renderCfBankDial(){
     _cfQueueAjax({
         type: 'POST', url: '../projectsmain/cfbankbalance', dataType: 'json',
         success: function(d){
-            if (gen === _cfLoadGen && d && d.error === 'No' && d.has_bank && d.balance_type === 'credit') {
-                // Backend returns availed in raw rupees; W.Capital is
-                // entered directly in Crores by the user, so convert here
-                // to keep both values on the same scale for the dial.
-                _cfBankState.availed = (+d.availed || 0) / 10000000;
+            if (gen === _cfLoadGen && d && d.error === 'No' && d.has_bank) {
+                // Signed bank balance (debit - credit) in rupees -> Crores.
+                _cfBankState.availed = (+d.balance || 0) / 10000000;
                 _cfDrawBankDial();
             }
         }
