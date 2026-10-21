@@ -3925,7 +3925,8 @@ class ProjectsmainController extends Controller
                     s.name, s.unit, s.start_date, s.duration, s.quantity, COALESCE(ea.activity_rate, 0) AS rate,
                     COALESCE(ig.name, 'Other') AS group_name, s.completed_status,
                     COALESCE(NULLIF((SELECT MIN(spr.start_date) FROM schedule_progress_report spr WHERE spr.activity_id = s.id), '0000-00-00'), s.actual_start_date) AS bar_start,
-                    COALESCE((SELECT SUM(l.currentqty) FROM schedule_progress_report_log l WHERE l.activity_id = s.id), 0) AS executed
+                    COALESCE((SELECT SUM(l.currentqty) FROM schedule_progress_report_log l WHERE l.activity_id = s.id), 0) AS executed,
+                    DATEDIFF(s.actual_end_date, s.actual_start_date) + 1 AS bar_days
              FROM scheduleactivities s
              LEFT JOIN iow_groups ig ON ig.id = s.iow_group_id
              LEFT JOIN pricing_estimate_new p ON p.project_Id = s.projectId AND p.activity_Id = s.activity_id
@@ -3979,6 +3980,14 @@ class ProjectsmainController extends Controller
             $barStart = substr((string)$a['bar_start'], 0, 10);
             if ((int)$a['completed_status'] === 1) continue;
             if ($cycEnd !== null && $barStart > $cycEnd) continue;
+            // Quantity still to do this cycle (same as the bar tip in the Gantt
+            // window): quantity planned by the cycle end, spread evenly over the
+            // bar's days, minus the quantity already executed.
+            $barDays = max(1, (int)$a['bar_days']);
+            $daysIn = $cycEnd === null ? $barDays
+                : (int)round((strtotime($cycEnd) - strtotime($barStart)) / 86400) + 1;
+            $daysIn = max(0, min($barDays, $daysIn));
+            $cycleQty = max(0, (float)$a['quantity'] * $daysIn / $barDays - (float)$a['executed']);
             $currentItems[] = [
                 'sched_id' => (int)$a['id'],
                 'wan_id'   => (int)$a['wan_id'],
@@ -3988,7 +3997,7 @@ class ProjectsmainController extends Controller
                 'unit'     => $a['unit'],
                 'quantity' => (float)$a['quantity'],
                 'executed' => (float)$a['executed'],
-                'remaining' => round(max(0, (float)$a['quantity'] - (float)$a['executed']), 3),
+                'remaining' => round($cycleQty, 2),
                 'rate'     => (float)$a['rate'],
                 'days'     => $curDays,
                 'duration' => $curDuration,
