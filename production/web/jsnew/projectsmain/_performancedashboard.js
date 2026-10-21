@@ -564,6 +564,7 @@ function renderCfValueDrivers(){
             durEl.style.display = 'flex';
             durEl.style.flexDirection = 'column';
             durEl.style.justifyContent = 'center';
+            durEl.style.flex = '1 1 auto';   // fill the panel so the bar sits in its vertical centre
             durEl.innerHTML = _cfDurationBarHtml(t, a, 'Target: ' + t + ' d', 'Actual: ' + a + ' d', (a - t >= 0 ? '+' : '') + (a - t) + ' d');
         }
     });
