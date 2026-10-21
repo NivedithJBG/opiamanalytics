@@ -511,17 +511,19 @@ function _cfDurationDialSvg(target, actual, centerLabel, tipLabel){
 function _cfDurationBarHtml(target, actual, targetLabel, actualLabel, tipLabel){
     var scale = Math.max(target, actual, 1);
     var tPct = target / scale * 100, aPct = actual / scale * 100;
-    var okPct = Math.min(actual, target) / scale * 100;
     var over = actual > target;
     var tipCol = over ? '#d9480f' : '#2ba899';
-    var bar = '<div style="position:relative;width:100%;height:26px;background:#3a4a5f;border-radius:3px;">'
-        + '<div style="position:absolute;left:0;top:0;bottom:0;width:' + okPct.toFixed(2) + '%;background:#2ba899;border-radius:3px 0 0 3px;"></div>'
-        + (over ? '<div style="position:absolute;left:' + tPct.toFixed(2) + '%;top:0;bottom:0;width:' + (aPct - tPct).toFixed(2) + '%;background:#d9480f;border-radius:0 3px 3px 0;"></div>' : '')
-        + '<div style="position:absolute;left:calc(' + tPct.toFixed(2) + '% - 3px);top:-4px;bottom:-4px;width:6px;background:#ffff00;border:1px solid #000;box-sizing:border-box;"></div>'
-        + '<div style="position:absolute;left:6px;top:0;line-height:26px;font-size:16px;font-weight:700;color:#fff;font-family:Barlow Condensed,Arial;">' + actual + ' d</div>'
+    // Purple-black bar; only the difference between actual and target is
+    // coloured: red-orange beyond the target, green-blue when short of it.
+    var gapL = Math.min(aPct, tPct), gapW = Math.abs(aPct - tPct);
+    var bar = '<div style="position:relative;width:100%;height:10px;background:#1a0a2e;border-radius:2px;">'
+        + (gapW > 0 ? '<div style="position:absolute;left:' + gapL.toFixed(2) + '%;top:0;bottom:0;width:' + gapW.toFixed(2) + '%;background:' + tipCol + ';"></div>' : '')
+        + '<div style="position:absolute;left:calc(' + tPct.toFixed(2) + '% - 2px);top:-4px;bottom:-4px;width:4px;background:#ffff00;border:1px solid #000;box-sizing:border-box;"></div>'
         + '</div>';
     return '<div style="width:100%;padding:0 10px;box-sizing:border-box;">'
-        + '<div style="text-align:right;font-size:20px;font-weight:700;color:' + tipCol + ';font-family:Barlow Condensed,Arial;line-height:22px;margin-bottom:4px;">' + tipLabel + '</div>'
+        + '<div style="display:flex;justify-content:space-between;align-items:baseline;font-family:Barlow Condensed,Arial;line-height:22px;margin-bottom:4px;">'
+        + '<span style="font-size:20px;font-weight:700;color:#000;">' + actual + ' d</span>'
+        + '<span style="font-size:20px;font-weight:700;color:' + tipCol + ';">' + tipLabel + '</span></div>'
         + bar
         + '<div style="display:flex;justify-content:space-between;font-size:11px;color:#5a5a5a;font-family:Barlow Condensed,Arial;margin-top:3px;"><span>0</span><span>' + scale + ' d</span></div>'
         + '</div>'
