@@ -3959,6 +3959,10 @@ class ProjectsmainController extends Controller
                         'type' => $ri['type_name'] !== '' ? $ri['type_name'] : 'Other',
                         'name' => $ri['name'], 'unit' => $ri['unit'], 'rate' => (float)$ri['rate'],
                         'est_qty' => 0.0, 'cycle_qty' => 0.0, 'cost' => 0.0, 'used' => 0.0,
+                        // first allocation of the resource, used to raise its PO from the popup
+                        'allocation_id' => (int)($ri['allocation_id'] ?? 0),
+                        'activity_id' => (int)($ri['activity_id'] ?? 0),
+                        'task_ids' => (string)($ri['task_ids'] ?? ''),
                     ];
                 }
                 $res[$key]['est_qty']   += $estQty;
@@ -6276,6 +6280,9 @@ class ProjectsmainController extends Controller
                 $items[] = [
                     'name'                 => $r['name'],
                     'resource_id'          => (int)($r['resource_id'] ?? 0),
+                    'allocation_id'        => (int)($r['pricing_resourceid'] ?? 0),
+                    'activity_id'          => (int)$wbId,
+                    'task_ids'             => (string)($r['task_ids'] ?? ''),
                     'type_name'            => $r['type_name'],
                     'group_id'             => (int)($r['group_id'] ?? 0),
                     'group_name'           => $r['group_name'] ?? '',

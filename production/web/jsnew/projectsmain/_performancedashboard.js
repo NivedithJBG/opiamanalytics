@@ -710,7 +710,11 @@ function _cfShowResourcesPopup(d){
             rows += '<tr><td colspan="' + NC + '" style="text-align:left;font-weight:700;background:#e8ecf3;color:#081142;">' + esc(grp) + '</td></tr>';
         }
         no++; sub += +r.cost || 0; total += +r.cost || 0;
-        rows += '<tr><td>' + no + '</td><td style="text-align:left;">' + esc(r.name) + '</td><td>' + esc(r.unit) + '</td>'
+        window._cfResRows = window._cfResRows || [];
+        if (no === 1) window._cfResRows = [];
+        window._cfResRows.push(r);
+        rows += '<tr><td>' + no + '</td><td style="text-align:left;"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><span>' + esc(r.name) + '</span>'
+            + '<button type="button" class="cf-res-order" data-i="' + (no - 1) + '" style="flex:none;background:#072c47;color:#fff;border:none;border-radius:12px;padding:2px 12px;font-size:11px;font-weight:700;cursor:pointer;">Order</button></div></td><td>' + esc(r.unit) + '</td>'
             + '<td>' + n2(r.est_qty) + '</td><td>' + n2(r.cycle_qty) + '</td><td>' + n2(r.rate) + '</td>'
             + '<td style="font-weight:700;">' + n2(r.cost) + '</td>'
             + '<td>' + (r.lot_size === null ? '-' : n2(r.lot_size)) + '</td><td>' + esc(opt(r.lead_time)) + '</td><td>' + esc(opt(r.credit_period)) + '</td>'
@@ -752,6 +756,97 @@ function _cfShowResourcesPopup(d){
     document.addEventListener('touchmove', function(e){ if (drag && e.touches.length === 1) { move(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); } }, { passive: false });
     document.addEventListener('touchend', function(){ drag = null; });
 }
+// Order button in the Project Resources popup. Materials, Consumables and
+// Purchased Inputs: the Raise Purchase Orders popup (same fields and endpoint as
+// Order Management > Purchase Orders), one PO for that resource — quantity = this
+// cycle's quantity, rate = estimate rate, until the popup gets its own fields.
+// Other resource types: a placeholder popup for now.
+var CF_PO_TYPES = ['Materials', 'Consumables', 'Purchased Inputs'];
+function _cfOrderPopupShell(id, title, body, foot){
+    $('#' + id).remove();
+    $('body').append('<div id="' + id + '" style="position:fixed;z-index:100700;width:460px;max-width:94vw;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:7px;box-shadow:0 6px 28px rgba(0,0,0,.35);overflow:hidden;font-family:Nunito,Arial,sans-serif;">'
+        + '<div class="cf-ord-hdr" style="display:flex;justify-content:space-between;align-items:center;background:#072c47;color:#fff;padding:12px 18px;font-size:14px;font-weight:700;cursor:move;user-select:none;touch-action:none;"><span>' + title + '</span><span class="cf-ord-close" style="cursor:pointer;font-size:18px;opacity:.85;">&times;</span></div>'
+        + '<div style="padding:16px 18px;max-height:70vh;overflow:auto;">' + body + '</div>'
+        + (foot ? '<div style="padding:12px 18px;border-top:1px solid #e6eaf0;text-align:right;">' + foot + '</div>' : '')
+        + '</div>');
+    var win = document.getElementById(id), drag = null, hdr = win.querySelector('.cf-ord-hdr');
+    function start(x, y){ var r = win.getBoundingClientRect(); win.style.transform = 'none'; win.style.left = r.left + 'px'; win.style.top = r.top + 'px'; drag = { sx: x, sy: y, ox: r.left, oy: r.top }; }
+    hdr.addEventListener('mousedown', function(e){ if ($(e.target).closest('.cf-ord-close').length) return; start(e.clientX, e.clientY); e.preventDefault(); });
+    hdr.addEventListener('touchstart', function(e){ if (e.touches.length === 1 && !$(e.target).closest('.cf-ord-close').length) start(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    $(document).off('.cford').on('mousemove.cford', function(e){ if (drag) { win.style.left = Math.max(0, drag.ox + e.clientX - drag.sx) + 'px'; win.style.top = Math.max(0, drag.oy + e.clientY - drag.sy) + 'px'; } })
+        .on('mouseup.cford touchend.cford', function(){ drag = null; })
+        .on('touchmove.cford', function(e){ var t = e.originalEvent.touches; if (drag && t && t.length === 1) { win.style.left = Math.max(0, drag.ox + t[0].clientX - drag.sx) + 'px'; win.style.top = Math.max(0, drag.oy + t[0].clientY - drag.sy) + 'px'; } });
+    $(win).on('click', '.cf-ord-close, .cf-ord-cancel', function(){ $(win).remove(); $(document).off('.cford'); });
+    return win;
+}
+function _cfTermRow(v){
+    return '<div class="cf-po-term-row" style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><input type="text" class="cf-po-term" value="' + $('<div>').text(v || '').html() + '" placeholder="Enter term..." style="flex:1;height:32px;border:1px solid #c5ccd4;border-radius:4px;padding:2px 8px;font-size:12px;color:#333;">'
+        + '<button type="button" class="cf-po-term-del" style="background:#c0392b;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;">&times;</button></div>';
+}
+function _cfShowRaisePo(r){
+    var lbl = 'style="display:block;font-size:12px;font-weight:700;color:#465365;margin:0 0 5px;"', inp = 'width:100%;box-sizing:border-box;height:36px;border:1px solid #c5ccd4;border-radius:4px;padding:2px 10px;font-size:13px;color:#333;';
+    var body = '<div style="font-size:12px;color:#5a6e8c;margin-bottom:12px;">' + $('<div>').text(r.name).html() + ' &middot; ' + (+r.cycle_qty || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 }) + ' ' + $('<div>').text(r.unit || '').html() + ' @ ' + (+r.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }) + '</div>'
+        + '<div style="margin-bottom:14px;"><label ' + lbl + '>Vendor</label><select id="cf-po-vendor" style="' + inp + '"><option value="">Loading...</option></select></div>'
+        + '<div style="margin-bottom:14px;"><label ' + lbl + '>Ship To</label><textarea id="cf-po-shipto" rows="3" style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
+        + '<div style="margin-bottom:14px;"><label ' + lbl + '>Credit Period</label><input type="number" id="cf-po-credit" min="0" step="1" placeholder="e.g. 30 days" style="' + inp + '"></div>'
+        + '<div style="margin-bottom:14px;"><label ' + lbl + '>Lead Time</label><input type="text" id="cf-po-lead" placeholder="e.g. 7 days" style="' + inp + '"></div>'
+        + '<div><label ' + lbl + '>Terms</label><div id="cf-po-terms">' + _cfTermRow('') + '</div>'
+        + '<button type="button" id="cf-po-term-add" style="margin-top:4px;background:none;border:1px dashed #c5ccd4;border-radius:4px;padding:3px 12px;font-size:11px;color:#465365;cursor:pointer;">+ Add Term</button></div>';
+    var foot = '<button type="button" class="cf-ord-cancel" style="background:#f0f4f8;border:1px solid #c5ccd4;border-radius:20px;padding:6px 20px;font-size:13px;color:#465365;cursor:pointer;margin-right:8px;">Cancel</button>'
+        + '<button type="button" id="cf-po-save" style="background:#072c47;color:#fff;border:none;border-radius:20px;padding:6px 24px;font-size:13px;cursor:pointer;">Raise PO</button>';
+    var win = _cfOrderPopupShell('cf-po-popup', 'Raise Purchase Orders', body, foot);
+    $('#cf-po-shipto').val($('#cf-shared-name').text() || '');
+    $.when(
+        $.ajax({ type: 'POST', url: '../procurement/getvendors', dataType: 'json', data: { context: 'po' } }),
+        $.ajax({ type: 'POST', url: '../procurement/getposettings', dataType: 'json', data: { resource_id: r.resource_id } })
+    ).done(function(vr, sr){
+        var v = vr[0] || {}, s = sr[0] || {};
+        var opts = '<option value="">&mdash; Select Vendor &mdash;</option>';
+        (v.vendors || []).forEach(function(x){ opts += '<option value="' + x.Vendor_Id + '">' + $('<div>').text(x.Name).html() + '</option>'; });
+        $('#cf-po-vendor').html(opts);
+        if (s.error === 'No' && s.data) {
+            var d = s.data;
+            if (d.vendor_id) $('#cf-po-vendor').val(d.vendor_id);
+            if (d.credit_period) $('#cf-po-credit').val(d.credit_period);
+            if (d.lead_time) $('#cf-po-lead').val(d.lead_time);
+            if (d.ship_to && d.ship_to.trim()) $('#cf-po-shipto').val(d.ship_to.trim());
+            try { var t = JSON.parse(d.terms || '[]'); if (t && t.length) $('#cf-po-terms').html(t.map(_cfTermRow).join('')); } catch (e) {}
+        }
+    });
+    $(win).on('click', '#cf-po-term-add', function(){ $('#cf-po-terms').append(_cfTermRow('')); })
+        .on('click', '.cf-po-term-del', function(){ if ($('.cf-po-term-row').length > 1) $(this).closest('.cf-po-term-row').remove(); else $(this).siblings('input').val(''); })
+        .on('click', '#cf-po-save', function(){
+            if (!String(r.task_ids || '').trim()) { alert('Please map ' + r.name + ' to a task in the Resource Allocation page before raising a Purchase Order.'); return; }
+            if (!$('#cf-po-vendor').val()) { alert('Please select a vendor.'); return; }
+            if (!(+r.cycle_qty > 0) || !(+r.rate > 0)) { alert('Quantity and rate are needed to raise the PO.'); return; }
+            var terms = []; $('.cf-po-term').each(function(){ var x = $(this).val().trim(); if (x) terms.push(x); });
+            var $b = $(this).prop('disabled', true).text('Processing...');
+            $.ajax({ type: 'POST', url: '../procurement/raisepobulk', dataType: 'json',
+                data: {
+                    vendor_id: $('#cf-po-vendor').val(), ship_to: $('#cf-po-shipto').val().trim(),
+                    credit_period: $('#cf-po-credit').val().trim(), lead_time: $('#cf-po-lead').val().trim(),
+                    terms: JSON.stringify(terms),
+                    resources: JSON.stringify([{ resource_id: r.resource_id, allocation_id: r.allocation_id || '', activity_id: r.activity_id || '',
+                        resource_name: r.name, unit: r.unit || '', qty: Math.round((+r.cycle_qty || 0) * 1000) / 1000, rate: +r.rate || 0 }])
+                },
+                success: function(d){
+                    $b.prop('disabled', false).text('Raise PO');
+                    if (d && d.error === 'No') { $(win).remove(); $(document).off('.cford'); alert('Purchase Order raised for ' + r.name + '.'); }
+                    else alert((d && (d.errortext || d.message)) || 'Could not raise the Purchase Order.');
+                },
+                error: function(){ $b.prop('disabled', false).text('Raise PO'); alert('Could not raise the Purchase Order.'); }
+            });
+        });
+}
+$(document).on('click', '.cf-res-order', function(e){
+    e.stopPropagation();
+    var r = (window._cfResRows || [])[+$(this).data('i')];
+    if (!r) return;
+    if (CF_PO_TYPES.indexOf(r.type) !== -1) { _cfShowRaisePo(r); return; }
+    _cfOrderPopupShell('cf-po-popup', 'Order &mdash; ' + $('<div>').text(r.type).html(),
+        '<div style="font-size:13px;color:#333;">' + $('<div>').text(r.name).html() + '</div><div style="font-size:12px;color:#8a97ad;margin-top:8px;">The order screen for ' + $('<div>').text(r.type).html() + ' is still to be defined.</div>',
+        '<button type="button" class="cf-ord-cancel" style="background:#f0f4f8;border:1px solid #c5ccd4;border-radius:20px;padding:6px 20px;font-size:13px;color:#465365;cursor:pointer;">Close</button>');
+});
 $(document).on('click', '#cf-rescycle-close', function(){ $('#cf-rescycle-win').remove(); $(document).off('.cfres'); });
 $(document).on('click', '#cf-value-procurement', function(){
     $.ajax({ type: 'POST', url: '../projectsmain/cfcycleresources', dataType: 'json',
