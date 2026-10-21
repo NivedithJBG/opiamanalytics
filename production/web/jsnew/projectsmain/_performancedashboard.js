@@ -689,6 +689,75 @@ $(document).on('click', '#cf-value-cost', function(){
         success: function(d){ if (d && d.error === 'No') { window._cfWipCyclesData = d; _cfShowCostCyclePopup(d); } } });
 });
 
+// Project Resources panel popup: the resources of the current cycle's activities
+// (same activity list as the Project Cost popup), one row per resource, grouped
+// by resource type with subtotals (from cfcycleresources).
+function _cfShowResourcesPopup(d){
+    $('#cf-rescycle-win').remove();
+    var rows = '', grp = null, sub = 0, total = 0, no = 0, res = d.resources || [], cyc = d.cycle || {};
+    function n2(v){ return (+v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function opt(v){ return (v === null || v === undefined || v === '') ? '-' : String(v); }
+    function esc(s){ return $('<div>').text(s == null ? '' : String(s)).html(); }
+    var NC = 13;
+    function closeGroup(){
+        if (grp === null) return;
+        rows += '<tr><td colspan="6" style="text-align:right;font-weight:700;color:#081142;">Subtotal &mdash; ' + esc(grp) + '</td><td style="font-weight:700;color:#081142;">' + n2(sub) + '</td><td colspan="' + (NC - 7) + '"></td></tr>';
+    }
+    res.forEach(function(r){
+        if (r.type !== grp) {
+            closeGroup();
+            grp = r.type; sub = 0;
+            rows += '<tr><td colspan="' + NC + '" style="text-align:left;font-weight:700;background:#e8ecf3;color:#081142;">' + esc(grp) + '</td></tr>';
+        }
+        no++; sub += +r.cost || 0; total += +r.cost || 0;
+        rows += '<tr><td>' + no + '</td><td style="text-align:left;">' + esc(r.name) + '</td><td>' + esc(r.unit) + '</td>'
+            + '<td>' + n2(r.est_qty) + '</td><td>' + n2(r.cycle_qty) + '</td><td>' + n2(r.rate) + '</td>'
+            + '<td style="font-weight:700;">' + n2(r.cost) + '</td>'
+            + '<td>' + (r.lot_size === null ? '-' : n2(r.lot_size)) + '</td><td>' + esc(opt(r.lead_time)) + '</td><td>' + esc(opt(r.credit_period)) + '</td>'
+            + '<td>' + n2(r.purchased) + '</td><td>' + n2(r.used) + '</td><td>' + n2(r.remaining) + '</td></tr>';
+    });
+    closeGroup();
+    if (!res.length) rows = '<tr><td colspan="' + NC + '" style="text-align:center;color:#666;padding:12px;">No resources allocated to the activities of this cycle.</td></tr>';
+    var th = 'style="background:#4a4f57;color:#fff;padding:6px 8px;font-weight:700;white-space:nowrap;"';
+    function h(t, tip){ return '<th ' + th + (tip ? ' title="' + tip + '"' : '') + '>' + t + '</th>'; }
+    var html = '<div id="cf-rescycle-win" style="position:fixed;z-index:100300;left:50%;top:12vh;transform:translateX(-50%);width:1180px;max-width:96vw;max-height:76vh;display:flex;flex-direction:column;background:#fff;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.45);font-family:Nunito,Arial,sans-serif;font-size:12px;color:#111;">'
+        + '<div id="cf-rescycle-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;background:#081142;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;cursor:move;user-select:none;touch-action:none;">'
+        + '<span style="font-weight:700;">PROJECT RESOURCES &middot; Cycle ' + (d.current_cycle || '') + (cyc.end_label ? ' (' + esc(cyc.end_label) + ')' : '')
+        + ' &middot; ' + (total / 100000).toFixed(2) + ' Lakhs' + (cyc.end_date ? ' &middot; ends ' + esc(cyc.end_date) : '') + '</span>'
+        + '<button type="button" id="cf-rescycle-close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;">&times;</button></div>'
+        + '<div style="flex:1;min-height:0;overflow:auto;padding:8px 10px;">'
+        + '<table style="width:100%;border-collapse:collapse;text-align:right;">'
+        + '<thead><tr>' + h('#') + '<th style="background:#4a4f57;color:#fff;padding:6px 8px;font-weight:700;text-align:left;">Resource</th>' + h('Unit')
+        + h('E. Quantity', 'Estimated quantity for the activities: consumption per unit x activity quantity')
+        + h('Cycle Qnty', 'Quantity required in this cycle: E. Quantity x activity days in the cycle / activity duration')
+        + h('Rate') + h('Cost in cycle', 'Cycle Qnty x Rate')
+        + h('Lot Size') + h('Lead Time') + h('Credit Period')
+        + h('Purchased', 'GRN quantity received for the project') + h('Used', 'Average consumption x quantity executed') + h('Remaining', 'Purchased - Used')
+        + '</tr></thead>'
+        + '<tbody>' + rows + '</tbody>'
+        + '<tfoot><tr><td colspan="6" style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">Total</td><td style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">' + n2(total) + '</td><td colspan="' + (NC - 7) + '" style="border-top:2px solid #4a4f57;"></td></tr></tfoot>'
+        + '</table></div>'
+        + '<div style="flex:none;padding:4px 12px 8px;color:#5a6e8c;font-size:11px;">Cost in cycle = Cycle Qnty &times; Rate. Its total equals the Project Cost popup total when the activity rates match their resource allocation. Remaining = Purchased &minus; Used.</div>'
+        + '</div>';
+    $('body').append(html);
+    $('#cf-rescycle-win td').css({ padding: '5px 8px', borderBottom: '1px solid #b8c2d3', borderRight: '1px solid #b8c2d3', whiteSpace: 'nowrap' });
+    $('#cf-rescycle-win th').css({ borderRight: '1px solid #6b7280' });
+    $('#cf-rescycle-win tr > :last-child').css({ borderRight: 'none' });
+    var win = document.getElementById('cf-rescycle-win'), drag = null;
+    function start(x, y){ var r = win.getBoundingClientRect(); win.style.transform = 'none'; win.style.left = r.left + 'px'; win.style.top = r.top + 'px'; drag = { sx: x, sy: y, ox: r.left, oy: r.top }; }
+    function move(x, y){ if (!drag) return; win.style.left = Math.max(0, drag.ox + x - drag.sx) + 'px'; win.style.top = Math.max(0, drag.oy + y - drag.sy) + 'px'; }
+    $('#cf-rescycle-hdr').on('mousedown', function(e){ if ($(e.target).closest('button').length) return; start(e.clientX, e.clientY); e.preventDefault(); });
+    $(document).on('mousemove.cfres', function(e){ move(e.clientX, e.clientY); }).on('mouseup.cfres', function(){ drag = null; });
+    document.getElementById('cf-rescycle-hdr').addEventListener('touchstart', function(e){ if (e.touches.length !== 1 || $(e.target).closest('button').length) return; start(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    document.addEventListener('touchmove', function(e){ if (drag && e.touches.length === 1) { move(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); } }, { passive: false });
+    document.addEventListener('touchend', function(){ drag = null; });
+}
+$(document).on('click', '#cf-rescycle-close', function(){ $('#cf-rescycle-win').remove(); $(document).off('.cfres'); });
+$(document).on('click', '#cf-value-procurement', function(){
+    $.ajax({ type: 'POST', url: '../projectsmain/cfcycleresources', dataType: 'json',
+        success: function(d){ if (d && d.error === 'No') _cfShowResourcesPopup(d); } });
+});
+
 // Clicking the Project Duration panel opens the Gantt window exactly as the
 // Gantt Chart icon on the top toolbar does (same element, same click handler).
 $(function(){
