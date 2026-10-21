@@ -5046,7 +5046,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
     var want = (mode === 'current') ? 'current' : 'full';
     var pid = openBtn ? openBtn.getAttribute('data-projectid') : '';
     if(want !== _loadedMode){
-      if(want === 'current'){ win.style.width='min(1590px, 96vw)'; win.style.height='min(650px, 90vh)'; }
+      if(want === 'current'){ var _fw = window._ganttCurFitW; if(!_fw){ try { _fw = +localStorage.getItem('ganttCurFitW') || 0; } catch(e){ _fw = 0; } } win.style.width = 'min(' + (_fw || 920) + 'px, 96vw)'; win.style.height='min(650px, 90vh)'; }
       else { win.style.width=''; win.style.height=''; }
     }
     win.classList.add('gw-open');

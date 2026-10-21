@@ -1680,8 +1680,18 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         if (_gwin && _mainLeft) {
           var _extra = _gwin.offsetWidth - _gc.clientWidth;
           var _ctab = _chartBody.querySelector('table');
-          var _need = _mainLeft.offsetWidth + (_ctab ? _ctab.offsetWidth : _chartBody.scrollWidth) + _extra;
-          _gwin.style.width = 'min(' + Math.round(_need) + 'px, 96vw)';
+          var _cw = _ctab ? _ctab.offsetWidth : _chartBody.scrollWidth;
+          // Room for the quantity labels that run past the grid's last column.
+          var _cl = _chartBody.getBoundingClientRect().left - _chartBody.scrollLeft;
+          _chartBody.querySelectorAll('.gact-cycqty').forEach(function(el){
+            var _r = el.getBoundingClientRect().right - _cl + 8;
+            if (_r > _cw) _cw = _r;
+          });
+          var _need = Math.round(_mainLeft.offsetWidth + _cw + _extra);
+          _gwin.style.width = 'min(' + _need + 'px, 96vw)';
+          // Remembered so the window opens at this size next time (no jump).
+          window._ganttCurFitW = _need;
+          try { localStorage.setItem('ganttCurFitW', String(_need)); } catch (e) {}
         }
         _fitBodies();
         if (window.ResizeObserver && !_gc._fitObs) {
