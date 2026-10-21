@@ -965,6 +965,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     // window) — same cycle as the Cashflow Project Cost popup. End '' = open.
     <?php $_cyc = ($project && $project->Project_Id) ? \app\controllers\ProjectsmainController::cfCurrentCycle($project->Project_Id) : null; ?>
     var _ganttCycleEnd = '<?= $_cyc && $_cyc['end'] ? $_cyc['end'] : '' ?>';
+    // Cycle start ('' for cycle 1: days before the project start count there).
+    var _ganttCycleStart = '<?= $_cyc && $_cyc['cycle'] > 1 ? $_cyc['start'] : '' ?>';
     window._ganttCycleQty = {};
     var _ganttTodayStr = (function(){ var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); })();
 
@@ -979,7 +981,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     g.setShowEndDate(0);
     g.setShowPlanStartDate(0);
     g.setShowPlanEndDate(0);
-    g.setShowComp(0);
+    g.setShowComp(window._ganttCurrentOnly ? 1 : 0);   // current view: reused as the "Days in Cycle" column
     g.setShowRes(1);
     g.setShowDeps(1);
     g.setFormatArr('Day', 'Week', 'Month');
@@ -987,7 +989,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     g.setWeekMinorDateDisplayFormat('dd mon');
     g.setUseSingleCell(10000);
     // Columns: Unit, Quantity, B.Duration, A.Duration — Status/KPI/Cost injected via DOM after Draw()
-    g.vColumnOrder = ['vAdditionalHeaders', 'vShowDur', 'vShowRes'];
+    g.vColumnOrder = window._ganttCurrentOnly ? ['vAdditionalHeaders', 'vShowDur', 'vShowRes', 'vShowComp'] : ['vAdditionalHeaders', 'vShowDur', 'vShowRes'];
     g.setAdditionalHeaders({
       unit: { title: 'Unit', class: 'gantt-col-unit' },
       qty:  { title: 'Quantity', class: 'gantt-col-qty' }
@@ -1212,6 +1214,24 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     _daysIn = Math.max(0, Math.min(actDur, _daysIn));
                     _cycQty = Math.max(0, parseFloat(act.quantity) * _daysIn / actDur - (parseFloat(act.cumulated_qty) || 0));
                   }
+                  // Current view: the bar is cut to the cycle (same Gantt dates, only
+                  // the part inside the cycle is drawn). _cyc keeps what was cut off.
+                  var _cyc = null;
+                  if (window._ganttCurrentOnly) {
+                    var _dd = function(a, b){ return Math.round((new Date(b) - new Date(a)) / 86400000); };
+                    var _fs = String(safeDate(barStart) || '').substr(0, 10);
+                    var _fl = String(addDays(safeDate(barEnd), -1)).substr(0, 10);   // last bar day
+                    var _clipL = !!(_ganttCycleStart && _fs < _ganttCycleStart);
+                    var _clipR = !!(_ganttCycleEnd && _fl > _ganttCycleEnd);
+                    var _vs = _clipL ? _ganttCycleStart : _fs;
+                    var _ve = _clipR ? _ganttCycleEnd : _fl;
+                    if (_ve < _vs) _ve = _vs;
+                    var _inDays = Math.max(0, _dd(_clipL ? _ganttCycleStart : _fs, _clipR ? _ganttCycleEnd : _fl) + 1);
+                    if (_fl < (_ganttCycleStart || _fs)) _inDays = 0;
+                    _cyc = { days: _inDays, shown: _dd(_vs, _ve) + 1, clipL: _clipL, clipR: _clipR };
+                    barStart = _vs;
+                    barEnd = addOneDay(_ve);
+                  }
 
                   var _secKey = hasProgress ? 'c' : 'n';
                   var _ti = new JSGantt.TaskItem(
@@ -1251,7 +1271,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     drawEnd:    barEnd,
                     rawId:  act.id,
                     wanId:  act.wan_id,
-                    hasProgress: hasProgress
+                    hasProgress: hasProgress,
+                    cyc:    _cyc
                   };
                   if (window._ganttCurrentOnly) _secBuf[_secKey].push(_ti); else g.AddTaskItem(_ti);
                   _shownInGroup++;
@@ -1327,7 +1348,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     var _resHdr = _findHdrCell('gres');
 
     if (_durHdr) { _durHdr.textContent = 'B. Duration'; _durHdr.title = 'Planned Start + Duration. Fixed until the user changes the planned start date or duration.'; }
-    if (_resHdr) { _resHdr.textContent = 'A. Duration'; _resHdr.title = 'If no progress reported: Planned Duration + Start Delay. If progress reported: Elapsed Days ÷ Quantity Done × Total Quantity.'; }
+    if (_resHdr) { _resHdr.textContent = 'A. Duration'; _resHdr.title = 'If no progress reported: Planned Duration (a late start moves the dates). If progress reported: Elapsed Days ÷ Quantity Done × Total Quantity.'; }
+    var _compHdr = window._ganttCurrentOnly ? _findHdrCell('gcomp') : null;
+    if (_compHdr) { _compHdr.textContent = 'Days in Cycle'; _compHdr.title = 'Scheduled days of the activity that fall inside the current billing cycle.'; }
 
     // Label the activity name column
     var _nameHdrs = _c ? _c.querySelectorAll('.gtaskname') : [];
@@ -1448,9 +1471,20 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         if (_adEl) {
           _adEl.textContent = formatGanttDur(_db.actdur);
         }
+        var _cdEl = _db.cyc ? _row.querySelector('td.gcomp div') : null;
+        if (_cdEl) _cdEl.textContent = formatGanttDur(_db.cyc.days);
         // Activity name, unit, quantity and both durations in black, in every Gantt
         // (A. Duration is no longer shown in red when it exceeds B. Duration).
         _row.querySelectorAll('td:not(.gtasklist), td:not(.gtasklist) div, .gact-serial').forEach(function(el){ el.style.color = '#000'; });
+      }
+
+      // Current view: Days in Cycle only on activity rows; section headings
+      // (Commenced / Not yet Commenced) show no durations.
+      if (window._ganttCurrentOnly) {
+        if (!_db) { var _cgEl = _row.querySelector('td.gcomp div'); if (_cgEl) _cgEl.textContent = ''; }
+        if (_secTi && (_tid === _secTi.c.getID() || _tid === _secTi.n.getID())) {
+          _row.querySelectorAll('td.gdur div, td.gres div').forEach(function(el){ el.textContent = ''; });
+        }
       }
 
       // Group row A. Duration
@@ -1483,9 +1517,20 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       if (!_barDiv || _delayDays <= 0 || !Number(_db.actdur)) continue;
       var _barW = parseInt(_barDiv.style.width) || 0;
       if (!_barW) continue;
-      var _delayPx = Math.min(_barW, Math.round(_barW / Number(_db.actdur) * _delayDays));
+      // Current view, bar cut to the cycle: the cycle's proportionate share of the
+      // delay (delay x days in cycle / duration), on the bar's own day scale.
+      var _barDays = Number(_db.actdur), _shownDelay = _delayDays, _ttl = 'Completion delayed ' + _delayDays + ' d';
+      if (_db.cyc) {
+        _barDays = Math.max(1, _db.cyc.shown);
+        if (_db.cyc.clipL || _db.cyc.clipR) {
+          _shownDelay = Math.round(_delayDays * _db.cyc.days / Number(_db.actdur));
+          _ttl += ' (this cycle\'s share: ' + _shownDelay + ' d)';
+        }
+        if (_shownDelay <= 0) continue;
+      }
+      var _delayPx = Math.min(_barW, Math.round(_barW / _barDays * _shownDelay));
       var _overlay = document.createElement('div');
-      _overlay.title = 'Completion delayed ' + _delayDays + ' d';
+      _overlay.title = _ttl;
       _overlay.style.cssText = 'position:absolute;left:' + (_barW - _delayPx) + 'px;width:' + _delayPx + 'px;top:1px;height:13px;background:rgba(255,40,0,0.9);z-index:2;border-radius:0 3px 3px 0;';
       _barDiv.appendChild(_overlay);
     }
@@ -1497,11 +1542,28 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       if (!_qbar) continue;
       var _qw = parseInt(_qbar.style.width) || 0;
       var _qtxt = (Math.round(_cq.qty * 100) / 100).toLocaleString('en-IN') + (_cq.unit ? ' ' + _cq.unit : '');
+      // Edge markers: ◂ started before this cycle, ▸ continues after it (red when
+      // the activity finishes late).
+      var _cc = (_actCells[_tid] || {}).cyc, _qoff = 4;
+      if (_cc && _cc.clipL) {
+        var _ml = document.createElement('span');
+        _ml.textContent = '◂'; _ml.title = 'Started before this cycle';
+        _ml.style.cssText = 'position:absolute;left:-11px;top:0;line-height:15px;font-size:12px;color:#1a0a2e;pointer-events:none;z-index:3;';
+        _qbar.appendChild(_ml);
+      }
+      if (_cc && _cc.clipR) {
+        var _ac = _actCells[_tid], _late = String(safeDate(_ac.aend) || '').substr(0, 10) > String(safeDate(_ac.end) || '').substr(0, 10);
+        var _mr = document.createElement('span');
+        _mr.textContent = '▸'; _mr.title = 'Continues after this cycle' + (_late ? ' — finishes late' : '');
+        _mr.style.cssText = 'position:absolute;left:' + (_qw + 1) + 'px;top:0;line-height:15px;font-size:12px;color:' + (_late ? '#ff2800' : '#1a0a2e') + ';pointer-events:none;z-index:3;';
+        _qbar.appendChild(_mr);
+        _qoff = 13;
+      }
       var _ql = document.createElement('span');
       _ql.className = 'gact-cycqty';
       _ql.title = 'Quantity still to be done this cycle';
       _ql.textContent = _qtxt;
-      _ql.style.cssText = 'position:absolute;left:' + (_qw + 4) + 'px;top:0;line-height:15px;font-size:11px;font-weight:700;color:#000;white-space:nowrap;pointer-events:none;z-index:3;';
+      _ql.style.cssText = 'position:absolute;left:' + (_qw + _qoff) + 'px;top:0;line-height:15px;font-size:11px;font-weight:700;color:#000;white-space:nowrap;pointer-events:none;z-index:3;';
       _qbar.style.overflow = 'visible';
       _qbar.appendChild(_ql);
     }
@@ -1614,7 +1676,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       hits.forEach(function(h){ h[0].style.color = h[1]; h[0].style.fontWeight = '700'; });
     }
     g.setFormat = function(f) { _origSetFormat.call(g, f); _decorateGantt(); _colorSections(); };
-    if (window._ganttCurrentOnly) { g.setFormat('month'); }
+    if (window._ganttCurrentOnly) { g.setFormat('week'); }   // current view opens in Week (Day/Month still selectable)
 
     // The scroll-fix above clones the left header, which strips the click
     // listeners from the chart's own Format links (Day/Week/Month). Handle those
