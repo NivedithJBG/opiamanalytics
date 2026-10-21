@@ -1112,7 +1112,13 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
             var made = {};
             return function(b){
               if (made[b]) return made[b];
-              var t = new JSGantt.TaskItem(gPid + '_' + b, gName, gS, gE, 'ggroupblack', '', 0, '', 0, 1, 'sec_' + b, 1, '', '', '', g);
+              // Group bar cut to the cycle too, so the timeline covers only the cycle.
+              var _gs = String(safeDate(gS) || '').substr(0, 10), _ge = String(safeDate(gE) || '').substr(0, 10);
+              if (_ganttCycleStart && _gs && _gs < _ganttCycleStart) _gs = _ganttCycleStart;
+              var _geMax = _ganttCycleEnd ? String(addOneDay(_ganttCycleEnd)).substr(0, 10) : '';
+              if (_geMax && _ge && _ge > _geMax) _ge = _geMax;
+              if (_gs && _ge && _ge < _gs) _ge = _gs;
+              var t = new JSGantt.TaskItem(gPid + '_' + b, gName, _gs || gS, _ge || gE, 'ggroupblack', '', 0, '', 0, 1, 'sec_' + b, 1, '', '', '', g);
               var h = t.getID();
               [_groupActDur, _groupActStart, _groupActEnd, _groupBDur, _groupBStart, _groupBEnd].forEach(function(m){ if (m[gHid] !== undefined) m[h] = m[gHid]; });
               if (_wbsRowWgId[gHid]) _wbsRowWgId[h] = _wbsRowWgId[gHid];
@@ -1347,10 +1353,15 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     var _durHdr = _findHdrCell('gdur');
     var _resHdr = _findHdrCell('gres');
 
-    if (_durHdr) { _durHdr.textContent = 'B. Duration'; _durHdr.title = 'Planned Start + Duration. Fixed until the user changes the planned start date or duration.'; }
-    if (_resHdr) { _resHdr.textContent = 'A. Duration'; _resHdr.title = 'If no progress reported: Planned Duration (a late start moves the dates). If progress reported: Elapsed Days ÷ Quantity Done × Total Quantity.'; }
+    // Current view: short headings (Qnty, P. Dur, A. Dur, Cycle Dur).
+    if (window._ganttCurrentOnly) {
+      var _qtyHdr = _findHdrCell('gantt-col-qty');
+      if (_qtyHdr) _qtyHdr.textContent = 'Qnty';
+    }
+    if (_durHdr) { _durHdr.textContent = window._ganttCurrentOnly ? 'P. Dur' : 'B. Duration'; _durHdr.title = 'Planned Start + Duration. Fixed until the user changes the planned start date or duration.'; }
+    if (_resHdr) { _resHdr.textContent = window._ganttCurrentOnly ? 'A. Dur' : 'A. Duration'; _resHdr.title = 'If no progress reported: Planned Duration (a late start moves the dates). If progress reported: Elapsed Days ÷ Quantity Done × Total Quantity.'; }
     var _compHdr = window._ganttCurrentOnly ? _findHdrCell('gcomp') : null;
-    if (_compHdr) { _compHdr.textContent = 'Days in Cycle'; _compHdr.title = 'Scheduled days of the activity that fall inside the current billing cycle.'; }
+    if (_compHdr) { _compHdr.textContent = 'Cycle Dur'; _compHdr.title = 'Scheduled days of the activity that fall inside the current billing cycle.'; }
 
     // Label the activity name column
     var _nameHdrs = _c ? _c.querySelectorAll('.gtaskname') : [];
@@ -1650,6 +1661,26 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         _lbClone.scrollTop = _chartBody.scrollTop;
         _lock = false;
       });
+      // Current view: column headings stay in place — only the rows scroll.
+      // The container no longer scrolls; the left list and chart bodies get the
+      // height left under the headings and scroll together.
+      if (window._ganttCurrentOnly) {
+        var _fitBodies = function() {
+          var _ch = _gc.querySelector('.gchartlbl');
+          var _hh = Math.max(_lhClone.offsetHeight, _ch ? _ch.offsetHeight : 0);
+          var _bh = _gc.clientHeight - _hh;
+          if (_bh < 60) return;
+          _gc.style.overflowY = 'hidden';
+          [_lbClone, _chartBody].forEach(function(el){ el.style.height = _bh + 'px'; el.style.maxHeight = _bh + 'px'; el.style.overflowY = 'auto'; });
+          _lbClone.style.scrollbarWidth = 'none';
+        };
+        _fitBodies();
+        if (window.ResizeObserver && !_gc._fitObs) {
+          _gc._fitObs = new ResizeObserver(function(){ if (window._ganttFitBodies) window._ganttFitBodies(); });
+          _gc._fitObs.observe(_gc);
+        }
+        window._ganttFitBodies = _fitBodies;
+      }
       _lbClone.addEventListener('scroll', function() {
         if (_lock) return; _lock = true;
         _chartBody.scrollTop = _lbClone.scrollTop;
