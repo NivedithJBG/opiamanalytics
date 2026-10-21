@@ -2144,7 +2144,7 @@ document.addEventListener('click', function(e){
   e.preventDefault();
   var touch = /iPad|iPhone|Android|Mobile/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   if (touch) { window.location.href = 'whatsapp://send'; return; }
-  var w = Math.min(1000, screen.availWidth - 80), h = Math.min(800, screen.availHeight - 80);
+  var w = Math.min(720, screen.availWidth - 80), h = Math.min(600, screen.availHeight - 80);
   var win = window.open('https://web.whatsapp.com/', 'opiam_whatsapp', 'width=' + w + ',height=' + h + ',left=' + (screen.availWidth - w - 20) + ',top=40');
   if (win) win.focus();
 });
