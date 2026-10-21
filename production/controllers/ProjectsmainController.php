@@ -4015,7 +4015,9 @@ class ProjectsmainController extends Controller
                     COALESCE(ig.name, 'Other') AS group_name, s.completed_status,
                     COALESCE(NULLIF((SELECT MIN(spr.start_date) FROM schedule_progress_report spr WHERE spr.activity_id = s.id), '0000-00-00'), s.actual_start_date) AS bar_start,
                     COALESCE((SELECT SUM(l.currentqty) FROM schedule_progress_report_log l WHERE l.activity_id = s.id), 0) AS executed,
-                    DATEDIFF(s.actual_end_date, s.actual_start_date) + 1 AS bar_days
+                    DATEDIFF(s.actual_end_date, s.actual_start_date) + 1 AS bar_days,
+                    (SELECT MIN(NULLIF(spr2.start_date, '0000-00-00')) FROM schedule_progress_report spr2 WHERE spr2.activity_id = s.id) AS spr_start,
+                    (SELECT MAX(l2.report_date) FROM schedule_progress_report_log l2 WHERE l2.activity_id = s.id) AS last_report
              FROM scheduleactivities s
              LEFT JOIN iow_groups ig ON ig.id = s.iow_group_id
              LEFT JOIN pricing_estimate_new p ON p.project_Id = s.projectId AND p.activity_Id = s.activity_id
@@ -4073,6 +4075,21 @@ class ProjectsmainController extends Controller
             // window): quantity planned by the cycle end, spread evenly over the
             // bar's days, minus the quantity already executed.
             $barDays = max(1, (int)$a['bar_days']);
+            // Progress reported: bar as on the Gantt — reported start, duration
+            // projected from the pace so far (elapsed days / quantity done x total
+            // quantity), end never before the last report. Slow progress lengthens
+            // the bar, so less of the quantity falls due by the cycle end.
+            if ((float)$a['executed'] > 0 && (float)$a['quantity'] > 0 && $a['last_report']) {
+                $st = substr((string)$a['start_date'], 0, 10);
+                $ss = $a['spr_start'] ? substr((string)$a['spr_start'], 0, 10) : '';
+                if ($ss && ($st === '' || $st === '0000-00-00' || $ss < $st)) $st = $ss;
+                $lr = substr((string)$a['last_report'], 0, 10);
+                $dDays = function($x, $y){ return (int)round((strtotime($y) - strtotime($x)) / 86400); };
+                $projDur = (int)round(($dDays($st, $lr) + 1) / (float)$a['executed'] * (float)$a['quantity']);
+                $endDay = max($projDur, $dDays($st, $lr) + 1);
+                $barStart = $st;
+                $barDays = max(1, $endDay);
+            }
             $daysIn = $cycEnd === null ? $barDays
                 : (int)round((strtotime($cycEnd) - strtotime($barStart)) / 86400) + 1;
             $daysIn = max(0, min($barDays, $daysIn));
