@@ -1269,6 +1269,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       _groupBStart[_projHid] = _projBStartMin;
       _groupBEnd  [_projHid] = _projBEndMax;
     }
+    // A. span of the project counts from the project's start date (Project
+    // creation) — a late start delays completion, it does not move the
+    // project's start — same as the Cashflow Project Duration panel.
+    var _projStartStr = '<?= ($project && $project->start_date) ? substr($project->start_date, 0, 10) : '' ?>';
+    if (_projStartStr && _projAStartMin && _projStartStr < String(_projAStartMin).substr(0, 10)) _projAStartMin = _projStartStr;
     if (_projAStartMin && _projAEndMax) {
       _groupActDur  [_projHid] = spanDays(_projAStartMin, _projAEndMax);
       _groupActStart[_projHid] = _projAStartMin;
