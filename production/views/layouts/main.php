@@ -45,6 +45,13 @@ $subDomain = array_shift(($HTTP_HOST));
 <!DOCTYPE html>
 <html lang="<?= Yii::$app->language ?>">
 <head>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#1a0a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Opiam">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/icons/opiam-180.png">
     <style>html,body{overflow-x:hidden;}</style>
     <meta charset="<?= Yii::$app->charset ?>">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -2159,6 +2166,7 @@ document.addEventListener('click', function(e){
     <button type="button" class="nt-tab" data-tab="action_plans">Action Plans<span class="nt-n" data-n="action_plans">0</span></button>
   </div>
   <div id="nt-list"></div>
+  <div id="nt-push" style="flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 24px 6px 10px;border-top:1px solid #d5dbe5;background:#fff;font-size:11px;color:#5a6e8c;"></div>
   <div id="nt-rs" title="Resize"></div>
 </div>
 <script>
@@ -2176,7 +2184,25 @@ document.addEventListener('click', function(e){
     try { localStorage.setItem('ntSeen', JSON.stringify(s)); } catch (e) {}
   }
   // Unread = not yet seen in this browser; for action plans only open ones count.
-  function unread(kind){ var s = seen(); return (data[kind] || []).filter(function(it){ return !s[key(kind, it)] && !(kind === 'action_plans' && +it.status === 1); }).length; }
+  function unread(kind){ var s = seen(); return (data[kind] || []).filter(function(it){ return !s[key(kind, it)] && stOf(kind, it) !== 'archive'; }).length; }
+  // Status of an item: action plans are Pending, Overdue (past target date) or
+  // Archive (done); messages and alerts are Pending or Archive (archived).
+  var SCOL = { pending: '#2ba899', overdue: '#d84a30', archive: '#9aa3b2' };
+  var SLBL = { pending: 'Pending', overdue: 'Overdue', archive: 'Archive' };
+  var filt = { messages: { pending: 1, archive: 0 }, alerts: { pending: 1, archive: 0 }, action_plans: { pending: 1, overdue: 1, archive: 0 } };
+  function stOf(kind, it){
+    if (kind === 'action_plans') return +it.status === 1 ? 'archive' : (it.target_date && String(it.target_date).substr(0, 10) < today ? 'overdue' : 'pending');
+    return +it.archived ? 'archive' : 'pending';
+  }
+  function dot(st){ return '<span title="' + SLBL[st] + '" style="flex:none;display:inline-block;width:9px;height:9px;border-radius:50%;background:' + SCOL[st] + ';margin-right:6px;vertical-align:middle;"></span>'; }
+  function chips(kind){
+    var all = data[kind] || [];
+    return '<div style="display:flex;gap:6px;margin-bottom:8px;">' + Object.keys(filt[kind]).map(function(st){
+      var n = all.filter(function(it){ return stOf(kind, it) === st; }).length, on = filt[kind][st];
+      return '<button type="button" class="nt-chip" data-st="' + st + '" style="display:flex;align-items:center;gap:0;background:' + (on ? '#fff' : 'transparent') + ';border:1px solid ' + (on ? SCOL[st] : '#c8d0e0') + ';border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;color:' + (on ? '#081142' : '#8a97ad') + ';cursor:pointer;">' + dot(st) + SLBL[st] + ' ' + n + '</button>';
+    }).join('') + '</div>';
+  }
+  function shown(kind){ return (data[kind] || []).filter(function(it){ return filt[kind][stOf(kind, it)]; }); }
   function esc(t){ var d = document.createElement('div'); d.textContent = t == null ? '' : String(t); return d.innerHTML; }
   function render(){
     var ua = unread('alerts'), um = unread('messages'), up = unread('action_plans'), total = ua + um + up;
@@ -2187,20 +2213,23 @@ document.addEventListener('click', function(e){
     b.style.color = (ua || up) ? '#d84a30' : '#1565c0';
     btn.title = total ? total + ' unread notification' + (total > 1 ? 's' : '') : 'Notifications';
     KINDS.forEach(function(k){
-      var n = win.querySelector('.nt-n[data-n="' + k + '"]'); n.textContent = (data[k] || []).filter(function(it){ return !(k === 'action_plans' && +it.status === 1); }).length;
+      var n = win.querySelector('.nt-n[data-n="' + k + '"]'); n.textContent = (data[k] || []).filter(function(it){ return stOf(k, it) !== 'archive'; }).length;
       n.classList.toggle('unread', unread(k) > 0 && k !== tab);
     });
     if (win.style.display !== 'flex') return;
     win.querySelectorAll('.nt-tab').forEach(function(t){ t.classList.toggle('on', t.getAttribute('data-tab') === tab); });
     if (tab === 'action_plans') { if (!(editing !== null && document.querySelector('#nt-list .ap-form'))) renderPlans(); return; }   // keep a half-written plan during the 2-minute refresh
-    var items = data[tab] || [];
-    document.getElementById('nt-list').innerHTML = items.length ? items.map(function(it){
-      return '<div class="nt-item" style="border-left-color:' + COL[tab] + '"><b>' + esc(it.title) + '</b><span>' + esc(it.text) + '</span></div>';
-    }).join('') : '<div style="text-align:center;color:#8a97ad;font-size:12px;padding:24px 8px;">' + EMPTY[tab] + '</div>';
+    var items = shown(tab), b2 = 'background:none;border:none;cursor:pointer;font-size:12px;line-height:1;padding:2px 4px;color:#5a6e8c;';
+    document.getElementById('nt-list').innerHTML = chips(tab) + (items.length ? items.map(function(it){
+      var st = stOf(tab, it), arch = st === 'archive';
+      return '<div class="nt-item" data-id="' + esc(it.id) + '" style="display:flex;align-items:flex-start;gap:6px;border-left-color:' + SCOL[st] + ';' + (arch ? 'opacity:.6;' : '') + '"><div style="flex:1;min-width:0;"><b>' + dot(st) + esc(it.title) + '</b><span>' + esc(it.text) + '</span></div>'
+        + (it._local ? '' : '<button type="button" class="nt-arch" data-arch="' + (arch ? 0 : 1) + '" title="' + (arch ? 'Restore' : 'Archive') + '" style="' + b2 + '">' + (arch ? '&#8634;' : '&#128451;') + '</button>') + '</div>';
+    }).join('') : '<div style="text-align:center;color:#8a97ad;font-size:12px;padding:24px 8px;">' + EMPTY[tab] + '</div>');
   }
   // ── Action plans: written by users, one strip each ──────────────────────
   var apUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/projectsmain/actionplansave"]); ?>';
   var apStatusUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/projectsmain/actionplanstatus"]); ?>';
+  var archUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/projectsmain/notifarchive"]); ?>';
   var users = [], today = '', editing = null;   // editing: null (closed), 0 (new) or a plan id
   function post(u, params, done){
     var x = new XMLHttpRequest(), body = Object.keys(params).map(function(k){ return encodeURIComponent(k) + '=' + encodeURIComponent(params[k] == null ? '' : params[k]); }).join('&');
@@ -2221,13 +2250,13 @@ document.addEventListener('click', function(e){
       + '<button type="button" class="ap-save" style="background:#1a0a2e;color:#fff;border:none;border-radius:14px;padding:4px 16px;font-size:12px;cursor:pointer;">Save</button></div></div>';
   }
   function renderPlans(){
-    var list = document.getElementById('nt-list'), plans = data.action_plans || [];
-    var html = editing === 0 ? planForm(null)
-      : '<button type="button" class="ap-new" style="width:100%;margin-bottom:8px;background:#fff;border:1px dashed #8a94a6;border-radius:6px;padding:7px;font-size:12px;font-weight:700;color:#1a0a2e;cursor:pointer;">+ New Action Plan</button>';
+    var list = document.getElementById('nt-list'), plans = shown('action_plans');
+    var html = chips('action_plans') + (editing === 0 ? planForm(null)
+      : '<button type="button" class="ap-new" style="width:100%;margin-bottom:8px;background:#fff;border:1px dashed #8a94a6;border-radius:6px;padding:7px;font-size:12px;font-weight:700;color:#1a0a2e;cursor:pointer;">+ New Action Plan</button>');
     plans.forEach(function(pl){
       if (editing === +pl.id) { html += planForm(pl); return; }
       var done = +pl.status === 1, late = !done && pl.target_date && String(pl.target_date).substr(0, 10) < today;
-      var edge = done ? '#9aa3b2' : late ? '#d84a30' : '#2ba899';
+      var edge = SCOL[stOf('action_plans', pl)];
       var meta = [];
       if (pl.responsible) meta.push('<span title="Responsible">&#128100; ' + esc(pl.responsible) + '</span>');
       if (pl.target_date) meta.push('<span title="Target date" style="' + (late ? 'color:#d84a30;font-weight:700;' : '') + '">&#128197; ' + fmtDate(pl.target_date) + (late ? ' · overdue' : '') + '</span>');
@@ -2236,18 +2265,24 @@ document.addEventListener('click', function(e){
       html += '<div class="ap-strip" data-id="' + pl.id + '" style="display:flex;align-items:stretch;background:#fff;border-radius:6px;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.10);overflow:hidden;' + (done ? 'opacity:.6;' : '') + '">'
         + '<div style="flex:none;width:5px;background:' + edge + ';"></div>'
         + '<div style="flex:1;min-width:0;padding:8px 10px;">'
-        + '<div style="font-size:12.5px;color:#111;line-height:1.4;white-space:pre-wrap;word-wrap:break-word;' + (done ? 'text-decoration:line-through;' : '') + '">' + esc(pl.text) + '</div>'
+        + '<div style="font-size:12.5px;color:#111;line-height:1.4;white-space:pre-wrap;word-wrap:break-word;' + (done ? 'text-decoration:line-through;' : '') + '">' + dot(stOf('action_plans', pl)) + esc(pl.text) + '</div>'
         + '<div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px;font-size:11px;color:#6b7a90;">' + meta.join('') + '</div></div>'
         + '<div style="flex:none;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:4px 6px;border-left:1px solid #eef1f5;">'
         + '<button type="button" class="ap-done" title="' + (done ? 'Reopen' : 'Mark done') + '" style="' + b + (done ? '' : 'color:#2ba899;') + '">' + (done ? '&#8634;' : '&#10003;') + '</button>'
         + (done ? '' : '<button type="button" class="ap-edit" title="Edit" style="' + b + '">&#9998;</button>')
         + '<button type="button" class="ap-del" title="Delete" style="' + b + 'color:#c0392b;">&times;</button></div></div>';
     });
-    if (!plans.length && editing !== 0) html += '<div style="text-align:center;color:#8a97ad;font-size:12px;padding:16px 8px;">No action plans yet.</div>';
+    if (!plans.length && editing !== 0) html += '<div style="text-align:center;color:#8a97ad;font-size:12px;padding:16px 8px;">' + ((data.action_plans || []).length ? 'No action plans with this status.' : 'No action plans yet.') + '</div>';
     list.innerHTML = html;
   }
   document.getElementById('nt-list').addEventListener('click', function(e){
     var t = e.target.closest('button'); if (!t) return;
+    if (t.classList.contains('nt-chip')) { var st = t.getAttribute('data-st'); filt[tab][st] = filt[tab][st] ? 0 : 1; render(); return; }
+    if (t.classList.contains('nt-arch')) {
+      var item = t.closest('.nt-item');
+      post(archUrl, { kind: tab, id: item.getAttribute('data-id'), archive: t.getAttribute('data-arch') }, function(){ load(); });
+      return;
+    }
     var strip = t.closest('.ap-strip'), id = strip ? +strip.getAttribute('data-id') : 0;
     if (t.classList.contains('ap-new')) { editing = 0; renderPlans(); var ta = document.querySelector('#nt-list .ap-text'); if (ta) ta.focus(); }
     else if (t.classList.contains('ap-cancel')) { editing = null; renderPlans(); }
@@ -2332,6 +2367,55 @@ document.addEventListener('click', function(e){
     data[kind].unshift({ id: 'local' + (++local) + '-' + Date.now(), title: title, text: text, _local: true });
     render();
   };
+  // ── Push notifications to this phone / computer ─────────────────────────
+  var pushKeyUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/projectsmain/pushkey"]); ?>';
+  var pushSubUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/projectsmain/pushsubscribe"]); ?>';
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  var swReg = null;
+  function b64ToBytes(b){ b = (b + '===='.slice((b.length % 4) || 4)).replace(/-/g, '+').replace(/_/g, '/'); var r = atob(b), a = new Uint8Array(r.length); for (var i = 0; i < r.length; i++) a[i] = r.charCodeAt(i); return a; }
+  function pushBar(html){ document.getElementById('nt-push').innerHTML = html; }
+  function pushBtn(label){ return '<button type="button" id="nt-push-on" style="flex:none;background:#1a0a2e;color:#fff;border:none;border-radius:12px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">' + label + '</button>'; }
+  function saveSub(sub, done){ post(pushSubUrl, { subscription: JSON.stringify(sub) }, function(r){ if (done) done(r); }); }
+  function pushState(){
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      pushBar(isIOS && !standalone
+        ? '<span>&#128241; To get notifications on this iPhone/iPad: tap <b>Share</b> &rarr; <b>Add to Home Screen</b> (Safari or Chrome), then open Opiam from that icon.</span>'
+        : '<span>This browser cannot show notifications.</span>');
+      return;
+    }
+    if (Notification.permission === 'denied') { pushBar('<span>Notifications are blocked for Opiam. Allow them in this browser\'s site settings.</span>'); return; }
+    (swReg ? Promise.resolve(swReg) : navigator.serviceWorker.ready).then(function(reg){ return reg.pushManager.getSubscription(); }).then(function(sub){
+      if (sub && Notification.permission === 'granted') { pushBar('<span style="color:#2ba899;font-weight:700;">&#10003; Notifications on for this device</span>'); saveSub(sub); }
+      else pushBar('<span>Get action plans and alerts on this device.</span>' + pushBtn('Allow notifications'));
+    }).catch(function(){ pushBar('<span>Get action plans and alerts on this device.</span>' + pushBtn('Allow notifications')); });
+  }
+  function enablePush(){
+    pushBar('<span>Turning notifications on...</span>');
+    Notification.requestPermission().then(function(p){
+      if (p !== 'granted') { pushState(); return; }
+      var x = new XMLHttpRequest(); x.open('POST', pushKeyUrl); x.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+      x.onload = function(){
+        var k = null; try { k = JSON.parse(x.responseText).key; } catch (e) {}
+        if (!k) { pushBar('<span>Could not turn notifications on. Try again.</span>' + pushBtn('Retry')); return; }
+        navigator.serviceWorker.ready.then(function(reg){
+          return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(k) });
+        }).then(function(sub){ saveSub(sub, function(){ pushState(); }); })
+          .catch(function(){ pushBar('<span>Could not turn notifications on. Try again.</span>' + pushBtn('Retry')); });
+      };
+      x.send();
+    });
+  }
+  document.getElementById('nt-push').addEventListener('click', function(e){ if (e.target.id === 'nt-push-on') enablePush(); });
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/opiam-sw.js', { scope: '/' }).then(function(reg){ swReg = reg; pushState(); }).catch(function(){ pushState(); });
+    // A tapped notification opens this window.
+    navigator.serviceWorker.addEventListener('message', function(e){ if (e.data && e.data.type === 'opiam-open-notifications' && win.style.display !== 'flex') btn.click(); });
+  } else pushState();
+  if (/[?&]notif=1/.test(location.search)) setTimeout(function(){ if (win.style.display !== 'flex') { tab = 'action_plans'; btn.click(); } }, 800);
+  // Clear the app-icon badge once the window has been opened.
+  btn.addEventListener('click', function(){ if (navigator.clearAppBadge) navigator.clearAppBadge().catch(function(){}); });
+
   window.ntReload = load;
   load();
   setInterval(load, 120000);   // refresh every 2 minutes

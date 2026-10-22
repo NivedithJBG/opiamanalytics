@@ -4016,13 +4016,22 @@ class ProjectsmainController extends Controller
         $pid = $this->_cfPid();
         $uid = (int)Yii::$app->user->Id;
         $db = Yii::$app->db;
+        // Due action plans are pushed to phones once a day; if the cron job has not
+        // run yet today, the first refresh after 8 AM IST does it.
+        $ist = new \DateTime('now', new \DateTimeZone('Asia/Kolkata'));
+        $flag = Yii::getAlias('@runtime') . '/push_due_date.txt';
+        if ((int)$ist->format('G') >= 8 && @file_get_contents($flag) !== $ist->format('Y-m-d')) {
+            @file_put_contents($flag, $ist->format('Y-m-d'));
+            try { self::cfPushDuePlans(); } catch (\Throwable $e) { Yii::warning('Due push failed: ' . $e->getMessage()); }
+        }
+        // archived = 1 when the item has been archived from the window.
         $messages = $db->createCommand(
-            "SELECT id, title, message AS text, message_read FROM messages
+            "SELECT id, title, message AS text, message_read AS archived FROM messages
              WHERE to_user_id = :u AND draft = 0 ORDER BY message_read ASC, id DESC LIMIT 50", [':u' => $uid]
         )->queryAll();
         $alerts = $pid ? $db->createCommand(
-            "SELECT notf_id AS id, type AS title, remarks AS text FROM notifications
-             WHERE itemid = :p AND status = 0 AND type LIKE '%Health%' ORDER BY notf_id DESC LIMIT 50", [':p' => $pid]
+            "SELECT notf_id AS id, type AS title, remarks AS text, status AS archived FROM notifications
+             WHERE itemid = :p AND type LIKE '%Health%' ORDER BY status ASC, notf_id DESC LIMIT 50", [':p' => $pid]
         )->queryAll() : [];
         // Action plans written by users for the project (action_plans table): open
         // ones first by target date, done ones after.
@@ -4036,7 +4045,96 @@ class ProjectsmainController extends Controller
              ORDER BY ap.status ASC, (ap.target_date IS NULL) ASC, ap.target_date ASC, ap.id DESC", [':p' => $pid]
         )->queryAll() : [];
         $users = $db->createCommand("SELECT id, username FROM user WHERE status = 1 ORDER BY username")->queryAll();
-        return ['error' => 'No', 'messages' => $messages, 'alerts' => $alerts, 'action_plans' => $plans, 'users' => $users, 'today' => date('Y-m-d')];
+        return ['error' => 'No', 'messages' => $messages, 'alerts' => $alerts, 'action_plans' => $plans, 'users' => $users, 'today' => $ist->format('Y-m-d')];
+    }
+
+    // ── Phone / browser push notifications (see components/WebPush.php) ──────
+    public function actionPushkey()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        return ['error' => 'No', 'key' => \app\components\WebPush::keys()['public']];
+    }
+
+    // Saves this device's subscription for the logged-in user.
+    public function actionPushsubscribe()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $uid = (int)Yii::$app->user->Id;
+        $sub = json_decode((string)($_POST['subscription'] ?? ''), true);
+        if (!$uid || empty($sub['endpoint']) || empty($sub['keys']['p256dh']) || empty($sub['keys']['auth'])) {
+            return ['error' => 'Yes', 'errortext' => 'Invalid subscription.'];
+        }
+        \app\components\WebPush::ensureTables();
+        $db = Yii::$app->db;
+        $hash = hash('sha256', $sub['endpoint']);
+        $row = ['user_id' => $uid, 'endpoint' => $sub['endpoint'], 'endpoint_hash' => $hash,
+                'p256dh' => $sub['keys']['p256dh'], 'auth' => $sub['keys']['auth'],
+                'user_agent' => substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255), 'created_at' => date('Y-m-d H:i:s')];
+        $exists = $db->createCommand("SELECT id FROM push_subscriptions WHERE endpoint_hash = :h", [':h' => $hash])->queryScalar();
+        if ($exists) $db->createCommand()->update('push_subscriptions', $row, ['id' => $exists])->execute();
+        else $db->createCommand()->insert('push_subscriptions', $row)->execute();
+        $sent = \app\components\WebPush::sendToUser($uid, ['title' => 'Opiam notifications are on',
+            'body' => 'You will be told here when an action plan is assigned to you and when it falls due.', 'tag' => 'opiam-welcome']);
+        return ['error' => 'No', 'sent' => $sent];
+    }
+
+    // Open plans of a user that are due or overdue today (IST), for the icon badge.
+    private static function _apDueCount($uid)
+    {
+        $today = (new \DateTime('now', new \DateTimeZone('Asia/Kolkata')))->format('Y-m-d');
+        return (int)Yii::$app->db->createCommand(
+            "SELECT COUNT(*) FROM action_plans WHERE deleted = 0 AND status = 0 AND target_date <= :d
+               AND COALESCE(responsible_user_id, created_by) = :u", [':d' => $today, ':u' => (int)$uid]
+        )->queryScalar();
+    }
+
+    private static function _apEnsureColumns()
+    {
+        $db = Yii::$app->db;
+        $has = $db->createCommand("SHOW COLUMNS FROM action_plans LIKE 'last_push_date'")->queryOne();
+        if (!$has) $db->createCommand("ALTER TABLE action_plans ADD COLUMN last_push_date DATE NULL")->execute();
+    }
+
+    // Pushes every open action plan that is due today or overdue to its responsible
+    // person (else its author), once a day. Run by the daily cron job (cron/push_due.php)
+    // and, as a fallback, by the first notification refresh after 8 AM IST.
+    public static function cfPushDuePlans()
+    {
+        self::_apEnsureColumns();
+        $db = Yii::$app->db;
+        $today = (new \DateTime('now', new \DateTimeZone('Asia/Kolkata')))->format('Y-m-d');
+        $plans = $db->createCommand(
+            "SELECT ap.*, p.Name AS project_name FROM action_plans ap LEFT JOIN projects p ON p.Project_Id = ap.project_id
+             WHERE ap.deleted = 0 AND ap.status = 0 AND ap.target_date IS NOT NULL AND ap.target_date <= :d
+               AND (ap.last_push_date IS NULL OR ap.last_push_date < :d2)", [':d' => $today, ':d2' => $today]
+        )->queryAll();
+        $n = 0;
+        foreach ($plans as $pl) {
+            $uid = (int)($pl['responsible_user_id'] ?: $pl['created_by']);
+            $due = substr($pl['target_date'], 0, 10);
+            $title = $due === $today ? 'Action plan due today' : 'Action plan overdue since ' . date('j M', strtotime($due));
+            $n += \app\components\WebPush::sendToUser($uid, [
+                'title' => $title,
+                'body' => ($pl['project_name'] ? $pl['project_name'] . ' — ' : '') . mb_substr($pl['plan_text'], 0, 140),
+                'tag' => 'opiam-ap-' . $pl['id'], 'url' => '/projectsmain/index', 'badge' => self::_apDueCount($uid),
+            ]);
+            $db->createCommand()->update('action_plans', ['last_push_date' => $today], ['id' => $pl['id']])->execute();
+        }
+        return $n;
+    }
+
+    // Archive / restore a message or an alert from the Notifications window.
+    public function actionNotifarchive()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $id = (int)($_POST['id'] ?? 0); $on = !empty($_POST['archive']) ? 1 : 0;
+        $db = Yii::$app->db;
+        if (($_POST['kind'] ?? '') === 'messages') {
+            $db->createCommand()->update('messages', ['message_read' => $on], ['id' => $id, 'to_user_id' => (int)Yii::$app->user->Id])->execute();
+        } elseif (($_POST['kind'] ?? '') === 'alerts') {
+            $db->createCommand()->update('notifications', ['status' => $on], ['notf_id' => $id, 'itemid' => $this->_cfPid()])->execute();
+        }
+        return ['error' => 'No'];
     }
 
     // Action plans: add / edit (id given), mark done or open, delete (kept, flagged).
@@ -4052,6 +4150,7 @@ class ProjectsmainController extends Controller
         $resp = (int)($_POST['responsible'] ?? 0) ?: null;
         $date = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_POST['target_date'] ?? '')) ? $_POST['target_date'] : null;
         $now = date('Y-m-d H:i:s');
+        $prevResp = $id ? $db->createCommand("SELECT responsible_user_id FROM action_plans WHERE id = :i", [':i' => $id])->queryScalar() : null;
         if ($id) {
             $db->createCommand()->update('action_plans',
                 ['plan_text' => $text, 'responsible_user_id' => $resp, 'target_date' => $date, 'updated_at' => $now],
@@ -4062,6 +4161,17 @@ class ProjectsmainController extends Controller
                 'status' => 0, 'created_by' => (int)Yii::$app->user->Id, 'created_at' => $now,
             ])->execute();
             $id = (int)$db->getLastInsertID();
+        }
+        // Tell the responsible person's phone when a plan is assigned to them.
+        if ($resp && (int)$prevResp !== (int)$resp) {
+            try {
+                $pname = (string)$db->createCommand("SELECT Name FROM projects WHERE Project_Id = :p", [':p' => $pid])->queryScalar();
+                \app\components\WebPush::sendToUser($resp, [
+                    'title' => 'New action plan for you' . ($date ? ' · due ' . date('j M', strtotime($date)) : ''),
+                    'body' => ($pname ? $pname . ' — ' : '') . mb_substr($text, 0, 140),
+                    'tag' => 'opiam-ap-' . $id, 'url' => '/projectsmain/index', 'badge' => self::_apDueCount($resp),
+                ]);
+            } catch (\Throwable $e) { Yii::warning('Action plan push failed: ' . $e->getMessage()); }
         }
         return ['error' => 'No', 'id' => $id];
     }
