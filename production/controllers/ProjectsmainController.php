@@ -4405,20 +4405,24 @@ class ProjectsmainController extends Controller
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) { return ['error' => 'No project selected']; }
         $pid = (int)$projuser->projectid;
-        $estimated = Yii::$app->db->createCommand(
-            "SELECT COALESCE(SUM(pe.activity_qty * ea.activity_rate), 0)
-             FROM pricing_estimate_new pe
-             JOIN estimateactivities ea ON ea.activity_id = pe.est_activity_Id
-             WHERE pe.project_Id = :p AND pe.pricing_status = 0", [':p' => $pid]
-        )->queryScalar();
-        // Actual project cost = sum of the Actual Cost of every activity in the
-        // Project Estimate window (same calculation, taken from that report).
+        // Estimated = the Project Estimate window's total (Amount column).
         $origPost = $_POST;
         $_POST = ['projectid' => $pid];
         $est = json_decode((new \app\controllers\EstimatereportController('estimatereport', Yii::$app))->actionGet(), true) ?: [];
         $_POST = $origPost;
-        $actual = (float)($est['grand_total_actual'] ?? 0);
-        return ['error' => 'No', 'estimated' => round((float)$estimated, 2), 'actual' => round($actual, 2)];
+        $estimated = (float)($est['grand_total'] ?? 0);
+        // Actual = the Cost Dashboard's "Project Cost · Actual": for each activity
+        // its actual cost (actual unit cost x quantity) where there is one, its
+        // estimated cost otherwise (see actionCostdashboardbatch).
+        $batch = json_decode($this->actionCostdashboardbatch(), true) ?: [];
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $actual = 0.0; $hasReal = false;
+        foreach (($batch['data'] ?? []) as $c) {
+            $acoa = (float)($c['acoa'] ?? 0);
+            $actual += $acoa > 0 ? $acoa : (float)($c['est'] ?? 0);
+            if ($acoa > 0) $hasReal = true;
+        }
+        return ['error' => 'No', 'estimated' => round($estimated, 2), 'actual' => round($actual, 2), 'has_actual' => $hasReal];
     }
 
     // Bills Receivable, per payment cycle.

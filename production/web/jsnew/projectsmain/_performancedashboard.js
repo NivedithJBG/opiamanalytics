@@ -516,7 +516,9 @@ function _cfDurationDialSvg(target, actual, centerLabel, tipLabel){
 // Project Duration as a horizontal bar: the full bar length is the project
 // duration (target, yellow marker at its end). The actual fills it green-blue;
 // beyond the target the scale grows to the actual and the excess is red-orange.
-function _cfDurationBarHtml(target, actual, targetLabel, actualLabel, tipLabel){
+function _cfDurationBarHtml(target, actual, targetLabel, actualLabel, tipLabel, fmt){
+    // fmt formats a value with its unit (days by default; the Project Cost bar passes Lakhs).
+    fmt = fmt || function(v){ return v + ' d'; };
     var scale = Math.max(target, actual, 1);
     var tPct = target / scale * 100, aPct = actual / scale * 100;
     var over = actual > target;
@@ -530,10 +532,10 @@ function _cfDurationBarHtml(target, actual, targetLabel, actualLabel, tipLabel){
         + '</div>';
     return '<div style="width:100%;padding:0 10px;box-sizing:border-box;">'
         + '<div style="display:flex;justify-content:space-between;align-items:baseline;font-family:Barlow Condensed,Arial;line-height:22px;margin-bottom:4px;">'
-        + '<span style="font-size:20px;font-weight:700;color:#000;">' + actual + ' d</span>'
+        + '<span style="font-size:20px;font-weight:700;color:#000;">' + fmt(actual) + '</span>'
         + '<span style="font-size:20px;font-weight:700;color:' + tipCol + ';">' + tipLabel + '</span></div>'
         + bar
-        + '<div style="display:flex;justify-content:space-between;font-size:11px;color:#5a5a5a;font-family:Barlow Condensed,Arial;margin-top:3px;"><span>0</span><span>' + scale + ' d</span></div>'
+        + '<div style="display:flex;justify-content:space-between;font-size:11px;color:#5a5a5a;font-family:Barlow Condensed,Arial;margin-top:3px;"><span>0</span><span>' + fmt(scale) + '</span></div>'
         + '</div>'
         + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:4px 8px 0;width:100%;box-sizing:border-box;">'
         + '<span style="font-size:13px;color:#1a2540;font-weight:700;">' + actualLabel + '</span>'
@@ -589,7 +591,12 @@ function renderCfValueDrivers(){
             costEl.style.display = 'flex';
             costEl.style.flexDirection = 'column';
             costEl.style.justifyContent = 'center';
-            costEl.innerHTML = _cfValueDialHtml(est, act, act.toFixed(2) + ' L', 'Target: ' + est.toFixed(2) + ' L', 'Actual: ' + act.toFixed(2) + ' L');
+            costEl.style.flex = '1 1 auto';
+            // Same bar as Project Duration: full length = estimate (Project Estimate
+            // window); actual = Cost Dashboard actual. Over the estimate red-orange,
+            // under it green-blue.
+            var lk = function(v){ return (+v).toFixed(2) + ' L'; };
+            costEl.innerHTML = _cfDurationBarHtml(est, act, 'Target: ' + lk(est), 'Actual: ' + lk(act) + (d.has_actual ? '' : ' (estimate)'), (act - est >= 0 ? '+' : '') + lk(act - est), lk);
         }
     });
 }
