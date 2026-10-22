@@ -2224,13 +2224,15 @@ document.addEventListener('click', function(e){
     document.getElementById('nt-list').innerHTML = (items.length ? items.map(function(it){
       var st = stOf(tab, it), arch = st === 'archive';
       return '<div class="nt-item" data-id="' + esc(it.id) + '" style="display:flex;align-items:flex-start;gap:6px;border-left-color:' + SCOL[st] + ';' + (arch ? 'opacity:.6;' : '') + '"><div style="flex:1;min-width:0;"><b>' + dot(st) + esc(it.title) + '</b><span>' + esc(it.text) + '</span></div>'
-        + (it._local ? '' : '<button type="button" class="nt-arch" data-arch="' + (arch ? 0 : 1) + '" title="' + (arch ? 'Restore' : 'Archive') + '" style="' + b2 + '">' + (arch ? '&#8634;' : '&#128451;') + '</button>') + '</div>';
+        + (it._local ? '' : '<span style="flex:none;display:flex;flex-direction:column;gap:2px;"><button type="button" class="nt-arch" data-arch="' + (arch ? 0 : 1) + '" title="' + (arch ? 'Restore' : 'Archive') + '" style="' + b2 + '">' + (arch ? '&#8634;' : '&#128451;') + '</button>'
+          + '<button type="button" class="nt-del" title="Delete" style="' + b2 + 'color:#c0392b;font-size:15px;">&times;</button></span>') + '</div>';
     }).join('') : '<div style="text-align:center;color:#8a97ad;font-size:12px;padding:24px 8px;">' + EMPTY[tab] + '</div>');
   }
   // ── Action plans: written by users, one strip each ──────────────────────
   var apUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/projectsmain/actionplansave"]); ?>';
   var apStatusUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/projectsmain/actionplanstatus"]); ?>';
   var archUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/projectsmain/notifarchive"]); ?>';
+  var delUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/projectsmain/notifdelete"]); ?>';
   var users = [], today = '', editing = null;   // editing: null (closed), 0 (new) or a plan id
   function post(u, params, done){
     var x = new XMLHttpRequest(), body = Object.keys(params).map(function(k){ return encodeURIComponent(k) + '=' + encodeURIComponent(params[k] == null ? '' : params[k]); }).join('&');
@@ -2279,6 +2281,11 @@ document.addEventListener('click', function(e){
   document.getElementById('nt-list').addEventListener('click', function(e){
     var t = e.target.closest('button'); if (!t) return;
     if (t.classList.contains('nt-chip')) { var st = t.getAttribute('data-st'); filt[tab][st] = filt[tab][st] ? 0 : 1; render(); return; }
+    if (t.classList.contains('nt-del')) {
+      if (!confirm('Delete this ' + (tab === 'messages' ? 'message' : 'alert') + '? It cannot be restored.')) return;
+      post(delUrl, { kind: tab, id: t.closest('.nt-item').getAttribute('data-id') }, function(){ load(); });
+      return;
+    }
     if (t.classList.contains('nt-arch')) {
       var item = t.closest('.nt-item');
       post(archUrl, { kind: tab, id: item.getAttribute('data-id'), archive: t.getAttribute('data-arch') }, function(){ load(); });

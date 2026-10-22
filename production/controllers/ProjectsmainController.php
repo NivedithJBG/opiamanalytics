@@ -4301,6 +4301,21 @@ class ProjectsmainController extends Controller
         return ['error' => 'No'];
     }
 
+    // Delete a message (the user's own) or an alert (of the selected project)
+    // from the Notifications window, instead of archiving it.
+    public function actionNotifdelete()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $id = (int)($_POST['id'] ?? 0);
+        $db = Yii::$app->db;
+        if (($_POST['kind'] ?? '') === 'messages') {
+            $db->createCommand()->delete('messages', ['id' => $id, 'to_user_id' => (int)Yii::$app->user->Id])->execute();
+        } elseif (($_POST['kind'] ?? '') === 'alerts') {
+            $db->createCommand()->delete('notifications', ['notf_id' => $id, 'itemid' => $this->_cfPid()])->execute();
+        }
+        return ['error' => 'No'];
+    }
+
     // Action plans: add / edit (id given), mark done or open, delete (kept, flagged).
     public function actionActionplansave()
     {
