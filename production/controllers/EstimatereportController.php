@@ -47,7 +47,12 @@ class EstimatereportController extends Controller
                 wa.activity_Unit                               AS unit,
                 wa.sortorder                                  AS act_sortorder,
                 COALESCE(pe.activity_qty, 0)                  AS quantity,
+                -- Rate = the project's own resource allocation (Resource Allocation
+                -- popup: sum of rate x quantity); the Activity Library rate only
+                -- when the activity has no resources allocated in the project.
                 COALESCE(
+                    NULLIF((SELECT SUM(pern.rate * pern.quantity) FROM pricing_estimate_resources_new pern
+                            WHERE pern.activity_id = wa.id AND pern.project_id = go.project_id AND pern.pricing_status = 0), 0),
                     (SELECT ea.activity_rate FROM estimateactivities ea WHERE ea.activity_id = wa.activity_Id),
                     0
                 )                                              AS rate

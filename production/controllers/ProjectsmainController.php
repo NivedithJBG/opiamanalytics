@@ -4217,7 +4217,12 @@ class ProjectsmainController extends Controller
         $acts = $db->createCommand(
             "SELECT s.id, s.activity_id AS wan_id,
                     (SELECT w.activity_Id FROM workgroup_activities_new w WHERE w.id = s.activity_id) AS lib_activity_id,
-                    s.name, s.unit, s.start_date, s.duration, s.quantity, COALESCE(ea.activity_rate, 0) AS rate,
+                    s.name, s.unit, s.start_date, s.duration, s.quantity,
+                    -- same rate as the Project Estimate window: project allocation, else library rate
+                    COALESCE(NULLIF((SELECT SUM(pern.rate * pern.quantity) FROM pricing_estimate_resources_new pern
+                                     WHERE pern.activity_id = s.activity_id AND pern.project_id = s.projectId AND pern.pricing_status = 0), 0),
+                             (SELECT ea2.activity_rate FROM workgroup_activities_new w2 JOIN estimateactivities ea2 ON ea2.activity_id = w2.activity_Id WHERE w2.id = s.activity_id),
+                             0) AS rate,
                     COALESCE(ig.name, 'Other') AS group_name, s.completed_status,
                     COALESCE(NULLIF((SELECT MIN(spr.start_date) FROM schedule_progress_report spr WHERE spr.activity_id = s.id), '0000-00-00'), s.actual_start_date) AS bar_start,
                     COALESCE((SELECT SUM(l.currentqty) FROM schedule_progress_report_log l WHERE l.activity_id = s.id), 0) AS executed,

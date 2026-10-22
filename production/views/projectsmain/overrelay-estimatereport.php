@@ -1169,8 +1169,10 @@
      Activity/Unit/Rate labels, all in one round trip. */
   function loadErraAllocationList(){
     $.ajax({
-      type: 'POST', url: '../projects/allocationlist', dataType: 'json',
-      data: { id: _erraActivityId },
+      // Opened from a project activity: the project's own allocation (never the
+      // Activity Library's) is shown and edited here — see ProjectsController::actionProjallocationlist.
+      type: 'POST', url: _erraWanId ? '../projects/projallocationlist' : '../projects/allocationlist', dataType: 'json',
+      data: { id: _erraActivityId, wan_id: _erraWanId },
       success: function(d){
         if (d.error && d.error !== 'No') return;
         document.getElementById('erra-tabs').innerHTML = d.result || '';
@@ -1369,7 +1371,7 @@
 
     saveBtn.disabled = true;
     $.ajax({
-      type: 'POST', url: '../projects/updateallocaterrated', dataType: 'json',
+      type: 'POST', url: _erraWanId ? '../projects/projallocationupdate' : '../projects/updateallocaterrated', dataType: 'json',
       data: { PRID: mid, updatevalue: updatevalue, updateqty: updateqty },
       success: function(d){
         saveBtn.disabled = false;
@@ -1385,7 +1387,7 @@
     var estactresId = delBtn.getAttribute('data-id');
     delBtn.disabled = true;
     $.ajax({
-      type: 'POST', url: '../projects/deleteactivityresource', dataType: 'json',
+      type: 'POST', url: _erraWanId ? '../projects/projallocationdelete' : '../projects/deleteactivityresource', dataType: 'json',
       data: { resid: estactresId, activityid: _erraActivityId, wan_id: _erraWanId },
       success: function(d){
         loadErraAllocationList();
@@ -1418,7 +1420,7 @@
 
     addBtn.disabled = true;
     $.ajax({
-      type: 'POST', url: '../projects/addactivityresource', dataType: 'json',
+      type: 'POST', url: _erraWanId ? '../projects/projallocationadd' : '../projects/addactivityresource', dataType: 'json',
       data: { EstActivity_Id: _erraActivityId, wan_id: _erraWanId, resid: resId, restype: restype, type: '', quantity: qty, srate: rate },
       success: function(d){
         addBtn.disabled = false;

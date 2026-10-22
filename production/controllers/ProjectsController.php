@@ -21720,6 +21720,117 @@ public function actionActivitymusterprocess()
          return json_encode($arr);
     }
 
+    /* ── Project resource allocation (Project Estimate > Resource Allocation) ──
+       The project's own copy of an activity's resources, in
+       pricing_estimate_resources_new, keyed by the project activity
+       (workgroup_activities_new.id = wan_id). It is copied from the Activity
+       Library when the activity is added to the project; after that it is
+       edited only here and is what every project calculation uses (estimate,
+       cost dashboard, cashflow dashboard, purchase orders). These actions never
+       touch the Activity Library (estactivity_resources / estimateactivities),
+       which is edited only from the Activity Library window. */
+    private function _projAllocWan($wanId)
+    {
+        return Yii::$app->db->createCommand(
+            "SELECT id, project_Id, activity_Id, activity_Name, activity_Unit FROM workgroup_activities_new WHERE id = :w LIMIT 1",
+            [':w' => (int)$wanId]
+        )->queryOne();
+    }
+
+    // Same response as actionAllocationlist, but the list and the header rate
+    // come from the project's copy.
+    public function actionProjallocationlist()
+    {
+        $lib = json_decode($this->actionAllocationlist(), true) ?: [];   // resource type buttons and library header
+        $wa = $this->_projAllocWan($_POST['wan_id'] ?? 0);
+        if (!$wa) return json_encode($lib);
+        $db = Yii::$app->db;
+        $rows = $db->createCommand(
+            "SELECT pern.pricing_resourceid AS pr_id, pern.resource_Id, pern.quantity, pern.rate,
+                    r.Name, r.Unit, COALESCE(rt.Name, '') AS type_name
+             FROM pricing_estimate_resources_new pern
+             LEFT JOIN resources r ON r.Resource_Id = pern.resource_Id
+             LEFT JOIN resourcetype rt ON rt.ResourceType_Id = COALESCE(NULLIF(pern.resourcetype_Id, 0), r.ResourceType_Id)
+             WHERE pern.activity_id = :w AND pern.project_id = :p AND pern.pricing_status = 0
+             ORDER BY pern.pricing_resourceid ASC",
+            [':w' => (int)$wa['id'], ':p' => (int)$wa['project_Id']]
+        )->queryAll();
+        $e = function($s){ return htmlspecialchars((string)$s, ENT_QUOTES); };
+        $html = '<div class="row alrshead"><div class="col-md-1"><label>#</label></div><div class="col-md-2"><label>Resource Type</label></div>'
+              . '<div class="col-md-2"><label>Resource</label></div><div class="col-md-5" style="padding-left:0px;"><div class="row">'
+              . '<div class="col-md-3"><label>Unit</label></div><div class="col-md-3"><label>Quantity</label></div>'
+              . '<div class="col-md-3"><label>Rate</label></div><div class="col-md-3"><label>Amount</label></div></div></div><div class="col-md-2"></div></div>';
+        $rate = 0.0; $sno = 0;
+        foreach ($rows as $d) {
+            $sno++; $id = (int)$d['pr_id']; $amt = (float)$d['quantity'] * (float)$d['rate']; $rate += $amt;
+            $html .= '<div class="row resmasterss res-masterrow' . $id . '" id="tempresrow' . $id . '">'
+                . '<div class="col-md-1 resmstrfrst"><span class="number">' . $sno . '</span></div>'
+                . '<div class="col-md-2 type rsnamemastr"><span>' . $e($d['type_name']) . '</span></div>'
+                . '<div class="col-md-2 type rsnamemastr"><span>' . $e($d['Name']) . '</span></div>'
+                . '<div class="col-md-5 type vendor-column colmastr"><div class="row">'
+                . '<div class="col-md-3 type rsmstrunt"><span>' . $e($d['Unit']) . '</span></div>'
+                . '<div class="col-md-3 type resmstrqty"><span id="allocateresourceqty' . $id . '">' . (float)$d['quantity'] . '</span>'
+                . '<input class="form-control editallocateresourceqty" style="display:none;" type="text" id="editallocateresourceqty' . $id . '" data-v="' . $id . '" value="' . (float)$d['quantity'] . '"></div>'
+                . '<div class="col-md-3 type resmstrrte" style="text-align: right;"><span id="allocateresourceunit' . $id . '">' . number_format((float)$d['rate'], 2) . '</span>'
+                . '<input class="form-control editallocateresourceunit" style="display:none;" type="text" id="editallocateresourceunit' . $id . '" data-v="' . $id . '" value="' . (float)$d['rate'] . '"></div>'
+                . '<div class="col-md-3 amount-column type resmstrsmnt" style="text-align: right;"><span id="allocateres_amt' . $id . '">' . number_format($amt, 2) . '</span></div>'
+                . '</div></div>'
+                . '<div class="col-md-2 icon-groups resmstrgrps">'
+                . '<a href="javascript:void(0);" class="btn btn-primary updatesallocateresourceunit icon-edit" data-v="' . $id . '" id="updatesallocateresourceunit' . $id . '" title="Edit Resource"></a>'
+                . '<a href="javascript:void(0);" style="display:none;" class="btn btn-primary savesallocateresourceunit icon-save" data-v="' . $id . '" id="savesallocateresourceunit' . $id . '" title="Save"></a>'
+                . '<a id="removeresourceitem' . $id . '" data-id="' . $id . '" href="javascript:void(0)" class="btn btn-primary icon-trash1 removeresourceitem" title="Delete Resource"></a>'
+                . '<a href="javascript:void(0);" class="btn btn-primary erra-task-btn icon-list" data-resid="' . (int)$d['resource_Id'] . '" data-v="' . $id . '" title="Map to Task"></a>'
+                . '</div></div>';
+        }
+        $lib['listadded'] = $html;
+        $lib['added'] = $rows ? 1 : 0;
+        $lib['activitynameval'] = 'Activity : ' . $wa['activity_Name'];
+        if ($rows) $lib['activitynamerate'] = 'Rate :&nbsp; ' . number_format($rate, 2);
+        $lib['scope'] = 'project';
+        return json_encode($lib);
+    }
+
+    public function actionProjallocationupdate()
+    {
+        $id = (int)($_POST['PRID'] ?? 0);
+        $rate = (float)str_replace(',', '', (string)($_POST['updatevalue'] ?? 0));
+        $qty = (float)($_POST['updateqty'] ?? 0);
+        Yii::$app->db->createCommand()->update('pricing_estimate_resources_new', ['rate' => $rate, 'quantity' => $qty], ['pricing_resourceid' => $id])->execute();
+        return json_encode(['error' => 'No']);
+    }
+
+    public function actionProjallocationdelete()
+    {
+        Yii::$app->db->createCommand()->delete('pricing_estimate_resources_new', ['pricing_resourceid' => (int)($_POST['resid'] ?? 0)])->execute();
+        return json_encode(['error' => 'No']);
+    }
+
+    public function actionProjallocationadd()
+    {
+        $wa = $this->_projAllocWan($_POST['wan_id'] ?? 0);
+        if (!$wa) return json_encode(['error' => 'Yes', 'errortext' => 'Activity not found in the project.']);
+        $db = Yii::$app->db;
+        $resId = (int)($_POST['resid'] ?? 0);
+        $typeId = (int)($_POST['restype'] ?? 0);
+        $qty = (float)($_POST['quantity'] ?? 0);
+        $rate = (float)($_POST['srate'] ?? 0);
+        $exists = $db->createCommand(
+            "SELECT pricing_resourceid FROM pricing_estimate_resources_new WHERE activity_id = :a AND project_id = :p AND resource_Id = :r LIMIT 1",
+            [':a' => (int)$wa['id'], ':p' => (int)$wa['project_Id'], ':r' => $resId]
+        )->queryScalar();
+        if ($exists) {
+            $db->createCommand()->update('pricing_estimate_resources_new',
+                ['quantity' => $qty, 'rate' => $rate, 'resourcetype_Id' => $typeId, 'pricing_status' => 0], ['pricing_resourceid' => $exists])->execute();
+        } else {
+            $db->createCommand()->insert('pricing_estimate_resources_new', [
+                'activity_id' => (int)$wa['id'], 'resource_Id' => $resId, 'resourcetype_Id' => $typeId,
+                'quantity' => $qty, 'rate' => $rate, 'project_id' => (int)$wa['project_Id'],
+                'est_activity_Id' => (int)$wa['activity_Id'], 'process_Id' => 0, 'pricing_status' => 0, 'operations_status' => 0,
+            ])->execute();
+        }
+        return json_encode(['error' => 'No']);
+    }
+
     public function actionAllocationsearch()
     {
         $connection = \Yii::$app->db;
