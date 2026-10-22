@@ -4310,7 +4310,7 @@ class ProjectsmainController extends Controller
                 "SELECT m.id, m.to_user_id, m.title, m.message, u.username AS sender FROM messages m LEFT JOIN user u ON u.id = m.from_user_id
                  WHERE m.id > :i AND m.draft = 0 ORDER BY m.id", [':i' => (int)$st['msg']])->queryAll() as $m) {
                 $n += \app\components\WebPush::sendToUser((int)$m['to_user_id'], [
-                    'title' => 'Message' . ($m['sender'] ? ' from ' . $m['sender'] : '') . ($m['title'] ? ': ' . $m['title'] : ''),
+                    'title' => (string)($m['title'] ?: $m['sender']),   // the Opiam icon already shows where it is from
                     'body' => mb_substr(strip_tags((string)$m['message']), 0, 1000), 'tag' => 'opiam-msg-' . $m['id'], 'url' => '/projectsmain/index',
                 ]);
             }
@@ -4325,7 +4325,7 @@ class ProjectsmainController extends Controller
                 else $users = $everyone ?? ($everyone = $db->createCommand("SELECT DISTINCT user_id FROM push_subscriptions")->queryColumn());
                 foreach ($users as $u) {
                     $n += \app\components\WebPush::sendToUser((int)$u, [
-                        'title' => 'Alert: ' . $a['type'], 'body' => mb_substr((string)($a['remarks'] ?: $a['project']), 0, 1000),
+                        'title' => (string)$a['type'], 'body' => mb_substr((string)($a['remarks'] ?: $a['project']), 0, 1000),
                         'tag' => 'opiam-alert-' . $a['notf_id'], 'url' => '/projectsmain/index',
                     ]);
                 }
