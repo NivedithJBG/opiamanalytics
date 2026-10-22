@@ -2216,7 +2216,7 @@ document.addEventListener('click', function(e){
     return '<div class="ap-form" style="background:#fff;border-radius:6px;padding:10px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);">'
       + '<textarea class="ap-text" rows="3" placeholder="Write the action plan..." style="' + fld + 'width:100%;padding:6px 8px;resize:vertical;">' + esc(pl.text || '') + '</textarea>'
       + '<div style="display:flex;gap:6px;margin-top:6px;"><select class="ap-resp" style="' + fld + 'flex:1;min-width:0;height:30px;padding:2px 6px;">' + opts + '</select>'
-      + '<input type="date" class="ap-date" value="' + (pl.target_date ? String(pl.target_date).substr(0, 10) : '') + '" title="Target date" style="' + fld + 'width:140px;height:30px;padding:2px 6px;"></div>'
+      + '<input type="date" class="ap-date" value="' + (pl.target_date ? String(pl.target_date).substr(0, 10) : (pl.id ? '' : today)) + '" title="Target date" style="' + fld + 'width:140px;height:30px;padding:2px 6px;"></div>'
       + '<div style="text-align:right;margin-top:8px;"><button type="button" class="ap-cancel" style="background:#f0f4f8;border:1px solid #c5ccd4;border-radius:14px;padding:4px 14px;font-size:12px;color:#465365;cursor:pointer;margin-right:6px;">Cancel</button>'
       + '<button type="button" class="ap-save" style="background:#1a0a2e;color:#fff;border:none;border-radius:14px;padding:4px 16px;font-size:12px;cursor:pointer;">Save</button></div></div>';
   }
