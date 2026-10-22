@@ -1229,7 +1229,7 @@ function _cfNetInvCycleBarsHtml(cyc){
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycle targets.</div>';
     var maxV = 0;
     cyc.forEach(function(c){ maxV = Math.max(maxV, (+c.adv || 0), (+c.wip || 0)); });
-    var W = 600, H = 300, base = 262, top = 40, pad = 20;
+    var W = 600, H = 300, base = 262, top = 56, pad = 20;
     var slot = (W - 2 * pad) / cyc.length;
     var barW = slot * 0.36;                       // two attached bars = 72% of the slot
     var hOf = function(v){ return maxV > 0 ? Math.round(((+v || 0) / maxV) * (base - top)) : 0; };
@@ -1243,12 +1243,16 @@ function _cfNetInvCycleBarsHtml(cyc){
             + '<rect x="' + (x + barW).toFixed(1) + '" y="' + (base - hA) + '" width="' + barW.toFixed(1) + '" height="' + hA + '" fill="' + (cur ? '#1a0a2e' : '#3a4a5f') + '"><title>' + c.name + ' · Advances and Deposits target ' + L(c.adv) + ' L</title></rect>'
             + '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (base - hW - 5) + '" text-anchor="middle" font-size="10" fill="#111">' + L(c.wip) + '</text>'
             + '<text x="' + (x + 1.5 * barW).toFixed(1) + '" y="' + (base - hA - 5) + '" text-anchor="middle" font-size="10" fill="#111">' + L(c.adv) + '</text>'
+            + '<text x="' + (x + barW).toFixed(1) + '" y="' + (base - Math.max(hA, hW) - 20) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#000"><title>Total target = WIP + Advances and Deposits</title>' + L((+c.wip || 0) + (+c.adv || 0)) + '</text>'
             + '<text x="' + (x + barW).toFixed(1) + '" y="' + (base + 18) + '" text-anchor="middle" font-size="12" fill="#333"' + (cur ? ' font-weight="700"' : '') + '>' + (c.end_label || c.name) + '</text>';
     });
     var sw = function(c){ return '<span style="display:inline-block;width:12px;height:8px;background:' + c + ';margin:0 4px 0 10px;vertical-align:middle;"></span>'; };
     return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
         + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg>'
-        + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;">' + sw('#8fa3b8') + 'WIP target' + sw('#3a4a5f') + 'Advances and Deposits target' + ' · bold = current cycle</div>';
+        + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 0;font-size:12px;color:#111;padding:8px 6px 0;">'
+        + sw('#8fa3b8') + 'WIP target' + sw('#3a4a5f') + 'Advances and Deposits target'
+        + '<span style="margin-left:12px;font-weight:700;color:#000;">000.0</span>&nbsp;= Total (WIP + Advances and Deposits)'
+        + '<span style="margin-left:12px;">' + sw('#2ba899').replace('margin:0 4px 0 10px', 'margin:0 4px 0 0') + 'Current cycle (bold label)</span></div>';
 }
 
 function _cfShowNetInvCycles(cycles){
