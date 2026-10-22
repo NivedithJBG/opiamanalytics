@@ -4034,9 +4034,9 @@ $(document).on('click', '#cf-bank', function(e){
 // Current Assets popup: the same account list behind the Current Assets figure.
 $(document).on('click', '#cf-curassets', function(){
     $.ajax({
-        type: 'POST', url: '../projectsmain/cfcurrentassetslist', dataType: 'json',
+        type: 'POST', url: '../projectsmain/cfcurrentassetsdiff', dataType: 'json',
         success: function(d){
-            if (d && d.error === 'No') { _cfShowCurrLiabBreakdown(d.accounts || [], 'Current Assets — Account Breakdown'); }
+            if (d && d.error === 'No') { _cfShowCurrLiabBreakdown(d.accounts || [], 'Current Assets = Advances and Deposits + the heads booked beyond it'); }
         }
     });
 });

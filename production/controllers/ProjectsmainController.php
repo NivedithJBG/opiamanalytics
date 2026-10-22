@@ -4130,6 +4130,47 @@ class ProjectsmainController extends Controller
                 'other_received' => round(array_sum(array_column($rows, 'amount')) - $g['wip'], 2)];
     }
 
+    // Current Assets popup: first bar = Advances and Deposits (cash and bank
+    // payments, the Advances and Deposits panel), then one bar per account head for
+    // what Current Assets holds beyond it (amounts booked by journal: input GST,
+    // retention, TDS, Bills Receivable, deposits partly by journal ...). The bars
+    // add up to Current Assets.
+    public function actionCfcurrentassetsdiff()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        if (!$pid) return ['error' => 'No project selected'];
+        $db = Yii::$app->db;
+        $p = [':p1' => $pid, ':p2' => $pid, ':p3' => $pid, ':p4' => $pid];
+        $cash = $db->createCommand("SELECT a, SUM(x) FROM (
+                SELECT account_id a, amount x FROM voucher WHERE contra=0 AND project_id=:p1
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=0 AND project_id=:p2
+                UNION ALL SELECT account_id, amount FROM voucher WHERE contra=1 AND type='Receipt' AND project_id=:p3
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=1 AND type='Payment' AND project_id=:p4) t GROUP BY a", $p)->queryAll(\PDO::FETCH_KEY_PAIR);
+        $main = $db->createCommand("SELECT a, SUM(x) FROM (
+                SELECT account_id a, amount x FROM voucher WHERE contra=0 AND project_id=:p1
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=0 AND project_id=:p2
+                UNION ALL SELECT debitacnt, amount FROM journalvoucher WHERE project_id=:p3
+                UNION ALL SELECT creditacnt, -amount FROM journalvoucher WHERE project_id=:p4) t GROUP BY a", $p)->queryAll(\PDO::FETCH_KEY_PAIR);
+        $types = $db->createCommand("SELECT id, account_type FROM accounts_item")->queryAll(\PDO::FETCH_KEY_PAIR);
+        $names = $db->createCommand("SELECT id, name FROM accounts_item")->queryAll(\PDO::FETCH_KEY_PAIR);
+        $advTotal = 0.0; $diffs = [];
+        foreach (array_unique(array_merge(array_keys($cash), array_keys($main))) as $id) {
+            $t = (int)($types[$id] ?? 0); $b = (float)($cash[$id] ?? 0); $m = (float)($main[$id] ?? 0);
+            // Advances and Deposits share (same rule as _cfFlowGroups).
+            if (in_array($t, [2, 8], true)) $adv = 0.0;
+            elseif ($t === 7) $adv = ($b > 0 && $m > 0) ? min($m, $b) : 0.0;
+            else $adv = $b > 0 ? $b : 0.0;
+            // Current Assets share (debit main balance, not Bank/Income/Expense).
+            $ca = (!in_array($t, [2, 4, 8], true) && $m > 0) ? $m : 0.0;
+            $advTotal += $adv;
+            if (abs($ca - $adv) >= 0.01) $diffs[] = ['name' => $names[$id] ?? ('Account ' . $id), 'amount' => round($ca - $adv, 2)];
+        }
+        usort($diffs, function($a, $b){ return $b['amount'] <=> $a['amount']; });
+        $rows = array_merge([['name' => 'Advances and Deposits', 'amount' => round($advTotal, 2)]], $diffs);
+        return ['error' => 'No', 'accounts' => $rows, 'total' => round(array_sum(array_column($rows, 'amount')), 2)];
+    }
+
     // Cashflow dashboard Notifications panel (right of the three windows):
     // messages to the user, alerts raised for the selected project (e.g. the
     // chatbot's ROI Health alert in the notifications table), and action plans.
