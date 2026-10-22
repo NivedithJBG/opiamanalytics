@@ -22,6 +22,8 @@ self.addEventListener('push', function(e){
 self.addEventListener('notificationclick', function(e){
   e.notification.close();
   var url = (e.notification.data && e.notification.data.url) || '/projectsmain/index';
+  // A message / alert / action plan opens on its own light page (a card with the full text).
+  if (url.indexOf('/notifview') >= 0) { e.waitUntil(self.clients.openWindow(url)); return; }
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(list){
     for (var i = 0; i < list.length; i++) {
       if ('focus' in list[i]) { list[i].postMessage({ type: 'opiam-open-notifications' }); return list[i].focus(); }

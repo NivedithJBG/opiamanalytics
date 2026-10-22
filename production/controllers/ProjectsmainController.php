@@ -4282,7 +4282,7 @@ class ProjectsmainController extends Controller
             $n += \app\components\WebPush::sendToUser($uid, [
                 'title' => $title,
                 'body' => ($pl['project_name'] ? $pl['project_name'] . ' — ' : '') . mb_substr($pl['plan_text'], 0, 1000),
-                'tag' => 'opiam-ap-' . $pl['id'], 'url' => '/projectsmain/index', 'badge' => self::_apDueCount($uid),
+                'tag' => 'opiam-ap-' . $pl['id'], 'url' => '/projectsmain/notifview?k=ap&id=' . $pl['id'], 'badge' => self::_apDueCount($uid),
             ]);
             $db->createCommand()->update('action_plans', ['last_push_date' => $today], ['id' => $pl['id']])->execute();
         }
@@ -4311,7 +4311,7 @@ class ProjectsmainController extends Controller
                  WHERE m.id > :i AND m.draft = 0 ORDER BY m.id", [':i' => (int)$st['msg']])->queryAll() as $m) {
                 $n += \app\components\WebPush::sendToUser((int)$m['to_user_id'], [
                     'title' => (string)($m['title'] ?: $m['sender']),   // the Opiam icon already shows where it is from
-                    'body' => mb_substr(strip_tags((string)$m['message']), 0, 1000), 'tag' => 'opiam-msg-' . $m['id'], 'url' => '/projectsmain/index',
+                    'body' => mb_substr(strip_tags((string)$m['message']), 0, 1000), 'tag' => 'opiam-msg-' . $m['id'], 'url' => '/projectsmain/notifview?k=msg&id=' . $m['id'],
                 ]);
             }
             \app\components\WebPush::ensureTables();
@@ -4326,7 +4326,7 @@ class ProjectsmainController extends Controller
                 foreach ($users as $u) {
                     $n += \app\components\WebPush::sendToUser((int)$u, [
                         'title' => (string)$a['type'], 'body' => mb_substr((string)($a['remarks'] ?: $a['project']), 0, 1000),
-                        'tag' => 'opiam-alert-' . $a['notf_id'], 'url' => '/projectsmain/index',
+                        'tag' => 'opiam-alert-' . $a['notf_id'], 'url' => '/projectsmain/notifview?k=alert&id=' . $a['notf_id'],
                     ]);
                 }
             }
@@ -4335,6 +4335,53 @@ class ProjectsmainController extends Controller
         fwrite($fh, json_encode(['msg' => max($maxMsg, (int)($st['msg'] ?? 0)), 'alert' => max($maxAl, (int)($st['alert'] ?? 0))]));
         flock($fh, LOCK_UN); fclose($fh);
         return $n;
+    }
+
+    // Light page a phone notification opens: one message / alert / action plan
+    // as a card (views/projectsmain/notifview.php), without loading the dashboard.
+    public function actionNotifview()
+    {
+        $kind = (string)($_GET['k'] ?? '');
+        $item = self::_notifItem($kind, (int)($_GET['id'] ?? 0), (int)Yii::$app->user->Id);
+        return $this->renderPartial('notifview', ['kind' => $kind, 'item' => $item]);
+    }
+
+    // Buttons on the notification page: archive / restore / delete a message or
+    // an alert, mark an action plan done / open.
+    public function actionNotifviewact()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $kind = (string)($_POST['k'] ?? ''); $id = (int)($_POST['id'] ?? 0); $do = (string)($_POST['do'] ?? '');
+        $uid = (int)Yii::$app->user->Id;
+        if (!self::_notifItem($kind, $id, $uid)) return ['error' => 'Yes', 'errortext' => 'This item no longer exists.'];
+        $db = Yii::$app->db;
+        if ($kind === 'msg') {
+            if ($do === 'delete') $db->createCommand()->delete('messages', ['id' => $id, 'to_user_id' => $uid])->execute();
+            else $db->createCommand()->update('messages', ['message_read' => $do === 'archive' ? 1 : 0], ['id' => $id, 'to_user_id' => $uid])->execute();
+        } elseif ($kind === 'alert') {
+            if ($do === 'delete') $db->createCommand()->delete('notifications', ['notf_id' => $id])->execute();
+            else $db->createCommand()->update('notifications', ['status' => $do === 'archive' ? 1 : 0], ['notf_id' => $id])->execute();
+        } elseif ($kind === 'ap') {
+            $db->createCommand()->update('action_plans', ['status' => $do === 'done' ? 1 : 0, 'updated_at' => date('Y-m-d H:i:s')], ['id' => $id])->execute();
+        }
+        return ['error' => 'No'];
+    }
+
+    private static function _notifItem($kind, $id, $uid)
+    {
+        $db = Yii::$app->db;
+        if ($kind === 'msg') return $db->createCommand(
+            "SELECT m.id, m.title, m.message AS text, m.message_read AS archived, u.username AS sender
+             FROM messages m LEFT JOIN user u ON u.id = m.from_user_id WHERE m.id = :i AND m.to_user_id = :u", [':i' => $id, ':u' => $uid])->queryOne() ?: null;
+        if ($kind === 'alert') return $db->createCommand(
+            "SELECT n.notf_id AS id, n.type AS title, n.remarks AS text, n.status AS archived, p.Name AS project
+             FROM notifications n LEFT JOIN projects p ON p.Project_Id = n.itemid WHERE n.notf_id = :i", [':i' => $id])->queryOne() ?: null;
+        if ($kind === 'ap') return $db->createCommand(
+            "SELECT ap.id, ap.plan_text AS text, ap.target_date, ap.status, p.Name AS project, ru.username AS responsible, cu.username AS created_by
+             FROM action_plans ap LEFT JOIN projects p ON p.Project_Id = ap.project_id
+             LEFT JOIN user ru ON ru.id = ap.responsible_user_id LEFT JOIN user cu ON cu.id = ap.created_by
+             WHERE ap.id = :i AND ap.deleted = 0", [':i' => $id])->queryOne() ?: null;
+        return null;
     }
 
     // Archive / restore a message or an alert from the Notifications window.
@@ -4398,7 +4445,7 @@ class ProjectsmainController extends Controller
                 \app\components\WebPush::sendToUser($resp, [
                     'title' => 'New action plan for you' . ($date ? ' · due ' . date('j M', strtotime($date)) : ''),
                     'body' => ($pname ? $pname . ' — ' : '') . mb_substr($text, 0, 1000),
-                    'tag' => 'opiam-ap-' . $id, 'url' => '/projectsmain/index', 'badge' => self::_apDueCount($resp),
+                    'tag' => 'opiam-ap-' . $id, 'url' => '/projectsmain/notifview?k=ap&id=' . $id, 'badge' => self::_apDueCount($resp),
                 ]);
             } catch (\Throwable $e) { Yii::warning('Action plan push failed: ' . $e->getMessage()); }
         }
