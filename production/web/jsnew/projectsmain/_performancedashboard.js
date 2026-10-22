@@ -1227,34 +1227,50 @@ function _cfRedrawNetInvBreakdown(){
 // combined target, red-orange below it. Cycles still to come show targets only.
 function _cfNetInvCycleBarsHtml(cyc){
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycle targets.</div>';
+    var GB = '#2ba899', RO = '#d84a30';
     var maxV = 0;
-    cyc.forEach(function(c){ maxV = Math.max(maxV, (+c.adv || 0), (+c.wip || 0)); });
-    var W = 600, H = 300, base = 262, top = 56, pad = 20;
+    cyc.forEach(function(c){ maxV = Math.max(maxV, +c.adv || 0, +c.wip || 0, +c.actual_adv || 0, +c.actual_wip || 0); });
+    var W = 600, H = 320, base = 262, top = 56, pad = 20;
     var slot = (W - 2 * pad) / cyc.length;
     var barW = slot * 0.36;                       // two attached bars = 72% of the slot
     var hOf = function(v){ return maxV > 0 ? Math.round(((+v || 0) / maxV) * (base - top)) : 0; };
     var L = function(v){ return ((+v || 0) / 100000).toFixed(1); };
+    // One bar: the target faded, the actual solid in the same colour, and the gap
+    // between them coloured — WIP: short red-orange / over green-blue;
+    // Advances and Deposits: the opposite.
+    function bar(x, target, actual, col, label, overGood){
+        var hT = hOf(target), out = '';
+        if (actual === null || actual === undefined) {
+            return '<rect x="' + x.toFixed(1) + '" y="' + (base - hT) + '" width="' + barW.toFixed(1) + '" height="' + hT + '" fill="' + col + '"><title>' + label + ' target ' + L(target) + ' L</title></rect>';
+        }
+        var hA = hOf(actual), hMin = Math.min(hA, hT);
+        out += '<rect x="' + x.toFixed(1) + '" y="' + (base - hT) + '" width="' + barW.toFixed(1) + '" height="' + hT + '" fill="' + col + '" fill-opacity="0.35"/>';
+        out += '<rect x="' + x.toFixed(1) + '" y="' + (base - hMin) + '" width="' + barW.toFixed(1) + '" height="' + hMin + '" fill="' + col + '"/>';
+        if (hA > hT) out += '<rect x="' + x.toFixed(1) + '" y="' + (base - hA) + '" width="' + barW.toFixed(1) + '" height="' + (hA - hT) + '" fill="' + (overGood ? GB : RO) + '"/>';
+        else if (hT > hA) out += '<rect x="' + x.toFixed(1) + '" y="' + (base - hT) + '" width="' + barW.toFixed(1) + '" height="' + (hT - hA) + '" fill="' + (overGood ? RO : GB) + '" fill-opacity="0.85"/>';
+        out += '<rect x="' + x.toFixed(1) + '" y="' + (base - Math.max(hA, hT)) + '" width="' + barW.toFixed(1) + '" height="' + Math.max(hA, hT) + '" fill="transparent"><title>' + label + ': target ' + L(target) + ' L, actual ' + L(actual) + ' L</title></rect>';
+        return out;
+    }
     var bars = '';
-    cyc.forEach(function(c){
-        var x = pad + cyc.indexOf(c) * slot + (slot - 2 * barW) / 2;
-        var hA = hOf(c.adv), hW = hOf(c.wip);
-        var cur = !!c.current;
-        bars += '<rect x="' + x.toFixed(1) + '" y="' + (base - hW) + '" width="' + barW.toFixed(1) + '" height="' + hW + '" fill="' + (cur ? '#2ba899' : '#8fa3b8') + '"><title>' + c.name + ' · WIP target ' + L(c.wip) + ' L</title></rect>'
-            + '<rect x="' + (x + barW).toFixed(1) + '" y="' + (base - hA) + '" width="' + barW.toFixed(1) + '" height="' + hA + '" fill="' + (cur ? '#1a0a2e' : '#3a4a5f') + '"><title>' + c.name + ' · Advances and Deposits target ' + L(c.adv) + ' L</title></rect>'
-            + '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (base - hW - 5) + '" text-anchor="middle" font-size="10" fill="#111">' + L(c.wip) + '</text>'
-            + '<text x="' + (x + 1.5 * barW).toFixed(1) + '" y="' + (base - hA - 5) + '" text-anchor="middle" font-size="10" fill="#111">' + L(c.adv) + '</text>'
-            + '<text x="' + (x + barW).toFixed(1) + '" y="' + (base - Math.max(hA, hW) - 20) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#000"><title>Total target = WIP + Advances and Deposits</title>' + L((+c.wip || 0) + (+c.adv || 0)) + '</text>'
-            + '<text x="' + (x + barW).toFixed(1) + '" y="' + (base + 18) + '" text-anchor="middle" font-size="12" fill="#333"' + (cur ? ' font-weight="700"' : '') + '>' + (c.end_label || c.name) + '</text>';
+    cyc.forEach(function(c, i){
+        var x = pad + i * slot + (slot - 2 * barW) / 2, cur = !!c.current;
+        var reached = c.actual_adv !== null && c.actual_adv !== undefined;
+        var hW = Math.max(hOf(c.wip), reached ? hOf(c.actual_wip) : 0), hA = Math.max(hOf(c.adv), reached ? hOf(c.actual_adv) : 0);
+        bars += bar(x, c.wip, reached ? c.actual_wip : null, '#8fa3b8', 'WIP', true)
+            + bar(x + barW, c.adv, reached ? c.actual_adv : null, '#3a4a5f', 'Advances and Deposits', false)
+            + '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (base - hW - 5) + '" text-anchor="middle" font-size="10" fill="#555">' + L(c.wip) + '</text>'
+            + '<text x="' + (x + 1.5 * barW).toFixed(1) + '" y="' + (base - hA - 5) + '" text-anchor="middle" font-size="10" fill="#555">' + L(c.adv) + '</text>';
+        // Bold black on top: the ACTUAL total (WIP + Advances and Deposits).
+        if (reached) bars += '<text x="' + (x + barW).toFixed(1) + '" y="' + (base - Math.max(hW, hA) - 20) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#000"><title>Actual Total Investment = WIP + Advances and Deposits</title>' + L((+c.actual_wip || 0) + (+c.actual_adv || 0)) + '</text>';
+        bars += '<text x="' + (x + barW).toFixed(1) + '" y="' + (base + 20) + '" text-anchor="middle" font-size="13" fill="#111"' + (cur ? ' font-weight="700"' : '') + '>' + (c.end_label || c.name) + '</text>';
     });
-    var sw = function(c){ return '<span style="display:inline-block;width:12px;height:8px;background:' + c + ';margin:0 4px 0 10px;vertical-align:middle;"></span>'; };
     return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
         + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg>';
 }
-
 function _cfShowNetInvCycles(cycles){
     $('#cf-netinv-breakdown-win').remove();
     window._cfNetInvCycles = cycles;
-    var winW = 640, winH = 380, MIN_W = 340, MIN_H = 240;
+    var winW = 660, winH = 440, MIN_W = 340, MIN_H = 260;
     var left = Math.max(10, (window.innerWidth - winW) / 2);
     var topP = Math.max(10, (window.innerHeight - winH) / 2);
     var rsHtml = '';
@@ -1282,6 +1298,7 @@ function _cfShowNetInvCycles(cycles){
         + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:6px;font-size:12px;color:#111;">'
         + '<span><span style="display:inline-block;width:14px;height:10px;background:#8fa3b8;margin-right:5px;vertical-align:middle;"></span>WIP</span>'
         + '<span><span style="display:inline-block;width:14px;height:10px;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Advances</span>'
+        + '<span style="color:#5a6e8c;">faded = target, solid = actual, bold figure = actual total</span>'
         + '</div></div>'
         + '<div style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;">'
         + '<div id="cf-ni-chart" style="min-width:0;">' + _cfNetInvCycleBarsHtml(cycles) + '</div>'

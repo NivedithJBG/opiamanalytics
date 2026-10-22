@@ -3036,12 +3036,16 @@ class ProjectsmainController extends Controller
         $cycles = [];
         foreach (($w['cycles'] ?? []) as $c) {
             $k = (int)$c['cycle'];
-            $actual = null;
-            if ($k < $cur) $actual = round($this->_cfFlowGroups($pid, $c['end_date'])['ti'], 2);
-            elseif ($k === $cur) $actual = round($this->_cfFlowGroups($pid)['ti'], 2);
+            // Actual Advances and Deposits and WIP at the cycle end (today for the
+            // current cycle); none for cycles still to come.
+            $g = null;
+            if ($k < $cur) $g = $this->_cfFlowGroups($pid, $c['end_date']);
+            elseif ($k === $cur) $g = $this->_cfFlowGroups($pid);
             $cycles[] = ['name' => 'C' . $k . ' ' . date('M', strtotime($c['end_date'])), 'end_date' => $c['end_date'],
                          'target' => round($advTarget + (float)$c['target'], 2), 'adv' => round($advTarget, 2), 'wip' => round((float)$c['target'], 2),
-                         'end_label' => $c['end_label'] ?? '', 'actual' => $actual, 'current' => $k === $cur];
+                         'end_label' => $c['end_label'] ?? '', 'current' => $k === $cur,
+                         'actual' => $g ? round($g['ti'], 2) : null,
+                         'actual_adv' => $g ? round($g['adv'], 2) : null, 'actual_wip' => $g ? round($g['wip'], 2) : null];
         }
         return json_encode(['error' => 'No', 'cycles' => $cycles, 'adv_target' => $advTarget, 'current_cycle' => $cur]);
 
