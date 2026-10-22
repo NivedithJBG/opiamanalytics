@@ -3064,16 +3064,18 @@ function _cfShowWipBreakdown(){
         bindDragTouch(document, 'mouseup', onUp);
     }
 }
+// Work In Progress panel: the account heads making up the current WIP, as vertical
+// bars of their actual cash and bank payments since the last bill (see
+// actionCfwipaccounts). Replaces the earlier cycle-target popup.
 $(document).on('click', '#cf-billsreceivable', function(e){
     if ($(e.target).closest('.cf-wip-pencil, .cf-wip-input').length) return;
     $.ajax({
-        type: 'POST', url: '../projectsmain/cfwipcycles', dataType: 'json',
+        type: 'POST', url: '../projectsmain/cfwipaccounts', dataType: 'json',
         success: function(d){
-            if (d && d.error === 'No') {
-                _cfWipState.cycles = d.cycles || [];
-                _cfWipState.currentCycle = +d.current_cycle || 0;
-                _cfShowWipBreakdown();
-            }
+            if (!d || d.error !== 'No') return;
+            var t = 'Work In Progress — Payments' + (d.last_bill ? ' since the bill of ' + d.last_bill : '');
+            if (Math.abs(+d.other_received || 0) >= 0.01) t += ' (less other receipts ' + ((+d.other_received) / 100000).toFixed(2) + ' L)';
+            _cfShowCurrLiabBreakdown(d.accounts || [], t);
         }
     });
 });

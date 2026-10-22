@@ -2484,18 +2484,19 @@ class ProjectsmainController extends Controller
             $types = $db->createCommand("SELECT id, account_type FROM accounts_item")->queryAll(\PDO::FETCH_KEY_PAIR);
             $brIds = $db->createCommand("SELECT id FROM accounts_item WHERE name='Bills Receivable'")->queryColumn();
         }
-        $g = ['bank' => 0.0, 'cash' => 0.0, 'adv' => 0.0, 'wip_cost' => 0.0, 'received' => 0.0];
+        $g = ['bank' => 0.0, 'cash' => 0.0, 'adv' => 0.0, 'wip_cost' => 0.0, 'received' => 0.0, 'wip_acc' => []];
         foreach ($cash as $id => $b) {
             $id = (int)$id; $b = (float)$b; $t = (int)($types[$id] ?? 0);
             if ($t === 2)      { $g['bank'] += $b; }
             elseif ($t === 1)  { $g['cash'] += $b; if ($b > 0) { $g['adv'] += $b; } else { $g['received'] += -$b; } }   // cash in hand is an advance
-            elseif ($t === 8)  { $g['wip_cost'] += $b; }
+            elseif ($t === 8)  { $g['wip_cost'] += $b; $g['wip_acc'][$id] = $b; }
             elseif ($t === 7) {
                 if ($b > 0) {
                     $m = (float)($main[$id] ?? 0);
                     $a = $m > 0 ? min($m, $b) : 0;
                     $g['adv'] += $a;
                     $g['wip_cost'] += $b - $a;
+                    $g['wip_acc'][$id] = $b - $a;
                 } else {
                     $g['received'] += -$b;
                 }
@@ -4104,6 +4105,29 @@ class ProjectsmainController extends Controller
             }
         }
         return ['error' => 'No', 'estimated' => round($est, 2), 'purchased' => round($purch, 2), 'used' => round($used, 2), 'stock' => round($stock, 2)];
+    }
+
+    // Work In Progress popup: the account heads making up the current WIP — each
+    // head's cash and bank payments counted as work cost (expense heads in full;
+    // suppliers/contractors for the part not treated as an advance), since the last
+    // bill (cost up to the last bill date is cleared from WIP). Other money received
+    // reduces WIP and is returned separately.
+    public function actionCfwipaccounts()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        if (!$pid) return ['error' => 'No project selected'];
+        $g = $this->_cfFlowGroups($pid);
+        $at = $g['last_bill'] ? $this->_cfFlowGroups($pid, $g['last_bill'], true)['wip_acc'] : [];
+        $names = Yii::$app->db->createCommand("SELECT id, name FROM accounts_item")->queryAll(\PDO::FETCH_KEY_PAIR);
+        $rows = [];
+        foreach ($g['wip_acc'] as $id => $v) {
+            $amt = round((float)$v - (float)($at[$id] ?? 0), 2);
+            if (abs($amt) >= 0.01) $rows[] = ['name' => $names[$id] ?? ('Account ' . $id), 'amount' => $amt];
+        }
+        usort($rows, function($a, $b){ return $b['amount'] <=> $a['amount']; });
+        return ['error' => 'No', 'accounts' => $rows, 'wip' => round($g['wip'], 2), 'last_bill' => $g['last_bill'],
+                'other_received' => round(array_sum(array_column($rows, 'amount')) - $g['wip'], 2)];
     }
 
     // Cashflow dashboard Notifications panel (right of the three windows):
