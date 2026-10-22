@@ -1239,10 +1239,10 @@ function _cfNetInvCycleBarsHtml(cyc){
         var x = pad + cyc.indexOf(c) * slot + (slot - 2 * barW) / 2;
         var hA = hOf(c.adv), hW = hOf(c.wip);
         var cur = !!c.current;
-        bars += '<rect x="' + x.toFixed(1) + '" y="' + (base - hA) + '" width="' + barW.toFixed(1) + '" height="' + hA + '" fill="' + (cur ? '#1a0a2e' : '#3a4a5f') + '"><title>' + c.name + ' · Advances and Deposits target ' + L(c.adv) + ' L</title></rect>'
-            + '<rect x="' + (x + barW).toFixed(1) + '" y="' + (base - hW) + '" width="' + barW.toFixed(1) + '" height="' + hW + '" fill="' + (cur ? '#2ba899' : '#8fa3b8') + '"><title>' + c.name + ' · WIP target ' + L(c.wip) + ' L</title></rect>'
-            + '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (base - hA - 5) + '" text-anchor="middle" font-size="10" fill="#111">' + L(c.adv) + '</text>'
-            + '<text x="' + (x + 1.5 * barW).toFixed(1) + '" y="' + (base - hW - 5) + '" text-anchor="middle" font-size="10" fill="#111">' + L(c.wip) + '</text>'
+        bars += '<rect x="' + x.toFixed(1) + '" y="' + (base - hW) + '" width="' + barW.toFixed(1) + '" height="' + hW + '" fill="' + (cur ? '#2ba899' : '#8fa3b8') + '"><title>' + c.name + ' · WIP target ' + L(c.wip) + ' L</title></rect>'
+            + '<rect x="' + (x + barW).toFixed(1) + '" y="' + (base - hA) + '" width="' + barW.toFixed(1) + '" height="' + hA + '" fill="' + (cur ? '#1a0a2e' : '#3a4a5f') + '"><title>' + c.name + ' · Advances and Deposits target ' + L(c.adv) + ' L</title></rect>'
+            + '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (base - hW - 5) + '" text-anchor="middle" font-size="10" fill="#111">' + L(c.wip) + '</text>'
+            + '<text x="' + (x + 1.5 * barW).toFixed(1) + '" y="' + (base - hA - 5) + '" text-anchor="middle" font-size="10" fill="#111">' + L(c.adv) + '</text>'
             + '<text x="' + (x + barW).toFixed(1) + '" y="' + (base + 18) + '" text-anchor="middle" font-size="12" fill="#333"' + (cur ? ' font-weight="700"' : '') + '>' + (c.end_label || c.name) + '</text>';
         if (c.actual !== null && c.actual !== undefined) {
             var hT = hOf(c.actual), ok = (+c.actual || 0) >= (+c.target || 0), col = ok ? '#2ba899' : '#d84a30';
@@ -1253,7 +1253,7 @@ function _cfNetInvCycleBarsHtml(cyc){
     var sw = function(c){ return '<span style="display:inline-block;width:12px;height:8px;background:' + c + ';margin:0 4px 0 10px;vertical-align:middle;"></span>'; };
     return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
         + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg>'
-        + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;">' + sw('#3a4a5f') + 'Advances and Deposits target' + sw('#8fa3b8') + 'WIP target' + sw('#2ba899') + 'Actual at/above target' + sw('#d84a30') + 'Actual below target · bold = current cycle</div>';
+        + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;">' + sw('#8fa3b8') + 'WIP target' + sw('#3a4a5f') + 'Advances and Deposits target' + sw('#2ba899') + 'Actual at/above target' + sw('#d84a30') + 'Actual below target · bold = current cycle</div>';
 }
 
 function _cfShowNetInvCycles(cycles){
