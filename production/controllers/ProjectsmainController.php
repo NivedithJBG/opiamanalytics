@@ -4219,7 +4219,7 @@ class ProjectsmainController extends Controller
                     (SELECT w.activity_Id FROM workgroup_activities_new w WHERE w.id = s.activity_id) AS lib_activity_id,
                     s.name, s.unit, s.start_date, s.duration, s.quantity,
                     -- same rate as the Project Estimate window: project allocation, else library rate
-                    COALESCE(NULLIF((SELECT SUM(pern.rate * pern.quantity) FROM pricing_estimate_resources_new pern
+                    COALESCE(NULLIF((SELECT ROUND(SUM(pern.rate * pern.quantity), 2) FROM pricing_estimate_resources_new pern
                                      WHERE pern.activity_id = s.activity_id AND pern.project_id = s.projectId AND pern.pricing_status = 0), 0),
                              (SELECT ea2.activity_rate FROM workgroup_activities_new w2 JOIN estimateactivities ea2 ON ea2.activity_id = w2.activity_Id WHERE w2.id = s.activity_id),
                              0) AS rate,
