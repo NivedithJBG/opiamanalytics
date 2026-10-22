@@ -1228,7 +1228,7 @@ function _cfRedrawNetInvBreakdown(){
 function _cfNetInvCycleBarsHtml(cyc){
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycle targets.</div>';
     var maxV = 0;
-    cyc.forEach(function(c){ maxV = Math.max(maxV, (+c.adv || 0), (+c.wip || 0), (+c.actual || 0)); });
+    cyc.forEach(function(c){ maxV = Math.max(maxV, (+c.adv || 0), (+c.wip || 0)); });
     var W = 600, H = 300, base = 262, top = 40, pad = 20;
     var slot = (W - 2 * pad) / cyc.length;
     var barW = slot * 0.36;                       // two attached bars = 72% of the slot
@@ -1244,16 +1244,11 @@ function _cfNetInvCycleBarsHtml(cyc){
             + '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (base - hW - 5) + '" text-anchor="middle" font-size="10" fill="#111">' + L(c.wip) + '</text>'
             + '<text x="' + (x + 1.5 * barW).toFixed(1) + '" y="' + (base - hA - 5) + '" text-anchor="middle" font-size="10" fill="#111">' + L(c.adv) + '</text>'
             + '<text x="' + (x + barW).toFixed(1) + '" y="' + (base + 18) + '" text-anchor="middle" font-size="12" fill="#333"' + (cur ? ' font-weight="700"' : '') + '>' + (c.end_label || c.name) + '</text>';
-        if (c.actual !== null && c.actual !== undefined) {
-            var hT = hOf(c.actual), ok = (+c.actual || 0) >= (+c.target || 0), col = ok ? '#2ba899' : '#d84a30';
-            bars += '<line x1="' + (x - 4).toFixed(1) + '" y1="' + (base - hT) + '" x2="' + (x + 2 * barW + 4).toFixed(1) + '" y2="' + (base - hT) + '" stroke="' + col + '" stroke-width="4"><title>' + c.name + ' · Actual ' + L(c.actual) + ' L (target ' + L(c.target) + ' L)</title></line>'
-                + '<text x="' + (x + 2 * barW + 6).toFixed(1) + '" y="' + (base - hT + 4) + '" font-size="10" font-weight="700" fill="' + col + '">' + L(c.actual) + '</text>';
-        }
     });
     var sw = function(c){ return '<span style="display:inline-block;width:12px;height:8px;background:' + c + ';margin:0 4px 0 10px;vertical-align:middle;"></span>'; };
     return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
         + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg>'
-        + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;">' + sw('#8fa3b8') + 'WIP target' + sw('#3a4a5f') + 'Advances and Deposits target' + sw('#2ba899') + 'Actual at/above target' + sw('#d84a30') + 'Actual below target · bold = current cycle</div>';
+        + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;">' + sw('#8fa3b8') + 'WIP target' + sw('#3a4a5f') + 'Advances and Deposits target' + ' · bold = current cycle</div>';
 }
 
 function _cfShowNetInvCycles(cycles){
