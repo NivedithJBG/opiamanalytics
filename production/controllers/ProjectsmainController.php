@@ -4024,7 +4024,58 @@ class ProjectsmainController extends Controller
             "SELECT notf_id AS id, type AS title, remarks AS text FROM notifications
              WHERE itemid = :p AND status = 0 AND type LIKE '%Health%' ORDER BY notf_id DESC LIMIT 50", [':p' => $pid]
         )->queryAll() : [];
-        return ['error' => 'No', 'messages' => $messages, 'alerts' => $alerts, 'action_plans' => []];
+        // Action plans written by users for the project (action_plans table): open
+        // ones first by target date, done ones after.
+        $plans = $pid ? $db->createCommand(
+            "SELECT ap.id, ap.plan_text AS text, ap.responsible_user_id, ap.target_date, ap.status, ap.created_at,
+                    ru.username AS responsible, cu.username AS created_by
+             FROM action_plans ap
+             LEFT JOIN user ru ON ru.id = ap.responsible_user_id
+             LEFT JOIN user cu ON cu.id = ap.created_by
+             WHERE ap.project_id = :p AND ap.deleted = 0
+             ORDER BY ap.status ASC, (ap.target_date IS NULL) ASC, ap.target_date ASC, ap.id DESC", [':p' => $pid]
+        )->queryAll() : [];
+        $users = $db->createCommand("SELECT id, username FROM user WHERE status = 1 ORDER BY username")->queryAll();
+        return ['error' => 'No', 'messages' => $messages, 'alerts' => $alerts, 'action_plans' => $plans, 'users' => $users, 'today' => date('Y-m-d')];
+    }
+
+    // Action plans: add / edit (id given), mark done or open, delete (kept, flagged).
+    public function actionActionplansave()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        if (!$pid) return ['error' => 'Yes', 'errortext' => 'No project selected.'];
+        $db = Yii::$app->db;
+        $id = (int)($_POST['id'] ?? 0);
+        $text = trim((string)($_POST['text'] ?? ''));
+        if ($text === '') return ['error' => 'Yes', 'errortext' => 'Please write the action plan.'];
+        $resp = (int)($_POST['responsible'] ?? 0) ?: null;
+        $date = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_POST['target_date'] ?? '')) ? $_POST['target_date'] : null;
+        $now = date('Y-m-d H:i:s');
+        if ($id) {
+            $db->createCommand()->update('action_plans',
+                ['plan_text' => $text, 'responsible_user_id' => $resp, 'target_date' => $date, 'updated_at' => $now],
+                ['id' => $id, 'project_id' => $pid, 'deleted' => 0])->execute();
+        } else {
+            $db->createCommand()->insert('action_plans', [
+                'project_id' => $pid, 'plan_text' => $text, 'responsible_user_id' => $resp, 'target_date' => $date,
+                'status' => 0, 'created_by' => (int)Yii::$app->user->Id, 'created_at' => $now,
+            ])->execute();
+            $id = (int)$db->getLastInsertID();
+        }
+        return ['error' => 'No', 'id' => $id];
+    }
+
+    public function actionActionplanstatus()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        $id = (int)($_POST['id'] ?? 0);
+        $del = !empty($_POST['delete']);
+        $set = $del ? ['deleted' => 1] : ['status' => ((int)($_POST['status'] ?? 0)) ? 1 : 0];
+        $set['updated_at'] = date('Y-m-d H:i:s');
+        Yii::$app->db->createCommand()->update('action_plans', $set, ['id' => $id, 'project_id' => $pid])->execute();
+        return ['error' => 'No'];
     }
 
     public function actionCfwipcycles()

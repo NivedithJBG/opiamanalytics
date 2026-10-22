@@ -2175,7 +2175,8 @@ document.addEventListener('click', function(e){
     var s = seen(); (data[kind] || []).forEach(function(it){ s[key(kind, it)] = 1; });
     try { localStorage.setItem('ntSeen', JSON.stringify(s)); } catch (e) {}
   }
-  function unread(kind){ var s = seen(); return (data[kind] || []).filter(function(it){ return !s[key(kind, it)]; }).length; }
+  // Unread = not yet seen in this browser; for action plans only open ones count.
+  function unread(kind){ var s = seen(); return (data[kind] || []).filter(function(it){ return !s[key(kind, it)] && !(kind === 'action_plans' && +it.status === 1); }).length; }
   function esc(t){ var d = document.createElement('div'); d.textContent = t == null ? '' : String(t); return d.innerHTML; }
   function render(){
     var ua = unread('alerts'), um = unread('messages'), up = unread('action_plans'), total = ua + um + up;
@@ -2186,31 +2187,106 @@ document.addEventListener('click', function(e){
     b.style.color = (ua || up) ? '#d84a30' : '#1565c0';
     btn.title = total ? total + ' unread notification' + (total > 1 ? 's' : '') : 'Notifications';
     KINDS.forEach(function(k){
-      var n = win.querySelector('.nt-n[data-n="' + k + '"]'); n.textContent = (data[k] || []).length;
+      var n = win.querySelector('.nt-n[data-n="' + k + '"]'); n.textContent = (data[k] || []).filter(function(it){ return !(k === 'action_plans' && +it.status === 1); }).length;
       n.classList.toggle('unread', unread(k) > 0 && k !== tab);
     });
     if (win.style.display !== 'flex') return;
     win.querySelectorAll('.nt-tab').forEach(function(t){ t.classList.toggle('on', t.getAttribute('data-tab') === tab); });
+    if (tab === 'action_plans') { if (!(editing !== null && document.querySelector('#nt-list .ap-form'))) renderPlans(); return; }   // keep a half-written plan during the 2-minute refresh
     var items = data[tab] || [];
     document.getElementById('nt-list').innerHTML = items.length ? items.map(function(it){
       return '<div class="nt-item" style="border-left-color:' + COL[tab] + '"><b>' + esc(it.title) + '</b><span>' + esc(it.text) + '</span></div>';
     }).join('') : '<div style="text-align:center;color:#8a97ad;font-size:12px;padding:24px 8px;">' + EMPTY[tab] + '</div>';
   }
+  // ── Action plans: written by users, one strip each ──────────────────────
+  var apUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/projectsmain/actionplansave"]); ?>';
+  var apStatusUrl = '<?php echo Yii::$app->urlManager->createAbsoluteUrl(["/projectsmain/actionplanstatus"]); ?>';
+  var users = [], today = '', editing = null;   // editing: null (closed), 0 (new) or a plan id
+  function post(u, params, done){
+    var x = new XMLHttpRequest(), body = Object.keys(params).map(function(k){ return encodeURIComponent(k) + '=' + encodeURIComponent(params[k] == null ? '' : params[k]); }).join('&');
+    x.open('POST', u); x.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded'); x.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    x.onload = function(){ var r = null; try { r = JSON.parse(x.responseText); } catch (e) {} done(r); };
+    x.send(body);
+  }
+  function fmtDate(d){ if (!d) return ''; var p = String(d).substr(0, 10).split('-'); var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p[1] - 1]; return (+p[2]) + ' ' + m + ' ' + p[0]; }
+  function planForm(pl){
+    pl = pl || {};
+    var opts = '<option value="">— Responsible —</option>' + users.map(function(u){ return '<option value="' + u.id + '"' + (String(u.id) === String(pl.responsible_user_id || '') ? ' selected' : '') + '>' + esc(u.username) + '</option>'; }).join('');
+    var fld = 'box-sizing:border-box;border:1px solid #c5ccd4;border-radius:4px;font:12px Nunito,Arial,sans-serif;color:#333;';
+    return '<div class="ap-form" style="background:#fff;border-radius:6px;padding:10px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);">'
+      + '<textarea class="ap-text" rows="3" placeholder="Write the action plan..." style="' + fld + 'width:100%;padding:6px 8px;resize:vertical;">' + esc(pl.text || '') + '</textarea>'
+      + '<div style="display:flex;gap:6px;margin-top:6px;"><select class="ap-resp" style="' + fld + 'flex:1;min-width:0;height:30px;padding:2px 6px;">' + opts + '</select>'
+      + '<input type="date" class="ap-date" value="' + (pl.target_date ? String(pl.target_date).substr(0, 10) : '') + '" title="Target date" style="' + fld + 'width:140px;height:30px;padding:2px 6px;"></div>'
+      + '<div style="text-align:right;margin-top:8px;"><button type="button" class="ap-cancel" style="background:#f0f4f8;border:1px solid #c5ccd4;border-radius:14px;padding:4px 14px;font-size:12px;color:#465365;cursor:pointer;margin-right:6px;">Cancel</button>'
+      + '<button type="button" class="ap-save" style="background:#1a0a2e;color:#fff;border:none;border-radius:14px;padding:4px 16px;font-size:12px;cursor:pointer;">Save</button></div></div>';
+  }
+  function renderPlans(){
+    var list = document.getElementById('nt-list'), plans = data.action_plans || [];
+    var html = editing === 0 ? planForm(null)
+      : '<button type="button" class="ap-new" style="width:100%;margin-bottom:8px;background:#fff;border:1px dashed #8a94a6;border-radius:6px;padding:7px;font-size:12px;font-weight:700;color:#1a0a2e;cursor:pointer;">+ New Action Plan</button>';
+    plans.forEach(function(pl){
+      if (editing === +pl.id) { html += planForm(pl); return; }
+      var done = +pl.status === 1, late = !done && pl.target_date && String(pl.target_date).substr(0, 10) < today;
+      var edge = done ? '#9aa3b2' : late ? '#d84a30' : '#2ba899';
+      var meta = [];
+      if (pl.responsible) meta.push('<span title="Responsible">&#128100; ' + esc(pl.responsible) + '</span>');
+      if (pl.target_date) meta.push('<span title="Target date" style="' + (late ? 'color:#d84a30;font-weight:700;' : '') + '">&#128197; ' + fmtDate(pl.target_date) + (late ? ' · overdue' : '') + '</span>');
+      meta.push('<span title="Written by">' + esc(pl.created_by || '') + ', ' + fmtDate(pl.created_at) + '</span>');
+      var b = 'background:none;border:none;cursor:pointer;font-size:13px;line-height:1;padding:2px 3px;color:#5a6e8c;';
+      html += '<div class="ap-strip" data-id="' + pl.id + '" style="display:flex;align-items:stretch;background:#fff;border-radius:6px;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.10);overflow:hidden;' + (done ? 'opacity:.6;' : '') + '">'
+        + '<div style="flex:none;width:5px;background:' + edge + ';"></div>'
+        + '<div style="flex:1;min-width:0;padding:8px 10px;">'
+        + '<div style="font-size:12.5px;color:#111;line-height:1.4;white-space:pre-wrap;word-wrap:break-word;' + (done ? 'text-decoration:line-through;' : '') + '">' + esc(pl.text) + '</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px;font-size:11px;color:#6b7a90;">' + meta.join('') + '</div></div>'
+        + '<div style="flex:none;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:4px 6px;border-left:1px solid #eef1f5;">'
+        + '<button type="button" class="ap-done" title="' + (done ? 'Reopen' : 'Mark done') + '" style="' + b + (done ? '' : 'color:#2ba899;') + '">' + (done ? '&#8634;' : '&#10003;') + '</button>'
+        + (done ? '' : '<button type="button" class="ap-edit" title="Edit" style="' + b + '">&#9998;</button>')
+        + '<button type="button" class="ap-del" title="Delete" style="' + b + 'color:#c0392b;">&times;</button></div></div>';
+    });
+    if (!plans.length && editing !== 0) html += '<div style="text-align:center;color:#8a97ad;font-size:12px;padding:16px 8px;">No action plans yet.</div>';
+    list.innerHTML = html;
+  }
+  document.getElementById('nt-list').addEventListener('click', function(e){
+    var t = e.target.closest('button'); if (!t) return;
+    var strip = t.closest('.ap-strip'), id = strip ? +strip.getAttribute('data-id') : 0;
+    if (t.classList.contains('ap-new')) { editing = 0; renderPlans(); var ta = document.querySelector('#nt-list .ap-text'); if (ta) ta.focus(); }
+    else if (t.classList.contains('ap-cancel')) { editing = null; renderPlans(); }
+    else if (t.classList.contains('ap-edit')) { editing = id; renderPlans(); }
+    else if (t.classList.contains('ap-save')) {
+      var f = t.closest('.ap-form'), txt = f.querySelector('.ap-text').value.trim();
+      if (!txt) { f.querySelector('.ap-text').focus(); return; }
+      t.disabled = true; t.textContent = 'Saving...';
+      post(apUrl, { id: editing || '', text: txt, responsible: f.querySelector('.ap-resp').value, target_date: f.querySelector('.ap-date').value }, function(r){
+        if (r && r.error === 'No') { editing = null; load(); } else { t.disabled = false; t.textContent = 'Save'; alert((r && r.errortext) || 'Could not save the action plan.'); }
+      });
+    }
+    else if (t.classList.contains('ap-done')) {
+      var pl = (data.action_plans || []).filter(function(p){ return +p.id === id; })[0];
+      post(apStatusUrl, { id: id, status: pl && +pl.status === 1 ? 0 : 1 }, function(){ load(); });
+    }
+    else if (t.classList.contains('ap-del')) {
+      if (!confirm('Delete this action plan?')) return;
+      post(apStatusUrl, { id: id, delete: 1 }, function(){ load(); });
+    }
+  });
+
   function load(){
     var x = new XMLHttpRequest();
     x.open('POST', url); x.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
     x.onload = function(){
       try { var r = JSON.parse(x.responseText); } catch (e) { return; }
       if (!r || r.error !== 'No') return;
+      users = r.users || []; today = r.today || '';
       KINDS.forEach(function(k){
         var mine = (data[k] || []).filter(function(it){ return it._local; });   // keep items added on this page
         data[k] = mine.concat(r[k] || []);
       });
+      if (win.style.display === 'flex' && tab) markSeen(tab);   // items arriving on the open tab count as read
       render();
     };
     x.send();
   }
-  function selectTab(k){ tab = k; markSeen(k); render(); }
+  function selectTab(k){ tab = k; editing = null; markSeen(k); render(); }
   btn.addEventListener('click', function(){
     if (win.style.display === 'flex') { win.style.display = 'none'; return; }
     win.style.display = 'flex';
