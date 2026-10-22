@@ -1413,6 +1413,22 @@ class ProjectsmainController extends Controller
         // existing schedule bar, tasks were never touched in this request and
         // there is nothing to translate against.
         if (!isset($taskOrdinalToId)) $taskOrdinalToId = [];
+        // Activities added from Project Workflow Tools (Create WBS) send no
+        // resources: the activity's Activity Library allocation comes with it,
+        // copied once into the project. From then on the project's copy is
+        // edited only in Project Estimate > Resource Allocation.
+        if (empty($resources) && $iowActId) {
+            foreach ($db->createCommand(
+                "SELECT ear.est_resource_id AS resource_id, COALESCE(r.ResourceType_Id, 0) AS type_id,
+                        ear.est_resource_quantity AS qty, ear.est_resource_rate AS rate
+                 FROM estactivity_resources ear LEFT JOIN resources r ON r.Resource_Id = ear.est_resource_id
+                 WHERE ear.estactivity_id = :a AND ear.est_resource_status = 0 ORDER BY ear.estactres_id",
+                [':a' => $iowActId]
+            )->queryAll() as $lr) {
+                $resources[] = ['resource_id' => (int)$lr['resource_id'], 'type_id' => (int)$lr['type_id'],
+                                'qty' => (float)$lr['qty'], 'rate' => (float)$lr['rate'], 'task_map' => []];
+            }
+        }
         if (!empty($resources)) {
             foreach ($resources as $res) {
                 $resId  = (int)($res['resource_id'] ?? 0);
