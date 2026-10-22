@@ -4281,7 +4281,7 @@ class ProjectsmainController extends Controller
             $title = $due === $today ? 'Action plan due today' : 'Action plan overdue since ' . date('j M', strtotime($due));
             $n += \app\components\WebPush::sendToUser($uid, [
                 'title' => $title,
-                'body' => ($pl['project_name'] ? $pl['project_name'] . ' — ' : '') . mb_substr($pl['plan_text'], 0, 140),
+                'body' => ($pl['project_name'] ? $pl['project_name'] . ' — ' : '') . mb_substr($pl['plan_text'], 0, 1000),
                 'tag' => 'opiam-ap-' . $pl['id'], 'url' => '/projectsmain/index', 'badge' => self::_apDueCount($uid),
             ]);
             $db->createCommand()->update('action_plans', ['last_push_date' => $today], ['id' => $pl['id']])->execute();
@@ -4311,7 +4311,7 @@ class ProjectsmainController extends Controller
                  WHERE m.id > :i AND m.draft = 0 ORDER BY m.id", [':i' => (int)$st['msg']])->queryAll() as $m) {
                 $n += \app\components\WebPush::sendToUser((int)$m['to_user_id'], [
                     'title' => 'Message' . ($m['sender'] ? ' from ' . $m['sender'] : '') . ($m['title'] ? ': ' . $m['title'] : ''),
-                    'body' => mb_substr(strip_tags((string)$m['message']), 0, 160), 'tag' => 'opiam-msg-' . $m['id'], 'url' => '/projectsmain/index',
+                    'body' => mb_substr(strip_tags((string)$m['message']), 0, 1000), 'tag' => 'opiam-msg-' . $m['id'], 'url' => '/projectsmain/index',
                 ]);
             }
             \app\components\WebPush::ensureTables();
@@ -4325,7 +4325,7 @@ class ProjectsmainController extends Controller
                 else $users = $everyone ?? ($everyone = $db->createCommand("SELECT DISTINCT user_id FROM push_subscriptions")->queryColumn());
                 foreach ($users as $u) {
                     $n += \app\components\WebPush::sendToUser((int)$u, [
-                        'title' => 'Alert: ' . $a['type'], 'body' => mb_substr((string)($a['remarks'] ?: $a['project']), 0, 160),
+                        'title' => 'Alert: ' . $a['type'], 'body' => mb_substr((string)($a['remarks'] ?: $a['project']), 0, 1000),
                         'tag' => 'opiam-alert-' . $a['notf_id'], 'url' => '/projectsmain/index',
                     ]);
                 }
@@ -4397,7 +4397,7 @@ class ProjectsmainController extends Controller
                 $pname = (string)$db->createCommand("SELECT Name FROM projects WHERE Project_Id = :p", [':p' => $pid])->queryScalar();
                 \app\components\WebPush::sendToUser($resp, [
                     'title' => 'New action plan for you' . ($date ? ' · due ' . date('j M', strtotime($date)) : ''),
-                    'body' => ($pname ? $pname . ' — ' : '') . mb_substr($text, 0, 140),
+                    'body' => ($pname ? $pname . ' — ' : '') . mb_substr($text, 0, 1000),
                     'tag' => 'opiam-ap-' . $id, 'url' => '/projectsmain/index', 'badge' => self::_apDueCount($resp),
                 ]);
             } catch (\Throwable $e) { Yii::warning('Action plan push failed: ' . $e->getMessage()); }
