@@ -1174,9 +1174,18 @@ function renderCfNetInvDial(){
     var gen = _cfLoadGen;
     _cfNetInvState = { target: 0, actual: 0 };
     _cfDrawNetInvDial();
-    _cfFetchTarget('bank_wcapital', function(d){
-        if (gen === _cfLoadGen) { _cfNetInvState.target = +d.target || 0; _cfDrawNetInvDial(); }
-    });
+    // Target (Lakhs) = Advances and Deposits target + current cycle's WIP target.
+    var advT = null, wipT = null;
+    function setTarget(){
+        if (gen !== _cfLoadGen || advT === null || wipT === null) return;
+        _cfNetInvState.target = advT + wipT / 100000;
+        _cfDrawNetInvDial();
+    }
+    _cfFetchTarget('investments_target', function(d){ advT = +d.target || 0; setTarget(); });
+    if (window._cfWipCyclesData) { wipT = +window._cfWipCyclesData.current_target || 0; setTarget(); }
+    else _cfQueueAjax({ type: 'POST', url: '../projectsmain/cfwipcycles', dataType: 'json',
+        success: function(d){ wipT = (d && d.error === 'No') ? (+d.current_target || 0) : 0; setTarget(); },
+        error: function(){ wipT = 0; setTarget(); } });
     _cfQueueAjax({
         type: 'POST', url: '../projectsmain/cfnetinvestment', dataType: 'json',
         success: function(d){
@@ -1206,6 +1215,53 @@ function _cfRedrawNetInvBreakdown(){
         + '<span style="float:right;font-weight:700;color:#251840;">Current: ' + _cfIndianComma(s.average / (r.unit === 'Crores' ? 10000000 : 100000)) + ' ' + r.unit + '</span>'
     );
     $('#cf-netinv-breakdown-chart').html(r.body);
+}
+
+// Total Investment popup: one bar per billing cycle of the whole project. The
+// bar is the cycle's target (Advances and Deposits target + the cycle's WIP
+// target); the actual (Advances + WIP at the cycle end, today for the current
+// cycle) is laid over it — above the target in green-blue, short of it in
+// red-orange. Cycles still to come show the target only.
+function _cfShowNetInvCycles(cycles){
+    $('#cf-netinv-breakdown-win').remove();
+    var L = function(v){ return ((+v || 0) / 100000).toFixed(2); };
+    var maxV = 1;
+    cycles.forEach(function(c){ maxV = Math.max(maxV, +c.target || 0, +c.actual || 0); });
+    var H = 230, colW = 54;
+    var bars = cycles.map(function(c){
+        var t = +c.target || 0, a = c.actual === null ? null : (+c.actual || 0);
+        var hT = Math.round(t / maxV * H), seg = '';
+        if (a !== null) {
+            var hA = Math.round(a / maxV * H), hMin = Math.min(hA, hT);
+            seg += '<div style="position:absolute;left:10px;right:10px;bottom:0;height:' + hMin + 'px;background:#64748b;"></div>';
+            if (hA > hT) seg += '<div style="position:absolute;left:10px;right:10px;bottom:' + hT + 'px;height:' + (hA - hT) + 'px;background:#2ba899;"></div>';
+            else if (hT > hA) seg += '<div style="position:absolute;left:10px;right:10px;bottom:' + hA + 'px;height:' + (hT - hA) + 'px;background:#d9480f;"></div>';
+        }
+        var tip = c.name + ' (ends ' + c.end_date + ')&#10;Target: ' + L(t) + ' L' + (a !== null ? '&#10;Actual: ' + L(a) + ' L&#10;' + (a >= t ? 'Above' : 'Short of') + ' target: ' + L(Math.abs(a - t)) + ' L' : '&#10;(cycle not reached yet)');
+        return '<div title="' + tip + '" style="flex:none;width:' + colW + 'px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + (H + 40) + 'px;">'
+            + '<div style="font-size:10px;font-weight:700;color:#081142;margin-bottom:2px;white-space:nowrap;">' + (a !== null ? L(a) : '') + '</div>'
+            + '<div style="position:relative;width:100%;height:' + hT + 'px;background:' + (a === null ? '#cfd6e2' : 'transparent') + ';border:1px solid #1a0a2e;border-bottom:none;box-sizing:border-box;">' + seg + '</div>'
+            + '<div style="font-size:10px;color:#333;margin-top:4px;white-space:nowrap;' + (c.current ? 'font-weight:700;color:#1565c0;' : '') + '">' + c.name + '</div>'
+            + '<div style="font-size:9px;color:#5a6e8c;">T ' + L(t) + '</div></div>';
+    }).join('');
+    var sw = function(c, b){ return '<span style="display:inline-block;width:12px;height:8px;background:' + c + ';' + (b ? 'border:1px solid #1a0a2e;' : '') + 'margin:0 4px 0 12px;vertical-align:middle;"></span>'; };
+    var html = '<div id="cf-netinv-breakdown-win" style="position:fixed;z-index:100300;left:50%;top:14vh;transform:translateX(-50%);width:' + Math.min(window.innerWidth - 40, Math.max(520, cycles.length * colW + 60)) + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.45);font-family:Nunito,Arial,sans-serif;color:#111;">'
+        + '<div id="cf-netinv-cyc-hdr" style="display:flex;justify-content:space-between;align-items:center;background:#081142;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;cursor:move;user-select:none;touch-action:none;font-size:13px;font-weight:700;">'
+        + '<span>TOTAL INVESTMENT &middot; target and actual per billing cycle (Lakhs)</span>'
+        + '<button type="button" id="cf-netinv-breakdown-close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;">&times;</button></div>'
+        + '<div style="overflow-x:auto;padding:12px 14px 4px;"><div style="display:flex;align-items:flex-end;gap:0;border-bottom:1px solid #1a0a2e;">' + (bars || '<div style="padding:30px;color:#666;font-size:12px;">Set Project Duration and Billing Cycle to see the cycles.</div>') + '</div></div>'
+        + '<div style="padding:6px 8px 10px;font-size:11px;color:#333;">' + sw('#cfd6e2', 1) + 'Target (cycle to come)' + sw('#64748b') + 'Actual' + sw('#2ba899') + 'Above target' + sw('#d9480f') + 'Short of target'
+        + '<div style="margin:6px 12px 0;color:#5a6e8c;">Target = Advances and Deposits target + the cycle\'s WIP target. Actual = Advances and Deposits + WIP at the cycle end (today for the current cycle).</div></div>'
+        + '</div>';
+    $('body').append(html);
+    var win = document.getElementById('cf-netinv-breakdown-win'), drag = null;
+    function start(x, y){ var r = win.getBoundingClientRect(); win.style.transform = 'none'; win.style.left = r.left + 'px'; win.style.top = r.top + 'px'; drag = { sx: x, sy: y, ox: r.left, oy: r.top }; }
+    $('#cf-netinv-cyc-hdr').on('mousedown', function(e){ if ($(e.target).closest('button').length) return; start(e.clientX, e.clientY); e.preventDefault(); });
+    $(document).off('.cfnic').on('mousemove.cfnic', function(e){ if (drag) { win.style.left = Math.max(0, drag.ox + e.clientX - drag.sx) + 'px'; win.style.top = Math.max(0, drag.oy + e.clientY - drag.sy) + 'px'; } })
+        .on('mouseup.cfnic', function(){ drag = null; });
+    document.getElementById('cf-netinv-cyc-hdr').addEventListener('touchstart', function(e){ if (e.touches.length === 1 && !$(e.target).closest('button').length) start(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    document.addEventListener('touchmove', function(e){ if (drag && e.touches.length === 1) { win.style.left = Math.max(0, drag.ox + e.touches[0].clientX - drag.sx) + 'px'; win.style.top = Math.max(0, drag.oy + e.touches[0].clientY - drag.sy) + 'px'; e.preventDefault(); } }, { passive: false });
+    document.addEventListener('touchend', function(){ drag = null; });
 }
 
 function _cfShowNetInvBreakdown(accounts, average){
@@ -1302,7 +1358,7 @@ $(document).on('click', '#cf-netinvestment', function(e){
     _cfQueueAjax({
         type: 'POST', url: '../projectsmain/cfnetinvestmentbreakdown', dataType: 'json',
         success: function(d){
-            if (d && d.error === 'No') { _cfShowNetInvBreakdown(d.accounts || [], +d.average || 0); }
+            if (d && d.error === 'No') { _cfShowNetInvCycles(d.cycles || []); }
         }
     });
 });
@@ -1835,7 +1891,7 @@ $(document).on('click', '#cf-currliab-tip-chart [data-cflbar="ti"]', function(e)
     e.stopPropagation();
     $.ajax({
         type: 'POST', url: '../projectsmain/cfnetinvestmentbreakdown', dataType: 'json',
-        success: function(d){ if (d && d.error === 'No') { _cfShowNetInvBreakdown(d.accounts || [], +d.average || 0); } }
+        success: function(d){ if (d && d.error === 'No') { _cfShowNetInvCycles(d.cycles || []); } }
     });
 });
 

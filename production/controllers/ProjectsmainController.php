@@ -3020,8 +3020,29 @@ class ProjectsmainController extends Controller
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
-        // Agreed cashflow rules: cycle-to-cycle Total Investment, one bar per client payment; Current = today.
-        return json_encode(['error' => 'No', 'accounts' => $this->_cfFlowCycles($pid), 'average' => round($this->_cfFlowGroups($pid)['ti'], 2)]);
+        // One bar per billing cycle of the whole project (Project duration / Billing
+        // cycle, from the earliest activity start — same cycles as the Project Cost
+        // popup):
+        //   target = Advances and Deposits target + that cycle's planned cost (WIP target)
+        //   actual = Total Investment (Advances + WIP) at the cycle end, as of today
+        //            for the current cycle, none for cycles still to come.
+        $w = $this->actionCfwipcycles();
+        Yii::$app->response->format = \yii\web\Response::FORMAT_RAW;
+        $advTarget = 100000 * (float)Yii::$app->db->createCommand(
+            "SELECT target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key = 'investments_target'", [':p' => $pid]
+        )->queryScalar();
+        $cur = (int)($w['current_cycle'] ?? 0);
+        $today = date('Y-m-d');
+        $cycles = [];
+        foreach (($w['cycles'] ?? []) as $c) {
+            $k = (int)$c['cycle'];
+            $actual = null;
+            if ($k < $cur) $actual = round($this->_cfFlowGroups($pid, $c['end_date'])['ti'], 2);
+            elseif ($k === $cur) $actual = round($this->_cfFlowGroups($pid)['ti'], 2);
+            $cycles[] = ['name' => 'C' . $k . ' ' . date('M', strtotime($c['end_date'])), 'end_date' => $c['end_date'],
+                         'target' => round($advTarget + (float)$c['target'], 2), 'actual' => $actual, 'current' => $k === $cur];
+        }
+        return json_encode(['error' => 'No', 'cycles' => $cycles, 'adv_target' => $advTarget, 'current_cycle' => $cur]);
 
         $allRows = $this->_cfNetInvestmentPerCycleRows($pid);
         $rows = array_values(array_filter($allRows, function($r) { return $r['name'] !== 'Current'; }));
