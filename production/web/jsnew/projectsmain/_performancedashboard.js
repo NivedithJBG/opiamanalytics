@@ -1248,11 +1248,7 @@ function _cfNetInvCycleBarsHtml(cyc){
     });
     var sw = function(c){ return '<span style="display:inline-block;width:12px;height:8px;background:' + c + ';margin:0 4px 0 10px;vertical-align:middle;"></span>'; };
     return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
-        + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg>'
-        + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 0;font-size:12px;color:#111;padding:8px 6px 0;">'
-        + sw('#8fa3b8') + 'WIP target' + sw('#3a4a5f') + 'Advances and Deposits target'
-        + '<span style="margin-left:12px;font-weight:700;color:#000;">000.0</span>&nbsp;= Total (WIP + Advances and Deposits)'
-        + '<span style="margin-left:12px;">' + sw('#2ba899').replace('margin:0 4px 0 10px', 'margin:0 4px 0 0') + 'Current cycle (bold label)</span></div>';
+        + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg>';
 }
 
 function _cfShowNetInvCycles(cycles){
@@ -1282,7 +1278,13 @@ function _cfShowNetInvCycles(cycles){
         + '<button id="cf-netinv-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
         + '<div style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;">'
-        + '<span style="font-weight:700;color:#081142;">Target per billing cycle (Lakhs) = Advances and Deposits target + WIP target</span></div>'
+        + '<span style="font-weight:700;color:#081142;">Target per billing cycle (Lakhs) = WIP target + Advances and Deposits target</span>'
+        + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:6px;font-size:12px;color:#111;">'
+        + '<span><span style="display:inline-block;width:14px;height:10px;background:#8fa3b8;margin-right:5px;vertical-align:middle;"></span>WIP target</span>'
+        + '<span><span style="display:inline-block;width:14px;height:10px;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Advances and Deposits target</span>'
+        + '<span><b style="color:#000;">Bold figure</b> on top = Total (WIP + Advances and Deposits)</span>'
+        + '<span><span style="display:inline-block;width:14px;height:10px;background:#2ba899;margin-right:5px;vertical-align:middle;"></span>Current cycle</span>'
+        + '</div></div>'
         + '<div style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;">'
         + '<div id="cf-ni-chart" style="min-width:0;">' + _cfNetInvCycleBarsHtml(cycles) + '</div>'
         + '</div></div>';
