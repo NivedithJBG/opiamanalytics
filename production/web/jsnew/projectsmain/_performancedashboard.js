@@ -1219,53 +1219,100 @@ function _cfRedrawNetInvBreakdown(){
     $('#cf-netinv-breakdown-chart').html(r.body);
 }
 
-// Total Investment popup: one bar per billing cycle of the whole project. The
-// bar is the cycle's target (Advances and Deposits target + the cycle's WIP
-// target); the actual (Advances + WIP at the cycle end, today for the current
-// cycle) is laid over it — above the target in green-blue, short of it in
-// red-orange. Cycles still to come show the target only.
-function _cfShowNetInvCycles(cycles){
-    $('#cf-netinv-breakdown-win').remove();
-    var L = function(v){ return ((+v || 0) / 100000).toFixed(2); };
-    var maxV = 1;
-    cycles.forEach(function(c){ maxV = Math.max(maxV, +c.target || 0, +c.actual || 0); });
-    var H = 230, colW = 54;
-    var bars = cycles.map(function(c){
-        var t = +c.target || 0, a = c.actual === null ? null : (+c.actual || 0);
-        var hT = Math.round(t / maxV * H), seg = '';
-        if (a !== null) {
-            var hA = Math.round(a / maxV * H), hMin = Math.min(hA, hT);
-            seg += '<div style="position:absolute;left:10px;right:10px;bottom:0;height:' + hMin + 'px;background:#64748b;"></div>';
-            if (hA > hT) seg += '<div style="position:absolute;left:10px;right:10px;bottom:' + hT + 'px;height:' + (hA - hT) + 'px;background:#2ba899;"></div>';
-            else if (hT > hA) seg += '<div style="position:absolute;left:10px;right:10px;bottom:' + hA + 'px;height:' + (hT - hA) + 'px;background:#d9480f;"></div>';
+// Total Investment popup — same window and chart design as the Work In Progress
+// popup (_cfShowWipBreakdown / _cfWipCycleBarsHtml). Per billing cycle, two
+// attached target bars: Advances and Deposits target and the cycle's WIP target.
+// The actual Total Investment (Advances + WIP at the cycle end, today for the
+// current cycle) is marked across the pair: green-blue at or above the
+// combined target, red-orange below it. Cycles still to come show targets only.
+function _cfNetInvCycleBarsHtml(cyc){
+    if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycle targets.</div>';
+    var maxV = 0;
+    cyc.forEach(function(c){ maxV = Math.max(maxV, (+c.adv || 0), (+c.wip || 0), (+c.actual || 0)); });
+    var W = 600, H = 300, base = 262, top = 40, pad = 20;
+    var slot = (W - 2 * pad) / cyc.length;
+    var barW = slot * 0.36;                       // two attached bars = 72% of the slot
+    var hOf = function(v){ return maxV > 0 ? Math.round(((+v || 0) / maxV) * (base - top)) : 0; };
+    var L = function(v){ return ((+v || 0) / 100000).toFixed(1); };
+    var bars = '';
+    cyc.forEach(function(c){
+        var x = pad + cyc.indexOf(c) * slot + (slot - 2 * barW) / 2;
+        var hA = hOf(c.adv), hW = hOf(c.wip);
+        var cur = !!c.current;
+        bars += '<rect x="' + x.toFixed(1) + '" y="' + (base - hA) + '" width="' + barW.toFixed(1) + '" height="' + hA + '" fill="' + (cur ? '#1a0a2e' : '#3a4a5f') + '"><title>' + c.name + ' · Advances and Deposits target ' + L(c.adv) + ' L</title></rect>'
+            + '<rect x="' + (x + barW).toFixed(1) + '" y="' + (base - hW) + '" width="' + barW.toFixed(1) + '" height="' + hW + '" fill="' + (cur ? '#2ba899' : '#8fa3b8') + '"><title>' + c.name + ' · WIP target ' + L(c.wip) + ' L</title></rect>'
+            + '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (base - hA - 5) + '" text-anchor="middle" font-size="10" fill="#111">' + L(c.adv) + '</text>'
+            + '<text x="' + (x + 1.5 * barW).toFixed(1) + '" y="' + (base - hW - 5) + '" text-anchor="middle" font-size="10" fill="#111">' + L(c.wip) + '</text>'
+            + '<text x="' + (x + barW).toFixed(1) + '" y="' + (base + 18) + '" text-anchor="middle" font-size="12" fill="#333"' + (cur ? ' font-weight="700"' : '') + '>' + (c.end_label || c.name) + '</text>';
+        if (c.actual !== null && c.actual !== undefined) {
+            var hT = hOf(c.actual), ok = (+c.actual || 0) >= (+c.target || 0), col = ok ? '#2ba899' : '#d84a30';
+            bars += '<line x1="' + (x - 4).toFixed(1) + '" y1="' + (base - hT) + '" x2="' + (x + 2 * barW + 4).toFixed(1) + '" y2="' + (base - hT) + '" stroke="' + col + '" stroke-width="4"><title>' + c.name + ' · Actual ' + L(c.actual) + ' L (target ' + L(c.target) + ' L)</title></line>'
+                + '<text x="' + (x + 2 * barW + 6).toFixed(1) + '" y="' + (base - hT + 4) + '" font-size="10" font-weight="700" fill="' + col + '">' + L(c.actual) + '</text>';
         }
-        var tip = c.name + ' (ends ' + c.end_date + ')&#10;Target: ' + L(t) + ' L' + (a !== null ? '&#10;Actual: ' + L(a) + ' L&#10;' + (a >= t ? 'Above' : 'Short of') + ' target: ' + L(Math.abs(a - t)) + ' L' : '&#10;(cycle not reached yet)');
-        return '<div title="' + tip + '" style="flex:none;width:' + colW + 'px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + (H + 40) + 'px;">'
-            + '<div style="font-size:10px;font-weight:700;color:#081142;margin-bottom:2px;white-space:nowrap;">' + (a !== null ? L(a) : '') + '</div>'
-            + '<div style="position:relative;width:100%;height:' + hT + 'px;background:' + (a === null ? '#cfd6e2' : 'transparent') + ';border:1px solid #1a0a2e;border-bottom:none;box-sizing:border-box;">' + seg + '</div>'
-            + '<div style="font-size:10px;color:#333;margin-top:4px;white-space:nowrap;' + (c.current ? 'font-weight:700;color:#1565c0;' : '') + '">' + c.name + '</div>'
-            + '<div style="font-size:9px;color:#5a6e8c;">T ' + L(t) + '</div></div>';
-    }).join('');
-    var sw = function(c, b){ return '<span style="display:inline-block;width:12px;height:8px;background:' + c + ';' + (b ? 'border:1px solid #1a0a2e;' : '') + 'margin:0 4px 0 12px;vertical-align:middle;"></span>'; };
-    var html = '<div id="cf-netinv-breakdown-win" style="position:fixed;z-index:100300;left:50%;top:14vh;transform:translateX(-50%);width:' + Math.min(window.innerWidth - 40, Math.max(520, cycles.length * colW + 60)) + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.45);font-family:Nunito,Arial,sans-serif;color:#111;">'
-        + '<div id="cf-netinv-cyc-hdr" style="display:flex;justify-content:space-between;align-items:center;background:#081142;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;cursor:move;user-select:none;touch-action:none;font-size:13px;font-weight:700;">'
-        + '<span>TOTAL INVESTMENT &middot; target and actual per billing cycle (Lakhs)</span>'
-        + '<button type="button" id="cf-netinv-breakdown-close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;">&times;</button></div>'
-        + '<div style="overflow-x:auto;padding:12px 14px 4px;"><div style="display:flex;align-items:flex-end;gap:0;border-bottom:1px solid #1a0a2e;">' + (bars || '<div style="padding:30px;color:#666;font-size:12px;">Set Project Duration and Billing Cycle to see the cycles.</div>') + '</div></div>'
-        + '<div style="padding:6px 8px 10px;font-size:11px;color:#333;">' + sw('#cfd6e2', 1) + 'Target (cycle to come)' + sw('#64748b') + 'Actual' + sw('#2ba899') + 'Above target' + sw('#d9480f') + 'Short of target'
-        + '<div style="margin:6px 12px 0;color:#5a6e8c;">Target = Advances and Deposits target + the cycle\'s WIP target. Actual = Advances and Deposits + WIP at the cycle end (today for the current cycle).</div></div>'
-        + '</div>';
-    $('body').append(html);
-    var win = document.getElementById('cf-netinv-breakdown-win'), drag = null;
-    function start(x, y){ var r = win.getBoundingClientRect(); win.style.transform = 'none'; win.style.left = r.left + 'px'; win.style.top = r.top + 'px'; drag = { sx: x, sy: y, ox: r.left, oy: r.top }; }
-    $('#cf-netinv-cyc-hdr').on('mousedown', function(e){ if ($(e.target).closest('button').length) return; start(e.clientX, e.clientY); e.preventDefault(); });
-    $(document).off('.cfnic').on('mousemove.cfnic', function(e){ if (drag) { win.style.left = Math.max(0, drag.ox + e.clientX - drag.sx) + 'px'; win.style.top = Math.max(0, drag.oy + e.clientY - drag.sy) + 'px'; } })
-        .on('mouseup.cfnic', function(){ drag = null; });
-    document.getElementById('cf-netinv-cyc-hdr').addEventListener('touchstart', function(e){ if (e.touches.length === 1 && !$(e.target).closest('button').length) start(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
-    document.addEventListener('touchmove', function(e){ if (drag && e.touches.length === 1) { win.style.left = Math.max(0, drag.ox + e.touches[0].clientX - drag.sx) + 'px'; win.style.top = Math.max(0, drag.oy + e.touches[0].clientY - drag.sy) + 'px'; e.preventDefault(); } }, { passive: false });
-    document.addEventListener('touchend', function(){ drag = null; });
+    });
+    var sw = function(c){ return '<span style="display:inline-block;width:12px;height:8px;background:' + c + ';margin:0 4px 0 10px;vertical-align:middle;"></span>'; };
+    return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
+        + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg>'
+        + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;">' + sw('#3a4a5f') + 'Advances and Deposits target' + sw('#8fa3b8') + 'WIP target' + sw('#2ba899') + 'Actual at/above target' + sw('#d84a30') + 'Actual below target · bold = current cycle</div>';
 }
 
+function _cfShowNetInvCycles(cycles){
+    $('#cf-netinv-breakdown-win').remove();
+    window._cfNetInvCycles = cycles;
+    var winW = 640, winH = 380, MIN_W = 340, MIN_H = 240;
+    var left = Math.max(10, (window.innerWidth - winW) / 2);
+    var topP = Math.max(10, (window.innerHeight - winH) / 2);
+    var rsHtml = '';
+    ['n','s','e','w','ne','nw','se','sw'].forEach(function(d){
+        rsHtml += '<div class="cf-ni-rs" data-dir="' + d + '" style="position:absolute;';
+        if (d === 'n') rsHtml += 'top:-4px;left:10px;right:10px;height:10px;cursor:n-resize;';
+        else if (d === 's') rsHtml += 'bottom:-4px;left:10px;right:10px;height:10px;cursor:s-resize;';
+        else if (d === 'e') rsHtml += 'right:-4px;top:10px;bottom:10px;width:10px;cursor:e-resize;';
+        else if (d === 'w') rsHtml += 'left:-4px;top:10px;bottom:10px;width:10px;cursor:w-resize;';
+        else if (d === 'ne') rsHtml += 'right:-4px;top:-4px;width:14px;height:14px;cursor:ne-resize;';
+        else if (d === 'nw') rsHtml += 'left:-4px;top:-4px;width:14px;height:14px;cursor:nw-resize;';
+        else if (d === 'se') rsHtml += 'right:-4px;bottom:-4px;width:14px;height:14px;cursor:se-resize;';
+        else rsHtml += 'left:-4px;bottom:-4px;width:14px;height:14px;cursor:sw-resize;';
+        rsHtml += 'z-index:20;background:transparent;"></div>';
+    });
+    var total = cycles.reduce(function(sum, c){ return sum + (+c.wip || 0); }, 0) + (cycles.length ? (+cycles[0].adv || 0) : 0);
+    var html = '<div id="cf-netinv-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + topP + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
+        + rsHtml
+        + '<div id="cf-ni-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#081142;cursor:move;user-select:none;">'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Total Investment — Cycle Targets</span>'
+        + '<button id="cf-netinv-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
+        + '</div>'
+        + '<div style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;">'
+        + '<span style="font-weight:700;color:#081142;">Target per billing cycle (Lakhs) = Advances and Deposits target + WIP target</span></div>'
+        + '<div style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;">'
+        + '<div id="cf-ni-chart" style="min-width:0;">' + _cfNetInvCycleBarsHtml(cycles) + '</div>'
+        + '</div></div>';
+    $('body').append(html);
+    var win = document.getElementById('cf-netinv-breakdown-win'), hdr = document.getElementById('cf-ni-hdr');
+    var act = null, sx = 0, sy = 0, ox = 0, oy = 0, ow = 0, oh = 0;
+    function onDown(e, dir){ var r = win.getBoundingClientRect(); act = dir; sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top; ow = r.width; oh = r.height; e.preventDefault(); if (dir !== 'drag') e.stopPropagation(); }
+    function onMove(e){
+        if (!act) return;
+        e.preventDefault();
+        var dx = e.clientX - sx, dy = e.clientY - sy;
+        if (act === 'drag') {
+            win.style.left = Math.max(0, Math.min(ox + dx, window.innerWidth - win.offsetWidth)) + 'px';
+            win.style.top = Math.max(0, Math.min(oy + dy, window.innerHeight - win.offsetHeight)) + 'px';
+        } else {
+            var l = ox, t = oy, w = ow, h = oh;
+            if (act.indexOf('e') > -1) w = Math.max(MIN_W, ow + dx);
+            if (act.indexOf('s') > -1) h = Math.max(MIN_H, oh + dy);
+            if (act.indexOf('w') > -1) { var nw = Math.max(MIN_W, ow - dx); l = ox + (ow - nw); w = nw; }
+            if (act.indexOf('n') > -1) { var nh = Math.max(MIN_H, oh - dy); t = oy + (oh - nh); h = nh; }
+            win.style.left = l + 'px'; win.style.top = t + 'px'; win.style.width = w + 'px'; win.style.height = h + 'px';
+        }
+    }
+    function onUp(){ act = null; }
+    bindDragTouch(hdr, 'mousedown', function(e){ if (e.target.id !== 'cf-netinv-breakdown-close') onDown(e, 'drag'); });
+    $(win).find('.cf-ni-rs').each(function(){ var dir = $(this).data('dir'); bindDragTouch(this, 'mousedown', function(e){ onDown(e, dir); }); });
+    bindDragTouch(document, 'mousemove', onMove, { passive: false });
+    bindDragTouch(document, 'mouseup', onUp);
+}
 function _cfShowNetInvBreakdown(accounts, average){
     $('#cf-netinv-breakdown-win').remove();
     window._cfNetInvBreakdownState = { accounts: accounts, average: average };

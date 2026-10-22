@@ -3040,7 +3040,8 @@ class ProjectsmainController extends Controller
             if ($k < $cur) $actual = round($this->_cfFlowGroups($pid, $c['end_date'])['ti'], 2);
             elseif ($k === $cur) $actual = round($this->_cfFlowGroups($pid)['ti'], 2);
             $cycles[] = ['name' => 'C' . $k . ' ' . date('M', strtotime($c['end_date'])), 'end_date' => $c['end_date'],
-                         'target' => round($advTarget + (float)$c['target'], 2), 'actual' => $actual, 'current' => $k === $cur];
+                         'target' => round($advTarget + (float)$c['target'], 2), 'adv' => round($advTarget, 2), 'wip' => round((float)$c['target'], 2),
+                         'end_label' => $c['end_label'] ?? '', 'actual' => $actual, 'current' => $k === $cur];
         }
         return json_encode(['error' => 'No', 'cycles' => $cycles, 'adv_target' => $advTarget, 'current_cycle' => $cur]);
 
