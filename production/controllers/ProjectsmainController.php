@@ -4014,6 +4014,72 @@ class ProjectsmainController extends Controller
         return ['error' => 'No', 'current_cycle' => $w['current_cycle'] ?? 0, 'cycle' => $cyc, 'resources' => $rows];
     }
 
+    // Cashflow, VALUE DRIVERS: Project Resources panel (bar).
+    //   Estimated = value of every resource allocated in the project
+    //               (rate x quantity per unit x activity quantity, project allocation)
+    //   Used      = used quantity (Cost Dashboard consumption x quantity executed) x rate
+    //   Purchased = GRN quantity x rate for goods (materials, consumables, purchased
+    //               inputs, tools); for services (labour, sub-contractors, equipment)
+    //               what is used is what is bought, so purchased = used
+    //   Stock     = purchased - used (goods lying at site)
+    // Values are at each resource's allocated rate, so the three are comparable.
+    public function actionCfresourcesvalue()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        if (!$pid) return ['error' => 'No project selected'];
+        $db = Yii::$app->db;
+        // Allocated value and average rate per resource across the project's activities.
+        $res = [];
+        foreach ($db->createCommand(
+            "SELECT pern.resource_Id AS rid, COALESCE(NULLIF(pern.resourcetype_Id, 0), r.ResourceType_Id) AS type_id,
+                    SUM(pern.rate * pern.quantity * COALESCE(pe.activity_qty, 0)) AS est_val,
+                    SUM(pern.quantity * COALESCE(pe.activity_qty, 0)) AS est_qty
+             FROM pricing_estimate_resources_new pern
+             LEFT JOIN resources r ON r.Resource_Id = pern.resource_Id
+             LEFT JOIN pricing_estimate_new pe ON pe.activity_Id = pern.activity_id AND pe.project_Id = pern.project_id AND pe.pricing_status = 0
+             WHERE pern.project_id = :p AND pern.pricing_status = 0
+             GROUP BY pern.resource_Id, type_id", [':p' => $pid]
+        )->queryAll() as $r) {
+            $q = (float)$r['est_qty'];
+            $res[(int)$r['rid']] = ['type' => (int)$r['type_id'], 'est' => (float)$r['est_val'], 'rate' => $q > 0 ? (float)$r['est_val'] / $q : 0.0, 'used' => 0.0, 'grn' => 0.0];
+        }
+        // Used quantity per resource: the Cost Dashboard's consumption x quantity executed.
+        $origPost = $_POST;
+        foreach ($db->createCommand("SELECT id FROM scheduleactivities WHERE projectId = :p AND status = 0", [':p' => $pid])->queryColumn() as $sid) {
+            $_POST = ['actid' => (int)$sid];
+            $cd = json_decode($this->actionCostdashboardactivity(), true) ?: [];
+            $done = (float)($cd['last_report_qty'] ?? 0);
+            if ($done <= 0) continue;
+            foreach (($cd['items'] ?? []) as $it) {
+                $rid = (int)($it['resource_id'] ?? 0);
+                if (isset($res[$rid])) $res[$rid]['used'] += (float)($it['actual_consumption'] ?? 0) * $done;
+            }
+        }
+        $_POST = $origPost;
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        foreach ($db->createCommand(
+            "SELECT g.GRN_Item AS rid, SUM(CAST(g.GRN_Quantity AS DECIMAL(15,4))) AS qty
+             FROM goods_received_note g JOIN purchase_orders po ON po.order_id = g.GRN_Purchase_Order
+             WHERE po.project_id = :p AND po.delete_status = 0 GROUP BY g.GRN_Item", [':p' => $pid]
+        )->queryAll() as $g) if (isset($res[(int)$g['rid']])) $res[(int)$g['rid']]['grn'] = (float)$g['qty'];
+        $goods = [2, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18];   // received on a GRN (materials, purchased inputs, consumables, tools)
+        $est = 0.0; $used = 0.0; $purch = 0.0; $stock = 0.0;
+        foreach ($res as $r) {
+            $est += $r['est'];
+            $u = $r['used'] * $r['rate'];
+            $used += $u;
+            if (in_array($r['type'], $goods, true)) {
+                $p = $r['grn'] * $r['rate'];
+                $purch += $p;
+                $stock += max(0, $p - $u);
+            } else {
+                $purch += $u;
+            }
+        }
+        return ['error' => 'No', 'estimated' => round($est, 2), 'purchased' => round($purch, 2), 'used' => round($used, 2), 'stock' => round($stock, 2)];
+    }
+
     // Cashflow dashboard Notifications panel (right of the three windows):
     // messages to the user, alerts raised for the selected project (e.g. the
     // chatbot's ROI Health alert in the notifications table), and action plans.

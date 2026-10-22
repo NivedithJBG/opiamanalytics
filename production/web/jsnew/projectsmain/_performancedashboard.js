@@ -543,6 +543,36 @@ function _cfDurationBarHtml(target, actual, targetLabel, actualLabel, tipLabel, 
         + '</div>';
 }
 
+// Project Resources bar (values in lakhs): full length = estimated value of the
+// project's allocated resources (yellow marker); lighter segment = purchased,
+// darker segment = used, so the gap between them is the stock at site. Purchase
+// beyond the estimate shows red-orange.
+function _cfResourceBarHtml(est, purch, used, stock){
+    var lk = function(v){ return (+v || 0).toFixed(2) + ' L'; };
+    var scale = Math.max(est, purch, used, 0.0001);
+    var pc = function(v){ return Math.max(0, Math.min(100, v / scale * 100)).toFixed(2); };
+    var over = purch > est;
+    var bar = '<div style="position:relative;width:100%;height:10px;background:#1a0a2e;border-radius:2px;">'
+        + '<div title="Purchased: ' + lk(purch) + '" style="position:absolute;left:0;top:0;bottom:0;width:' + pc(Math.min(purch, est)) + '%;background:#8fd3c8;"></div>'
+        + (over ? '<div style="position:absolute;left:' + pc(est) + '%;top:0;bottom:0;width:' + (pc(purch) - pc(est)).toFixed(2) + '%;background:#d9480f;"></div>' : '')
+        + '<div title="Used: ' + lk(used) + '" style="position:absolute;left:0;top:0;bottom:0;width:' + pc(used) + '%;background:#2ba899;"></div>'
+        + '<div style="position:absolute;left:calc(' + pc(est) + '% - 2px);top:-4px;bottom:-4px;width:4px;background:#ffff00;border:1px solid #000;box-sizing:border-box;"></div>'
+        + '</div>';
+    var sw = function(c){ return '<span style="display:inline-block;width:10px;height:6px;background:' + c + ';border-radius:1px;margin-right:3px;vertical-align:middle;"></span>'; };
+    return '<div style="width:100%;padding:0 10px;box-sizing:border-box;font-family:Barlow Condensed,Arial;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:baseline;line-height:22px;margin-bottom:4px;">'
+        + '<span style="font-size:20px;font-weight:700;color:#000;" title="Used">' + lk(used) + '</span>'
+        + '<span style="font-size:13px;font-weight:700;color:#1a2540;" title="Stock at site = Purchased - Used">Stock ' + lk(stock) + '</span></div>'
+        + bar
+        + '<div style="display:flex;justify-content:space-between;font-size:11px;color:#5a5a5a;margin-top:3px;"><span>0</span><span>' + lk(scale) + '</span></div>'
+        + '</div>'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:4px 8px 0;width:100%;box-sizing:border-box;font-size:12px;color:#111;">'
+        + '<span>' + sw('#8fd3c8') + 'Purch: ' + lk(purch) + '</span>'
+        + '<span>' + sw('#2ba899') + 'Used: ' + lk(used) + '</span>'
+        + '<span>' + sw('#ffff00') + 'Est: ' + lk(est) + '</span>'
+        + '</div>';
+}
+
 // Dial plus its labels row, used by all three VALUE DRIVERS panels.
 function _cfValueDialHtml(target, actual, centerLabel, targetLabel, actualLabel, tipLabel){
     return _cfDurationDialSvg(target, actual, centerLabel, tipLabel)
@@ -563,7 +593,15 @@ function renderCfValueDrivers(){
         procEl.style.display = 'flex';
         procEl.style.flexDirection = 'column';
         procEl.style.justifyContent = 'center';
-        procEl.innerHTML = _cfValueDialHtml(0, 0, '-', 'Target: -', 'Actual: -');
+        procEl.style.flex = '1 1 auto';
+        procEl.innerHTML = _cfResourceBarHtml(0, 0, 0, 0);
+        _cfQueueAjax({
+            type: 'POST', url: '../projectsmain/cfresourcesvalue', dataType: 'json',
+            success: function(d){
+                if (gen !== _cfLoadGen || !d || d.error !== 'No') return;
+                procEl.innerHTML = _cfResourceBarHtml(+d.estimated / 100000, +d.purchased / 100000, +d.used / 100000, +d.stock / 100000);
+            }
+        });
     }
     _cfQueueAjax({
         type: 'POST', url: '../projectsmain/cfprojectduration', dataType: 'json',
