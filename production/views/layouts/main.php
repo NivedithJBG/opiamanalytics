@@ -2159,14 +2159,14 @@ document.addEventListener('click', function(e){
 <a id="wa-btn" href="https://web.whatsapp.com/" title="WhatsApp"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91A9.85 9.85 0 0 0 12.04 2zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.22 8.22 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24a8.2 8.2 0 0 1 8.24 8.25c0 4.54-3.7 8.23-8.24 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.24 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.16-.47-.28z"/></svg></a>
 <button type="button" id="nt-btn" title="Notifications"><svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5.5-6.84V3a1.5 1.5 0 0 0-3 0v1.16A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2z"/></svg><span id="nt-badge"></span></button>
 <div id="nt-win">
-  <div id="nt-hdr"><span>Notifications</span><button type="button" id="nt-close" title="Close">&times;</button></div>
+  <div id="nt-hdr"><span>Notifications</span><span style="display:flex;align-items:center;gap:10px;"><button type="button" id="nt-push-icon" title="Turn on notifications for this device" style="display:none;background:none;border:1px solid rgba(255,255,255,.5);border-radius:12px;color:#fff;font-size:11px;cursor:pointer;padding:1px 8px;line-height:16px;">&#128276;+</button><button type="button" id="nt-close" title="Close">&times;</button></span></div>
   <div id="nt-tabs">
     <button type="button" class="nt-tab" data-tab="messages">Messages<span class="nt-n" data-n="messages">0</span></button>
     <button type="button" class="nt-tab" data-tab="alerts">Alerts<span class="nt-n" data-n="alerts">0</span></button>
     <button type="button" class="nt-tab" data-tab="action_plans">Action Plans<span class="nt-n" data-n="action_plans">0</span></button>
   </div>
   <div id="nt-list"></div>
-  <div id="nt-push" style="flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 24px 6px 10px;border-top:1px solid #d5dbe5;background:#fff;font-size:11px;color:#5a6e8c;"></div>
+  <div id="nt-push" style="flex:none;display:none;align-items:center;justify-content:space-between;gap:8px;padding:6px 24px 6px 10px;border-top:1px solid #d5dbe5;background:#fff;font-size:11px;color:#5a6e8c;"></div>
   <div id="nt-rs" title="Resize"></div>
 </div>
 <script>
@@ -2382,21 +2382,24 @@ document.addEventListener('click', function(e){
   var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   var swReg = null;
   function b64ToBytes(b){ b = (b + '===='.slice((b.length % 4) || 4)).replace(/-/g, '+').replace(/_/g, '/'); var r = atob(b), a = new Uint8Array(r.length); for (var i = 0; i < r.length; i++) a[i] = r.charCodeAt(i); return a; }
-  function pushBar(html){ document.getElementById('nt-push').innerHTML = html; }
+  // Messages about turning notifications on show only while needed (bar hidden otherwise).
+  var pushHint = '';
+  function pushBar(html){ var el = document.getElementById('nt-push'); el.innerHTML = html; el.style.display = html ? 'flex' : 'none'; }
+  function pushIcon(show, hint){ pushHint = hint || ''; document.getElementById('nt-push-icon').style.display = show ? 'inline-block' : 'none'; }
   function pushBtn(label){ return '<button type="button" id="nt-push-on" style="flex:none;background:#1a0a2e;color:#fff;border:none;border-radius:12px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">' + label + '</button>'; }
   function saveSub(sub, done){ post(pushSubUrl, { subscription: JSON.stringify(sub) }, function(r){ if (done) done(r); }); }
   function pushState(){
     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-      pushBar(isIOS && !standalone
-        ? '<span>&#128241; To get notifications on this iPhone/iPad: tap <b>Share</b> &rarr; <b>Add to Home Screen</b> (Safari or Chrome), then open Opiam from that icon.</span>'
-        : '<span>This browser cannot show notifications.</span>');
+      pushBar('');
+      if (isIOS && !standalone) pushIcon(true, '<span>&#128241; To get notifications on this iPhone/iPad: tap <b>Share</b> &rarr; <b>Add to Home Screen</b> (Safari or Chrome), then open Opiam from that icon.</span>');
+      else pushIcon(false);
       return;
     }
-    if (Notification.permission === 'denied') { pushBar('<span>Notifications are blocked for Opiam. Allow them in this browser\'s site settings.</span>'); return; }
+    if (Notification.permission === 'denied') { pushBar(''); pushIcon(true, '<span>Notifications are blocked for Opiam. Allow them in this browser\'s site settings.</span>'); return; }
     (swReg ? Promise.resolve(swReg) : navigator.serviceWorker.ready).then(function(reg){ return reg.pushManager.getSubscription(); }).then(function(sub){
-      if (sub && Notification.permission === 'granted') { pushBar('<span style="color:#2ba899;font-weight:700;">&#10003; Notifications on for this device</span>'); saveSub(sub); }
-      else pushBar('<span>Get action plans and alerts on this device.</span>' + pushBtn('Allow notifications'));
-    }).catch(function(){ pushBar('<span>Get action plans and alerts on this device.</span>' + pushBtn('Allow notifications')); });
+      if (sub && Notification.permission === 'granted') { pushBar(''); pushIcon(false); saveSub(sub); }
+      else { pushBar(''); pushIcon(true, ''); }
+    }).catch(function(){ pushBar(''); pushIcon(true, ''); });
   }
   function enablePush(){
     pushBar('<span>Turning notifications on...</span>');
@@ -2415,6 +2418,12 @@ document.addEventListener('click', function(e){
     });
   }
   document.getElementById('nt-push').addEventListener('click', function(e){ if (e.target.id === 'nt-push-on') enablePush(); });
+  // Header bell: turn notifications on here, or show what to do on this device.
+  document.getElementById('nt-push-icon').addEventListener('click', function(e){
+    e.stopPropagation();
+    if (pushHint) { var el = document.getElementById('nt-push'); if (el.style.display === 'flex') pushBar(''); else pushBar(pushHint); return; }
+    enablePush();
+  });
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/opiam-sw.js', { scope: '/' }).then(function(reg){ swReg = reg; pushState(); }).catch(function(){ pushState(); });
     // A tapped notification opens this window.
