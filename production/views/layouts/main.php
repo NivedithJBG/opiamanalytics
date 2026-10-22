@@ -2189,7 +2189,8 @@ document.addEventListener('click', function(e){
   // Archive (done); messages and alerts are Pending or Archive (archived).
   var SCOL = { pending: '#2ba899', overdue: '#d84a30', archive: '#9aa3b2' };
   var SLBL = { pending: 'Pending', overdue: 'Overdue', archive: 'Archive' };
-  var filt = { messages: { pending: 1, archive: 0 }, alerts: { pending: 1, archive: 0 }, action_plans: { pending: 1, overdue: 1, archive: 0 } };
+  // Every item is listed (archived ones last); its status shows only as a coloured dot.
+  var filt = { messages: { pending: 1, archive: 1 }, alerts: { pending: 1, archive: 1 }, action_plans: { pending: 1, overdue: 1, archive: 1 } };
   function stOf(kind, it){
     if (kind === 'action_plans') return +it.status === 1 ? 'archive' : (it.target_date && String(it.target_date).substr(0, 10) < today ? 'overdue' : 'pending');
     return +it.archived ? 'archive' : 'pending';
@@ -2220,7 +2221,7 @@ document.addEventListener('click', function(e){
     win.querySelectorAll('.nt-tab').forEach(function(t){ t.classList.toggle('on', t.getAttribute('data-tab') === tab); });
     if (tab === 'action_plans') { if (!(editing !== null && document.querySelector('#nt-list .ap-form'))) renderPlans(); return; }   // keep a half-written plan during the 2-minute refresh
     var items = shown(tab), b2 = 'background:none;border:none;cursor:pointer;font-size:12px;line-height:1;padding:2px 4px;color:#5a6e8c;';
-    document.getElementById('nt-list').innerHTML = chips(tab) + (items.length ? items.map(function(it){
+    document.getElementById('nt-list').innerHTML = (items.length ? items.map(function(it){
       var st = stOf(tab, it), arch = st === 'archive';
       return '<div class="nt-item" data-id="' + esc(it.id) + '" style="display:flex;align-items:flex-start;gap:6px;border-left-color:' + SCOL[st] + ';' + (arch ? 'opacity:.6;' : '') + '"><div style="flex:1;min-width:0;"><b>' + dot(st) + esc(it.title) + '</b><span>' + esc(it.text) + '</span></div>'
         + (it._local ? '' : '<button type="button" class="nt-arch" data-arch="' + (arch ? 0 : 1) + '" title="' + (arch ? 'Restore' : 'Archive') + '" style="' + b2 + '">' + (arch ? '&#8634;' : '&#128451;') + '</button>') + '</div>';
@@ -2251,7 +2252,7 @@ document.addEventListener('click', function(e){
   }
   function renderPlans(){
     var list = document.getElementById('nt-list'), plans = shown('action_plans');
-    var html = chips('action_plans') + (editing === 0 ? planForm(null)
+    var html = (editing === 0 ? planForm(null)
       : '<button type="button" class="ap-new" style="width:100%;margin-bottom:8px;background:#fff;border:1px dashed #8a94a6;border-radius:6px;padding:7px;font-size:12px;font-weight:700;color:#1a0a2e;cursor:pointer;">+ New Action Plan</button>');
     plans.forEach(function(pl){
       if (editing === +pl.id) { html += planForm(pl); return; }
