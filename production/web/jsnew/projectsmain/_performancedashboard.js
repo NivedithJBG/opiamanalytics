@@ -263,10 +263,10 @@ var _cfLoading = false;
 // old single window into them; their IDs are kept, so the drawing code is unchanged.
 var _cfSegWins = [
     // Same segment widths as the single window at medium size: 960px in total,
-    // Value Drivers 210px wide, the others 182px per panel column, with 26px gaps between the segments.
-    { id: 'cf-win-value', title: 'Value Drivers',       cols: 1, head: '#1a0a2e', left: 'calc(50% - 586px)', width: '210px', panels: [1], center: true },
-    { id: 'cf-win-c2c',   title: 'Cash-to-Cash Cycle',  cols: 3, head: '#1a0a2e', left: 'calc(50% - 350px)', width: '546px', panels: [3, 4, 5], center: true },
-    { id: 'cf-win-roi',   title: 'Profit - ROI - Free Cash',   cols: 2, head: '#1a0a2e', left: 'calc(50% + 222px)', width: '364px', panels: [6, 7], center: true }
+    // Value Drivers 198px wide, the others 182px per panel column, with 26px gaps between the segments.
+    { id: 'cf-win-value', title: 'Value Drivers',       cols: 1, head: '#1a0a2e', left: 'calc(50% - 580px)', width: '198px', panels: [1], center: true },
+    { id: 'cf-win-c2c',   title: 'Cash-to-Cash Cycle',  cols: 3, head: '#1a0a2e', left: 'calc(50% - 356px)', width: '546px', panels: [3, 4, 5], center: true },
+    { id: 'cf-win-roi',   title: 'Profit - ROI - Free Cash',   cols: 2, head: '#1a0a2e', left: 'calc(50% + 216px)', width: '364px', panels: [6, 7], center: true }
 ];
 // Moves all three Cashflow windows by the same amount (used by the shared header).
 function cfMoveSegmentWindows(dx, dy){
@@ -282,7 +282,7 @@ function cfMoveSegmentWindows(dx, dy){
 // (13" iPad portrait 1024px, landscape 1366px). Scaling uses transform, so the window
 // positions stay in screen pixels and the jQuery UI drag and touch drag keep working.
 function cfFitLayout(){
-    var GROUP_W = 1172;   // Value Drivers 210 + 26 + C2C 546 + 26 + ROI 364
+    var GROUP_W = 1160;   // Value Drivers 198 + 26 + C2C 546 + 26 + ROI 364
     var vw = window.innerWidth, vh = window.innerHeight;
     var portrait = vh > vw;
     // Portrait (iPad 1024 wide): use nearly the full width, and keep the windows
@@ -305,7 +305,7 @@ function cfFitLayout(){
         hdr.style.top = (top - 44 * s) + 'px';
     }
     // Each window's offset from the start of the group (same as its calc(50% ...) left).
-    var offsets = { 'cf-win-value': 0, 'cf-win-c2c': 236, 'cf-win-roi': 808 };
+    var offsets = { 'cf-win-value': 0, 'cf-win-c2c': 224, 'cf-win-roi': 796 };
     _cfSegWins.forEach(function(w){
         var el = document.getElementById(w.id);
         if (!el) return;
@@ -335,7 +335,7 @@ function cfBuildSegmentWindows(){
     // Shared header above the three windows: "Project Management" and the project name.
     // Dragging it (or touching it) moves all three windows together; its × closes all.
     $('body').append(
-        '<div id="cf-shared-hdr" style="display:none;position:fixed;left:calc(50% - 586px);top:calc(12vh - 44px);width:1172px;height:30px;box-sizing:border-box;background:#081142;color:#fff;padding:0 12px;align-items:center;justify-content:space-between;cursor:move;user-select:none;touch-action:none;z-index:100200;font-family:Nunito,Arial,sans-serif;">'
+        '<div id="cf-shared-hdr" style="display:none;position:fixed;left:calc(50% - 580px);top:calc(12vh - 44px);width:1160px;height:30px;box-sizing:border-box;background:#081142;color:#fff;padding:0 12px;align-items:center;justify-content:space-between;cursor:move;user-select:none;touch-action:none;z-index:100200;font-family:Nunito,Arial,sans-serif;">'
         + '<span><span style="font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;">Project Management</span>'
         + '<span id="cf-shared-name" style="font-size:12px;margin-left:12px;opacity:.9;"></span></span>'
         + '<button type="button" id="cf-shared-close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;padding:0 3px;">&times;</button>'
