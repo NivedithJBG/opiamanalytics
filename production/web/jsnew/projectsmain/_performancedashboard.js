@@ -1034,7 +1034,7 @@ function renderCfBars(){
 // via cfsavetarget/cfgettarget.
 var _cfInvestState = { target: 0, actual: 0, editing: false };
 
-function _cfInvestDialSvg(target, actual){
+function _cfInvestDialSvg(target, actual, aboveGood){
     var targetCr = _cfEnteredToRupees(target) / 10000000;
     var maxV = targetCr > 0 ? targetCr * 2 : 1;
     var f = Math.max(0, Math.min(1, actual / maxV));
@@ -1057,8 +1057,9 @@ function _cfInvestDialSvg(target, actual){
     // Gap arc: colored based on performance. For Investment (spending):
     // - Orange-red if actual > target (overspent - bad)
     // - Blue-green if actual < target (under budget - good)
-    var gapCol = actual > targetCr ? '#d84a30' : '#2ba899';
-    var gapPath = (targetCr > 0 && actual > 0) ? (f < targetF ? arc(f, targetF, gapCol) : arc(targetF, f, gapCol)) : '';
+    // Total Investment (aboveGood): above the target green-blue, below it red-orange.
+    var gapCol = aboveGood ? (actual >= targetCr ? '#2ba899' : '#d84a30') : (actual > targetCr ? '#d84a30' : '#2ba899');
+    var gapPath = (targetCr > 0 && (actual > 0 || aboveGood)) ? (f < targetF ? arc(f, targetF, gapCol) : arc(targetF, f, gapCol)) : '';
     var nr = r - 14, na = Math.PI * (1 - f);
     var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
     // Target is typed directly in Lakhs (the input box's fixed
@@ -1160,9 +1161,10 @@ function _cfDrawNetInvDial(){
     var fmt = { unit: 'Lakhs' };
     var divisor = 100;
     var maxV = targetCr > 0 ? targetCr * 2 : 1;
-    var needleCol = (s.actual / maxV) <= 0.5 ? '#0d3f7a' : '#b5540a';
+    // Current cycle: needle = actual, yellow band = target; above target green-blue, below red-orange.
+    var needleCol = s.actual >= targetCr ? '#2ba899' : '#d84a30';
     el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
-        + _cfInvestDialSvg(s.target, s.actual)
+        + _cfInvestDialSvg(s.target, s.actual, true)
         + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
         + '<span style="font-size:13px;color:#111;">Actual: <span style="font-size:13px;color:' + needleCol + ';font-weight:700;">' + (s.actual * divisor).toFixed(2) + '</span></span>'
         + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Target: <span style="font-size:13px;color:#5a5a5a;font-weight:700;">' + (targetCr * divisor).toFixed(2) + '</span></span>'
