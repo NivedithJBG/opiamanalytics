@@ -1170,15 +1170,16 @@ class ChatbotController extends Controller
         $wbn_row     = $wbn_id ? $db->createCommand("SELECT activity_Id FROM workgroup_activities_new WHERE id=$wbn_id")->queryOne() : null;
         $masterActId = ($wbn_row && $wbn_row['activity_Id']) ? (int)$wbn_row['activity_Id'] : $wbn_id;
 
-        $task_rows = $masterActId ? $db->createCommand(
-            "SELECT at.id AS task_id, at.task_name, at.task_unit,
-                    COALESCE(stn.task_productivity, at.productivity, 0) AS productivity,
+        $task_rows = $actid ? $db->createCommand(
+            "SELECT stn.task_Id AS task_id, COALESCE(stn.task_name, at.task_name) AS task_name, COALESCE(stn.task_unit, at.task_unit) AS task_unit,
+                    COALESCE(stn.task_productivity, 0) AS productivity,
                     COALESCE(stn.task_resource_units, 1) AS resource_units,
                     COALESCE(stn.task_qty, 0) AS task_qty,
                     COALESCE(stn.Budgeted_Duration, 0) AS planned_duration
-             FROM activity_tasks at
-             LEFT JOIN schedule_task_new stn ON stn.task_Id=at.id AND stn.activity_Id=$actid
-             WHERE at.activity_id=$masterActId ORDER BY at.sort_order ASC"
+             FROM schedule_task_new stn
+             LEFT JOIN activity_tasks at ON at.id = stn.task_Id
+             WHERE stn.activity_Id=" . (int)$actid . " AND stn.status = 0 AND stn.task_Id > 0
+             ORDER BY COALESCE(stn.sort_order, 999999), stn.id"
         )->queryAll() : [];
 
         $taskMbQty = [];

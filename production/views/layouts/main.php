@@ -3749,9 +3749,12 @@ document.addEventListener('click', function(e){
                 type:'POST', url:'../projectsmain/getactivityresources', dataType:'json',
                 data:{ activity_id: act.id },
                 success:function(res){
-                    var tasks = (res.tasks || []).map(function(t){
-                        return { name:t.task_name, qty:t.task_qty, prod:t.productivity, resunits:t.resunits };
-                    });
+                    var pend = (window.cwbsEdits || {})[act.id];
+                    var tasks = pend ? pend.tasks.map(function(t){ return { id:t.id, name:t.name, unit:t.unit, qty:t.qty, prod:t.prod, resunits:1 }; })
+                        : (res.tasks || []).map(function(t){
+                            return { id:t.id, name:t.task_name, unit:t.task_unit, qty:t.task_qty, prod:t.productivity, resunits:t.resunits };
+                        });
+                    if (pend) { res.tasks = pend.tasks.map(function(t){ return { task_qty:t.qty, productivity:t.prod }; }); res.unit = pend.unit; act.name = pend.name; }
                     // Time to do 1 unit of the activity = sum over tasks of
                     // (Qty/Unit ÷ Productivity/day) — the Activity Library
                     // has no resource_units field, so R.Unit here is the
@@ -3781,7 +3784,7 @@ document.addEventListener('click', function(e){
                     $.ajax({
                         type:'POST', url:'../projectsmain/wbsadd', dataType:'json',
                         data:{ payload: JSON.stringify(payload) },
-                        success:function(){ addOne(i + 1); },
+                        success:function(){ if (window.cwbsEdits) delete window.cwbsEdits[act.id]; addOne(i + 1); },
                         error:function(){
                             $('#cwbs-msg').css('color','#c00').text('Failed to add "' + act.name + '". Stopped.');
                             $btn.prop('disabled', false);
@@ -3888,6 +3891,15 @@ document.addEventListener('click', function(e){
         }
 
         cwbsedShow();
+        // Edits made here are for this project only: kept with the row and sent
+        // when the activity is added to the Gantt (never saved to the Activity Library).
+        var pend = (window.cwbsEdits || {})[actId];
+        if (pend) {
+            $('#cwbsed-act-name').val(pend.name);
+            $('#cwbsed-act-unit').val(pend.unit);
+            $('#cwbsed-task-rows').html(pend.tasks.length ? pend.tasks.map(function(t){ return cwbsedTaskRowHtml(t.name, t.unit, t.qty, t.prod, t.id); }).join('') : cwbsedTaskRowHtml(pend.name, pend.unit, '', '', 0));
+            return;
+        }
         $('#cwbsed-task-rows').html('<div class="cwbsed-placeholder" style="padding:10px 0;color:#888;font-size:12px;">Loading tasks&hellip;</div>');
         $.ajax({
             type:'POST', url:'../projectsmain/getactivityresources', dataType:'json',
@@ -3944,43 +3956,20 @@ document.addEventListener('click', function(e){
         });
         if(taskError){ alert('Please fill in Task Name, Unit, Qty/Unit and Productivity/day for every task row (or remove the empty row).'); return; }
 
-        var $btn = $(this).prop('disabled', true);
-        var postData = {
-            activity_id:          actId,
-            activitytypeid:       0,
-            worktypeid:           $('#cwbsed-proj-type').val() || 0,
-            iow_group_id:         $('#cwbsed-iow-group').val() || 0,
-            working_hours:        8,
-            'estactivityname[]':  [actName],
-            'estactivityunit[]':  [actUnit],
-            'task_id[]':          taskIds,
-            'task_name[]':        taskNames,
-            'task_unit[]':        taskUnits,
-            'task_qty[]':         taskQtys,
-            'task_productivity[]':taskProds
-        };
-        $.ajax({
-            type:'POST', url:'../projects/updateactivitywithtasks', dataType:'json',
-            data: postData,
-            success:function(d){
-                $btn.prop('disabled', false);
-                if(d.error === 'No'){
-                    cwbsedHide();
-                    // Update only the edited row in the Create WBS list, so the
-                    // Qty/R.Unit/ticks entered on the other rows are untouched.
-                    var $ed = $('#cwbs-tbody tr[data-actid="' + actId + '"]');
-                    $ed.find('.cwbs-act-name').html($('<div>').text(actName).html());
-                    $ed.find('.cwbs-unit-td').html($('<div>').text(actUnit).html());
-                    $ed.find('.cwbs-edit-btn, .cwbs-tick-btn').attr('data-actname', actName).data('actname', actName);
-                } else {
-                    alert('Save failed: ' + (d.msg || 'Unknown error'));
-                }
-            },
-            error:function(xhr){
-                $btn.prop('disabled', false);
-                alert('Save failed. Please try again. (' + xhr.status + ')');
-            }
-        });
+        // Kept for this project only — applied when the activity is added to the
+        // Gantt (actionWbsadd). The Activity Library is not changed.
+        var tasks = [];
+        for (var i = 0; i < taskNames.length; i++) tasks.push({ id: +taskIds[i] || 0, name: taskNames[i], unit: taskUnits[i], qty: +taskQtys[i] || 0, prod: +taskProds[i] || 0 });
+        window.cwbsEdits = window.cwbsEdits || {};
+        window.cwbsEdits[actId] = { name: actName, unit: actUnit, tasks: tasks };
+        cwbsedHide();
+        // Update only the edited row in the Create WBS list, so the Qty/R.Unit/ticks
+        // entered on the other rows are untouched.
+        var $ed = $('#cwbs-tbody tr[data-actid="' + actId + '"]');
+        $ed.find('.cwbs-act-name').html($('<div>').text(actName).html() + ' <span style="font-size:10px;color:#2ba899;font-weight:700;">(edited for this project)</span>');
+        $ed.find('.cwbs-unit-td').html($('<div>').text(actUnit).html());
+        $ed.find('.cwbs-edit-btn, .cwbs-tick-btn').attr('data-actname', actName).data('actname', actName);
+        if (cwbsSelected[actId]) cwbsSelected[actId].name = actName;
     });
 
     $(document).on('click','#pdoc-nav-btn',  function(e){ e.preventDefault(); pdocShow(); });

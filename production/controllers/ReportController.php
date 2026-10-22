@@ -348,11 +348,11 @@ class ReportController extends Controller
 
         // Get tasks for this activity — same source as the Tasks screen (schedule_task_new + activity_tasks)
         $tasks = $db->createCommand("
-            SELECT stn.id AS task_Id, at.task_name AS Name
+            SELECT stn.id AS task_Id, COALESCE(stn.task_name, at.task_name) AS Name
             FROM schedule_task_new stn
-            JOIN activity_tasks at ON at.id = stn.task_Id
-            WHERE stn.activity_Id = :aid AND stn.status = 0
-            ORDER BY stn.id ASC
+            LEFT JOIN activity_tasks at ON at.id = stn.task_Id
+            WHERE stn.activity_Id = :aid AND stn.status = 0 AND COALESCE(stn.task_name, at.task_name) IS NOT NULL
+            ORDER BY COALESCE(stn.sort_order, 999999), stn.id ASC
         ", [':aid' => $actid])->queryAll();
 
         $html = '<form id="schedule-task-reporting' . $actid . '">';

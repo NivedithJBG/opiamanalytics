@@ -485,12 +485,12 @@ class ProjectsmainController extends Controller
         $items = [];
         foreach ($rows as $r) {
             $tasks = $db->createCommand(
-                "SELECT stn.task_Id AS id, at.task_name AS name, stn.task_qty AS qty,
-                        stn.task_productivity AS productivity, stn.task_resource_units AS resunits
+                "SELECT stn.task_Id AS id, COALESCE(stn.task_name, at.task_name) AS name, COALESCE(stn.task_unit, at.task_unit) AS unit,
+                        stn.task_qty AS qty, stn.task_productivity AS productivity, stn.task_resource_units AS resunits
                  FROM schedule_task_new stn
                  LEFT JOIN activity_tasks at ON at.id = stn.task_Id
                  WHERE stn.activity_Id=:sa AND stn.status=0
-                 ORDER BY stn.id ASC",
+                 ORDER BY COALESCE(stn.sort_order, 999999), stn.id ASC",
                 [':sa' => $r['id']]
             )->queryAll();
             // No task values saved on this Gantt activity yet: fall back to the
@@ -499,7 +499,7 @@ class ProjectsmainController extends Controller
             // made the save fall back to a 1-day duration).
             if (!$tasks) {
                 $tasks = $db->createCommand(
-                    "SELECT at.id AS id, at.task_name AS name, at.task_qty AS qty,
+                    "SELECT at.id AS id, at.task_name AS name, at.task_unit AS unit, at.task_qty AS qty,
                             at.productivity AS productivity, at.resource_units AS resunits
                      FROM activity_tasks at
                      WHERE at.activity_id = (SELECT activity_Id FROM workgroup_activities_new WHERE id = :w)
@@ -616,7 +616,8 @@ class ProjectsmainController extends Controller
             $tQty  = (float)($t['qty'] ?? 0);
             $tProd = (float)($t['productivity'] ?? 0);
             $budgetedDuration = ($tQty > 0 && $tProd > 0) ? round($tQty / $tProd, 4) : 0;
-            $taskLibId = (int)($t['id'] ?? 0);
+            $taskLibId = $this->_projTaskId($db, ['id' => (int)($t['id'] ?? 0), 'name' => $tname, 'unit' => $t['unit'] ?? '', 'qty' => $tQty, 'prod' => $tProd, 'resunits' => $t['resunits'] ?? 1]);
+            $tSortU = isset($tSortU) ? $tSortU + 1 : 0;
             $db->createCommand()->insert('schedule_task_new', [
                 'wbs_id'              => 0,
                 'activity_Id'         => $saId,
@@ -631,23 +632,11 @@ class ProjectsmainController extends Controller
                 'task_qty'            => $tQty,
                 'task_productivity'   => $tProd,
                 'task_resource_units' => (float)($t['resunits'] ?? 1) ?: 1,
+                'task_name'           => $tname,
+                'task_unit'           => trim((string)($t['unit'] ?? '')),
+                'sort_order'          => $tSortU,
             ])->execute();
-
-            // Two-way sync with the Activity Library's Edit Activity popup
-            // (ProjectsController::actionUpdateactivitywithtasks), which
-            // owns the master copy in activity_tasks — without this, a
-            // Productivity/Name/Unit edit made here (from the Gantt) never
-            // reaches the Library, and the two screens silently drift apart
-            // (see actionUpdateactivitywithtasks's own sync back into
-            // schedule_task_new for the reverse direction). Only real
-            // library tasks (taskLibId > 0) have a row to update — an
-            // ad-hoc task added here with no library link has none.
-            if ($taskLibId > 0) {
-                $db->createCommand(
-                    "UPDATE activity_tasks SET task_name=:n, productivity=:pr WHERE id=:id",
-                    [':n' => $tname, ':pr' => $tProd, ':id' => $taskLibId]
-                )->execute();
-            }
+            // Project edits stay in the project: the Activity Library is not updated.
         }
 
         return ['error' => 'No', 'sa_id' => $saId, 'duration' => $duration, 'duration_is_fallback' => ($sumDurPerUnit <= 0)];
@@ -1099,6 +1088,22 @@ class ProjectsmainController extends Controller
      * between (workgroups_new removed) — an activity attaches directly
      * to iow_group_id everywhere below.
      */
+    // A project task's id: the library task it was copied from, or — for a task
+    // added only for this project — a new project-only task row
+    // (activity_tasks.activity_id = 0, never listed by the Activity Library).
+    // Work Orders, M. Book, Map to Task and progress all use this id.
+    private function _projTaskId($db, array $task)
+    {
+        $id = (int)($task['id'] ?? 0);
+        if ($id && $db->createCommand("SELECT 1 FROM activity_tasks WHERE id = :i", [':i' => $id])->queryScalar()) return $id;
+        $db->createCommand()->insert('activity_tasks', [
+            'activity_id' => 0, 'task_name' => trim((string)($task['name'] ?? '')), 'task_unit' => trim((string)($task['unit'] ?? '')),
+            'task_qty' => (float)($task['qty'] ?? 0), 'productivity' => (float)($task['prod'] ?? 0),
+            'resource_units' => max(1, (float)($task['resunits'] ?? 1)), 'sort_order' => 0,
+        ])->execute();
+        return (int)$db->getLastInsertID();
+    }
+
     public function actionWbsadd()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -1184,15 +1189,10 @@ class ProjectsmainController extends Controller
                 // write a field here if the caller actually supplied a
                 // non-zero value for it (the old WBS form, which DOES
                 // have these fields, still updates them as before).
-                $setSql = ['activity_unit=:u'];
-                $params = [':u' => $unit, ':id' => $iowActId];
-                if ($projTypeId > 0) { $setSql[] = 'work_type=:wt'; $params[':wt'] = $projTypeId; }
-                if ($actTypeId  > 0) { $setSql[] = 'activity_type=:at'; $params[':at'] = $actTypeId; }
-                if ($iowGroupId > 0) { $setSql[] = 'iow_group_id=:g'; $params[':g'] = $iowGroupId; }
-                $db->createCommand(
-                    "UPDATE estimateactivities SET " . implode(', ', $setSql) . " WHERE activity_id=:id",
-                    $params
-                )->execute();
+                // Adding an activity to a project never changes the Activity
+                // Library (it is the general template); project changes live in
+                // the project's own copy (workgroup_activities_new, tasks in
+                // schedule_task_new, resources in pricing_estimate_resources_new).
             }
 
             // $taskOrdinalToId maps each saved task's 0-based ordinal (skipping
@@ -1201,21 +1201,10 @@ class ProjectsmainController extends Controller
             // actionWbssave() for why this indirection is needed.
             $taskOrdinalToId = [];
             if (!empty($tasks)) {
-                $db->createCommand("DELETE FROM activity_tasks WHERE activity_id=:id", [':id' => $iowActId])->execute();
                 $sort = 0;
                 foreach ($tasks as $task) {
-                    $tname = trim($task['name'] ?? '');
-                    if (!$tname) continue;
-                    $db->createCommand(
-                        "INSERT INTO activity_tasks (activity_id, task_name, task_unit, task_qty, productivity, resource_units, sort_order)
-                         VALUES (:a, :n, :u, :q, :p, :ru, :s)",
-                        [':a' => $iowActId, ':n' => $tname, ':u' => trim($task['unit'] ?? ''),
-                         ':q' => (float)($task['qty'] ?? 0),
-                         ':p' => (float)($task['prod'] ?? 0),
-                         ':ru' => max(1, (float)($task['resunits'] ?? 1)),
-                         ':s' => $sort]
-                    )->execute();
-                    $taskOrdinalToId[$sort] = (int)$db->lastInsertID;
+                    if (!trim($task['name'] ?? '')) continue;
+                    $taskOrdinalToId[$sort] = $this->_projTaskId($db, $task);
                     $sort++;
                 }
             }
@@ -1314,7 +1303,6 @@ class ProjectsmainController extends Controller
             // activity_tasks or schedule_task_new. Sync them here the same
             // way a fresh add would, keyed off the existing sa_id/wan_id.
             if (!empty($tasks)) {
-                $db->createCommand("DELETE FROM activity_tasks WHERE activity_id=:id", [':id' => $iowActId])->execute();
                 $db->createCommand("DELETE FROM schedule_task_new WHERE activity_Id=:id", [':id' => $existingSa])->execute();
                 $sort = 0;
                 foreach ($tasks as $task) {
@@ -1323,19 +1311,14 @@ class ProjectsmainController extends Controller
                     $tQty  = (float)($task['qty']  ?? 0);
                     $tProd = (float)($task['prod'] ?? 0);
                     $tRes  = max(1, (float)($task['resunits'] ?? 1));
-                    $db->createCommand(
-                        "INSERT INTO activity_tasks (activity_id, task_name, task_unit, task_qty, productivity, resource_units, sort_order)
-                         VALUES (:a, :n, :u, :q, :p, :ru, :s)",
-                        [':a' => $iowActId, ':n' => $tname, ':u' => trim($task['unit'] ?? ''),
-                         ':q' => $tQty, ':p' => $tProd, ':ru' => $tRes, ':s' => $sort]
-                    )->execute();
-                    $newTaskId = (int)$db->lastInsertID;
+                    $newTaskId = $this->_projTaskId($db, $task);
                     $budgetedDuration = ($tQty > 0 && $tProd > 0) ? round($tQty / $tProd, 4) : 0;
                     $db->createCommand()->insert('schedule_task_new', [
                         'wbs_id' => 0, 'activity_Id' => $existingSa, 'process_Id' => 0, 'task_Id' => $newTaskId,
                         'Budgeted_Duration' => $budgetedDuration, 'End_Duration' => 0, 'status' => 0,
                         'wbs_activity_Id' => 0, 'activity_name' => $tname, 'primavera_id' => 0,
                         'task_qty' => $tQty, 'task_productivity' => $tProd, 'task_resource_units' => $tRes,
+                        'task_name' => $tname, 'task_unit' => trim($task['unit'] ?? ''), 'sort_order' => $sort,
                     ])->execute();
                     $sort++;
                 }
@@ -1467,12 +1450,9 @@ class ProjectsmainController extends Controller
                     'task_ids'          => $taskIds,
                 ])->execute();
 
-                // Two-way sync — mirror into the shared Activity Library too
-                // (same convention as actionWbssave(); see that function for
-                // the full rationale). Only need the insert-if-missing branch
-                // here since this whole block already only runs when no row
-                // existed yet for this resource.
-                if ($iowActId) {
+                // No mirror into the Activity Library: a project's allocation
+                // never changes the library template.
+                if (false) {
                     $libExists = $db->createCommand(
                         "SELECT estactres_id FROM estactivity_resources WHERE estactivity_id=:a AND est_resource_id=:r LIMIT 1",
                         [':a' => $iowActId, ':r' => $resId]
@@ -1524,9 +1504,9 @@ class ProjectsmainController extends Controller
         // so the Edit Activities Task popup showed blank task names).
         $usingSubmittedTasks = !empty($tasks);
         $taskSource = $usingSubmittedTasks ? $tasks : array_map(function($wt){
-            return ['id' => (int)$wt['id'], 'name' => $wt['task_name'], 'qty' => (float)$wt['task_qty'], 'prod' => (float)$wt['productivity'], 'resunits' => 1];
+            return ['id' => (int)$wt['id'], 'name' => $wt['task_name'], 'unit' => $wt['task_unit'], 'qty' => (float)$wt['task_qty'], 'prod' => (float)$wt['productivity'], 'resunits' => 1];
         }, $db->createCommand(
-            "SELECT id, task_name, task_qty, productivity FROM activity_tasks WHERE activity_id=:id",
+            "SELECT id, task_name, task_unit, task_qty, productivity FROM activity_tasks WHERE activity_id=:id ORDER BY sort_order, id",
             [':id' => $iowActId]
         )->queryAll());
         $ord = 0;
@@ -1538,6 +1518,7 @@ class ProjectsmainController extends Controller
             $tRes  = (float)($wt['resunits'] ?? 1) ?: 1;
             $budgetedDuration = ($tQty > 0 && $tProd > 0) ? round($tQty / $tProd, 4) : 0;
             $taskId = $usingSubmittedTasks ? (int)($taskOrdinalToId[$ord] ?? 0) : (int)($wt['id'] ?? 0);
+            $tSort = $ord;
             $ord++;
             $db->createCommand()->insert('schedule_task_new', [
                 'wbs_id'           => 0,
@@ -1553,6 +1534,9 @@ class ProjectsmainController extends Controller
                 'task_qty'         => $tQty,
                 'task_productivity'=> $tProd,
                 'task_resource_units' => $tRes,
+                'task_name'        => $tName,
+                'task_unit'        => trim((string)($wt['unit'] ?? '')),
+                'sort_order'       => $tSort,
             ])->execute();
         }
 
@@ -1637,7 +1621,14 @@ class ProjectsmainController extends Controller
         // tasks — from activity_tasks, the table actionWbssave/actionWbsadd actually write to.
         // resource_units aliased to resunits to match the key name the WBS
         // form's prefill code (main.php _prefillModal) already reads.
-        $tasks = $db->createCommand(
+        $tasks = $saId ? $db->createCommand(
+            "SELECT stn.task_Id AS id, COALESCE(stn.task_name, at.task_name) AS task_name, COALESCE(stn.task_unit, at.task_unit) AS task_unit,
+                    stn.task_qty, stn.task_productivity AS productivity, stn.task_resource_units AS resunits
+             FROM schedule_task_new stn LEFT JOIN activity_tasks at ON at.id = stn.task_Id
+             WHERE stn.activity_Id = :sa AND stn.status = 0 ORDER BY COALESCE(stn.sort_order, 999999), stn.id",
+            [':sa' => $saId]
+        )->queryAll() : [];
+        if (!$tasks) $tasks = $db->createCommand(
             "SELECT id, task_name, task_unit, task_qty, productivity, resource_units AS resunits FROM activity_tasks WHERE activity_id = :id ORDER BY sort_order ASC, id ASC",
             [':id' => $iowActId]
         )->queryAll();
@@ -5664,16 +5655,17 @@ class ProjectsmainController extends Controller
             "SELECT activity_Id FROM workgroup_activities_new WHERE id=$wbn_id"
         )->queryOne() : null;
         $masterActId = ($wbn_row && $wbn_row['activity_Id']) ? (int)$wbn_row['activity_Id'] : $wbn_id;
-        $task_rows = $masterActId ? $connection->createCommand(
-            "SELECT at.id AS task_id, at.task_name, at.task_unit,
-                    COALESCE(stn.task_productivity, at.productivity, 0) AS productivity,
+        // The project's own tasks of this activity (never the Activity Library's).
+        $task_rows = $actid ? $connection->createCommand(
+            "SELECT stn.task_Id AS task_id, COALESCE(stn.task_name, at.task_name) AS task_name, COALESCE(stn.task_unit, at.task_unit) AS task_unit,
+                    COALESCE(stn.task_productivity, 0) AS productivity,
                     COALESCE(stn.task_resource_units, 1) AS resource_units,
                     COALESCE(stn.task_qty, 0) AS task_qty,
                     COALESCE(stn.Budgeted_Duration, 0) AS planned_duration
-             FROM activity_tasks at
-             LEFT JOIN schedule_task_new stn ON stn.task_Id = at.id AND stn.activity_Id = $actid
-             WHERE at.activity_id = $masterActId
-             ORDER BY at.sort_order ASC"
+             FROM schedule_task_new stn
+             LEFT JOIN activity_tasks at ON at.id = stn.task_Id
+             WHERE stn.activity_Id = " . (int)$actid . " AND stn.status = 0 AND stn.task_Id > 0
+             ORDER BY COALESCE(stn.sort_order, 999999), stn.id"
         )->queryAll() : [];
 
         // Sum measurement-book "work done" qty per task for this activity (Site Office > Measurement Book)
@@ -6295,7 +6287,7 @@ class ProjectsmainController extends Controller
             $taskQtyMap  = [];  // task_id => task_qty (planned qty per activity unit)
             $taskUnitMap = [];  // task_id => task_unit from activity_tasks
             $stnRows = $db->createCommand(
-                "SELECT stn.task_Id AS task_id, stn.task_qty, COALESCE(at.task_unit, '') AS task_unit
+                "SELECT stn.task_Id AS task_id, stn.task_qty, COALESCE(stn.task_unit, at.task_unit, '') AS task_unit
                  FROM schedule_task_new stn
                  LEFT JOIN activity_tasks at ON at.id = stn.task_Id
                  WHERE stn.activity_Id = :actid",
@@ -8413,10 +8405,17 @@ class ProjectsmainController extends Controller
             }
             $estActivity = $connection->createCommand("SELECT working_hours FROM estimateactivities WHERE activity_id='".$estActivityId."'")->queryOne();
             $defaultWorkHours = !empty($estActivity) ? $estActivity['working_hours'] : 8;
-            $sql = "SELECT id AS Id, task_name AS task, task_unit, productivity FROM activity_tasks WHERE activity_id='".$estActivityId."' ORDER BY sort_order ASC";
-            $command = $connection->createCommand($sql);
-            $dataReader = $command->query();
-            $tasks = $dataReader->readAll();
+            $tasks = $connection->createCommand(
+                "SELECT stn.task_Id AS Id, COALESCE(stn.task_name, at.task_name) AS task, COALESCE(stn.task_unit, at.task_unit) AS task_unit,
+                        COALESCE(stn.task_productivity, at.productivity) AS productivity
+                 FROM schedule_task_new stn LEFT JOIN activity_tasks at ON at.id = stn.task_Id
+                 WHERE stn.activity_Id = :sa AND stn.status = 0 AND stn.task_Id > 0
+                 ORDER BY COALESCE(stn.sort_order, 999999), stn.id", [':sa' => (int)$activityid]
+            )->queryAll();
+            if (!$tasks) {
+                $sql = "SELECT id AS Id, task_name AS task, task_unit, productivity FROM activity_tasks WHERE activity_id='".$estActivityId."' ORDER BY sort_order ASC";
+                $tasks = $connection->createCommand($sql)->queryAll();
+            }
             // $datarows = '';
 
             //$sqlforactschedule = "SELECT * FROM schedule_activity_new WHERE actvity_id='".$activityid."' AND activity_name='".$name."' ";

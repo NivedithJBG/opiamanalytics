@@ -1066,20 +1066,21 @@ class ProcurementController extends Controller
         )->queryOne();
         if ($savedQtyRow) $activityQty = (float)$savedQtyRow['qty'];
 
+        // The project's own tasks for this activity — never the Activity Library's.
         $taskRows = $db->createCommand(
-            "SELECT id, task_name, task_unit, productivity FROM activity_tasks
-             WHERE activity_id=:mid ORDER BY sort_order ASC",
-            [':mid' => $masterActivityId]
+            "SELECT stn.task_Id AS id, COALESCE(stn.task_name, at.task_name) AS task_name,
+                    COALESCE(stn.task_unit, at.task_unit) AS task_unit, stn.task_qty
+             FROM schedule_task_new stn LEFT JOIN activity_tasks at ON at.id = stn.task_Id
+             WHERE stn.activity_Id = :sid AND stn.status = 0 AND stn.task_Id > 0
+             ORDER BY COALESCE(stn.sort_order, 999999), stn.id",
+            [':sid' => $schedId]
         )->queryAll();
 
         $rows = [];
         foreach ($taskRows as $t) {
-            // task_unit_qty: qty per unit from schedule-task screen (no wo_task_rates override)
-            $stRow = $db->createCommand(
-                "SELECT task_qty FROM schedule_task_new WHERE activity_Id=:sid AND task_Id=:tid LIMIT 1",
-                [':sid' => $schedId, ':tid' => $t['id']]
-            )->queryOne();
-            $taskUnitQty = ($stRow && $stRow['task_qty'] > 0) ? (float)$stRow['task_qty'] : (float)$t['productivity'];
+            // Quantity per unit of the activity, as set for this project (0 if not set —
+            // never the productivity).
+            $taskUnitQty = (float)$t['task_qty'];
 
             $savedRate = $db->createCommand(
                 "SELECT rate, task_qty, total_qty, selected FROM wo_task_rates WHERE activity_id=:aid AND task_id=:tid LIMIT 1",
@@ -1384,16 +1385,18 @@ class ProcurementController extends Controller
                 $masterActId = $wbn ? (int)$wbn['activity_Id'] : $actId;
 
                 $taskRows = $db->createCommand(
-                    "SELECT id, task_name, task_unit FROM activity_tasks WHERE activity_id=:id ORDER BY sort_order ASC",
-                    [':id' => $masterActId]
+                    "SELECT stn.task_Id AS id, COALESCE(stn.task_name, at.task_name) AS task_name,
+                            COALESCE(stn.task_unit, at.task_unit) AS task_unit, stn.task_qty
+                     FROM schedule_task_new stn LEFT JOIN activity_tasks at ON at.id = stn.task_Id
+                     WHERE stn.activity_Id = (SELECT id FROM scheduleactivities WHERE activity_id=:aid AND projectId=:pid AND status=0 LIMIT 1)
+                       AND stn.status = 0 AND stn.task_Id > 0
+                     ORDER BY COALESCE(stn.sort_order, 999999), stn.id",
+                    [':aid' => $actId, ':pid' => $projectid]
                 )->queryAll();
 
                 $hydratedTasks = [];
                 foreach ($taskRows as $tr) {
-                    $stRow = $db->createCommand(
-                        "SELECT task_qty FROM schedule_task_new WHERE activity_Id=(SELECT id FROM scheduleactivities WHERE activity_id=:aid AND projectId=:pid AND status=0 LIMIT 1) AND task_Id=:tid LIMIT 1",
-                        [':aid' => $actId, ':pid' => $projectid, ':tid' => $tr['id']]
-                    )->queryOne();
+                    $stRow = ['task_qty' => $tr['task_qty']];
                     $savedRate = $db->createCommand(
                         "SELECT rate, task_qty, selected FROM wo_task_rates WHERE activity_id=:aid AND task_id=:tid LIMIT 1",
                         [':aid' => $actId, ':tid' => $tr['id']]

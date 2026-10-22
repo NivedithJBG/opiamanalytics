@@ -154,8 +154,10 @@ class StorekeeperController extends Controller
         $rows = $db->createCommand("
             SELECT
                 at.id             AS task_id,
-                at.task_name,
-                at.task_unit,
+                COALESCE((SELECT stn.task_name FROM schedule_task_new stn JOIN scheduleactivities sa ON sa.id = stn.activity_Id AND sa.status = 0
+                          WHERE sa.activity_id = pern.activity_id AND stn.task_Id = at.id AND stn.task_name IS NOT NULL LIMIT 1), at.task_name) AS task_name,
+                COALESCE((SELECT stn.task_unit FROM schedule_task_new stn JOIN scheduleactivities sa ON sa.id = stn.activity_Id AND sa.status = 0
+                          WHERE sa.activity_id = pern.activity_id AND stn.task_Id = at.id AND stn.task_unit IS NOT NULL LIMIT 1), at.task_unit) AS task_unit,
                 pern.activity_id,
                 wan.activity_Name AS activity_name
             FROM pricing_estimate_resources_new pern

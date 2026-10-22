@@ -21439,22 +21439,9 @@ public function actionActivitymusterprocess()
                     ], 'id = ' . $existingId)->execute();
                     $submittedIds[] = $existingId;
 
-                    // Two-way sync with the Gantt's per-project "Tasks" popup
-                    // (ProjectsmainController::actionWbsactivityupdate), which
-                    // edits its own project-scoped copy in schedule_task_new —
-                    // without this, a Library edit here never reaches any
-                    // project already using this task, and the two screens
-                    // silently drift apart (see actionWbsactivityupdate's own
-                    // sync back into activity_tasks for the reverse direction).
-                    // Budgeted_Duration is recomputed with the same formula
-                    // actionWbsactivityupdate uses when it writes this table.
-                    $connection->createCommand(
-                        "UPDATE schedule_task_new
-                         SET activity_name=:n, task_productivity=:pr,
-                             Budgeted_Duration = CASE WHEN task_qty > 0 AND :pr2 > 0 THEN ROUND(task_qty / :pr3, 4) ELSE 0 END
-                         WHERE task_Id=:tid",
-                        [':n' => $taskName, ':pr' => $newProd, ':pr2' => $newProd, ':pr3' => $newProd, ':tid' => $existingId]
-                    )->execute();
+                    // The Activity Library is only the template: editing it here
+                    // does not change projects that already use this task (each
+                    // project keeps its own copy in schedule_task_new).
                 } else {
                     $connection->createCommand()->insert('activity_tasks', [
                         'activity_id'  => $activityId,
@@ -22251,7 +22238,18 @@ public function actionActivitymusterprocess()
 
         $db = \Yii::$app->db;
 
+        // The project's own tasks for this activity (its Gantt bar's task copy);
+        // the library's only if the activity is not on the Gantt yet.
         $tasks = $db->createCommand(
+            "SELECT stn.task_Id AS id, COALESCE(stn.task_name, at.task_name) AS task_name, COALESCE(stn.task_unit, at.task_unit) AS task_unit
+             FROM schedule_task_new stn
+             JOIN scheduleactivities sa ON sa.id = stn.activity_Id AND sa.status = 0
+             LEFT JOIN activity_tasks at ON at.id = stn.task_Id
+             WHERE sa.activity_id = :w AND stn.status = 0 AND stn.task_Id > 0
+             ORDER BY COALESCE(stn.sort_order, 999999), stn.id",
+            [':w' => $wanId]
+        )->queryAll();
+        if (!$tasks) $tasks = $db->createCommand(
             "SELECT id, task_name, task_unit FROM activity_tasks WHERE activity_id=:a ORDER BY sort_order ASC, id ASC",
             [':a' => $libActId]
         )->queryAll();
