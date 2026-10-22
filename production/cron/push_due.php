@@ -17,4 +17,5 @@ $config = require 'config/web.php';
 new yii\web\Application($config);
 $ist = new DateTime('now', new DateTimeZone('Asia/Kolkata'));
 @file_put_contents(Yii::getAlias('@runtime') . '/push_due_date.txt', $ist->format('Y-m-d'));
-echo $ist->format('Y-m-d H:i'), ' pushed ', app\controllers\ProjectsmainController::cfPushDuePlans(), " notification(s)\n";
+echo $ist->format('Y-m-d H:i'), ' pushed ', app\controllers\ProjectsmainController::cfPushDuePlans(), ' action plan and ',
+     app\controllers\ProjectsmainController::cfPushNewItems(), " message/alert notification(s)\n";

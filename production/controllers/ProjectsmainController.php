@@ -4188,6 +4188,8 @@ class ProjectsmainController extends Controller
             @file_put_contents($flag, $ist->format('Y-m-d'));
             try { self::cfPushDuePlans(); } catch (\Throwable $e) { Yii::warning('Due push failed: ' . $e->getMessage()); }
         }
+        // New messages and alerts are pushed to phones (first refresh that sees them).
+        try { self::cfPushNewItems(); } catch (\Throwable $e) { Yii::warning('Message/alert push failed: ' . $e->getMessage()); }
         // archived = 1 when the item has been archived from the window.
         $messages = $db->createCommand(
             "SELECT id, title, message AS text, message_read AS archived FROM messages
@@ -4284,6 +4286,54 @@ class ProjectsmainController extends Controller
             ]);
             $db->createCommand()->update('action_plans', ['last_push_date' => $today], ['id' => $pl['id']])->execute();
         }
+        return $n;
+    }
+
+    // Pushes every message and alert created since the last run to the phones of
+    // the people concerned — whatever created them (chatbot ROI health check,
+    // future message screen ...). Messages go to their recipient; an alert goes
+    // to its assigned user, else its owner, else everyone with notifications on.
+    // Runs from the 2-minute notification refresh and the daily job; the first
+    // run only records where it starts, so old items are not pushed.
+    public static function cfPushNewItems()
+    {
+        $db = Yii::$app->db;
+        $file = Yii::getAlias('@runtime') . '/push_state.json';
+        $fh = @fopen($file, 'c+');
+        if (!$fh || !flock($fh, LOCK_EX | LOCK_NB)) { if ($fh) fclose($fh); return 0; }   // another run is busy
+        $st = json_decode(stream_get_contents($fh), true) ?: [];
+        $maxMsg = (int)$db->createCommand("SELECT COALESCE(MAX(id), 0) FROM messages")->queryScalar();
+        $maxAl = (int)$db->createCommand("SELECT COALESCE(MAX(notf_id), 0) FROM notifications")->queryScalar();
+        $n = 0;
+        if (isset($st['msg'], $st['alert'])) {
+            foreach ($db->createCommand(
+                "SELECT m.id, m.to_user_id, m.title, m.message, u.username AS sender FROM messages m LEFT JOIN user u ON u.id = m.from_user_id
+                 WHERE m.id > :i AND m.draft = 0 ORDER BY m.id", [':i' => (int)$st['msg']])->queryAll() as $m) {
+                $n += \app\components\WebPush::sendToUser((int)$m['to_user_id'], [
+                    'title' => 'Message' . ($m['sender'] ? ' from ' . $m['sender'] : '') . ($m['title'] ? ': ' . $m['title'] : ''),
+                    'body' => mb_substr(strip_tags((string)$m['message']), 0, 160), 'tag' => 'opiam-msg-' . $m['id'], 'url' => '/projectsmain/index',
+                ]);
+            }
+            \app\components\WebPush::ensureTables();
+            $everyone = null;
+            foreach ($db->createCommand(
+                "SELECT n.notf_id, n.type, n.remarks, n.user_id, n.assigned_user, p.Name AS project FROM notifications n
+                 LEFT JOIN projects p ON p.Project_Id = n.itemid
+                 WHERE n.notf_id > :i AND n.type LIKE '%Health%' ORDER BY n.notf_id", [':i' => (int)$st['alert']])->queryAll() as $a) {
+                $to = (int)$a['assigned_user'] ?: (int)$a['user_id'];
+                if ($to) $users = [$to];
+                else $users = $everyone ?? ($everyone = $db->createCommand("SELECT DISTINCT user_id FROM push_subscriptions")->queryColumn());
+                foreach ($users as $u) {
+                    $n += \app\components\WebPush::sendToUser((int)$u, [
+                        'title' => 'Alert: ' . $a['type'], 'body' => mb_substr((string)($a['remarks'] ?: $a['project']), 0, 160),
+                        'tag' => 'opiam-alert-' . $a['notf_id'], 'url' => '/projectsmain/index',
+                    ]);
+                }
+            }
+        }
+        ftruncate($fh, 0); rewind($fh);
+        fwrite($fh, json_encode(['msg' => max($maxMsg, (int)($st['msg'] ?? 0)), 'alert' => max($maxAl, (int)($st['alert'] ?? 0))]));
+        flock($fh, LOCK_UN); fclose($fh);
         return $n;
     }
 
