@@ -4644,6 +4644,15 @@ class ProjectsmainController extends Controller
                 : (int)round((strtotime($cycEnd) - strtotime($barStart)) / 86400) + 1;
             $daysIn = max(0, min($barDays, $daysIn));
             $cycleQty = max(0, (float)$a['quantity'] * $daysIn / $barDays - (float)$a['executed']);
+            // Cycle Qnty (Project Cost popup): quantity planned in this cycle only =
+            // per-day production x the bar's days inside this cycle; nothing deducted,
+            // nothing carried forward. Cycle 1 also takes days before its start, the
+            // last cycle days after its end.
+            $bS = strtotime($barStart); $bE = $bS + ($barDays - 1) * 86400;
+            $cS = ($cyc && (int)$cyc['cycle'] > 1) ? strtotime($cyc['start']) : $bS;
+            $cE = $cycEnd !== null ? strtotime($cycEnd) : $bE;
+            $inCycle = max(0, (int)round((min($bE, $cE) - max($bS, $cS)) / 86400) + 1);
+            $cycleOnlyQty = (float)$a['quantity'] * min($barDays, $inCycle) / $barDays;
             $currentItems[] = [
                 'sched_id' => (int)$a['id'],
                 'wan_id'   => (int)$a['wan_id'],
@@ -4654,6 +4663,7 @@ class ProjectsmainController extends Controller
                 'quantity' => (float)$a['quantity'],
                 'executed' => (float)$a['executed'],
                 'remaining' => round($cycleQty, 2),
+                'cycle_qty' => round($cycleOnlyQty, 2),
                 'rate'     => (float)$a['rate'],
                 'days'     => $curDays,
                 'duration' => $curDuration,
