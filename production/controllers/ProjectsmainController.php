@@ -2557,14 +2557,18 @@ class ProjectsmainController extends Controller
                 $g['ti_mode'] = 'br';
                 $g['ti'] = $g['adv'] + $br + $g['wip'];
             } else {
-                $billAmt = (float)$db->createCommand(
-                    "SELECT COALESCE(SUM(amount),0) FROM journalvoucher WHERE project_id=:p AND debitacnt IN ($in) AND date(date) = :d",
-                    [':p' => $pid, ':d' => $lastBill])->queryScalar();
+                // Left-over from earlier bills = Bills Receivable balance on the day before this bill.
+                $carry = max(0, (float)$db->createCommand(
+                    "SELECT COALESCE(SUM(x),0) FROM (
+                       SELECT amount x FROM voucher WHERE project_id=:p1 AND account_id IN ($in) AND date(date) < :d1
+                       UNION ALL SELECT -amount FROM voucher WHERE project_id=:p2 AND creditacnt IN ($in) AND date(date) < :d2
+                       UNION ALL SELECT amount FROM journalvoucher WHERE project_id=:p3 AND debitacnt IN ($in) AND date(date) < :d3
+                       UNION ALL SELECT -amount FROM journalvoucher WHERE project_id=:p4 AND creditacnt IN ($in) AND date(date) < :d4) t",
+                    [':p1' => $pid, ':p2' => $pid, ':p3' => $pid, ':p4' => $pid, ':d1' => $lastBill, ':d2' => $lastBill, ':d3' => $lastBill, ':d4' => $lastBill])->queryScalar());
                 $prevBill = $db->createCommand(
                     "SELECT MAX(date(date)) FROM journalvoucher WHERE project_id=:p AND debitacnt IN ($in) AND date(date) < :d",
                     [':p' => $pid, ':d' => $lastBill])->queryScalar();
                 $deducted = $costAtBill - ($prevBill ? $this->_cfFlowGroups($pid, $prevBill, true)['wip_cost'] : 0.0);
-                $carry = max(0, $br - $billAmt);
                 $g['ti_mode'] = 'billed';
                 $g['ti_deducted'] = $deducted; $g['ti_carry'] = $carry;
                 $g['ti'] = $g['adv'] + $carry + $deducted;
