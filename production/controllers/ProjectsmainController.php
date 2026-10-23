@@ -2537,6 +2537,28 @@ class ProjectsmainController extends Controller
         return $g;
     }
 
+    // Average investment in the project from its first transaction to today: the
+    // Total Investment after each transaction date, weighted by the number of days
+    // it stayed at that value (until the next transaction date, or today).
+    private function _cfAverageInvestment($pid)
+    {
+        $dates = Yii::$app->db->createCommand(
+            "SELECT DISTINCT d FROM (SELECT date(date) d FROM voucher WHERE project_id=:p1
+               UNION SELECT date(date) FROM journalvoucher WHERE project_id=:p2) t
+             WHERE d IS NOT NULL AND d > '1900-01-01' AND d <= CURDATE() ORDER BY d", [':p1' => $pid, ':p2' => $pid]
+        )->queryColumn();
+        if (!$dates) return ['avg' => null, 'from' => null];
+        $sum = 0.0; $days = 0;
+        $end = strtotime(date('Y-m-d')) + 86400;   // today counts as a full day
+        foreach ($dates as $i => $d) {
+            $next = isset($dates[$i + 1]) ? strtotime($dates[$i + 1]) : $end;
+            $w = max(0, (int)round(($next - strtotime($d)) / 86400));
+            $sum += $this->_cfFlowGroups($pid, $d)['ti'] * $w;
+            $days += $w;
+        }
+        return ['avg' => $days ? round($sum / $days, 2) : null, 'from' => $dates[0]];
+    }
+
     // Cycle-to-cycle cash flow: a cycle ends on each date a client payment is
     // credited to Bills Receivable; the last row is the open cycle up to today.
     // Each row's amount is Total Investment at the end of the cycle (= money tied up).
@@ -3048,7 +3070,9 @@ class ProjectsmainController extends Controller
                          'actual' => $g ? round($g['ti'], 2) : null,
                          'actual_adv' => $g ? round($g['adv'], 2) : null, 'actual_wip' => $g ? round($g['wip'], 2) : null];
         }
-        return json_encode(['error' => 'No', 'cycles' => $cycles, 'adv_target' => $advTarget, 'current_cycle' => $cur]);
+        $avg = $this->_cfAverageInvestment($pid);
+        return json_encode(['error' => 'No', 'cycles' => $cycles, 'adv_target' => $advTarget, 'current_cycle' => $cur,
+                            'avg_ti' => $avg['avg'], 'avg_from' => $avg['from']]);
 
         $allRows = $this->_cfNetInvestmentPerCycleRows($pid);
         $rows = array_values(array_filter($allRows, function($r) { return $r['name'] !== 'Current'; }));

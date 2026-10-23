@@ -1271,7 +1271,7 @@ function _cfNetInvCycleBarsHtml(cyc){
     return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
         + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg>';
 }
-function _cfShowNetInvCycles(cycles){
+function _cfShowNetInvCycles(cycles, info){
     $('#cf-netinv-breakdown-win').remove();
     window._cfNetInvCycles = cycles;
     var winW = 780, winH = 440, MIN_W = 480, MIN_H = 260;
@@ -1290,12 +1290,14 @@ function _cfShowNetInvCycles(cycles){
         else rsHtml += 'left:-4px;bottom:-4px;width:14px;height:14px;cursor:sw-resize;';
         rsHtml += 'z-index:20;background:transparent;"></div>';
     });
-    // Right side: actual Total Investment today (current cycle) and the average of
-    // the actual Total Investment of every cycle reached so far.
+    // Right side: actual Total Investment today (current cycle) and the average
+    // investment in the project — Total Investment weighted by days, from the first
+    // transaction to today (avg_ti from actionCfnetinvestmentbreakdown).
     var reached = cycles.filter(function(c){ return c.actual !== null && c.actual !== undefined; });
     var curC = cycles.filter(function(c){ return c.current; })[0];
     var curAct = curC && curC.actual !== null && curC.actual !== undefined ? +curC.actual : (reached.length ? +reached[reached.length - 1].actual : null);
-    var avgAct = reached.length ? reached.reduce(function(s, c){ return s + (+c.actual || 0); }, 0) / reached.length : null;
+    var avgAct = info && info.avg_ti !== null && info.avg_ti !== undefined ? +info.avg_ti : null;
+    var avgFrom = info && info.avg_from ? new Date(info.avg_from + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }) : '';
     function statBox(title, v, note){
         return '<div style="border:1px solid #dde2e9;border-radius:6px;padding:8px 10px;text-align:center;">'
             + '<div style="font-size:12px;font-weight:700;color:#081142;text-transform:uppercase;letter-spacing:.3px;">' + title + '</div>'
@@ -1317,7 +1319,7 @@ function _cfShowNetInvCycles(cycles){
         + '<div id="cf-ni-chart" style="flex:1;min-width:0;overflow-y:auto;">' + _cfNetInvCycleBarsHtml(cycles) + '</div>'
         + '<div style="flex:none;width:130px;display:flex;flex-direction:column;justify-content:center;gap:14px;font-family:Barlow Condensed,Arial;">'
         + statBox('Total Investment', curAct, 'actual, today')
-        + statBox('Average Investment', avgAct, 'actual, per cycle to date')
+        + statBox('Average Investment', avgAct, 'weighted by days' + (avgFrom ? ', ' + avgFrom + ' to today' : ''))
         + '</div>'
         + '</div></div>';
     $('body').append(html);
@@ -1440,7 +1442,7 @@ $(document).on('click', '#cf-netinvestment', function(e){
     _cfQueueAjax({
         type: 'POST', url: '../projectsmain/cfnetinvestmentbreakdown', dataType: 'json',
         success: function(d){
-            if (d && d.error === 'No') { _cfShowNetInvCycles(d.cycles || []); }
+            if (d && d.error === 'No') { _cfShowNetInvCycles(d.cycles || [], d); }
         }
     });
 });
@@ -1973,7 +1975,7 @@ $(document).on('click', '#cf-currliab-tip-chart [data-cflbar="ti"]', function(e)
     e.stopPropagation();
     $.ajax({
         type: 'POST', url: '../projectsmain/cfnetinvestmentbreakdown', dataType: 'json',
-        success: function(d){ if (d && d.error === 'No') { _cfShowNetInvCycles(d.cycles || []); } }
+        success: function(d){ if (d && d.error === 'No') { _cfShowNetInvCycles(d.cycles || [], d); } }
     });
 });
 
