@@ -4158,7 +4158,7 @@ if($action=='login')
       <div class="panel" style="grid-column:3;grid-row:2;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">Project Expenditure</div><div class="gp" style="background:#eceef0;" id="cf-projectexpenditure"></div></div>
       <div class="panel" style="grid-column:3;grid-row:3;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">Contribution Margin</div><div class="gp" style="background:#eceef0;" id="cf-contribmargin"></div></div>
       <div class="panel" style="grid-column:4;grid-row:1;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">ROI</div><div class="gp" style="background:#eceef0;" id="cf-roi"></div></div>
-      <div class="panel" style="grid-column:4;grid-row:2;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">FREE CASH</div><div class="gp" style="background:#eceef0;" id="cf-expenses"></div></div>
+      <div class="panel" style="grid-column:4;grid-row:2;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">FREE CASH FROM PROJECT</div><div class="gp" style="background:#eceef0;" id="cf-expenses"></div></div>
       <div class="panel" style="grid-column:4;grid-row:3;background:#eceef0;"><div class="ph" style="background:#1a0a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Investments &amp; Liabilities</div><div class="gp" style="background:#eceef0;" id="cf-currentliabilities"></div></div>
     </div>
     </div>
