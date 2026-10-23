@@ -1241,7 +1241,7 @@ function _cfNetInvCycleBarsHtml(cyc){
     cyc.forEach(function(c){ maxV = Math.max(maxV, tot(c), has(c) ? +c.actual || 0 : 0); });
     var W = 600, H = 300, base = 262, top = 40, pad = 20;
     var slot = (W - 2 * pad) / cyc.length;
-    var barW = Math.min(slot * 0.5, 90), ovW = barW * 0.55;
+    var barW = Math.min(slot * 0.5, 90);
     var hOf = function(v){ return maxV > 0 ? Math.max(0, Math.round((v / maxV) * (base - top))) : 0; };
     var L = function(v){ return (v / 100000).toFixed(1); };
     var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1253,8 +1253,12 @@ function _cfNetInvCycleBarsHtml(cyc){
         var topY = base - h;
         if (has(c)) {
             var a = +c.actual || 0, hA = hOf(a);
-            bars += '<rect x="' + (cx - ovW / 2).toFixed(1) + '" y="' + (base - hA) + '" width="' + ovW.toFixed(1) + '" height="' + hA + '" fill="' + (a >= v ? GB : RO) + '"><title>Actual Total Investment ' + L(a) + ' L (WIP ' + L(+c.actual_wip || 0) + ' + Advances ' + L(+c.actual_adv || 0) + ')</title></rect>';
-            // Actual value at the top of the overlay bar: white inside the target bar, black above it.
+            // Same width as the target bar: the part above the target (exceeded) green-blue,
+            // the part of the target not reached (short) red-orange.
+            var tip = 'Actual Total Investment ' + L(a) + ' L (WIP ' + L(+c.actual_wip || 0) + ' + Advances ' + L(+c.actual_adv || 0) + '), target ' + L(v) + ' L';
+            if (hA > h) bars += '<rect x="' + (cx - barW / 2).toFixed(1) + '" y="' + (base - hA) + '" width="' + barW.toFixed(1) + '" height="' + (hA - h) + '" fill="' + GB + '"><title>' + tip + '</title></rect>';
+            else if (h > hA) bars += '<rect x="' + (cx - barW / 2).toFixed(1) + '" y="' + (base - h) + '" width="' + barW.toFixed(1) + '" height="' + (h - hA) + '" fill="' + RO + '"><title>' + tip + '</title></rect>';
+            // Actual value at the top of the actual: white inside the short part, black above the bar.
             var inside = (base - hA) - topY > 18;
             bars += '<text x="' + cx.toFixed(1) + '" y="' + (base - hA - 5) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + (inside ? '#fff' : '#000') + '">' + L(a) + '</text>';
             if (!inside) topY = Math.min(topY, base - hA - 18);
@@ -1304,8 +1308,8 @@ function _cfShowNetInvCycles(cycles){
         + '</div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
         + '<span><span style="display:inline-block;width:14px;height:10px;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Target</span>'
-        + '<span><span style="display:inline-block;width:14px;height:10px;background:#2ba899;margin-right:5px;vertical-align:middle;"></span>Actual at or above target</span>'
-        + '<span><span style="display:inline-block;width:14px;height:10px;background:#d84a30;margin-right:5px;vertical-align:middle;"></span>Actual below target</span>'
+        + '<span><span style="display:inline-block;width:14px;height:10px;background:#2ba899;margin-right:5px;vertical-align:middle;"></span>Exceeded target</span>'
+        + '<span><span style="display:inline-block;width:14px;height:10px;background:#d84a30;margin-right:5px;vertical-align:middle;"></span>Short of target</span>'
         + '</div>'
         + '<div style="flex:1;min-width:0;min-height:0;display:flex;gap:12px;overflow:hidden;padding:10px 16px 16px;box-sizing:border-box;">'
         + '<div id="cf-ni-chart" style="flex:1;min-width:0;overflow-y:auto;">' + _cfNetInvCycleBarsHtml(cycles) + '</div>'
