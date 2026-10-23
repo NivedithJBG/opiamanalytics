@@ -3787,10 +3787,15 @@ function _cfShowBankBreakdown(points){
 // cfnetinvestmentbreakdown (same cycles as the Total Investment popup).
 function _cfBankTiLinesSvg(cyc){
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycles.</div>';
+    // Two lines over the billing cycles reached so far (cycle end, today for the
+    // current cycle): actual Total Investment and the Bills Receivable balance.
     var has = function(c){ return c.actual !== null && c.actual !== undefined; };
-    var proj = function(c){ return (+c.wip || 0) + (+c.adv || 0); };
+    var SER = [
+        { key: 'actual',    col: '#2ba899', name: 'Total Investment' },
+        { key: 'actual_br', col: '#6a4c93', name: 'Bills Receivable' }
+    ];
     var maxV = 0, minV = 0;
-    cyc.forEach(function(c){ maxV = Math.max(maxV, proj(c), has(c) ? +c.actual : 0); minV = Math.min(minV, has(c) ? +c.actual : 0); });
+    cyc.forEach(function(c){ if (has(c)) SER.forEach(function(s){ var v = +c[s.key] || 0; maxV = Math.max(maxV, v); minV = Math.min(minV, v); }); });
     // X axis = period (billing cycles), Y axis = value in Lakhs, with tick marks.
     var W = 660, H = 340, base = 270, top = 30, padL = 70, padR = 24;
     var rawStep = Math.max(1, (maxV - minV) / 100000 / 5), mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
@@ -3800,41 +3805,34 @@ function _cfBankTiLinesSvg(cyc){
     var slot = (W - padL - padR) / cyc.length;
     var xOf = function(i){ return padL + (i + 0.5) * slot; };
     var yOf = function(v){ return base - ((v - minV) / (maxV - minV)) * (base - top); };
-    var axes = '';
-    for (var tv = minV; tv <= maxV + 1; tv += tick) {
-        var ty = yOf(tv).toFixed(1);
-        axes += '<line x1="' + padL + '" y1="' + ty + '" x2="' + (W - padR) + '" y2="' + ty + '" stroke="#e3e7ee"/>'
-            + '<line x1="' + (padL - 5) + '" y1="' + ty + '" x2="' + padL + '" y2="' + ty + '" stroke="#555"/>'
-            + '<text x="' + (padL - 8) + '" y="' + (+ty + 4) + '" text-anchor="end" font-size="11" fill="#333">' + (tv / 100000).toFixed(tick < 100000 ? 1 : 0) + '</text>';
-    }
-    axes += '<line x1="' + padL + '" y1="' + top + '" x2="' + padL + '" y2="' + base + '" stroke="#555"/>'
-        + '<line x1="' + padL + '" y1="' + base + '" x2="' + (W - padR) + '" y2="' + base + '" stroke="#555"/>'
-        + '<text x="16" y="' + ((top + base) / 2) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700" transform="rotate(-90 16 ' + ((top + base) / 2) + ')">Total Investment (Lakhs)</text>'
-        + '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700">Billing cycle (period)</text>';
-    var L = function(v){ return (v / 100000).toFixed(1); };
+    var L = function(v){ return (v / 100000).toFixed(2); };
     var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     var lbl = function(c){ var m = /^(\d{2})(\d{2})-(\d{2})/.exec(c.end_date || ''); return m ? mon[+m[3] - 1] + ' ' + m[2] : (c.end_label || c.name); };
-    var PC = '#3a4a5f', AC = '#2ba899';
-    var pPts = cyc.map(function(c, i){ return xOf(i).toFixed(1) + ',' + yOf(proj(c)).toFixed(1); }).join(' ');
-    var aPts = [];
-    cyc.forEach(function(c, i){ if (has(c)) aPts.push(xOf(i).toFixed(1) + ',' + yOf(+c.actual).toFixed(1)); });
-    var out = axes
+    var out = '';
+    for (var tv = minV; tv <= maxV + 1; tv += tick) {
+        var ty = yOf(tv).toFixed(1);
+        out += '<line x1="' + padL + '" y1="' + ty + '" x2="' + (W - padR) + '" y2="' + ty + '" stroke="#e3e7ee"/>'
+            + '<line x1="' + (padL - 5) + '" y1="' + ty + '" x2="' + padL + '" y2="' + ty + '" stroke="#555"/>'
+            + '<text x="' + (padL - 8) + '" y="' + (+ty + 4) + '" text-anchor="end" font-size="11" fill="#333">' + (tv / 100000).toFixed(0) + '</text>';
+    }
+    out += '<line x1="' + padL + '" y1="' + top + '" x2="' + padL + '" y2="' + base + '" stroke="#555"/>'
+        + '<line x1="' + padL + '" y1="' + base + '" x2="' + (W - padR) + '" y2="' + base + '" stroke="#555"/>'
         + (minV < 0 ? '<line x1="' + padL + '" y1="' + yOf(0).toFixed(1) + '" x2="' + (W - padR) + '" y2="' + yOf(0).toFixed(1) + '" stroke="#999"/>' : '')
-        + '<polyline points="' + pPts + '" fill="none" stroke="' + PC + '" stroke-width="2.5" stroke-dasharray="6 4"/>'
-        + (aPts.length > 1 ? '<polyline points="' + aPts.join(' ') + '" fill="none" stroke="' + AC + '" stroke-width="3"/>' : '');
+        + '<text x="16" y="' + ((top + base) / 2) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700" transform="rotate(-90 16 ' + ((top + base) / 2) + ')">Lakhs</text>'
+        + '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700">Billing cycle (period)</text>';
+    SER.forEach(function(s, si){
+        var pts = [];
+        cyc.forEach(function(c, i){ if (has(c)) pts.push([xOf(i), yOf(+c[s.key] || 0), +c[s.key] || 0]); });
+        if (pts.length > 1) out += '<polyline points="' + pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="3"/>';
+        pts.forEach(function(p){
+            out += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="5" fill="' + s.col + '"><title>' + s.name + ' ' + L(p[2]) + ' L</title></circle>'
+                + '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] + (si === 0 ? -9 : 18)).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + s.col + '">' + L(p[2]) + '</text>';
+        });
+    });
     cyc.forEach(function(c, i){
-        var x = xOf(i), yp = yOf(proj(c)), cur = !!c.current;
-        out += '<circle cx="' + x.toFixed(1) + '" cy="' + yp.toFixed(1) + '" r="4" fill="' + PC + '"><title>Projected ' + L(proj(c)) + ' L</title></circle>';
-        var ya = has(c) ? yOf(+c.actual) : null;
-        // Projected value above its point unless the actual sits above it.
-        var pUp = ya === null || ya >= yp;
-        out += '<text x="' + x.toFixed(1) + '" y="' + (pUp ? yp - 9 : yp + 17).toFixed(1) + '" text-anchor="middle" font-size="11" fill="' + PC + '">' + L(proj(c)) + '</text>';
-        if (ya !== null) {
-            out += '<circle cx="' + x.toFixed(1) + '" cy="' + ya.toFixed(1) + '" r="5" fill="' + AC + '"><title>Actual ' + L(+c.actual) + ' L</title></circle>'
-                + '<text x="' + x.toFixed(1) + '" y="' + (pUp ? ya + 18 : ya - 9).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#000">' + L(+c.actual) + '</text>';
-        }
+        var x = xOf(i);
         out += '<line x1="' + x.toFixed(1) + '" y1="' + base + '" x2="' + x.toFixed(1) + '" y2="' + (base + 5) + '" stroke="#555"/>'
-            + '<text x="' + x.toFixed(1) + '" y="' + (base + 20) + '" text-anchor="middle" font-size="12" fill="#111"' + (cur ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
+            + '<text x="' + x.toFixed(1) + '" y="' + (base + 20) + '" text-anchor="middle" font-size="12" fill="#111"' + (c.current ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
     return '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible;">' + out + '</svg>';
 }
@@ -3843,11 +3841,11 @@ function _cfShowBankTiLines(cycles){
     var winW = 720, winH = 430;
     var html = '<div id="cf-bank-ti-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - winW) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - winH) / 2) + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:360px;min-height:260px;max-width:98vw;resize:both;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + '<div id="cf-bank-ti-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#081142;cursor:move;user-select:none;touch-action:none;">'
-        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Total Investment per Cycle (Lakhs)</span>'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Total Investment and Bills Receivable per Cycle (Lakhs)</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
-        + '<span><span style="display:inline-block;width:18px;border-top:2.5px dashed #3a4a5f;margin-right:5px;vertical-align:middle;"></span>Projected</span>'
-        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #2ba899;margin-right:5px;vertical-align:middle;"></span>Actual</span></div>'
+        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #2ba899;margin-right:5px;vertical-align:middle;"></span>Total Investment</span>'
+        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #6a4c93;margin-right:5px;vertical-align:middle;"></span>Bills Receivable</span></div>'
         + '<div style="flex:1;min-height:0;overflow:auto;padding:10px 16px 16px;">' + _cfBankTiLinesSvg(cycles) + '</div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;

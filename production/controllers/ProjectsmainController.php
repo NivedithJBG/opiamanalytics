@@ -3109,7 +3109,8 @@ class ProjectsmainController extends Controller
                          'target' => round($advTarget + (float)$c['target'], 2), 'adv' => round($advTarget, 2), 'wip' => round((float)$c['target'], 2),
                          'end_label' => $c['end_label'] ?? '', 'current' => $k === $cur,
                          'actual' => $g ? round($g['ti'], 2) : null,
-                         'actual_adv' => $g ? round($g['adv'], 2) : null, 'actual_wip' => $g ? round($g['wip'], 2) : null];
+                         'actual_adv' => $g ? round($g['adv'], 2) : null, 'actual_wip' => $g ? round($g['wip'], 2) : null,
+                         'actual_br' => $g ? round($g['br'], 2) : null];
         }
         $avg = $this->_cfAverageInvestment($pid);
         return json_encode(['error' => 'No', 'cycles' => $cycles, 'adv_target' => $advTarget, 'current_cycle' => $cur,
