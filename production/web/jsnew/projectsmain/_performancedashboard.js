@@ -653,7 +653,7 @@ function _cfShowCostCyclePopup(d){
     var total = 0, rows = '', grp = null, sub = 0, no = 0;
     function closeGroup(){
         if (grp === null) return;
-        rows += '<tr><td colspan="6" style="text-align:right;font-weight:700;color:#081142;">Subtotal &mdash; ' + esc(grp) + '</td><td style="font-weight:700;color:#081142;">' + n2(sub) + '</td><td></td><td></td><td></td></tr>';
+        rows += '<tr><td colspan="6" style="text-align:right;font-weight:700;color:#081142;">Subtotal &mdash; ' + esc(grp) + '</td><td style="font-weight:700;color:#081142;">' + n2(sub) + '</td><td></td><td class="cf-rv-sub" data-g="' + (window._cfCostGroups.length - 1) + '" style="font-weight:700;color:#081142;"></td><td></td></tr>';
     }
     // Group sections kept for the Activities popup (group heading click).
     window._cfCostGroups = [];
@@ -671,12 +671,12 @@ function _cfShowCostCyclePopup(d){
         no++;
         sub += +it.cost || 0;
         total += +it.cost || 0;
-        rows += '<tr class="cf-cc-row" data-schedid="' + (+it.sched_id || 0) + '" style="cursor:pointer;" title="Open the Cost Dashboard"><td>' + no + '</td><td style="text-align:left;">' + esc(it.name) + '</td><td>' + esc(it.unit) + '</td>'
+        rows += '<tr class="cf-cc-row" data-g="' + (window._cfCostGroups.length - 1) + '" data-schedid="' + (+it.sched_id || 0) + '" style="cursor:pointer;" title="Open the Cost Dashboard"><td>' + no + '</td><td style="text-align:left;">' + esc(it.name) + '</td><td>' + esc(it.unit) + '</td>'
             + '<td>' + n2(it.quantity) + '</td><td>' + n2(it.remaining) + '</td><td>' + n2(it.rate) + '</td>'
             + '<td style="font-weight:700;">' + n2(it.cost) + '</td>'
             // Quoted rate: typed here for now (to be filled from the BOQ later).
-            + '<td style="padding:2px 4px;"><input type="text" inputmode="decimal" class="cf-qtd-in" data-wan="' + (+it.wan_id || 0) + '" value="' + (it.qtd_rate === null || it.qtd_rate === undefined ? '' : (+it.qtd_rate).toFixed(2)) + '" placeholder="-" title="Quoted rate (from the BOQ, or type it here and press Enter)" style="width:72px;box-sizing:border-box;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:3px 5px;font:inherit;background:#fffbe6;"></td>'
-            + '<td>-</td><td>-</td></tr>';
+            + '<td style="padding:2px 4px;"><input type="text" inputmode="decimal" class="cf-qtd-in" data-wan="' + (+it.wan_id || 0) + '" data-rq="' + ((+it.quantity || 0) - (+it.remaining || 0)) + '" value="' + (it.qtd_rate === null || it.qtd_rate === undefined ? '' : (+it.qtd_rate).toFixed(2)) + '" placeholder="-" title="Quoted rate (from the BOQ, or type it here and press Enter)" style="width:72px;box-sizing:border-box;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:3px 5px;font:inherit;background:#fffbe6;"></td>'
+            + '<td class="cf-rv"></td><td>-</td></tr>';
     });
     closeGroup();
     if (!items.length) rows = '<tr><td colspan="10" style="text-align:center;color:#666;padding:12px;">' + ((d.cycles || []).length ? 'No activities in the current billing cycle.' : 'Set Project Duration and Billing Cycle to see the cycle.') + '</td></tr>';
@@ -689,9 +689,9 @@ function _cfShowCostCyclePopup(d){
         + '<button type="button" id="cf-costcycle-close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;">&times;</button></div>'
         + '<div style="flex:1;min-height:0;overflow:auto;padding:8px 10px;">'
         + '<table style="width:100%;border-collapse:collapse;text-align:right;">'
-        + '<thead><tr><th ' + th + '>#</th><th style="background:#4a4f57;color:#fff;padding:6px 8px;font-weight:700;text-align:left;">Activity</th><th ' + th + '>Unit</th><th ' + th + ' title="Estimated quantity">E. Quantity</th><th ' + th + ' title="Quantity in this cycle minus quantity already executed (progress report)">R. Cycle Qnty</th><th ' + th + '>Rate</th><th ' + th + '>Cost in cycle</th><th ' + th + ' title="Quoted Rate">Qtd Rate</th><th ' + th + '>Revenue/Cycle</th><th ' + th + '>Margin</th></tr></thead>'
+        + '<thead><tr><th ' + th + '>#</th><th style="background:#4a4f57;color:#fff;padding:6px 8px;font-weight:700;text-align:left;">Activity</th><th ' + th + '>Unit</th><th ' + th + ' title="Estimated quantity">E. Quantity</th><th ' + th + ' title="Quantity in this cycle minus quantity already executed (progress report)">R. Cycle Qnty</th><th ' + th + '>Rate</th><th ' + th + '>Cost in cycle</th><th ' + th + ' title="Quoted Rate">Qtd Rate</th><th ' + th + ' title="(E. Quantity &minus; R. Cycle Qnty) &times; Qtd Rate">Revenue/Cycle</th><th ' + th + '>Margin</th></tr></thead>'
         + '<tbody>' + rows + '</tbody>'
-        + '<tfoot><tr><td colspan="6" style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">Total</td><td style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">' + n2(total) + '</td><td style="border-top:2px solid #4a4f57;"></td><td style="border-top:2px solid #4a4f57;"></td><td style="border-top:2px solid #4a4f57;"></td></tr></tfoot>'
+        + '<tfoot><tr><td colspan="6" style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">Total</td><td style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">' + n2(total) + '</td><td style="border-top:2px solid #4a4f57;"></td><td id="cf-rv-tot" style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;"></td><td style="border-top:2px solid #4a4f57;"></td></tr></tfoot>'
         + '</table></div>'
         + '<div style="flex:none;padding:4px 12px 8px;color:#5a6e8c;font-size:11px;">Cost in cycle = Quantity &times; Rate &times; (activity days in this cycle &divide; activity duration). R. Cycle Qnty = quantity in this cycle (to the cycle end) &minus; quantity already executed (progress report). Unfinished activities carry forward to the next cycle.</div>'
         + '</div>';
@@ -699,6 +699,7 @@ function _cfShowCostCyclePopup(d){
     $('#cf-costcycle-win td').css({ padding: '5px 8px', borderBottom: '1px solid #b8c2d3', borderRight: '1px solid #b8c2d3' });
     $('#cf-costcycle-win th').css({ borderRight: '1px solid #6b7280' });
     $('#cf-costcycle-win tr > :last-child').css({ borderRight: 'none' });
+    _cfCostRevenue();
     // Drag by the header (mouse and touch).
     var win = document.getElementById('cf-costcycle-win'), drag = null;
     function start(x, y){ var r = win.getBoundingClientRect(); win.style.transform = 'none'; win.style.left = r.left + 'px'; win.style.top = r.top + 'px'; drag = { sx: x, sy: y, ox: r.left, oy: r.top }; }
@@ -737,6 +738,21 @@ $(document).on('mousedown touchstart', '#gcm-popup', function(){
     if (!$('#cf-win-value').is(':visible') && !$('#cf-costcycle-win').length) return;
     setTimeout(function(){ $('#gcm-popup').css('z-index', 100500); }, 0);
 });
+// Revenue/Cycle = (E. Quantity - R. Cycle Qnty) x Qtd Rate per row, with group
+// subtotals and the total (recalculated whenever a quoted rate changes).
+function _cfCostRevenue(){
+    var n2 = function(v){ return (+v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+    var subs = {}, tot = 0, any = false;
+    $('#cf-costcycle-win tr.cf-cc-row').each(function(){
+        var inp = $(this).find('.cf-qtd-in')[0], raw = inp ? inp.value.replace(/,/g, '').trim() : '';
+        var cell = $(this).find('.cf-rv'), g = $(this).data('g');
+        if (raw === '' || !isFinite(+raw)) { cell.text('-'); return; }
+        var v = +raw * (+$(inp).data('rq') || 0);
+        cell.text(n2(v)); subs[g] = (subs[g] || 0) + v; tot += v; any = true;
+    });
+    $('#cf-costcycle-win .cf-rv-sub').each(function(){ var g = $(this).data('g'); $(this).text(subs[g] !== undefined ? n2(subs[g]) : '-'); });
+    $('#cf-rv-tot').text(any ? n2(tot) : '-');
+}
 // Quoted rate entry in the Project Cost popup: saved per project activity on Enter / leaving the box.
 $(document).on('click mousedown touchstart', '.cf-qtd-in', function(e){ e.stopPropagation(); });
 $(document).on('keydown', '.cf-qtd-in', function(e){ if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
@@ -752,6 +768,7 @@ $(document).on('change', '.cf-qtd-in', function(){
             if (!d || d.error !== 'No') { el.style.borderColor = '#d84a30'; return; }
             el.value = raw === '' ? '' : v.toFixed(2);
             el.style.borderColor = '#2ba899';
+            _cfCostRevenue();
             ((window._cfWipCyclesData || {}).current_items || []).forEach(function(it){ if (+it.wan_id === wan) it.qtd_rate = raw === '' ? null : v; });
         },
         error: function(){ el.style.borderColor = '#d84a30'; }
