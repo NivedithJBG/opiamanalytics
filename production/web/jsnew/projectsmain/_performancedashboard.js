@@ -3791,11 +3791,26 @@ function _cfBankTiLinesSvg(cyc){
     var proj = function(c){ return (+c.wip || 0) + (+c.adv || 0); };
     var maxV = 0, minV = 0;
     cyc.forEach(function(c){ maxV = Math.max(maxV, proj(c), has(c) ? +c.actual : 0); minV = Math.min(minV, has(c) ? +c.actual : 0); });
-    if (maxV === minV) maxV = minV + 1;
-    var W = 640, H = 320, base = 262, top = 36, padL = 30, padR = 30;
-    var step = cyc.length > 1 ? (W - padL - padR) / (cyc.length - 1) : 0;
-    var xOf = function(i){ return cyc.length > 1 ? padL + i * step : W / 2; };
+    // X axis = period (billing cycles), Y axis = value in Lakhs, with tick marks.
+    var W = 660, H = 340, base = 270, top = 30, padL = 70, padR = 24;
+    var rawStep = Math.max(1, (maxV - minV) / 100000 / 5), mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    var tick = [1, 2, 2.5, 5, 10].map(function(m){ return m * mag; }).filter(function(t){ return t >= rawStep; })[0] * 100000;
+    minV = Math.floor(minV / tick) * tick; maxV = Math.ceil(maxV / tick) * tick;
+    if (maxV === minV) maxV = minV + tick;
+    var slot = (W - padL - padR) / cyc.length;
+    var xOf = function(i){ return padL + (i + 0.5) * slot; };
     var yOf = function(v){ return base - ((v - minV) / (maxV - minV)) * (base - top); };
+    var axes = '';
+    for (var tv = minV; tv <= maxV + 1; tv += tick) {
+        var ty = yOf(tv).toFixed(1);
+        axes += '<line x1="' + padL + '" y1="' + ty + '" x2="' + (W - padR) + '" y2="' + ty + '" stroke="#e3e7ee"/>'
+            + '<line x1="' + (padL - 5) + '" y1="' + ty + '" x2="' + padL + '" y2="' + ty + '" stroke="#555"/>'
+            + '<text x="' + (padL - 8) + '" y="' + (+ty + 4) + '" text-anchor="end" font-size="11" fill="#333">' + (tv / 100000).toFixed(tick < 100000 ? 1 : 0) + '</text>';
+    }
+    axes += '<line x1="' + padL + '" y1="' + top + '" x2="' + padL + '" y2="' + base + '" stroke="#555"/>'
+        + '<line x1="' + padL + '" y1="' + base + '" x2="' + (W - padR) + '" y2="' + base + '" stroke="#555"/>'
+        + '<text x="16" y="' + ((top + base) / 2) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700" transform="rotate(-90 16 ' + ((top + base) / 2) + ')">Total Investment (Lakhs)</text>'
+        + '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700">Billing cycle (period)</text>';
     var L = function(v){ return (v / 100000).toFixed(1); };
     var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     var lbl = function(c){ var m = /^(\d{2})(\d{2})-(\d{2})/.exec(c.end_date || ''); return m ? mon[+m[3] - 1] + ' ' + m[2] : (c.end_label || c.name); };
@@ -3803,7 +3818,8 @@ function _cfBankTiLinesSvg(cyc){
     var pPts = cyc.map(function(c, i){ return xOf(i).toFixed(1) + ',' + yOf(proj(c)).toFixed(1); }).join(' ');
     var aPts = [];
     cyc.forEach(function(c, i){ if (has(c)) aPts.push(xOf(i).toFixed(1) + ',' + yOf(+c.actual).toFixed(1)); });
-    var out = '<line x1="0" y1="' + yOf(0).toFixed(1) + '" x2="' + W + '" y2="' + yOf(0).toFixed(1) + '" stroke="#999"/>'
+    var out = axes
+        + (minV < 0 ? '<line x1="' + padL + '" y1="' + yOf(0).toFixed(1) + '" x2="' + (W - padR) + '" y2="' + yOf(0).toFixed(1) + '" stroke="#999"/>' : '')
         + '<polyline points="' + pPts + '" fill="none" stroke="' + PC + '" stroke-width="2.5" stroke-dasharray="6 4"/>'
         + (aPts.length > 1 ? '<polyline points="' + aPts.join(' ') + '" fill="none" stroke="' + AC + '" stroke-width="3"/>' : '');
     cyc.forEach(function(c, i){
@@ -3817,7 +3833,8 @@ function _cfBankTiLinesSvg(cyc){
             out += '<circle cx="' + x.toFixed(1) + '" cy="' + ya.toFixed(1) + '" r="5" fill="' + AC + '"><title>Actual ' + L(+c.actual) + ' L</title></circle>'
                 + '<text x="' + x.toFixed(1) + '" y="' + (pUp ? ya + 18 : ya - 9).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#000">' + L(+c.actual) + '</text>';
         }
-        out += '<text x="' + x.toFixed(1) + '" y="' + (base + 24) + '" text-anchor="middle" font-size="12" fill="#111"' + (cur ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
+        out += '<line x1="' + x.toFixed(1) + '" y1="' + base + '" x2="' + x.toFixed(1) + '" y2="' + (base + 5) + '" stroke="#555"/>'
+            + '<text x="' + x.toFixed(1) + '" y="' + (base + 20) + '" text-anchor="middle" font-size="12" fill="#111"' + (cur ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
     return '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible;">' + out + '</svg>';
 }
