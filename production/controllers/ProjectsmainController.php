@@ -2479,12 +2479,14 @@ class ProjectsmainController extends Controller
                 UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=0 AND project_id=:p2 $dc
                 UNION ALL SELECT debitacnt, amount FROM journalvoucher WHERE project_id=:p3 $dc
                 UNION ALL SELECT creditacnt, -amount FROM journalvoucher WHERE project_id=:p4 $dc) t GROUP BY a", $p)->queryAll(\PDO::FETCH_KEY_PAIR);
-        static $types = null, $brIds = null;
+        static $types = null, $brIds = null, $vendorAcc = null;
         if ($types === null) {
             $types = $db->createCommand("SELECT id, account_type FROM accounts_item")->queryAll(\PDO::FETCH_KEY_PAIR);
+            // Supplier / sub-contractor accounts (linked to a vendor), as opposed to loans etc.
+            $vendorAcc = array_flip(array_map('intval', $db->createCommand("SELECT DISTINCT account_id FROM vendors WHERE account_id > 0")->queryColumn()));
             $brIds = $db->createCommand("SELECT id FROM accounts_item WHERE name='Bills Receivable'")->queryColumn();
         }
-        $g = ['bank' => 0.0, 'cash' => 0.0, 'adv' => 0.0, 'wip_cost' => 0.0, 'received' => 0.0, 'wip_acc' => []];
+        $g = ['bank' => 0.0, 'cash' => 0.0, 'adv' => 0.0, 'wip_cost' => 0.0, 'received' => 0.0, 'refunds' => 0.0, 'wip_acc' => []];
         foreach ($cash as $id => $b) {
             $id = (int)$id; $b = (float)$b; $t = (int)($types[$id] ?? 0);
             if ($t === 2)      { $g['bank'] += $b; }
@@ -2499,6 +2501,7 @@ class ProjectsmainController extends Controller
                     $g['wip_acc'][$id] = $b - $a;
                 } else {
                     $g['received'] += -$b;
+                    if (isset($vendorAcc[$id])) $g['refunds'] += -$b;   // money returned by a supplier / sub-contractor
                 }
             }
             elseif ($b > 0)    { $g['adv'] += $b; }
@@ -2521,7 +2524,7 @@ class ProjectsmainController extends Controller
         $g['billed'] = $billed;
         // On each bill date the cost spent up to that date is cleared from WIP (the
         // bill amount itself is not deducted), so WIP = cost spent since the latest
-        // bill, less any non-client money received.
+        // bill, less refunds from suppliers / sub-contractors.
         $lastBill = null;
         if ($brIds) {
             $in = implode(',', array_map('intval', $brIds));
@@ -2531,7 +2534,9 @@ class ProjectsmainController extends Controller
         }
         $costAtBill = $lastBill ? $this->_cfFlowGroups($pid, $lastBill, true)['wip_cost'] : 0.0;
         $g['last_bill'] = $lastBill;
-        $g['wip'] = $g['wip_cost'] - $costAtBill - ($g['received'] - $clientPaid);
+        // Refunds from suppliers / sub-contractors reduce WIP (refunds on expense accounts
+        // already net off in wip_cost); loans, capital and advances received do not.
+        $g['wip'] = $g['wip_cost'] - $costAtBill - $g['refunds'];
         $g['ti']  = $g['adv'] + $g['wip'];   // Total Investment = Advances and Deposits + WIP (Bills Receivable not added)
         $g['br']  = max(0, $br);
         return $g;
