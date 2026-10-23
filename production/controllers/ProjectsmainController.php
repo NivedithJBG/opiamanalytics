@@ -4619,6 +4619,16 @@ class ProjectsmainController extends Controller
                 'cost'     => round($curPart, 2),
             ];
         }
+        // Quoted rate per project activity, entered in the Project Cost popup (kept in
+        // cf_dashboard_targets as qtd_rate_<wan_id> until it is filled from the BOQ).
+        $qtd = $db->createCommand(
+            "SELECT metric_key, target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key LIKE 'qtd\\_rate\\_%'", [':p' => $pid]
+        )->queryAll(\PDO::FETCH_KEY_PAIR);
+        foreach ($currentItems as &$ci) {
+            $k = 'qtd_rate_' . $ci['wan_id'];
+            $ci['qtd_rate'] = isset($qtd[$k]) ? (float)$qtd[$k] : null;
+        }
+        unset($ci);
 
         $cycles = [];
         for ($k = 1; $k <= $n; $k++) {

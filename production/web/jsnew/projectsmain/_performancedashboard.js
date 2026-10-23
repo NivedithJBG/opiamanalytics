@@ -673,7 +673,10 @@ function _cfShowCostCyclePopup(d){
         total += +it.cost || 0;
         rows += '<tr class="cf-cc-row" data-schedid="' + (+it.sched_id || 0) + '" style="cursor:pointer;" title="Open the Cost Dashboard"><td>' + no + '</td><td style="text-align:left;">' + esc(it.name) + '</td><td>' + esc(it.unit) + '</td>'
             + '<td>' + n2(it.quantity) + '</td><td>' + n2(it.remaining) + '</td><td>' + n2(it.rate) + '</td>'
-            + '<td style="font-weight:700;">' + n2(it.cost) + '</td><td>-</td><td>-</td><td>-</td></tr>';
+            + '<td style="font-weight:700;">' + n2(it.cost) + '</td>'
+            // Quoted rate: typed here for now (to be filled from the BOQ later).
+            + '<td style="padding:2px 4px;"><input type="text" inputmode="decimal" class="cf-qtd-in" data-wan="' + (+it.wan_id || 0) + '" value="' + (it.qtd_rate === null || it.qtd_rate === undefined ? '' : (+it.qtd_rate).toFixed(2)) + '" placeholder="Enter" title="Quoted rate &mdash; type and press Enter" style="width:72px;box-sizing:border-box;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:3px 5px;font:inherit;background:#fffbe6;"></td>'
+            + '<td>-</td><td>-</td></tr>';
     });
     closeGroup();
     if (!items.length) rows = '<tr><td colspan="10" style="text-align:center;color:#666;padding:12px;">' + ((d.cycles || []).length ? 'No activities in the current billing cycle.' : 'Set Project Duration and Billing Cycle to see the cycle.') + '</td></tr>';
@@ -733,6 +736,26 @@ $(document).on('click', '.cf-cc-row', function(){
 $(document).on('mousedown touchstart', '#gcm-popup', function(){
     if (!$('#cf-win-value').is(':visible') && !$('#cf-costcycle-win').length) return;
     setTimeout(function(){ $('#gcm-popup').css('z-index', 100500); }, 0);
+});
+// Quoted rate entry in the Project Cost popup: saved per project activity on Enter / leaving the box.
+$(document).on('click mousedown touchstart', '.cf-qtd-in', function(e){ e.stopPropagation(); });
+$(document).on('keydown', '.cf-qtd-in', function(e){ if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
+$(document).on('change', '.cf-qtd-in', function(){
+    var el = this, wan = +$(el).data('wan'), raw = el.value.replace(/,/g, '').trim();
+    if (!wan) return;
+    if (raw !== '' && !isFinite(+raw)) { el.style.borderColor = '#d84a30'; return; }
+    var v = raw === '' ? 0 : +raw;
+    el.style.borderColor = '#b8c2d3';
+    _cfQueueAjax({ type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json', priority: true,
+        data: { metric_key: 'qtd_rate_' + wan, target_value: v },
+        success: function(d){
+            if (!d || d.error !== 'No') { el.style.borderColor = '#d84a30'; return; }
+            el.value = raw === '' ? '' : v.toFixed(2);
+            el.style.borderColor = '#2ba899';
+            ((window._cfWipCyclesData || {}).current_items || []).forEach(function(it){ if (+it.wan_id === wan) it.qtd_rate = raw === '' ? null : v; });
+        },
+        error: function(){ el.style.borderColor = '#d84a30'; }
+    });
 });
 $(document).on('click', '#cf-costcycle-close', function(){ $('#cf-costcycle-win').remove(); $(document).off('.cfcost'); });
 $(document).on('click', '#cf-value-cost', function(){
