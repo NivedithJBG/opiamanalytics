@@ -4849,10 +4849,8 @@ class ProjectsmainController extends Controller
     public function actionCfbillsreceivablecycles()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        $uid = Yii::$app->user->Id;
-        $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
-        if (!$projuser) { return ['error' => 'No project selected']; }
-        $pid = (int)$projuser->projectid;
+        $pid = $this->_cfPid();
+        if (!$pid) { return ['error' => 'No project selected']; }
         $db = Yii::$app->db;
 
         $wip = $this->actionCfwipcycles();
