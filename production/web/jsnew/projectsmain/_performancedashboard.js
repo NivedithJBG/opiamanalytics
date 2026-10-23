@@ -3788,10 +3788,10 @@ function _cfShowBankBreakdown(points){
 function _cfBankTiLinesSvg(cyc){
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycles.</div>';
     // One line: projected fund requirement in each billing cycle = the bank
-    // balance at its lowest point in the cycle, shown as the amount to be funded
-    // (0 when the balance stays positive), from cfbankprojection.
+    // balance at its lowest point in the cycle, shown as the amount to be funded:
+    // positive = funds needed, negative = surplus (from cfbankprojection).
     var has = function(){ return true; };
-    cyc.forEach(function(c){ c.need = Math.max(0, -(+c.low || 0)); });
+    cyc.forEach(function(c){ c.need = -(+c.low || 0); });
     var SER = [ { key: 'need', col: '#d84a30', name: 'Fund requirement' } ];
     var maxV = 0, minV = 0;
     cyc.forEach(function(c){ if (has(c)) SER.forEach(function(s){ var v = +c[s.key] || 0; maxV = Math.max(maxV, v); minV = Math.min(minV, v); }); });
@@ -3844,7 +3844,7 @@ function _cfShowBankTiLines(cycles, note){
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Fund Requirement per Cycle (Lakhs)</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
-        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #d84a30;margin-right:5px;vertical-align:middle;"></span>Fund requirement (bank balance at its lowest in the cycle)</span>' + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'
+        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #d84a30;margin-right:5px;vertical-align:middle;"></span>Fund requirement (+ needed, &minus; surplus)</span>' + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;padding:10px 16px 16px;">' + _cfBankTiLinesSvg(cycles) + '</div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;
