@@ -3799,7 +3799,7 @@ function _cfBankTiLinesSvg(cyc){
     var maxV = 0, minV = 0;
     cyc.forEach(function(c){ if (has(c)) SER.forEach(function(s){ var v = +c[s.key] || 0; maxV = Math.max(maxV, v); minV = Math.min(minV, v); }); });
     // X axis = period (billing cycles), Y axis = value in Lakhs, with tick marks.
-    var W = 660, H = 340, base = 270, top = 30, padL = 70, padR = 24;
+    var W = 660, H = 362, base = 270, top = 30, padL = 70, padR = 24;
     var rawStep = Math.max(1, (maxV - minV) / 100000 / 5), mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
     var tick = [1, 2, 2.5, 5, 10].map(function(m){ return m * mag; }).filter(function(t){ return t >= rawStep; })[0] * 100000;
     minV = Math.floor(minV / tick) * tick; maxV = Math.ceil(maxV / tick) * tick;
@@ -3824,17 +3824,18 @@ function _cfBankTiLinesSvg(cyc){
         + '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700">Billing cycle (period)</text>';
     SER.forEach(function(s, si){
         var pts = [];
-        cyc.forEach(function(c, i){ if (has(c)) pts.push([xOf(i), yOf(+c[s.key] || 0), +c[s.key] || 0]); });
+        cyc.forEach(function(c, i){ if (has(c)) pts.push([xOf(i), yOf(+c[s.key] || 0), +c[s.key] || 0, c]); });
         if (pts.length > 1) out += '<polyline points="' + pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="3"/>';
         pts.forEach(function(p){
             out += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="5" fill="' + s.col + '"><title>' + s.name + ' ' + L(p[2]) + ' L</title></circle>'
-                + '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] + (si === 0 ? -9 : 18)).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + s.col + '">' + L(p[2]) + '</text>';
+                // At each cycle the higher value is labelled above its point, the other below.
+                + '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] + (function(){ var o = +p[3][SER[1 - si].key] || 0; return (p[2] > o || (p[2] === o && si === 0)) ? -10 : 19; })()).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + s.col + '">' + L(p[2]) + '</text>';
         });
     });
     cyc.forEach(function(c, i){
         var x = xOf(i);
         out += '<line x1="' + x.toFixed(1) + '" y1="' + base + '" x2="' + x.toFixed(1) + '" y2="' + (base + 5) + '" stroke="#555"/>'
-            + '<text x="' + x.toFixed(1) + '" y="' + (base + 20) + '" text-anchor="middle" font-size="12" fill="#111"' + (c.current ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
+            + '<text x="' + x.toFixed(1) + '" y="' + (base + 40) + '" text-anchor="middle" font-size="12" fill="#111"' + (c.current ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
     return '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible;">' + out + '</svg>';
 }
