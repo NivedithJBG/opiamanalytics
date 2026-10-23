@@ -3787,12 +3787,14 @@ function _cfShowBankBreakdown(points){
 // cfnetinvestmentbreakdown (same cycles as the Total Investment popup).
 function _cfBankTiLinesSvg(cyc){
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycles.</div>';
-    // Two lines over the billing cycles reached so far (cycle end, today for the
-    // current cycle): actual Total Investment and the Bills Receivable balance.
-    var has = function(c){ return c.actual !== null && c.actual !== undefined; };
+    // Two projected lines over every billing cycle: Total Investment as in the
+    // Total Investment popup (WIP target + Advances and Deposits target) and Bills
+    // Receivable as in the Bills Receivable popup (its cycle target, proj_br).
+    var has = function(){ return true; };
+    cyc.forEach(function(c){ c.proj_ti = (+c.wip || 0) + (+c.adv || 0); });
     var SER = [
-        { key: 'actual',    col: '#2ba899', name: 'Total Investment' },
-        { key: 'actual_br', col: '#6a4c93', name: 'Bills Receivable' }
+        { key: 'proj_ti', col: '#2ba899', name: 'Projected Total Investment' },
+        { key: 'proj_br', col: '#6a4c93', name: 'Projected Bills Receivable' }
     ];
     var maxV = 0, minV = 0;
     cyc.forEach(function(c){ if (has(c)) SER.forEach(function(s){ var v = +c[s.key] || 0; maxV = Math.max(maxV, v); minV = Math.min(minV, v); }); });
@@ -3841,11 +3843,11 @@ function _cfShowBankTiLines(cycles){
     var winW = 720, winH = 430;
     var html = '<div id="cf-bank-ti-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - winW) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - winH) / 2) + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:360px;min-height:260px;max-width:98vw;resize:both;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + '<div id="cf-bank-ti-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#081142;cursor:move;user-select:none;touch-action:none;">'
-        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Total Investment and Bills Receivable per Cycle (Lakhs)</span>'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Total Investment and Bills Receivable per Cycle (Lakhs)</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
-        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #2ba899;margin-right:5px;vertical-align:middle;"></span>Total Investment</span>'
-        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #6a4c93;margin-right:5px;vertical-align:middle;"></span>Bills Receivable</span></div>'
+        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #2ba899;margin-right:5px;vertical-align:middle;"></span>Projected Total Investment</span>'
+        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #6a4c93;margin-right:5px;vertical-align:middle;"></span>Projected Bills Receivable</span></div>'
         + '<div style="flex:1;min-height:0;overflow:auto;padding:10px 16px 16px;">' + _cfBankTiLinesSvg(cycles) + '</div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;
@@ -3866,7 +3868,17 @@ $(document).on('click', '#cf-bankdial', function(e){
     _cfQueueAjax({
         type: 'POST', url: '../projectsmain/cfnetinvestmentbreakdown', dataType: 'json', priority: true,
         success: function(d){
-            if (d && d.error === 'No') { _cfShowBankTiLines(d.cycles || []); }
+            if (!d || d.error !== 'No') return;
+            var cyc = d.cycles || [];
+            // Bills Receivable targets, matched cycle by cycle.
+            _cfQueueAjax({
+                type: 'POST', url: '../projectsmain/cfbillsreceivablecycles', dataType: 'json', priority: true,
+                success: function(b){
+                    var br = (b && b.error === 'No') ? (b.cycles || []) : [];
+                    cyc.forEach(function(c, i){ c.proj_br = br[i] ? +br[i].target || 0 : 0; });
+                    _cfShowBankTiLines(cyc);
+                }
+            });
         }
     });
 });
