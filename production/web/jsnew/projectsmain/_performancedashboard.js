@@ -1250,7 +1250,9 @@ function _cfNetInvCycleBarsHtml(cyc){
     cyc.forEach(function(c, i){
         var v = tot(c), h = hOf(v), cx = pad + (i + 0.5) * slot, cur = !!c.current;
         bars += '<rect x="' + (cx - barW / 2).toFixed(1) + '" y="' + (base - h) + '" width="' + barW.toFixed(1) + '" height="' + h + '" fill="#3a4a5f"><title>Target Total Investment ' + L(v) + ' L (WIP ' + L(+c.wip || 0) + ' + Advances ' + L(+c.adv || 0) + ')</title></rect>';
-        var topY = base - h;
+        // Target value at the top of the target bar: above it, or just inside it
+        // (white) when the exceeded part sits on top.
+        var tgtY = base - h - 6, tgtFill = '#555';
         if (has(c)) {
             var a = +c.actual || 0, hA = hOf(a);
             // Same width as the target bar: the part above the target (exceeded) green-blue,
@@ -1258,12 +1260,12 @@ function _cfNetInvCycleBarsHtml(cyc){
             var tip = 'Actual Total Investment ' + L(a) + ' L (WIP ' + L(+c.actual_wip || 0) + ' + Advances ' + L(+c.actual_adv || 0) + '), target ' + L(v) + ' L';
             if (hA > h) bars += '<rect x="' + (cx - barW / 2).toFixed(1) + '" y="' + (base - hA) + '" width="' + barW.toFixed(1) + '" height="' + (hA - h) + '" fill="' + GB + '"><title>' + tip + '</title></rect>';
             else if (h > hA) bars += '<rect x="' + (cx - barW / 2).toFixed(1) + '" y="' + (base - h) + '" width="' + barW.toFixed(1) + '" height="' + (h - hA) + '" fill="' + RO + '"><title>' + tip + '</title></rect>';
-            // Actual value at the top of the actual: white inside the short part, black above the bar.
-            var inside = (base - hA) - topY > 18;
-            bars += '<text x="' + cx.toFixed(1) + '" y="' + (base - hA - 5) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + (inside ? '#fff' : '#000') + '">' + L(a) + '</text>';
-            if (!inside) topY = Math.min(topY, base - hA - 18);
+            // Actual value at the top of the actual: above the bar when exceeded,
+            // just inside the reached part (white) when short.
+            if (hA >= h) { bars += '<text x="' + cx.toFixed(1) + '" y="' + (base - hA - 5) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#000">' + L(a) + '</text>'; tgtY = base - h + 14; tgtFill = '#fff'; }
+            else bars += '<text x="' + cx.toFixed(1) + '" y="' + (hA > 18 ? base - hA + 15 : base - hA - 5) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">' + L(a) + '</text>';
         }
-        bars += '<text x="' + cx.toFixed(1) + '" y="' + (topY - 6) + '" text-anchor="middle" font-size="11" fill="#555">' + L(v) + '</text>'
+        bars += '<text x="' + cx.toFixed(1) + '" y="' + tgtY + '" text-anchor="middle" font-size="11" fill="' + tgtFill + '">' + L(v) + '</text>'
             + '<text x="' + cx.toFixed(1) + '" y="' + (base + 22) + '" text-anchor="middle" font-size="13" fill="#111"' + (cur ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
     return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
