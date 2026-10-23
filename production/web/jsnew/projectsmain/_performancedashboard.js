@@ -675,7 +675,7 @@ function _cfShowCostCyclePopup(d){
             + '<td>' + n2(it.quantity) + '</td><td>' + n2(it.remaining) + '</td><td>' + n2(it.rate) + '</td>'
             + '<td style="font-weight:700;">' + n2(it.cost) + '</td>'
             // Quoted rate: typed here for now (to be filled from the BOQ later).
-            + '<td style="padding:2px 4px;"><input type="text" inputmode="decimal" class="cf-qtd-in" data-wan="' + (+it.wan_id || 0) + '" value="' + (it.qtd_rate === null || it.qtd_rate === undefined ? '' : (+it.qtd_rate).toFixed(2)) + '" placeholder="Enter" title="Quoted rate &mdash; type and press Enter" style="width:72px;box-sizing:border-box;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:3px 5px;font:inherit;background:#fffbe6;"></td>'
+            + '<td style="padding:2px 4px;"><input type="text" inputmode="decimal" class="cf-qtd-in" data-wan="' + (+it.wan_id || 0) + '" value="' + (it.qtd_rate === null || it.qtd_rate === undefined ? '' : (+it.qtd_rate).toFixed(2)) + '" placeholder="-" title="Quoted rate (from the BOQ, or type it here and press Enter)" style="width:72px;box-sizing:border-box;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:3px 5px;font:inherit;background:#fffbe6;"></td>'
             + '<td>-</td><td>-</td></tr>';
     });
     closeGroup();
