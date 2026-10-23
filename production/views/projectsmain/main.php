@@ -4150,10 +4150,10 @@ if($action=='login')
       <div id="cf-grid">
       <div class="panel" style="grid-column:1;grid-row:1;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Investments</div><div class="gp" style="background:#e3e5e8;" id="cf-currentassets"></div></div>
       <div class="panel" style="grid-column:1;grid-row:2;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Work In Progress</div><div class="gp" style="background:#e3e5e8;" id="cf-billsreceivable"></div></div>
-      <div class="panel" style="grid-column:1;grid-row:3;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Bills Receivable</div><div class="gp" style="background:#e3e5e8;" id="cf-contract-income"></div></div>
+      <div class="panel" style="grid-column:2;grid-row:3;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Bills Receivable</div><div class="gp" style="background:#e3e5e8;" id="cf-contract-income"></div></div>
       <div class="panel" style="grid-column:2;grid-row:1;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Bank-Working Capital</div><div class="gp" style="background:#e3e5e8;" id="cf-bankdial"></div></div>
       <div class="panel" style="grid-column:2;grid-row:2;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Current Liabilities</div><div class="gp" style="background:#e3e5e8;" id="cf-bank"></div></div>
-      <div class="panel" style="grid-column:2;grid-row:3;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Total Investment</div><div class="gp" style="background:#e3e5e8;" id="cf-netinvestment"></div></div>
+      <div class="panel" style="grid-column:1;grid-row:3;background:#e3e5e8;"><div class="ph" style="background:#4a4f57;">Total Investment</div><div class="gp" style="background:#e3e5e8;" id="cf-netinvestment"></div></div>
       <div class="panel" style="grid-column:3;grid-row:1;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">Contract Income</div><div class="gp" style="background:#eceef0;" id="cf-contractincome"></div></div>
       <div class="panel" style="grid-column:3;grid-row:2;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">Project Expenditure</div><div class="gp" style="background:#eceef0;" id="cf-projectexpenditure"></div></div>
       <div class="panel" style="grid-column:3;grid-row:3;background:#eceef0;"><div class="ph" style="background:#1a0a2e;">Contribution Margin</div><div class="gp" style="background:#eceef0;" id="cf-contribmargin"></div></div>
