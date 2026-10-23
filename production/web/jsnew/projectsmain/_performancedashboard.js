@@ -197,8 +197,9 @@ var _cfAjaxInFlight = 0;
 // immediately after a fresh login). Fully serial (1 at a time) is the
 // only concurrency level that's actually safe against this backend.
 var _CF_AJAX_MAX_CONCURRENT = 1;
+// opts.priority: a click that opens a popup goes ahead of the panels still loading.
 function _cfQueueAjax(opts){
-    _cfAjaxQueue.push(opts);
+    if (opts.priority) _cfAjaxQueue.unshift(opts); else _cfAjaxQueue.push(opts);
     _cfDrainAjaxQueue();
 }
 function _cfDrainAjaxQueue(){
@@ -1439,11 +1440,13 @@ function _cfShowNetInvBreakdown(accounts, average){
     }
 }
 $(document).on('click', '#cf-netinvestment', function(e){
+    var el = this; el.style.cursor = 'progress';
     _cfQueueAjax({
-        type: 'POST', url: '../projectsmain/cfnetinvestmentbreakdown', dataType: 'json',
+        type: 'POST', url: '../projectsmain/cfnetinvestmentbreakdown', dataType: 'json', priority: true,
         success: function(d){
             if (d && d.error === 'No') { _cfShowNetInvCycles(d.cycles || [], d); }
-        }
+        },
+        complete: function(){ el.style.cursor = 'pointer'; }
     });
 });
 $(document).on('click', '#cf-netinv-breakdown-close', function(){ $('#cf-netinv-breakdown-win').remove(); });
@@ -4244,7 +4247,7 @@ function _cfShowContractIncomeBreakdown(accounts, average, cumulative){
 $(document).on('click', '#cf-contractincome', function(e){
     if ($(e.target).closest('.cf-dial-target-pencil, .cf-dial-target-input').length) return;
     _cfQueueAjax({
-        type: 'POST', url: '../projectsmain/cfcontractincomebreakdown', dataType: 'json',
+        type: 'POST', url: '../projectsmain/cfcontractincomebreakdown', dataType: 'json', priority: true,
         success: function(d){
             if (d && d.error === 'No') { _cfShowContractIncomeBreakdown(d.accounts || [], +d.average || 0, +d.cumulative || 0); }
         }
