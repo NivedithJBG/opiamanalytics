@@ -3809,13 +3809,15 @@ function _cfBankTiLinesSvg(cyc){
     var out = '';
     for (var tv = minV; tv <= maxV + 1; tv += tick) {
         var ty = yOf(tv).toFixed(1);
-        out += '<line x1="' + padL + '" y1="' + ty + '" x2="' + (W - padR) + '" y2="' + ty + '" stroke="#e3e7ee"/>'
+        out += '<line x1="' + padL + '" y1="' + ty + '" x2="' + (W - padR) + '" y2="' + ty + '" stroke="#d3d9e2"/>'
             + '<line x1="' + (padL - 5) + '" y1="' + ty + '" x2="' + padL + '" y2="' + ty + '" stroke="#555"/>'
             + '<text x="' + (padL - 8) + '" y="' + (+ty + 4) + '" text-anchor="end" font-size="11" fill="#333">' + (tv / 100000).toFixed(0) + '</text>';
     }
     out += '<line x1="' + padL + '" y1="' + top + '" x2="' + padL + '" y2="' + base + '" stroke="#555"/>'
         + '<line x1="' + padL + '" y1="' + base + '" x2="' + (W - padR) + '" y2="' + base + '" stroke="#555"/>'
-        + (minV < 0 ? '<line x1="' + padL + '" y1="' + yOf(0).toFixed(1) + '" x2="' + (W - padR) + '" y2="' + yOf(0).toFixed(1) + '" stroke="#999"/>' : '')
+        // Vertical gridline at each period; the 0 line darker than the gridlines.
+        + cyc.map(function(c, i){ return '<line x1="' + xOf(i).toFixed(1) + '" y1="' + top + '" x2="' + xOf(i).toFixed(1) + '" y2="' + base + '" stroke="#d3d9e2"/>'; }).join('')
+        + '<line x1="' + padL + '" y1="' + yOf(0).toFixed(1) + '" x2="' + (W - padR) + '" y2="' + yOf(0).toFixed(1) + '" stroke="#222" stroke-width="1.6"/>'
         + '<text x="16" y="' + ((top + base) / 2) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700" transform="rotate(-90 16 ' + ((top + base) / 2) + ')">Lakhs</text>'
         + '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700">Billing cycle (period)</text>';
     SER.forEach(function(s, si){
