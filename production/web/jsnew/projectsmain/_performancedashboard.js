@@ -1227,42 +1227,26 @@ function _cfRedrawNetInvBreakdown(){
 // combined target, red-orange below it. Cycles still to come show targets only.
 function _cfNetInvCycleBarsHtml(cyc){
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycle targets.</div>';
-    var GB = '#2ba899', RO = '#d84a30';
+    // One bar per billing cycle, the current one and those still to come: the
+    // target Total Investment (WIP target + Advances and Deposits target).
+    var ci = -1;
+    cyc.forEach(function(c, i){ if (c.current && ci < 0) ci = i; });
+    if (ci > 0) cyc = cyc.slice(ci);
+    var tot = function(c){ return (+c.wip || 0) + (+c.adv || 0); };
     var maxV = 0;
-    cyc.forEach(function(c){ maxV = Math.max(maxV, +c.adv || 0, +c.wip || 0, +c.actual_adv || 0, +c.actual_wip || 0); });
-    var W = 600, H = 320, base = 262, top = 56, pad = 20;
+    cyc.forEach(function(c){ maxV = Math.max(maxV, tot(c)); });
+    var W = 600, H = 320, base = 262, top = 40, pad = 20;
     var slot = (W - 2 * pad) / cyc.length;
-    var barW = slot * 0.36;                       // two attached bars = 72% of the slot
-    var hOf = function(v){ return maxV > 0 ? Math.round(((+v || 0) / maxV) * (base - top)) : 0; };
-    var L = function(v){ return ((+v || 0) / 100000).toFixed(1); };
-    // One bar: the target faded, the actual solid in the same colour, and the gap
-    // between them coloured — WIP: short red-orange / over green-blue;
-    // Advances and Deposits: the opposite.
-    function bar(x, target, actual, col, label, overGood){
-        var hT = hOf(target), out = '';
-        if (actual === null || actual === undefined) {
-            return '<rect x="' + x.toFixed(1) + '" y="' + (base - hT) + '" width="' + barW.toFixed(1) + '" height="' + hT + '" fill="' + col + '"><title>' + label + ' target ' + L(target) + ' L</title></rect>';
-        }
-        var hA = hOf(actual), hMin = Math.min(hA, hT);
-        out += '<rect x="' + x.toFixed(1) + '" y="' + (base - hT) + '" width="' + barW.toFixed(1) + '" height="' + hT + '" fill="' + col + '" fill-opacity="0.35"/>';
-        out += '<rect x="' + x.toFixed(1) + '" y="' + (base - hMin) + '" width="' + barW.toFixed(1) + '" height="' + hMin + '" fill="' + col + '"/>';
-        if (hA > hT) out += '<rect x="' + x.toFixed(1) + '" y="' + (base - hA) + '" width="' + barW.toFixed(1) + '" height="' + (hA - hT) + '" fill="' + (overGood ? GB : RO) + '"/>';
-        else if (hT > hA) out += '<rect x="' + x.toFixed(1) + '" y="' + (base - hT) + '" width="' + barW.toFixed(1) + '" height="' + (hT - hA) + '" fill="' + (overGood ? RO : GB) + '" fill-opacity="0.85"/>';
-        out += '<rect x="' + x.toFixed(1) + '" y="' + (base - Math.max(hA, hT)) + '" width="' + barW.toFixed(1) + '" height="' + Math.max(hA, hT) + '" fill="transparent"><title>' + label + ': target ' + L(target) + ' L, actual ' + L(actual) + ' L</title></rect>';
-        return out;
-    }
+    var barW = Math.min(slot * 0.5, 90);
+    var hOf = function(v){ return maxV > 0 ? Math.round((v / maxV) * (base - top)) : 0; };
+    var L = function(v){ return (v / 100000).toFixed(1); };
     var bars = '';
-    cyc.forEach(function(c, i){
-        var x = pad + i * slot + (slot - 2 * barW) / 2, cur = !!c.current;
-        var reached = c.actual_adv !== null && c.actual_adv !== undefined;
-        var hW = Math.max(hOf(c.wip), reached ? hOf(c.actual_wip) : 0), hA = Math.max(hOf(c.adv), reached ? hOf(c.actual_adv) : 0);
-        bars += bar(x, c.wip, reached ? c.actual_wip : null, '#8fa3b8', 'WIP', true)
-            + bar(x + barW, c.adv, reached ? c.actual_adv : null, '#3a4a5f', 'Advances and Deposits', false)
-            + '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (base - hW - 5) + '" text-anchor="middle" font-size="10" fill="#555">' + L(c.wip) + '</text>'
-            + '<text x="' + (x + 1.5 * barW).toFixed(1) + '" y="' + (base - hA - 5) + '" text-anchor="middle" font-size="10" fill="#555">' + L(c.adv) + '</text>';
-        // Bold black on top: the ACTUAL total (WIP + Advances and Deposits).
-        if (reached) bars += '<text x="' + (x + barW).toFixed(1) + '" y="' + (base - Math.max(hW, hA) - 20) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#000"><title>Actual Total Investment = WIP + Advances and Deposits</title>' + L((+c.actual_wip || 0) + (+c.actual_adv || 0)) + '</text>';
-        bars += '<text x="' + (x + barW).toFixed(1) + '" y="' + (base + 20) + '" text-anchor="middle" font-size="13" fill="#111"' + (cur ? ' font-weight="700"' : '') + '>' + (c.end_label || c.name) + '</text>';
+    cyc.forEach(function(c){
+        var v = tot(c), h = hOf(v), cx = pad + (cyc.indexOf(c) + 0.5) * slot, cur = !!c.current;
+        bars += '<rect x="' + (cx - barW / 2).toFixed(1) + '" y="' + (base - h) + '" width="' + barW.toFixed(1) + '" height="' + h + '" fill="#3a4a5f"><title>Target Total Investment ' + L(v) + ' L (WIP ' + L(+c.wip || 0) + ' + Advances ' + L(+c.adv || 0) + ')</title></rect>'
+            + '<text x="' + cx.toFixed(1) + '" y="' + (base - h - 6) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#111">' + L(v) + '</text>'
+            + '<text x="' + cx.toFixed(1) + '" y="' + (base + 20) + '" text-anchor="middle" font-size="13" fill="#111"' + (cur ? ' font-weight="700"' : '') + '>' + (c.end_label || c.name) + '</text>'
+            + '<text x="' + cx.toFixed(1) + '" y="' + (base + 36) + '" text-anchor="middle" font-size="10" fill="#5a6e8c">' + (cur ? 'Current' : 'Projected') + '</text>';
     });
     return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
         + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg>';
@@ -1290,16 +1274,12 @@ function _cfShowNetInvCycles(cycles){
     var html = '<div id="cf-netinv-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + topP + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
         + '<div id="cf-ni-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#081142;cursor:move;user-select:none;">'
-        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Total Investment — Cycle Targets</span>'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Total Investment — Current and Projected</span>'
         + '<button id="cf-netinv-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
         + '<div style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;">'
-        + '<span style="font-weight:700;color:#081142;">Target per billing cycle (Lakhs) = WIP target + Advances and Deposits target</span>'
-        + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:6px;font-size:12px;color:#111;">'
-        + '<span><span style="display:inline-block;width:14px;height:10px;background:#8fa3b8;margin-right:5px;vertical-align:middle;"></span>WIP</span>'
-        + '<span><span style="display:inline-block;width:14px;height:10px;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Advances</span>'
-        + '<span style="color:#5a6e8c;">faded = target, solid = actual, bold figure = actual total</span>'
-        + '</div></div>'
+        + '<span style="font-weight:700;color:#081142;">Target Total Investment per billing cycle (Lakhs) = WIP target + Advances and Deposits target, current cycle and projected cycles</span>'
+        + '</div>'
         + '<div style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;">'
         + '<div id="cf-ni-chart" style="min-width:0;">' + _cfNetInvCycleBarsHtml(cycles) + '</div>'
         + '</div></div>';
