@@ -2537,7 +2537,38 @@ class ProjectsmainController extends Controller
         // Refunds from suppliers / sub-contractors reduce WIP (refunds on expense accounts
         // already net off in wip_cost); loans, capital and advances received do not.
         $g['wip'] = $g['wip_cost'] - $costAtBill - $g['refunds'];
-        $g['ti']  = $g['adv'] + $g['wip'];   // Total Investment = Advances and Deposits + WIP (Bills Receivable not added)
+        // Total Investment = Advances and Deposits + X (agreed 2026-10-23):
+        //  - Bills Receivable 0 (or no bill yet): X = current WIP (cost since the latest bill).
+        //  - Bill raised and nothing credited to Bills Receivable since: X = the unpaid
+        //    balance carried from earlier bills + the WIP deducted at that bill (cost since
+        //    the previous bill); cost spent after the bill is not added.
+        //  - Something credited to Bills Receivable after the latest bill and a debit
+        //    balance still left: X = that Bills Receivable balance.
+        $g['ti_mode'] = 'wip';
+        $g['ti'] = $g['adv'] + $g['wip'];
+        if ($lastBill && $br > 0.005) {
+            $in = implode(',', array_map('intval', $brIds));
+            $lastCredit = $db->createCommand(
+                "SELECT MAX(d) FROM (SELECT date(date) d FROM voucher WHERE project_id=:p1 AND creditacnt IN ($in)$dc
+                   UNION ALL SELECT date(date) FROM journalvoucher WHERE project_id=:p2 AND creditacnt IN ($in)$dc) t",
+                [':p1' => $pid, ':p2' => $pid])->queryScalar();
+            if ($lastCredit && $lastCredit > $lastBill) {
+                $g['ti_mode'] = 'br';
+                $g['ti'] = $g['adv'] + $br;
+            } else {
+                $billAmt = (float)$db->createCommand(
+                    "SELECT COALESCE(SUM(amount),0) FROM journalvoucher WHERE project_id=:p AND debitacnt IN ($in) AND date(date) = :d",
+                    [':p' => $pid, ':d' => $lastBill])->queryScalar();
+                $prevBill = $db->createCommand(
+                    "SELECT MAX(date(date)) FROM journalvoucher WHERE project_id=:p AND debitacnt IN ($in) AND date(date) < :d",
+                    [':p' => $pid, ':d' => $lastBill])->queryScalar();
+                $deducted = $costAtBill - ($prevBill ? $this->_cfFlowGroups($pid, $prevBill, true)['wip_cost'] : 0.0);
+                $carry = max(0, $br - $billAmt);
+                $g['ti_mode'] = 'billed';
+                $g['ti_deducted'] = $deducted; $g['ti_carry'] = $carry;
+                $g['ti'] = $g['adv'] + $carry + $deducted;
+            }
+        }
         $g['br']  = max(0, $br);
         return $g;
     }
