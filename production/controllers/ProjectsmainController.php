@@ -2543,8 +2543,7 @@ class ProjectsmainController extends Controller
         //    balance carried from earlier bills + the WIP deducted at that bill (cost since
         //    the previous bill); cost spent after the bill is not added.
         //  - The client has paid (Bank/Cash receipt credited to Bills Receivable or to
-        //    Contract Income) after the
-        //    latest bill and a debit balance is still left over: X = that left-over
+        //    Contract Income) after the latest bill and a debit balance is still left over: X = that left-over
         //    Bills Receivable balance + current WIP, until it is paid or a new bill is raised.
         //    Journal credits (TDS etc.) alone do not count as payment.
         $g['ti_mode'] = 'wip';
