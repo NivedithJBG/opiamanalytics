@@ -2543,7 +2543,7 @@ class ProjectsmainController extends Controller
         //    balance carried from earlier bills + the WIP deducted at that bill (cost since
         //    the previous bill); cost spent after the bill is not added.
         //  - Something credited to Bills Receivable after the latest bill and a debit
-        //    balance still left: X = that Bills Receivable balance.
+        //    balance still left: X = that Bills Receivable balance + current WIP.
         $g['ti_mode'] = 'wip';
         $g['ti'] = $g['adv'] + $g['wip'];
         if ($lastBill && $br > 0.005) {
@@ -2554,7 +2554,7 @@ class ProjectsmainController extends Controller
                 [':p1' => $pid, ':p2' => $pid])->queryScalar();
             if ($lastCredit && $lastCredit > $lastBill) {
                 $g['ti_mode'] = 'br';
-                $g['ti'] = $g['adv'] + $br;
+                $g['ti'] = $g['adv'] + $br + $g['wip'];
             } else {
                 $billAmt = (float)$db->createCommand(
                     "SELECT COALESCE(SUM(amount),0) FROM journalvoucher WHERE project_id=:p AND debitacnt IN ($in) AND date(date) = :d",
