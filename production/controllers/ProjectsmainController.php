@@ -2091,7 +2091,8 @@ class ProjectsmainController extends Controller
     //  - Receipts: each cycle billed at its end for its Bills Receivable target and
     //    paid after the average collection time (billing cycle length if no bills
     //    yet); today's Bills Receivable balance comes in after the same time.
-    //  - Advances and Deposits target not included.
+    //  - Advances and Deposits: if the target is above today's actual advances, the
+    //    difference is paid out on day 1 (advances already paid are in today's balance).
     public function actionCfbankprojection()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -2112,6 +2113,10 @@ class ProjectsmainController extends Controller
         if ($fg['br'] > 0) $addIn($today + $coll * $day, $fg['br']);
         $brT = $b['cycles'] ?? [];
         $out = []; $bal = (float)$fg['bank'];
+        $advTarget = 100000 * (float)Yii::$app->db->createCommand(
+            "SELECT target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key = 'investments_target'", [':p' => $pid])->queryScalar();
+        $advExtra = max(0, $advTarget - (float)$fg['adv']);
+        $bal -= $advExtra;
         $prevEnd = null;
         foreach ($cyc as $i => $c) {
             $k = (int)$c['cycle'];
@@ -2132,7 +2137,7 @@ class ProjectsmainController extends Controller
             $out[] = ['cycle' => $k, 'end_date' => $c['end_date'], 'current' => $k === (int)$cur['cycle'],
                       'low' => round($lo, 2), 'high' => round($hi, 2), 'end' => round($bal, 2)];
         }
-        return ['error' => 'No', 'cycles' => $out, 'opening' => round((float)$fg['bank'], 2), 'collection_days' => $coll];
+        return ['error' => 'No', 'cycles' => $out, 'opening' => round((float)$fg['bank'], 2), 'collection_days' => $coll, 'advances_extra' => round($advExtra, 2)];
     }
 
     // Bank/Working Capital panel breakdown (Cashflow Dashboard popup):
