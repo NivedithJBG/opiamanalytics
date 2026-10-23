@@ -2542,8 +2542,8 @@ class ProjectsmainController extends Controller
         //  - Bill raised and nothing credited to Bills Receivable since: X = the unpaid
         //    balance carried from earlier bills + the WIP deducted at that bill (cost since
         //    the previous bill); cost spent after the bill is not added.
-        //  - The client has paid (Bank/Cash receipt credited to Bills Receivable or to
-        //    Contract Income) after the latest bill and a debit balance is still left over: X = that left-over
+        //  - The client has paid the bill (Bank/Cash receipt crediting Bills Receivable)
+        //    after the latest bill and a debit balance is still left over: X = that left-over
         //    Bills Receivable balance + current WIP, until it is paid or a new bill is raised.
         //    Journal credits (TDS etc.) alone do not count as payment.
         $g['ti_mode'] = 'wip';
@@ -2551,8 +2551,7 @@ class ProjectsmainController extends Controller
         if ($lastBill && $br > 0.005) {
             $in = implode(',', array_map('intval', $brIds));
             $lastCredit = $db->createCommand(
-                "SELECT MAX(date(v.date)) FROM voucher v LEFT JOIN accounts_item ai ON ai.id = v.creditacnt
-                 WHERE v.project_id=:p1 AND (v.creditacnt IN ($in) OR ai.name = 'Contract Income')" . str_replace('date(date)', 'date(v.date)', $dc),
+                "SELECT MAX(date(date)) FROM voucher WHERE project_id=:p1 AND creditacnt IN ($in)$dc",
                 [':p1' => $pid])->queryScalar();
             if ($lastCredit && $lastCredit > $lastBill) {
                 $g['ti_mode'] = 'br';
