@@ -2084,6 +2084,57 @@ class ProjectsmainController extends Controller
         ]);
     }
 
+    // Bank popup: projected bank balance, day by day from today to the end of the
+    // last billing cycle, and its lowest and highest point in each cycle.
+    //  - Opening = today's Bank panel balance.
+    //  - Cost: each cycle's planned cost (WIP target) paid evenly over its days.
+    //  - Receipts: each cycle billed at its end for its Bills Receivable target and
+    //    paid after the average collection time (billing cycle length if no bills
+    //    yet); today's Bills Receivable balance comes in after the same time.
+    //  - Advances and Deposits target not included.
+    public function actionCfbankprojection()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        if (!$pid) return ['error' => 'No project selected'];
+        $w = $this->actionCfwipcycles();
+        $b = $this->actionCfbillsreceivablecycles();
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $cur = self::cfCurrentCycle($pid);
+        $cyc = $w['cycles'] ?? [];
+        if (!$cyc || !$cur) return ['error' => 'No', 'cycles' => []];
+        $fg = $this->_cfFlowGroups($pid);
+        $coll = (int)round($this->_cfCollectionCycleDaysAverage($pid));
+        if ($coll <= 0) $coll = (int)$cur['length'];
+        $day = 86400; $today = strtotime(date('Y-m-d'));
+        $in = [];   // receipts by date
+        $addIn = function($ts, $amt) use (&$in) { $k = date('Y-m-d', $ts); $in[$k] = ($in[$k] ?? 0) + $amt; };
+        if ($fg['br'] > 0) $addIn($today + $coll * $day, $fg['br']);
+        $brT = $b['cycles'] ?? [];
+        $out = []; $bal = (float)$fg['bank'];
+        $prevEnd = null;
+        foreach ($cyc as $i => $c) {
+            $k = (int)$c['cycle'];
+            $end = strtotime($c['end_date']);
+            $start = $k === (int)$cur['cycle'] ? strtotime($cur['start']) : ($prevEnd !== null ? $prevEnd + $day : $end);
+            $prevEnd = $end;
+            if ($k < (int)$cur['cycle']) continue;
+            $days = max(1, (int)round(($end - $start) / $day) + 1);
+            $perDay = (float)$c['target'] / $days;
+            $addIn($end + $coll * $day, (float)($brT[$i]['target'] ?? 0));
+            $lo = null; $hi = null;
+            for ($t = max($start, $today); $t <= $end; $t += $day) {
+                $bal += ($in[date('Y-m-d', $t)] ?? 0) - $perDay;
+                $lo = $lo === null ? $bal : min($lo, $bal);
+                $hi = $hi === null ? $bal : max($hi, $bal);
+            }
+            if ($lo === null) { $lo = $hi = $bal; }
+            $out[] = ['cycle' => $k, 'end_date' => $c['end_date'], 'current' => $k === (int)$cur['cycle'],
+                      'low' => round($lo, 2), 'high' => round($hi, 2), 'end' => round($bal, 2)];
+        }
+        return ['error' => 'No', 'cycles' => $out, 'opening' => round((float)$fg['bank'], 2), 'collection_days' => $coll];
+    }
+
     // Bank/Working Capital panel breakdown (Cashflow Dashboard popup):
     // a LINE chart (unlike every other breakdown popup here, which are
     // bar charts) of the PEAK working-capital-drawn (Availed, see
