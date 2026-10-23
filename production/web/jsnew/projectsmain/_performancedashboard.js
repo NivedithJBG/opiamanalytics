@@ -3787,12 +3787,11 @@ function _cfShowBankBreakdown(points){
 // cfnetinvestmentbreakdown (same cycles as the Total Investment popup).
 function _cfBankTiLinesSvg(cyc){
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycles.</div>';
-    // One line: projected fund requirement in each billing cycle = the bank
-    // balance at its lowest point in the cycle, shown as the amount to be funded:
-    // positive = funds needed, negative = surplus (from cfbankprojection).
+    // One line: projected bank balance in each billing cycle at its lowest point
+    // (the peak funding need) — negative = overdraft, positive = surplus
+    // (from cfbankprojection).
     var has = function(){ return true; };
-    cyc.forEach(function(c){ c.need = -(+c.low || 0); });
-    var SER = [ { key: 'need', col: '#d84a30', name: 'Fund requirement' } ];
+    var SER = [ { key: 'low', col: '#3a4a5f', name: 'Bank balance' } ];
     var maxV = 0, minV = 0;
     cyc.forEach(function(c){ if (has(c)) SER.forEach(function(s){ var v = +c[s.key] || 0; maxV = Math.max(maxV, v); minV = Math.min(minV, v); }); });
     // X axis = period (billing cycles), Y axis = value in Lakhs, with tick marks.
@@ -3824,9 +3823,11 @@ function _cfBankTiLinesSvg(cyc){
         cyc.forEach(function(c, i){ if (has(c)) pts.push([xOf(i), yOf(+c[s.key] || 0), +c[s.key] || 0, c]); });
         if (pts.length > 1) out += '<polyline points="' + pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="3"/>';
         pts.forEach(function(p){
-            out += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="5" fill="' + s.col + '"><title>' + s.name + ' ' + L(p[2]) + ' L</title></circle>'
+            // Bank balance: overdraft points red-orange, surplus points green-blue.
+            var pc = s.key === 'low' ? (p[2] < 0 ? '#d84a30' : '#2ba899') : s.col;
+            out += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="5" fill="' + pc + '"><title>' + s.name + ' ' + L(p[2]) + ' L</title></circle>'
                 // At each cycle the higher value is labelled above its point, the other below.
-                + '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] + (function(){ var o = SER.length > 1 ? +p[3][SER[1 - si].key] || 0 : -Infinity; return (p[2] > o || (p[2] === o && si === 0)) ? -10 : 19; })()).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + s.col + '">' + L(p[2]) + '</text>';
+                + '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] + (function(){ var o = SER.length > 1 ? +p[3][SER[1 - si].key] || 0 : -Infinity; return (p[2] > o || (p[2] === o && si === 0)) ? -10 : 19; })()).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + pc + '">' + L(p[2]) + '</text>';
         });
     });
     cyc.forEach(function(c, i){
@@ -3841,10 +3842,10 @@ function _cfShowBankTiLines(cycles, note){
     var winW = 720, winH = 430;
     var html = '<div id="cf-bank-ti-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - winW) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - winH) / 2) + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:360px;min-height:260px;max-width:98vw;resize:both;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + '<div id="cf-bank-ti-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#081142;cursor:move;user-select:none;touch-action:none;">'
-        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Fund Requirement per Cycle (Lakhs)</span>'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Bank Balance per Cycle (Lakhs)</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
-        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #d84a30;margin-right:5px;vertical-align:middle;"></span>Fund requirement (+ needed, &minus; surplus)</span>' + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'
+        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #3a4a5f;margin-right:5px;vertical-align:middle;"></span>Bank balance at its lowest in the cycle (&minus; overdraft, + surplus)</span>' + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;padding:10px 16px 16px;">' + _cfBankTiLinesSvg(cycles) + '</div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;
