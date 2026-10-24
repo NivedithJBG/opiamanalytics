@@ -3304,12 +3304,12 @@ class ProjectsmainController extends Controller
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
 
-        // Cashflow from Project = Net Working Capital - (Bank + Cash) (agreed 2026-10-24);
+        // Cashflow from Project = (Bank + Cash) x (-1) - Net Working Capital (agreed 2026-10-24);
         // Net Working Capital = Current Assets - Current Liabilities (the panel figures).
         $fg = $this->_cfFlowGroups($pid);
         $nwc = (float)(json_decode($this->actionCfcurrentassetstotal(), true)['total'] ?? 0)
              - (float)(json_decode($this->actionCfcurrentliabilities(), true)['total'] ?? 0);
-        $freeCashValue = $nwc - ($fg['bank'] + $fg['cash']);
+        $freeCashValue = -($fg['bank'] + $fg['cash']) - $nwc;
         $averageInvestment = (float)($this->_cfAverageInvestment($pid)['avg'] ?? 0);
         $freeCashPct = $averageInvestment > 0 ? ($freeCashValue / $averageInvestment) * 100 : 0;
 
