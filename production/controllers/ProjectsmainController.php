@@ -3355,7 +3355,9 @@ class ProjectsmainController extends Controller
         $pid = (int)$projuser->projectid;
 
         $contributionMarginValue = $this->_cfContributionMarginValue($pid);
-        $averageInvestment = $this->_cfNetInvestmentAverage($pid);
+        // Average Investment = day-weighted Total Investment (Advances + WIP) from the
+        // first transaction to today, as in the Total Investment popup (agreed 2026-10-24).
+        $averageInvestment = (float)($this->_cfAverageInvestment($pid)['avg'] ?? 0);
         $roiPct = $averageInvestment > 0 ? ($contributionMarginValue / $averageInvestment) * 100 : 0;
 
         return json_encode([
