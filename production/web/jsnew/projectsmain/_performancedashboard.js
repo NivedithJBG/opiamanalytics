@@ -1315,7 +1315,7 @@ function _cfNetInvCycleBarsHtml(cyc){
 function _cfShowNetInvCycles(cycles, info){
     $('#cf-netinv-breakdown-win').remove();
     window._cfNetInvCycles = cycles;
-    var winW = 780, winH = 440, MIN_W = 480, MIN_H = 260;
+    var winW = 840, winH = 480, MIN_W = 520, MIN_H = 260;
     var left = Math.max(10, (window.innerWidth - winW) / 2);
     var topP = Math.max(10, (window.innerHeight - winH) / 2);
     var rsHtml = '';
@@ -1339,6 +1339,17 @@ function _cfShowNetInvCycles(cycles, info){
     var curAct = curC && curC.actual !== null && curC.actual !== undefined ? +curC.actual : (reached.length ? +reached[reached.length - 1].actual : null);
     var avgAct = info && info.avg_ti !== null && info.avg_ti !== undefined ? +info.avg_ti : null;
     var avgFrom = info && info.avg_from ? new Date(info.avg_from + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }) : '';
+    // Funded by: bank overdraft + cash received beyond cost (GST, margin, net of
+    // withheld) + Bills Receivable left-over = Total Investment today.
+    function fundBox(){
+        var f = info && info.funding; if (!f) return '';
+        var L = function(v){ return ((+v || 0) / 100000).toFixed(2); };
+        var row = function(lbl, v, b){ return '<div style="display:flex;justify-content:space-between;gap:6px;' + (b ? 'border-top:1px solid #b8c2d3;margin-top:3px;padding-top:3px;font-weight:700;' : '') + '"><span>' + lbl + '</span><span>' + L(v) + '</span></div>'; };
+        return '<div style="border:1px solid #dde2e9;border-radius:6px;padding:8px 10px;font-size:12px;color:#111;">'
+            + '<div style="font-size:12px;font-weight:700;color:#081142;text-transform:uppercase;letter-spacing:.3px;text-align:center;margin-bottom:4px;">Funded by (L)</div>'
+            + row('Bank overdraft', f.bank) + row('GST + margin received, net of withheld', f.received) + row('Bills Receivable left-over', f.unpaid)
+            + row('Total Investment', f.total, true) + '</div>';
+    }
     function statBox(title, v, note){
         return '<div style="border:1px solid #dde2e9;border-radius:6px;padding:8px 10px;text-align:center;">'
             + '<div style="font-size:12px;font-weight:700;color:#081142;text-transform:uppercase;letter-spacing:.3px;">' + title + '</div>'
@@ -1358,9 +1369,10 @@ function _cfShowNetInvCycles(cycles, info){
         + '</div>'
         + '<div style="flex:1;min-width:0;min-height:0;display:flex;gap:12px;overflow:hidden;padding:10px 16px 16px;box-sizing:border-box;">'
         + '<div id="cf-ni-chart" style="flex:1;min-width:0;overflow-y:auto;">' + _cfNetInvCycleBarsHtml(cycles) + '</div>'
-        + '<div style="flex:none;width:130px;display:flex;flex-direction:column;justify-content:center;gap:14px;font-family:Barlow Condensed,Arial;">'
+        + '<div style="flex:none;width:190px;display:flex;flex-direction:column;justify-content:center;gap:10px;font-family:Barlow Condensed,Arial;overflow-y:auto;">'
         + statBox('Total Investment', curAct, 'actual, today')
         + statBox('Average Investment', avgAct, 'weighted by days' + (avgFrom ? ', ' + avgFrom + ' to today' : ''))
+        + fundBox()
         + '</div>'
         + '</div></div>';
     $('body').append(html);

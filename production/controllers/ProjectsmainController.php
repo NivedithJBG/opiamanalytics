@@ -3179,8 +3179,17 @@ class ProjectsmainController extends Controller
                          'actual_br' => $g ? round($g['br'], 2) : null];
         }
         $avg = $this->_cfAverageInvestment($pid);
+        // How today's Total Investment is funded: the bank overdraft, cash received
+        // beyond the cost cleared at bills (GST collected + margin, net of amounts the
+        // client withheld) that is temporarily in use, and the Bills Receivable left-over
+        // counted in Total Investment that was never paid out.
+        $g0 = $this->_cfFlowGroups($pid);
+        $unpaid = $g0['ti_mode'] === 'br' ? $g0['br'] : ($g0['ti_mode'] === 'billed' ? ($g0['ti_carry'] ?? 0) : 0);
+        $fundBank = -$g0['bank'];
+        $funding = ['bank' => round($fundBank, 2), 'unpaid' => round($unpaid, 2),
+                    'received' => round($g0['ti'] - $fundBank - $unpaid, 2), 'total' => round($g0['ti'], 2)];
         return json_encode(['error' => 'No', 'cycles' => $cycles, 'adv_target' => $advTarget, 'current_cycle' => $cur,
-                            'avg_ti' => $avg['avg'], 'avg_from' => $avg['from']]);
+                            'avg_ti' => $avg['avg'], 'avg_from' => $avg['from'], 'funding' => $funding]);
 
         $allRows = $this->_cfNetInvestmentPerCycleRows($pid);
         $rows = array_values(array_filter($allRows, function($r) { return $r['name'] !== 'Current'; }));
