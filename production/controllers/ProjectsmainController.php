@@ -2542,17 +2542,18 @@ class ProjectsmainController extends Controller
             $vendorAcc = array_flip(array_map('intval', $db->createCommand("SELECT DISTINCT account_id FROM vendors WHERE account_id > 0")->queryColumn()));
             $brIds = $db->createCommand("SELECT id FROM accounts_item WHERE name='Bills Receivable'")->queryColumn();
         }
-        $g = ['bank' => 0.0, 'cash' => 0.0, 'adv' => 0.0, 'wip_cost' => 0.0, 'received' => 0.0, 'refunds' => 0.0, 'wip_acc' => []];
+        $g = ['bank' => 0.0, 'cash' => 0.0, 'adv' => 0.0, 'wip_cost' => 0.0, 'received' => 0.0, 'refunds' => 0.0, 'wip_acc' => [], 'adv_acc' => []];
         foreach ($cash as $id => $b) {
             $id = (int)$id; $b = (float)$b; $t = (int)($types[$id] ?? 0);
             if ($t === 2)      { $g['bank'] += $b; }
-            elseif ($t === 1)  { $g['cash'] += $b; if ($b > 0) { $g['adv'] += $b; } else { $g['received'] += -$b; } }   // cash in hand is an advance
+            elseif ($t === 1)  { $g['cash'] += $b; if ($b > 0) { $g['adv'] += $b; $g['adv_acc'][$id] = $b; } else { $g['received'] += -$b; } }   // cash in hand is an advance
             elseif ($t === 8)  { $g['wip_cost'] += $b; $g['wip_acc'][$id] = $b; }
             elseif ($t === 7) {
                 if ($b > 0) {
                     $m = (float)($main[$id] ?? 0);
                     $a = $m > 0 ? min($m, $b) : 0;
                     $g['adv'] += $a;
+                    if ($a > 0) $g['adv_acc'][$id] = $a;
                     $g['wip_cost'] += $b - $a;
                     $g['wip_acc'][$id] = $b - $a;
                 } else {
@@ -2560,7 +2561,7 @@ class ProjectsmainController extends Controller
                     if (isset($vendorAcc[$id])) $g['refunds'] += -$b;   // money returned by a supplier / sub-contractor
                 }
             }
-            elseif ($b > 0)    { $g['adv'] += $b; }
+            elseif ($b > 0)    { $g['adv'] += $b; $g['adv_acc'][$id] = $b; }
             else               { $g['received'] += -$b; }
         }
         if ($costOnly) { return $g; }
@@ -2773,10 +2774,19 @@ class ProjectsmainController extends Controller
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
 
+        // Same accounts and amounts as the panel figure (_cfFlowGroups adv: cash paid
+        // out and not yet adjusted), so no journal-only items such as input GST.
+        $rows = [];
+        foreach ($this->_cfFlowGroups($pid)['adv_acc'] as $acctId => $amt) {
+            $name = Yii::$app->db->createCommand("SELECT name FROM accounts_item WHERE id=:id", [':id' => $acctId])->queryScalar();
+            $rows[] = ['name' => $name ?: ('Account #' . $acctId), 'amount' => round($amt, 2),
+                       'members' => $this->_cfAccountTransactionsDetail($acctId, $pid)];
+        }
+        usort($rows, function($a, $b) { return $b['amount'] <=> $a['amount']; });
+        return json_encode(['error' => 'No', 'accounts' => $rows]);
+
         $byAccount = $this->_cfBankCashPaymentsByDebitAccount($pid, null, null);
         $gstPairedIds = $this->_cfGstPairedAccountIds();
-
-        $rows = [];
         foreach ($this->_cfGstAccountPairs() as $pair) {
             $net = $this->_cfAccountDebitBalance($pair[0], $pid) + $this->_cfAccountDebitBalance($pair[1], $pid);
             if ($net > 0) {
