@@ -3304,8 +3304,10 @@ class ProjectsmainController extends Controller
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
 
-        $freeCashValue = $this->_cfFreeCashValue($pid);
-        $averageInvestment = $this->_cfNetInvestmentAverage($pid);
+        // Free Cash = current balance of Cash + current balance of Bank (agreed 2026-10-24).
+        $fg = $this->_cfFlowGroups($pid);
+        $freeCashValue = $fg['bank'] + $fg['cash'];
+        $averageInvestment = (float)($this->_cfAverageInvestment($pid)['avg'] ?? 0);
         $freeCashPct = $averageInvestment > 0 ? ($freeCashValue / $averageInvestment) * 100 : 0;
 
         return json_encode([
