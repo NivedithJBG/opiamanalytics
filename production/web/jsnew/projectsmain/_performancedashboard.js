@@ -3308,8 +3308,8 @@ function renderCfBillsReceivableDial(){
 // actual credited to Contract Income. A shortfall (actual below target) is shown
 // in orange-red, an excess (actual above target) in blue-green.
 function _cfBillsRecvBarsHtml(){
-    // Line chart: target per billing cycle (dashed) and the actual credited to
-    // Contract Income (solid, cycles reached so far). X = period, Y = Lakhs.
+    // Line chart: target per billing cycle (dark line) and the actual credited to
+    // Contract Income (dark green line, cycles reached so far). X = period, Y = Lakhs.
     var s = window._cfBillsRecvBreakdownState || {};
     var cyc = s.cycles || [], cur = +s.currentCycle || 0;
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration, Billing Cycle, Project Value and an estimate to see the cycle targets.</div>';
@@ -3324,7 +3324,7 @@ function _cfBillsRecvBarsHtml(){
     var xOf = function(i){ return padL + (i + 0.5) * slot; };
     var yOf = function(v){ return base - (v / maxS) * (base - top); };
     var L = function(v){ return (v / 100000).toFixed(2); };
-    var GRID = '#7d8590', TC = '#3a4a5f', AC = '#2ba899';
+    var GRID = '#7d8590', TC = '#1f2a3a', AC = '#1e8073';
     var out = '';
     for (var tv = 0; tv <= maxS + 1; tv += tick) {
         var ty = yOf(tv).toFixed(1);
@@ -3336,10 +3336,10 @@ function _cfBillsRecvBarsHtml(){
         + '<text x="16" y="' + ((top + base) / 2) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700" transform="rotate(-90 16 ' + ((top + base) / 2) + ')">Lakhs</text>'
         + '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700">Billing cycle (period)</text>';
     var tPts = cyc.map(function(c, i){ return xOf(i).toFixed(1) + ',' + yOf(+c.target || 0).toFixed(1); });
-    out += '<polyline points="' + tPts.join(' ') + '" fill="none" stroke="' + TC + '" stroke-width="2.5" stroke-dasharray="6 4"/>';
+    out += '<polyline points="' + tPts.join(' ') + '" fill="none" stroke="' + TC + '" stroke-width="3"/>';
     var aPts = [];
     cyc.forEach(function(c, i){ if (reached(c, i)) aPts.push(xOf(i).toFixed(1) + ',' + yOf(+c.actual || 0).toFixed(1)); });
-    if (aPts.length > 1) out += '<polyline points="' + aPts.join(' ') + '" fill="none" stroke="' + AC + '" stroke-width="3"/>';
+    if (aPts.length > 1) out += '<polyline points="' + aPts.join(' ') + '" fill="none" stroke="' + AC + '" stroke-width="3.5"/>';
     cyc.forEach(function(c, i){
         var x = xOf(i), t = +c.target || 0, a = +c.actual || 0, has = reached(c, i);
         // The higher value is labelled above its point, the other below.
@@ -3354,7 +3354,7 @@ function _cfBillsRecvBarsHtml(){
             + '<text x="' + x.toFixed(1) + '" y="' + (base + 40) + '" text-anchor="middle" font-size="12" fill="#111"' + ((c.cycle || i + 1) === cur ? ' font-weight="700"' : '') + '>' + (c.end_label || '') + '</text>';
     });
     return '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible;">' + out + '</svg>'
-        + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;"><span style="display:inline-block;width:18px;border-top:2.5px dashed #3a4a5f;margin-right:5px;vertical-align:middle;"></span>Target &nbsp; <span style="display:inline-block;width:18px;border-top:3px solid #2ba899;margin-right:5px;vertical-align:middle;"></span>Actual credited (red point = below target)</div>';
+        + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;"><span style="display:inline-block;width:18px;border-top:3px solid #1f2a3a;margin-right:5px;vertical-align:middle;"></span>Target &nbsp; <span style="display:inline-block;width:18px;border-top:3.5px solid #1e8073;margin-right:5px;vertical-align:middle;"></span>Actual credited (red point = below target)</div>';
 }
 function _cfRedrawBillsRecvBreakdown(){
     var s = window._cfBillsRecvBreakdownState;
