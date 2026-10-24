@@ -2858,40 +2858,28 @@ function _cfDrawFreeCashDial(){
     if (!el) return;
     el.style.justifyContent = 'center';
     var s = _cfFreeCashState;
-    // Target is still edited/stored as a PERCENTAGE (metric_key
-    // "free_cash_target"), but displayed here as its rupee equivalent —
-    // target% * Average Investment / 100 — formatted the same way as
-    // the Actual value, per explicit request to show a figure, not %.
-    var targetRupees = s.target / 100 * s.avgInvestment;
-    var targetFmt = _cfFmtMoney(targetRupees);
-    // Actual's displayed unit follows the Target's unit (so the two
-    // never show in different units, e.g. Actual in Lakhs while Target
-    // sits in Crores) — falling back to Actual's own auto-magnitude unit
-    // only when there's no target set yet (targetRupees is 0, so
-    // targetFmt carries no real signal to follow).
-    var fmt = targetRupees !== 0 ? targetFmt : _cfFmtMoney(s.value);
-    var divisor = fmt.unit === 'Crores' ? 10000000 : 100000;
-    var targetDivisor = divisor;
+    // Free Cash = Cash + Bank balance (actionCfreecash). Dial: target Free Cash
+    // (typed in Lakhs, metric_key "free_cash_target_amt") at the centre marker,
+    // needle = actual; at or above target green-blue, below red-orange.
+    var lk = function(v){ return (v / 100000).toFixed(2); };
+    var targetRupees = _cfEnteredToRupees(s.target);
     var targetCell = s.editing
-        ? '<input class="cf-freecash-input" data-field="target" type="number" step="any" value="' + (targetRupees / targetDivisor).toFixed(2) + '" style="width:60px;font-size:13px;padding:0 3px;border:1px solid #b0bec5;border-radius:2px;color:#5a5a5a;font-weight:700;"> <span style="font-size:11px;color:#888;">' + fmt.unit + '</span>'
-        : '<span style="font-size:13px;color:#5a5a5a;font-weight:700;">' + (targetRupees / targetDivisor).toFixed(2) + ' ' + fmt.unit + '</span>';
-    var maxV = s.target > 0 ? Math.min(100, s.target * 2) : 100;
-    var needleCol = (s.percent / maxV) <= 0.5 ? '#4a2e7a' : '#b5540a';
-    var centerLabel = (s.value / divisor).toFixed(2) + ' ' + fmt.unit;
+        ? '<input class="cf-freecash-input" data-field="target" type="number" step="any" value="' + (+s.target || 0) + '" style="width:60px;font-size:13px;padding:0 3px;border:1px solid #b0bec5;border-radius:2px;color:#5a5a5a;font-weight:700;"> <span style="font-size:11px;color:#888;">Lakhs</span>'
+        : '<span style="font-size:13px;color:#5a5a5a;font-weight:700;">' + lk(targetRupees) + ' Lakhs</span>';
+    var needleCol = s.value >= targetRupees ? '#2ba899' : '#d84a30';
     el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
-        + _cfFreeCashDialSvg(s.target, s.percent, centerLabel)
+        + _cfInvestDialSvg(s.target, s.value / 10000000, true)
         + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
-        + '<span style="font-size:13px;color:' + needleCol + ';font-weight:700;">' + (s.value / divisor).toFixed(2) + ' ' + fmt.unit + '</span>'
+        + '<span style="font-size:13px;color:#111;">Actual: <span style="color:' + needleCol + ';font-weight:700;">' + lk(s.value) + '</span></span>'
         + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Target: ' + targetCell + ' <button class="cf-freecash-pencil" title="Edit Target" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>'
         + '</div>'
         + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
 }
-
 function renderCfFreeCashDial(){
     var gen = _cfLoadGen;
     _cfFreeCashState = { target: 0, value: 0, percent: 0, avgInvestment: 0, editing: false };
     _cfDrawFreeCashDial();
-    _cfFetchTarget('free_cash_target', function(d){
+    _cfFetchTarget('free_cash_target_amt', function(d){
         if (gen === _cfLoadGen) { _cfFreeCashState.target = +d.target || 0; _cfDrawFreeCashDial(); }
     });
     _cfQueueAjax({
@@ -2911,17 +2899,14 @@ $(document).on('click', '.cf-freecash-pencil', function(e){
     e.preventDefault(); e.stopPropagation();
     var s = _cfFreeCashState;
     if (s.editing) {
-        // Input is entered as a rupee figure (Lakhs under 100, else
-        // Crores — same convention as _cfEnteredToRupees), converted
-        // back to the percentage that's actually stored server-side.
-        var enteredRupees = _cfEnteredToRupees(+$('.cf-freecash-input[data-field="target"]').val() || 0);
-        var pct = s.avgInvestment > 0 ? (enteredRupees / s.avgInvestment) * 100 : 0;
-        s.target = pct;
+        // Target Free Cash typed in Lakhs, stored as typed.
+        var typed = +$('.cf-freecash-input[data-field="target"]').val() || 0;
+        s.target = typed;
         s.editing = false;
         _cfDrawFreeCashDial();
         _cfQueueAjax({
             type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json',
-            data: { metric_key: 'free_cash_target', target_value: pct },
+            data: { metric_key: 'free_cash_target_amt', target_value: typed },
             success: function(){ renderCfBars(); }
         });
     } else {
