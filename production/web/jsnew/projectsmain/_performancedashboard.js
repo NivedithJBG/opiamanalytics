@@ -1340,14 +1340,14 @@ function _cfShowNetInvCycles(cycles, info){
     var avgAct = info && info.avg_ti !== null && info.avg_ti !== undefined ? +info.avg_ti : null;
     var avgFrom = info && info.avg_from ? new Date(info.avg_from + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }) : '';
     // Funded by: bank overdraft + cash received beyond cost (GST, margin, net of
-    // withheld) + Bills Receivable left-over = Total Investment today.
+    // withheld) = Total Investment today.
     function fundBox(){
         var f = info && info.funding; if (!f) return '';
         var L = function(v){ return ((+v || 0) / 100000).toFixed(2); };
         var row = function(lbl, v, b){ return '<div style="display:flex;justify-content:space-between;gap:6px;' + (b ? 'border-top:1px solid #b8c2d3;margin-top:3px;padding-top:3px;font-weight:700;' : '') + '"><span>' + lbl + '</span><span>' + L(v) + '</span></div>'; };
         return '<div style="border:1px solid #dde2e9;border-radius:6px;padding:8px 10px;font-size:12px;color:#111;">'
             + '<div style="font-size:12px;font-weight:700;color:#081142;text-transform:uppercase;letter-spacing:.3px;text-align:center;margin-bottom:4px;">Funded by (L)</div>'
-            + row('Bank overdraft', f.bank) + row('GST + margin received, net of withheld', f.received) + row('Bills Receivable left-over', f.unpaid)
+            + row('Bank overdraft', f.bank) + row('GST + margin received, net of withheld', f.received)
             + row('Total Investment', f.total, true) + '</div>';
     }
     function statBox(title, v, note){

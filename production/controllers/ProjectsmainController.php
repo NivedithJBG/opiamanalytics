@@ -2594,43 +2594,9 @@ class ProjectsmainController extends Controller
         // Refunds from suppliers / sub-contractors reduce WIP (refunds on expense accounts
         // already net off in wip_cost); loans, capital and advances received do not.
         $g['wip'] = $g['wip_cost'] - $costAtBill - $g['refunds'];
-        // Total Investment = Advances and Deposits + X (agreed 2026-10-23):
-        //  - Bills Receivable 0 (or no bill yet): X = current WIP (cost since the latest bill).
-        //  - Bill raised and nothing credited to Bills Receivable since: X = the unpaid
-        //    balance carried from earlier bills + the WIP deducted at that bill (cost since
-        //    the previous bill); cost spent after the bill is not added.
-        //  - The client has paid the bill (Bank/Cash receipt crediting Bills Receivable)
-        //    after the latest bill and a debit balance is still left over: X = that left-over
-        //    Bills Receivable balance + current WIP, until it is paid or a new bill is raised.
-        //    Journal credits (TDS etc.) alone do not count as payment.
-        $g['ti_mode'] = 'wip';
+        // Total Investment = Advances and Deposits + current WIP (agreed 2026-10-24).
+        // Bills Receivable is left out: it is billed money, not money invested.
         $g['ti'] = $g['adv'] + $g['wip'];
-        if ($lastBill && $br > 0.005) {
-            $in = implode(',', array_map('intval', $brIds));
-            $lastCredit = $db->createCommand(
-                "SELECT MAX(date(date)) FROM voucher WHERE project_id=:p1 AND creditacnt IN ($in)$dc",
-                [':p1' => $pid])->queryScalar();
-            if ($lastCredit && $lastCredit > $lastBill) {
-                $g['ti_mode'] = 'br';
-                $g['ti'] = $g['adv'] + $br + $g['wip'];
-            } else {
-                // Left-over from earlier bills = Bills Receivable balance on the day before this bill.
-                $carry = max(0, (float)$db->createCommand(
-                    "SELECT COALESCE(SUM(x),0) FROM (
-                       SELECT amount x FROM voucher WHERE project_id=:p1 AND account_id IN ($in) AND date(date) < :d1
-                       UNION ALL SELECT -amount FROM voucher WHERE project_id=:p2 AND creditacnt IN ($in) AND date(date) < :d2
-                       UNION ALL SELECT amount FROM journalvoucher WHERE project_id=:p3 AND debitacnt IN ($in) AND date(date) < :d3
-                       UNION ALL SELECT -amount FROM journalvoucher WHERE project_id=:p4 AND creditacnt IN ($in) AND date(date) < :d4) t",
-                    [':p1' => $pid, ':p2' => $pid, ':p3' => $pid, ':p4' => $pid, ':d1' => $lastBill, ':d2' => $lastBill, ':d3' => $lastBill, ':d4' => $lastBill])->queryScalar());
-                $prevBill = $db->createCommand(
-                    "SELECT MAX(date(date)) FROM journalvoucher WHERE project_id=:p AND debitacnt IN ($in) AND date(date) < :d",
-                    [':p' => $pid, ':d' => $lastBill])->queryScalar();
-                $deducted = $costAtBill - ($prevBill ? $this->_cfFlowGroups($pid, $prevBill, true)['wip_cost'] : 0.0);
-                $g['ti_mode'] = 'billed';
-                $g['ti_deducted'] = $deducted; $g['ti_carry'] = $carry;
-                $g['ti'] = $g['adv'] + $carry + $deducted;
-            }
-        }
         $g['br']  = max(0, $br);
         return $g;
     }
@@ -3181,13 +3147,11 @@ class ProjectsmainController extends Controller
         $avg = $this->_cfAverageInvestment($pid);
         // How today's Total Investment is funded: the bank overdraft, cash received
         // beyond the cost cleared at bills (GST collected + margin, net of amounts the
-        // client withheld) that is temporarily in use, and the Bills Receivable left-over
-        // counted in Total Investment that was never paid out.
+        // client withheld) that is temporarily in use.
         $g0 = $this->_cfFlowGroups($pid);
-        $unpaid = $g0['ti_mode'] === 'br' ? $g0['br'] : ($g0['ti_mode'] === 'billed' ? ($g0['ti_carry'] ?? 0) : 0);
         $fundBank = -$g0['bank'];
-        $funding = ['bank' => round($fundBank, 2), 'unpaid' => round($unpaid, 2),
-                    'received' => round($g0['ti'] - $fundBank - $unpaid, 2), 'total' => round($g0['ti'], 2)];
+        $funding = ['bank' => round($fundBank, 2),
+                    'received' => round($g0['ti'] - $fundBank, 2), 'total' => round($g0['ti'], 2)];
         return json_encode(['error' => 'No', 'cycles' => $cycles, 'adv_target' => $advTarget, 'current_cycle' => $cur,
                             'avg_ti' => $avg['avg'], 'avg_from' => $avg['from'], 'funding' => $funding]);
 
