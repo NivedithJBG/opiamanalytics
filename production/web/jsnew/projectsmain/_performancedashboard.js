@@ -2885,6 +2885,12 @@ function renderCfFreeCashDial(){
     _cfQueueAjax({
         type: 'POST', url: '../projectsmain/cfreecash', dataType: 'json',
         success: function(d){
+            if (gen === _cfLoadGen && d && d.error === 'No' && d.pending) {
+                // Formula to be agreed: placeholder dial, as for Capital efficiency.
+                var fe = document.getElementById('cf-expenses');
+                if (fe) fe.innerHTML = _cfValueDialHtml(0, 0, '-', 'Target: -', 'Actual: -');
+                return;
+            }
             if (gen === _cfLoadGen && d && d.error === 'No') {
                 _cfFreeCashState.value = +d.value || 0;
                 _cfFreeCashState.percent = +d.percent || 0;

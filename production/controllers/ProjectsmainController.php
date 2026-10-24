@@ -3299,6 +3299,8 @@ class ProjectsmainController extends Controller
     // metric_key "free_cash_target".
     public function actionCfreecash()
     {
+        // Formula removed (2026-10-24) until it is agreed; the panel shows "-".
+        return json_encode(['error' => 'No', 'pending' => true]);
         $uid = Yii::$app->user->Id;
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
