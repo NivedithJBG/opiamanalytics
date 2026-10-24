@@ -2664,6 +2664,8 @@ class ProjectsmainController extends Controller
              GROUP BY t.a HAVING SUM(t.x) > 0", $p)->queryAll();
         $total = 0;
         foreach ($rows as $r) { $total += (float)$r['bal']; }
+        // Current WIP (cost since the latest bill) is also a current asset (agreed 2026-10-24).
+        $total += $this->_cfFlowGroups($pid)['wip'];
         return json_encode(['error' => 'No', 'total' => round($total, 2)]);
     }
 
@@ -2689,6 +2691,7 @@ class ProjectsmainController extends Controller
              GROUP BY t.a, ai.name HAVING SUM(t.x) > 0 ORDER BY amt DESC", $p)->queryAll();
         $out = [];
         foreach ($rows as $r) { $out[] = ['name' => $r['name'], 'amount' => round((float)$r['amt'], 2)]; }
+        $out[] = ['name' => 'Work In Progress', 'amount' => round($this->_cfFlowGroups($pid)['wip'], 2)];
         return json_encode(['error' => 'No', 'accounts' => $out]);
     }
 
@@ -4236,7 +4239,7 @@ class ProjectsmainController extends Controller
     }
 
     // Current Assets popup: first bar = Advances and Deposits (cash and bank
-    // payments, the Advances and Deposits panel), then one bar per account head for
+    // payments, the Advances and Deposits panel), then Work In Progress, then one bar per account head for
     // what Current Assets holds beyond it (amounts booked by journal: input GST,
     // retention, TDS, Bills Receivable, deposits partly by journal ...). The bars
     // add up to Current Assets.
@@ -4266,13 +4269,14 @@ class ProjectsmainController extends Controller
             if (in_array($t, [2, 8], true)) $adv = 0.0;
             elseif ($t === 7) $adv = ($b > 0 && $m > 0) ? min($m, $b) : 0.0;
             else $adv = $b > 0 ? $b : 0.0;
-            // Current Assets share (debit main balance, not Bank/Income/Expense).
-            $ca = (!in_array($t, [2, 4, 8], true) && $m > 0) ? $m : 0.0;
+            // Current Assets share (debit main balance, not Income/Expense; bank included).
+            $ca = (!in_array($t, [4, 8], true) && $m > 0) ? $m : 0.0;
             $advTotal += $adv;
             if (abs($ca - $adv) >= 0.01) $diffs[] = ['name' => $names[$id] ?? ('Account ' . $id), 'amount' => round($ca - $adv, 2)];
         }
         usort($diffs, function($a, $b){ return $b['amount'] <=> $a['amount']; });
-        $rows = array_merge([['name' => 'Advances and Deposits', 'amount' => round($advTotal, 2)]], $diffs);
+        $rows = array_merge([['name' => 'Advances and Deposits', 'amount' => round($advTotal, 2)],
+                             ['name' => 'Work In Progress', 'amount' => round($this->_cfFlowGroups($pid)['wip'], 2)]], $diffs);
         return ['error' => 'No', 'accounts' => $rows, 'total' => round(array_sum(array_column($rows, 'amount')), 2)];
     }
 
