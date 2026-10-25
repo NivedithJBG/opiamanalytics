@@ -4714,9 +4714,9 @@ class ProjectsmainController extends Controller
                 array_merge([':a' => (int)$a['id']],
                     ($cyc && (int)$cyc['cycle'] > 1) ? [':s' => $cyc['start']] : [],
                     $cycEnd !== null ? [':e' => $cycEnd] : []))->queryScalar();
-            // Cycle Qnty (agreed 2026-10-25) = (E. Quantity - W.Done Qty) / actual activity
-            // duration x activity days inside this cycle.
-            $cycleOnlyQty = max(0, ((float)$a['quantity'] - $doneCycle) / $barDays * min($barDays, $inCycle));
+            // Cycle Qnty (agreed 2026-10-25) = E. Quantity / actual activity duration x
+            // activity days inside this cycle (actual duration = projected from progress).
+            $cycleOnlyQty = (float)$a['quantity'] / $barDays * min($barDays, $inCycle);
             $currentItems[] = [
                 'sched_id' => (int)$a['id'],
                 'wan_id'   => (int)$a['wan_id'],
