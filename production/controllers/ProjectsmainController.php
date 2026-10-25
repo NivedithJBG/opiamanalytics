@@ -4611,7 +4611,7 @@ class ProjectsmainController extends Controller
         $acts = $db->createCommand(
             "SELECT s.id, s.activity_id AS wan_id,
                     (SELECT w.activity_Id FROM workgroup_activities_new w WHERE w.id = s.activity_id) AS lib_activity_id,
-                    s.name, s.unit, s.start_date, s.duration, s.quantity,
+                    s.name, s.unit, s.start_date, s.duration, s.old_duration, s.quantity,
                     -- same rate as the Project Estimate window: the project's allocation only (0 if none)
                     COALESCE((SELECT ROUND(SUM(pern.rate * pern.quantity), 2) FROM pricing_estimate_resources_new pern
                               WHERE pern.activity_id = s.activity_id AND pern.project_id = s.projectId AND pern.pricing_status = 0), 0) AS rate,
@@ -4714,9 +4714,10 @@ class ProjectsmainController extends Controller
                 array_merge([':a' => (int)$a['id']],
                     ($cyc && (int)$cyc['cycle'] > 1) ? [':s' => $cyc['start']] : [],
                     $cycEnd !== null ? [':e' => $cycEnd] : []))->queryScalar();
-            // Cycle Qnty (agreed 2026-10-25) = E. Quantity / actual activity duration x
-            // activity days inside this cycle (actual duration = projected from progress).
-            $cycleOnlyQty = (float)$a['quantity'] / $barDays * min($barDays, $inCycle);
+            // Cycle Qnty (agreed 2026-10-25) = (E. Quantity - W.Done Qty) / B. Activity
+            // Duration (baseline, old_duration) x activity days inside this cycle.
+            $bDur = max(1, (int)($a['old_duration'] ?: $a['duration']));
+            $cycleOnlyQty = max(0, ((float)$a['quantity'] - $doneCycle) / $bDur * min($barDays, $inCycle));
             $currentItems[] = [
                 'sched_id' => (int)$a['id'],
                 'wan_id'   => (int)$a['wan_id'],
