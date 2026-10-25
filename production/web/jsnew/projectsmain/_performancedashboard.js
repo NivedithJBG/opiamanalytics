@@ -1024,14 +1024,23 @@ function renderCfPlaceholderDials(){
         _cfQueueAjax({ type: 'POST', url: '../projectsmain/cfcurrentliabilities', dataType: 'json',
             success: function(d){ if (wcGen === _cfLoadGen && d && d.error === 'No') { wcCL = +d.total || 0; wcDraw(); } } });
     }
-    ['cf-wceff'].forEach(function(id){
-        var el = document.getElementById(id);
-        if (!el) return;
-        el.style.display = 'flex';
-        el.style.flexDirection = 'column';
-        el.style.justifyContent = 'center';
-        el.innerHTML = _cfValueDialHtml(0, 0, '-', 'Target: -', 'Actual: -');
-    });
+    // Capital efficiency = Contract Income / Average Investment (times), as a large figure.
+    var ceEl = document.getElementById('cf-wceff');
+    if (ceEl) {
+        var ceGen = _cfLoadGen;
+        ceEl.style.display = 'flex'; ceEl.style.flexDirection = 'column'; ceEl.style.justifyContent = 'center';
+        ceEl.style.alignItems = 'center'; ceEl.style.flex = '1'; ceEl.style.height = '100%'; ceEl.style.width = '100%';
+        ceEl.innerHTML = '<div style="font-family:Barlow Condensed,Arial;font-size:42px;font-weight:700;color:#5a6e8c;">-</div>';
+        _cfQueueAjax({ type: 'POST', url: '../projectsmain/cfcapitalefficiency', dataType: 'json',
+            success: function(d){
+                if (ceGen !== _cfLoadGen || !d || d.error !== 'No') return;
+                var v = d.value;
+                ceEl.title = 'Contract Income ' + ((+d.contract_income || 0) / 100000).toFixed(2) + ' L / Average Investment ' + ((+d.average_investment || 0) / 100000).toFixed(2) + ' L';
+                ceEl.innerHTML = '<div style="text-align:center;font-family:Barlow Condensed,Arial;line-height:1;">'
+                    + '<div style="font-size:42px;font-weight:700;color:#081142;">' + (v === null || v === undefined ? '-' : (+v).toFixed(2)) + '</div>'
+                    + '<div style="font-size:14px;font-weight:600;color:#5a6e8c;margin-top:6px;letter-spacing:.04em;">TIMES</div></div>';
+            } });
+    }
 }
 
 function renderCfBars(){

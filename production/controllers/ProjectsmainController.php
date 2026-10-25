@@ -3352,6 +3352,21 @@ class ProjectsmainController extends Controller
     // _cfContributionMarginValue) — ROI is a ratio of that same figure,
     // not a separate rupee amount of its own. Target is a user-editable
     // PERCENTAGE, saved under metric_key "roi_target".
+    // Capital efficiency (agreed 2026-10-25) = Contract Income / Average Investment
+    // (day-weighted Total Investment, same as ROI and the Total Investment popup),
+    // both from the first transaction to today.
+    public function actionCfcapitalefficiency()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        if (!$pid) return ['error' => 'No project selected'];
+        $ci = (float)$this->_cfLatestContractIncomeAmount($pid);
+        $avg = $this->_cfAverageInvestment($pid);
+        $a = (float)($avg['avg'] ?? 0);
+        return ['error' => 'No', 'value' => $a > 0 ? round($ci / $a, 2) : null,
+                'contract_income' => round($ci, 2), 'average_investment' => round($a, 2), 'from' => $avg['from']];
+    }
+
     public function actionCfroi()
     {
         $uid = Yii::$app->user->Id;
