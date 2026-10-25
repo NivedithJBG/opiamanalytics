@@ -4717,6 +4717,15 @@ class ProjectsmainController extends Controller
                 'executed' => (float)$a['executed'],
                 'remaining' => round($cycleQty, 2),
                 'cycle_qty' => round($cycleOnlyQty, 2),
+                // W.Done Qty: quantity reported done (progress report) within this cycle
+                // (cycle 1 also counts reports before its start).
+                'done_cycle' => round((float)$db->createCommand(
+                    "SELECT COALESCE(SUM(currentqty), 0) FROM schedule_progress_report_log WHERE activity_id = :a"
+                    . (($cyc && (int)$cyc['cycle'] > 1) ? " AND date(report_date) >= :s" : '')
+                    . ($cycEnd !== null ? " AND date(report_date) <= :e" : ''),
+                    array_merge([':a' => (int)$a['id']],
+                        ($cyc && (int)$cyc['cycle'] > 1) ? [':s' => $cyc['start']] : [],
+                        $cycEnd !== null ? [':e' => $cycEnd] : []))->queryScalar(), 2),
                 'rate'     => (float)$a['rate'],
                 'days'     => $curDays,
                 'duration' => $curDuration,

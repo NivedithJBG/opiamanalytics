@@ -653,7 +653,7 @@ function _cfShowCostCyclePopup(d){
     var total = 0, rows = '', grp = null, sub = 0, no = 0;
     function closeGroup(){
         if (grp === null) return;
-        rows += '<tr><td colspan="6" style="text-align:right;font-weight:700;color:#081142;">Subtotal &mdash; ' + esc(grp) + '</td><td style="font-weight:700;color:#081142;">' + n2(sub) + '</td><td></td><td class="cf-rv-sub" data-g="' + (window._cfCostGroups.length - 1) + '" style="font-weight:700;color:#081142;"></td><td></td></tr>';
+        rows += '<tr><td colspan="7" style="text-align:right;font-weight:700;color:#081142;">Subtotal &mdash; ' + esc(grp) + '</td><td style="font-weight:700;color:#081142;">' + n2(sub) + '</td><td></td><td class="cf-rv-sub" data-g="' + (window._cfCostGroups.length - 1) + '" style="font-weight:700;color:#081142;"></td><td></td></tr>';
     }
     // Group sections kept for the Activities popup (group heading click).
     window._cfCostGroups = [];
@@ -662,7 +662,7 @@ function _cfShowCostCyclePopup(d){
             closeGroup();
             grp = it.group; sub = 0;
             window._cfCostGroups.push({ iow_name: grp, items: [] });
-            rows += '<tr class="cf-cc-grp" data-grp="' + (window._cfCostGroups.length - 1) + '" style="cursor:pointer;" title="Show the activities and their resource allocation"><td colspan="10" style="text-align:left;font-weight:700;background:#e8ecf3;color:#081142;">' + esc(grp) + '</td></tr>';
+            rows += '<tr class="cf-cc-grp" data-grp="' + (window._cfCostGroups.length - 1) + '" style="cursor:pointer;" title="Show the activities and their resource allocation"><td colspan="11" style="text-align:left;font-weight:700;background:#e8ecf3;color:#081142;">' + esc(grp) + '</td></tr>';
         }
         window._cfCostGroups[window._cfCostGroups.length - 1].items.push({
             wan_id: it.wan_id, sched_id: it.sched_id, lib_activity_id: it.lib_activity_id,
@@ -672,14 +672,14 @@ function _cfShowCostCyclePopup(d){
         sub += +it.cost || 0;
         total += +it.cost || 0;
         rows += '<tr class="cf-cc-row" data-g="' + (window._cfCostGroups.length - 1) + '" data-schedid="' + (+it.sched_id || 0) + '" style="cursor:pointer;" title="Open the Cost Dashboard"><td>' + no + '</td><td style="text-align:left;">' + esc(it.name) + '</td><td>' + esc(it.unit) + '</td>'
-            + '<td>' + n2(it.quantity) + '</td><td>' + n2(it.cycle_qty) + '</td><td>' + n2(it.rate) + '</td>'
+            + '<td>' + n2(it.quantity) + '</td><td>' + n2(it.cycle_qty) + '</td><td>' + n2(it.done_cycle) + '</td><td>' + n2(it.rate) + '</td>'
             + '<td style="font-weight:700;">' + n2(it.cost) + '</td>'
             // Quoted rate: typed here for now (to be filled from the BOQ later).
             + '<td style="padding:2px 4px;"><input type="text" inputmode="decimal" class="cf-qtd-in" data-wan="' + (+it.wan_id || 0) + '" data-rq="' + ((+it.quantity || 0) - (+it.cycle_qty || 0)) + '" value="' + (it.qtd_rate === null || it.qtd_rate === undefined ? '' : (+it.qtd_rate).toFixed(2)) + '" placeholder="-" title="Quoted rate (from the BOQ, or type it here and press Enter)" style="width:72px;box-sizing:border-box;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:3px 5px;font:inherit;background:#fffbe6;"></td>'
             + '<td class="cf-rv"></td><td>-</td></tr>';
     });
     closeGroup();
-    if (!items.length) rows = '<tr><td colspan="10" style="text-align:center;color:#666;padding:12px;">' + ((d.cycles || []).length ? 'No activities in the current billing cycle.' : 'Set Project Duration and Billing Cycle to see the cycle.') + '</td></tr>';
+    if (!items.length) rows = '<tr><td colspan="11" style="text-align:center;color:#666;padding:12px;">' + ((d.cycles || []).length ? 'No activities in the current billing cycle.' : 'Set Project Duration and Billing Cycle to see the cycle.') + '</td></tr>';
     var th = 'style="background:#4a4f57;color:#fff;padding:6px 8px;font-weight:700;white-space:nowrap;"';
     var html = '<div id="cf-costcycle-win" style="position:fixed;z-index:100300;left:50%;top:14vh;transform:translateX(-50%);width:990px;max-width:96vw;max-height:72vh;display:flex;flex-direction:column;background:#fff;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.45);font-family:Nunito,Arial,sans-serif;font-size:12px;color:#111;">'
         + '<div id="cf-costcycle-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;background:#081142;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;cursor:move;user-select:none;touch-action:none;">'
@@ -689,9 +689,9 @@ function _cfShowCostCyclePopup(d){
         + '<button type="button" id="cf-costcycle-close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;">&times;</button></div>'
         + '<div style="flex:1;min-height:0;overflow:auto;padding:8px 10px;">'
         + '<table style="width:100%;border-collapse:collapse;text-align:right;">'
-        + '<thead><tr><th ' + th + '>#</th><th style="background:#4a4f57;color:#fff;padding:6px 8px;font-weight:700;text-align:left;">Activity</th><th ' + th + '>Unit</th><th ' + th + ' title="Estimated quantity">E. Quantity</th><th ' + th + ' title="Quantity planned in this cycle">Cycle Qnty</th><th ' + th + '>Rate</th><th ' + th + '>Cost in cycle</th><th ' + th + ' title="Quoted Rate">Qtd Rate</th><th ' + th + ' title="(E. Quantity &minus; Cycle Qnty) &times; Qtd Rate">Revenue/Cycle</th><th ' + th + '>Margin</th></tr></thead>'
+        + '<thead><tr><th ' + th + '>#</th><th style="background:#4a4f57;color:#fff;padding:6px 8px;font-weight:700;text-align:left;">Activity</th><th ' + th + '>Unit</th><th ' + th + ' title="Estimated quantity">E. Quantity</th><th ' + th + ' title="Quantity planned in this cycle">Cycle Qnty</th><th ' + th + ' title="Quantity done in this cycle (progress report)">W.Done Qty</th><th ' + th + '>Rate</th><th ' + th + '>Cost in cycle</th><th ' + th + ' title="Quoted Rate">Qtd Rate</th><th ' + th + ' title="(E. Quantity &minus; Cycle Qnty) &times; Qtd Rate">Revenue/Cycle</th><th ' + th + '>Margin</th></tr></thead>'
         + '<tbody>' + rows + '</tbody>'
-        + '<tfoot><tr><td colspan="6" style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">Total</td><td style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">' + n2(total) + '</td><td style="border-top:2px solid #4a4f57;"></td><td id="cf-rv-tot" style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;"></td><td style="border-top:2px solid #4a4f57;"></td></tr></tfoot>'
+        + '<tfoot><tr><td colspan="7" style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">Total</td><td style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">' + n2(total) + '</td><td style="border-top:2px solid #4a4f57;"></td><td id="cf-rv-tot" style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;"></td><td style="border-top:2px solid #4a4f57;"></td></tr></tfoot>'
         + '</table></div>'
         + '<div style="flex:none;padding:4px 12px 8px;color:#5a6e8c;font-size:11px;">Cost in cycle = Quantity &times; Rate &times; (activity days in this cycle &divide; activity duration).</div>'
         + '</div>';
