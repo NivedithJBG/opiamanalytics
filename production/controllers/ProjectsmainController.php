@@ -3299,19 +3299,19 @@ class ProjectsmainController extends Controller
     // metric_key "free_cash_target".
     public function actionCfreecash()
     {
-        // Formula removed (2026-10-24) until it is agreed; the panel shows "-".
-        return json_encode(['error' => 'No', 'pending' => true]);
         $uid = Yii::$app->user->Id;
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
 
-        // Cashflow from Project = (Bank + Cash) x (-1) - Net Working Capital (agreed 2026-10-24);
+        // Cashflow from Project (agreed 2026-10-25): (Bank + Cash) - Net Working Capital when
+        // Bank + Cash is positive, (Bank + Cash) + Net Working Capital when it is negative;
         // Net Working Capital = Current Assets - Current Liabilities (the panel figures).
         $fg = $this->_cfFlowGroups($pid);
         $nwc = (float)(json_decode($this->actionCfcurrentassetstotal(), true)['total'] ?? 0)
              - (float)(json_decode($this->actionCfcurrentliabilities(), true)['total'] ?? 0);
-        $freeCashValue = -($fg['bank'] + $fg['cash']) - $nwc;
+        $cb = $fg['bank'] + $fg['cash'];
+        $freeCashValue = $cb >= 0 ? $cb - $nwc : $cb + $nwc;
         $averageInvestment = (float)($this->_cfAverageInvestment($pid)['avg'] ?? 0);
         $freeCashPct = $averageInvestment > 0 ? ($freeCashValue / $averageInvestment) * 100 : 0;
 
