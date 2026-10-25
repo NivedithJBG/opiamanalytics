@@ -3306,13 +3306,13 @@ class ProjectsmainController extends Controller
 
         // Cashflow from Project (agreed 2026-10-26), with CB = current balance of Bank + Cash
         // (negative = credit / overdraft) and the Current Assets / Liabilities panel figures:
-        //  - CB credit: CB + (Current Liabilities - |CB|) + Current Assets
+        //  - CB credit: CB + (Current Liabilities - |CB|, as a credit i.e. minus) + Current Assets
         //  - CB debit:  CB + (Current Assets - CB) - Current Liabilities
         $fg = $this->_cfFlowGroups($pid);
         $ca = (float)(json_decode($this->actionCfcurrentassetstotal(), true)['total'] ?? 0);
         $cl = (float)(json_decode($this->actionCfcurrentliabilities(), true)['total'] ?? 0);
         $cb = $fg['bank'] + $fg['cash'];
-        $freeCashValue = $cb < 0 ? $cb + ($cl - abs($cb)) + $ca : $cb + ($ca - $cb) - $cl;
+        $freeCashValue = $cb < 0 ? $cb - ($cl - abs($cb)) + $ca : $cb + ($ca - $cb) - $cl;
         $averageInvestment = (float)($this->_cfAverageInvestment($pid)['avg'] ?? 0);
         $freeCashPct = $averageInvestment > 0 ? ($freeCashValue / $averageInvestment) * 100 : 0;
 
