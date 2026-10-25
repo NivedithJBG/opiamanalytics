@@ -1024,23 +1024,7 @@ function renderCfPlaceholderDials(){
         _cfQueueAjax({ type: 'POST', url: '../projectsmain/cfcurrentliabilities', dataType: 'json',
             success: function(d){ if (wcGen === _cfLoadGen && d && d.error === 'No') { wcCL = +d.total || 0; wcDraw(); } } });
     }
-    // Capital efficiency = Contract Income / Average Investment (times), as a large figure.
-    var ceEl = document.getElementById('cf-wceff');
-    if (ceEl) {
-        var ceGen = _cfLoadGen;
-        ceEl.style.display = 'flex'; ceEl.style.flexDirection = 'column'; ceEl.style.justifyContent = 'center';
-        ceEl.style.alignItems = 'center'; ceEl.style.flex = '1'; ceEl.style.height = '100%'; ceEl.style.width = '100%';
-        ceEl.innerHTML = '<div style="font-family:Barlow Condensed,Arial;font-size:42px;font-weight:700;color:#5a6e8c;">-</div>';
-        _cfQueueAjax({ type: 'POST', url: '../projectsmain/cfcapitalefficiency', dataType: 'json',
-            success: function(d){
-                if (ceGen !== _cfLoadGen || !d || d.error !== 'No') return;
-                var v = d.value;
-                ceEl.title = 'Contract Income ' + ((+d.contract_income || 0) / 100000).toFixed(2) + ' L / Average Investment ' + ((+d.average_investment || 0) / 100000).toFixed(2) + ' L';
-                ceEl.innerHTML = '<div style="text-align:center;font-family:Barlow Condensed,Arial;line-height:1;">'
-                    + '<div style="font-size:42px;font-weight:700;color:#081142;">' + (v === null || v === undefined ? '-' : (+v).toFixed(2)) + '</div>'
-                    + '<div style="font-size:14px;font-weight:600;color:#5a6e8c;margin-top:6px;letter-spacing:.04em;">TIMES</div></div>';
-            } });
-    }
+    renderCfCapEffDial();
 }
 
 function renderCfBars(){
@@ -2927,6 +2911,86 @@ $(document).on('click', '.cf-freecash-pencil', function(e){
     } else {
         s.editing = true;
         _cfDrawFreeCashDial();
+    }
+});
+
+// Capital efficiency panel: dial in "times" = Contract Income / Average Investment
+// (actionCfcapitalefficiency). Target (yellow band at the centre) is editable with
+// the pencil (metric_key "capital_efficiency_target"); the gap between the needle
+// and the target is red-orange below target, green-blue above it.
+var _cfCapEffState = { target: 0, value: null, editing: false, tip: '' };
+function _cfCapEffDialSvg(target, actual){
+    var maxV = target > 0 ? target * 2 : Math.max(1, actual * 2);
+    var f = Math.max(0, Math.min(1, actual / maxV)), targetF = 0.5;
+    var cx = 105, cy = 82, r = 76, sw = 15;
+    function ptF(fr){ var a = Math.PI * (1 - fr); return [(cx + r * Math.cos(a)).toFixed(1), (cy - r * Math.sin(a)).toFixed(1)]; }
+    function arc(f1, f2, col){
+        if (f2 <= f1) return '';
+        var p1 = ptF(f1), p2 = ptF(f2);
+        return '<path d="M' + p1[0] + ',' + p1[1] + ' A' + r + ',' + r + ' 0 0,1 ' + p2[0] + ',' + p2[1] + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="butt"/>';
+    }
+    var gap = target > 0 && actual !== target ? arc(Math.min(f, targetF), Math.max(f, targetF), actual < target ? '#d84a30' : '#2ba899') : '';
+    var ta = Math.PI * (1 - targetF), tr1 = r - sw / 2 - 3, tr2 = r + sw / 2 + 3;
+    var tx1 = (cx + tr1 * Math.cos(ta)).toFixed(1), ty1 = (cy - tr1 * Math.sin(ta)).toFixed(1);
+    var tx2 = (cx + tr2 * Math.cos(ta)).toFixed(1), ty2 = (cy - tr2 * Math.sin(ta)).toFixed(1);
+    var nr = r - 14, na = Math.PI * (1 - f);
+    var nx = (cx + nr * Math.cos(na)).toFixed(1), ny = (cy - nr * Math.sin(na)).toFixed(1);
+    return '<div style="flex:none;width:100%;display:flex;justify-content:center;margin-top:6px;"><svg width="140" height="82" viewBox="0 -10 210 108" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="display:block;">'
+        + arc(0, 1, '#3a4a5f') + gap
+        + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#000" stroke-width="8" stroke-linecap="butt"/>'
+        + '<line x1="' + tx1 + '" y1="' + ty1 + '" x2="' + tx2 + '" y2="' + ty2 + '" stroke="#ffff00" stroke-width="6" stroke-linecap="butt"/>'
+        + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx + '" y2="' + ny + '" stroke="#333" stroke-width="5" stroke-linecap="round"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#555"/><circle cx="' + cx + '" cy="' + cy + '" r="2.5" fill="#dce3ef"/>'
+        + '<text x="' + cx + '" y="' + (cy - 30) + '" text-anchor="middle" font-size="24" font-weight="700" fill="#000" font-family="Barlow Condensed,Arial">' + actual.toFixed(2) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#5a5a5a" font-family="Barlow Condensed,Arial">times</text>'
+        + '</svg></div>';
+}
+function _cfDrawCapEffDial(){
+    var el = document.getElementById('cf-wceff');
+    if (!el) return;
+    var s = _cfCapEffState;
+    el.style.display = 'flex'; el.style.flexDirection = 'column'; el.style.justifyContent = 'center';
+    el.title = s.tip;
+    var v = s.value === null ? 0 : s.value;
+    var tCell = s.editing
+        ? '<input class="cf-capeff-input" type="number" step="any" value="' + (+s.target || 0) + '" style="width:54px;font-size:13px;padding:0 3px;border:1px solid #b0bec5;border-radius:2px;color:#5a5a5a;font-weight:700;">'
+        : '<span style="font-size:13px;color:#5a5a5a;font-weight:700;">' + (+s.target || 0).toFixed(2) + '</span>';
+    el.innerHTML = '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>'
+        + _cfCapEffDialSvg(+s.target || 0, v)
+        + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
+        + '<span style="font-size:13px;color:#111;">Actual: <span style="font-weight:700;color:' + (v < (+s.target || 0) ? '#d84a30' : '#2ba899') + ';">' + (s.value === null ? '-' : v.toFixed(2)) + '</span></span>'
+        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Target: ' + tCell + ' <button class="cf-capeff-pencil" title="Edit Target" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>'
+        + '</div>'
+        + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
+}
+function renderCfCapEffDial(){
+    var gen = _cfLoadGen;
+    _cfCapEffState = { target: 0, value: null, editing: false, tip: '' };
+    _cfDrawCapEffDial();
+    _cfFetchTarget('capital_efficiency_target', function(d){
+        if (gen === _cfLoadGen) { _cfCapEffState.target = +d.target || 0; _cfDrawCapEffDial(); }
+    });
+    _cfQueueAjax({ type: 'POST', url: '../projectsmain/cfcapitalefficiency', dataType: 'json',
+        success: function(d){
+            if (gen !== _cfLoadGen || !d || d.error !== 'No') return;
+            _cfCapEffState.value = d.value === null || d.value === undefined ? null : +d.value;
+            _cfCapEffState.tip = 'Contract Income ' + ((+d.contract_income || 0) / 100000).toFixed(2) + ' L / Average Investment ' + ((+d.average_investment || 0) / 100000).toFixed(2) + ' L';
+            _cfDrawCapEffDial();
+        } });
+}
+$(document).on('click', '.cf-capeff-input', function(e){ e.stopPropagation(); });
+$(document).on('click', '.cf-capeff-pencil', function(e){
+    e.preventDefault(); e.stopPropagation();
+    var s = _cfCapEffState;
+    if (s.editing) {
+        s.target = +$('.cf-capeff-input').val() || 0;
+        s.editing = false;
+        _cfDrawCapEffDial();
+        _cfQueueAjax({ type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json', priority: true,
+            data: { metric_key: 'capital_efficiency_target', target_value: s.target } });
+    } else {
+        s.editing = true;
+        _cfDrawCapEffDial();
     }
 });
 
