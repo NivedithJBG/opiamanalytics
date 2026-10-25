@@ -4705,7 +4705,18 @@ class ProjectsmainController extends Controller
             $cS = ($cyc && (int)$cyc['cycle'] > 1) ? strtotime($cyc['start']) : $bS;
             $cE = $cycEnd !== null ? strtotime($cycEnd) : $bE;
             $inCycle = max(0, (int)round((min($bE, $cE) - max($bS, $cS)) / 86400) + 1);
-            $cycleOnlyQty = (float)$a['quantity'] * min($barDays, $inCycle) / $barDays;
+            // W.Done Qty: quantity reported done (progress report) within this cycle
+            // (cycle 1 also counts reports before its start).
+            $doneCycle = (float)$db->createCommand(
+                "SELECT COALESCE(SUM(currentqty), 0) FROM schedule_progress_report_log WHERE activity_id = :a"
+                . (($cyc && (int)$cyc['cycle'] > 1) ? " AND date(report_date) >= :s" : '')
+                . ($cycEnd !== null ? " AND date(report_date) <= :e" : ''),
+                array_merge([':a' => (int)$a['id']],
+                    ($cyc && (int)$cyc['cycle'] > 1) ? [':s' => $cyc['start']] : [],
+                    $cycEnd !== null ? [':e' => $cycEnd] : []))->queryScalar();
+            // Cycle Qnty (agreed 2026-10-25) = (E. Quantity - W.Done Qty) / actual activity
+            // duration x activity days inside this cycle.
+            $cycleOnlyQty = max(0, ((float)$a['quantity'] - $doneCycle) / $barDays * min($barDays, $inCycle));
             $currentItems[] = [
                 'sched_id' => (int)$a['id'],
                 'wan_id'   => (int)$a['wan_id'],
@@ -4717,15 +4728,7 @@ class ProjectsmainController extends Controller
                 'executed' => (float)$a['executed'],
                 'remaining' => round($cycleQty, 2),
                 'cycle_qty' => round($cycleOnlyQty, 2),
-                // W.Done Qty: quantity reported done (progress report) within this cycle
-                // (cycle 1 also counts reports before its start).
-                'done_cycle' => round((float)$db->createCommand(
-                    "SELECT COALESCE(SUM(currentqty), 0) FROM schedule_progress_report_log WHERE activity_id = :a"
-                    . (($cyc && (int)$cyc['cycle'] > 1) ? " AND date(report_date) >= :s" : '')
-                    . ($cycEnd !== null ? " AND date(report_date) <= :e" : ''),
-                    array_merge([':a' => (int)$a['id']],
-                        ($cyc && (int)$cyc['cycle'] > 1) ? [':s' => $cyc['start']] : [],
-                        $cycEnd !== null ? [':e' => $cycEnd] : []))->queryScalar(), 2),
+                'done_cycle' => round($doneCycle, 2),
                 'rate'     => (float)$a['rate'],
                 'days'     => $curDays,
                 'duration' => $curDuration,
