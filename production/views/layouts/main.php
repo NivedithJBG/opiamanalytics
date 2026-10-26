@@ -5321,7 +5321,91 @@ window.loadIowGroupOptions = function(selectEl, cb){
   <div id="gantt-win-body">
     <div id="gantt-win-loading">Loading Gantt chart&hellip;</div>
   </div>
+  <button type="button" id="gn-btn" title="Notes">&#128221;</button>
 </div>
+
+<!-- Gantt Notes: the user's own notes for the project, kept open while working on
+     the Gantt (draggable, resizable). Each note is a strip; the tick removes it. -->
+<div id="gn-win">
+  <div id="gn-hdr"><span>Notes</span><button type="button" id="gn-close" title="Close">&times;</button></div>
+  <div id="gn-form">
+    <textarea id="gn-text" rows="2" placeholder="Write a note&hellip; (Ctrl+Enter to add)"></textarea>
+    <button type="button" id="gn-add">Add</button>
+  </div>
+  <div id="gn-list"></div>
+</div>
+<style>
+#gn-btn { position:absolute; right:18px; bottom:16px; width:42px; height:42px; border-radius:50%; border:none;
+  background:#0f5c52; color:#fff; font-size:19px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.3); z-index:30; }
+#gn-btn:hover { background:#0d4c44; }
+#gn-win { display:none; position:fixed; right:40px; top:120px; width:340px; height:420px; min-width:260px; min-height:200px;
+  background:#fff; border-radius:8px; box-shadow:0 8px 28px rgba(0,0,0,.35); z-index:100050; flex-direction:column;
+  overflow:hidden; resize:both; font-family:Nunito,Arial,sans-serif; }
+#gn-win.gn-open { display:flex; }
+#gn-hdr { flex:none; display:flex; justify-content:space-between; align-items:center; background:#081142; color:#fff;
+  padding:8px 12px; font-weight:700; font-size:14px; cursor:move; user-select:none; touch-action:none; }
+#gn-close { background:none; border:none; color:#fff; font-size:20px; line-height:1; cursor:pointer; }
+#gn-form { flex:none; display:flex; gap:6px; padding:8px 10px; border-bottom:1px solid #e3e7ee; }
+#gn-text { flex:1; resize:none; border:1px solid #bcc6d4; border-radius:5px; padding:5px 7px; font:inherit; font-size:13px; }
+#gn-add { flex:none; border:none; background:#0f5c52; color:#fff; border-radius:5px; padding:0 14px; font-weight:700; cursor:pointer; }
+#gn-list { flex:1; overflow-y:auto; padding:8px 10px; }
+.gn-strip { display:flex; align-items:flex-start; gap:8px; background:#f4f6fa; border-left:4px solid #2ba899;
+  border-radius:5px; padding:7px 8px; margin-bottom:7px; font-size:13px; color:#111; }
+.gn-strip-text { flex:1; white-space:pre-wrap; word-wrap:break-word; }
+.gn-strip-date { display:block; font-size:10px; color:#8a94a3; margin-top:3px; }
+.gn-tick { flex:none; width:24px; height:24px; border-radius:50%; border:1.5px solid #2ba899; background:#fff; color:#2ba899;
+  font-size:13px; line-height:1; cursor:pointer; }
+.gn-tick:hover { background:#2ba899; color:#fff; }
+.gn-empty { color:#8a94a3; font-size:12px; text-align:center; padding:16px 0; }
+</style>
+<script>
+(function(){
+  var win = document.getElementById('gn-win'), hdr = document.getElementById('gn-hdr');
+  function esc(s){ return $('<div>').text(s == null ? '' : String(s)).html(); }
+  function load(){
+    $('#gn-list').html('<div class="gn-empty">Loading&hellip;</div>');
+    $.ajax({ type:'POST', url:'../projectsmain/ganttnotes', dataType:'json', success:function(d){
+      var n = (d && d.notes) || [];
+      $('#gn-list').html(n.length ? n.map(function(x){
+        return '<div class="gn-strip" data-id="' + x.id + '"><div class="gn-strip-text">' + esc(x.text)
+          + '<span class="gn-strip-date">' + esc((x.created_at || '').slice(0, 16)) + '</span></div>'
+          + '<button type="button" class="gn-tick" title="Done">&#10003;</button></div>';
+      }).join('') : '<div class="gn-empty">No notes yet.</div>');
+    } });
+  }
+  function add(){
+    var t = $.trim($('#gn-text').val()); if (!t) return;
+    $('#gn-add').prop('disabled', true);
+    $.ajax({ type:'POST', url:'../projectsmain/ganttnoteadd', dataType:'json', data:{ text:t },
+      success:function(d){ $('#gn-add').prop('disabled', false); if (d && d.error === 'No') { $('#gn-text').val('').focus(); load(); } else alert((d && d.errortext) || 'Could not save.'); },
+      error:function(){ $('#gn-add').prop('disabled', false); alert('Could not save.'); } });
+  }
+  $(document).on('click', '#gn-btn', function(){ if (win.classList.contains('gn-open')) { win.classList.remove('gn-open'); return; } win.classList.add('gn-open'); load(); $('#gn-text').focus(); });
+  $(document).on('click', '#gn-close', function(){ win.classList.remove('gn-open'); });
+  $(document).on('click', '#gn-add', add);
+  $(document).on('keydown', '#gn-text', function(e){ if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); add(); } });
+  $(document).on('click', '.gn-tick', function(){
+    var strip = $(this).closest('.gn-strip'), id = strip.data('id');
+    strip.fadeOut(200, function(){ strip.remove(); if (!$('#gn-list .gn-strip').length) $('#gn-list').html('<div class="gn-empty">No notes yet.</div>'); });
+    $.ajax({ type:'POST', url:'../projectsmain/ganttnotedone', dataType:'json', data:{ id:id } });
+  });
+  // Close with the Gantt window.
+  $(document).on('click', '#gantt-win-close', function(){ win.classList.remove('gn-open'); });
+  // Drag by the header (mouse and touch).
+  var drag = null;
+  window.bindDragTouch(hdr, 'mousedown', function(e){
+    if (e.target.id === 'gn-close') return;
+    var r = win.getBoundingClientRect(); drag = { sx:e.clientX, sy:e.clientY, ox:r.left, oy:r.top };
+    win.style.right = 'auto'; win.style.left = r.left + 'px'; e.preventDefault();
+  });
+  window.bindDragTouch(document, 'mousemove', function(e){
+    if (!drag) return;
+    win.style.left = Math.max(0, Math.min(drag.ox + e.clientX - drag.sx, window.innerWidth - 60)) + 'px';
+    win.style.top = Math.max(0, Math.min(drag.oy + e.clientY - drag.sy, window.innerHeight - 40)) + 'px';
+  }, { passive:false });
+  window.bindDragTouch(document, 'mouseup', function(){ drag = null; });
+})();
+</script>
 
 <script>
 (function(){

@@ -4519,6 +4519,52 @@ class ProjectsmainController extends Controller
     }
 
     // Archive / restore a message or an alert from the Notifications window.
+    // ── Gantt notes: the user's own notes for the selected project (strips in the
+    // Gantt window's Notes popup). Ticking a note marks it done (hidden, kept).
+    private static function _gnEnsure()
+    {
+        Yii::$app->db->createCommand("CREATE TABLE IF NOT EXISTS gantt_notes (
+            id INT AUTO_INCREMENT PRIMARY KEY, project_id INT NOT NULL, user_id INT NOT NULL,
+            note_text TEXT NOT NULL, done TINYINT NOT NULL DEFAULT 0,
+            created_at DATETIME NOT NULL, done_at DATETIME NULL,
+            KEY idx_proj_user (project_id, user_id, done)) DEFAULT CHARSET=utf8mb4")->execute();
+    }
+
+    public function actionGanttnotes()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        if (!$pid) return ['error' => 'Yes', 'errortext' => 'No project selected.'];
+        self::_gnEnsure();
+        $rows = Yii::$app->db->createCommand(
+            "SELECT id, note_text AS text, created_at FROM gantt_notes
+             WHERE project_id = :p AND user_id = :u AND done = 0 ORDER BY id DESC",
+            [':p' => $pid, ':u' => (int)Yii::$app->user->Id])->queryAll();
+        return ['error' => 'No', 'notes' => $rows];
+    }
+
+    public function actionGanttnoteadd()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        $text = trim((string)($_POST['text'] ?? ''));
+        if (!$pid) return ['error' => 'Yes', 'errortext' => 'No project selected.'];
+        if ($text === '') return ['error' => 'Yes', 'errortext' => 'Please write the note.'];
+        self::_gnEnsure();
+        $db = Yii::$app->db;
+        $db->createCommand()->insert('gantt_notes', ['project_id' => $pid, 'user_id' => (int)Yii::$app->user->Id,
+            'note_text' => $text, 'done' => 0, 'created_at' => date('Y-m-d H:i:s')])->execute();
+        return ['error' => 'No', 'id' => (int)$db->getLastInsertID()];
+    }
+
+    public function actionGanttnotedone()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        Yii::$app->db->createCommand()->update('gantt_notes', ['done' => 1, 'done_at' => date('Y-m-d H:i:s')],
+            ['id' => (int)($_POST['id'] ?? 0), 'user_id' => (int)Yii::$app->user->Id])->execute();
+        return ['error' => 'No'];
+    }
+
     public function actionNotifarchive()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
