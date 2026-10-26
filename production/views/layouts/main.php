@@ -2614,8 +2614,9 @@ document.addEventListener('click', function(e){
             </div>
             <div class="col-md-4">
               <div class="form-group">
-                <label>Billing Cycle (days)</label>
-                <input type="number" min="0" step="1" id="gpm_billingcycle" class="form-control" placeholder="e.g. 45">
+                <label>Billing Cycle (days) <span class="text-danger">*</span></label>
+                <input type="number" min="1" step="1" id="gpm_billingcycle" class="form-control" placeholder="e.g. 45">
+                <span class="text-danger gpm-err" id="gpm_billingcycle_err" style="display:none;font-size:12px;"></span>
               </div>
             </div>
           </div>
@@ -2882,6 +2883,7 @@ document.addEventListener('click', function(e){
         if(!val)    { $('#gpm_value_err').text('Enter project value').show(); err=1; }
         if(!client) { $('#gpm_client_err').text('Enter client name').show(); err=1; }
         if(!hrs)    { $('#gpm_wrkhrs_err').text('Select work hours').show(); err=1; }
+        if(!(parseInt($('#gpm_billingcycle').val(), 10) > 0)) { $('#gpm_billingcycle_err').text('Enter billing cycle (days)').show(); err=1; }
         if(err) return;
 
         var isEdit = pid ? true : false;
