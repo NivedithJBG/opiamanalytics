@@ -879,21 +879,21 @@ function _cfTermRow(v){
 }
 function _cfShowRaisePo(r){
     var lbl = 'style="display:block;font-size:12px;font-weight:700;color:#465365;margin:0 0 5px;"', inp = 'width:100%;box-sizing:border-box;height:36px;border:1px solid #c5ccd4;border-radius:4px;padding:2px 10px;font-size:13px;color:#333;';
-    var body = '<div style="margin-bottom:14px;"><label ' + lbl + '>Vendor</label><select id="cf-po-vendor" style="' + inp + '"><option value="">Loading...</option></select></div>'
+    var body = '<div style="margin-bottom:14px;max-width:200px;"><label ' + lbl + '>Date</label><input type="date" id="cf-po-date" style="' + inp + '"></div>'
+        + '<div style="margin-bottom:14px;"><label ' + lbl + '>Vendor</label><select id="cf-po-vendor" style="' + inp + '"><option value="">Loading...</option></select></div>'
         + '<div style="margin-bottom:14px;"><label ' + lbl + '>Ship To</label><textarea id="cf-po-shipto" rows="3" style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
         // Resource, Unit, Quantity (this cycle), Rate and Amount = Qty x Rate.
         + '<div style="display:flex;gap:10px;margin-bottom:14px;"><div style="flex:3;min-width:0;"><label ' + lbl + '>' + $('<div>').text(r.type || 'Resource').html() + '</label><input type="text" id="cf-po-res" style="' + inp + '"></div>'
-        + '<div style="flex:1;min-width:0;"><label ' + lbl + '>Unit</label><input type="text" id="cf-po-unit" style="' + inp + '"></div>'
-        + '<div style="flex:1.4;min-width:0;"><label ' + lbl + '>Date</label><input type="date" id="cf-po-date" style="' + inp + '"></div></div>'
+        + '<div style="flex:1;min-width:0;"><label ' + lbl + '>Unit</label><input type="text" id="cf-po-unit" style="' + inp + '"></div></div>'
         + '<div style="display:flex;gap:10px;margin-bottom:14px;"><div style="flex:1;min-width:0;"><label ' + lbl + '>Qnty</label><input type="text" inputmode="decimal" id="cf-po-qty" style="' + inp + 'text-align:right;"></div>'
         + '<div style="flex:1;min-width:0;"><label ' + lbl + '>Rate</label><input type="text" inputmode="decimal" id="cf-po-rate" style="' + inp + 'text-align:right;"></div>'
-        + '<div style="flex:1.2;min-width:0;"><label ' + lbl + '>Amount</label><input type="text" inputmode="decimal" id="cf-po-amt" style="' + inp + 'text-align:right;font-weight:700;"></div></div>'
+        + '<div style="flex:1.2;min-width:0;"><label ' + lbl + '>Amount</label><input type="text" id="cf-po-amt" readonly tabindex="-1" style="' + inp + 'text-align:right;font-weight:700;"></div></div>'
         + '<div style="margin-bottom:14px;"><label ' + lbl + '>Credit Period</label><input type="number" id="cf-po-credit" min="0" step="1" placeholder="e.g. 30 days" style="' + inp + '"></div>'
         + '<div style="margin-bottom:14px;"><label ' + lbl + '>Lead Time</label><input type="text" id="cf-po-lead" placeholder="e.g. 7 days" style="' + inp + '"></div>'
         + '<div><label ' + lbl + '>Terms</label><div id="cf-po-terms">' + _cfTermRow('') + '</div>'
         + '<button type="button" id="cf-po-term-add" style="margin-top:4px;background:none;border:1px dashed #c5ccd4;border-radius:4px;padding:3px 12px;font-size:11px;color:#465365;cursor:pointer;">+ Add Term</button></div>';
     var foot = '<button type="button" class="cf-ord-cancel" style="background:#f0f4f8;border:1px solid #c5ccd4;border-radius:20px;padding:6px 20px;font-size:13px;color:#465365;cursor:pointer;margin-right:8px;">Cancel</button>'
-        + '<button type="button" id="cf-po-save" style="background:#072c47;color:#fff;border:none;border-radius:20px;padding:6px 24px;font-size:13px;cursor:pointer;">Raise PO</button>';
+        + '<button type="button" id="cf-po-save" style="background:#072c47;color:#fff;border:none;border-radius:20px;padding:6px 24px;font-size:13px;cursor:pointer;">Send Mail to Vendor</button>';
     var win = _cfOrderPopupShell('cf-po-popup', 'Raise Purchase Orders', body, foot);
     $('#cf-po-shipto').val($('#cf-shared-name').text() || '');
     $('#cf-po-res').val(r.name || ''); $('#cf-po-unit').val(r.unit || '');
@@ -903,7 +903,6 @@ function _cfShowRaisePo(r){
         $('#cf-po-amt').val(a.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })); }
     poAmt();
     $(win).on('input', '#cf-po-qty, #cf-po-rate', function(){ this.value = this.value.replace(/[^0-9.]/g, ''); poAmt(); });
-    $(win).on('change', '#cf-po-amt', function(){ var a = +String(this.value).replace(/,/g, '') || 0, q = +$('#cf-po-qty').val() || 0; if (q > 0) $('#cf-po-rate').val(Math.round(a / q * 100) / 100); poAmt(); });
     $.when(
         $.ajax({ type: 'POST', url: '../procurement/getvendors', dataType: 'json', data: { context: 'po' } }),
         $.ajax({ type: 'POST', url: '../procurement/getposettings', dataType: 'json', data: { resource_id: r.resource_id } })
@@ -939,11 +938,18 @@ function _cfShowRaisePo(r){
                         resource_name: $('#cf-po-res').val().trim() || r.name, unit: $('#cf-po-unit').val().trim() || r.unit || '', qty: Math.round(poQty * 1000) / 1000, rate: poRate }])
                 },
                 success: function(d){
-                    $b.prop('disabled', false).text('Raise PO');
-                    if (d && d.error === 'No') { $(win).remove(); $(document).off('.cford'); alert('Purchase Order raised for ' + r.name + '.'); }
-                    else alert((d && (d.errortext || d.message)) || 'Could not raise the Purchase Order.');
+                    if (!d || d.error !== 'No') { $b.prop('disabled', false).text('Send Mail to Vendor'); alert((d && (d.errortext || d.message)) || 'Could not raise the Purchase Order.'); return; }
+                    var done = function(msg){ $(win).remove(); $(document).off('.cford'); alert(msg); };
+                    if (!d.vendor_email) { done('Purchase Order ' + (d.ordernumber || '') + ' raised, but the vendor has no e-mail address, so no mail was sent.'); return; }
+                    $b.text('Sending mail...');
+                    $.ajax({ type: 'POST', url: '../procurement/emailpo', dataType: 'json', data: { order_id: d.order_id, to: d.vendor_email },
+                        success: function(m){
+                            if (m && m.error === 'No') done('Purchase Order ' + (d.ordernumber || '') + ' raised and mailed to ' + d.vendor_email + '.');
+                            else done('Purchase Order ' + (d.ordernumber || '') + ' raised, but the mail failed: ' + ((m && m.errortext) || 'unknown error') + '.');
+                        },
+                        error: function(){ done('Purchase Order ' + (d.ordernumber || '') + ' raised, but the mail could not be sent.'); } });
                 },
-                error: function(){ $b.prop('disabled', false).text('Raise PO'); alert('Could not raise the Purchase Order.'); }
+                error: function(){ $b.prop('disabled', false).text('Send Mail to Vendor'); alert('Could not raise the Purchase Order.'); }
             });
         });
 }
