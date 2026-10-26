@@ -2621,7 +2621,7 @@ function _cfDrawWipDial(){
         + _cfWipDialSvg(s.target, s.currentWip)
         + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 6px;width:100%;box-sizing:border-box;">'
         + '<span style="font-size:12px;color:#111;">C.WIP: <span style="font-size:12px;color:' + needleCol + ';font-weight:700;">' + (s.currentWip * divisor).toFixed(2) + '</span></span>'
-        + '<span style="font-size:12px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>T.WIP: ' + targetCell + ' <button class="cf-wip-pencil" title="Edit Target WIP" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>'
+        + '<span style="font-size:12px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>T.WIP: ' + targetCell + '</span>'
         + '</div>'
         + (s.avgDays !== null
             ? '<div style="width:100%;text-align:center;font-family:Barlow Condensed,Arial;padding:2px 6px 0;box-sizing:border-box;"><span style="font-size:12px;color:#111;" title="Length of the most recent WIP cycle (last Contract Income credit to the one before it, or project start for the first cycle). Average across all closed cycles so far: ' + (s.avgAllCycles !== null ? s.avgAllCycles.toFixed(1) : '—') + ' days.">Avg. Time in WIP: <span style="font-weight:700;color:#081142;">' + s.avgDays.toFixed(1) + ' days</span></span></div>'
