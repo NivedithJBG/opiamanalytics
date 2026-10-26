@@ -563,6 +563,12 @@ use app\models\Resources;
 /* Move modals to <body> so accordion overflow/z-index doesn't trap them */
 $('#alAddActivityPopup, #alProjTypePopup, #alIowGroupPopup, #alIowPopup, #alActTypePopup').appendTo('body');
 
+/* Open the IOW Group and IOW windows near the top of the screen, never taller
+   than the screen (the body scrolls instead), so the whole window is visible. */
+$('<style>#alIowGroupPopup .modal-dialog, #alIowPopup .modal-dialog { margin-top:3vh; }'
+  + '#alIowGroupPopup .modal-content, #alIowPopup .modal-content { max-height:94vh; display:flex; flex-direction:column; }'
+  + '#alIowGroupPopup .modal-body, #alIowPopup .modal-body { overflow-y:auto; flex:1 1 auto; min-height:0; }</style>').appendTo('head');
+
 /* These are plain Bootstrap-markup modals with no drag support at all —
    Bootstrap's own modal() JS plugin isn't active on this page (confirmed:
    $.fn.modal is undefined here), so there's no shown.bs.modal to hook.
