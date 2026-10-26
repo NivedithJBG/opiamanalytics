@@ -718,7 +718,7 @@ if($action=='login')
                     <a class="icon-add" id="add-project-nav-btn" title="Projects" href="#" style="font-size:18px;"></a>
                 </li>
                 <li>
-                    <a class="icon-rocket pwt-nav-btn" id="pwt-nav-btn" title="Project Workflow Tools" href="#"></a>
+                    <a class="icon-rocket pwt-nav-btn" id="pwt-nav-btn" title="Create WBS" href="#"></a>
                 </li>
                 <li>
                     <a class="icon-document pdoc-btn" id="pdoc-nav-btn" title="Project Documents" href="#"></a>
@@ -3450,7 +3450,8 @@ document.addEventListener('click', function(e){
     function pwtHide(){
         $('#pwt-popup').removeClass('pwt-open');
     }
-    $(document).on('click','#pwt-nav-btn',  function(e){ e.preventDefault(); pwtShow(); });
+    // The toolbar icon opens Create WBS directly (the Project Workflow Tools window is no longer used).
+    $(document).on('click','#pwt-nav-btn',  function(e){ e.preventDefault(); cwbsShow(); });
     $(document).on('click','#pwt-close-x',  function(){ pwtHide(); });
     $(document).on('click','#pwt-tabs .pwt-tab[data-pwt-pane]', function(){
         var pane = $(this).data('pwt-pane');
