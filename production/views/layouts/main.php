@@ -3658,7 +3658,14 @@ document.addEventListener('click', function(e){
         $('#cwbs-loading').hide();
         $('#cwbs-empty').text(msg || 'Select a Project Type and IOW Group to list activities.').show();
         $('#cwbs-msg').text('');
-        $('#cwbs-add-btn').prop('disabled', true);
+        cwbsAddState();
+    }
+    // Add is available once an IOW Group is chosen (it can be added on its own,
+    // with no activities) or when activities are ticked.
+    function cwbsAddState(){ $('#cwbs-add-btn').prop('disabled', !$('#cwbs-iow-group').val() && !Object.keys(cwbsSelected).length); }
+    function cwbsToast(msg){
+        $('#cwbs-added-toast').remove();
+        $('<div id="cwbs-added-toast"></div>').html(msg).css({ position:'fixed', left:'50%', top:'40%', transform:'translate(-50%,-50%)', background:'#0f5c52', color:'#fff', padding:'14px 26px', borderRadius:'8px', fontSize:'16px', fontWeight:700, boxShadow:'0 8px 24px rgba(0,0,0,.3)', zIndex:300000 }).appendTo('body').delay(2200).fadeOut(400, function(){ $(this).remove(); });
     }
     function cwbsLoadActivities(){
         // All activities of the Project Type (not filtered by IOW Group); the chosen
@@ -3678,7 +3685,7 @@ document.addEventListener('click', function(e){
                 $('#cwbs-tbody .cwbs-qty-input').each(function(){ keepQty[$(this).data('actid')] = $(this).val(); });
                 $('#cwbs-tbody .cwbs-runits-input').each(function(){ keepRun[$(this).data('actid')] = $(this).val(); });
                 cwbsSelected = {};
-                $('#cwbs-add-btn').prop('disabled', true);
+                cwbsAddState();
                 var items = d.items || [];
                 if(!items.length){ cwbsResetList('No activities found for this Project Type.'); return; }
                 var rows = '';
@@ -3700,7 +3707,7 @@ document.addEventListener('click', function(e){
                     var btn = $('#cwbs-tbody .cwbs-tick-btn[data-actid="' + id + '"]');
                     if (btn.length) { cwbsSelected[id] = keepSel[id]; btn.addClass('cwbs-selected'); }
                 });
-                $('#cwbs-add-btn').prop('disabled', Object.keys(cwbsSelected).length === 0);
+                cwbsAddState();
                 $('#cwbs-table').show();
                 cwbsFilterActs();
             },
@@ -3731,7 +3738,7 @@ document.addEventListener('click', function(e){
     }
     $(document).on('change','#cwbs-proj-type', function(){ cwbsLoadIowGroups(); });
     // Choosing the IOW Group no longer reloads the list (it only sets where to add).
-    $(document).on('change','#cwbs-iow-group', function(){ if(!$('#cwbs-tbody tr').length) cwbsLoadActivities(); });
+    $(document).on('change','#cwbs-iow-group', function(){ if(!$('#cwbs-tbody tr').length) cwbsLoadActivities(); cwbsAddState(); });
     function cwbsFilterActs(){
         var q = ($('#cwbs-act-search').val() || '').trim().toLowerCase(), n = 0;
         $('#cwbs-tbody tr').each(function(){
@@ -3791,11 +3798,27 @@ document.addEventListener('click', function(e){
             cwbsSelected[id] = { id:id, name:name };
             $(this).addClass('cwbs-selected');
         }
-        $('#cwbs-add-btn').prop('disabled', !Object.keys(cwbsSelected).length);
+        cwbsAddState();
     });
     $(document).on('click','#cwbs-add-btn', function(){
         var ids = Object.keys(cwbsSelected);
-        if(!ids.length) return;
+        if(!ids.length){
+            // No activities ticked: add the IOW Group alone to the Gantt.
+            var gid = $('#cwbs-iow-group').val();
+            if(!gid) return;
+            var $b = $(this).prop('disabled', true);
+            $.ajax({ type:'POST', url:'../projectsmain/wbsaddgroup', dataType:'json', data:{ iow_group_id: gid },
+                success:function(d){
+                    $b.prop('disabled', false);
+                    if(d && d.error === 'No'){
+                        $('#cwbs-msg').css('color','#197a3a').text(d.existed ? 'This IOW Group is already in the Gantt.' : 'IOW Group added to the Gantt.');
+                        if(!d.existed) cwbsToast('&#10003; IOW Group added to Gantt Chart');
+                        if(typeof window.reloadGantt === 'function') window.reloadGantt();
+                    } else { $('#cwbs-msg').css('color','#c00').text((d && d.errortext) || 'Could not add the IOW Group.'); }
+                },
+                error:function(){ $b.prop('disabled', false); $('#cwbs-msg').css('color','#c00').text('Could not add the IOW Group.'); } });
+            return;
+        }
 
         // Qty is mandatory for every selected activity — the Activity
         // Library has no resource_units field, so Create WBS's own R.Unit
@@ -3826,7 +3849,7 @@ document.addEventListener('click', function(e){
                 $('<div id="cwbs-added-toast">&#10003; Added to Gantt Chart</div>').css({ position:'fixed', left:'50%', top:'40%', transform:'translate(-50%,-50%)', background:'#0f5c52', color:'#fff', padding:'14px 26px', borderRadius:'8px', fontSize:'16px', fontWeight:700, boxShadow:'0 8px 24px rgba(0,0,0,.3)', zIndex:300000 }).appendTo('body').delay(2200).fadeOut(400, function(){ $(this).remove(); });
                 cwbsSelected = {};
                 $('.cwbs-tick-btn').removeClass('cwbs-selected');
-                $('#cwbs-add-btn').prop('disabled', true);
+                cwbsAddState();
                 if(typeof window.reloadGantt === 'function') window.reloadGantt();
                 return;
             }

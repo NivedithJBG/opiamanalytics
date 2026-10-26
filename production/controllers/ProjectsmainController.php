@@ -1112,6 +1112,23 @@ class ProjectsmainController extends Controller
         return (int)$db->getLastInsertID();
     }
 
+    // Create WBS: add an IOW Group to the project's Gantt on its own, with no
+    // activities under it (a heading only).
+    public function actionWbsaddgroup()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        $gid = (int)($_POST['iow_group_id'] ?? 0);
+        if (!$pid || !$gid) return ['error' => 'Yes', 'errortext' => 'Select a project and an IOW Group.'];
+        $db = Yii::$app->db;
+        if ($db->createCommand("SELECT 1 FROM iow_group_order WHERE project_id=:p AND iow_group_id=:g LIMIT 1", [':p' => $pid, ':g' => $gid])->queryScalar()) {
+            return ['error' => 'No', 'existed' => true];
+        }
+        $next = (int)($db->createCommand("SELECT COALESCE(MAX(sortorder),0)+1 FROM iow_group_order WHERE project_id=:p", [':p' => $pid])->queryScalar() ?: 1);
+        $db->createCommand("INSERT INTO iow_group_order (project_id, iow_group_id, sortorder) VALUES (:p, :g, :s)", [':p' => $pid, ':g' => $gid, ':s' => $next])->execute();
+        return ['error' => 'No', 'existed' => false];
+    }
+
     public function actionWbsadd()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
