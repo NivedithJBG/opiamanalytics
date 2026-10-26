@@ -549,7 +549,8 @@ function _cfDurationBarHtml(target, actual, targetLabel, actualLabel, tipLabel, 
 // darker segment = used, so the gap between them is the stock at site. Purchase
 // beyond the estimate shows red-orange.
 function _cfResourceBarHtml(est, purch, used, stock){
-    var lk = function(v){ return (+v || 0).toFixed(2) + ' L'; };
+    // Figures without a unit; "Lakhs" is shown once, beside the main figure.
+    var lk = function(v){ return (+v || 0).toFixed(2); };
     var scale = Math.max(est, purch, used, 0.0001);
     var pc = function(v){ return Math.max(0, Math.min(100, v / scale * 100)).toFixed(2); };
     var over = purch > est;
@@ -562,7 +563,7 @@ function _cfResourceBarHtml(est, purch, used, stock){
     var sw = function(c){ return '<span style="display:inline-block;width:10px;height:6px;background:' + c + ';border-radius:1px;margin-right:3px;vertical-align:middle;"></span>'; };
     return '<div style="width:100%;padding:0 10px;box-sizing:border-box;font-family:Barlow Condensed,Arial;">'
         + '<div style="display:flex;justify-content:space-between;align-items:baseline;line-height:22px;margin-bottom:4px;">'
-        + '<span style="font-size:20px;font-weight:700;color:#000;" title="Used">' + lk(used) + '</span>'
+        + '<span style="font-size:20px;font-weight:700;color:#000;" title="Used">' + lk(used) + ' <span style="font-size:13px;color:#5a5a5a;">Lakhs</span></span>'
         + '<span style="font-size:13px;font-weight:700;color:#1a2540;" title="Stock at site = Purchased - Used">Stock ' + lk(stock) + '</span></div>'
         + bar
         + '<div style="display:flex;justify-content:space-between;font-size:11px;color:#5a5a5a;margin-top:3px;"><span>0</span><span>' + lk(scale) + '</span></div>'
