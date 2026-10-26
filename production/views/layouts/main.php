@@ -397,7 +397,8 @@ $subDomain = array_shift(($HTTP_HOST));
         /* Searchable IOW Group: a text box over the hidden select, with a match list. */
         .cwbs-ss { position:relative; }
         .cwbs-ss input { width:100%; box-sizing:border-box; border:1px solid #bcd0cc; border-radius:5px; padding:6px 26px 6px 8px; font-size:12px; height:32px; background:#fff; outline:none; }
-        .cwbs-ss input:focus { border-color:#0f5c52; }
+        .cwbs-ss input { cursor:pointer; }
+        .cwbs-ss input:focus { border-color:#0f5c52; cursor:text; }
         .cwbs-ss:after { content:'\25BE'; position:absolute; right:9px; top:7px; font-size:12px; color:#555; pointer-events:none; }
         .cwbs-ss-list { position:absolute; left:0; right:0; top:34px; max-height:260px; overflow-y:auto; background:#fff; border:1px solid #bcd0cc; border-radius:5px; box-shadow:0 6px 18px rgba(0,0,0,.18); z-index:50; display:none; }
         .cwbs-ss-item { padding:6px 10px; font-size:12px; cursor:pointer; }
