@@ -2994,6 +2994,10 @@ document.addEventListener('click', function(e){
           <label>IOW Group</label>
           <select id="cwbs-iow-group"><option value="">Select IOW Group</option></select>
         </div>
+        <div class="cwbs-f">
+          <label>Search Activity</label>
+          <input type="text" id="cwbs-act-search" placeholder="Type to search activities" autocomplete="off" style="border:1px solid #bcd0cc;border-radius:5px;padding:6px 8px;font-size:12px;height:32px;outline:none;">
+        </div>
       </div>
       <div id="cwbs-msg"></div>
       <div id="cwbs-list-wrap">
@@ -3656,15 +3660,16 @@ document.addEventListener('click', function(e){
         $('#cwbs-add-btn').prop('disabled', true);
     }
     function cwbsLoadActivities(){
+        // All activities of the Project Type (not filtered by IOW Group); the chosen
+        // IOW Group is where the selected activities are added in the Gantt.
         var typeId = $('#cwbs-proj-type').val();
-        var groupId = $('#cwbs-iow-group').val();
-        if(!typeId || !groupId){ cwbsResetList(); return; }
+        if(!typeId){ cwbsResetList(); return; }
         $('#cwbs-empty').hide();
         $('#cwbs-table').hide();
         $('#cwbs-loading').show();
         $.ajax({
             type:'POST', url:'../projectsmain/getactivitiesbytypeandgroup', dataType:'json',
-            data:{ typeId:typeId, iowGroupId:groupId },
+            data:{ typeId:typeId },
             success:function(d){
                 $('#cwbs-loading').hide();
                 // Keep what's already entered (Qty, R.Unit, ticks) across the refresh.
@@ -3674,7 +3679,7 @@ document.addEventListener('click', function(e){
                 cwbsSelected = {};
                 $('#cwbs-add-btn').prop('disabled', true);
                 var items = d.items || [];
-                if(!items.length){ cwbsResetList('No activities found under this IOW Group.'); return; }
+                if(!items.length){ cwbsResetList('No activities found for this Project Type.'); return; }
                 var rows = '';
                 items.forEach(function(it, idx){
                     rows += '<tr data-actid="'+it.id+'">'
@@ -3696,6 +3701,7 @@ document.addEventListener('click', function(e){
                 });
                 $('#cwbs-add-btn').prop('disabled', Object.keys(cwbsSelected).length === 0);
                 $('#cwbs-table').show();
+                cwbsFilterActs();
             },
             error:function(){
                 $('#cwbs-loading').hide();
@@ -3723,7 +3729,17 @@ document.addEventListener('click', function(e){
         });
     }
     $(document).on('change','#cwbs-proj-type', function(){ cwbsLoadIowGroups(); });
-    $(document).on('change','#cwbs-iow-group', function(){ cwbsLoadActivities(); });
+    // Choosing the IOW Group no longer reloads the list (it only sets where to add).
+    $(document).on('change','#cwbs-iow-group', function(){ if(!$('#cwbs-tbody tr').length) cwbsLoadActivities(); });
+    function cwbsFilterActs(){
+        var q = ($('#cwbs-act-search').val() || '').trim().toLowerCase(), n = 0;
+        $('#cwbs-tbody tr').each(function(){
+            var hit = !q || $(this).find('.cwbs-act-name').text().toLowerCase().indexOf(q) >= 0;
+            $(this).toggle(hit); if (hit) n++;
+        });
+        $('#cwbs-msg').css('color','#555').text(q && !n ? 'No activity matches "' + q + '".' : '');
+    }
+    $(document).on('input','#cwbs-act-search', cwbsFilterActs);
     // IOW Group search: type to filter the groups, pick one from the list. The
     // hidden select stays the source of the value, so the rest works unchanged.
     (function(){
@@ -3796,6 +3812,7 @@ document.addEventListener('click', function(e){
 
         var groupId = $('#cwbs-iow-group').val();
         var iowName = $('#cwbs-iow-group option:selected').text();
+        if(!groupId){ alert('Select the IOW Group to add the activities under.'); return; }
         var $btn = $(this).prop('disabled', true);
         $('#cwbs-msg').css('color','#555').text('Adding ' + ids.length + ' activity/activities…');
 

@@ -303,7 +303,15 @@ class ProjectsmainController extends Controller
         if ($typeId)     $sql .= " AND ea.work_type = " . $typeId;
         if ($groupId)    $sql .= " AND ea.activity_type = " . $groupId;
         if ($iowGroupId) $sql .= " AND ea.iow_group_id = " . $iowGroupId;
-        $sql .= " ORDER BY ea.activity_name ASC";
+        // Create WBS lists every activity of the Project Type once (the same activity
+        // can sit in several IOW groups in the library), whatever IOW group is chosen.
+        if ($typeId && !$groupId && !$iowGroupId) {
+            $sql = "SELECT MIN(ea.activity_id) AS id, MIN(ea.activity_name) AS name, ea.activity_unit AS unit
+                     FROM estimateactivities ea
+                     WHERE ea.activity_status = 0 AND ea.work_type = " . $typeId . "
+                     GROUP BY LOWER(TRIM(ea.activity_name)), ea.activity_unit";
+        }
+        $sql .= " ORDER BY name ASC";
         $rows = \Yii::$app->db->createCommand($sql)->queryAll();
 
         return ['items' => $rows];
