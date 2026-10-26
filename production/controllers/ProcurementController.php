@@ -401,7 +401,8 @@ class ProcurementController extends Controller
             $totalAmount += (float)($r['qty'] ?? 0) * (float)($r['rate'] ?? 0);
         }
 
-        $today = date('Y-m-d');
+        // PO date from the Raise Purchase Order window (today if not given).
+        $today = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_POST['po_date'] ?? '')) ? $_POST['po_date'] : date('Y-m-d');
         $db->createCommand()->insert('purchase_orders', [
             'project_id'         => $projectid,
             'vendor_id'          => $vendorId,
