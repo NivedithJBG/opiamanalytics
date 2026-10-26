@@ -6241,8 +6241,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
     .menu4-popup-cntnr,
     #reslib-win,
     #vendorlib-win,
-    #rel-win,
-    #estreport-win {
+    #rel-win {
         top: 0 !important;
         left: 0 !important;
         right: 0 !important;
@@ -6255,6 +6254,9 @@ window.loadIowGroupOptions = function(selectEl, cb){
         min-height: 0 !important;
         border-radius: 0 !important;
     }
+
+    /* Project Estimate: a centred window, not full-screen, on tablet/phone. */
+    #estreport-win { left: 3vw; width: 94vw; top: 40px; height: calc(100vh - 70px); }
 
     /* Smaller floating popups (Cost Dashboard, KPI modal, Resource
        Library sub-popup, dashboard modals, performance dashboard) don't

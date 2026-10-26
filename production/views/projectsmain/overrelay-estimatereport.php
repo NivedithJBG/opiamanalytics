@@ -13,8 +13,8 @@
 /* ── Main Estimate Report window ──────────────────────────────── */
 #estreport-win {
   display:none; position:fixed;
-  top:50px; left:calc(50% - 620px);
-  width:1240px; height:calc(100vh - 90px);
+  top:50px; left:calc(50% - 490px);
+  width:980px; max-width:96vw; height:calc(100vh - 90px);
   min-width:480px; min-height:320px;
   background:#fff; border-radius:8px;
   box-shadow:0 8px 32px rgba(0,0,0,.35);
