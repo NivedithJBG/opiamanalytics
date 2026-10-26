@@ -4557,6 +4557,16 @@ class ProjectsmainController extends Controller
         return ['error' => 'No', 'id' => (int)$db->getLastInsertID()];
     }
 
+    public function actionGanttnoteedit()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $text = trim((string)($_POST['text'] ?? ''));
+        if ($text === '') return ['error' => 'Yes', 'errortext' => 'Please write the note.'];
+        Yii::$app->db->createCommand()->update('gantt_notes', ['note_text' => $text],
+            ['id' => (int)($_POST['id'] ?? 0), 'user_id' => (int)Yii::$app->user->Id])->execute();
+        return ['error' => 'No'];
+    }
+
     public function actionGanttnotedone()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;

@@ -5367,9 +5367,10 @@ window.loadIowGroupOptions = function(selectEl, cb){
     $.ajax({ type:'POST', url:'../projectsmain/ganttnotes', dataType:'json', success:function(d){
       var n = (d && d.notes) || [];
       $('#gn-list').html(n.length ? n.map(function(x){
-        return '<div class="gn-strip" data-id="' + x.id + '"><div class="gn-strip-text">' + esc(x.text)
+        return '<div class="gn-strip" data-id="' + x.id + '"><div class="gn-strip-text"><span class="gn-t">' + esc(x.text) + '</span>'
           + '<span class="gn-strip-date">' + esc((x.created_at || '').slice(0, 16)) + '</span></div>'
-          + '<button type="button" class="gn-tick" title="Done">&#10003;</button></div>';
+          + '<button type="button" class="gn-tick gn-edit" title="Edit">&#9998;</button>'
+          + '<button type="button" class="gn-tick gn-done" title="Done">&#10003;</button></div>';
       }).join('') : '<div class="gn-empty">No notes yet.</div>');
     } });
   }
@@ -5387,10 +5388,32 @@ window.loadIowGroupOptions = function(selectEl, cb){
   function fit(){ var t = document.getElementById('gn-text'); t.style.height = 'auto'; t.style.height = Math.min(220, t.scrollHeight + 2) + 'px'; }
   $(document).on('input', '#gn-text', fit);
   $(document).on('keydown', '#gn-text', function(e){ if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); add(); } });
-  $(document).on('click', '.gn-tick', function(){
+  $(document).on('click', '.gn-done', function(){
     var strip = $(this).closest('.gn-strip'), id = strip.data('id');
     strip.fadeOut(200, function(){ strip.remove(); if (!$('#gn-list .gn-strip').length) $('#gn-list').html('<div class="gn-empty">No notes yet.</div>'); });
     $.ajax({ type:'POST', url:'../projectsmain/ganttnotedone', dataType:'json', data:{ id:id } });
+  });
+  // Edit a note in place: the strip text becomes a box with Save / Cancel.
+  $(document).on('click', '.gn-edit', function(){
+    var strip = $(this).closest('.gn-strip'), box = strip.find('.gn-strip-text');
+    if (box.find('textarea').length) return;
+    var old = strip.find('.gn-t').text();
+    box.data('html', box.html());
+    box.html('<textarea class="gn-edit-text" style="width:100%;box-sizing:border-box;min-height:50px;border:1px solid #bcc6d4;border-radius:5px;padding:5px 7px;font:inherit;font-size:13px;resize:vertical;"></textarea>'
+      + '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:5px;">'
+      + '<button type="button" class="gn-edit-cancel" style="border:1px solid #bcc6d4;background:#fff;border-radius:4px;padding:3px 10px;cursor:pointer;">Cancel</button>'
+      + '<button type="button" class="gn-edit-save" style="border:none;background:#0f5c52;color:#fff;border-radius:4px;padding:3px 12px;font-weight:700;cursor:pointer;">Save</button></div>');
+    var ta = box.find('textarea').val(old).focus()[0];
+    ta.style.height = 'auto'; ta.style.height = Math.min(220, ta.scrollHeight + 2) + 'px';
+  });
+  $(document).on('click', '.gn-edit-cancel', function(){ var box = $(this).closest('.gn-strip-text'); box.html(box.data('html')); });
+  $(document).on('click', '.gn-edit-save', function(){
+    var strip = $(this).closest('.gn-strip'), t = $.trim(strip.find('.gn-edit-text').val());
+    if (!t) return;
+    $(this).prop('disabled', true);
+    $.ajax({ type:'POST', url:'../projectsmain/ganttnoteedit', dataType:'json', data:{ id:strip.data('id'), text:t },
+      success:function(d){ if (d && d.error === 'No') load(); else alert((d && d.errortext) || 'Could not save.'); },
+      error:function(){ alert('Could not save.'); } });
   });
   // Close with the Gantt window.
   $(document).on('click', '#gantt-win-close', function(){ win.classList.remove('gn-open'); });
