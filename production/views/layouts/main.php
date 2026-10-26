@@ -394,6 +394,15 @@ $subDomain = array_shift(($HTTP_HOST));
             height:32px; background:#fff; outline:none;
         }
         .cwbs-f select:focus { border-color:#0f5c52; }
+        /* Searchable IOW Group: a text box over the hidden select, with a match list. */
+        .cwbs-ss { position:relative; }
+        .cwbs-ss input { width:100%; box-sizing:border-box; border:1px solid #bcd0cc; border-radius:5px; padding:6px 26px 6px 8px; font-size:12px; height:32px; background:#fff; outline:none; }
+        .cwbs-ss input:focus { border-color:#0f5c52; }
+        .cwbs-ss:after { content:'\25BE'; position:absolute; right:9px; top:7px; font-size:12px; color:#555; pointer-events:none; }
+        .cwbs-ss-list { position:absolute; left:0; right:0; top:34px; max-height:260px; overflow-y:auto; background:#fff; border:1px solid #bcd0cc; border-radius:5px; box-shadow:0 6px 18px rgba(0,0,0,.18); z-index:50; display:none; }
+        .cwbs-ss-item { padding:6px 10px; font-size:12px; cursor:pointer; }
+        .cwbs-ss-item:hover, .cwbs-ss-item.on { background:#e3f1ee; }
+        .cwbs-ss-none { padding:6px 10px; font-size:12px; color:#888; }
         #cwbs-msg { font-size:12px; color:#c0392b; padding:0 16px; flex-shrink:0; min-height:0; }
         #cwbs-msg:empty { display:none; }
         #cwbs-list-wrap { flex:1; overflow-y:auto; padding:10px 16px; min-height:0; }
@@ -3713,6 +3722,46 @@ document.addEventListener('click', function(e){
     }
     $(document).on('change','#cwbs-proj-type', function(){ cwbsLoadIowGroups(); });
     $(document).on('change','#cwbs-iow-group', function(){ cwbsLoadActivities(); });
+    // IOW Group search: type to filter the groups, pick one from the list. The
+    // hidden select stays the source of the value, so the rest works unchanged.
+    (function(){
+        var sel = document.getElementById('cwbs-iow-group');
+        if (!sel || sel.getAttribute('data-ss')) return;
+        sel.setAttribute('data-ss', '1');
+        var wrap = document.createElement('div'); wrap.className = 'cwbs-ss';
+        var inp = document.createElement('input'); inp.type = 'text'; inp.placeholder = 'Search IOW Group'; inp.autocomplete = 'off';
+        var list = document.createElement('div'); list.className = 'cwbs-ss-list';
+        sel.parentNode.insertBefore(wrap, sel); wrap.appendChild(inp); wrap.appendChild(list); wrap.appendChild(sel);
+        sel.style.display = 'none';
+        function selText(){ var o = sel.options[sel.selectedIndex]; return o && o.value ? o.textContent : ''; }
+        function sync(){ inp.value = selText(); }
+        function render(){
+            var q = inp.value.trim().toLowerCase(), html = '', n = 0;
+            for (var i = 0; i < sel.options.length; i++) {
+                var o = sel.options[i]; if (!o.value) continue;
+                if (q && o.textContent.toLowerCase().indexOf(q) < 0) continue;
+                html += '<div class="cwbs-ss-item' + (o.value === sel.value ? ' on' : '') + '" data-v="' + o.value + '">' + $('<div>').text(o.textContent).html() + '</div>'; n++;
+            }
+            list.innerHTML = n ? html : '<div class="cwbs-ss-none">' + (sel.options.length > 1 ? 'No IOW Group matches' : 'Select a Project Type first') + '</div>';
+            list.style.display = 'block';
+        }
+        inp.addEventListener('focus', function(){ inp.select(); render(); });
+        inp.addEventListener('input', render);
+        list.addEventListener('mousedown', function(e){
+            var it = e.target.closest('.cwbs-ss-item'); if (!it) return;
+            e.preventDefault();
+            sel.value = it.getAttribute('data-v'); sync(); list.style.display = 'none'; inp.blur();
+            $(sel).trigger('change');
+        });
+        inp.addEventListener('blur', function(){ setTimeout(function(){ list.style.display = 'none'; sync(); }, 150); });
+        inp.addEventListener('keydown', function(e){
+            if (e.key === 'Enter') { var f = list.querySelector('.cwbs-ss-item'); if (f) { e.preventDefault(); f.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); } }
+            else if (e.key === 'Escape') { inp.blur(); }
+        });
+        // Keep the box in step when the list is reloaded or the value set in code.
+        new MutationObserver(sync).observe(sel, { childList: true });
+        $(sel).on('change', sync);
+    })();
     $(document).on('click','.cwbs-tick-btn', function(){
         var id = $(this).data('actid');
         var name = $(this).data('actname');
