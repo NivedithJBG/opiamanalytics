@@ -811,7 +811,7 @@ function _cfShowResourcesPopup(d){
             + '<button type="button" class="cf-res-order" data-i="' + (no - 1) + '" style="flex:none;background:#3d6a8f;color:#fff;border:none;border-radius:12px;padding:2px 12px;font-size:11px;font-weight:700;cursor:pointer;">Order</button></div></td><td>' + esc(r.unit) + '</td>'
             + '<td>' + n2(r.est_qty) + '</td><td>' + n2(r.cycle_qty) + '</td><td>' + n2(r.rate) + '</td>'
             + '<td style="font-weight:700;">' + n2(r.cost) + '</td>'
-            + '<td>' + (r.lot_size === null ? '-' : n2(r.lot_size)) + '</td><td>' + esc(opt(r.lead_time)) + '</td><td>' + esc(opt(r.credit_period)) + '</td>'
+            + '<td>' + esc(opt(r.lead_time)) + '</td><td>' + (r.lot_size === null ? '-' : n2(r.lot_size)) + '</td><td>' + esc(opt(r.credit_period)) + '</td>'
             + '<td>' + n2(r.purchased) + '</td><td>' + n2(r.used) + '</td><td>' + n2(r.remaining) + '</td></tr>';
     });
     closeGroup();
@@ -829,7 +829,7 @@ function _cfShowResourcesPopup(d){
         + h('E. Quantity', 'Estimated quantity for the activities: consumption per unit x activity quantity')
         + h('Cycle Qnty', 'Quantity required in this cycle: E. Quantity x activity days in the cycle / activity duration')
         + h('Rate') + h('Cost in cycle', 'Cycle Qnty x Rate')
-        + h('Lot Size') + h('Lead Time') + h('Credit Period')
+        + h('Lead Time') + h('Lot Size') + h('Credit Period')
         + h('Purchased', 'GRN quantity received for the project') + h('Used', 'Average consumption x quantity executed') + h('Remaining', 'Purchased - Used')
         + '</tr></thead>'
         + '<tbody>' + rows + '</tbody>'
