@@ -5329,7 +5329,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
 <div id="gn-win">
   <div id="gn-hdr"><span>Notes</span><button type="button" id="gn-close" title="Close">&times;</button></div>
   <div id="gn-form">
-    <textarea id="gn-text" rows="2" placeholder="Write a note&hellip; (Ctrl+Enter to add)"></textarea>
+    <textarea id="gn-text" rows="2" placeholder="Write a note&hellip;"></textarea>
     <button type="button" id="gn-add">Add</button>
   </div>
   <div id="gn-list"></div>
