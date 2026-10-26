@@ -455,7 +455,7 @@ use app\models\Resources;
                     <div class="col-md-8">
                         <label>IOW Group</label>
                         <div class="input-group">
-                            <input type="text" class="form-control" id="alIowGroupName" placeholder="IOW Group">
+                            <input type="text" class="form-control" id="alIowGroupName" placeholder="Search or add IOW Group" autocomplete="off">
                             <span class="input-group-btn">
                                 <button type="button" class="btn btn-primary" id="alSaveIowGroup"><span class="icon-check"></span> Add</button>
                             </span>
@@ -931,9 +931,31 @@ function alLoadIowGroupList(){
             } else {
                 $('#alIowGroupListContainer').html('<div style="padding:8px 15px;color:#999;">No groups yet.</div>');
             }
+            alFilterIowGroupList();
         }
     });
 }
+
+// The IOW Group box also searches: as you type, the list shows only the groups
+// that match. An exact match means the group already exists (Add disabled);
+// no match means it can be added as a new group.
+function alFilterIowGroupList(){
+    var q = ($('#alIowGroupName').val() || '').trim().toLowerCase();
+    var rows = $('#alIowGroupListContainer tbody tr'), shown = 0, exact = false;
+    rows.each(function(){
+        var name = $.trim($(this).children('td').eq(1).text()).toLowerCase();
+        var hit = !q || name.indexOf(q) >= 0;
+        $(this).toggle(hit);
+        if (hit) shown++;
+        if (q && name === q) exact = true;
+    });
+    $('#alIowGroupNoMatch').remove();
+    if (q && !shown) {
+        $('#alIowGroupListContainer').prepend('<div id="alIowGroupNoMatch" style="padding:8px 15px;color:#5a6e8c;">No group matches &ldquo;' + $('<div>').text(q).html() + '&rdquo; &mdash; click <b>Add</b> to create it.</div>');
+    }
+    $('#alSaveIowGroup').prop('disabled', exact).attr('title', exact ? 'This IOW group already exists' : '');
+}
+$(document).on('input', '#alIowGroupName', alFilterIowGroupList);
 
 /* ── IOW Group inline edit (table row) ── */
 $(document).on('click', '.al-edit-iowgroup', function(){
@@ -1012,6 +1034,7 @@ $(document).on('click', '#alSaveIowGroup', function(){
             btn.attr('disabled', false);
             if(data.error === 'No'){
                 $('#alIowGroupName').val('');
+                $('#alSaveIowGroup').prop('disabled', false);
                 alLoadIowGroupList();
                 alRefreshIowGroupDropdown();
             } else {
