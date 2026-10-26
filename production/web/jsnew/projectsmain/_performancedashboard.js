@@ -295,7 +295,7 @@ function cfFitLayout(){
     var maxS = (touch && !portrait) ? 1.15 : 1;
     var s = Math.min(maxS, (vw - (portrait ? 12 : 24)) / GROUP_W);
     var top = Math.max(64, Math.round(vh * 0.10));          // windows start below the toolbar
-    var winH = Math.min(vh * (touch && !portrait ? 0.74 : 0.68), vh - top - 16, GROUP_W * s * (portrait ? 0.61 : (touch ? 0.56 : 0.72)));
+    var winH = Math.min(vh * (touch && !portrait ? 0.74 : 0.68), vh - top - 16, GROUP_W * s * (portrait ? 0.50 : (touch ? 0.48 : 0.72)));   // iPad: wider than tall
     var groupLeft = (vw - GROUP_W * s) / 2;
     var hdr = document.getElementById('cf-shared-hdr');
     if (hdr) {
@@ -321,7 +321,7 @@ $(window).on('resize orientationchange', function(){
     if ($('#cf-win-value').is(':visible')) cfFitLayout();
 });
 // Larger touch targets for the close buttons and title bars on touch screens (iPad).
-$('head').append('<style>@media (pointer:coarse){#cf-shared-close,.cf-seg-close{min-width:36px;min-height:36px;font-size:22px !important;}.cf-seg-hdr{padding:10px 12px !important;}}</style>');
+$('head').append('<style>@media (pointer:coarse){#cf-shared-close,.cf-seg-close{min-width:28px;min-height:24px;font-size:20px !important;}.cf-seg-hdr{padding:3px 10px !important;}}</style>');
 function cfShowSegmentWindows(){
     _cfSegWins.forEach(function(w){ $('#' + w.id).css('display', 'flex'); });
     $('#cf-shared-hdr').css('display', 'flex');
