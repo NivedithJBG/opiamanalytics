@@ -290,7 +290,8 @@ use app\models\Resources;
                 <form id="estactivityform">
                     <input type="hidden" id="editingActivityId" name="activity_id" value="">
                     <div class="row" id="estactivityaddrow">
-                        <!-- Project Type + IOW Group -->
+                        <!-- Project Type (activities belong to a Project Type only; IOW Groups are
+                             chosen per project when activities are added to the Gantt) -->
                         <div class="row" style="margin-top:6px;">
                             <div class="col-md-6">
                                 <div class="form-group">
@@ -307,7 +308,7 @@ use app\models\Resources;
                                     <span style="color:red;"></span>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6" style="display:none;">
                                 <div class="form-group">
                                     <label>IOW Group</label>
                                     <select class="form-control" id="actIowGroupId" name="iow_group_id">

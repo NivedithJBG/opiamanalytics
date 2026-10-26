@@ -21235,7 +21235,8 @@ public function actionActivitymusterprocess()
             $activityType = intval(isset($_POST['activitytypeid']) ? $_POST['activitytypeid'] : 0);
             $workType     = intval(isset($_POST['worktypeid'])     ? $_POST['worktypeid']     : 0);
             $workingHours = intval(isset($_POST['working_hours'])  ? $_POST['working_hours']  : 8);
-            $iowGroupId   = intval(isset($_POST['iow_group_id'])   ? $_POST['iow_group_id']   : 0);
+            // Activities are independent of IOW Groups (agreed 2026-10-26): none is stored.
+            $iowGroupId   = 0;
             $names = isset($_POST['estactivityname']) ? (array)$_POST['estactivityname'] : [];
 
             // Activity Type is optional (same as Project Type/work_type
@@ -21416,7 +21417,6 @@ public function actionActivitymusterprocess()
         $connection->createCommand()->update('estimateactivities', [
             'activity_type' => (int)($_POST['activitytypeid'] ?? 0),
             'work_type'     => (int)($_POST['worktypeid'] ?? 0),
-            'iow_group_id'  => (int)($_POST['iow_group_id'] ?? 0),
             'activity_name' => $_POST['estactivityname'][0],
             'activity_unit' => $_POST['estactivityunit'][0],
             'working_hours' => $workingHours,

@@ -3041,7 +3041,7 @@ document.addEventListener('click', function(e){
         <label>Project Type</label>
         <select id="cwbsed-proj-type"><option value="0">Select Project Type</option></select>
       </div>
-      <div class="cwbsed-f" style="flex:1;">
+      <div class="cwbsed-f" style="flex:1;display:none;"><!-- activities have no IOW Group -->
         <label>IOW Group</label>
         <select id="cwbsed-iow-group"><option value="">Select IOW Group</option></select>
       </div>

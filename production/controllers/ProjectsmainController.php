@@ -1177,7 +1177,7 @@ class ProjectsmainController extends Controller
                         "INSERT INTO estimateactivities
                          (activity_name, activity_unit, work_type, activity_type, iow_group_id, activity_rate, activity_status)
                          VALUES (:n, :u, :wt, :at, :g, 0, 0)",
-                        [':n' => $actNameInput, ':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId, ':g' => $iowGroupId]
+                        [':n' => $actNameInput, ':u' => $unit, ':wt' => $projTypeId, ':at' => $actTypeId, ':g' => 0]   // library activity: no IOW Group
                     )->execute();
                     $iowActId = (int)$db->lastInsertID;
                 }
