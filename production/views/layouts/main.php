@@ -5346,7 +5346,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
   padding:8px 12px; font-weight:700; font-size:14px; cursor:move; user-select:none; touch-action:none; }
 #gn-close { background:none; border:none; color:#fff; font-size:20px; line-height:1; cursor:pointer; }
 #gn-form { flex:none; display:flex; gap:6px; padding:8px 10px; border-bottom:1px solid #e3e7ee; }
-#gn-text { flex:1; resize:none; border:1px solid #bcc6d4; border-radius:5px; padding:5px 7px; font:inherit; font-size:13px; }
+#gn-text { flex:1; resize:none; min-height:40px; max-height:220px; overflow-y:auto; border:1px solid #bcc6d4; border-radius:5px; padding:5px 7px; font:inherit; font-size:13px; }
 #gn-add { flex:none; border:none; background:#0f5c52; color:#fff; border-radius:5px; padding:0 14px; font-weight:700; cursor:pointer; }
 #gn-list { flex:1; overflow-y:auto; padding:8px 10px; }
 .gn-strip { display:flex; align-items:flex-start; gap:8px; background:#f4f6fa; border-left:4px solid #2ba899;
@@ -5377,12 +5377,15 @@ window.loadIowGroupOptions = function(selectEl, cb){
     var t = $.trim($('#gn-text').val()); if (!t) return;
     $('#gn-add').prop('disabled', true);
     $.ajax({ type:'POST', url:'../projectsmain/ganttnoteadd', dataType:'json', data:{ text:t },
-      success:function(d){ $('#gn-add').prop('disabled', false); if (d && d.error === 'No') { $('#gn-text').val('').focus(); load(); } else alert((d && d.errortext) || 'Could not save.'); },
+      success:function(d){ $('#gn-add').prop('disabled', false); if (d && d.error === 'No') { $('#gn-text').val('').focus(); fit(); load(); } else alert((d && d.errortext) || 'Could not save.'); },
       error:function(){ $('#gn-add').prop('disabled', false); alert('Could not save.'); } });
   }
   $(document).on('click', '#gn-btn', function(){ if (win.classList.contains('gn-open')) { win.classList.remove('gn-open'); return; } win.classList.add('gn-open'); load(); $('#gn-text').focus(); });
   $(document).on('click', '#gn-close', function(){ win.classList.remove('gn-open'); });
   $(document).on('click', '#gn-add', add);
+  // The note box grows with the text, so the whole note is visible while typing.
+  function fit(){ var t = document.getElementById('gn-text'); t.style.height = 'auto'; t.style.height = Math.min(220, t.scrollHeight + 2) + 'px'; }
+  $(document).on('input', '#gn-text', fit);
   $(document).on('keydown', '#gn-text', function(e){ if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); add(); } });
   $(document).on('click', '.gn-tick', function(){
     var strip = $(this).closest('.gn-strip'), id = strip.data('id');
