@@ -375,6 +375,11 @@ class HelperComponent extends Component
         // that check happens in a second pass below, after dates exist.
         $dur = []; $anchor = []; $hasStartedMap = [];
         $today = date('Y-m-d');
+        // Activities take the project start date as their start, unless relationships
+        // or a later start set on the activity move them (agreed 2026-10-26).
+        $projStart = substr((string)$connection->createCommand(
+            "SELECT start_date FROM projects WHERE Project_Id = :p", [':p' => $projectid])->queryScalar(), 0, 10);
+        if ($projStart === '' || $projStart === '0000-00-00') $projStart = null;
         foreach ($activities as $act) {
             $plannedDur = max(1, (int)round((float)$this->getCpmProjDays($act->id, $act->quantity)));
 
@@ -403,6 +408,7 @@ class HelperComponent extends Component
                 $anchor[$act->id] = $today;
                 $dur[$act->id]    = $plannedDur;
             }
+            if (!$hasStarted && $projStart && $anchor[$act->id] < $projStart) $anchor[$act->id] = $projStart;
         }
 
         // Working-day date arithmetic (holiday/week-off aware)
@@ -624,6 +630,10 @@ class HelperComponent extends Component
         }
 
         $dur = []; $anchor = []; $isCompleted = [];
+        // Project start is the earliest start for any activity (agreed 2026-10-26).
+        $projStart = substr((string)$connection->createCommand(
+            "SELECT start_date FROM projects WHERE Project_Id = :p", [':p' => $projectid])->queryScalar(), 0, 10);
+        if ($projStart === '' || $projStart === '0000-00-00') $projStart = null;
         foreach ($activities as $act) {
             $isCompleted[$act->id] = ((int)$act->completed_status === 1);
             $dur[$act->id] = max(1, (int)$act->old_duration);
@@ -638,6 +648,7 @@ class HelperComponent extends Component
             } else {
                 $anchor[$act->id] = date('Y-m-d');
             }
+            if (!$isCompleted[$act->id] && $projStart && $anchor[$act->id] !== '2000-01-01' && $anchor[$act->id] < $projStart) $anchor[$act->id] = $projStart;
         }
 
         $wd = function($date, $n, $direction) use ($projectid) {
