@@ -106,10 +106,7 @@ $(function() {
             $('#estworktypelistss1').next('span').html('Select Project Type').show('slow');
             error = 1;
         }
-        if(!$('#actIowGroupId').val()){
-            $('#actIowGroupId').next('span').html('Select IOW Group').show('slow');
-            error = 1;
-        }
+        // IOW Group is no longer part of an activity (activities belong to a Project Type only).
         $('.estactivityname').each(function(){
             var id=$(this).attr('data-id');
             if($(this).val()=='')
@@ -132,6 +129,7 @@ $(function() {
         // row (e.g. productivity left blank) silently saved as 0 before,
         // which is exactly the "productivity not saving" confusion from
         // earlier; now it's caught here instead.
+        var taskError = 0;
         $('#task-rows-container .task-row').each(function(){
             var $row = $(this);
             var $name = $row.find('.task-name');
@@ -140,15 +138,15 @@ $(function() {
             var $prod = $row.find('.task-productivity');
             if($name.val() === '' || $unit.val() === '' || $qty.val() === '' || $prod.val() === ''){
                 $row.find('.task-name, .task-unit, .task-qty, .task-productivity').css('border-color', '#d9534f');
-                error = 1;
+                error = 1; taskError = 1;
             } else {
                 $row.find('.task-name, .task-unit, .task-qty, .task-productivity').css('border-color', '');
             }
         });
-        if(error && $('#task-rows-container .task-row').length && !$('#task-rows-error').length){
+        if(taskError && !$('#task-rows-error').length){
             $('#task-rows-container').after('<div id="task-rows-error" style="color:red;font-size:12px;margin-top:4px;">Please fill in Task Name, Unit, Qty/Unit and Productivity/day for every task row (or remove the empty row).</div>');
         }
-        if(!error){ $('#task-rows-error').remove(); }
+        if(!taskError){ $('#task-rows-error').remove(); }
 
         if(error==0){
             var editingId = $('#editingActivityId').val();
