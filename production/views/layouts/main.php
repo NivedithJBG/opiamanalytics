@@ -5331,7 +5331,11 @@ window.loadIowGroupOptions = function(selectEl, cb){
       success:function(d){ $('#gn-add').prop('disabled', false); if (d && d.error === 'No') { $('#gn-text').val('').focus(); fit(); load(); } else alert((d && d.errortext) || 'Could not save.'); },
       error:function(){ $('#gn-add').prop('disabled', false); alert('Could not save.'); } });
   }
-  $(document).on('click', '#gn-btn', function(){ if (win.classList.contains('gn-open')) { win.classList.remove('gn-open'); return; } win.classList.add('gn-open'); load(); $('#gn-text').focus(); });
+  // Keep Notes above the Gantt window (which raises itself on tap, e.g. on iPad).
+  function toTop(){ var g = document.getElementById('gantt-win'); var z = g ? (parseInt(window.getComputedStyle(g).zIndex, 10) || 100000) : 100000; win.style.zIndex = z + 50; }
+  $(document).on('click', '#gn-btn', function(e){ e.stopPropagation(); if (win.classList.contains('gn-open')) { win.classList.remove('gn-open'); return; } toTop(); win.classList.add('gn-open'); load(); $('#gn-text').focus(); });
+  $(document).on('mousedown touchstart', '#gn-win', toTop);
+  $(document).on('mousedown touchstart', '#gantt-win', function(){ if (win.classList.contains('gn-open')) setTimeout(toTop, 0); });
   $(document).on('click', '#gn-close', function(){ win.classList.remove('gn-open'); });
   $(document).on('click', '#gn-add', add);
   // The note box grows with the text, so the whole note is visible while typing.
