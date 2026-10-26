@@ -477,7 +477,7 @@ use app\models\Resources;
                         </select>
                     </div>
                 </div>
-                <div id="alIowGroupListContainer" class="row"></div>
+                <div id="alIowGroupListContainer" class="row" style="max-height:52vh;overflow-y:auto;"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal" style="background:#e67e22;color:#fff;border-color:#d35400;"><span class="icon-close"></span> Close</button>
