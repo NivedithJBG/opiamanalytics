@@ -3801,6 +3801,9 @@ document.addEventListener('click', function(e){
             if(i >= ids.length){
                 $btn.prop('disabled', false);
                 $('#cwbs-msg').css('color','#197a3a').text('Added ' + ids.length + ' activity/activities to the Gantt.');
+                // Clear confirmation over the Create WBS window.
+                $('#cwbs-added-toast').remove();
+                $('<div id="cwbs-added-toast">&#10003; Added to Gantt Chart</div>').css({ position:'fixed', left:'50%', top:'40%', transform:'translate(-50%,-50%)', background:'#0f5c52', color:'#fff', padding:'14px 26px', borderRadius:'8px', fontSize:'16px', fontWeight:700, boxShadow:'0 8px 24px rgba(0,0,0,.3)', zIndex:300000 }).appendTo('body').delay(2200).fadeOut(400, function(){ $(this).remove(); });
                 cwbsSelected = {};
                 $('.cwbs-tick-btn').removeClass('cwbs-selected');
                 $('#cwbs-add-btn').prop('disabled', true);
