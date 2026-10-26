@@ -268,45 +268,6 @@ $subDomain = array_shift(($HTTP_HOST));
         #pdoc-popup .ui-resizable-se { background:#1565C0; opacity:.4; border-radius:0 0 8px 0; }
         #pdoc-popup .ui-resizable-se:hover { opacity:.7; }
 
-        /* ── Project Workflow Tools Floating Popup ── */
-        #pwt-popup {
-            display:none; flex-direction:column;
-            position:fixed;
-            width:640px; height:420px; min-width:420px; min-height:280px;
-            z-index:100000;
-            background:#fff; border-radius:10px; overflow:hidden;
-            box-shadow:0 8px 40px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.12);
-        }
-        #pwt-popup.pwt-open { display:flex; }
-        #pwt-header {
-            background:linear-gradient(135deg,#0d3b4f,#0f5c52);
-            color:#fff; padding:10px 16px; display:flex; align-items:center; gap:8px;
-            cursor:move; user-select:none; flex-shrink:0;
-        }
-        #pwt-header h4 { margin:0; font-size:14px; font-weight:700; flex:1; }
-        #pwt-close-x {
-            background:rgba(255,255,255,0.2); border:none; color:#fff; border-radius:50%;
-            width:24px; height:24px; font-size:15px; cursor:pointer; line-height:24px; text-align:center; flex-shrink:0;
-        }
-        #pwt-close-x:hover { background:rgba(255,255,255,0.35); }
-        #pwt-tabs {
-            display:flex; flex-wrap:wrap; gap:6px; background:#eef5f3;
-            border-bottom:1px solid #d6e3e0; padding:10px 14px; flex-shrink:0;
-        }
-        #pwt-tabs .pwt-tab {
-            background:linear-gradient(135deg,#0d3b4f,#0f5c52); color:#fff;
-            border:none; border-radius:20px; padding:7px 16px; font-size:12px; font-weight:600;
-            cursor:pointer; opacity:.6; transition:opacity .15s;
-        }
-        #pwt-tabs .pwt-tab:hover { opacity:.85; }
-        #pwt-tabs .pwt-tab.active { opacity:1; box-shadow:0 2px 6px rgba(13,59,79,.4); }
-        #pwt-body { flex:1; overflow-y:auto; padding:18px; min-height:0; }
-        .pwt-pane { display:none; }
-        .pwt-pane.active { display:block; }
-        .pwt-placeholder { text-align:center; color:#888; padding:40px 20px; font-size:13px; }
-        #pwt-popup .ui-resizable-se { background:#0f5c52; opacity:.4; border-radius:0 0 8px 0; }
-        #pwt-popup .ui-resizable-se:hover { opacity:.7; }
-
         /* ── Create WBS Floating Popup ── */
         #cwbs-popup {
             display:none; flex-direction:column;
@@ -2927,32 +2888,6 @@ document.addEventListener('click', function(e){
 </script>
 <!-- ── End Projects Manager Overlay ───────────────────────────────────── -->
 
-<!-- ── Project Workflow Tools Floating Popup ─────────────────────────── -->
-<div id="pwt-popup">
-  <div id="pwt-header">
-    <span style="font-size:15px;opacity:.85;">&#128640;</span>
-    <h4>Project Workflow Tools</h4>
-    <button id="pwt-close-x" style="margin-left:auto;">&times;</button>
-  </div>
-  <div id="pwt-tabs">
-    <button type="button" id="cwbs-open-btn" class="pwt-tab">Create WBS</button>
-    <button type="button" class="pwt-tab" data-pwt-pane="pwt-pane-schedule">Schedule Project</button>
-    <button type="button" class="pwt-tab" data-pwt-pane="pwt-pane-estimate">Estimate Project</button>
-    <button type="button" class="pwt-tab" data-pwt-pane="pwt-pane-optimise">Optimise Project</button>
-  </div>
-  <div id="pwt-body">
-    <div class="pwt-pane" id="pwt-pane-schedule">
-      <div class="pwt-placeholder">Schedule Project — coming soon.</div>
-    </div>
-    <div class="pwt-pane" id="pwt-pane-estimate">
-      <div class="pwt-placeholder">Estimate Project — coming soon.</div>
-    </div>
-    <div class="pwt-pane" id="pwt-pane-optimise">
-      <div class="pwt-placeholder">Optimise Project — coming soon.</div>
-    </div>
-  </div>
-</div>
-
 <!-- ── Create WBS Floating Popup ──────────────────────────────────────── -->
 <div id="cwbs-popup">
   <div id="cwbs-header">
@@ -3430,36 +3365,8 @@ document.addEventListener('click', function(e){
         $('#pdoc-up-corr-msg').text('');
     });
 
-    /* ── Project Workflow Tools popup ── */
-    var pwtInited = false;
-    function pwtShow(){
-        document.dispatchEvent(new Event('pwt:open'));
-        var $p = $('#pwt-popup');
-        if(!pwtInited){
-            $p.css({ visibility:'hidden', top:0, left:0 }).addClass('pwt-open');
-            var pw = $p.outerWidth(), ph = $p.outerHeight();
-            var ww = $(window).width(), wh = $(window).height();
-            $p.css({ visibility:'', top: Math.max(60, (wh - ph) / 2), left: Math.max(0, (ww - pw) / 2) });
-            $p.draggable({ handle:'#pwt-header', containment:'window', scroll:false });
-            $p.resizable({ minWidth:420, minHeight:280, handles:'all' });
-            pwtInited = true;
-        } else {
-            $p.addClass('pwt-open');
-        }
-    }
-    function pwtHide(){
-        $('#pwt-popup').removeClass('pwt-open');
-    }
-    // The toolbar icon opens Create WBS directly (the Project Workflow Tools window is no longer used).
-    $(document).on('click','#pwt-nav-btn',  function(e){ e.preventDefault(); cwbsShow(); });
-    $(document).on('click','#pwt-close-x',  function(){ pwtHide(); });
-    $(document).on('click','#pwt-tabs .pwt-tab[data-pwt-pane]', function(){
-        var pane = $(this).data('pwt-pane');
-        $('#pwt-tabs .pwt-tab[data-pwt-pane]').removeClass('active');
-        $(this).addClass('active');
-        $('.pwt-pane').removeClass('active');
-        $('#' + pane).addClass('active');
-    });
+    // The toolbar icon (rocket, "Create WBS") opens Create WBS directly.
+    $(document).on('click','#pwt-nav-btn', function(e){ e.preventDefault(); cwbsShow(); });
 
     /* ── Create WBS popup ──
        Project Type + IOW Group pickers -> tick-select activities ->
@@ -3718,7 +3625,6 @@ document.addEventListener('click', function(e){
             }
         });
     }
-    $(document).on('click','#cwbs-open-btn', function(){ cwbsShow(); });
     $(document).on('click','#cwbs-close-x, #cwbs-cancel-btn', function(){ cwbsHide(); });
     // IOW Group list depends on the selected Project Type: only groups that
     // have activities of that type are shown.
@@ -6171,7 +6077,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
 /* Ensure all floating popups are direct children of <body> so they
    are never trapped inside a parent stacking context */
 (function(){
-  var ids = ['pwt-popup','cwbs-popup','cwbsed-popup','pdoc-popup','pdoc-viewer-popup','gpm-overlay','gantt-win','cb-win','cb-btn','reslib-win','vendorlib-win','rel-win','estreport-win','menu4-popup-cntnr','procurement-win','storeoffice-win','userpermissions-win'];
+  var ids = ['cwbs-popup','cwbsed-popup','pdoc-popup','pdoc-viewer-popup','gpm-overlay','gantt-win','cb-win','cb-btn','reslib-win','vendorlib-win','rel-win','estreport-win','menu4-popup-cntnr','procurement-win','storeoffice-win','userpermissions-win'];
   ids.forEach(function(id){
     var el = document.getElementById(id) || document.querySelector('.' + id);
     if(el && el.parentNode !== document.body) document.body.appendChild(el);
@@ -6189,7 +6095,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
   var SUB_POPUP_GAP = 5000; /* sub-popups (Resource Library / Relationships
     "+add"-type popups) always sit at parent-floater-ceiling + this gap, so
     they can never end up under a repeatedly-clicked parent window. */
-  var floaters = ['pwt-popup','cwbs-popup','cwbsed-popup','pdoc-popup','pdoc-viewer-popup','gantt-win','cb-win','reslib-win','vendorlib-win','rel-win','estreport-win','menu4-popup-cntnr','procurement-win','storeoffice-win','userpermissions-win','cd-modal','cf-modal','pd-modal','gkp-popup','gkm-modal','gcm-popup','gpm-overlay'];
+  var floaters = ['cwbs-popup','cwbsed-popup','pdoc-popup','pdoc-viewer-popup','gantt-win','cb-win','reslib-win','vendorlib-win','rel-win','estreport-win','menu4-popup-cntnr','procurement-win','storeoffice-win','userpermissions-win','cd-modal','cf-modal','pd-modal','gkp-popup','gkm-modal','gcm-popup','gpm-overlay'];
 
   window.popupBringToFront = function(id){
     var el = document.getElementById(id) || document.querySelector('.' + id);
@@ -6315,7 +6221,6 @@ window.loadIowGroupOptions = function(selectEl, cb){
   document.addEventListener('rel:open',    function(){ window.popupBringToFront('rel-win'); window.popupCascade('rel-win'); });
   document.addEventListener('estreport:open', function(){ window.popupBringToFront('estreport-win'); window.popupCascade('estreport-win'); });
   document.addEventListener('actlib:open', function(){ window.popupBringToFront('menu4-popup-cntnr'); window.popupCascade('menu4-popup-cntnr'); });
-  document.addEventListener('pwt:open',    function(){ window.popupBringToFront('pwt-popup'); window.popupCascade('pwt-popup'); });
 })();
 </script>
 
