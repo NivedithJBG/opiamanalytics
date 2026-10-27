@@ -21290,7 +21290,7 @@ public function actionActivitymusterprocess()
                     }
                 }
             }
-            return json_encode(['error' => 'No']);
+            return json_encode(['error' => 'No', 'id' => (int)($activityId ?? 0)]);
         } catch (\Exception $e) {
             return json_encode(['error' => 'Yes', 'msg' => $e->getMessage()]);
         }
@@ -21339,6 +21339,15 @@ public function actionActivitymusterprocess()
         }
         if ($iowGroupId > 0) {
             $sql .= " AND ea.iow_group_id = " . $iowGroupId;
+        }
+        // Activity Library: right after adding, only the activities just added are listed.
+        $onlyIds = array_filter(array_map('intval', explode(',', (string)($_POST['only_ids'] ?? ''))));
+        if ($onlyIds) {
+            $sql = "SELECT ea.*, eat.activitytype_name, ewt.estworktype_name
+                FROM estimateactivities ea
+                LEFT JOIN estimateactivitytypes eat ON eat.activitytype_id = ea.activity_type
+                LEFT JOIN estimateworktypes ewt ON ewt.estworktype_id = ea.work_type
+                WHERE ea.activity_id IN (" . implode(',', $onlyIds) . ")";
         }
         $sql .= " ORDER BY ea.sortorder ASC, ea.activity_id ASC";
 

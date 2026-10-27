@@ -27,7 +27,7 @@ $(function() {
                 $('.preloader').show();
             },
             dataType: "json",
-            data: {estactivityname:$('#searchestactivityname').val(),estactivitytype:$('#searchestactivitytype').val(),estworktype:$('#searchestworktypelist').val()},
+            data: {estactivityname:$('#searchestactivityname').val(),estactivitytype:$('#searchestactivitytype').val(),estworktype:$('#searchestworktypelist').val(),only_ids:((window._alAddedIds||[]).join(','))},
             success: function(data){
                 if(data.error=='No')
                 {
@@ -188,7 +188,7 @@ $(function() {
                     {
                         // Let an open Create WBS window refresh its activity list.
                         $(document).trigger('actlib:saved');
-                        if(!editingId) $(document).trigger('actlib:added', [{ name: $('#estactivityname1').val(), unit: $('#estactivityunit1').val(), type: $('#estworktypelistss1 option:selected').text() }]);
+                        if(!editingId && data.id && window._alAddedIds) window._alAddedIds.push(data.id);
                         $('#saveestactivity').attr("disabled", false);
                         $(".search-and-actions-wrpr").show();
                         $('#listestactivity').trigger('click');
