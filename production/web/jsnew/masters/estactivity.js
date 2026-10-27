@@ -427,7 +427,6 @@ $(document).on( "click", "#addestactivity", function(){
     $(".remove_field").trigger('click');
     $('#estactivitytypeid').val('0');
     $(".add-activity-form").show();
-    $("#estactivityitems").hide();
 
 });
 $(document).on( "click", ".cancelactivity", function(){
