@@ -317,6 +317,11 @@ $subDomain = array_shift(($HTTP_HOST));
         .cwbs-hp-ib { border:1px solid #bcd0cc; background:#fff; border-radius:4px; width:26px; height:24px; cursor:pointer; font-size:12px; padding:0; margin-left:2px; }
         .cwbs-hp-ib:hover { border-color:#0f5c52; }
         .cwbs-hp-ib.del { color:#c0392b; }
+        .cwbs-hp-names .cwbs-hp-nrow { display:flex; gap:6px; margin-bottom:6px; }
+        .cwbs-hp-plus { border:1px solid #0f5c52; background:#fff; color:#0f5c52; border-radius:50%; width:32px; height:32px; font-size:20px; line-height:1; cursor:pointer; flex-shrink:0; padding:0; }
+        .cwbs-hp-plus:hover { background:#e3f1ee; }
+        .cwbs-hp-nrm { border:1px solid #e0b4ae; background:#fff; color:#c0392b; border-radius:5px; width:32px; height:32px; cursor:pointer; flex-shrink:0; padding:0; }
+        .cwbs-hp-addrow { text-align:right; margin:4px 0 10px; }
         #cwbs-boq-toggle {
             display:flex; align-items:center; gap:8px; background:#fff;
             border:none; border-bottom:1px solid #d6e3e0; padding:10px 16px;
@@ -3006,9 +3011,10 @@ document.addEventListener('click', function(e){
   <div class="cwbs-hp-hdr"><h4>IOW Group &mdash; headings in this project's Gantt</h4><button type="button" class="cwbs-hp-x">&times;</button></div>
   <div class="cwbs-hp-body">
     <div class="cwbs-hp-row">
-      <div style="flex:1;"><label>IOW Group</label><input type="text" id="cwbs-iowp-name" placeholder="Enter IOW Group name" autocomplete="off"></div>
-      <button type="button" class="cwbs-btn cwbs-btn-add" id="cwbs-iowp-add">Add to Gantt</button>
+      <div style="flex:1;"><label>IOW Group</label><div class="cwbs-hp-names" id="cwbs-iowp-names" data-ph="Enter IOW Group name"></div></div>
+      <button type="button" class="cwbs-hp-plus" data-for="cwbs-iowp-names" title="Add another IOW Group" style="margin-bottom:6px;">+</button>
     </div>
+    <div class="cwbs-hp-addrow"><button type="button" class="cwbs-btn cwbs-btn-add" id="cwbs-iowp-add">Add to Gantt</button></div>
     <div class="cwbs-hp-msg" id="cwbs-iowp-msg"></div>
     <table><tbody id="cwbs-iowp-list"></tbody></table>
   </div>
@@ -3020,9 +3026,10 @@ document.addEventListener('click', function(e){
       <div style="flex:1;"><label>IOW Group</label><select id="cwbs-sgp-group"><option value="">Select IOW Group</option></select></div>
     </div>
     <div class="cwbs-hp-row">
-      <div style="flex:1;"><label>Sub Group</label><input type="text" id="cwbs-sgp-name" placeholder="Enter Sub Group name" autocomplete="off"></div>
-      <button type="button" class="cwbs-btn cwbs-btn-add" id="cwbs-sgp-add">Add to Gantt</button>
+      <div style="flex:1;"><label>Sub Group</label><div class="cwbs-hp-names" id="cwbs-sgp-names" data-ph="Enter Sub Group name"></div></div>
+      <button type="button" class="cwbs-hp-plus" data-for="cwbs-sgp-names" title="Add another Sub Group" style="margin-bottom:6px;">+</button>
     </div>
+    <div class="cwbs-hp-addrow"><button type="button" class="cwbs-btn cwbs-btn-add" id="cwbs-sgp-add">Add to Gantt</button></div>
     <div class="cwbs-hp-msg" id="cwbs-sgp-msg"></div>
     <table><tbody id="cwbs-sgp-list"></tbody></table>
   </div>
@@ -3805,7 +3812,37 @@ document.addEventListener('click', function(e){
         if (window.popupBringToFront) window.popupBringToFront(id);
         cwbsLoadHeadings();
     }
-    $(document).on('click', '#cwbs-tab-iow', function(){ cwbsOpenHp('cwbs-iowp'); $('#cwbs-iowp-msg').text(''); setTimeout(function(){ $('#cwbs-iowp-name').focus(); }, 50); });
+    // Name boxes: + adds another box, so several can be added to the Gantt at once.
+    function cwbsNameRow($box, first){
+        var $r = $('<div class="cwbs-hp-nrow"><input type="text" class="cwbs-hp-name" autocomplete="off"></div>');
+        $r.find('input').attr('placeholder', $box.data('ph'));
+        if (!first) $r.append('<button type="button" class="cwbs-hp-nrm" title="Remove">&times;</button>');
+        $box.append($r);
+        return $r.find('input');
+    }
+    function cwbsNamesReset(id){ return cwbsNameRow($('#' + id).empty(), true); }
+    function cwbsNames(id){ var a = []; $('#' + id + ' .cwbs-hp-name').each(function(){ var v = $.trim(this.value); if (v) a.push(v); }); return a; }
+    $(document).on('click', '.cwbs-hp-plus', function(){ cwbsNameRow($('#' + $(this).data('for')), false).focus(); });
+    $(document).on('click', '.cwbs-hp-nrm', function(){ $(this).closest('.cwbs-hp-nrow').remove(); });
+    $(document).on('keydown', '.cwbs-hp-name', function(e){ if (e.key === 'Enter') { e.preventDefault(); cwbsNameRow($(this).closest('.cwbs-hp-names'), false).focus(); } });
+    cwbsNamesReset('cwbs-iowp-names'); cwbsNamesReset('cwbs-sgp-names');
+    // Adds each name in turn, then refreshes the lists and the Gantt once.
+    function cwbsAddMany(url, datas, $msg, what, done){
+        var ok = 0, errs = [];
+        (function next(i){
+            if (i >= datas.length) {
+                var t = ok + ' ' + what + (ok > 1 ? 's' : '');
+                if (ok) { cwbsToast('&#10003; ' + t + ' added to Gantt Chart'); cwbsAfterHeadingChange(); }
+                $msg.css('color', errs.length ? '#c00' : '#197a3a').text(errs.length ? errs.join(' ') : t + ' added to the Gantt.');
+                if (done) done(errs.length);
+                return;
+            }
+            $.ajax({ type:'POST', url:'../projectsmain/' + url, dataType:'json', data:datas[i],
+                success:function(d){ if (d && d.error === 'No') ok++; else errs.push(datas[i].name + ': ' + ((d && d.errortext) || 'not added.')); next(i + 1); },
+                error:function(){ errs.push(datas[i].name + ': not added.'); next(i + 1); } });
+        })(0);
+    }
+    $(document).on('click', '#cwbs-tab-iow', function(){ cwbsOpenHp('cwbs-iowp'); $('#cwbs-iowp-msg').text(''); setTimeout(function(){ $('#cwbs-iowp-names .cwbs-hp-name').first().focus(); }, 50); });
     $(document).on('click', '#cwbs-tab-sg', function(){ cwbsOpenHp('cwbs-sgp'); $('#cwbs-sgp-msg').text(''); });
     $(document).on('click', '#cwbs-tab-act', function(){
         var on = !$('#cwbs-popup').hasClass('cwbs-acts');
@@ -3814,20 +3851,20 @@ document.addEventListener('click', function(e){
     });
     $(document).on('click', '.cwbs-hp-x', function(){ $(this).closest('.cwbs-hp').removeClass('on'); });
     $(document).on('click', '#cwbs-iowp-add', function(){
-        var name = $.trim($('#cwbs-iowp-name').val());
-        if (!name) { $('#cwbs-iowp-msg').css('color','#c00').text('Enter the IOW Group name.'); return; }
-        $('#cwbs-iowp-name').val('');
-        cwbsPost('wbsheadingadd', { name: name }, $('#cwbs-iowp-msg'), 'IOW Group added to Gantt Chart');
+        var names = cwbsNames('cwbs-iowp-names');
+        if (!names.length) { $('#cwbs-iowp-msg').css('color','#c00').text('Enter the IOW Group name.'); return; }
+        var $b = $(this).prop('disabled', true);
+        cwbsAddMany('wbsheadingadd', names.map(function(n){ return { name: n }; }), $('#cwbs-iowp-msg'), 'IOW Group',
+            function(errs){ $b.prop('disabled', false); if (!errs) cwbsNamesReset('cwbs-iowp-names').focus(); });
     });
-    $(document).on('keydown', '#cwbs-iowp-name', function(e){ if (e.key === 'Enter') $('#cwbs-iowp-add').click(); });
     $(document).on('click', '#cwbs-sgp-add', function(){
-        var gid = $('#cwbs-sgp-group').val(), name = $.trim($('#cwbs-sgp-name').val());
+        var gid = $('#cwbs-sgp-group').val(), names = cwbsNames('cwbs-sgp-names');
         if (!gid) { $('#cwbs-sgp-msg').css('color','#c00').text('Select the IOW Group.'); return; }
-        if (!name) { $('#cwbs-sgp-msg').css('color','#c00').text('Enter the Sub Group name.'); return; }
-        $('#cwbs-sgp-name').val('');
-        cwbsPost('wbssubgroupadd', { iow_group_id: gid, name: name }, $('#cwbs-sgp-msg'), 'Sub Group added to Gantt Chart');
+        if (!names.length) { $('#cwbs-sgp-msg').css('color','#c00').text('Enter the Sub Group name.'); return; }
+        var $b = $(this).prop('disabled', true);
+        cwbsAddMany('wbssubgroupadd', names.map(function(n){ return { iow_group_id: gid, name: n }; }), $('#cwbs-sgp-msg'), 'Sub Group',
+            function(errs){ $b.prop('disabled', false); if (!errs) cwbsNamesReset('cwbs-sgp-names').focus(); });
     });
-    $(document).on('keydown', '#cwbs-sgp-name', function(e){ if (e.key === 'Enter') $('#cwbs-sgp-add').click(); });
     $(document).on('click', '.cwbs-hp-ib', function(){
         var k = $(this).data('k'), a = $(this).data('a'), id = $(this).data('id');
         var $msg = k === 'g' ? $('#cwbs-iowp-msg') : $('#cwbs-sgp-msg');
