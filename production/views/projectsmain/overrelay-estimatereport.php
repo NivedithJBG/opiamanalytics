@@ -164,7 +164,8 @@
      activities with a Resource Allocation button and an Edit (Unit +
      Quantity) button per row. Same drag/resize chrome as every other
      popup in this app. ── */
-.er-iow-row { cursor:pointer; }
+.er-iow-row, .er-sub-row { cursor:pointer; }
+.er-sub-row:hover td { background:#dde9e6 !important; }
 .er-iow-row:hover td { background:#d8dce1 !important; }
 #eriow-bk{display:none;position:fixed;inset:0;background:transparent;z-index:200300;}
 #eriow-bk.eriow-open{display:block}
@@ -651,7 +652,7 @@
         if (_sid !== _curSub) {
           if (_curSub) html += _subTotalRow(_curSub);
           _curSub = _sid;
-          if (_sid) { _shownSubs[_sid] = 1; html += '<tr class="er-sub-row"><td></td><td colspan="8">' + esc(_subName[_sid] || 'Sub Group') + '</td></tr>'; }
+          if (_sid) { _shownSubs[_sid] = 1; html += '<tr class="er-sub-row" data-secidx="' + secIdx + '" data-sgid="' + _sid + '"><td></td><td colspan="8">' + esc(_subName[_sid] || 'Sub Group') + '</td></tr>'; }
         }
         var rowIdx = _erResourcesByRow.length;
         _erResourcesByRow.push(it.resources || []);
@@ -672,7 +673,7 @@
       if (_curSub) html += _subTotalRow(_curSub);
       // Sub Groups with no activities yet still show as headings.
       (sec.subgroups || []).forEach(function(sg){
-        if (!_shownSubs[sg.id]) html += '<tr class="er-sub-row"><td></td><td colspan="8">' + esc(sg.name) + '</td></tr>';
+        if (!_shownSubs[sg.id]) html += '<tr class="er-sub-row" data-secidx="' + secIdx + '" data-sgid="' + sg.id + '"><td></td><td colspan="8">' + esc(sg.name) + '</td></tr>';
       });
       html += '<tr class="er-subtotal-row">'
         + '<td colspan="5" style="text-align:right;">Subtotal — ' + esc(sec.iow_name || 'IOW') + '</td>'
@@ -1035,6 +1036,15 @@
     var sec = _erSectionsData[secIdx];
     if (!sec) return;
     openEriowPopup(sec);
+  });
+
+  // Sub Group row: the same popup, with only that Sub Group's activities.
+  $(document).on('click', '.er-sub-row', function(){
+    var sec = _erSectionsData[+this.getAttribute('data-secidx')];
+    if (!sec) return;
+    var sid = String(this.getAttribute('data-sgid')), name = '';
+    (sec.subgroups || []).forEach(function(g){ if (String(g.id) === sid) name = g.name; });
+    openEriowPopup({ iow_name: name, items: (sec.items || []).filter(function(it){ return String(it.subgroup_id) === sid; }) });
   });
 
   function openEriowPopup(sec){
