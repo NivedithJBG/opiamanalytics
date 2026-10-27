@@ -549,18 +549,18 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   overflow-x: hidden !important;
 }
 /* Widen the activity name column */
-/* Summary bars: IOW Group teal, Sub Group dark navy (project bar stays black). */
+/* Summary bars: IOW Group dark navy, Sub Group teal (project bar stays black). */
 .ggroupiow, .ggroupsub { height: 7px; margin-top: 2px; opacity: 1 !important; }
-.ggroupiow { background: #0f766e; }
-.ggroupsub { background: #14286e; }
+.ggroupiow { background: #14286e; }
+.ggroupsub { background: #0f766e; }
 .ggroupiowendpointleft, .ggroupiowendpointright, .ggroupsubendpointleft, .ggroupsubendpointright {
   overflow: hidden; width: 0; height: 0; top: 2px;
   border-left: 4px solid transparent; border-bottom: 4px solid transparent; border-right: 4px solid transparent;
 }
 .ggroupiowendpointleft, .ggroupsubendpointleft { float: left; }
 .ggroupiowendpointright, .ggroupsubendpointright { float: right; }
-.ggroupiowendpointleft, .ggroupiowendpointright { border-top: 4px solid #0f766e; }
-.ggroupsubendpointleft, .ggroupsubendpointright { border-top: 4px solid #14286e; }
+.ggroupiowendpointleft, .ggroupiowendpointright { border-top: 4px solid #14286e; }
+.ggroupsubendpointleft, .ggroupsubendpointright { border-top: 4px solid #0f766e; }
 .ggroupiowcomplete, .ggroupsubcomplete { float: left; overflow: hidden; height: 3px; opacity: .8; background-color: #777; margin-top: 2px; margin-bottom: 2px; }
 #gantt-container .gtaskname,
 #gantt-container .gspanning.gtaskname {
