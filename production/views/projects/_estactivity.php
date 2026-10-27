@@ -84,6 +84,7 @@ use app\models\Resources;
                         <div class="search-and-actions-wrpr" id="AR-allocate-body-one-head" style="display:flex;align-items:center;gap:3px;padding:4px 0;flex-wrap:wrap;justify-content:flex-start;">
                             <a href="#alProjTypePopup" class="btn btn-default" id="alOpenProjTypePopup" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">Project Type</a>
                             <a href="#" class="btn" id="al-tab-addact" title="Add Activity" style="border-radius:20px;background:#081142;color:#fff;border-color:#081142;">Add Activity</a>
+                            <a href="#alAddActivityPopup" class="btn" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activity" style="margin-left:10px;border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-add"></span> Activity</a>
                             <a href="#" class="btn list-accountType" id="listestactivity" style="display:none;"></a>
                             <select id="searchestworktypelist" class="form-control" style="margin-left:10px;width:170px;border-radius:20px;height:34px;display:inline-block;">
                                 <option value="0">Select Project Type</option>
@@ -99,14 +100,7 @@ use app\models\Resources;
                             <input type="hidden" name="estworktypedisplay" id="estworktypedisplay">
                             <span id="al-ptype-err" style="color:red;font-size:12px;margin-left:8px;display:none;"></span>
                         </div>
-                        <!-- Add Activity: the form sits here, the activities of the selected type list below it. -->
-                        <div id="al-inline-add" style="border:1px solid #d5dbe6;border-radius:8px;padding:6px 12px 8px;margin:4px 0 8px;background:#f7f9fc;">
-                            <div style="font-weight:700;color:#081142;margin-bottom:2px;" id="al-inline-title">Add Activity</div>
-                            <div id="al-inline-add-body"></div>
-                            <div id="al-inline-add-actions" style="text-align:right;margin-top:6px;">
-                                <button type="button" class="btn" id="al-inline-clear" style="background:#e67e22;color:#fff;border-color:#d35400;border-radius:20px;"><span class="icon-close"></span> Clear</button>
-                            </div>
-                        </div>
+
                         <div class="content-wrpr">
 
                             <!-- add-activity-form kept as hidden placeholder so existing JS hide/show calls don't error -->
@@ -903,25 +897,13 @@ $(document).on('shown.bs.modal', '#alAddActivityPopup', function(){
 
 /* Edit handler is in estactivity.js alongside the delete handler */;
 
-/* Add Activity tab: the form lives in the window itself (no popup). Its Project
-   Type is the one chosen in the toolbar, so the form's own field is hidden. */
-$('#estactivityform').appendTo('#al-inline-add-body');
-$('#saveestactivity').css('border-radius', '20px').appendTo('#al-inline-add-actions');
-$('#estworktypelistss1').closest('.col-md-6').hide();
-$(document).on('click', '#al-tab-addact', function(e){ e.preventDefault(); $('#al-inline-add').show(); $('#estactivityname1').focus(); });
-$(document).on('change', '#searchestworktypelist', function(){ $('#estworktypelistss1').val(this.value); $('#al-ptype-err').hide(); });
-(function(){
-    var orig = window.closeAlAddActivityModal;
-    window.closeAlAddActivityModal = function(){
-        if (orig) orig();
-        $('#al-inline-title').text('Add Activity');
-        $('#estworktypelistss1').val($('#searchestworktypelist').val());
-    };
-})();
-$(document).on('click', '#al-inline-clear', function(){ window.closeAlAddActivityModal(); });
-// Resource allocation view hides the add form; Back shows it again.
-$(document).on('click', '.allocate-resosurces-btn', function(){ $('#al-inline-add').hide(); });
-$(document).on('click', '.close-prjctactactvty', function(){ $('#al-inline-add').show(); });
+/* Add Activity tab: shows the activity list. + Activity opens the add popup with
+   the Project Type chosen in the list already filled in. */
+$(document).on('click', '#al-tab-addact', function(e){ e.preventDefault(); $('#listestactivity').trigger('click'); });
+$(document).on('click', '#addestactivity', function(){
+    var t = $('#searchestworktypelist').val();
+    setTimeout(function(){ if (t && t !== '0') $('#estworktypelistss1').val(t); }, 0);
+});
 
 /* Intercept estactivity.js showing .add-activity-form (edit flow) → open modal instead */
 var alActObserver = new MutationObserver(function(mutations){
