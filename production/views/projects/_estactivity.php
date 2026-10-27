@@ -83,7 +83,6 @@ use app\models\Resources;
                     <div class="search-and-content-wrpr">
                         <div class="search-and-actions-wrpr" id="AR-allocate-body-one-head" style="display:flex;align-items:center;gap:3px;padding:4px 0;flex-wrap:wrap;justify-content:flex-start;">
                             <a href="#alProjTypePopup" class="btn btn-default" id="alOpenProjTypePopup" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ Project Type</a>
-                            <a href="#alIowGroupPopup" class="btn btn-default" id="alOpenIowGroupPopup" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ IOW Group</a>
                             <a href="#alAddActivityPopup" class="btn" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-add"></span> Activity</a>
                             <a href="#alListPopup" class="btn list-accountType" id="listestactivity" data-toggle="modal" data-target="#alListPopup" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-th-list"></span> Activities</a>
                             <select id="searchestworktypelist" class="form-control al-list-only" style="margin-left:10px;width:160px;border-radius:20px;height:34px;display:none;">
