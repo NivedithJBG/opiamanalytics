@@ -3556,7 +3556,8 @@ document.addEventListener('click', function(e){
     function cwbsSplitWithBoq(){
         // Start below the top toolbar so its icons stay clickable.
         var top = 208;   // just below the toolbar icons
-        var h = Math.max(300, $(window).height() - top - 40),   // room for the bottom tab bar half = Math.floor($(window).width() / 2);
+        var h = Math.max(300, $(window).height() - top - 40);   // room for the bottom tab bar
+        var half = Math.floor($(window).width() / 2);
         $('#pdoc-viewer-popup').css({ left: 0, top: top, width: half - 4, height: h, right: 'auto', bottom: 'auto', transform: 'none' });
         $('#cwbs-popup').css({ left: half, top: top, width: $(window).width() - half - 4, height: h, right: 'auto', bottom: 'auto', transform: 'none' });
     }
