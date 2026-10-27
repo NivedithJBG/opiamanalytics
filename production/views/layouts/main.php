@@ -3554,7 +3554,10 @@ document.addEventListener('click', function(e){
     });
     // Two halves of the screen below the toolbar: BOQ viewer left, Create WBS right.
     function cwbsSplitWithBoq(){
-        var top = 60, h = Math.max(300, $(window).height() - top - 10), half = Math.floor($(window).width() / 2);
+        // Start below the top toolbar so its icons stay clickable.
+        var tb = document.querySelector('.round-icons'), top = tb ? Math.round(tb.getBoundingClientRect().bottom) + 8 : 215;
+        if (top < 60 || top > 300) top = 215;
+        var h = Math.max(300, $(window).height() - top - 10), half = Math.floor($(window).width() / 2);
         $('#pdoc-viewer-popup').css({ left: 0, top: top, width: half - 4, height: h, right: 'auto', bottom: 'auto', transform: 'none' });
         $('#cwbs-popup').css({ left: half, top: top, width: $(window).width() - half - 4, height: h, right: 'auto', bottom: 'auto', transform: 'none' });
     }
