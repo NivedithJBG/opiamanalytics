@@ -1374,6 +1374,50 @@ class ProjectsmainController extends Controller
         return ['error' => 'No'];
     }
 
+    // Gantt drag: IOW Group `iow_group_id` dropped on Sub Group `at_subgroup_id`.
+    // That Sub Group and every Sub Group after it in the same IOW Group move
+    // under the dropped IOW Group (with their activities), and the dropped IOW
+    // Group is placed right after that IOW Group in the Gantt.
+    public function actionWbsiowsplitat()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        $gid = (int)($_POST['iow_group_id'] ?? 0);
+        $at  = (int)($_POST['at_subgroup_id'] ?? 0);
+        if (!$pid || !$gid || !$at) return ['error' => 'Yes', 'errortext' => 'Invalid request.'];
+        $this->_sgEnsure();
+        $db = Yii::$app->db;
+        $parent = $db->createCommand("SELECT iow_group_id FROM wbs_subgroups WHERE id=:i AND project_id=:p AND status=0", [':i' => $at, ':p' => $pid])->queryScalar();
+        if ($parent === false) return ['error' => 'Yes', 'errortext' => 'Sub Group not found.'];
+        $parent = (int)$parent;
+        if ($parent === $gid) return ['error' => 'No'];
+        if (!$db->createCommand("SELECT 1 FROM iow_group_order WHERE project_id=:p AND iow_group_id=:g", [':p' => $pid, ':g' => $gid])->queryScalar()) {
+            return ['error' => 'Yes', 'errortext' => 'That IOW Group is not in this project\'s Gantt.'];
+        }
+        $subs = $db->createCommand("SELECT id FROM wbs_subgroups WHERE project_id=:p AND iow_group_id=:g AND status=0 ORDER BY sortorder ASC, id ASC", [':p' => $pid, ':g' => $parent])->queryColumn();
+        $from = array_search((string)$at, array_map('strval', $subs), true);
+        $move = array_slice($subs, $from === false ? 0 : $from);
+        $tx = $db->beginTransaction();
+        try {
+            $next = (int)$db->createCommand("SELECT COALESCE(MAX(sortorder),0) FROM wbs_subgroups WHERE project_id=:p AND iow_group_id=:g AND status=0", [':p' => $pid, ':g' => $gid])->queryScalar();
+            foreach ($move as $sid) {
+                $db->createCommand("UPDATE wbs_subgroups SET iow_group_id=:g, sortorder=:s WHERE id=:i", [':g' => $gid, ':s' => ++$next, ':i' => $sid])->execute();
+                $db->createCommand("UPDATE scheduleactivities sa JOIN wbs_subgroup_activities m ON m.wan_id = sa.activity_id
+                                    SET sa.iow_group_id = :g WHERE m.subgroup_id = :i AND sa.projectId = :p", [':g' => $gid, ':i' => $sid, ':p' => $pid])->execute();
+                $db->createCommand("UPDATE workgroup_activities_new wa JOIN wbs_subgroup_activities m ON m.wan_id = wa.id
+                                    SET wa.iow_group_id = :g WHERE m.subgroup_id = :i AND wa.project_Id = :p", [':g' => $gid, ':i' => $sid, ':p' => $pid])->execute();
+            }
+            // Gantt order: the dropped IOW Group right after the one it split.
+            $order = $db->createCommand("SELECT iow_group_id FROM iow_group_order WHERE project_id=:p ORDER BY sortorder ASC, iow_group_id ASC", [':p' => $pid])->queryColumn();
+            $order = array_values(array_filter($order, function($x) use ($gid){ return (int)$x !== $gid; }));
+            $pos = array_search((string)$parent, array_map('strval', $order), true);
+            array_splice($order, $pos === false ? count($order) : $pos + 1, 0, [$gid]);
+            foreach ($order as $k => $g) $db->createCommand("UPDATE iow_group_order SET sortorder=:s WHERE project_id=:p AND iow_group_id=:g", [':s' => $k + 1, ':p' => $pid, ':g' => $g])->execute();
+            $tx->commit();
+        } catch (\Exception $e) { $tx->rollBack(); return ['error' => 'Yes', 'errortext' => 'Could not move the IOW Group.']; }
+        return ['error' => 'No'];
+    }
+
     // Gantt drag: an activity moved into Sub Group `subgroup_id` (0 = directly under its IOW Group).
     public function actionWbsactivitysubgroup()
     {

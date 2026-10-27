@@ -2011,8 +2011,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var row = _groupRowFromPoint(e.clientX, e.clientY);
       if (row && row !== _dragRow) {
         var rowTid = row.id.slice(row.id.indexOf('child_') + 'child_'.length);
-        var rowInfo = (window._ganttSgRows || {})[rowTid] ? null : (window._ganttWbsBareRowWgId || {})[rowTid];
-        // Only another IOW Group header row is a valid drop target —
+        var rowInfo = (window._ganttWbsBareRowWgId || {})[rowTid];
+        // Another IOW Group row, or a Sub Group row (the IOW Group takes that
+        // Sub Group and the ones after it) —
         // dropping on an activity row does nothing.
         if (rowInfo) {
           _dropRow = row;
@@ -2032,7 +2033,19 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       if (!dropRow) return; // released outside a valid IOW Group row — no-op
 
       var dropTid = dropRow.id.slice(dropRow.id.indexOf('child_') + 'child_'.length);
-      var dropInfo = (window._ganttSgRows || {})[dropTid] ? null : (window._ganttWbsBareRowWgId || {})[dropTid];
+      var _sgDrop = (window._ganttSgRows || {})[dropTid];
+      if (_sgDrop) {
+        if (String(_sgDrop.iowGroupId) === String(dragGid)) return;
+        $.ajax({ type: 'POST', url: _base + '/wbsiowsplitat', dataType: 'json',
+          data: { iow_group_id: dragGid, at_subgroup_id: _sgDrop.sgId },
+          success: function(resp) {
+            if (!resp || resp.error !== 'No') { alert((resp && resp.errortext) || 'Could not move — please try again.'); return; }
+            if (typeof window.loadGantt === 'function') window.loadGantt();
+          },
+          error: function() { alert('Network error — could not save the move.'); } });
+        return;
+      }
+      var dropInfo = (window._ganttWbsBareRowWgId || {})[dropTid];
       if (!dropInfo || !dropInfo.iowGroupId) return;
       var dropGid = String(dropInfo.iowGroupId);
       if (dropGid === dragGid) return;
