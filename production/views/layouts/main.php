@@ -311,9 +311,11 @@ $subDomain = array_shift(($HTTP_HOST));
         .cwbs-hp-msg { font-size:12px; min-height:16px; margin-bottom:6px; }
         .cwbs-hp table { width:100%; border-collapse:collapse; font-size:12.5px; }
         .cwbs-hp td { border:1px solid #d6e3e0; padding:5px 8px; }
+        .cwbs-hp th { background:#0f5c52; color:#fff; font-size:11.5px; font-weight:700; padding:6px 8px; border:1px solid #0d4d45; text-align:left; }
+        .cwbs-hp th.n, .cwbs-hp th.c, .cwbs-hp th.b { text-align:center; }
         .cwbs-hp td.n { width:34px; text-align:center; color:#888; }
-        .cwbs-hp td.c { width:60px; text-align:center; color:#6c7a89; }
-        .cwbs-hp td.b { width:128px; text-align:right; white-space:nowrap; }
+        .cwbs-hp td.c { width:80px; text-align:center; color:#6c7a89; } .cwbs-hp th.c { width:80px; }
+        .cwbs-hp td.b, .cwbs-hp th.b { width:150px; text-align:center; white-space:nowrap; }
         .cwbs-hp-ib { border:1px solid #bcd0cc; background:#fff; border-radius:4px; width:26px; height:24px; cursor:pointer; font-size:12px; padding:0; margin-left:2px; }
         .cwbs-hp-ib:hover { border-color:#0f5c52; }
         .cwbs-hp-ib.del { color:#c0392b; }
@@ -3016,7 +3018,7 @@ document.addEventListener('click', function(e){
     </div>
     <div class="cwbs-hp-addrow"><button type="button" class="cwbs-btn cwbs-btn-add" id="cwbs-iowp-add">Add to Gantt</button></div>
     <div class="cwbs-hp-msg" id="cwbs-iowp-msg"></div>
-    <table><tbody id="cwbs-iowp-list"></tbody></table>
+    <table><thead><tr><th class="n">#</th><th>IOW Group</th><th class="c" title="Activities in the Gantt under this IOW Group">Activities</th><th class="b">Move / Rename / Delete</th></tr></thead><tbody id="cwbs-iowp-list"></tbody></table>
   </div>
 </div>
 <div id="cwbs-sgp" class="cwbs-hp">
@@ -3031,7 +3033,7 @@ document.addEventListener('click', function(e){
     </div>
     <div class="cwbs-hp-addrow"><button type="button" class="cwbs-btn cwbs-btn-add" id="cwbs-sgp-add">Add to Gantt</button></div>
     <div class="cwbs-hp-msg" id="cwbs-sgp-msg"></div>
-    <table><tbody id="cwbs-sgp-list"></tbody></table>
+    <table><thead><tr><th class="n">#</th><th>Sub Group</th><th class="c" title="Activities in the Gantt under this Sub Group">Activities</th><th class="b">Move / Rename / Delete</th></tr></thead><tbody id="cwbs-sgp-list"></tbody></table>
   </div>
 </div>
 
@@ -3786,7 +3788,7 @@ document.addEventListener('click', function(e){
     function cwbsRenderIowList(){
         var rows = '';
         cwbsHeads.groups.forEach(function(gr, i){
-            rows += '<tr><td class="n">' + (i + 1) + '</td><td>' + cwbsEsc(gr.name) + '</td><td class="c" title="Activities in the Gantt">' + gr.acts + ' act.</td><td class="b">' + cwbsHpBtns('g', gr.id) + '</td></tr>';
+            rows += '<tr><td class="n">' + (i + 1) + '</td><td>' + cwbsEsc(gr.name) + '</td><td class="c" title="Activities in the Gantt">' + gr.acts + '</td><td class="b">' + cwbsHpBtns('g', gr.id) + '</td></tr>';
         });
         $('#cwbs-iowp-list').html(rows || '<tr><td style="color:#888;text-align:center;">No IOW Group in this project\'s Gantt yet.</td></tr>');
     }
@@ -3794,7 +3796,7 @@ document.addEventListener('click', function(e){
         var gid = String($('#cwbs-sgp-group').val() || ''), rows = '', n = 0;
         cwbsHeads.subgroups.forEach(function(sg){
             if (String(sg.iow_group_id) !== gid) return;
-            rows += '<tr><td class="n">' + (++n) + '</td><td>' + cwbsEsc(sg.name) + '</td><td class="c" title="Activities in the Gantt">' + sg.acts + ' act.</td><td class="b">' + cwbsHpBtns('s', sg.id) + '</td></tr>';
+            rows += '<tr><td class="n">' + (++n) + '</td><td>' + cwbsEsc(sg.name) + '</td><td class="c" title="Activities in the Gantt">' + sg.acts + '</td><td class="b">' + cwbsHpBtns('s', sg.id) + '</td></tr>';
         });
         $('#cwbs-sgp-list').html(rows || '<tr><td style="color:#888;text-align:center;">' + (gid ? 'No Sub Group under this IOW Group yet.' : 'Select an IOW Group.') + '</td></tr>');
     }
