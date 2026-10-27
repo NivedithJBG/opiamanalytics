@@ -298,7 +298,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .cwbs-tab.on { background:#0f5c52; color:#fff; }
         #cwbs-popup #cwbs-main { display:none; }
         #cwbs-popup.cwbs-acts #cwbs-main { display:flex; }
-        .cwbs-hp { position:fixed; display:none; flex-direction:column; width:560px; max-width:94vw; max-height:80vh; background:#fff; border-radius:10px;
+        .cwbs-hp { position:fixed; display:none; flex-direction:column; width:720px; max-width:94vw; max-height:80vh; background:#fff; border-radius:10px;
             box-shadow:0 12px 40px rgba(0,0,0,.35); overflow:hidden; font-family:Nunito,Arial,sans-serif; }
         .cwbs-hp.on { display:flex; }
         .cwbs-hp-hdr { background:linear-gradient(135deg,#0d3b4f,#0f5c52); color:#fff; padding:10px 14px; display:flex; align-items:center; cursor:move; }
