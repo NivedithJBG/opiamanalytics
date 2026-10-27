@@ -5327,6 +5327,8 @@ window.dockMinimise = function(el, label){
   tab.addEventListener('click', function(){
     el.style.display = ''; el.removeAttribute('data-docked'); tab.remove();
     if (window.popupBringToFront && el.id) window.popupBringToFront(el.id);
+    // The Gantt may have been reloaded while hidden (columns measured as 0): redraw it now it is visible.
+    if (el.id === 'gantt-win' && typeof window.reloadGantt === 'function') window.reloadGantt();
   });
   document.getElementById('win-dock').appendChild(tab);
 };
