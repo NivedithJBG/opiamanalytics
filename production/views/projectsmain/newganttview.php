@@ -1429,7 +1429,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       if (_cell) {
         // From the left: Project 4px, IOW Group 20px; Sub Groups and activities
         // line up together at 40px (activities carry a serial number).
-        var _lv = _t.getLevel(), _indent = !_t.getGroup() ? 40 : (_lv <= 1 ? 4 : (_lv === 2 ? 20 : 40));
+        var _lv = _t.getLevel(), _indent = !_t.getGroup() ? 40 : (_lv <= 1 ? 4 : (_lv === 2 ? 20 : 68));   // Sub Group (68) starts where activity names start (40 + serial 28)
         _cell.style.paddingLeft = _indent + 'px';
         if (!_t.getGroup()) {
           _actSn++;
