@@ -85,7 +85,7 @@ use app\models\Resources;
                             <a href="#alProjTypePopup" class="btn btn-default" id="alOpenProjTypePopup" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ Project Type</a>
                             <a href="#alIowGroupPopup" class="btn btn-default" id="alOpenIowGroupPopup" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ IOW Group</a>
                             <a href="#alAddActivityPopup" class="btn" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-add"></span> Activity</a>
-                            <a href="#" class="btn list-accountType" id="listestactivity" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-th-list"></span> List</a>
+                            <a href="#alListPopup" class="btn list-accountType" id="listestactivity" data-toggle="modal" data-target="#alListPopup" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-th-list"></span> List</a>
                             <select id="searchestworktypelist" class="form-control al-list-only" style="margin-left:10px;width:160px;border-radius:20px;height:34px;display:none;">
                                 <option value="0">All Project Types</option>
                                 <?php
@@ -404,6 +404,25 @@ use app\models\Resources;
     </div>
 </div>
 
+<!-- ── ACTIVITY LIST MODAL ─────────────────────────────────────────────── -->
+<div class="modal fade" id="alListPopup" data-backdrop="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" style="float:left;">Activity List</h4>
+                <button type="button" class="close" data-dismiss="modal" style="float:right;font-size:30px;">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height:72vh;overflow-y:auto;">
+                <div id="alListBar" style="display:flex;align-items:center;gap:3px;padding:0 0 8px;"></div>
+                <div class="activities-masters-tab allocate-resource-tabss" id="alListBody"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal" style="background:#e67e22;color:#fff;border-color:#d35400;"><span class="icon-close"></span> Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ── PROJECT TYPE MODAL ────────────────────────────────────────────── -->
 <div class="modal fade" id="alProjTypePopup" data-backdrop="false">
     <div class="modal-dialog modal-lg">
@@ -562,7 +581,14 @@ use app\models\Resources;
 (function(){
 
 /* Move modals to <body> so accordion overflow/z-index doesn't trap them */
-$('#alAddActivityPopup, #alProjTypePopup, #alIowGroupPopup, #alIowPopup, #alActTypePopup').appendTo('body');
+$('#alAddActivityPopup, #alProjTypePopup, #alIowGroupPopup, #alIowPopup, #alActTypePopup, #alListPopup').appendTo('body');
+/* Activity List popup: the Project Type filter, search and the list (with its
+   resource allocation view) move into it from the Activity Library window. */
+$('#searchestworktypelist, #searchestactivityname, #estactivitysearch').removeClass('al-list-only').appendTo('#alListBar');
+$('#searchestworktypelist').css({ display: 'inline-block', marginLeft: 0 });
+$('#searchestactivityname').css('display', 'inline-block');
+$('#estactivitysearch').css('display', 'inline-flex');
+$('#estactivity .content-wrpr').first().appendTo('#alListBody');
 
 /* Open the IOW Group and IOW windows near the top of the screen, never taller
    than the screen (the body scrolls instead), so the whole window is visible. */
@@ -576,7 +602,7 @@ $('<style>#alIowGroupPopup .modal-dialog, #alIowPopup .modal-dialog { margin-top
    Make the header draggable directly: switch the centered .modal-dialog to
    an absolutely-positioned box at its current screen spot the first time
    it's dragged, then move it with the mouse/touch. */
-var _alIds = ['alAddActivityPopup','alProjTypePopup','alIowGroupPopup','alIowPopup','alActTypePopup'];
+var _alIds = ['alAddActivityPopup','alProjTypePopup','alIowGroupPopup','alIowPopup','alActTypePopup','alListPopup'];
 _alIds.forEach(function(id){
   var modal = document.getElementById(id);
   if(!modal) return;
@@ -633,10 +659,11 @@ _alIds.forEach(function(id){
     var step = _alOpenSeq() * 30;
     dialog.style.position = 'fixed';
     dialog.style.margin = '0';
-    dialog.style.width = '700px';
+    var _w = id === 'alListPopup' ? Math.min(1100, window.innerWidth - 40) : 700;
+    dialog.style.width = _w + 'px';
     dialog.style.maxWidth = 'calc(100vw - 40px)';
     var top  = Math.min(window.innerHeight - 120, base.top + 70 + step);
-    var left = Math.min(window.innerWidth - 720, Math.max(10, base.left + 40 + step));
+    var left = Math.min(window.innerWidth - _w - 20, Math.max(10, base.left + 40 + step));
     dialog.style.top  = top + 'px';
     dialog.style.left = left + 'px';
     /* All 5 sub-popups share the same static CSS z-index (999999), so
@@ -895,16 +922,20 @@ $(document).on('shown.bs.modal', '#alAddActivityPopup', function(){
 /* The window opens with the tabs only. The Project Type filter, search and the
    activity list appear when the List tab is clicked. */
 function alTabsOnly(){
-    $('.al-list-only').hide();
+    $('#alListPopup').css('display', 'none').removeClass('in');
     $('#estactivityitems').empty();
     $('#Ar-allocate-body-two').hide();
     $('.allocation-cntnt-wrpr').css('cssText', 'display:none !important;');
 }
 alTabsOnly();
 document.addEventListener('actlib:open', alTabsOnly);
-$(document).on('click', '#listestactivity', function(){
-    $('#searchestworktypelist, #searchestactivityname').css('display', 'inline-block');
-    $('#estactivitysearch').css('display', 'inline-flex');
+// Edit (pencil) in the list: the edit popup comes above the list popup.
+$(document).on('click', '.al-edit-activity-btn', function(){
+    var m = document.getElementById('alAddActivityPopup'), n = 0;
+    var t = setInterval(function(){
+        if (getComputedStyle(m).display !== 'none') { m.style.setProperty('z-index', _alNextZ(), 'important'); clearInterval(t); }
+        else if (++n > 30) clearInterval(t);
+    }, 100);
 });
 
 /* Intercept estactivity.js showing .add-activity-form (edit flow) → open modal instead */

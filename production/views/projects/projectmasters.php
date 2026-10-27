@@ -120,7 +120,7 @@ $(function(){
   bindDragTouch(document, 'mouseup', function(){ _action=null; });
 
   // Move Activity Library modals to <body> so they aren't clipped by overflow:hidden on the container
-  ['alAddActivityPopup','alProjTypePopup','alIowGroupPopup','alIowPopup','alActTypePopup'].forEach(function(id){
+  ['alAddActivityPopup','alProjTypePopup','alIowGroupPopup','alIowPopup','alActTypePopup','alListPopup'].forEach(function(id){
     var el = document.getElementById(id);
     if(el && el.parentNode !== document.body) document.body.appendChild(el);
   });
