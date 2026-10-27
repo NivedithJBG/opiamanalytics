@@ -79,7 +79,7 @@
   border:1px solid #cfd5db; font-size:12px;
 }
 .er-table tr.er-sub-row td {
-  background:#eef3f2; font-weight:700; color:#0f5c52; padding:5px 9px 5px 22px;
+  background:#eef3f2; font-weight:700; color:#0f5c52; padding:5px 9px;
   border:1px solid #d5dfdd; font-size:12px;
 }
 .er-table tr.er-subtotal-row.er-sub-subtotal td { background:#f6f9f8; font-weight:600; color:#0f5c52; }
@@ -651,7 +651,7 @@
         if (_sid !== _curSub) {
           if (_curSub) html += _subTotalRow(_curSub);
           _curSub = _sid;
-          if (_sid) { _shownSubs[_sid] = 1; html += '<tr class="er-sub-row"><td colspan="9">' + esc(_subName[_sid] || 'Sub Group') + '</td></tr>'; }
+          if (_sid) { _shownSubs[_sid] = 1; html += '<tr class="er-sub-row"><td></td><td colspan="8">' + esc(_subName[_sid] || 'Sub Group') + '</td></tr>'; }
         }
         var rowIdx = _erResourcesByRow.length;
         _erResourcesByRow.push(it.resources || []);
@@ -672,7 +672,7 @@
       if (_curSub) html += _subTotalRow(_curSub);
       // Sub Groups with no activities yet still show as headings.
       (sec.subgroups || []).forEach(function(sg){
-        if (!_shownSubs[sg.id]) html += '<tr class="er-sub-row"><td colspan="9">' + esc(sg.name) + '</td></tr>';
+        if (!_shownSubs[sg.id]) html += '<tr class="er-sub-row"><td></td><td colspan="8">' + esc(sg.name) + '</td></tr>';
       });
       html += '<tr class="er-subtotal-row">'
         + '<td colspan="5" style="text-align:right;">Subtotal — ' + esc(sec.iow_name || 'IOW') + '</td>'
