@@ -78,20 +78,11 @@ $(function(){
     }
   });
 
-  // Minimise: shrink to its title bar at the bottom of the screen; click again to restore.
-  var _min = null;
-  document.querySelector('.menu4-win-min').addEventListener('click', function(){
-    if(_min){
-      win.style.left=_min.left; win.style.top=_min.top; win.style.width=_min.width; win.style.height=_min.height;
-      win.style.minHeight=''; _min=null; this.innerHTML='&minus;'; this.title='Minimise';
-    } else {
-      _anchor();
-      _min={left:win.style.left,top:win.style.top,width:win.style.width,height:win.style.height};
-      var hh = hdr.getBoundingClientRect().height || 44;
-      win.style.minHeight='0'; win.style.height=hh+'px'; win.style.width='340px';
-      win.style.left='12px'; win.style.top=(window.innerHeight - hh - 8)+'px';
-      this.innerHTML='&#9634;'; this.title='Restore';
-    }
+  // Minimise: the window becomes a tab in the bottom bar; clicking the tab brings it back.
+  document.querySelector('.menu4-win-min').addEventListener('click', function(e){
+    e.stopPropagation();
+    win.setAttribute('data-dock-label', 'Activity Library');
+    if (window.dockMinimise) window.dockMinimise(win, 'Activity Library');
   });
 
   // Drag

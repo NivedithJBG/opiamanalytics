@@ -5294,6 +5294,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
     <div id="gantt-win-hdr-btns">
       <a class="icon-clock" id="btn-project-duration" title="Project Duration" href="#" style="width:24px;height:24px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#2878c0;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.2);">&#8986;</a>
       <a class="icon-calendar" id="btn-gantt-calendar-inline" title="Holidays" href="#" style="width:24px;height:24px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#B8860B;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.2);"></a>
+      <button id="gantt-win-min" title="Minimise" style="font-weight:700;">&minus;</button>
       <button id="gantt-win-expand" title="Fullscreen">&#x26F6;</button>
       <button id="gantt-win-close" title="Close">&times;</button>
     </div>
@@ -5303,6 +5304,45 @@ window.loadIowGroupOptions = function(selectEl, cb){
   </div>
   <button type="button" id="gn-btn" title="Notes">&#128221;</button>
 </div>
+
+<div id="win-dock"></div>
+<style>
+#win-dock { position:fixed; left:12px; bottom:0; display:flex; gap:6px; z-index:300500; pointer-events:none; }
+.win-dock-tab { pointer-events:auto; background:#081142; color:#fff; border:none; border-radius:6px 6px 0 0; padding:7px 16px;
+  font:700 12px Nunito,Arial,sans-serif; cursor:pointer; box-shadow:0 -2px 10px rgba(0,0,0,.25); }
+.win-dock-tab:hover { background:#13206a; }
+</style>
+<script>
+// window.dockMinimise(el, label): hides the window and shows a tab in the bottom bar;
+// clicking the tab shows the window again where it was.
+window.dockMinimise = function(el, label){
+  if (!el || el.getAttribute('data-docked')) return;
+  el.setAttribute('data-docked', '1');
+  el.style.display = 'none';
+  var tab = document.createElement('button');
+  tab.type = 'button'; tab.className = 'win-dock-tab'; tab.textContent = label;
+  tab.addEventListener('click', function(){
+    el.style.display = ''; el.removeAttribute('data-docked'); tab.remove();
+    if (window.popupBringToFront && el.id) window.popupBringToFront(el.id);
+  });
+  document.getElementById('win-dock').appendChild(tab);
+};
+// Closing a docked window also removes its tab.
+window.dockForget = function(el){
+  if (!el || !el.getAttribute('data-docked')) return;
+  el.style.display = ''; el.removeAttribute('data-docked');
+  document.querySelectorAll('#win-dock .win-dock-tab').forEach(function(t){ if (t.textContent === el.getAttribute('data-dock-label')) t.remove(); });
+};
+$(document).on('click', '#gantt-win-close', function(){ window.dockForget(document.getElementById('gantt-win')); });
+document.addEventListener('actlib:open', function(){ window.dockForget(document.querySelector('.menu4-popup-cntnr')); });
+$(document).on('click', '#gantt-win-min', function(e){
+  e.stopPropagation();
+  var w = document.getElementById('gantt-win');
+  w.setAttribute('data-dock-label', 'Gantt Chart');
+  window.dockMinimise(w, 'Gantt Chart');
+  var n = document.getElementById('gn-win'); if (n) n.classList.remove('gn-open');
+});
+</script>
 
 <!-- Gantt Notes: the user's own notes for the project, kept open while working on
      the Gantt (draggable, resizable). Each note is a strip; the tick removes it. -->
@@ -5517,6 +5557,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
   // Duration panel: smaller window, monthly format, only due/reported activities).
   var _loadedMode = null;
   window.openGanttWin = function(mode){
+    if (window.dockForget) window.dockForget(win);   // reopening a minimised Gantt
     var want = (mode === 'current') ? 'current' : 'full';
     var pid = openBtn ? openBtn.getAttribute('data-projectid') : '';
     if(want !== _loadedMode){
