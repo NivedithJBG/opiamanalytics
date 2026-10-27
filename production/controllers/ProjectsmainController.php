@@ -1337,6 +1337,65 @@ class ProjectsmainController extends Controller
         return ['error' => 'No'];
     }
 
+    // Gantt drag: put Sub Group `id` under IOW Group `iow_group_id`, just before
+    // Sub Group `before_id` (0 = at the end). Moving it to another IOW Group
+    // takes its activities along.
+    public function actionWbssubgroupplace()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid    = $this->_cfPid();
+        $id     = (int)($_POST['id'] ?? 0);
+        $target = (int)($_POST['iow_group_id'] ?? 0);
+        $before = (int)($_POST['before_id'] ?? 0);
+        if (!$pid || !$id || !$target) return ['error' => 'Yes', 'errortext' => 'Invalid request.'];
+        $this->_sgEnsure();
+        $db = Yii::$app->db;
+        $cur = $db->createCommand("SELECT iow_group_id FROM wbs_subgroups WHERE id=:i AND project_id=:p AND status=0", [':i' => $id, ':p' => $pid])->queryScalar();
+        if ($cur === false) return ['error' => 'Yes', 'errortext' => 'Sub Group not found.'];
+        if (!$db->createCommand("SELECT 1 FROM iow_group_order WHERE project_id=:p AND iow_group_id=:g", [':p' => $pid, ':g' => $target])->queryScalar()) {
+            return ['error' => 'Yes', 'errortext' => 'That IOW Group is not in this project\'s Gantt.'];
+        }
+        $tx = $db->beginTransaction();
+        try {
+            if ((int)$cur !== $target) {
+                $db->createCommand("UPDATE wbs_subgroups SET iow_group_id=:g WHERE id=:i", [':g' => $target, ':i' => $id])->execute();
+                $db->createCommand("UPDATE scheduleactivities sa JOIN wbs_subgroup_activities m ON m.wan_id = sa.activity_id
+                                    SET sa.iow_group_id = :g WHERE m.subgroup_id = :i AND sa.projectId = :p", [':g' => $target, ':i' => $id, ':p' => $pid])->execute();
+                $db->createCommand("UPDATE workgroup_activities_new wa JOIN wbs_subgroup_activities m ON m.wan_id = wa.id
+                                    SET wa.iow_group_id = :g WHERE m.subgroup_id = :i AND wa.project_Id = :p", [':g' => $target, ':i' => $id, ':p' => $pid])->execute();
+            }
+            $ids = $db->createCommand("SELECT id FROM wbs_subgroups WHERE project_id=:p AND iow_group_id=:g AND status=0 AND id<>:i ORDER BY sortorder ASC, id ASC",
+                [':p' => $pid, ':g' => $target, ':i' => $id])->queryColumn();
+            $pos = $before ? array_search((string)$before, array_map('strval', $ids), true) : false;
+            if ($pos === false) $ids[] = $id; else array_splice($ids, $pos, 0, [$id]);
+            foreach ($ids as $k => $sid) $db->createCommand("UPDATE wbs_subgroups SET sortorder=:s WHERE id=:i", [':s' => $k + 1, ':i' => $sid])->execute();
+            $tx->commit();
+        } catch (\Exception $e) { $tx->rollBack(); return ['error' => 'Yes', 'errortext' => 'Could not move the Sub Group.']; }
+        return ['error' => 'No'];
+    }
+
+    // Gantt drag: an activity moved into Sub Group `subgroup_id` (0 = directly under its IOW Group).
+    public function actionWbsactivitysubgroup()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        $wan = (int)($_POST['wan_id'] ?? 0);
+        $sg  = (int)($_POST['subgroup_id'] ?? 0);
+        if (!$pid || !$wan) return ['error' => 'Yes', 'errortext' => 'Invalid request.'];
+        $this->_sgEnsure();
+        $db = Yii::$app->db;
+        $gid = $db->createCommand("SELECT iow_group_id FROM workgroup_activities_new WHERE id=:w AND project_Id=:p", [':w' => $wan, ':p' => $pid])->queryScalar();
+        if ($gid === false) return ['error' => 'Yes', 'errortext' => 'Activity not found.'];
+        if ($sg) {
+            $sgGid = $db->createCommand("SELECT iow_group_id FROM wbs_subgroups WHERE id=:i AND project_id=:p AND status=0", [':i' => $sg, ':p' => $pid])->queryScalar();
+            if ($sgGid === false || (int)$sgGid !== (int)$gid) return ['error' => 'Yes', 'errortext' => 'That Sub Group is under a different IOW Group.'];
+            $db->createCommand("INSERT INTO wbs_subgroup_activities (wan_id, subgroup_id) VALUES (:w, :s) ON DUPLICATE KEY UPDATE subgroup_id = VALUES(subgroup_id)", [':w' => $wan, ':s' => $sg])->execute();
+        } else {
+            $db->createCommand("DELETE FROM wbs_subgroup_activities WHERE wan_id=:w", [':w' => $wan])->execute();
+        }
+        return ['error' => 'No'];
+    }
+
     public function actionWbsadd()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;

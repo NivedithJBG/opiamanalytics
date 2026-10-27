@@ -1049,6 +1049,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     // rows — only the WBS-item tier itself.
     var _wbsRowWgId = {};
     window._ganttWbsBareRowWgId = _wbsRowWgId;
+    var _sgRowInfo = {};   // Sub Group row hashed id -> {sgId, iowGroupId}
+    window._ganttSgRows = _sgRowInfo;
     // A. Duration/Start/End for group rows (WBS items and IOW groups) — separate to avoid clearing B. columns
     var _groupActDur   = {};
     var _groupActStart = {};
@@ -1162,6 +1164,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     _sgHid[sg.id] = _sgTi.getID();
                     _sgKids[sg.id] = [];
                     if (_wbsRowWgId[parentId]) _wbsRowWgId[_sgTi.getID()] = _wbsRowWgId[parentId];
+                    _sgRowInfo[_sgTi.getID()] = { sgId: String(sg.id), iowGroupId: String(item.iowGroupid) };
                   });
                 }
                 for (var j = 0; j < actData.result.length; j++) {
@@ -1300,6 +1303,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     drawEnd:    barEnd,
                     rawId:  act.id,
                     wanId:  act.wan_id,
+                    subgroupId: String(_sgHid[act.subgroup_id] ? act.subgroup_id : 0),
                     hasProgress: hasProgress,
                     cyc:    _cyc
                   };
@@ -1498,7 +1502,14 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       // group instead of a single activity. Placed in the same
       // dedicated dot/handle column so both row types line up.
       var _groupInfo = _wbsRowWgId[_tid];
-      if (_groupInfo && _dotCell && !_dotCell.querySelector('.giow-reorder-handle')) {
+      if (_sgRowInfo[_tid] && _dotCell && !_dotCell.querySelector('.gsg-reorder-handle')) {
+        var _sHandle = document.createElement('span');
+        _sHandle.className = 'giow-reorder-handle gsg-reorder-handle';
+        _sHandle.title = 'Press and drag to move this Sub Group';
+        _sHandle.textContent = '⋮⋮';
+        _sHandle.setAttribute('data-tid', _tid);
+        _dotCell.appendChild(_sHandle);
+      } else if (_groupInfo && _dotCell && !_dotCell.querySelector('.giow-reorder-handle')) {
         var _gHandle = document.createElement('span');
         _gHandle.className = 'giow-reorder-handle';
         _gHandle.title = 'Press and drag to reorder this IOW Group';
@@ -1880,6 +1891,14 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var dropDb = cells[dropTid];
       if (!dropDb) return;
 
+      var _dragSg = cells[dragTid] ? cells[dragTid].subgroupId : '0', _dropSg = dropDb.subgroupId || '0';
+      var _setSg = function(done){
+        if (_dragSg === _dropSg) { done(); return; }
+        $.ajax({ type: 'POST', url: _base + '/wbsactivitysubgroup', dataType: 'json',
+          data: { wan_id: cells[dragTid].wanId, subgroup_id: _dropSg },
+          success: function(r){ if (!r || r.error !== 'No') { alert((r && r.errortext) || 'Could not move — please try again.'); return; } done(); },
+          error: function(){ alert('Network error — could not save the move.'); } });
+      };
       if (dropDb.iowGroupId === iowGroupId) {
         // Same IOW Group — reorder within it. Build the new order: every
         // activity in this group (this project), in current DOM order,
@@ -1901,7 +1920,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
         var wanIds = orderedTids.map(function(t){ return cells[t].wanId; });
 
-        $.ajax({
+        _setSg(function(){ $.ajax({
           type: 'POST',
           url: _base + '/reordertaskswithinwbs',
           dataType: 'json',
@@ -1916,7 +1935,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           error: function() {
             alert('Network error — could not save the new order.');
           }
-        });
+        }); });
       } else {
         // Different IOW Group — move the activity there, placed right
         // after the row it was dropped on.
@@ -1934,7 +1953,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
               alert((resp && resp.errortext) || 'Could not move — please try again.');
               return;
             }
-            if (typeof window.loadGantt === 'function') window.loadGantt();
+            // Into the Sub Group of the activity it was dropped on (or none).
+            _dragSg = 'x';   // always set: its old Sub Group belongs to the other IOW Group
+            _setSg(function(){ if (typeof window.loadGantt === 'function') window.loadGantt(); });
           },
           error: function() {
             alert('Network error — could not save the move.');
@@ -1965,7 +1986,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       return null;
     }
 
-    $(document).off('mousedown.giowdrag').on('mousedown.giowdrag', '#gantt-container .giow-reorder-handle', function(e) {
+    $(document).off('mousedown.giowdrag').on('mousedown.giowdrag', '#gantt-container .giow-reorder-handle:not(.gsg-reorder-handle)', function(e) {
       var tid = $(this).attr('data-tid');
       var gid = $(this).attr('data-iowgroupid');
       var row = document.getElementById('gantt-container' + 'child_' + tid);
@@ -1990,7 +2011,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var row = _groupRowFromPoint(e.clientX, e.clientY);
       if (row && row !== _dragRow) {
         var rowTid = row.id.slice(row.id.indexOf('child_') + 'child_'.length);
-        var rowInfo = (window._ganttWbsBareRowWgId || {})[rowTid];
+        var rowInfo = (window._ganttSgRows || {})[rowTid] ? null : (window._ganttWbsBareRowWgId || {})[rowTid];
         // Only another IOW Group header row is a valid drop target —
         // dropping on an activity row does nothing.
         if (rowInfo) {
@@ -2011,7 +2032,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       if (!dropRow) return; // released outside a valid IOW Group row — no-op
 
       var dropTid = dropRow.id.slice(dropRow.id.indexOf('child_') + 'child_'.length);
-      var dropInfo = (window._ganttWbsBareRowWgId || {})[dropTid];
+      var dropInfo = (window._ganttSgRows || {})[dropTid] ? null : (window._ganttWbsBareRowWgId || {})[dropTid];
       if (!dropInfo || !dropInfo.iowGroupId) return;
       var dropGid = String(dropInfo.iowGroupId);
       if (dropGid === dragGid) return;
@@ -2023,7 +2044,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       $('#gantt-container .gtasktablewrapper tr[id*="child_"]').each(function() {
         if (this.id.indexOf('childrow_') !== -1) return;
         var rowTid = this.id.slice(this.id.indexOf('child_') + 'child_'.length);
-        var info = (window._ganttWbsBareRowWgId || {})[rowTid];
+        var info = (window._ganttSgRows || {})[rowTid] ? null : (window._ganttWbsBareRowWgId || {})[rowTid];
         if (info && info.iowGroupId) orderedGids.push(String(info.iowGroupId));
       });
       var fromIdx = orderedGids.indexOf(dragGid);
@@ -2049,6 +2070,66 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           alert('Network error — could not save the new order.');
         }
       });
+    });
+  })();
+
+  // ── Move a Sub Group — press-and-hold drag ──────────────────────────────────
+  // Drop on another Sub Group row: placed just before it (in that row's IOW
+  // Group). Drop on an IOW Group row: moved to the end of that IOW Group.
+  // Its activities go with it.
+  (function(){
+    var $ghost = $('#gact-drag-ghost');
+    var _dragTid = null, _dragRow = null, _dropRow = null;
+    function _rowAt(y) {
+      var rows = document.querySelectorAll('#gantt-container .gtasktablewrapper tr[id*="child_"]');
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i].id.indexOf('childrow_') !== -1) continue;
+        var r = rows[i].getBoundingClientRect();
+        if (y >= r.top && y < r.bottom) return rows[i];
+      }
+      return null;
+    }
+    function _tidOf(row){ return row.id.slice(row.id.indexOf('child_') + 'child_'.length); }
+    function _isIowRow(tid){ return !(window._ganttSgRows || {})[tid] && !!(window._ganttWbsBareRowWgId || {})[tid]; }
+    $(document).off('mousedown.gsgdrag').on('mousedown.gsgdrag', '#gantt-container .gsg-reorder-handle', function(e) {
+      var tid = $(this).attr('data-tid');
+      var row = document.getElementById('gantt-container' + 'child_' + tid);
+      if (!row || !(window._ganttSgRows || {})[tid]) return;
+      _dragTid = tid; _dragRow = row;
+      $(this).addClass('giow-dragging');
+      var nameCell = row.querySelector('td.gtaskname');
+      $ghost.text(nameCell ? nameCell.textContent.trim() : 'Sub Group').css({ left: (e.clientX + 14) + 'px', top: (e.clientY + 10) + 'px', display: 'block' });
+      e.preventDefault(); e.stopImmediatePropagation();
+    });
+    $(document).off('mousemove.gsgdrag').on('mousemove.gsgdrag', function(e) {
+      if (!_dragTid) return;
+      $ghost.css({ left: (e.clientX + 14) + 'px', top: (e.clientY + 10) + 'px' });
+      if (_dropRow) { $(_dropRow).removeClass('giow-drop-target'); _dropRow = null; }
+      var row = _rowAt(e.clientY);
+      if (row && row !== _dragRow) {
+        var t = _tidOf(row);
+        if ((window._ganttSgRows || {})[t] || _isIowRow(t)) { _dropRow = row; $(row).addClass('giow-drop-target'); }
+      }
+    });
+    $(document).off('mouseup.gsgdrag').on('mouseup.gsgdrag', function() {
+      if (!_dragTid) return;
+      $('.gsg-reorder-handle.giow-dragging').removeClass('giow-dragging');
+      $ghost.css('display', 'none');
+      if (_dropRow) $(_dropRow).removeClass('giow-drop-target');
+      var drag = (window._ganttSgRows || {})[_dragTid], dropRow = _dropRow;
+      _dragTid = null; _dragRow = null; _dropRow = null;
+      if (!drag || !dropRow) return;
+      var t = _tidOf(dropRow), sgDrop = (window._ganttSgRows || {})[t], data;
+      if (sgDrop) data = { id: drag.sgId, iow_group_id: sgDrop.iowGroupId, before_id: sgDrop.sgId };
+      else if (_isIowRow(t)) data = { id: drag.sgId, iow_group_id: window._ganttWbsBareRowWgId[t].iowGroupId, before_id: 0 };
+      else return;
+      if (sgDrop && sgDrop.sgId === drag.sgId) return;
+      $.ajax({ type: 'POST', url: _base + '/wbssubgroupplace', dataType: 'json', data: data,
+        success: function(resp) {
+          if (!resp || resp.error !== 'No') { alert((resp && resp.errortext) || 'Could not move the Sub Group.'); return; }
+          if (typeof window.loadGantt === 'function') window.loadGantt();
+        },
+        error: function() { alert('Network error — could not move the Sub Group.'); } });
     });
   })();
 
