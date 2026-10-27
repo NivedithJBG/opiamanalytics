@@ -81,19 +81,12 @@ use app\models\Resources;
         <div class="panel-body">
 
                     <div class="search-and-content-wrpr">
-                        <style>
-                            .al-tabs { display:flex; gap:4px; border-bottom:2px solid #081142; margin-bottom:8px; }
-                            .al-tab { background:#e3e7ef; color:#081142; border:none; border-radius:8px 8px 0 0; padding:7px 22px; font-weight:700; cursor:pointer; }
-                            .al-tab.active { background:#081142; color:#fff; }
-                        </style>
-                        <div class="al-tabs">
-                            <button type="button" class="al-tab" id="al-tab-pt">Project Type</button>
-                            <button type="button" class="al-tab active" id="al-tab-list">List</button>
-                        </div>
-                        <div id="al-pt-panel" style="display:none;"></div>
-                        <div class="search-and-actions-wrpr" id="AR-allocate-body-one-head" style="display:flex;align-items:center;gap:3px;padding:4px 0;flex-wrap:nowrap;justify-content:flex-start;">
-                            <a href="#" class="btn list-accountType" id="listestactivity" style="display:none;"></a>
-                            <select id="searchestworktypelist" class="form-control" style="width:120px;border-radius:20px;height:34px;display:inline-block;">
+                        <div class="search-and-actions-wrpr" id="AR-allocate-body-one-head" style="display:flex;align-items:center;gap:3px;padding:4px 0;flex-wrap:wrap;justify-content:flex-start;">
+                            <a href="#alProjTypePopup" class="btn btn-default" id="alOpenProjTypePopup" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ Project Type</a>
+                            <a href="#alIowGroupPopup" class="btn btn-default" id="alOpenIowGroupPopup" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ IOW Group</a>
+                            <a href="#alAddActivityPopup" class="btn" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-add"></span> Activity</a>
+                            <a href="#" class="btn list-accountType" id="listestactivity" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-th-list"></span> List</a>
+                            <select id="searchestworktypelist" class="form-control" style="margin-left:10px;width:120px;border-radius:20px;height:34px;display:inline-block;">
                                 <option value="0">All Project Types</option>
                                 <?php
                                 $typelist = EstimateWorkType::find()->where(['estworktype_status' => 0])->orderBy(['estworktype_name' => SORT_ASC])->all();
@@ -102,13 +95,10 @@ use app\models\Resources;
                                 endforeach;
                                 ?>
                             </select>
-                            <input type="text" id="searchestactivityname" placeholder="Search..." class="form-control" style="margin-left:6px;width:140px;min-width:0 !important;border-radius:20px;height:34px;display:inline-block;flex-shrink:0;">
-                            <button id="estactivitysearch" class="btn btn-primary" type="button" style="margin-left:3px;border-radius:20px;width:34px !important;min-width:0 !important;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="icon-search5"></span></button>
-                            <a href="#alAddActivityPopup" class="btn" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities" style="margin-left:10px;border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-add"></span> Activity</a>
+                            <input type="text" id="searchestactivityname" placeholder="Search..." class="form-control" style="margin-left:6px;width:90px;border-radius:20px;height:34px;display:inline-block;flex-shrink:0;">
+                            <button id="estactivitysearch" class="btn btn-primary" type="button" style="margin-left:3px;border-radius:20px;width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="icon-search5"></span></button>
                             <input type="hidden" name="estworktypedisplay" id="estworktypedisplay">
-                            <span id="al-ptype-err" style="color:red;font-size:12px;margin-left:8px;display:none;"></span>
                         </div>
-
                         <div class="content-wrpr">
 
                             <!-- add-activity-form kept as hidden placeholder so existing JS hide/show calls don't error -->
@@ -785,9 +775,7 @@ function alRefreshProjTypeDropdowns(){
                 filterOpts += '<option value="'+t.id+'">'+$('<div>').text(t.name).html()+'</option>';
             });
             $('.estworktypelistses').html(opts);
-            var curF = $('#searchestworktypelist').val();
             $('#searchestworktypelist').html(filterOpts);
-            if (curF) $('#searchestworktypelist').val(curF);
         }
     });
 }
@@ -887,15 +875,14 @@ $(document).on('change', '#estworktypelistss1', function(){
 // The first task copies the activity name and unit, until it's typed into by hand.
 // Its Qty/Unit defaults to 1.
 $(document).on('input', '#estactivityname1', function(){
-    var t = $('#estactivityform .task-name').first();
+    var t = $('#alAddActivityPopup .task-name').first();
     if (!t.val() || t.data('auto')) { t.val(this.value).data('auto', true); }
-    var q = $('#estactivityform .task-qty').first(); if (!q.val()) q.val(1);
 });
 $(document).on('input', '#estactivityunit1', function(){
-    var t = $('#estactivityform .task-unit').first();
+    var t = $('#alAddActivityPopup .task-unit').first();
     if (!t.val() || t.data('auto')) { t.val(this.value).data('auto', true); }
 });
-$(document).on('input', '#estactivityform .task-name, #estactivityform .task-unit', function(){
+$(document).on('input', '#alAddActivityPopup .task-name, #alAddActivityPopup .task-unit', function(){
     $(this).data('auto', false);
 });
 $(document).on('shown.bs.modal', '#alAddActivityPopup', function(){
@@ -904,28 +891,6 @@ $(document).on('shown.bs.modal', '#alAddActivityPopup', function(){
 });
 
 /* Edit handler is in estactivity.js alongside the delete handler */;
-
-/* Tabs. Project Type: only the project type window (add / rename / delete types).
-   List: only the activity list, with + Activity opening the add popup (the
-   Project Type chosen in the list is filled in). */
-$('#alProjTypePopup .modal-body').children().appendTo('#al-pt-panel');
-function alShowTab(tab){
-    var pt = tab === 'pt';
-    $('#al-tab-pt').toggleClass('active', pt);
-    $('#al-tab-list').toggleClass('active', !pt);
-    $('#al-pt-panel').toggle(pt);
-    $('#AR-allocate-body-one-head').css('display', pt ? 'none' : 'flex');
-    $('#estactivity .search-and-content-wrpr > .content-wrpr').toggle(!pt);
-    if (pt) { $('#alProjTypeName').val(''); $('#alProjTypeErr').hide(); alLoadProjTypeList(); }
-    else $('#listestactivity').trigger('click');
-}
-$(document).on('click', '#al-tab-pt', function(){ alShowTab('pt'); });
-$(document).on('click', '#al-tab-list', function(){ alShowTab('list'); });
-$(document).on('click', '.prjct-estactvts', function(){ alShowTab('list'); });
-$(document).on('click', '#addestactivity', function(){
-    var t = $('#searchestworktypelist').val();
-    setTimeout(function(){ if (t && t !== '0') $('#estworktypelistss1').val(t); }, 0);
-});
 
 /* Intercept estactivity.js showing .add-activity-form (edit flow) → open modal instead */
 var alActObserver = new MutationObserver(function(mutations){

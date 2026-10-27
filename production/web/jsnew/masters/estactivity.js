@@ -27,14 +27,12 @@ $(function() {
                 $('.preloader').show();
             },
             dataType: "json",
-            data: {estactivityname:$('#searchestactivityname').val(),estactivitytype:$('#searchestactivitytype').val(),estworktype:$('#searchestworktypelist').val(),only_id:(window._alOnlyId||0)},
+            data: {estactivityname:$('#searchestactivityname').val(),estactivitytype:$('#searchestactivitytype').val(),estworktype:$('#searchestworktypelist').val()},
             success: function(data){
-                var onlyNew = !!window._alOnlyId; window._alOnlyId = 0;
                 if(data.error=='No')
                 {
                     $('#collapsemasteract').show();
                     $('#estactivityitems').html(data.result);
-                    if (onlyNew) $('#estactivityitems').prepend('<div style="padding:4px 2px;color:#197a3a;font-weight:700;font-size:12px;">Activity added. Search or pick a Project Type to see all activities.</div>');
                     $('.estactivitytypename').html(data.estactypename);
                     $('#estactivitytable').show();
                     $('.content-action-wrpr').show();
@@ -190,7 +188,6 @@ $(function() {
                     {
                         // Let an open Create WBS window refresh its activity list.
                         $(document).trigger('actlib:saved');
-                        if(!editingId && data.id) window._alOnlyId = data.id;
                         $('#saveestactivity').attr("disabled", false);
                         $(".search-and-actions-wrpr").show();
                         $('#listestactivity').trigger('click');
