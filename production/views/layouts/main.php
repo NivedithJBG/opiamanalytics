@@ -289,6 +289,9 @@ $subDomain = array_shift(($HTTP_HOST));
             width:24px; height:24px; font-size:15px; cursor:pointer; line-height:24px; text-align:center; flex-shrink:0;
         }
         #cwbs-close-x:hover { background:rgba(255,255,255,0.35); }
+        .cwbs-hdr-btn { background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.35); color:#fff; border-radius:14px;
+            padding:3px 12px; font-size:12px; font-weight:700; cursor:pointer; margin-right:8px; white-space:nowrap; }
+        .cwbs-hdr-btn:hover { background:rgba(255,255,255,0.32); }
         #cwbs-boq-toggle {
             display:flex; align-items:center; gap:8px; background:#fff;
             border:none; border-bottom:1px solid #d6e3e0; padding:10px 16px;
@@ -2893,7 +2896,9 @@ document.addEventListener('click', function(e){
   <div id="cwbs-header">
     <span style="font-size:15px;opacity:.85;">&#128640;</span>
     <h4>Create WBS</h4>
-    <button id="cwbs-close-x" style="margin-left:auto;">&times;</button>
+    <button type="button" class="cwbs-hdr-btn" id="cwbs-open-gantt" title="Open the Gantt chart on top, to check the added activities" style="margin-left:auto;">Gantt Chart</button>
+    <button type="button" class="cwbs-hdr-btn" id="cwbs-open-actlib" title="Open the Activity Library on top, to add a new activity">Activity Library</button>
+    <button id="cwbs-close-x">&times;</button>
   </div>
   <button type="button" id="cwbs-boq-toggle">
     <span class="cwbs-boq-caret">&#9656;</span> Upload BOQ
@@ -3544,7 +3549,29 @@ document.addEventListener('click', function(e){
         var displayName = $row.data('name');
         if(typeof window.pdocViewFile === 'function'){
             window.pdocViewFile(filename, displayName, CWBS_BOQ_FILE_BASE + filename);
+            cwbsSplitWithBoq();
         }
+    });
+    // Two halves of the screen below the toolbar: BOQ viewer left, Create WBS right.
+    function cwbsSplitWithBoq(){
+        var top = 60, h = Math.max(300, $(window).height() - top - 10), half = Math.floor($(window).width() / 2);
+        $('#pdoc-viewer-popup').css({ left: 0, top: top, width: half - 4, height: h, right: 'auto', bottom: 'auto', transform: 'none' });
+        $('#cwbs-popup').css({ left: half, top: top, width: $(window).width() - half - 4, height: h, right: 'auto', bottom: 'auto', transform: 'none' });
+    }
+    // Gantt chart and Activity Library open on top of the split windows.
+    $(document).on('click', '#cwbs-open-gantt', function(){
+        if (typeof window.openGanttWin === 'function') window.openGanttWin();
+        else $('#gantt-win-open').trigger('click');
+        setTimeout(function(){ if (window.popupBringToFront) window.popupBringToFront('gantt-win'); }, 50);
+    });
+    $(document).on('click', '#cwbs-open-actlib', function(){
+        var a = document.querySelector('.round-icons a.overNow4[title="Activity Library"]') || document.querySelector('a.overNow4[title="Activity Library"]');
+        if (a) a.click();
+        setTimeout(function(){ if (window.popupBringToFront) window.popupBringToFront('menu4-popup-cntnr'); }, 300);
+    });
+    // An activity saved in the Activity Library appears in the Create WBS list at once.
+    $(document).on('actlib:saved', function(){
+        if ($('#cwbs-popup').hasClass('cwbs-open') && $('#cwbs-proj-type').val()) cwbsLoadActivities();
     });
 
     $(document).on('click','.cwbs-boq-fr-del', function(){

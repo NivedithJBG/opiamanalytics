@@ -186,6 +186,8 @@ $(function() {
                 success:function(data){
                     if(data.error=='No')
                     {
+                        // Let an open Create WBS window refresh its activity list.
+                        $(document).trigger('actlib:saved');
                         $('#saveestactivity').attr("disabled", false);
                         $(".search-and-actions-wrpr").show();
                         $('#listestactivity').trigger('click');
