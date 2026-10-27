@@ -86,7 +86,7 @@ use app\models\Resources;
                             <a href="#alIowGroupPopup" class="btn btn-default" id="alOpenIowGroupPopup" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ IOW Group</a>
                             <a href="#alAddActivityPopup" class="btn" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-add"></span> Activity</a>
                             <a href="#" class="btn list-accountType" id="listestactivity" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-th-list"></span> List</a>
-                            <select id="searchestworktypelist" class="form-control" style="margin-left:10px;width:120px;border-radius:20px;height:34px;display:inline-block;">
+                            <select id="searchestworktypelist" class="form-control" style="margin-left:10px;width:160px;border-radius:20px;height:34px;display:inline-block;">
                                 <option value="0">All Project Types</option>
                                 <?php
                                 $typelist = EstimateWorkType::find()->where(['estworktype_status' => 0])->orderBy(['estworktype_name' => SORT_ASC])->all();
@@ -95,8 +95,8 @@ use app\models\Resources;
                                 endforeach;
                                 ?>
                             </select>
-                            <input type="text" id="searchestactivityname" placeholder="Search..." class="form-control" style="margin-left:6px;width:90px;border-radius:20px;height:34px;display:inline-block;flex-shrink:0;">
-                            <button id="estactivitysearch" class="btn btn-primary" type="button" style="margin-left:3px;border-radius:20px;width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="icon-search5"></span></button>
+                            <input type="text" id="searchestactivityname" placeholder="Search..." class="form-control" style="margin-left:6px;width:160px;min-width:0 !important;border-radius:20px;height:34px;display:inline-block;flex-shrink:0;">
+                            <button id="estactivitysearch" class="btn btn-primary" type="button" style="margin-left:3px;border-radius:20px;width:34px !important;min-width:0 !important;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="icon-search5"></span></button>
                             <input type="hidden" name="estworktypedisplay" id="estworktypedisplay">
                         </div>
                         <div class="content-wrpr">
