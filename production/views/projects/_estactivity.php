@@ -395,6 +395,10 @@ use app\models\Resources;
                         </div>
                     </div>
                 </form>
+                <div id="alAddedWrap" style="display:none;margin-top:12px;">
+                    <div style="font-weight:600;border-bottom:1px solid #eee;padding-bottom:4px;margin-bottom:4px;color:#197a3a;">Activities added</div>
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;"><tbody id="alAddedList"></tbody></table>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn cancelactivity" data-dismiss="modal" style="background:#e67e22;color:#fff;border-color:#d35400;border-radius:20px;"><span class="icon-close"></span> Close</button>
@@ -588,7 +592,7 @@ $('#searchestworktypelist, #searchestactivityname, #estactivitysearch').removeCl
 $('#searchestworktypelist').css({ display: 'inline-block', marginLeft: 0 });
 $('#searchestactivityname').css('display', 'inline-block');
 $('#estactivitysearch').css('display', 'inline-flex');
-$('#addestactivity').css('margin-left', '10px').appendTo('#alListBar');
+$('#addestactivity').css({ marginLeft: 'auto', fontSize: '15px', fontWeight: 700, padding: '7px 22px' }).appendTo('#alListBar');
 $('#estactivity .content-wrpr').first().appendTo('#alListBody');
 
 /* Open the IOW Group and IOW windows near the top of the screen, never taller
@@ -931,6 +935,17 @@ function alTabsOnly(){
 alTabsOnly();
 document.addEventListener('actlib:open', alTabsOnly);
 // Edit (pencil) in the list: the edit popup comes above the list popup.
+$(document).on('actlib:added', function(e, a){
+    var esc = function(v){ return $('<div>').text(v || '').html(); };
+    $('#alAddedList').append('<tr><td style="padding:5px 8px;border:1px solid #ddd;width:36px;text-align:center;color:#999;">' + ($('#alAddedList tr').length + 1) + '</td>'
+        + '<td style="padding:5px 8px;border:1px solid #ddd;">' + esc(a.name) + '</td>'
+        + '<td style="padding:5px 8px;border:1px solid #ddd;width:80px;text-align:center;">' + esc(a.unit) + '</td>'
+        + '<td style="padding:5px 8px;border:1px solid #ddd;width:160px;color:#555;">' + esc(a.type) + '</td></tr>');
+    $('#alAddedWrap').show();
+});
+// A fresh + Activity starts with an empty added list.
+$(document).on('click', '#addestactivity', function(){ $('#alAddedList').empty(); $('#alAddedWrap').hide(); });
+$(document).on('click', '.al-edit-activity-btn', function(){ $('#alAddedList').empty(); $('#alAddedWrap').hide(); });
 $(document).on('click', '.al-edit-activity-btn', function(){
     var m = document.getElementById('alAddActivityPopup'), n = 0;
     var t = setInterval(function(){
