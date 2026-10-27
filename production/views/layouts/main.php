@@ -313,7 +313,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .cwbs-hp td { border:1px solid #d6e3e0; padding:5px 8px; }
         .cwbs-hp th { background:#0f5c52; color:#fff; font-size:11.5px; font-weight:700; padding:6px 8px; border:1px solid #0d4d45; text-align:left; }
         .cwbs-hp th.n, .cwbs-hp th.c, .cwbs-hp th.b { text-align:center; }
-        .cwbs-hp td.n { width:34px; text-align:center; color:#888; }
+        .cwbs-hp td.n, .cwbs-hp th.n { width:40px; text-align:center; } .cwbs-hp td.n { color:#888; }
         .cwbs-hp td.c { width:80px; text-align:center; color:#6c7a89; } .cwbs-hp th.c { width:80px; }
         .cwbs-hp td.b, .cwbs-hp th.b { width:150px; text-align:center; white-space:nowrap; }
         .cwbs-hp-ib { border:1px solid #bcd0cc; background:#fff; border-radius:4px; width:26px; height:24px; cursor:pointer; font-size:12px; padding:0; margin-left:2px; }
@@ -3790,7 +3790,7 @@ document.addEventListener('click', function(e){
         cwbsHeads.groups.forEach(function(gr, i){
             rows += '<tr><td class="n">' + (i + 1) + '</td><td>' + cwbsEsc(gr.name) + '</td><td class="b">' + cwbsHpBtns('g', gr.id) + '</td></tr>';
         });
-        $('#cwbs-iowp-list').html(rows || '<tr><td style="color:#888;text-align:center;">No IOW Group in this project\'s Gantt yet.</td></tr>');
+        $('#cwbs-iowp-list').html(rows || '<tr><td colspan="3" style="color:#888;text-align:center;">No IOW Group in this project\'s Gantt yet.</td></tr>');
     }
     function cwbsRenderSgList(){
         var gid = String($('#cwbs-sgp-group').val() || ''), rows = '', n = 0;
@@ -3798,7 +3798,7 @@ document.addEventListener('click', function(e){
             if (String(sg.iow_group_id) !== gid) return;
             rows += '<tr><td class="n">' + (++n) + '</td><td>' + cwbsEsc(sg.name) + '</td><td class="b">' + cwbsHpBtns('s', sg.id) + '</td></tr>';
         });
-        $('#cwbs-sgp-list').html(rows || '<tr><td style="color:#888;text-align:center;">' + (gid ? 'No Sub Group under this IOW Group yet.' : 'Select an IOW Group.') + '</td></tr>');
+        $('#cwbs-sgp-list').html(rows || '<tr><td colspan="3" style="color:#888;text-align:center;">' + (gid ? 'No Sub Group under this IOW Group yet.' : 'Select an IOW Group.') + '</td></tr>');
     }
     $(document).on('change', '#cwbs-sgp-group', cwbsRenderSgList);
     // Tabs: IOW Group and Sub Group open their popups; Activities shows the activity list.
@@ -3899,8 +3899,8 @@ document.addEventListener('click', function(e){
     $(document).on('input','#cwbs-act-search', cwbsFilterActs);
     // IOW Group search: type to filter the groups, pick one from the list. The
     // hidden select stays the source of the value, so the rest works unchanged.
-    (function(){
-        var sel = document.getElementById('cwbs-iow-group');
+    function cwbsSearchable(selId){
+        var sel = document.getElementById(selId);
         if (!sel || sel.getAttribute('data-ss')) return;
         sel.setAttribute('data-ss', '1');
         var wrap = document.createElement('div'); wrap.className = 'cwbs-ss';
@@ -3936,7 +3936,9 @@ document.addEventListener('click', function(e){
         // Keep the box in step when the list is reloaded or the value set in code.
         new MutationObserver(sync).observe(sel, { childList: true });
         $(sel).on('change', sync);
-    })();
+    }
+    cwbsSearchable('cwbs-iow-group');
+    cwbsSearchable('cwbs-sgp-group');
     $(document).on('click','.cwbs-tick-btn', function(){
         var id = $(this).data('actid');
         var name = $(this).data('actname');
