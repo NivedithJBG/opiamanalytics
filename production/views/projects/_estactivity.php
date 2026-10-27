@@ -588,7 +588,8 @@ $('#searchestworktypelist, #searchestactivityname, #estactivitysearch').removeCl
 $('#searchestworktypelist').css({ display: 'inline-block', marginLeft: 0 });
 $('#searchestactivityname').css('display', 'inline-block');
 $('#estactivitysearch').css('display', 'inline-flex');
-$('#addestactivity').css({ marginLeft: 'auto', fontSize: '15px', fontWeight: 700, padding: '7px 22px' }).appendTo('#alListBar');
+$('#addestactivity').css({ float: 'right', marginRight: '14px', marginTop: '2px', fontSize: '13px', fontWeight: 700, padding: '4px 14px' })
+    .insertAfter('#alListPopup .modal-header .close');
 $('#estactivity .content-wrpr').first().appendTo('#alListBody');
 
 /* Open the IOW Group and IOW windows near the top of the screen, never taller
