@@ -588,6 +588,7 @@ $('#searchestworktypelist, #searchestactivityname, #estactivitysearch').removeCl
 $('#searchestworktypelist').css({ display: 'inline-block', marginLeft: 0 });
 $('#searchestactivityname').css('display', 'inline-block');
 $('#estactivitysearch').css('display', 'inline-flex');
+$('#addestactivity').css('margin-left', '10px').appendTo('#alListBar');
 $('#estactivity .content-wrpr').first().appendTo('#alListBody');
 
 /* Open the IOW Group and IOW windows near the top of the screen, never taller
