@@ -1144,7 +1144,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                 var _sgHid = {}, _sgKids = {}, _sgTis = {}, _sgOrder = [], _sgRows = {};
                 if (!window._ganttCurrentOnly) {
                   (actData.subgroups || []).forEach(function(sg){
-                    var _sgTi = new JSGantt.TaskItem('sg_' + sg.id, sg.name, '', '', 'ggroupblack', '', 0, '', 0, 1, parentId, 1, '', '', '', g);
+                    var _sgTi = new JSGantt.TaskItem('sg_' + sg.id, sg.name, '', '', 'ggroupblack', '', 0, '', 0, 1, 'iow_' + item.iowGroupid, 1, '', '', '', g);
                     _sgTis[sg.id] = _sgTi; _sgOrder.push(sg.id); _sgRows[sg.id] = [];
                     _sgHid[sg.id] = _sgTi.getID();
                     _sgKids[sg.id] = [];
@@ -1254,7 +1254,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     pId, act.name,
                     barStart, barEnd,
                     pClass, '', 0, actDur, 0, 0,
-                    window._ganttCurrentOnly ? _mkSecGroup(_secKey) : (_sgHid[act.subgroup_id] || parentId), 1,
+                    window._ganttCurrentOnly ? _mkSecGroup(_secKey) : (_sgHid[act.subgroup_id] ? 'sg_' + act.subgroup_id : parentId), 1,
                     act.depends || null,
                     '', '', g, null,
                     null, null, null, '',
