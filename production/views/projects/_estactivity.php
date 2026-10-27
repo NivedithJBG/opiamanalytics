@@ -94,7 +94,7 @@ use app\models\Resources;
                                 ?>
                             </select>
                             <input type="text" id="searchestactivityname" placeholder="Search..." class="form-control" style="margin-left:6px;width:140px;min-width:0 !important;border-radius:20px;height:34px;display:inline-block;flex-shrink:0;">
-                            <button id="estactivitysearch" class="btn btn-primary" type="button" style="margin-left:3px;border-radius:20px;width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="icon-search5"></span></button>
+                            <button id="estactivitysearch" class="btn btn-primary" type="button" style="margin-left:3px;border-radius:20px;width:34px !important;min-width:0 !important;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="icon-search5"></span></button>
                             <a href="#alAddActivityPopup" class="btn" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities" style="margin-left:10px;border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-add"></span> Activity</a>
                             <input type="hidden" name="estworktypedisplay" id="estworktypedisplay">
                             <span id="al-ptype-err" style="color:red;font-size:12px;margin-left:8px;display:none;"></span>
