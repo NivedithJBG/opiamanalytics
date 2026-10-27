@@ -28,6 +28,7 @@ $(function(){
   <div class="menu4-win-hdr">
     <span style="font-size:18px;font-weight:700;color:#333;">Activity Library</span>
     <div class="menu4-win-hdr-btns">
+      <button class="menu4-win-min" title="Minimise" style="font-weight:700;">&minus;</button>
       <button class="menu4-win-expand" title="Fullscreen">&#x26F6;</button>
       <button class="menu4-win-close" title="Close">&times;</button>
     </div>
@@ -74,6 +75,22 @@ $(function(){
       win.style.left='0'; win.style.top='0';
       win.style.width='100vw'; win.style.height='100vh';
       this.innerHTML='&#x2716;'; this.title='Restore';
+    }
+  });
+
+  // Minimise: shrink to its title bar at the bottom of the screen; click again to restore.
+  var _min = null;
+  document.querySelector('.menu4-win-min').addEventListener('click', function(){
+    if(_min){
+      win.style.left=_min.left; win.style.top=_min.top; win.style.width=_min.width; win.style.height=_min.height;
+      win.style.minHeight=''; _min=null; this.innerHTML='&minus;'; this.title='Minimise';
+    } else {
+      _anchor();
+      _min={left:win.style.left,top:win.style.top,width:win.style.width,height:win.style.height};
+      var hh = hdr.getBoundingClientRect().height || 44;
+      win.style.minHeight='0'; win.style.height=hh+'px'; win.style.width='340px';
+      win.style.left='12px'; win.style.top=(window.innerHeight - hh - 8)+'px';
+      this.innerHTML='&#9634;'; this.title='Restore';
     }
   });
 
