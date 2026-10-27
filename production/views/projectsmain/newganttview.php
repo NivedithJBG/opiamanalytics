@@ -1413,6 +1413,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
     // Apply progressive indentation + patch B. columns and A. columns with formatted values
     var _tasks = g.getList ? g.getList() : [];
+    var _actSn = 0;   // serial number of activity rows, in display order
     for (var _i = 0; _i < _tasks.length; _i++) {
       var _t = _tasks[_i];
       var _tid = _t.getID();
@@ -1426,19 +1427,20 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       // it — just a smaller step now that there's one less tier.
       var _cell = _row.querySelector('td.gtaskname');
       if (_cell) {
-        // From the left: Project 4px, IOW Group 20px, Sub Group 40px, activities 60px.
-        var _lv = _t.getLevel(), _indent = !_t.getGroup() ? 60 : (_lv <= 1 ? 4 : (_lv === 2 ? 20 : 40));
+        // From the left: Project 4px, IOW Group 20px; Sub Groups and activities
+        // line up together at 40px (activities carry a serial number).
+        var _lv = _t.getLevel(), _indent = !_t.getGroup() ? 40 : (_lv <= 1 ? 4 : (_lv === 2 ? 20 : 40));
         _cell.style.paddingLeft = _indent + 'px';
-        // Current view: serial-number badge in the gap left of the activity name.
-        var _serial = window._ganttCurrentOnly && window._ganttSerial ? window._ganttSerial[_tid] : null;
-        if (_serial && !_cell.querySelector('.gact-serial')) {
-          _cell.style.position = 'relative';
-          var _sb = document.createElement('span');
-          _sb.className = 'gact-serial';
-          _sb.textContent = _serial;
-          _sb.style.cssText = 'position:absolute;left:28px;top:50%;transform:translateY(-50%);width:26px;box-sizing:border-box;'
-            + 'text-align:right;font-size:11px;font-weight:700;line-height:15px;color:#081142;';
-          _cell.insertBefore(_sb, _cell.firstChild);
+        if (!_t.getGroup()) {
+          _actSn++;
+          if (!_cell.querySelector('.gact-serial')) {
+            var _sb = document.createElement('span');
+            _sb.className = 'gact-serial';
+            _sb.textContent = _actSn;
+            _sb.style.cssText = 'display:inline-block;min-width:22px;margin-right:6px;text-align:right;font-size:11px;font-weight:700;color:#081142;';
+            var _host = _cell.querySelector('div') || _cell;
+            _host.insertBefore(_sb, _host.firstChild);
+          }
         }
       }
 
@@ -1824,7 +1826,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       $(this).addClass('gact-dragging');
 
       var nameCell = row.querySelector('td.gtaskname');
-      $ghost.text(nameCell ? nameCell.textContent.trim() : 'Activity')
+      $ghost.text(nameCell ? nameCell.textContent.trim().replace(/^\d+/, '').trim() : 'Activity')
         .css({ left: (e.clientX + 14) + 'px', top: (e.clientY + 10) + 'px', display: 'block' });
 
       e.preventDefault();
@@ -4532,7 +4534,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         var db = cells[tid];
         if (!db) return;
         _curActId = db.rawId || null;
-        var name = this.textContent.trim();
+        var name = this.textContent.trim(), _snEl = this.querySelector('.gact-serial');
+        if (_snEl && name.indexOf(_snEl.textContent) === 0) name = name.slice(_snEl.textContent.length).trim();
         _render(name, db);
         _positionNearCell(this);
       });
