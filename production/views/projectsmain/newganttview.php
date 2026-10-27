@@ -4893,10 +4893,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         var wgMap = window._ganttWbsBareRowWgId || {};
         var info = wgMap[tid];
         if (!info) return; // not an IOW Group row/bar — ignore (e.g. a leaf activity row/bar)
-        var _sgRows = window._ganttSgRows || {}, _sgClicked = _sgRows[tid];
-        if (!_sgClicked) {
-          for (var _k in _sgRows) { if (String(_sgRows[_k].iowGroupId) === String(info.iowGroupId)) return; }
-        }
+        // IOW Group row: all its activities; Sub Group row: only that Sub Group's.
+        var _sgClicked = (window._ganttSgRows || {})[tid];
 
         // Resolve the IOW Group's own name from its name row.
         var iowName = '';
