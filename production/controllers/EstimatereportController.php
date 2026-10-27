@@ -35,9 +35,18 @@ class EstimatereportController extends Controller
             [':pid' => $projectId]
         )->queryOne();
 
+        // Sub Groups (same structure as the Gantt): each activity's Sub Group.
+        $costCtrl = new \app\controllers\ProjectsmainController('projectsmain', Yii::$app);
+        $costCtrl->_sgEnsure();
+        $subRows = $db->createCommand(
+            "SELECT id, iow_group_id, name FROM wbs_subgroups WHERE project_id = :pid AND status = 0 ORDER BY sortorder ASC, id ASC",
+            [':pid' => $projectId]
+        )->queryAll();
+
         $rows = $db->createCommand("
             SELECT
                 go.iow_group_id                              AS iow_id,
+                COALESCE(MAX(sgm.subgroup_id), 0)            AS subgroup_id,
                 ig.name                                      AS iow_name,
                 go.sortorder                                 AS iow_sortorder,
                 wa.id                                        AS activity_row_id,
@@ -59,6 +68,7 @@ class EstimatereportController extends Controller
             LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id AND ig.status = 0
             LEFT JOIN workgroup_activities_new wa ON wa.iow_group_id = go.iow_group_id AND wa.project_Id = go.project_id AND wa.pr_status = 0
             LEFT JOIN scheduleactivities sa ON sa.activity_id = wa.id AND sa.projectId = go.project_id AND sa.status = 0
+            LEFT JOIN wbs_subgroup_activities sgm ON sgm.wan_id = wa.id
             LEFT JOIN pricing_estimate_new pe
                    ON pe.activity_Id = wa.id AND pe.project_Id = go.project_id AND pe.pricing_status = 0
             WHERE go.project_id = :pid
@@ -70,7 +80,6 @@ class EstimatereportController extends Controller
         // Dashboard's "Cost of Activity" panel (ProjectsmainController::
         // actionCostdashboardactivity + newganttview.php's _renderCostOfActivity)
         // rather than recomputing a different approximation here.
-        $costCtrl = new \app\controllers\ProjectsmainController('projectsmain', Yii::$app);
         $origPost = $_POST;
 
         /* Group into IOW Group sections with subtotal, plus a grand total.
@@ -170,6 +179,7 @@ class EstimatereportController extends Controller
             }
 
             $byIow[$iowKey]['items'][] = [
+                'subgroup_id'     => (int)$r['subgroup_id'],
                 'sched_id'        => (int)$r['sched_id'],
                 'wan_id'          => (int)$r['activity_row_id'],
                 'lib_activity_id' => (int)$r['lib_activity_id'],
@@ -191,9 +201,32 @@ class EstimatereportController extends Controller
         }
         $_POST = $origPost;
 
+        // Each section: activities directly under the IOW Group first, then each
+        // Sub Group (in order) with its activities and its own subtotal.
         $sections = [];
         foreach ($groups as $iowKey) {
-            $sections[] = $byIow[$iowKey];
+            $sec = $byIow[$iowKey];
+            $subs = [];
+            foreach ($subRows as $sr) {
+                if ((int)$sr['iow_group_id'] === $iowKey) $subs[(int)$sr['id']] = ['id' => (int)$sr['id'], 'name' => $sr['name'], 'subtotal' => 0.0, 'subtotal_actual' => 0.0];
+            }
+            $direct = []; $bySub = [];
+            foreach ($sec['items'] as $it) {
+                $sid = $it['subgroup_id'];
+                if ($sid && isset($subs[$sid])) {
+                    $bySub[$sid][] = $it;
+                    $subs[$sid]['subtotal'] += $it['amount'];
+                    $subs[$sid]['subtotal_actual'] += $it['a_amount'];
+                } else {
+                    $it['subgroup_id'] = 0;
+                    $direct[] = $it;
+                }
+            }
+            $items = $direct;
+            foreach ($subs as $sid => $sg) { foreach ($bySub[$sid] ?? [] as $it) $items[] = $it; }
+            $sec['items'] = $items;
+            $sec['subgroups'] = array_values($subs);
+            $sections[] = $sec;
         }
 
         return json_encode([

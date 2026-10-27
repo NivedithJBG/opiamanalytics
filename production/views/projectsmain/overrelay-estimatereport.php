@@ -78,6 +78,11 @@
   background:#e4e7eb; font-weight:700; color:#37475a; padding:6px 9px;
   border:1px solid #cfd5db; font-size:12px;
 }
+.er-table tr.er-sub-row td {
+  background:#eef3f2; font-weight:700; color:#0f5c52; padding:5px 9px 5px 22px;
+  border:1px solid #d5dfdd; font-size:12px;
+}
+.er-table tr.er-subtotal-row.er-sub-subtotal td { background:#f6f9f8; font-weight:600; color:#0f5c52; }
 .er-table tr.er-subtotal-row td {
   background:#f0f2f4; font-weight:700; color:#37475a; border:1px solid #dde2e7;
 }
@@ -628,7 +633,26 @@
     var sl = 1;
     d.sections.forEach(function(sec, secIdx){
       html += '<tr class="er-iow-row" data-secidx="' + secIdx + '"><td colspan="8">' + esc(sec.iow_name || 'IOW') + '</td></tr>';
+      var _subName = {}, _subTot = {};
+      (sec.subgroups || []).forEach(function(sg){ _subName[sg.id] = sg.name; _subTot[sg.id] = sg; });
+      var _curSub = 0, _shownSubs = {};
+      var _subTotalRow = function(sid){
+        var sg = _subTot[sid];
+        return '<tr class="er-subtotal-row er-sub-subtotal">'
+          + '<td colspan="5" style="text-align:right;">Subtotal — ' + esc(sg.name) + '</td>'
+          + '<td class="er-num">' + fmtNum(sg.subtotal) + '</td>'
+          + '<td></td><td></td>'
+          + '<td class="er-num">' + fmtNum(sg.subtotal_actual) + '</td>'
+          + '</tr>';
+      };
       (sec.items || []).forEach(function(it){
+        // Sub Group heading (as in the Gantt) before its first activity.
+        var _sid = it.subgroup_id || 0;
+        if (_sid !== _curSub) {
+          if (_curSub) html += _subTotalRow(_curSub);
+          _curSub = _sid;
+          if (_sid) { _shownSubs[_sid] = 1; html += '<tr class="er-sub-row"><td colspan="9">' + esc(_subName[_sid] || 'Sub Group') + '</td></tr>'; }
+        }
         var rowIdx = _erResourcesByRow.length;
         _erResourcesByRow.push(it.resources || []);
         _erSchedIdByRow.push(it.sched_id || 0);
@@ -644,6 +668,11 @@
           + '<td class="er-num">' + fmtNum(it.actual_rate) + '</td>'
           + '<td class="er-num">' + fmtNum(it.a_amount) + '</td>'
           + '</tr>';
+      });
+      if (_curSub) html += _subTotalRow(_curSub);
+      // Sub Groups with no activities yet still show as headings.
+      (sec.subgroups || []).forEach(function(sg){
+        if (!_shownSubs[sg.id]) html += '<tr class="er-sub-row"><td colspan="9">' + esc(sg.name) + '</td></tr>';
       });
       html += '<tr class="er-subtotal-row">'
         + '<td colspan="5" style="text-align:right;">Subtotal — ' + esc(sec.iow_name || 'IOW') + '</td>'

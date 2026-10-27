@@ -1135,7 +1135,7 @@ class ProjectsmainController extends Controller
     // under one IOW Group of the project (wbs_subgroups); activities are placed
     // in a Sub Group through wbs_subgroup_activities (keyed by the project
     // activity, workgroup_activities_new.id).
-    private function _sgEnsure()
+    public function _sgEnsure()
     {
         static $done = false;
         if ($done) return;
