@@ -1129,6 +1129,214 @@ class ProjectsmainController extends Controller
         return ['error' => 'No', 'existed' => false];
     }
 
+    // ── Create WBS tabs: IOW Group and Sub Group headings of the project's Gantt ──
+    // An IOW Group added here is a heading for this project only (iow_groups row
+    // with project_id = the project, no project type mapping). A Sub Group sits
+    // under one IOW Group of the project (wbs_subgroups); activities are placed
+    // in a Sub Group through wbs_subgroup_activities (keyed by the project
+    // activity, workgroup_activities_new.id).
+    private function _sgEnsure()
+    {
+        static $done = false;
+        if ($done) return;
+        $db = Yii::$app->db;
+        $db->createCommand("CREATE TABLE IF NOT EXISTS wbs_subgroups (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            project_id INT NOT NULL,
+            iow_group_id INT NOT NULL,
+            name VARCHAR(150) NOT NULL,
+            sortorder INT NOT NULL DEFAULT 0,
+            status TINYINT NOT NULL DEFAULT 0,
+            created_at DATETIME NULL,
+            KEY idx_proj_group (project_id, iow_group_id)
+        )")->execute();
+        $db->createCommand("CREATE TABLE IF NOT EXISTS wbs_subgroup_activities (
+            wan_id INT NOT NULL PRIMARY KEY,
+            subgroup_id INT NOT NULL,
+            KEY idx_subgroup (subgroup_id)
+        )")->execute();
+        $done = true;
+    }
+
+    // Puts the project's heading order back to 1..n (in the current order).
+    private function _sgRenumberGroups($pid)
+    {
+        $db = Yii::$app->db;
+        $ids = $db->createCommand("SELECT iow_group_id FROM iow_group_order WHERE project_id=:p ORDER BY sortorder ASC, iow_group_id ASC", [':p' => $pid])->queryColumn();
+        foreach ($ids as $i => $g) {
+            $db->createCommand("UPDATE iow_group_order SET sortorder=:s WHERE project_id=:p AND iow_group_id=:g", [':s' => $i + 1, ':p' => $pid, ':g' => $g])->execute();
+        }
+        return $ids;
+    }
+
+    // The project's IOW Group headings (Gantt order) with their Sub Groups.
+    public function actionWbsheadings()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        if (!$pid) return ['error' => 'Yes', 'errortext' => 'Select a project first.'];
+        $this->_sgEnsure();
+        $db = Yii::$app->db;
+        $groups = $db->createCommand(
+            "SELECT go.iow_group_id AS id, COALESCE(ig.name, '') AS name,
+                    (SELECT COUNT(*) FROM scheduleactivities sa WHERE sa.projectId = go.project_id AND sa.iow_group_id = go.iow_group_id AND sa.status = 0) AS acts
+             FROM iow_group_order go
+             LEFT JOIN iow_groups ig ON ig.id = go.iow_group_id
+             WHERE go.project_id = :p AND go.iow_group_id NOT IN (17, 18)
+             ORDER BY go.sortorder ASC, go.iow_group_id ASC", [':p' => $pid]
+        )->queryAll();
+        $subs = $db->createCommand(
+            "SELECT sg.id, sg.iow_group_id, sg.name,
+                    (SELECT COUNT(*) FROM wbs_subgroup_activities m
+                       JOIN scheduleactivities sa ON sa.activity_id = m.wan_id AND sa.projectId = sg.project_id AND sa.status = 0
+                      WHERE m.subgroup_id = sg.id) AS acts
+             FROM wbs_subgroups sg
+             WHERE sg.project_id = :p AND sg.status = 0
+             ORDER BY sg.sortorder ASC, sg.id ASC", [':p' => $pid]
+        )->queryAll();
+        return ['error' => 'No', 'groups' => $groups, 'subgroups' => $subs];
+    }
+
+    public function actionWbsheadingadd()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid  = $this->_cfPid();
+        $name = trim((string)($_POST['name'] ?? ''));
+        if (!$pid) return ['error' => 'Yes', 'errortext' => 'Select a project first.'];
+        if ($name === '') return ['error' => 'Yes', 'errortext' => 'Enter the IOW Group name.'];
+        $db = Yii::$app->db;
+        $dup = $db->createCommand(
+            "SELECT 1 FROM iow_group_order go JOIN iow_groups ig ON ig.id = go.iow_group_id
+             WHERE go.project_id = :p AND LOWER(TRIM(ig.name)) = LOWER(:n) LIMIT 1", [':p' => $pid, ':n' => $name]
+        )->queryScalar();
+        if ($dup) return ['error' => 'Yes', 'errortext' => 'This IOW Group is already in the Gantt.'];
+        $db->createCommand("INSERT INTO iow_groups (name, project_id, status, primavera_id) VALUES (:n, :p, 0, 0)", [':n' => $name, ':p' => $pid])->execute();
+        $gid = (int)$db->getLastInsertID();
+        $this->_sgRenumberGroups($pid);
+        $next = (int)$db->createCommand("SELECT COALESCE(MAX(sortorder),0)+1 FROM iow_group_order WHERE project_id=:p", [':p' => $pid])->queryScalar();
+        $db->createCommand("INSERT INTO iow_group_order (project_id, iow_group_id, sortorder) VALUES (:p, :g, :s)", [':p' => $pid, ':g' => $gid, ':s' => $next])->execute();
+        return ['error' => 'No', 'id' => $gid];
+    }
+
+    // Rename: only a heading made for this project (not one shared with the
+    // library or other projects, which would rename it there too).
+    public function actionWbsheadingrename()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid  = $this->_cfPid();
+        $gid  = (int)($_POST['id'] ?? 0);
+        $name = trim((string)($_POST['name'] ?? ''));
+        if (!$pid || !$gid || $name === '') return ['error' => 'Yes', 'errortext' => 'Enter the new name.'];
+        $db = Yii::$app->db;
+        $own = (int)$db->createCommand("SELECT project_id FROM iow_groups WHERE id=:g", [':g' => $gid])->queryScalar() === $pid;
+        $shared = $db->createCommand("SELECT 1 FROM iow_group_worktypes WHERE iow_group_id=:g LIMIT 1", [':g' => $gid])->queryScalar()
+               || $db->createCommand("SELECT 1 FROM iow_group_order WHERE iow_group_id=:g AND project_id<>:p LIMIT 1", [':g' => $gid, ':p' => $pid])->queryScalar();
+        if (!$own || $shared) return ['error' => 'Yes', 'errortext' => 'This IOW Group is shared with the library or other projects, so it can\'t be renamed here.'];
+        $db->createCommand("UPDATE iow_groups SET name=:n WHERE id=:g", [':n' => $name, ':g' => $gid])->execute();
+        return ['error' => 'No'];
+    }
+
+    // Remove a heading from this project's Gantt (only when it has no activities).
+    public function actionWbsheadingdelete()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        $gid = (int)($_POST['id'] ?? 0);
+        if (!$pid || !$gid) return ['error' => 'Yes', 'errortext' => 'Invalid request.'];
+        $this->_sgEnsure();
+        $db = Yii::$app->db;
+        $n = (int)$db->createCommand("SELECT COUNT(*) FROM scheduleactivities WHERE projectId=:p AND iow_group_id=:g AND status=0", [':p' => $pid, ':g' => $gid])->queryScalar();
+        if ($n) return ['error' => 'Yes', 'errortext' => 'This IOW Group has ' . $n . ' activities in the Gantt. Remove them first.'];
+        $db->createCommand()->delete('iow_group_order', ['project_id' => $pid, 'iow_group_id' => $gid])->execute();
+        $db->createCommand("UPDATE wbs_subgroups SET status=1 WHERE project_id=:p AND iow_group_id=:g", [':p' => $pid, ':g' => $gid])->execute();
+        $this->_sgRenumberGroups($pid);
+        return ['error' => 'No'];
+    }
+
+    // Move a heading one place up or down in the Gantt.
+    public function actionWbsheadingmove()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        $gid = (int)($_POST['id'] ?? 0);
+        $dir = ($_POST['dir'] ?? '') === 'up' ? -1 : 1;
+        if (!$pid || !$gid) return ['error' => 'Yes', 'errortext' => 'Invalid request.'];
+        $db = Yii::$app->db;
+        $ids = $this->_sgRenumberGroups($pid);
+        $i = array_search((string)$gid, array_map('strval', $ids), true);
+        $j = $i === false ? false : $i + $dir;
+        if ($i === false || $j < 0 || $j >= count($ids)) return ['error' => 'No'];
+        $db->createCommand("UPDATE iow_group_order SET sortorder=:s WHERE project_id=:p AND iow_group_id=:g", [':s' => $j + 1, ':p' => $pid, ':g' => $ids[$i]])->execute();
+        $db->createCommand("UPDATE iow_group_order SET sortorder=:s WHERE project_id=:p AND iow_group_id=:g", [':s' => $i + 1, ':p' => $pid, ':g' => $ids[$j]])->execute();
+        return ['error' => 'No'];
+    }
+
+    public function actionWbssubgroupadd()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid  = $this->_cfPid();
+        $gid  = (int)($_POST['iow_group_id'] ?? 0);
+        $name = trim((string)($_POST['name'] ?? ''));
+        if (!$pid || !$gid) return ['error' => 'Yes', 'errortext' => 'Select the IOW Group.'];
+        if ($name === '') return ['error' => 'Yes', 'errortext' => 'Enter the Sub Group name.'];
+        $this->_sgEnsure();
+        $db = Yii::$app->db;
+        if (!$db->createCommand("SELECT 1 FROM iow_group_order WHERE project_id=:p AND iow_group_id=:g", [':p' => $pid, ':g' => $gid])->queryScalar()) {
+            return ['error' => 'Yes', 'errortext' => 'That IOW Group is not in this project\'s Gantt.'];
+        }
+        if ($db->createCommand("SELECT 1 FROM wbs_subgroups WHERE project_id=:p AND iow_group_id=:g AND status=0 AND LOWER(TRIM(name))=LOWER(:n)", [':p' => $pid, ':g' => $gid, ':n' => $name])->queryScalar()) {
+            return ['error' => 'Yes', 'errortext' => 'This Sub Group is already under that IOW Group.'];
+        }
+        $next = (int)$db->createCommand("SELECT COALESCE(MAX(sortorder),0)+1 FROM wbs_subgroups WHERE project_id=:p AND iow_group_id=:g AND status=0", [':p' => $pid, ':g' => $gid])->queryScalar();
+        $db->createCommand()->insert('wbs_subgroups', ['project_id' => $pid, 'iow_group_id' => $gid, 'name' => $name, 'sortorder' => $next, 'status' => 0, 'created_at' => date('Y-m-d H:i:s')])->execute();
+        return ['error' => 'No', 'id' => (int)$db->getLastInsertID()];
+    }
+
+    public function actionWbssubgrouprename()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid  = $this->_cfPid();
+        $id   = (int)($_POST['id'] ?? 0);
+        $name = trim((string)($_POST['name'] ?? ''));
+        if (!$pid || !$id || $name === '') return ['error' => 'Yes', 'errortext' => 'Enter the new name.'];
+        $this->_sgEnsure();
+        Yii::$app->db->createCommand("UPDATE wbs_subgroups SET name=:n WHERE id=:i AND project_id=:p", [':n' => $name, ':i' => $id, ':p' => $pid])->execute();
+        return ['error' => 'No'];
+    }
+
+    // Deleting a Sub Group keeps its activities: they move up to sit directly
+    // under the IOW Group.
+    public function actionWbssubgroupdelete()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        $id  = (int)($_POST['id'] ?? 0);
+        if (!$pid || !$id) return ['error' => 'Yes', 'errortext' => 'Invalid request.'];
+        $this->_sgEnsure();
+        $db = Yii::$app->db;
+        if (!$db->createCommand("SELECT 1 FROM wbs_subgroups WHERE id=:i AND project_id=:p", [':i' => $id, ':p' => $pid])->queryScalar()) return ['error' => 'Yes', 'errortext' => 'Sub Group not found.'];
+        $db->createCommand("UPDATE wbs_subgroups SET status=1 WHERE id=:i", [':i' => $id])->execute();
+        $db->createCommand("DELETE FROM wbs_subgroup_activities WHERE subgroup_id=:i", [':i' => $id])->execute();
+        return ['error' => 'No'];
+    }
+
+    public function actionWbssubgroupmove()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        $id  = (int)($_POST['id'] ?? 0);
+        $dir = ($_POST['dir'] ?? '') === 'up' ? -1 : 1;
+        if (!$pid || !$id) return ['error' => 'Yes', 'errortext' => 'Invalid request.'];
+        $this->_sgEnsure();
+        $db = Yii::$app->db;
+        $gid = (int)$db->createCommand("SELECT iow_group_id FROM wbs_subgroups WHERE id=:i AND project_id=:p", [':i' => $id, ':p' => $pid])->queryScalar();
+        $ids = $db->createCommand("SELECT id FROM wbs_subgroups WHERE project_id=:p AND iow_group_id=:g AND status=0 ORDER BY sortorder ASC, id ASC", [':p' => $pid, ':g' => $gid])->queryColumn();
+        $i = array_search((string)$id, array_map('strval', $ids), true);
+        if ($i !== false && isset($ids[$i + $dir])) { $t = $ids[$i]; $ids[$i] = $ids[$i + $dir]; $ids[$i + $dir] = $t; }
+        foreach ($ids as $k => $sid) $db->createCommand("UPDATE wbs_subgroups SET sortorder=:s WHERE id=:i", [':s' => $k + 1, ':i' => $sid])->execute();
+        return ['error' => 'No'];
+    }
+
     public function actionWbsadd()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -1295,6 +1503,17 @@ class ProjectsmainController extends Controller
                      VALUES (:p, :a, :qty, :rate, :ea, 0, 0, 0)",
                     [':p' => $pid, ':a' => $wanId, ':qty' => $qty, ':rate' => round($calcRate, 2), ':ea' => $iowActId]
                 )->execute();
+            }
+        }
+
+        // Create WBS: the activity goes into the chosen Sub Group (none = directly under the IOW Group).
+        if (array_key_exists('subgroup_id', $p)) {
+            $this->_sgEnsure();
+            $sgId = (int)$p['subgroup_id'];
+            if ($sgId) {
+                $db->createCommand("INSERT INTO wbs_subgroup_activities (wan_id, subgroup_id) VALUES (:w, :s) ON DUPLICATE KEY UPDATE subgroup_id = VALUES(subgroup_id)", [':w' => $wanId, ':s' => $sgId])->execute();
+            } else {
+                $db->createCommand("DELETE FROM wbs_subgroup_activities WHERE wan_id = :w", [':w' => $wanId])->execute();
             }
         }
 
@@ -12710,6 +12929,7 @@ class ProjectsmainController extends Controller
     {
         $iowGroupId = (int)($_POST['iowGroupId'] ?? $_POST['itemId'] ?? 0);
         $projectId  = (int)($_POST['projectId'] ?? 0);
+        $this->_sgEnsure();
         $rows = \Yii::$app->db->createCommand("
             SELECT sa.id, sa.name,
                    sa.activity_id AS wan_id,
@@ -12717,6 +12937,7 @@ class ProjectsmainController extends Controller
                    sa.old_duration, sa.quantity, sa.unit,
                    sa.scheduleitem_id, sa.iow_group_id, sa.critical_status,
                    sa.completed_status,
+                   COALESCE(MAX(sgm.subgroup_id), 0) AS subgroup_id,
                    CASE
                      WHEN rpt.cumulated_qty > 0
                           AND sa.quantity > 0
@@ -12762,11 +12983,16 @@ class ProjectsmainController extends Controller
             LEFT JOIN activity_relations AS ar
                    ON ar.dependent_activity = sa.id AND ar.status = 0 AND ar.projectId = sa.projectId
             LEFT JOIN workgroup_activities_new AS wa ON wa.id = sa.activity_id
+            LEFT JOIN wbs_subgroup_activities AS sgm ON sgm.wan_id = sa.activity_id
             WHERE sa.iow_group_id = :g AND sa.projectId = :p AND sa.status = 0
             GROUP BY sa.id
             ORDER BY COALESCE(wa.sortorder, 999999) ASC, sa.id ASC
         ", [':g' => $iowGroupId, ':p' => $projectId])->queryAll();
-        return json_encode(['result' => $rows, 'error' => 'No']);
+        $subgroups = \Yii::$app->db->createCommand(
+            "SELECT id, name FROM wbs_subgroups WHERE project_id = :p AND iow_group_id = :g AND status = 0 ORDER BY sortorder ASC, id ASC",
+            [':g' => $iowGroupId, ':p' => $projectId]
+        )->queryAll();
+        return json_encode(['result' => $rows, 'subgroups' => $subgroups, 'error' => 'No']);
     }
 
     /* Inline edit of an activity's PLANNED Start date from the Gantt

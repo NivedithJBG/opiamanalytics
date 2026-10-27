@@ -292,6 +292,31 @@ $subDomain = array_shift(($HTTP_HOST));
         .cwbs-hdr-btn { background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.35); color:#fff; border-radius:14px;
             padding:3px 12px; font-size:12px; font-weight:700; cursor:pointer; margin-right:8px; white-space:nowrap; }
         .cwbs-hdr-btn:hover { background:rgba(255,255,255,0.32); }
+        #cwbs-tabs { display:flex; gap:6px; padding:8px 14px 0; border-bottom:2px solid #0f5c52; flex-shrink:0; }
+        .cwbs-tab { background:#e3efec; color:#0d3b4f; border:none; border-radius:8px 8px 0 0; padding:7px 20px; font-size:13px; font-weight:700; cursor:pointer; }
+        .cwbs-tab:hover { background:#d1e6e1; }
+        .cwbs-tab.on { background:#0f5c52; color:#fff; }
+        #cwbs-popup #cwbs-main { display:none; }
+        #cwbs-popup.cwbs-acts #cwbs-main { display:flex; }
+        .cwbs-hp { position:fixed; display:none; flex-direction:column; width:560px; max-width:94vw; max-height:80vh; background:#fff; border-radius:10px;
+            box-shadow:0 12px 40px rgba(0,0,0,.35); overflow:hidden; font-family:Nunito,Arial,sans-serif; }
+        .cwbs-hp.on { display:flex; }
+        .cwbs-hp-hdr { background:linear-gradient(135deg,#0d3b4f,#0f5c52); color:#fff; padding:10px 14px; display:flex; align-items:center; cursor:move; }
+        .cwbs-hp-hdr h4 { margin:0; font-size:14px; font-weight:700; flex:1; }
+        .cwbs-hp-x { background:rgba(255,255,255,0.2); border:none; color:#fff; width:26px; height:26px; border-radius:50%; font-size:16px; line-height:1; cursor:pointer; }
+        .cwbs-hp-body { padding:12px 14px; overflow-y:auto; flex:1; min-height:0; }
+        .cwbs-hp-row { display:flex; gap:8px; align-items:flex-end; margin-bottom:10px; }
+        .cwbs-hp-row label { font-size:11px; font-weight:700; color:#0d3b4f; display:block; margin-bottom:3px; }
+        .cwbs-hp-row input, .cwbs-hp-row select { width:100%; box-sizing:border-box; border:1px solid #bcd0cc; border-radius:5px; padding:6px 8px; font-size:12px; height:32px; outline:none; }
+        .cwbs-hp-msg { font-size:12px; min-height:16px; margin-bottom:6px; }
+        .cwbs-hp table { width:100%; border-collapse:collapse; font-size:12.5px; }
+        .cwbs-hp td { border:1px solid #d6e3e0; padding:5px 8px; }
+        .cwbs-hp td.n { width:34px; text-align:center; color:#888; }
+        .cwbs-hp td.c { width:60px; text-align:center; color:#6c7a89; }
+        .cwbs-hp td.b { width:128px; text-align:right; white-space:nowrap; }
+        .cwbs-hp-ib { border:1px solid #bcd0cc; background:#fff; border-radius:4px; width:26px; height:24px; cursor:pointer; font-size:12px; padding:0; margin-left:2px; }
+        .cwbs-hp-ib:hover { border-color:#0f5c52; }
+        .cwbs-hp-ib.del { color:#c0392b; }
         #cwbs-boq-toggle {
             display:flex; align-items:center; gap:8px; background:#fff;
             border:none; border-bottom:1px solid #d6e3e0; padding:10px 16px;
@@ -2900,6 +2925,11 @@ document.addEventListener('click', function(e){
     <button type="button" class="cwbs-hdr-btn" id="cwbs-open-actlib" title="Open the Activity Library on top, to add a new activity">Activity Library</button>
     <button id="cwbs-close-x">&times;</button>
   </div>
+  <div id="cwbs-tabs">
+    <button type="button" class="cwbs-tab" id="cwbs-tab-iow">IOW Group</button>
+    <button type="button" class="cwbs-tab" id="cwbs-tab-sg">Sub Group</button>
+    <button type="button" class="cwbs-tab" id="cwbs-tab-act">Activities</button>
+  </div>
   <button type="button" id="cwbs-boq-toggle">
     <span class="cwbs-boq-caret">&#9656;</span> Upload BOQ
   </button>
@@ -2936,13 +2966,17 @@ document.addEventListener('click', function(e){
           <select id="cwbs-iow-group"><option value="">Select IOW Group</option></select>
         </div>
         <div class="cwbs-f">
+          <label>Sub Group</label>
+          <select id="cwbs-subgroup" style="border:1px solid #bcd0cc;border-radius:5px;padding:6px 8px;font-size:12px;height:32px;"><option value="">None (directly under the IOW Group)</option></select>
+        </div>
+        <div class="cwbs-f">
           <label>Search Activity</label>
           <input type="text" id="cwbs-act-search" placeholder="Type to search activities" autocomplete="off" style="border:1px solid #bcd0cc;border-radius:5px;padding:6px 8px;font-size:12px;height:32px;outline:none;">
         </div>
       </div>
       <div id="cwbs-msg"></div>
       <div id="cwbs-list-wrap">
-        <div id="cwbs-empty" class="cwbs-placeholder">Select a Project Type and IOW Group to list activities.</div>
+        <div id="cwbs-empty" class="cwbs-placeholder">Select a Project Type to list activities.</div>
         <div id="cwbs-loading" class="cwbs-placeholder" style="display:none;">Loading activities&hellip;</div>
         <table id="cwbs-table" style="display:none;">
           <thead>
@@ -2964,6 +2998,33 @@ document.addEventListener('click', function(e){
         <button type="button" id="cwbs-add-btn" class="cwbs-btn cwbs-btn-add">Add</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ── Create WBS: IOW Group / Sub Group headings of this project's Gantt ── -->
+<div id="cwbs-iowp" class="cwbs-hp">
+  <div class="cwbs-hp-hdr"><h4>IOW Group &mdash; headings in this project's Gantt</h4><button type="button" class="cwbs-hp-x">&times;</button></div>
+  <div class="cwbs-hp-body">
+    <div class="cwbs-hp-row">
+      <div style="flex:1;"><label>IOW Group</label><input type="text" id="cwbs-iowp-name" placeholder="Enter IOW Group name" autocomplete="off"></div>
+      <button type="button" class="cwbs-btn cwbs-btn-add" id="cwbs-iowp-add">Add to Gantt</button>
+    </div>
+    <div class="cwbs-hp-msg" id="cwbs-iowp-msg"></div>
+    <table><tbody id="cwbs-iowp-list"></tbody></table>
+  </div>
+</div>
+<div id="cwbs-sgp" class="cwbs-hp">
+  <div class="cwbs-hp-hdr"><h4>Sub Group &mdash; under an IOW Group in this project's Gantt</h4><button type="button" class="cwbs-hp-x">&times;</button></div>
+  <div class="cwbs-hp-body">
+    <div class="cwbs-hp-row">
+      <div style="flex:1;"><label>IOW Group</label><select id="cwbs-sgp-group"><option value="">Select IOW Group</option></select></div>
+    </div>
+    <div class="cwbs-hp-row">
+      <div style="flex:1;"><label>Sub Group</label><input type="text" id="cwbs-sgp-name" placeholder="Enter Sub Group name" autocomplete="off"></div>
+      <button type="button" class="cwbs-btn cwbs-btn-add" id="cwbs-sgp-add">Add to Gantt</button>
+    </div>
+    <div class="cwbs-hp-msg" id="cwbs-sgp-msg"></div>
+    <table><tbody id="cwbs-sgp-list"></tbody></table>
   </div>
 </div>
 
@@ -3597,13 +3658,13 @@ document.addEventListener('click', function(e){
         $('#cwbs-tbody').empty();
         $('#cwbs-table').hide();
         $('#cwbs-loading').hide();
-        $('#cwbs-empty').text(msg || 'Select a Project Type and IOW Group to list activities.').show();
+        $('#cwbs-empty').text(msg || 'Select a Project Type to list activities.').show();
         $('#cwbs-msg').text('');
         cwbsAddState();
     }
     // Add is available once an IOW Group is chosen (it can be added on its own,
     // with no activities) or when activities are ticked.
-    function cwbsAddState(){ $('#cwbs-add-btn').prop('disabled', !$('#cwbs-iow-group').val() && !Object.keys(cwbsSelected).length); }
+    function cwbsAddState(){ $('#cwbs-add-btn').prop('disabled', !Object.keys(cwbsSelected).length); }
     function cwbsToast(msg){
         $('#cwbs-added-toast').remove();
         $('<div id="cwbs-added-toast"></div>').html(msg).css({ position:'fixed', left:'50%', top:'40%', transform:'translate(-50%,-50%)', background:'#0f5c52', color:'#fff', padding:'14px 26px', borderRadius:'8px', fontSize:'16px', fontWeight:700, boxShadow:'0 8px 24px rgba(0,0,0,.3)', zIndex:300000 }).appendTo('body').delay(2200).fadeOut(400, function(){ $(this).remove(); });
@@ -3661,21 +3722,130 @@ document.addEventListener('click', function(e){
     $(document).on('click','#cwbs-close-x, #cwbs-cancel-btn', function(){ cwbsHide(); });
     // IOW Group list depends on the selected Project Type: only groups that
     // have activities of that type are shown.
+    // IOW Groups to add under = this project's Gantt headings (made in the IOW Group tab).
     function cwbsLoadIowGroups(){
-        var typeId = $('#cwbs-proj-type').val();
-        var sel = $('#cwbs-iow-group');
-        sel.html('<option value="">Select IOW Group</option>');
-        if(!typeId){ cwbsResetList(); return; }
-        $.ajax({ type:'POST', url:'../projectsmain/getiowgroupsbytype', dataType:'json', data:{ typeId:typeId },
+        cwbsLoadHeadings(function(){
+            if($('#cwbs-proj-type').val()) cwbsLoadActivities(); else cwbsResetList();
+        });
+    }
+    var cwbsHeads = { groups: [], subgroups: [] };
+    var cwbsEsc = function(v){ return $('<div>').text(v == null ? '' : v).html(); };
+    function cwbsLoadHeadings(done){
+        $.ajax({ type:'POST', url:'../projectsmain/wbsheadings', dataType:'json',
             success:function(d){
-                if($('#cwbs-proj-type').val() !== typeId) return; // type changed meanwhile
-                (d.items||[]).forEach(function(it){
-                    sel.append('<option value="'+it.id+'">'+$('<div>').text(it.name).html()+'</option>');
+                if(!d || d.error !== 'No') return;
+                cwbsHeads = { groups: d.groups || [], subgroups: d.subgroups || [] };
+                var opts = '<option value="">Select IOW Group</option>';
+                cwbsHeads.groups.forEach(function(gr){ opts += '<option value="' + gr.id + '">' + cwbsEsc(gr.name) + '</option>'; });
+                ['#cwbs-iow-group', '#cwbs-sgp-group'].forEach(function(sid){
+                    var sel = $(sid), cur = sel.val();
+                    sel.html(opts);
+                    if (cur && sel.find('option[value="' + cur + '"]').length) sel.val(cur);
                 });
-                cwbsLoadActivities();
+                cwbsFillSubgroups();
+                cwbsRenderIowList();
+                cwbsRenderSgList();
+                if (done) done();
             }
         });
     }
+    function cwbsFillSubgroups(){
+        var gid = String($('#cwbs-iow-group').val() || ''), sel = $('#cwbs-subgroup'), cur = sel.val();
+        var opts = '<option value="">None (directly under the IOW Group)</option>';
+        cwbsHeads.subgroups.forEach(function(sg){ if (String(sg.iow_group_id) === gid) opts += '<option value="' + sg.id + '">' + cwbsEsc(sg.name) + '</option>'; });
+        sel.html(opts);
+        if (cur && sel.find('option[value="' + cur + '"]').length) sel.val(cur);
+    }
+    $(document).on('change', '#cwbs-iow-group', cwbsFillSubgroups);
+    function cwbsAfterHeadingChange(){
+        cwbsLoadHeadings();
+        if (typeof window.reloadGantt === 'function') window.reloadGantt();
+    }
+    function cwbsPost(url, data, $msg, okText){
+        $.ajax({ type:'POST', url:'../projectsmain/' + url, dataType:'json', data:data,
+            success:function(d){
+                if (d && d.error === 'No') { if (okText) { $msg.css('color','#197a3a').text(okText); cwbsToast('&#10003; ' + okText); } else $msg.text(''); cwbsAfterHeadingChange(); }
+                else $msg.css('color','#c00').text((d && d.errortext) || 'Could not save.');
+            },
+            error:function(){ $msg.css('color','#c00').text('Could not save.'); }
+        });
+    }
+    function cwbsHpBtns(kind, id){
+        return '<button type="button" class="cwbs-hp-ib" data-k="' + kind + '" data-a="up" data-id="' + id + '" title="Move up">&#9650;</button>'
+             + '<button type="button" class="cwbs-hp-ib" data-k="' + kind + '" data-a="down" data-id="' + id + '" title="Move down">&#9660;</button>'
+             + '<button type="button" class="cwbs-hp-ib" data-k="' + kind + '" data-a="ren" data-id="' + id + '" title="Rename">&#9998;</button>'
+             + '<button type="button" class="cwbs-hp-ib del" data-k="' + kind + '" data-a="del" data-id="' + id + '" title="Delete">&#10005;</button>';
+    }
+    function cwbsRenderIowList(){
+        var rows = '';
+        cwbsHeads.groups.forEach(function(gr, i){
+            rows += '<tr><td class="n">' + (i + 1) + '</td><td>' + cwbsEsc(gr.name) + '</td><td class="c" title="Activities in the Gantt">' + gr.acts + ' act.</td><td class="b">' + cwbsHpBtns('g', gr.id) + '</td></tr>';
+        });
+        $('#cwbs-iowp-list').html(rows || '<tr><td style="color:#888;text-align:center;">No IOW Group in this project\'s Gantt yet.</td></tr>');
+    }
+    function cwbsRenderSgList(){
+        var gid = String($('#cwbs-sgp-group').val() || ''), rows = '', n = 0;
+        cwbsHeads.subgroups.forEach(function(sg){
+            if (String(sg.iow_group_id) !== gid) return;
+            rows += '<tr><td class="n">' + (++n) + '</td><td>' + cwbsEsc(sg.name) + '</td><td class="c" title="Activities in the Gantt">' + sg.acts + ' act.</td><td class="b">' + cwbsHpBtns('s', sg.id) + '</td></tr>';
+        });
+        $('#cwbs-sgp-list').html(rows || '<tr><td style="color:#888;text-align:center;">' + (gid ? 'No Sub Group under this IOW Group yet.' : 'Select an IOW Group.') + '</td></tr>');
+    }
+    $(document).on('change', '#cwbs-sgp-group', cwbsRenderSgList);
+    // Tabs: IOW Group and Sub Group open their popups; Activities shows the activity list.
+    function cwbsOpenHp(id){
+        var el = document.getElementById(id), cw = document.getElementById('cwbs-popup').getBoundingClientRect();
+        if (!el.classList.contains('on')) {
+            el.classList.add('on');
+            var w = el.offsetWidth;
+            el.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, cw.left + (cw.width - w) / 2)) + 'px';
+            el.style.top = Math.max(60, cw.top + 70) + 'px';
+            if (!el.getAttribute('data-drag') && $.fn.draggable) { $(el).draggable({ handle: '.cwbs-hp-hdr', containment: 'window', scroll: false }); el.setAttribute('data-drag', '1'); }
+        }
+        if (window.popupBringToFront) window.popupBringToFront(id);
+        cwbsLoadHeadings();
+    }
+    $(document).on('click', '#cwbs-tab-iow', function(){ cwbsOpenHp('cwbs-iowp'); $('#cwbs-iowp-msg').text(''); setTimeout(function(){ $('#cwbs-iowp-name').focus(); }, 50); });
+    $(document).on('click', '#cwbs-tab-sg', function(){ cwbsOpenHp('cwbs-sgp'); $('#cwbs-sgp-msg').text(''); });
+    $(document).on('click', '#cwbs-tab-act', function(){
+        var on = !$('#cwbs-popup').hasClass('cwbs-acts');
+        $('#cwbs-popup').toggleClass('cwbs-acts', on);
+        $(this).toggleClass('on', on);
+    });
+    $(document).on('click', '.cwbs-hp-x', function(){ $(this).closest('.cwbs-hp').removeClass('on'); });
+    $(document).on('click', '#cwbs-iowp-add', function(){
+        var name = $.trim($('#cwbs-iowp-name').val());
+        if (!name) { $('#cwbs-iowp-msg').css('color','#c00').text('Enter the IOW Group name.'); return; }
+        $('#cwbs-iowp-name').val('');
+        cwbsPost('wbsheadingadd', { name: name }, $('#cwbs-iowp-msg'), 'IOW Group added to Gantt Chart');
+    });
+    $(document).on('keydown', '#cwbs-iowp-name', function(e){ if (e.key === 'Enter') $('#cwbs-iowp-add').click(); });
+    $(document).on('click', '#cwbs-sgp-add', function(){
+        var gid = $('#cwbs-sgp-group').val(), name = $.trim($('#cwbs-sgp-name').val());
+        if (!gid) { $('#cwbs-sgp-msg').css('color','#c00').text('Select the IOW Group.'); return; }
+        if (!name) { $('#cwbs-sgp-msg').css('color','#c00').text('Enter the Sub Group name.'); return; }
+        $('#cwbs-sgp-name').val('');
+        cwbsPost('wbssubgroupadd', { iow_group_id: gid, name: name }, $('#cwbs-sgp-msg'), 'Sub Group added to Gantt Chart');
+    });
+    $(document).on('keydown', '#cwbs-sgp-name', function(e){ if (e.key === 'Enter') $('#cwbs-sgp-add').click(); });
+    $(document).on('click', '.cwbs-hp-ib', function(){
+        var k = $(this).data('k'), a = $(this).data('a'), id = $(this).data('id');
+        var $msg = k === 'g' ? $('#cwbs-iowp-msg') : $('#cwbs-sgp-msg');
+        var base = k === 'g' ? 'wbsheading' : 'wbssubgroup';
+        var name = $.trim($(this).closest('tr').children('td').eq(1).text());
+        if (a === 'up' || a === 'down') { cwbsPost(base + 'move', { id: id, dir: a }, $msg, ''); return; }
+        if (a === 'ren') {
+            var nn = window.prompt('Rename "' + name + '" to:', name);
+            if (nn === null || !$.trim(nn) || $.trim(nn) === name) return;
+            cwbsPost(base + 'rename', { id: id, name: $.trim(nn) }, $msg, 'Renamed');
+            return;
+        }
+        if (a === 'del') {
+            if (!window.confirm(k === 'g' ? 'Remove IOW Group "' + name + '" from this project\'s Gantt?'
+                                          : 'Delete Sub Group "' + name + '"? Its activities stay, directly under the IOW Group.')) return;
+            cwbsPost(base + 'delete', { id: id }, $msg, k === 'g' ? 'IOW Group removed' : 'Sub Group deleted');
+        }
+    });
     $(document).on('change','#cwbs-proj-type', function(){ cwbsLoadIowGroups(); });
     // Choosing the IOW Group no longer reloads the list (it only sets where to add).
     $(document).on('change','#cwbs-iow-group', function(){ if(!$('#cwbs-tbody tr').length) cwbsLoadActivities(); cwbsAddState(); });
@@ -3708,7 +3878,7 @@ document.addEventListener('click', function(e){
                 if (q && o.textContent.toLowerCase().indexOf(q) < 0) continue;
                 html += '<div class="cwbs-ss-item' + (o.value === sel.value ? ' on' : '') + '" data-v="' + o.value + '">' + $('<div>').text(o.textContent).html() + '</div>'; n++;
             }
-            list.innerHTML = n ? html : '<div class="cwbs-ss-none">' + (sel.options.length > 1 ? 'No IOW Group matches' : 'Select a Project Type first') + '</div>';
+            list.innerHTML = n ? html : '<div class="cwbs-ss-none">' + (sel.options.length > 1 ? 'No IOW Group matches' : 'Add an IOW Group in the IOW Group tab first') + '</div>';
             list.style.display = 'block';
         }
         inp.addEventListener('focus', function(){ inp.select(); render(); });
@@ -3742,23 +3912,7 @@ document.addEventListener('click', function(e){
     });
     $(document).on('click','#cwbs-add-btn', function(){
         var ids = Object.keys(cwbsSelected);
-        if(!ids.length){
-            // No activities ticked: add the IOW Group alone to the Gantt.
-            var gid = $('#cwbs-iow-group').val();
-            if(!gid) return;
-            var $b = $(this).prop('disabled', true);
-            $.ajax({ type:'POST', url:'../projectsmain/wbsaddgroup', dataType:'json', data:{ iow_group_id: gid },
-                success:function(d){
-                    $b.prop('disabled', false);
-                    if(d && d.error === 'No'){
-                        $('#cwbs-msg').css('color','#197a3a').text(d.existed ? 'This IOW Group is already in the Gantt.' : 'IOW Group added to the Gantt.');
-                        if(!d.existed) cwbsToast('&#10003; IOW Group added to Gantt Chart');
-                        if(typeof window.reloadGantt === 'function') window.reloadGantt();
-                    } else { $('#cwbs-msg').css('color','#c00').text((d && d.errortext) || 'Could not add the IOW Group.'); }
-                },
-                error:function(){ $b.prop('disabled', false); $('#cwbs-msg').css('color','#c00').text('Could not add the IOW Group.'); } });
-            return;
-        }
+        if(!ids.length) return;
 
         // Qty is mandatory for every selected activity — the Activity
         // Library has no resource_units field, so Create WBS's own R.Unit
@@ -3821,6 +3975,7 @@ document.addEventListener('click', function(e){
                     var payload = {
                         iow_name: iowName,
                         iow_group_id: groupId,
+                        subgroup_id: parseInt($('#cwbs-subgroup').val(), 10) || 0,
                         iow_act_id: act.id,
                         act_name: act.name,
                         sch_unit: res.sch_unit || res.unit || '',
@@ -6175,7 +6330,7 @@ $(document).on('click', '#gantt-win-min', function(e){
   var SUB_POPUP_GAP = 5000; /* sub-popups (Resource Library / Relationships
     "+add"-type popups) always sit at parent-floater-ceiling + this gap, so
     they can never end up under a repeatedly-clicked parent window. */
-  var floaters = ['cwbs-popup','cwbsed-popup','pdoc-popup','pdoc-viewer-popup','gantt-win','cb-win','reslib-win','vendorlib-win','rel-win','estreport-win','menu4-popup-cntnr','procurement-win','storeoffice-win','userpermissions-win','cd-modal','cf-modal','pd-modal','gkp-popup','gkm-modal','gcm-popup','gpm-overlay'];
+  var floaters = ['cwbs-popup','cwbs-iowp','cwbs-sgp','cwbsed-popup','pdoc-popup','pdoc-viewer-popup','gantt-win','cb-win','reslib-win','vendorlib-win','rel-win','estreport-win','menu4-popup-cntnr','procurement-win','storeoffice-win','userpermissions-win','cd-modal','cf-modal','pd-modal','gkp-popup','gkm-modal','gcm-popup','gpm-overlay'];
 
   window.popupBringToFront = function(id){
     var el = document.getElementById(id) || document.querySelector('.' + id);

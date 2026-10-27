@@ -1141,6 +1141,16 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                 var _shownInGroup = 0;
                 var _dropEmptyGroup = function(){ if (window._ganttCurrentOnly && !_shownInGroup) g.RemoveTaskItem(parentId); };
                 if (!actData.result) { _dropEmptyGroup(); return; }
+                var _sgHid = {}, _sgKids = {};
+                if (!window._ganttCurrentOnly) {
+                  (actData.subgroups || []).forEach(function(sg){
+                    var _sgTi = new JSGantt.TaskItem('sg_' + sg.id, sg.name, '', '', 'ggroupblack', '', 0, '', 0, 1, parentId, 1, '', '', '', g);
+                    g.AddTaskItem(_sgTi);
+                    _sgHid[sg.id] = _sgTi.getID();
+                    _sgKids[sg.id] = [];
+                    if (_wbsRowWgId[parentId]) _wbsRowWgId[_sgTi.getID()] = _wbsRowWgId[parentId];
+                  });
+                }
                 for (var j = 0; j < actData.result.length; j++) {
                   var act = actData.result[j];
                   if (!safeDate(act.actual_start_date) || !safeDate(act.actual_end_date)) continue;
@@ -1244,7 +1254,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     pId, act.name,
                     barStart, barEnd,
                     pClass, '', 0, actDur, 0, 0,
-                    window._ganttCurrentOnly ? _mkSecGroup(_secKey) : parentId, 1,
+                    window._ganttCurrentOnly ? _mkSecGroup(_secKey) : (_sgHid[act.subgroup_id] || parentId), 1,
                     act.depends || null,
                     '', '', g, null,
                     null, null, null, '',
@@ -1281,8 +1291,24 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     cyc:    _cyc
                   };
                   if (window._ganttCurrentOnly) _secBuf[_secKey].push(_ti); else g.AddTaskItem(_ti);
+                  if (_sgKids[act.subgroup_id]) _sgKids[act.subgroup_id].push(_ti.getID());
                   _shownInGroup++;
                 }
+                // Sub Group columns: B./A. Start, End and Duration span its activities.
+                Object.keys(_sgKids).forEach(function(sid){
+                  var h = _sgHid[sid], bs = null, be = null, as = null, ae = null;
+                  _sgKids[sid].forEach(function(k){
+                    var c = _actCells[k]; if (!c) return;
+                    var s1 = safeDate(c.start), e1 = safeDate(c.end), s2 = safeDate(c.astart), e2 = safeDate(c.aend);
+                    if (s1 && (!bs || s1 < bs)) bs = s1;
+                    if (e1 && (!be || e1 > be)) be = e1;
+                    if (s2 && (!as || s2 < as)) as = s2;
+                    if (e2 && (!ae || e2 > ae)) ae = e2;
+                  });
+                  var span = function(a, b){ return (a && b) ? Math.round((new Date(b) - new Date(a)) / 86400000) + 1 : null; };
+                  _groupBStart[h] = bs; _groupBEnd[h] = be; _groupBDur[h] = span(bs, be);
+                  _groupActStart[h] = as || bs; _groupActEnd[h] = ae || be; _groupActDur[h] = span(as || bs, ae || be);
+                });
                 _dropEmptyGroup();
               };
             })(_iowHid, _mkSecGroup)
