@@ -5735,6 +5735,9 @@ $(document).on('click', '#gantt-win-min', function(e){
       // Floating gantt window is open — reload its content
       _loaded = true;
       _loadGanttWin();
+    } else if(document.querySelector('#gantt-win-body #gantt-container')){
+      // Floating Gantt is closed: draw it fresh the next time it opens (drawing it hidden squashes the columns).
+      _loaded = false;
     } else if(typeof window.loadGantt === 'function'){
       // Full-page gantt view
       window.loadGantt();
