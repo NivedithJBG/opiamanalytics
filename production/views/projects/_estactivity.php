@@ -95,7 +95,7 @@ use app\models\Resources;
                                 ?>
                             </select>
                             <input type="text" id="searchestactivityname" placeholder="Search..." class="form-control al-list-only" style="margin-left:6px;width:160px;min-width:0 !important;border-radius:20px;height:34px;display:none;flex-shrink:0;">
-                            <button id="estactivitysearch" class="btn btn-primary al-list-only" type="button" style="margin-left:3px;border-radius:20px;width:34px !important;min-width:0 !important;height:34px;padding:0;display:none;align-items:center;justify-content:center;flex-shrink:0;"><span class="icon-search5"></span></button>
+                            <button id="estactivitysearch" class="btn btn-primary al-list-only" type="button" style="margin-left:3px;border-radius:20px;width:60px !important;min-width:0 !important;height:34px;padding:0;display:none;align-items:center;justify-content:center;flex-shrink:0;"><span class="icon-search5"></span></button>
                             <input type="hidden" name="estworktypedisplay" id="estworktypedisplay">
                         </div>
                         <div class="content-wrpr">
