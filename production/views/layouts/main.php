@@ -5536,7 +5536,7 @@ window.dockMinimise = function(el, label){
     el.style.display = ''; el.removeAttribute('data-docked'); tab.remove();
     if (window.popupBringToFront && el.id) window.popupBringToFront(el.id);
     // The Gantt may have been reloaded while hidden (columns measured as 0): redraw it now it is visible.
-    if (el.id === 'gantt-win' && typeof window.reloadGantt === 'function') window.reloadGantt();
+    if (el.id === 'gantt-win' && typeof window.reloadGantt === 'function') { el.removeAttribute('data-needs-redraw'); window.reloadGantt(); }
   });
   document.getElementById('win-dock').appendChild(tab);
 };
@@ -5730,6 +5730,7 @@ $(document).on('click', '#gantt-win-min', function(e){
 
   // Expose for external callers (WBS modal Add to Gantt / Delete)
   window.reloadGantt = function() {
+    if(win.getAttribute('data-docked')){ win.setAttribute('data-needs-redraw', '1'); return; }
     if(win.classList.contains('gw-open')){
       // Floating gantt window is open — reload its content
       _loaded = true;
@@ -5770,7 +5771,9 @@ $(document).on('click', '#gantt-win-min', function(e){
   // Duration panel: smaller window, monthly format, only due/reported activities).
   var _loadedMode = null;
   window.openGanttWin = function(mode){
+    var _wasDocked = !!win.getAttribute('data-docked');
     if (window.dockForget) window.dockForget(win);   // reopening a minimised Gantt
+    if (_wasDocked) { win.removeAttribute('data-needs-redraw'); _loaded = false; }   // redraw now that it is visible
     var want = (mode === 'current') ? 'current' : 'full';
     var pid = openBtn ? openBtn.getAttribute('data-projectid') : '';
     if(want !== _loadedMode){
