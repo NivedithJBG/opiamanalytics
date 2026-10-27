@@ -82,12 +82,11 @@ use app\models\Resources;
 
                     <div class="search-and-content-wrpr">
                         <div class="search-and-actions-wrpr" id="AR-allocate-body-one-head" style="display:flex;align-items:center;gap:3px;padding:4px 0;flex-wrap:wrap;justify-content:flex-start;">
-                            <a href="#alProjTypePopup" class="btn btn-default" id="alOpenProjTypePopup" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ Project Type</a>
-                            <a href="#alIowGroupPopup" class="btn btn-default" id="alOpenIowGroupPopup" data-toggle="modal" data-target="#alIowGroupPopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">+ IOW Group</a>
-                            <a href="#alAddActivityPopup" class="btn" data-toggle="modal" data-target="#alAddActivityPopup" id="addestactivity" title="Add Activities" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-add"></span> Activity</a>
-                            <a href="#" class="btn list-accountType" id="listestactivity" style="border-radius:20px;background:#4a5568;color:#fff;border-color:#2d3748;"><span class="icon-th-list"></span> List</a>
-                            <select id="searchestworktypelist" class="form-control" style="margin-left:10px;width:120px;border-radius:20px;height:34px;display:inline-block;">
-                                <option value="0">All Project Types</option>
+                            <a href="#alProjTypePopup" class="btn btn-default" id="alOpenProjTypePopup" data-toggle="modal" data-target="#alProjTypePopup" style="background:#6b7a93;color:#fff;border-color:#56657a;border-radius:20px;">Project Type</a>
+                            <a href="#" class="btn" id="al-tab-addact" title="Add Activity" style="border-radius:20px;background:#081142;color:#fff;border-color:#081142;">Add Activity</a>
+                            <a href="#" class="btn list-accountType" id="listestactivity" style="display:none;"></a>
+                            <select id="searchestworktypelist" class="form-control" style="margin-left:10px;width:170px;border-radius:20px;height:34px;display:inline-block;">
+                                <option value="0">Select Project Type</option>
                                 <?php
                                 $typelist = EstimateWorkType::find()->where(['estworktype_status' => 0])->orderBy(['estworktype_name' => SORT_ASC])->all();
                                 foreach ($typelist as $list):
@@ -95,9 +94,18 @@ use app\models\Resources;
                                 endforeach;
                                 ?>
                             </select>
-                            <input type="text" id="searchestactivityname" placeholder="Search..." class="form-control" style="margin-left:6px;width:90px;border-radius:20px;height:34px;display:inline-block;flex-shrink:0;">
+                            <input type="text" id="searchestactivityname" placeholder="Search activity..." class="form-control" style="margin-left:6px;width:160px;border-radius:20px;height:34px;display:inline-block;flex-shrink:0;">
                             <button id="estactivitysearch" class="btn btn-primary" type="button" style="margin-left:3px;border-radius:20px;width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="icon-search5"></span></button>
                             <input type="hidden" name="estworktypedisplay" id="estworktypedisplay">
+                            <span id="al-ptype-err" style="color:red;font-size:12px;margin-left:8px;display:none;"></span>
+                        </div>
+                        <!-- Add Activity: the form sits here, the activities of the selected type list below it. -->
+                        <div id="al-inline-add" style="border:1px solid #d5dbe6;border-radius:8px;padding:6px 12px 8px;margin:4px 0 8px;background:#f7f9fc;">
+                            <div style="font-weight:700;color:#081142;margin-bottom:2px;" id="al-inline-title">Add Activity</div>
+                            <div id="al-inline-add-body"></div>
+                            <div id="al-inline-add-actions" style="text-align:right;margin-top:6px;">
+                                <button type="button" class="btn" id="al-inline-clear" style="background:#e67e22;color:#fff;border-color:#d35400;border-radius:20px;"><span class="icon-close"></span> Clear</button>
+                            </div>
                         </div>
                         <div class="content-wrpr">
 
@@ -769,13 +777,15 @@ function alRefreshProjTypeDropdowns(){
         success: function(data){
             if(!data || !data.items) return;
             var opts = '<option value="0">Select Project Type</option>';
-            var filterOpts = '<option value="0">All Project Types</option>';
+            var filterOpts = '<option value="0">Select Project Type</option>';
             data.items.forEach(function(t){
                 opts       += '<option value="'+t.id+'">'+$('<div>').text(t.name).html()+'</option>';
                 filterOpts += '<option value="'+t.id+'">'+$('<div>').text(t.name).html()+'</option>';
             });
             $('.estworktypelistses').html(opts);
+            var curF = $('#searchestworktypelist').val();
             $('#searchestworktypelist').html(filterOpts);
+            if (curF) $('#searchestworktypelist').val(curF);
         }
     });
 }
@@ -875,14 +885,15 @@ $(document).on('change', '#estworktypelistss1', function(){
 // The first task copies the activity name and unit, until it's typed into by hand.
 // Its Qty/Unit defaults to 1.
 $(document).on('input', '#estactivityname1', function(){
-    var t = $('#alAddActivityPopup .task-name').first();
+    var t = $('#estactivityform .task-name').first();
     if (!t.val() || t.data('auto')) { t.val(this.value).data('auto', true); }
+    var q = $('#estactivityform .task-qty').first(); if (!q.val()) q.val(1);
 });
 $(document).on('input', '#estactivityunit1', function(){
-    var t = $('#alAddActivityPopup .task-unit').first();
+    var t = $('#estactivityform .task-unit').first();
     if (!t.val() || t.data('auto')) { t.val(this.value).data('auto', true); }
 });
-$(document).on('input', '#alAddActivityPopup .task-name, #alAddActivityPopup .task-unit', function(){
+$(document).on('input', '#estactivityform .task-name, #estactivityform .task-unit', function(){
     $(this).data('auto', false);
 });
 $(document).on('shown.bs.modal', '#alAddActivityPopup', function(){
@@ -891,6 +902,26 @@ $(document).on('shown.bs.modal', '#alAddActivityPopup', function(){
 });
 
 /* Edit handler is in estactivity.js alongside the delete handler */;
+
+/* Add Activity tab: the form lives in the window itself (no popup). Its Project
+   Type is the one chosen in the toolbar, so the form's own field is hidden. */
+$('#estactivityform').appendTo('#al-inline-add-body');
+$('#saveestactivity').css('border-radius', '20px').appendTo('#al-inline-add-actions');
+$('#estworktypelistss1').closest('.col-md-6').hide();
+$(document).on('click', '#al-tab-addact', function(e){ e.preventDefault(); $('#al-inline-add').show(); $('#estactivityname1').focus(); });
+$(document).on('change', '#searchestworktypelist', function(){ $('#estworktypelistss1').val(this.value); $('#al-ptype-err').hide(); });
+(function(){
+    var orig = window.closeAlAddActivityModal;
+    window.closeAlAddActivityModal = function(){
+        if (orig) orig();
+        $('#al-inline-title').text('Add Activity');
+        $('#estworktypelistss1').val($('#searchestworktypelist').val());
+    };
+})();
+$(document).on('click', '#al-inline-clear', function(){ window.closeAlAddActivityModal(); });
+// Resource allocation view hides the add form; Back shows it again.
+$(document).on('click', '.allocate-resosurces-btn', function(){ $('#al-inline-add').hide(); });
+$(document).on('click', '.close-prjctactactvty', function(){ $('#al-inline-add').show(); });
 
 /* Intercept estactivity.js showing .add-activity-form (edit flow) → open modal instead */
 var alActObserver = new MutationObserver(function(mutations){

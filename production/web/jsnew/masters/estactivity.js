@@ -27,12 +27,14 @@ $(function() {
                 $('.preloader').show();
             },
             dataType: "json",
-            data: {estactivityname:$('#searchestactivityname').val(),estactivitytype:$('#searchestactivitytype').val(),estworktype:$('#searchestworktypelist').val()},
+            data: {estactivityname:$('#searchestactivityname').val(),estactivitytype:$('#searchestactivitytype').val(),estworktype:$('#searchestworktypelist').val(),only_id:(window._alOnlyId||0)},
             success: function(data){
+                var onlyNew = !!window._alOnlyId; window._alOnlyId = 0;
                 if(data.error=='No')
                 {
                     $('#collapsemasteract').show();
                     $('#estactivityitems').html(data.result);
+                    if (onlyNew) $('#estactivityitems').prepend('<div style="padding:4px 2px;color:#197a3a;font-weight:700;font-size:12px;">Activity added. Search or pick a Project Type to see all activities.</div>');
                     $('.estactivitytypename').html(data.estactypename);
                     $('#estactivitytable').show();
                     $('.content-action-wrpr').show();
@@ -102,8 +104,11 @@ $(function() {
         // below), but per explicit direction every field must be filled
         // before an activity can be added, so those three are validated
         // the same way Activity Name/Unit already were.
+        if ($('#searchestworktypelist').length) $('#estworktypelistss1').val($('#searchestworktypelist').val());
+        $('#al-ptype-err').hide();
         if(!$('#estworktypelistss1').val() || $('#estworktypelistss1').val() === '0'){
             $('#estworktypelistss1').next('span').html('Select Project Type').show('slow');
+            $('#al-ptype-err').text('Select Project Type').show();
             error = 1;
         }
         // IOW Group is no longer part of an activity (activities belong to a Project Type only).
@@ -188,6 +193,7 @@ $(function() {
                     {
                         // Let an open Create WBS window refresh its activity list.
                         $(document).trigger('actlib:saved');
+                        if(!editingId && data.id) window._alOnlyId = data.id;
                         $('#saveestactivity').attr("disabled", false);
                         $(".search-and-actions-wrpr").show();
                         $('#listestactivity').trigger('click');
@@ -338,9 +344,10 @@ $(document).on('click', '.al-edit-activity-btn', function(){
             $('#estactivityform .error').hide();
             /* show modal first, then prefill after Bootstrap resets have run */
             window._alEditMode = true;
-            $('#alAddActivityPopup').css('display','block').addClass('in');
-            $('body').addClass('modal-open');
-            if(!$('.modal-backdrop').length) $('<div class="modal-backdrop fade in"></div>').appendTo('body');
+            $('#al-inline-add').show();
+            $('#al-inline-title').text('Edit Activity');
+            $('#searchestworktypelist').val(act.work_type || 0);
+            var _box = document.getElementById('al-inline-add'); if (_box) _box.scrollIntoView({ block: 'start', behavior: 'smooth' });
             setTimeout(function(){
                 $('#estworktypelistss1').val(act.work_type || 0);
                 $('#estactivitytypeid').val(act.activity_type);
