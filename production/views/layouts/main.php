@@ -3550,12 +3550,15 @@ document.addEventListener('click', function(e){
         if(typeof window.pdocViewFile === 'function'){
             window.pdocViewFile(filename, displayName, CWBS_BOQ_FILE_BASE + filename);
             cwbsSplitWithBoq();
+            setTimeout(cwbsSplitWithBoq, 120);   // after the viewer finishes opening
         }
     });
     // Two halves of the screen below the toolbar: BOQ viewer left, Create WBS right.
     function cwbsSplitWithBoq(){
         // Start below the top toolbar so its icons stay clickable.
-        var top = 208;   // just below the toolbar icons
+        // Just below the toolbar icons (measured, so it holds at any zoom level).
+        var ic = document.getElementById('pwt-nav-btn'), icb = ic ? ic.getBoundingClientRect().bottom : 0;
+        var top = (icb > 20 && icb < 400) ? Math.round(icb) + 6 : 160;
         var h = Math.max(300, $(window).height() - top - 40);   // room for the bottom tab bar
         var half = Math.floor($(window).width() / 2);
         $('#pdoc-viewer-popup').css({ left: 0, top: top, width: half - 4, height: h, right: 'auto', bottom: 'auto', transform: 'none' });
