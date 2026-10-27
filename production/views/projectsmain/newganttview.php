@@ -1141,11 +1141,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                 var _shownInGroup = 0;
                 var _dropEmptyGroup = function(){ if (window._ganttCurrentOnly && !_shownInGroup) g.RemoveTaskItem(parentId); };
                 if (!actData.result) { _dropEmptyGroup(); return; }
-                var _sgHid = {}, _sgKids = {};
+                var _sgHid = {}, _sgKids = {}, _sgTis = {}, _sgOrder = [], _sgRows = {};
                 if (!window._ganttCurrentOnly) {
                   (actData.subgroups || []).forEach(function(sg){
                     var _sgTi = new JSGantt.TaskItem('sg_' + sg.id, sg.name, '', '', 'ggroupblack', '', 0, '', 0, 1, parentId, 1, '', '', '', g);
-                    g.AddTaskItem(_sgTi);
+                    _sgTis[sg.id] = _sgTi; _sgOrder.push(sg.id); _sgRows[sg.id] = [];
                     _sgHid[sg.id] = _sgTi.getID();
                     _sgKids[sg.id] = [];
                     if (_wbsRowWgId[parentId]) _wbsRowWgId[_sgTi.getID()] = _wbsRowWgId[parentId];
@@ -1290,10 +1290,16 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     hasProgress: hasProgress,
                     cyc:    _cyc
                   };
-                  if (window._ganttCurrentOnly) _secBuf[_secKey].push(_ti); else g.AddTaskItem(_ti);
+                  if (window._ganttCurrentOnly) _secBuf[_secKey].push(_ti);
+                  else if (_sgRows[act.subgroup_id]) _sgRows[act.subgroup_id].push(_ti);
+                  else g.AddTaskItem(_ti);
                   if (_sgKids[act.subgroup_id]) _sgKids[act.subgroup_id].push(_ti.getID());
                   _shownInGroup++;
                 }
+                _sgOrder.forEach(function(sid){
+                  g.AddTaskItem(_sgTis[sid]);
+                  _sgRows[sid].forEach(function(t){ g.AddTaskItem(t); });
+                });
                 // Sub Group columns: B./A. Start, End and Duration span its activities.
                 Object.keys(_sgKids).forEach(function(sid){
                   var h = _sgHid[sid], bs = null, be = null, as = null, ae = null;
