@@ -1426,8 +1426,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       // it — just a smaller step now that there's one less tier.
       var _cell = _row.querySelector('td.gtaskname');
       if (_cell) {
-        // IOW Group 18px; a heading one level down (Sub Group) 36px; activities 60px.
-        var _lv = _t.getLevel(), _indent = _lv <= 1 ? [0, 18][_lv] : (_t.getGroup() ? 36 : 60);
+        // From the left: Project 4px, IOW Group 20px, Sub Group 40px, activities 60px.
+        var _lv = _t.getLevel(), _indent = !_t.getGroup() ? 60 : (_lv <= 1 ? 4 : (_lv === 2 ? 20 : 40));
         _cell.style.paddingLeft = _indent + 'px';
         // Current view: serial-number badge in the gap left of the activity name.
         var _serial = window._ganttCurrentOnly && window._ganttSerial ? window._ganttSerial[_tid] : null;
