@@ -549,6 +549,19 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   overflow-x: hidden !important;
 }
 /* Widen the activity name column */
+/* Summary bars: IOW Group teal, Sub Group dark navy (project bar stays black). */
+.ggroupiow, .ggroupsub { height: 7px; margin-top: 2px; opacity: 1 !important; }
+.ggroupiow { background: #0f766e; }
+.ggroupsub { background: #14286e; }
+.ggroupiowendpointleft, .ggroupiowendpointright, .ggroupsubendpointleft, .ggroupsubendpointright {
+  overflow: hidden; width: 0; height: 0; top: 2px;
+  border-left: 4px solid transparent; border-bottom: 4px solid transparent; border-right: 4px solid transparent;
+}
+.ggroupiowendpointleft, .ggroupsubendpointleft { float: left; }
+.ggroupiowendpointright, .ggroupsubendpointright { float: right; }
+.ggroupiowendpointleft, .ggroupiowendpointright { border-top: 4px solid #0f766e; }
+.ggroupsubendpointleft, .ggroupsubendpointright { border-top: 4px solid #14286e; }
+.ggroupiowcomplete, .ggroupsubcomplete { float: left; overflow: hidden; height: 3px; opacity: .8; background-color: #777; margin-top: 2px; margin-bottom: 2px; }
 #gantt-container .gtaskname,
 #gantt-container .gspanning.gtaskname {
   min-width: 315px !important;
@@ -1074,7 +1087,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           var _iowTi = new JSGantt.TaskItem(
             iowPid, item.iow_group_name,
             _iowBarS, _iowBarE,
-            'ggroupblack', '', 0, '', 0, 1, projectId, 1, '', '', '', g
+            'ggroupiow', '', 0, '', 0, 1, projectId, 1, '', '', '', g
           );
           var _iowHid = _iowTi.getID();
           iowHashedIds[item.iowGroupid] = _iowHid;
@@ -1118,7 +1131,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
               var _geMax = _ganttCycleEnd ? String(addOneDay(_ganttCycleEnd)).substr(0, 10) : '';
               if (_geMax && _ge && _ge > _geMax) _ge = _geMax;
               if (_gs && _ge && _ge < _gs) _ge = _gs;
-              var t = new JSGantt.TaskItem(gPid + '_' + b, gName, _gs || gS, _ge || gE, 'ggroupblack', '', 0, '', 0, 1, 'sec_' + b, 1, '', '', '', g);
+              var t = new JSGantt.TaskItem(gPid + '_' + b, gName, _gs || gS, _ge || gE, 'ggroupiow', '', 0, '', 0, 1, 'sec_' + b, 1, '', '', '', g);
               var h = t.getID();
               [_groupActDur, _groupActStart, _groupActEnd, _groupBDur, _groupBStart, _groupBEnd].forEach(function(m){ if (m[gHid] !== undefined) m[h] = m[gHid]; });
               if (_wbsRowWgId[gHid]) _wbsRowWgId[h] = _wbsRowWgId[gHid];
@@ -1144,7 +1157,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                 var _sgHid = {}, _sgKids = {}, _sgTis = {}, _sgOrder = [], _sgRows = {};
                 if (!window._ganttCurrentOnly) {
                   (actData.subgroups || []).forEach(function(sg){
-                    var _sgTi = new JSGantt.TaskItem('sg_' + sg.id, sg.name, '', '', 'ggroupblack', '', 0, '', 0, 1, 'iow_' + item.iowGroupid, 1, '', '', '', g);
+                    var _sgTi = new JSGantt.TaskItem('sg_' + sg.id, sg.name, '', '', 'ggroupsub', '', 0, '', 0, 1, 'iow_' + item.iowGroupid, 1, '', '', '', g);
                     _sgTis[sg.id] = _sgTi; _sgOrder.push(sg.id); _sgRows[sg.id] = [];
                     _sgHid[sg.id] = _sgTi.getID();
                     _sgKids[sg.id] = [];
