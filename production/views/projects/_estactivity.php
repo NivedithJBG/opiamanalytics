@@ -412,7 +412,7 @@ use app\models\Resources;
                 <h4 class="modal-title" style="float:left;">Activity List</h4>
                 <button type="button" class="close" data-dismiss="modal" style="float:right;font-size:30px;">&times;</button>
             </div>
-            <div class="modal-body" style="max-height:72vh;overflow-y:auto;">
+            <div class="modal-body" style="height:72vh;overflow-y:auto;">
                 <div id="alListBar" style="display:flex;align-items:center;gap:3px;padding:0 0 8px;"></div>
                 <div class="activities-masters-tab allocate-resource-tabss" id="alListBody"></div>
             </div>

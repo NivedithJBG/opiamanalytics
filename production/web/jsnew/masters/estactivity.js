@@ -24,7 +24,7 @@ $(function() {
             type: 'POST',
             url: '../projects/listestactivity',
             beforeSend : function(){
-                $('.preloader').show();
+                if (!$('#estactivityitems').children().length) $('.preloader').show();
             },
             dataType: "json",
             data: {estactivityname:$('#searchestactivityname').val(),estactivitytype:$('#searchestactivitytype').val(),estworktype:$('#searchestworktypelist').val(),only_ids:((window._alAddedIds||[]).join(','))},
@@ -59,8 +59,10 @@ $(function() {
     $('#estactivitysearch').click(function(){
       $('#listestactivity').trigger('click')
     });
+    var _alSearchT = null;
     $(document).on("keyup", "#searchestactivityname", function(){
-        $('#listestactivity').trigger('click')
+        clearTimeout(_alSearchT);
+        _alSearchT = setTimeout(function(){ $('#listestactivity').trigger('click'); }, 300);
     });
     $('#searchestworktypelist').change(function(){
         $('#listestactivity').trigger('click')
