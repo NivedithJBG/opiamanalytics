@@ -3867,16 +3867,28 @@ document.addEventListener('click', function(e){
         cwbsAddMany('wbssubgroupadd', names.map(function(n){ return { iow_group_id: gid, name: n }; }), $('#cwbs-sgp-msg'), 'Sub Group',
             function(errs){ $b.prop('disabled', false); if (!errs) cwbsNamesReset('cwbs-sgp-names').focus(); });
     });
+    $(document).on('keydown', '.cwbs-hp-ren', function(e){
+        if (e.key === 'Enter') { e.preventDefault(); $(this).closest('tr').find('.cwbs-hp-ib[data-a="ren"]').click(); }
+        else if (e.key === 'Escape') { var $td = $(this).closest('td'); $td.text($td.data('orig')).removeData('orig'); $td.closest('tr').find('.cwbs-hp-ib[data-a="ren"]').html('&#9998;').attr('title', 'Rename'); }
+    });
     $(document).on('click', '.cwbs-hp-ib', function(){
         var k = $(this).data('k'), a = $(this).data('a'), id = $(this).data('id');
         var $msg = k === 'g' ? $('#cwbs-iowp-msg') : $('#cwbs-sgp-msg');
         var base = k === 'g' ? 'wbsheading' : 'wbssubgroup';
-        var name = $.trim($(this).closest('tr').children('td').eq(1).text());
+        var $nameTd = $(this).closest('tr').children('td').eq(1);
+        var name = $.trim($nameTd.data('orig') != null ? $nameTd.data('orig') : $nameTd.text());
         if (a === 'up' || a === 'down') { cwbsPost(base + 'move', { id: id, dir: a }, $msg, ''); return; }
         if (a === 'ren') {
-            var nn = window.prompt('Rename "' + name + '" to:', name);
-            if (nn === null || !$.trim(nn) || $.trim(nn) === name) return;
-            cwbsPost(base + 'rename', { id: id, name: $.trim(nn) }, $msg, 'Renamed');
+            var $in = $nameTd.find('input.cwbs-hp-ren');
+            if (!$in.length) {
+                $nameTd.data('orig', name).html('<input type="text" class="cwbs-hp-ren" style="width:100%;box-sizing:border-box;border:1px solid #0f5c52;border-radius:4px;padding:3px 6px;font-size:12.5px;">');
+                $nameTd.find('input').val(name).focus().select();
+                $(this).html('&#10003;').attr('title', 'Save');
+                return;
+            }
+            var nn = $.trim($in.val());
+            if (!nn || nn === name) { $nameTd.removeData('orig').text(name); $(this).html('&#9998;').attr('title', 'Rename'); return; }
+            cwbsPost(base + 'rename', { id: id, name: nn }, $msg, 'Renamed');
             return;
         }
         if (a === 'del') {
