@@ -482,9 +482,12 @@ class ProjectsmainController extends Controller
         if (!$iowGroupId) return ['error' => 'No iow_group_id', 'items' => []];
         $db = \Yii::$app->db;
 
+        // Opened from a Sub Group row: only that Sub Group's activities.
+        $sgId = (int)(\Yii::$app->request->post('subgroup_id', 0));
+        if ($sgId) $this->_sgEnsure();
         $rows = $db->createCommand(
             "SELECT sa.id, sa.name, sa.unit, sa.quantity, sa.duration, sa.activity_id AS wan_id, sa.resource_units AS r_unit
-             FROM scheduleactivities sa
+             FROM scheduleactivities sa" . ($sgId ? " JOIN wbs_subgroup_activities m ON m.wan_id = sa.activity_id AND m.subgroup_id = " . $sgId : '') . "
              WHERE sa.iow_group_id=:g AND sa.projectId=:p AND sa.status=0
              ORDER BY sa.sortorder ASC, sa.id ASC",
             [':g' => $iowGroupId, ':p' => $pid]

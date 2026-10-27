@@ -5115,9 +5115,12 @@ window.loadIowGroupOptions = function(selectEl, cb){
     return (schQty > 0 && sumDurPerUnit > 0) ? Math.ceil((schQty * sumDurPerUnit) / rUnit) : 1;
   }
 
-  window.openEditActivitiesModal = function(iowName, iowGroupId){
+  var _eamSubgroupId = 0;
+  window.openEditActivitiesModal = function(iowName, iowGroupId, subgroupId){
     _eamIowName = iowName || '';
     _eamIowGroupId = iowGroupId || 0;
+    _eamSubgroupId = subgroupId || 0;
+    document.getElementById('eam-iow-del-btn').style.display = _eamSubgroupId ? 'none' : '';
     _eamReloadPending = false;
     document.getElementById('eam-hdr-title-suffix').textContent = iowName ? (' — ' + iowName) : '';
     eamRenderIowRowView();
@@ -5149,7 +5152,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
     target.innerHTML = '<p id="eam-empty">Loading…</p>';
     $.ajax({
       type: 'POST', url: '../projectsmain/wbsactivitiesbyiow', dataType: 'json',
-      data: { iow_group_id: _eamIowGroupId },
+      data: { iow_group_id: _eamIowGroupId, subgroup_id: _eamSubgroupId },
       success: function(d){
         var items = d.items || [];
         _eamTasksByAct = {};
