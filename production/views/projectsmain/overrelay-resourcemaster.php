@@ -7,7 +7,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 
 <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/resourcetype.js?v=6" type="text/javascript"></script>
 <script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/resourcegroup.js?v=2" type="text/javascript"></script>
-<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/resource.js?v=2" type="text/javascript"></script>
+<script src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/resource.js?v=<?php echo filemtime(__DIR__ . "/../../web/jsnew/projectsmain/resource.js"); ?>" type="text/javascript"></script>
 
 <style>
 /* ── shared resize handles ──────────────────────────────────── */
