@@ -599,6 +599,7 @@
           _sessionAdded.push(row);
           renderSessionAdded();
           if(typeof window.reloadGantt === 'function') window.reloadGantt();
+          relWin.classList.remove('rl2-open');   // saved: close the window
 
           /* Reset only the Activity pickers + lag for the next entry —
              IOW selections on both sides stay put (per user request: keep
@@ -973,7 +974,7 @@
         $(btn).prop('disabled', false);
         if(d && d.error==='No' && d.inserted > 0){
           if(typeof window.reloadGantt === 'function') window.reloadGantt();
-          loadLiveList();
+          closeSub('rel-live-popup');   // saved: close the window
         } else {
           alert((d && d.errortext) || 'Could not save — check that both activities are valid and this relationship doesn\'t already exist.');
         }
@@ -1032,7 +1033,7 @@
       success:function(d){
         if(d && d.error==='No'){
           if(typeof window.reloadGantt === 'function') window.reloadGantt();
-          loadLiveList();
+          closeSub('rel-live-popup');   // saved: close the window
         } else { alert('Could not delete.'); }
       }
     });
@@ -1114,7 +1115,7 @@
         $(btn).prop('disabled', false);
         if(d && d.error==='No'){
           if(typeof window.reloadGantt === 'function') window.reloadGantt();
-          loadLiveList();
+          closeSub('rel-live-popup');   // saved: close the window
         } else {
           alert((d && d.errortext) || 'Could not save.');
         }
