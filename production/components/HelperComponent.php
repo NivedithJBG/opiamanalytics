@@ -698,6 +698,10 @@ class HelperComponent extends Component
                     $ef = $efFloor;
                     $es = $wd($ef, $dur[$id] - 1, 'previous');
                 }
+                if ($projStart && $es < $projStart) {           // never before the project start
+                    $es = $wd($projStart, 0, 'next');
+                    $ef = $wd($es, $dur[$id] - 1, 'next');
+                }
                 $ES[$id] = $es;
                 $EF[$id] = $ef;
                 $progress = true;
