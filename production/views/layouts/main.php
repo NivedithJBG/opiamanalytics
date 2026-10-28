@@ -3854,7 +3854,7 @@ document.addEventListener('click', function(e){
     $(document).on('click', '.cwbs-hp-x', function(){ $(this).closest('.cwbs-hp').removeClass('on'); });
     $(document).on('click', '#cwbs-iowp-add', function(){
         var names = cwbsNames('cwbs-iowp-names');
-        if (!names.length) { $('#cwbs-iowp-msg').css('color','#c00').text('Enter the IOW Group name.'); return; }
+        if (!names.length) { if ($('#cwbs-iowp-msg').text().indexOf('added') < 0) $('#cwbs-iowp-msg').css('color','#555').text('Type an IOW Group name, then Add to Gantt.'); return; }
         var $b = $(this).prop('disabled', true);
         cwbsAddMany('wbsheadingadd', names.map(function(n){ return { name: n }; }), $('#cwbs-iowp-msg'), 'IOW Group',
             function(errs){ $b.prop('disabled', false); if (!errs) cwbsNamesReset('cwbs-iowp-names').focus(); });
@@ -3862,7 +3862,7 @@ document.addEventListener('click', function(e){
     $(document).on('click', '#cwbs-sgp-add', function(){
         var gid = $('#cwbs-sgp-group').val(), names = cwbsNames('cwbs-sgp-names');
         if (!gid) { $('#cwbs-sgp-msg').css('color','#c00').text('Select the IOW Group.'); return; }
-        if (!names.length) { $('#cwbs-sgp-msg').css('color','#c00').text('Enter the Sub Group name.'); return; }
+        if (!names.length) { if ($('#cwbs-sgp-msg').text().indexOf('added') < 0) $('#cwbs-sgp-msg').css('color','#555').text('Type a Sub Group name, then Add to Gantt.'); return; }
         var $b = $(this).prop('disabled', true);
         cwbsAddMany('wbssubgroupadd', names.map(function(n){ return { iow_group_id: gid, name: n }; }), $('#cwbs-sgp-msg'), 'Sub Group',
             function(errs){ $b.prop('disabled', false); if (!errs) cwbsNamesReset('cwbs-sgp-names').focus(); });
