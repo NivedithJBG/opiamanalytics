@@ -525,7 +525,7 @@
       _relPickSide = (_relPickSide === 'prec') ? 'dep' : 'prec';
       _updatePickHint();
     }
-    if(_acts.length){ fill(); } else { loadGanttActivities(fill); }
+    loadGanttActivities(fill);   // always fresh: the Gantt order may have changed
     return true;
   };
 
@@ -942,7 +942,7 @@
           });
       }
     }
-    if(_acts.length){ build(); } else { loadGanttActivities(build); }
+    loadGanttActivities(build);   // always fresh: the Gantt order may have changed
   }
 
   $(document).on('click', '.rl2-new-save-btn', function(){
