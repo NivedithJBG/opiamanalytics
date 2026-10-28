@@ -1373,8 +1373,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       _groupActEnd  [_projHid] = _projAEndMax;
     }
 
-    // Open the timeline at the project start date (not today); the cycle view keeps its own window.
-    if (_projStartStr && !window._ganttCurrentOnly) g.setScrollTo(_projStartStr);
+    // Open the timeline at the project start date (not today); the cycle view at its cycle start (or the project start).
+    var _scrollTo = window._ganttCurrentOnly ? (_ganttCycleStart || _projStartStr) : _projStartStr;
+    if (_scrollTo) g.setScrollTo(_scrollTo);
     g.Draw();
 
     // Exposed so the #gantt-win resize handler (main.php) can switch
