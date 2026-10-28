@@ -21431,6 +21431,7 @@ public function actionActivitymusterprocess()
             'working_hours' => $workingHours,
         ], 'activity_id = ' . $activityId)->execute();
         $submittedIds = [];
+        $prodChanged = [];   // library task id => new productivity
         if (!empty($_POST['task_name'])) {
             foreach ($_POST['task_name'] as $j => $taskName) {
                 if (trim($taskName) === '') continue;
@@ -21439,6 +21440,8 @@ public function actionActivitymusterprocess()
                     $newUnit = $_POST['task_unit'][$j] ?? '';
                     $newQty  = (float)($_POST['task_qty'][$j] ?? 0);
                     $newProd = (float)($_POST['task_productivity'][$j] ?? 0);
+                    $oldProd = (float)$connection->createCommand("SELECT productivity FROM activity_tasks WHERE id = :i", [':i' => $existingId])->queryScalar();
+                    if (abs($oldProd - $newProd) > 0.0000001) $prodChanged[$existingId] = $newProd;
                     $connection->createCommand()->update('activity_tasks', [
                         'task_name'    => $taskName,
                         'task_unit'    => $newUnit,
@@ -21448,9 +21451,9 @@ public function actionActivitymusterprocess()
                     ], 'id = ' . $existingId)->execute();
                     $submittedIds[] = $existingId;
 
-                    // The Activity Library is only the template: editing it here
-                    // does not change projects that already use this task (each
-                    // project keeps its own copy in schedule_task_new).
+                    // Productivity is universal: a change here is carried to every
+                    // project's copy of this task (see _applyLibraryProductivity).
+                    // Other task fields stay project-specific.
                 } else {
                     $connection->createCommand()->insert('activity_tasks', [
                         'activity_id'  => $activityId,
@@ -21471,7 +21474,65 @@ public function actionActivitymusterprocess()
         } else {
             $connection->createCommand("DELETE FROM activity_tasks WHERE activity_id = $activityId")->execute();
         }
-        return json_encode(['error' => 'No']);
+        $updated = $prodChanged ? $this->_applyLibraryProductivity($activityId, $prodChanged) : 0;
+        return json_encode(['error' => 'No', 'gantt_updated' => $updated]);
+    }
+
+    // A productivity change in the Activity Library goes to every project that
+    // uses the activity: the project's task copy takes the new productivity,
+    // the activity's duration is recalculated (same formula as Create WBS /
+    // Edit Activities: ceil(qty × Σ(task qty ÷ productivity) ÷ R.Unit)), and the
+    // project's schedule is recalculated. Completed activities are not touched.
+    private function _applyLibraryProductivity($libActivityId, array $prodChanged)
+    {
+        $db = \Yii::$app->db;
+        // 1. Project task copies of the changed library tasks.
+        foreach ($prodChanged as $taskId => $prod) {
+            $db->createCommand(
+                "UPDATE schedule_task_new stn
+                 JOIN scheduleactivities sa ON sa.id = stn.activity_Id AND sa.status = 0 AND COALESCE(sa.completed_status, 0) <> 1
+                 SET stn.task_productivity = :p,
+                     stn.Budgeted_Duration = IF(stn.task_qty > 0 AND :p2 > 0, ROUND(stn.task_qty / :p3, 4), 0)
+                 WHERE stn.task_Id = :t AND stn.status = 0",
+                [':p' => $prod, ':p2' => $prod, ':p3' => $prod, ':t' => (int)$taskId]
+            )->execute();
+        }
+        // 2. Activities affected: those using the library activity, or a changed task.
+        $ids = implode(',', array_map('intval', array_keys($prodChanged)));
+        $acts = $db->createCommand(
+            "SELECT DISTINCT sa.id, sa.projectId, sa.quantity, sa.resource_units, sa.start_date, sa.duration, sa.activity_id AS wan_id, wa.activity_Id AS lib_id
+             FROM scheduleactivities sa
+             LEFT JOIN workgroup_activities_new wa ON wa.id = sa.activity_id
+             WHERE sa.status = 0 AND COALESCE(sa.completed_status, 0) <> 1
+               AND (wa.activity_Id = :a OR sa.id IN (SELECT activity_Id FROM schedule_task_new WHERE status = 0 AND task_Id IN ($ids)))",
+            [':a' => (int)$libActivityId]
+        )->queryAll();
+        $projects = []; $n = 0;
+        foreach ($acts as $a) {
+            $tasks = $db->createCommand(
+                "SELECT task_qty AS qty, task_productivity AS prod FROM schedule_task_new WHERE activity_Id = :s AND status = 0",
+                [':s' => $a['id']]
+            )->queryAll();
+            if (!$tasks && $a['lib_id']) {   // no project copy yet: the library tasks are used
+                $tasks = $db->createCommand("SELECT task_qty AS qty, productivity AS prod FROM activity_tasks WHERE activity_id = :l", [':l' => $a['lib_id']])->queryAll();
+            }
+            $sum = 0.0;
+            foreach ($tasks as $t) { if ((float)$t['prod'] > 0) $sum += (float)$t['qty'] / (float)$t['prod']; }
+            $qty = (float)$a['quantity']; $ru = (float)$a['resource_units'] ?: 1.0;
+            $dur = ($qty > 0 && $sum > 0) ? (int)ceil(($qty * $sum) / $ru) : 1;
+            if ($dur === (int)$a['duration']) continue;
+            $start = $a['start_date'] ?: date('Y-m-d');
+            $end = date('Y-m-d', strtotime($start . ' + ' . ($dur - 1) . ' days'));
+            $db->createCommand("UPDATE scheduleactivities SET duration = :d, old_duration = :d, end_date = :e WHERE id = :i", [':d' => $dur, ':e' => $end, ':i' => $a['id']])->execute();
+            if ($a['wan_id']) $db->createCommand("UPDATE workgroup_activities_new SET duration = :d WHERE id = :w", [':d' => $dur, ':w' => $a['wan_id']])->execute();
+            $projects[(int)$a['projectId']] = true; $n++;
+        }
+        // 3. Each changed project's schedule (planned, then actual dates).
+        foreach (array_keys($projects) as $pid) {
+            \Yii::$app->helper->RecalculatePlannedDates($pid);
+            \Yii::$app->helper->GetRelationcorrect($pid);
+        }
+        return $n;
     }
 
     public function actionDeleteactivity()
