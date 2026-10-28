@@ -5158,6 +5158,42 @@ class ProjectsmainController extends Controller
                 'cost'     => round($curPart, 2),
             ];
         }
+        // Project Overhead (Support Activities: Project Overhead, Project General
+        // Expenses) — estimate-only, no Gantt bar — is part of every cycle's cost,
+        // as in the Project Estimate. Per-day items (unit Days): rate x the cycle's
+        // days. Other items (e.g. L.S): their amount spread evenly over the project
+        // duration, each cycle taking its share of days.
+        $ohRows = $db->createCommand(
+            "SELECT wa.id AS wan_id, wa.activity_Id AS lib_activity_id, wa.activity_Name AS name, wa.activity_Unit AS unit,
+                    COALESCE(ig.name, 'Support Activities') AS group_name,
+                    COALESCE((SELECT pe.activity_qty FROM pricing_estimate_new pe WHERE pe.activity_Id = wa.id AND pe.project_Id = wa.project_Id AND pe.pricing_status = 0 LIMIT 1), 0) AS quantity,
+                    COALESCE((SELECT ROUND(SUM(pern.rate * pern.quantity), 2) FROM pricing_estimate_resources_new pern
+                              WHERE pern.activity_id = wa.id AND pern.project_id = wa.project_Id AND pern.pricing_status = 0), 0) AS rate
+             FROM workgroup_activities_new wa
+             LEFT JOIN iow_groups ig ON ig.id = wa.iow_group_id
+             WHERE wa.project_Id = :p AND wa.iow_group_id IN (17, 18) AND wa.pr_status = 0
+             ORDER BY wa.sortorder ASC, wa.id ASC",
+            [':p' => $pid]
+        )->queryAll();
+        $cycDays = function($k) use ($cycleLen, $duration) { return max(0, min($k * $cycleLen, $duration) - ($k - 1) * $cycleLen); };
+        foreach ($ohRows as $o) {
+            $rate = (float)$o['rate']; $qty = (float)$o['quantity'];
+            $perDay = in_array(strtolower(trim((string)$o['unit'])), ['day', 'days', 'dys', 'dy'], true);
+            for ($k = 1; $k <= $n; $k++) {
+                $bars[$k] += $perDay ? $rate * $cycDays($k) : ($duration > 0 ? $qty * $rate * $cycDays($k) / $duration : 0);
+            }
+            $d = $cycDays($current);
+            $cq = $perDay ? $d : ($duration > 0 ? $qty * $d / $duration : 0);
+            $currentItems[] = [
+                'sched_id' => 0, 'wan_id' => (int)$o['wan_id'], 'lib_activity_id' => (int)$o['lib_activity_id'],
+                'group' => $o['group_name'], 'name' => $o['name'], 'unit' => $o['unit'],
+                'quantity' => $qty, 'executed' => 0, 'remaining' => round($cq, 2), 'cycle_qty' => round($cq, 2),
+                'done_cycle' => 0, 'rate' => $rate, 'days' => $d, 'duration' => $duration,
+                'cost' => round($cq * $rate, 2), 'overhead' => true,
+            ];
+            $ohTotal = ($ohTotal ?? 0) + $qty * $rate;
+        }
+
         // Quoted rate per project activity, entered in the Project Cost popup (kept in
         // cf_dashboard_targets as qtd_rate_<wan_id> until it is filled from the BOQ).
         $qtd = $db->createCommand(
@@ -5180,7 +5216,7 @@ class ProjectsmainController extends Controller
             ];
         }
 
-        $totalCost = 0.0;
+        $totalCost = (float)($ohTotal ?? 0);   // Project Overhead included, as in the Project Estimate
         foreach ($acts as $a) {
             $totalCost += (float)$a['quantity'] * (float)$a['rate'];
         }
