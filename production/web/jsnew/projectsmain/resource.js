@@ -135,6 +135,11 @@ $(function(){
             $('#editresourcename').next('.error').text('Enter Resource Name').show();
             return;
         }
+        $('#editresaccerr').hide();
+        if(!(+$('#editresacchead').val() > 0)){
+            $('#editresaccerr').text('Select the Account Sub Group and Account Head').show();
+            return;
+        }
         $.ajax({
             type: 'POST',
             url: '../resources/update',
@@ -145,7 +150,8 @@ $(function(){
                 unit:       $('#editresourceunit').val().trim(),
                 rate:       $('#editresourcerate').val(),
                 restypeid:  $('#editresourcetype').val(),
-                resgroupid: $('#editresourcegroup').val()
+                resgroupid: $('#editresourcegroup').val(),
+                account_id: $('#editresacchead').val()
             },
             beforeSend: function(){ $('#saveresourcebutton').attr('disabled', true); },
             success: function(data){
@@ -199,6 +205,7 @@ function openEditResource(btn) {
     $('#editresourcerate').val(rate);
     $('#saveresourceval').val(id);
     $('#editresourcetype').val(typeId);
+    if (window._resFillEditAccount) window._resFillEditAccount(String($btn.data('accid') || 0));
 
     $('#editresourcegroup').html('<option value="0">-- Select Group --</option>');
     if(typeId && typeId != '0'){

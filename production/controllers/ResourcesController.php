@@ -19,7 +19,7 @@ class ResourcesController extends Controller
         $search   = isset($_POST['resourcename']) ? trim($_POST['resourcename']) : '';
         $typeId   = isset($_POST['restypeid'])    ? (int)$_POST['restypeid']   : 0;
         $groupId  = isset($_POST['resgroupid'])   ? (int)$_POST['resgroupid']  : 0;
-        $sql = "SELECT r.Resource_Id, r.Name, r.Unit, r.Price, r.ResourceType_Id, r.Resource_group_Id, r.sortorder,
+        $sql = "SELECT r.Resource_Id, r.Name, r.Unit, r.Price, r.ResourceType_Id, r.Resource_group_Id, r.sortorder, r.Resource_Acc_Id,
                        rt.Name AS TypeName, rg.Resource_group_Name AS GroupName
                 FROM resources r
                 LEFT JOIN resourcetype rt ON rt.ResourceType_Id = r.ResourceType_Id
@@ -95,6 +95,7 @@ class ResourcesController extends Controller
                                .         'data-rate="' . $rate . '" '
                                .         'data-typeid="' . (int)$data['ResourceType_Id'] . '" '
                                .         'data-groupid="' . (int)$data['Resource_group_Id'] . '" '
+                               .         'data-accid="' . (int)($data['Resource_Acc_Id'] ?? 0) . '" '
                                .         'onclick="openEditResource(this)" '
                                .         'style="border-radius:50%;width:28px;height:28px;padding:0;margin-right:4px;">'
                                .         '<span class="icon-pencil"></span></button>'
@@ -115,6 +116,7 @@ class ResourcesController extends Controller
     public function actionCreate()
     {
         if (isset($_POST['resourcename'])) {
+            if ((int)($_POST['account_id'] ?? 0) <= 0) return json_encode(['error' => 'Yes', 'errortext' => 'Select the Account Sub Group and Account Head.']);
             $model = new Resources();
             $model->Name              = $_POST['resourcename'];
             $model->ResourceType_Id   = isset($_POST['restypeid'])  ? (int)$_POST['restypeid']  : 0;
@@ -161,6 +163,14 @@ class ResourcesController extends Controller
         )->queryAll()];
     }
 
+    public function actionAccountheadsub()
+    {
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $head = (int)($_POST['account_id'] ?? 0);
+        $sub = $head ? (int)\Yii::$app->db->createCommand("SELECT subgrp_id FROM subgroup_accounts WHERE account_id = :a ORDER BY id ASC LIMIT 1", [':a' => $head])->queryScalar() : 0;
+        return ['error' => 'No', 'subgroup_id' => $sub];
+    }
+
     public function actionAccountheads()
     {
         \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -183,6 +193,8 @@ class ResourcesController extends Controller
                 if (isset($_POST['rate']) && $_POST['rate'] !== '') $model->Price = (float)$_POST['rate'];
                 if (isset($_POST['restypeid'])  && $_POST['restypeid']  != '') $model->ResourceType_Id   = (int)$_POST['restypeid'];
                 if (isset($_POST['resgroupid']) && $_POST['resgroupid'] != '') $model->Resource_group_Id = (int)$_POST['resgroupid'];
+                if ((int)($_POST['account_id'] ?? 0) <= 0) return json_encode(['error' => 'Yes', 'errortext' => 'Select the Account Sub Group and Account Head.']);
+                $model->Resource_Acc_Id = (int)$_POST['account_id'];
                 if ($model->save(false)) {
                     return json_encode(['Id' => $model->Resource_Id, 'Name' => $model->Name, 'error' => 'No']);
                 } else {

@@ -196,6 +196,13 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
           <button type="button" class="btn btn-primary" id="saveresourcebutton"><span class="icon-check"></span> Save</button>
           <input type="hidden" id="saveresourceval" value=""></div>
       </div>
+      <div class="row">
+        <div class="col-md-3"><div class="form-group"><label>Account Sub Group <span style="color:red;">*</span></label>
+          <select id="editresaccsub" class="form-control"><option value="0">-- Select Sub Group --</option></select></div></div>
+        <div class="col-md-3"><div class="form-group"><label>Account Head <span style="color:red;">*</span></label>
+          <select id="editresacchead" class="form-control"><option value="0">-- Select Sub Group first --</option></select>
+          <span class="error" id="editresaccerr" style="display:none;color:red;"></span></div></div>
+      </div>
     </div>
 
     <div class="preloader"          style="display:none;text-align:center;padding:20px 0;"><img src="<?php echo Yii::$app->request->baseUrl; ?>/images/loader.gif"></div>
@@ -319,11 +326,12 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
       </div>
       <!-- The resource's Account Head (Finance), picked under its Account Sub Group. -->
       <div class="row" style="margin-top:12px;">
-        <div class="col-md-6"><div class="form-group"><label>Account Sub Group</label>
+        <div class="col-md-6"><div class="form-group"><label>Account Sub Group <span style="color:red;">*</span></label>
           <select id="addresaccsub" class="form-control"><option value="0">-- Select Sub Group --</option></select>
           </div></div>
-        <div class="col-md-6"><div class="form-group"><label>Account Head</label>
+        <div class="col-md-6"><div class="form-group"><label>Account Head <span style="color:red;">*</span></label>
           <select id="addresacchead" class="form-control"><option value="0">-- Select Sub Group first --</option></select>
+          <span class="error" id="addresaccerr" style="display:none;color:red;"></span>
           </div></div>
       </div>
     </form>
@@ -631,25 +639,40 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
     $.ajax({ type:'POST', url:'../resources/accountsubgroups', dataType:'json', success:function(d){
       var o = '<option value="0">-- Select Sub Group --</option>';
       ((d && d.items) || []).forEach(function(x){ o += '<option value="' + x.id + '">' + _resEsc(x.name) + '</option>'; });
-      $('#addresaccsub').html(o);
+      $('#addresaccsub, #editresaccsub').html(o);
     }});
-    $(document).on('change', '#addresaccsub', function(){
-      var sub = this.value, $h = $('#addresacchead');
-      if (sub === '0') { $h.html('<option value="0">-- Select Sub Group first --</option>'); return; }
+    function _resLoadHeads(sub, $h, selectId){
+      if (!sub || sub === '0') { $h.html('<option value="0">-- Select Sub Group first --</option>'); return; }
       $h.html('<option value="0">Loading…</option>');
       $.ajax({ type:'POST', url:'../resources/accountheads', dataType:'json', data:{ subgroup_id: sub }, success:function(d){
         var items = (d && d.items) || [];
         var o = '<option value="0">' + (items.length ? '-- Select Account Head --' : 'No Account Heads under this Sub Group') + '</option>';
         items.forEach(function(x){ o += '<option value="' + x.id + '">' + _resEsc(x.name) + '</option>'; });
         $h.html(o);
+        if (selectId) $h.val(String(selectId));
       }});
-    });
+    }
+    $(document).on('change', '#addresaccsub', function(){ _resLoadHeads(this.value, $('#addresacchead')); });
+    $(document).on('change', '#editresaccsub', function(){ _resLoadHeads(this.value, $('#editresacchead')); });
+    // Edit form opened: show the resource's current Sub Group and Account Head.
+    window._resFillEditAccount = function(accId){
+      $('#editresaccerr').hide();
+      $('#editresaccsub').val('0'); $('#editresacchead').html('<option value="0">-- Select Sub Group first --</option>');
+      if (!accId || accId === '0') return;
+      $.ajax({ type:'POST', url:'../resources/accountheadsub', dataType:'json', data:{ account_id: accId }, success:function(d){
+        var sub = d && d.subgroup_id ? String(d.subgroup_id) : '0';
+        $('#editresaccsub').val(sub);
+        _resLoadHeads(sub, $('#editresacchead'), accId);
+      }});
+    };
 
     /* ADD RESOURCE */
     $('#saveresource').on('click', function(){
       var name = $('#resourcename1').val().trim();
       $('#resourcename1').next('.error').hide();
       if(!name){ $('#resourcename1').next('.error').text('Enter Resource Name').show(); return; }
+      $('#addresaccerr').hide();
+      if(!(+$('#addresacchead').val() > 0)){ $('#addresaccerr').text('Select the Account Sub Group and Account Head').show(); return; }
       var $btn = $(this).attr('disabled', true);
       $.ajax({ type:'POST', url:'../resources/create', dataType:'json',
         data:{
