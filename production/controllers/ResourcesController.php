@@ -130,7 +130,8 @@ class ResourcesController extends Controller
             $model->lead_time         = 0;
             $model->credit_period     = 0;
             $model->Project_Id        = 0;
-            $model->Resource_Acc_Id   = 0;
+            // Account Head the resource is booked to (Add Resource: Account Sub Group -> Account Head).
+            $model->Resource_Acc_Id   = isset($_POST['account_id']) ? (int)$_POST['account_id'] : 0;
             $model->Resource_Location = '';
             $model->pricing_status    = 0;
             $model->log_check         = 0;
@@ -148,6 +149,28 @@ class ResourcesController extends Controller
                 return json_encode(['error' => 'Yes', 'errortext' => 'Cannot save resource. Please try again.']);
             }
         }
+    }
+
+    // Add Resource: Account Sub Groups (Finance), and the Account Heads mapped to
+    // one of them in Finance (subgroup_accounts).
+    public function actionAccountsubgroups()
+    {
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        return ['error' => 'No', 'items' => \Yii::$app->db->createCommand(
+            "SELECT id, TRIM(name) AS name FROM accounts_sub WHERE COALESCE(Status, 0) = 0 ORDER BY TRIM(name) ASC"
+        )->queryAll()];
+    }
+
+    public function actionAccountheads()
+    {
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $sub = (int)($_POST['subgroup_id'] ?? 0);
+        if (!$sub) return ['error' => 'No', 'items' => []];
+        return ['error' => 'No', 'items' => \Yii::$app->db->createCommand(
+            "SELECT DISTINCT ai.id, TRIM(ai.name) AS name
+             FROM subgroup_accounts sa JOIN accounts_item ai ON ai.id = sa.account_id AND COALESCE(ai.Status, 0) = 0
+             WHERE sa.subgrp_id = :s ORDER BY TRIM(ai.name) ASC", [':s' => $sub]
+        )->queryAll()];
     }
 
     public function actionUpdate()

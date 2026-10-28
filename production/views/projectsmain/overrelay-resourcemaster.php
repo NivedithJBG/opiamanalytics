@@ -317,6 +317,15 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
           <input id="resourcerate1" type="text" inputmode="decimal" autocomplete="off" class="form-control" placeholder="0.00">
           </div></div>
       </div>
+      <!-- The resource's Account Head (Finance), picked under its Account Sub Group. -->
+      <div class="row" style="margin-top:12px;">
+        <div class="col-md-6"><div class="form-group"><label>Account Sub Group</label>
+          <select id="addresaccsub" class="form-control"><option value="0">-- Select Sub Group --</option></select>
+          </div></div>
+        <div class="col-md-6"><div class="form-group"><label>Account Head</label>
+          <select id="addresacchead" class="form-control"><option value="0">-- Select Sub Group first --</option></select>
+          </div></div>
+      </div>
     </form>
   </div>
   <div class="rl-sw-footer">
@@ -617,6 +626,25 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
       });
     });
 
+    /* Account Sub Group -> Account Heads mapped to it in Finance. */
+    var _resEsc = function(v){ return $('<div>').text(v == null ? '' : v).html(); };
+    $.ajax({ type:'POST', url:'../resources/accountsubgroups', dataType:'json', success:function(d){
+      var o = '<option value="0">-- Select Sub Group --</option>';
+      ((d && d.items) || []).forEach(function(x){ o += '<option value="' + x.id + '">' + _resEsc(x.name) + '</option>'; });
+      $('#addresaccsub').html(o);
+    }});
+    $(document).on('change', '#addresaccsub', function(){
+      var sub = this.value, $h = $('#addresacchead');
+      if (sub === '0') { $h.html('<option value="0">-- Select Sub Group first --</option>'); return; }
+      $h.html('<option value="0">Loading…</option>');
+      $.ajax({ type:'POST', url:'../resources/accountheads', dataType:'json', data:{ subgroup_id: sub }, success:function(d){
+        var items = (d && d.items) || [];
+        var o = '<option value="0">' + (items.length ? '-- Select Account Head --' : 'No Account Heads under this Sub Group') + '</option>';
+        items.forEach(function(x){ o += '<option value="' + x.id + '">' + _resEsc(x.name) + '</option>'; });
+        $h.html(o);
+      }});
+    });
+
     /* ADD RESOURCE */
     $('#saveresource').on('click', function(){
       var name = $('#resourcename1').val().trim();
@@ -629,7 +657,8 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
           unit:         $('#resourceunit1').val().trim(),
           rate:         $('#resourcerate1').val(),
           restypeid:    $('#addresourcetype').val(),
-          resgroupid:   $('#addresourcegroup').val()
+          resgroupid:   $('#addresourcegroup').val(),
+          account_id:   $('#addresacchead').val() || 0
         },
         success:function(d){
           $btn.attr('disabled', false);
@@ -639,6 +668,8 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
             $('#resourcerate1').val('');
             $('#addresourcetype').val('0');
             $('#addresourcegroup').html('<option value="0">-- Select Group --</option>');
+            $('#addresaccsub').val('0');
+            $('#addresacchead').html('<option value="0">-- Select Sub Group first --</option>');
             if($('#resourcelistsection').html().trim()){
               setTimeout(function(){ $('#listresource').trigger('click'); }, 200);
             }
