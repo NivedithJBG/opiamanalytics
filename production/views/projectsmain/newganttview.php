@@ -1351,6 +1351,9 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         _secBuf[b].forEach(function(t){ if (!t.getGroup()) window._ganttSerial[t.getID()] = ++_sn; });
       });
       ['c', 'n'].forEach(function(b){
+        // An empty section has no dates of its own (the chart would stretch back to today): pin it to the project start.
+        var _secPin = _ganttCycleStart || '<?= ($project && $project->start_date) ? substr($project->start_date, 0, 10) : '' ?>';
+        if (!_secBuf[b].length && _secPin) { _secTi[b].setStart(_secPin); _secTi[b].setEnd(_secPin); }
         g.AddTaskItem(_secTi[b]);   // both headings always shown, even when a section is empty
         _secBuf[b].forEach(function(t){ g.AddTaskItem(t); });
       });
