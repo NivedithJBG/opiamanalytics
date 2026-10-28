@@ -599,7 +599,6 @@
           _sessionAdded.push(row);
           renderSessionAdded();
           if(typeof window.reloadGantt === 'function') window.reloadGantt();
-          relWin.classList.remove('rl2-open');   // saved: close the window
 
           /* Reset only the Activity pickers + lag for the next entry —
              IOW selections on both sides stay put (per user request: keep
