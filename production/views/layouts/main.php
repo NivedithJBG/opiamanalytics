@@ -3922,8 +3922,8 @@ document.addEventListener('click', function(e){
         sel.style.display = 'none';
         function selText(){ var o = sel.options[sel.selectedIndex]; return o && o.value ? o.textContent : ''; }
         function sync(){ inp.value = selText(); }
-        function render(){
-            var q = inp.value.trim().toLowerCase(), html = '', n = 0;
+        function render(all){   // all: show every group (on opening the list), not just the one already chosen
+            var q = all === true ? '' : inp.value.trim().toLowerCase(), html = '', n = 0;
             for (var i = 0; i < sel.options.length; i++) {
                 var o = sel.options[i]; if (!o.value) continue;
                 if (q && o.textContent.toLowerCase().indexOf(q) < 0) continue;
@@ -3932,7 +3932,7 @@ document.addEventListener('click', function(e){
             list.innerHTML = n ? html : '<div class="cwbs-ss-none">' + (sel.options.length > 1 ? 'No IOW Group matches' : 'Add an IOW Group in the IOW Group tab first') + '</div>';
             list.style.display = 'block';
         }
-        inp.addEventListener('focus', function(){ inp.select(); render(); });
+        inp.addEventListener('focus', function(){ inp.select(); render(true); });
         inp.addEventListener('input', render);
         list.addEventListener('mousedown', function(e){
             var it = e.target.closest('.cwbs-ss-item'); if (!it) return;
