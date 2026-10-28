@@ -5029,7 +5029,9 @@ window.loadIowGroupOptions = function(selectEl, cb){
 #eam-body tbody tr:nth-child(even){background:#eaf5f1;}
 #eam-body tbody tr:hover{background:#d7ede6;}
 #eam-body th, #eam-body td{white-space:nowrap;padding:8px 10px;border:1px solid #bcdcd2;font-size:13px;vertical-align:middle;}
-#eam-body th{background:#e9ebed;color:#555;font-weight:700;text-align:left;}
+#eam-body th{background:#e9ebed;color:#555;font-weight:700;text-align:left;position:sticky;top:-14px;z-index:2;}
+/* Rows snap into place when scrolling; leave room for the sticky heading row so it never hides. */
+#eam-body{scroll-padding-top:26px;}
 #eam-body td.eam-col-sno{color:#999;text-align:center;width:36px;}
 #eam-body td.eam-col-name{white-space:normal;}
 .eam-name-input{width:100%;height:28px;border:1px solid #ccc;border-radius:4px;padding:0 6px;font-size:12px;box-sizing:border-box;}
