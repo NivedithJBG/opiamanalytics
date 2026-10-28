@@ -43,13 +43,20 @@ class RelationController extends Controller
         /* Activities per group — scheduleitem_id here (frontend-facing key
            name, unchanged) now holds the activity's iow_group_id directly,
            matching the Workgroup_Id key in the groups list above. */
+        // Same order as the Gantt: activities directly under the IOW Group, then
+        // each Sub Group in its order; within those, the Gantt's activity order.
+        (new \app\controllers\ProjectsmainController('projectsmain', \Yii::$app))->_sgEnsure();
         $activities = $db->createCommand("
             SELECT sa.id, sa.name, sa.iow_group_id AS scheduleitem_id
             FROM scheduleactivities sa
+            LEFT JOIN workgroup_activities_new wa ON wa.id = sa.activity_id
+            LEFT JOIN wbs_subgroup_activities m ON m.wan_id = sa.activity_id
+            LEFT JOIN wbs_subgroups sg ON sg.id = m.subgroup_id AND sg.status = 0
             WHERE sa.projectId = :pid AND sa.status = 0
               AND sa.actual_start_date IS NOT NULL
               AND sa.actual_start_date != '0000-00-00'
-            ORDER BY sa.iow_group_id ASC, sa.id ASC
+            ORDER BY sa.iow_group_id ASC, (sg.id IS NOT NULL) ASC, COALESCE(sg.sortorder, 0) ASC, COALESCE(sg.id, 0) ASC,
+                     COALESCE(wa.sortorder, 999999) ASC, sa.id ASC
         ", [':pid' => $projectId])->queryAll();
 
         return json_encode(['error' => 'No', 'groups' => $groups, 'activities' => $activities]);
