@@ -88,6 +88,7 @@
 }
 .er-table tr.er-grand-row td {
   background:#6b7c93; color:#fff; font-weight:700; font-size:13px; border:1px solid #55647a;
+  padding:5px 9px; white-space:nowrap;   /* one line: the total no longer wraps and doubles the row height */
 }
 .er-table td.er-editable{cursor:pointer;}
 .er-table td.er-editable:hover{background:#eef4fb;outline:1px dashed #7ba3d0;outline-offset:-2px;}
