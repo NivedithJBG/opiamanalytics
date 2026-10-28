@@ -956,6 +956,15 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
   // Exception-safe wrapper: a JS error mid-build must never leave the chart blank
   window.loadGantt = function loadGantt() {
+    // Redraw (e.g. after a drag): keep the scroll position.
+    var _gwb = document.getElementById('gantt-win-body');
+    if (_gwb && document.querySelector('#gantt-container .gtaskname')) {
+      var _sk = [];
+      $(_gwb).find('*').addBack().each(function(){
+        if (this.scrollTop || this.scrollLeft) _sk.push({ cls: this.className || '', id: this.id || '', top: this.scrollTop, left: this.scrollLeft });
+      });
+      window._ganttScrollKeep = _sk;
+    }
     try {
       loadGanttInner();
     } catch (err) {
@@ -1791,8 +1800,27 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       while ((n = w.nextNode())) { var t = n.nodeValue.trim(); if (cols[t]) hits.push([n.parentNode, cols[t]]); }
       hits.forEach(function(h){ h[0].style.color = h[1]; h[0].style.fontWeight = '700'; });
     }
-    g.setFormat = function(f) { _origSetFormat.call(g, f); _decorateGantt(); _colorSections(); };
-    if (window._ganttCurrentOnly) { g.setFormat('week'); }   // current view opens in Week (Day/Month still selectable)
+    var _fmtKey = window._ganttCurrentOnly ? '_ganttFmtCycle' : '_ganttFmtFull';
+    g.setFormat = function(f) { _origSetFormat.call(g, f); window[_fmtKey] = f; _decorateGantt(); _colorSections(); };
+    // The format chosen before a refresh stays; otherwise the current view opens in Week (Day/Month still selectable).
+    if (window[_fmtKey]) g.setFormat(window[_fmtKey]);
+    else if (window._ganttCurrentOnly) { g.setFormat('week'); }
+    // Back to where it was scrolled before the refresh.
+    if (window._ganttScrollKeep && window._ganttScrollKeep.length) {
+      var _sk = window._ganttScrollKeep; window._ganttScrollKeep = null;
+      setTimeout(function(){
+        var _body = document.getElementById('gantt-win-body');
+        if (!_body) return;
+        var _used = {};
+        _sk.forEach(function(k){
+          var cands = k.id ? [document.getElementById(k.id)] : Array.prototype.filter.call(_body.querySelectorAll('*'), function(el){ return (el.className || '') === k.cls; });
+          if (k.id === 'gantt-win-body') cands = [_body];
+          var key = k.id || k.cls, i = _used[key] || 0, el = cands[i];
+          _used[key] = i + 1;
+          if (el) { el.scrollTop = k.top; el.scrollLeft = k.left; }
+        });
+      }, 0);
+    }
 
     // The scroll-fix above clones the left header, which strips the click
     // listeners from the chart's own Format links (Day/Week/Month). Handle those

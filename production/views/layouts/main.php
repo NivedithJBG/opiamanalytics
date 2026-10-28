@@ -5719,11 +5719,20 @@ $(document).on('click', '#gantt-win-min', function(e){
     });
   }
 
-  function _loadGanttWin(pid) {
+  function _loadGanttWin(pid, keep) {
     var url = _ganttUrl + '&id=' + (pid || _ganttPid) + (_loadedMode === 'current' ? '&current=1' : '');
     _removeStaleGcmPopups();
-    $('#gantt-win-body').html('<div id="gantt-win-loading">Loading Gantt chart&hellip;</div>');
+    if (!keep) $('#gantt-win-body').html('<div id="gantt-win-loading">Loading Gantt chart&hellip;</div>');
     $.ajax({ url: url, cache: false, success: function(html){
+      // Refresh (e.g. after a relationship): the new chart goes back to the same scroll position.
+      window._ganttScrollKeep = null;
+      if (keep) {
+        var _sk = [];
+        $('#gantt-win-body').find('*').addBack().each(function(){
+          if (this.scrollTop || this.scrollLeft) _sk.push({ cls: this.className || '', id: this.id || '', top: this.scrollTop, left: this.scrollLeft });
+        });
+        window._ganttScrollKeep = _sk;
+      }
       $('#gantt-win-body').html(html);
       _reparentGcmPopup();
     }, error: function(){
@@ -5735,9 +5744,9 @@ $(document).on('click', '#gantt-win-min', function(e){
   window.reloadGantt = function() {
     if(win.getAttribute('data-docked')){ win.setAttribute('data-needs-redraw', '1'); return; }
     if(win.classList.contains('gw-open')){
-      // Floating gantt window is open — reload its content
+      // Floating gantt window is open — reload its content in place
       _loaded = true;
-      _loadGanttWin();
+      _loadGanttWin(undefined, true);
     } else if(document.querySelector('#gantt-win-body #gantt-container')){
       // Floating Gantt is closed: draw it fresh the next time it opens (drawing it hidden squashes the columns).
       _loaded = false;
