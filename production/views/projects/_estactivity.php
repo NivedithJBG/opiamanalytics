@@ -287,7 +287,7 @@ use app\models\Resources;
                 <button type="button" class="close cancelactivity" data-dismiss="modal" style="float:right;font-size:30px;">&times;</button>
             </div>
             <div class="modal-body">
-                <form id="estactivityform">
+                <form id="estactivityform" autocomplete="off">
                     <input type="hidden" id="editingActivityId" name="activity_id" value="">
                     <div class="row" id="estactivityaddrow">
                         <!-- Project Type (activities belong to a Project Type only; IOW Groups are
@@ -958,6 +958,9 @@ $(document).on('click', '.al-edit-activity-btn', function(){
     }, 100);
 });
 
+// No browser suggestion list on the Add Activity fields (names typed earlier kept popping up).
+$(document).on('focusin', '#estactivityform input[type=text], #estactivityform input:not([type])', function(){ this.setAttribute('autocomplete', 'off'); });
+$('#estactivityform input').attr('autocomplete', 'off');
 $(document).on('click', '#listestactivity', function(e){
     e.preventDefault();
     if (e.originalEvent && getComputedStyle(document.getElementById('alListPopup')).display === 'none') document.getElementById('alListOpener').click();
