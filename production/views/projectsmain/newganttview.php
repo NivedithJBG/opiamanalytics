@@ -550,6 +550,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 /* Widen the activity name column */
 /* Summary bars: IOW Group dark purple-blue, Sub Group teal (project bar stays black). */
+.ggroupblank, .ggroupblankendpointleft, .ggroupblankendpointright, .ggroupblankcomplete { display: none !important; }
 .ggroupiow, .ggroupsub { height: 7px; margin-top: 2px; opacity: 1 !important; }
 .ggroupiow { background: #3b2a8f; }
 .ggroupsub { background: #0f766e; }
@@ -1353,7 +1354,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       ['c', 'n'].forEach(function(b){
         // An empty section has no dates of its own (the chart would stretch back to today): pin it to the project start.
         var _secPin = _ganttCycleStart || '<?= ($project && $project->start_date) ? substr($project->start_date, 0, 10) : '' ?>';
-        if (!_secBuf[b].length && _secPin) { _secTi[b].setStart(_secPin); _secTi[b].setEnd(_secPin); }
+        if (!_secBuf[b].length && _secPin) { _secTi[b].setStart(_secPin); _secTi[b].setEnd(_secPin); _secTi[b].setClass('ggroupblank'); }   // no bar drawn for it
         g.AddTaskItem(_secTi[b]);   // both headings always shown, even when a section is empty
         _secBuf[b].forEach(function(t){ g.AddTaskItem(t); });
       });
