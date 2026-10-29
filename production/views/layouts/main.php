@@ -5521,6 +5521,38 @@ window.loadIowGroupOptions = function(selectEl, cb){
   <button type="button" id="gn-btn" title="Notes">&#128221;</button>
 </div>
 
+<script>
+// App-wide input rules (every form, including popups added later):
+//  - Number fields (type=number, or inputmode decimal/numeric) take no letters.
+//  - Unit fields (id/name/class/placeholder mentions "unit", e.g. Unit, Task Unit)
+//    take no digits. Numeric unit-count fields (R.Unit, resource units) are number
+//    fields and follow the number rule instead.
+(function(){
+  if (window._appInputRules) return; window._appInputRules = true;
+  function isNum(el){ return el.type === 'number' || /^(decimal|numeric)$/i.test(el.getAttribute('inputmode') || ''); }
+  function isUnit(el){
+    if (el.type !== 'text' && el.type !== 'search') return false;
+    var k = ((el.id || '') + ' ' + (el.name || '') + ' ' + (typeof el.className === 'string' ? el.className : '') + ' ' + (el.placeholder || '')).toLowerCase();
+    if (!/unit/.test(k)) return false;
+    return !/commun|opportun|per[_ -]?unit|/unit|r[._ -]?units?(?![a-z])|runit|resunit|resource_?units?|units?[_ -]?(qty|rate|price|cost|amount|count)/.test(k);
+  }
+  function clean(el){
+    var v = el.value, nv = v;
+    if (el.type === 'number') return;   // the browser already keeps letters out of these (see keydown)
+    if (isNum(el)) nv = v.replace(/[^0-9.,\-]/g, '');
+    else if (isUnit(el)) nv = v.replace(/[0-9]/g, '');
+    if (nv !== v) { var p = el.selectionStart - (v.length - nv.length); el.value = nv; try { el.setSelectionRange(p, p); } catch (x) {} }
+  }
+  document.addEventListener('input', function(e){ var el = e.target; if (el && el.tagName === 'INPUT') clean(el); }, true);
+  // type=number still lets e / E / + through: block them.
+  document.addEventListener('keydown', function(e){
+    var el = e.target;
+    if (el && el.tagName === 'INPUT' && el.type === 'number' && (e.key === 'e' || e.key === 'E' || e.key === '+')) e.preventDefault();
+  }, true);
+  // Pasted text is cleaned the same way.
+  document.addEventListener('paste', function(e){ var el = e.target; if (el && el.tagName === 'INPUT') setTimeout(function(){ clean(el); }, 0); }, true);
+})();
+</script>
 <div id="win-dock"></div>
 <style>
 #win-dock { position:fixed; left:12px; bottom:0; display:flex; gap:6px; z-index:300500; pointer-events:none; }
