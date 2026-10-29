@@ -5678,6 +5678,12 @@ $(document).on('click', '#gantt-win-min', function(e){
     var msg = (proj ? 'Note - ' + proj + '\n' : '') + strip.find('.gn-t').text();
     var touch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
     if (touch) { window.location.href = 'whatsapp://send?text=' + encodeURIComponent(msg); return; }
+    // PC: WhatsApp Web only fills in the text when it knows the number, so the note
+    // is copied first; pick the person, paste (Ctrl+V) and send.
+    try { navigator.clipboard.writeText(msg); } catch (x) {}
+    var $t = $('<div>').text('Note copied. In WhatsApp, open the person\u2019s chat, press Ctrl+V, then Send.')
+      .css({ position:'fixed', left:'50%', top:'30%', transform:'translate(-50%,-50%)', background:'#128c7e', color:'#fff', padding:'14px 22px', borderRadius:'8px', fontSize:'15px', fontWeight:700, zIndex:300000, boxShadow:'0 8px 24px rgba(0,0,0,.3)' })
+      .appendTo('body').delay(4500).fadeOut(400, function(){ $(this).remove(); });
     var w = 520, h = Math.min(760, screen.availHeight - 80);
     window.open('https://web.whatsapp.com/send?text=' + encodeURIComponent(msg), 'opiam_whatsapp', 'width=' + w + ',height=' + h + ',left=' + (screen.availWidth - w - 20) + ',top=40');
   });
