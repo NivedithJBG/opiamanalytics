@@ -108,6 +108,30 @@ class ProjectsmainController extends Controller
         return parent::beforeAction($action); 
     }
 
+    // A project task saved without a unit (Create WBS / Edit Activities) takes
+    // the unit of its Activity Library task, so the project copy is never blank.
+    public function afterAction($action, $result)
+    {
+        $result = parent::afterAction($action, $result);
+        if (in_array($action->id, ['wbsadd', 'wbsactivityupdate'], true)) {
+            $pid = $this->_cfPid();
+            if ($pid) self::fillBlankTaskUnits((int)$pid);
+        }
+        return $result;
+    }
+
+    public static function fillBlankTaskUnits($pid)
+    {
+        return Yii::$app->db->createCommand(
+            "UPDATE schedule_task_new stn
+             JOIN scheduleactivities sa ON sa.id = stn.activity_Id AND sa.projectId = :p
+             JOIN activity_tasks at ON at.id = stn.task_Id
+             SET stn.task_unit = TRIM(at.task_unit)
+             WHERE (stn.task_unit IS NULL OR TRIM(stn.task_unit) = '') AND TRIM(COALESCE(at.task_unit, '')) <> ''",
+            [':p' => (int)$pid]
+        )->execute();
+    }
+
  
 
     public function actionIndex()
