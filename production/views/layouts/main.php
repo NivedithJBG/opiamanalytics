@@ -5534,7 +5534,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
     if (el.type !== 'text' && el.type !== 'search') return false;
     var k = ((el.id || '') + ' ' + (el.name || '') + ' ' + (typeof el.className === 'string' ? el.className : '') + ' ' + (el.placeholder || '')).toLowerCase();
     if (!/unit/.test(k)) return false;
-    return !/commun|opportun|per[_ -]?unit|/unit|r[._ -]?units?(?![a-z])|runit|resunit|resource_?units?|units?[_ -]?(qty|rate|price|cost|amount|count)/.test(k);
+    return !/commun|opportun|per[_ -]?unit|\/unit|r[._ -]?units?(?![a-z])|runit|resunit|resource_?units?|units?[_ -]?(qty|rate|price|cost|amount|count)/.test(k);
   }
   function clean(el){
     var v = el.value, nv = v;
