@@ -6324,7 +6324,7 @@ class ProjectsmainController extends Controller
         $pid = (int)$projuser->projectid;
         $connection = \Yii::$app->db;
         $act = $connection->createCommand(
-            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, act_start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status
+            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, act_start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status, activity_id
              FROM scheduleactivities WHERE id=$actid AND projectId=$pid"
         )->queryOne();
         $kpi = $this->_buildKpi($act, $pid, $connection);
@@ -6348,7 +6348,7 @@ class ProjectsmainController extends Controller
         $actid = (int)$activityId;
         $pid = (int)$projectId;
         $act = $connection->createCommand(
-            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, act_start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status
+            "SELECT id, name, duration, old_duration, unit, quantity, completed_status, start_date, act_start_date, actual_start_date, actual_end_date, end_date, resource_units, critical_status, activity_id
              FROM scheduleactivities WHERE id=$actid AND projectId=$pid"
         )->queryOne();
         if (!$act) return null;
@@ -6398,7 +6398,13 @@ class ProjectsmainController extends Controller
 
         $target_qty = (float)($act['quantity'] ?? 0);
         $unit       = $act['unit'] ?? '';
-        $wh         = $san ? (int)$san['Workhours']      : 8;
+        // Working hours per day: the Activity Library W.Hrs of this activity; the old
+        // per-activity schedule table, then 8, only if the library has none.
+        $libWh = (int)$connection->createCommand(
+            "SELECT ea.working_hours FROM workgroup_activities_new wa JOIN estimateactivities ea ON ea.activity_id = wa.activity_Id WHERE wa.id = :w",
+            [':w' => (int)($act['activity_id'] ?? 0)]
+        )->queryScalar();
+        $wh         = $libWh > 0 ? $libWh : (($san && (int)$san['Workhours'] > 0) ? (int)$san['Workhours'] : 8);
         $cycles     = $san ? (float)$san['Cycles']       : 1;
         $progress   = $san ? (float)$san['progress']     : 0;
 
