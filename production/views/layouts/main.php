@@ -6498,7 +6498,11 @@ $(document).on('click', '#gantt-win-min', function(e){
       _raise._inGroup = false;
     }
     _track(el);
-    _z = _topZ(el) + 1;
+    /* Never lower a window: its own CSS z-index may already sit above its
+       backdrop (e.g. popup 200301 over backdrop 200300) — dropping below
+       that would leave the see-through backdrop catching every click. */
+    var own = parseInt(getComputedStyle(el).zIndex, 10) || 0;
+    _z = Math.max(_topZ(el) + 1, own);
     el.style.setProperty('z-index', String(_z), 'important');
     /* A Bootstrap modal opened while other windows are on screen: let clicks
        outside its dialog reach those windows (so they can be brought up). */
