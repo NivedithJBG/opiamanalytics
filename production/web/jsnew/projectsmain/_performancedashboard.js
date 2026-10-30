@@ -861,7 +861,7 @@ function _cfOrderPopupShell(id, title, body, foot){
     $('#' + id).remove();
     $('body').append('<div id="' + id + '" style="position:fixed;z-index:100700;width:460px;max-width:94vw;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:7px;box-shadow:0 6px 28px rgba(0,0,0,.35);overflow:hidden;font-family:Nunito,Arial,sans-serif;">'
         + '<div class="cf-ord-hdr" style="display:flex;justify-content:space-between;align-items:center;background:#072c47;color:#fff;padding:12px 18px;font-size:14px;font-weight:700;cursor:move;user-select:none;touch-action:none;"><span>' + title + '</span><span class="cf-ord-close" style="cursor:pointer;font-size:18px;opacity:.85;">&times;</span></div>'
-        + '<div style="padding:16px 18px;max-height:70vh;overflow:auto;">' + body + '</div>'
+        + '<div style="padding:14px 18px;max-height:calc(100vh - 150px);overflow:auto;">' + body + '</div>'
         + (foot ? '<div style="padding:12px 18px;border-top:1px solid #e6eaf0;text-align:right;">' + foot + '</div>' : '')
         + '</div>');
     var win = document.getElementById(id), drag = null, hdr = win.querySelector('.cf-ord-hdr');
@@ -879,18 +879,18 @@ function _cfTermRow(v){
         + '<button type="button" class="cf-po-term-del" style="background:#c0392b;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;">&times;</button></div>';
 }
 function _cfShowRaisePo(r){
-    var lbl = 'style="display:block;font-size:12px;font-weight:700;color:#465365;margin:0 0 5px;"', inp = 'width:100%;box-sizing:border-box;height:36px;border:1px solid #c5ccd4;border-radius:4px;padding:2px 10px;font-size:13px;color:#333;';
-    var body = '<div style="margin-bottom:14px;max-width:200px;"><label ' + lbl + '>Date</label><input type="date" id="cf-po-date" style="' + inp + '"></div>'
-        + '<div style="margin-bottom:14px;"><label ' + lbl + '>Vendor</label><select id="cf-po-vendor" style="' + inp + '"><option value="">Loading...</option></select></div>'
-        + '<div style="margin-bottom:14px;"><label ' + lbl + '>Ship To</label><textarea id="cf-po-shipto" rows="3" style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
+    var lbl = 'style="display:block;font-size:12px;font-weight:700;color:#465365;margin:0 0 5px;"', inp = 'width:100%;box-sizing:border-box;height:34px;border:1px solid #c5ccd4;border-radius:4px;padding:2px 10px;font-size:13px;color:#333;';
+    var body = '<div style="margin-bottom:9px;max-width:200px;"><label ' + lbl + '>Date</label><input type="date" id="cf-po-date" style="' + inp + '"></div>'
+        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Vendor</label><select id="cf-po-vendor" style="' + inp + '"><option value="">Loading...</option></select></div>'
+        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Ship To</label><textarea id="cf-po-shipto" rows="2" style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
         // Resource, Unit, Quantity (this cycle), Rate and Amount = Qty x Rate.
-        + '<div style="display:flex;gap:10px;margin-bottom:14px;"><div style="flex:3;min-width:0;"><label ' + lbl + '>' + $('<div>').text(r.type || 'Resource').html() + '</label><input type="text" id="cf-po-res" style="' + inp + '"></div>'
+        + '<div style="display:flex;gap:10px;margin-bottom:9px;"><div style="flex:3;min-width:0;"><label ' + lbl + '>' + $('<div>').text(r.type || 'Resource').html() + '</label><input type="text" id="cf-po-res" style="' + inp + '"></div>'
         + '<div style="flex:1;min-width:0;"><label ' + lbl + '>Unit</label><input type="text" id="cf-po-unit" style="' + inp + '"></div></div>'
-        + '<div style="display:flex;gap:10px;margin-bottom:14px;"><div style="flex:1;min-width:0;"><label ' + lbl + '>Qnty</label><input type="text" inputmode="decimal" id="cf-po-qty" style="' + inp + 'text-align:right;"></div>'
+        + '<div style="display:flex;gap:10px;margin-bottom:9px;"><div style="flex:1;min-width:0;"><label ' + lbl + '>Qnty</label><input type="text" inputmode="decimal" id="cf-po-qty" style="' + inp + 'text-align:right;"></div>'
         + '<div style="flex:1;min-width:0;"><label ' + lbl + '>Rate</label><input type="text" inputmode="decimal" id="cf-po-rate" style="' + inp + 'text-align:right;"></div>'
         + '<div style="flex:1.2;min-width:0;"><label ' + lbl + '>Amount</label><input type="text" id="cf-po-amt" readonly tabindex="-1" style="' + inp + 'text-align:right;font-weight:700;"></div></div>'
-        + '<div style="margin-bottom:14px;"><label ' + lbl + '>Credit Period</label><input type="number" id="cf-po-credit" min="0" step="1" placeholder="e.g. 30 days" style="' + inp + '"></div>'
-        + '<div style="margin-bottom:14px;"><label ' + lbl + '>Lead Time</label><input type="text" id="cf-po-lead" placeholder="e.g. 7 days" style="' + inp + '"></div>'
+        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Credit Period</label><input type="number" id="cf-po-credit" min="0" step="1" placeholder="e.g. 30 days" style="' + inp + '"></div>'
+        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Lead Time</label><input type="text" id="cf-po-lead" placeholder="e.g. 7 days" style="' + inp + '"></div>'
         + '<div><label ' + lbl + '>Terms</label><div id="cf-po-terms">' + _cfTermRow('') + '</div>'
         + '<button type="button" id="cf-po-term-add" style="margin-top:4px;background:none;border:1px dashed #c5ccd4;border-radius:4px;padding:3px 12px;font-size:11px;color:#465365;cursor:pointer;">+ Add Term</button></div>';
     var foot = '<button type="button" class="cf-ord-cancel" style="background:#f0f4f8;border:1px solid #c5ccd4;border-radius:20px;padding:6px 20px;font-size:13px;color:#465365;cursor:pointer;margin-right:8px;">Cancel</button>'
