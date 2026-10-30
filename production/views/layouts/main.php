@@ -6535,7 +6535,46 @@ $(document).on('click', '#gantt-win-min', function(e){
   }).observe(document.body, { childList:true, subtree:true, attributes:true, attributeFilter:['style','class'] });
 
   /* Pressing anywhere on a lower window brings it to the top. */
+  /* A popup's backdrop / dimmed overlay (not the window itself): a body-level
+     layer the press landed on directly, see-through, or named *-bk. */
+  function _isSurface(el){
+    if(!_candidate(el) || el.nodeType !== 1) return false;
+    if(_isBackdrop(el)) return true;
+    var bg = getComputedStyle(el).backgroundColor, m = /rgba?\(([^)]+)\)/.exec(bg);
+    var see = bg === 'transparent' || (m && m[1].split(',').length === 4 && parseFloat(m[1].split(',')[3]) < 1);
+    if(!see) return false;
+    var r = el.getBoundingClientRect();
+    return r.width >= window.innerWidth * 0.95 && r.height >= window.innerHeight * 0.95;
+  }
+  /* The window lying under a backdrop at this point, if any. */
+  function _windowBelow(x, y, surface){
+    var list = document.elementsFromPoint ? document.elementsFromPoint(x, y) : [];
+    for(var i = 0; i < list.length; i++){
+      var el = list[i];
+      if(el === document.body || el === document.documentElement) return null;
+      if(surface.contains(el) || _isSurface(el)) continue;
+      var w = el; while(w.parentElement && w.parentElement !== document.body && !(w.classList && w.classList.contains('modal'))) w = w.parentElement;
+      if(_positioned(w) && (_popups.indexOf(w) >= 0 || floaters.indexOf(w.id) >= 0)) return { win: w, el: el };
+      return null;   /* page itself is under the backdrop: let the backdrop act as usual */
+    }
+    return null;
+  }
   function _onPress(e){
+    /* Pressed on a backdrop over a lower window: bring that window up and
+       hand it the press, so it can be dragged (or used) straight away. */
+    if(e.target && e.target.nodeType === 1 && _isSurface(e.target)){
+      var pt = e.touches ? e.touches[0] : e;
+      var hit = pt && _windowBelow(pt.clientX, pt.clientY, e.target);
+      if(hit){
+        if(e.cancelable && e.type === 'mousedown') e.preventDefault();
+        e.stopImmediatePropagation();
+        _raise(hit.win);
+        if(e.type === 'mousedown') hit.el.dispatchEvent(new MouseEvent('mousedown', { bubbles:true, cancelable:true, view:window,
+          clientX:e.clientX, clientY:e.clientY, screenX:e.screenX, screenY:e.screenY, button:e.button, buttons:e.buttons,
+          ctrlKey:e.ctrlKey, shiftKey:e.shiftKey, altKey:e.altKey, metaKey:e.metaKey }));
+        return;
+      }
+    }
     var n = e.target, win = null;
     for(; n && n !== document.body && n !== document.documentElement; n = n.parentElement){
       if(n.parentElement === document.body || (n.classList && n.classList.contains('modal'))){ win = n; break; }
