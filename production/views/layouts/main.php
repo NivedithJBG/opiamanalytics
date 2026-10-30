@@ -5555,7 +5555,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
 </script>
 <div id="win-dock"></div>
 <style>
-#win-dock { position:fixed; left:12px; bottom:0; display:flex; gap:6px; z-index:300500; pointer-events:none; }
+#win-dock { position:fixed; left:12px; bottom:0; display:flex; gap:6px; z-index:2147480000; pointer-events:none; }
 .win-dock-tab { pointer-events:auto; background:#081142; color:#fff; border:none; border-radius:6px 6px 0 0; padding:7px 16px;
   font:700 12px Nunito,Arial,sans-serif; cursor:pointer; box-shadow:0 -2px 10px rgba(0,0,0,.25); }
 .win-dock-tab:hover { background:#13206a; }
@@ -6457,14 +6457,101 @@ $(document).on('click', '#gantt-win-min', function(e){
     they can never end up under a repeatedly-clicked parent window. */
   var floaters = ['cwbs-popup','cwbs-iowp','cwbs-sgp','cwbsed-popup','pdoc-popup','pdoc-viewer-popup','gantt-win','cb-win','reslib-win','vendorlib-win','rel-win','estreport-win','menu4-popup-cntnr','procurement-win','storeoffice-win','userpermissions-win','cd-modal','cf-modal','pd-modal','gkp-popup','gkm-modal','gcm-popup','gpm-overlay'];
 
-  window.popupBringToFront = function(id){
-    var el = document.getElementById(id) || document.querySelector('.' + id);
-    if(el) el.style.zIndex = ++_z;
+  /* ── Window stacking rule (app-wide, every popup / window / modal):
+     1. A window that opens always appears above every window already on
+        screen, whatever z-index its own CSS gives it.
+     2. Pressing on any window lower in the stack brings it to the top.
+     A window's z-index is set to (highest z-index on screen) + 1, so
+     hard-coded values elsewhere (100200, 200700, 999999, 1000500 …) can
+     never keep a newer window underneath. Page chrome visible at load
+     (header, dashboard, round buttons) and backdrops are left alone. ── */
+  var _popups = [];               /* every element ever treated as a window */
+  function _isBackdrop(el){ return /(^|\s)modal-backdrop(\s|$)/.test(typeof el.className === 'string' ? el.className : '') || /(-bk|backdrop)$/i.test(el.id || ''); }
+  var _skip = { 'win-dock':1, 'cb-btn':1, 'nt-btn':1, 'wa-btn':1 };
+  function _shown(el){
+    if(!el.getClientRects().length) return false;
+    var cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden';
+  }
+  function _positioned(el){
+    if(el.nodeType !== 1 || /^(SCRIPT|STYLE|LINK|META|NOSCRIPT)$/.test(el.tagName)) return false;
+    if(_skip[el.id] || _isBackdrop(el)) return false;
+    var p = getComputedStyle(el).position; return p === 'fixed' || p === 'absolute';
+  }
+  function _topZ(except){
+    var m = _z;
+    for(var i = 0; i < _popups.length; i++){
+      var p = _popups[i]; if(p === except || !p.isConnected) continue;
+      var z = parseInt(getComputedStyle(p).zIndex, 10);
+      if(z > m && _shown(p)) m = z;
+    }
+    return m;
+  }
+  function _track(el){ if(_popups.indexOf(el) < 0) _popups.push(el); }
+  function _raise(el){
+    _track(el);
+    _z = _topZ(el) + 1;
+    el.style.setProperty('z-index', String(_z), 'important');
+    /* A Bootstrap modal opened while other windows are on screen: let clicks
+       outside its dialog reach those windows (so they can be brought up). */
+    if(el.classList.contains('modal')){
+      var others = _popups.some(function(p){ return p !== el && p.isConnected && !p.classList.contains('modal') && _shown(p); });
+      el.style.pointerEvents = others ? 'none' : '';
+      var d = el.querySelector('.modal-dialog'); if(d) d.style.pointerEvents = others ? 'auto' : '';
+    }
     /* Re-raise any currently-open sub-popups registered against this
        floater, so this floater's own rise never overtakes its children. */
-    var cb = _reraiseSubs[id];
-    if(typeof cb === 'function') cb();
+    if(el.id && typeof _reraiseSubs[el.id] === 'function') _reraiseSubs[el.id]();
+  }
+  window.popupRaise = _raise;
+
+  window.popupBringToFront = function(id){
+    var el = document.getElementById(id) || document.querySelector('.' + id);
+    if(el) _raise(el);
   };
+
+  /* Windows living directly under <body>, and Bootstrap modals anywhere. */
+  function _candidate(el){
+    return el && el.nodeType === 1 && (el.parentNode === document.body || (el.classList && el.classList.contains('modal')));
+  }
+  var _vis = new WeakMap();
+  function _check(el, isNew){
+    if(!_candidate(el) || !_positioned(el)) return;
+    var now = _shown(el), was = _vis.get(el);
+    _vis.set(el, now);
+    if(now && (isNew || was === false || (was === undefined && _popups.indexOf(el) < 0 && el.classList.contains('modal')))) _raise(el);
+  }
+  /* Page state at load: what is already visible is page chrome (never
+     raised); what is hidden becomes a window the moment it is shown. */
+  Array.prototype.forEach.call(document.body.children, function(c){ if(_positioned(c)) _vis.set(c, _shown(c)); });
+  Array.prototype.forEach.call(document.querySelectorAll('.modal'), function(c){ _vis.set(c, _shown(c)); });
+  new MutationObserver(function(recs){
+    for(var i = 0; i < recs.length; i++){
+      var r = recs[i];
+      if(r.type === 'childList'){
+        if(r.target !== document.body) continue;
+        for(var j = 0; j < r.addedNodes.length; j++) _check(r.addedNodes[j], true);
+      } else _check(r.target, false);
+    }
+  }).observe(document.body, { childList:true, subtree:true, attributes:true, attributeFilter:['style','class'] });
+
+  /* Pressing anywhere on a lower window brings it to the top. */
+  function _onPress(e){
+    var n = e.target, win = null;
+    for(; n && n !== document.body && n !== document.documentElement; n = n.parentElement){
+      if(n.parentElement === document.body || (n.classList && n.classList.contains('modal'))){ win = n; break; }
+    }
+    if(!win || !_positioned(win)) return;
+    if(_popups.indexOf(win) < 0 && floaters.indexOf(win.id) < 0 && !win.classList.contains('modal')) return; /* page chrome */
+    if(_isTop(win)) return;   /* already on top */
+    _raise(win);
+  }
+  function _isTop(win){ var z = parseInt(getComputedStyle(win).zIndex, 10); return z > _topZ(win); }
+  document.addEventListener('mousedown', _onPress, true);
+  document.addEventListener('touchstart', _onPress, { capture:true, passive:true });
+
+  /* Bootstrap 3 pulls focus back into an open modal; with windows on top of
+     it that would make their inputs unusable, so that pull is switched off. */
+  if(window.jQuery && jQuery.fn.modal && jQuery.fn.modal.Constructor) jQuery.fn.modal.Constructor.prototype.enforceFocus = function(){};
 
   /* Sub-popup owners (Resource Library, Relationships) register a callback
      here that re-raises their own open sub-popups whenever this floater
@@ -6478,8 +6565,7 @@ $(document).on('click', '#gantt-win-min', function(e){
 
   floaters.forEach(function(id){
     var el = document.getElementById(id) || document.querySelector('.' + id);
-    if(!el) return;
-    bindDragTouch(el, 'mousedown', function(){ window.popupBringToFront(id); }, true);
+    if(el) _track(el);
   });
 
   /* ── Cascade positioning ── */
