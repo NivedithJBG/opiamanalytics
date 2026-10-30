@@ -6487,7 +6487,16 @@ $(document).on('click', '#gantt-win-min', function(e){
     return m;
   }
   function _track(el){ if(_popups.indexOf(el) < 0) _popups.push(el); }
+  /* Windows that form one window on screen (the Project Management
+     dashboard: shared header + its three panels) rise together. */
+  var _groups = [['cf-shared-hdr', 'cf-win-value', 'cf-win-c2c', 'cf-win-roi']];
   function _raise(el){
+    var g = el.id && _groups.filter(function(x){ return x.indexOf(el.id) >= 0; })[0];
+    if(g && !_raise._inGroup){
+      _raise._inGroup = true;
+      g.forEach(function(id){ var m = document.getElementById(id); if(m && m !== el && _shown(m)) _raise(m); });
+      _raise._inGroup = false;
+    }
     _track(el);
     _z = _topZ(el) + 1;
     el.style.setProperty('z-index', String(_z), 'important');
@@ -6581,7 +6590,8 @@ $(document).on('click', '#gantt-win-min', function(e){
     }
     if(!win || !_positioned(win)) return;
     if(_popups.indexOf(win) < 0 && floaters.indexOf(win.id) < 0 && !win.classList.contains('modal')) return; /* page chrome */
-    if(_isTop(win)) return;   /* already on top */
+    var grouped = win.id && _groups.some(function(x){ return x.indexOf(win.id) >= 0; });
+    if(!grouped && _isTop(win)) return;   /* already on top */
     _raise(win);
   }
   function _isTop(win){ var z = parseInt(getComputedStyle(win).zIndex, 10); return z > _topZ(win); }
