@@ -2562,6 +2562,38 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     // Resources / Yield / Cost of Resources) — all three now use the
     // same Type→Group→Resource bar-chart structure; only the metric's
     // own est/act/over formula (see _UCR_METRICS) differs between them.
+    // Unit Cost of Resources / Yield: same look as the Total Investment chart
+    // (dashboard) — wide navy bars on a base line, value on top, bold labels
+    // below, no axis/gridlines; resources over estimate stacked on top in
+    // red-orange. Each bar still opens the Type → Group drill-down on click.
+    function _renderTiStyleTypeBars(rows) {
+      var esc = function(t){ return $('<span>').text(t).html(); };
+      var n = rows.length, W = Math.max(300, n * 110), H = 190, top = 26, base = 150;
+      var slot = W / n, barW = Math.min(slot * 0.5, 70);
+      var maxV = 0;
+      rows.forEach(function(r){ maxV = Math.max(maxV, +r.value || 0); });
+      var hOf = function(v){ return maxV > 0 ? Math.round((v / maxV) * (base - top)) : 0; };
+      var bars = '';
+      rows.forEach(function(r, i){
+        var tot = +r.value || 0, over = Math.min(tot, +r.overCount || 0), within = tot - over;
+        var cx = (i + 0.5) * slot, x = (cx - barW / 2).toFixed(1);
+        var hT = hOf(tot), hW = hOf(within);
+        var nm = r.name.length > 18 ? r.name.slice(0, 17) + '…' : r.name;
+        bars += '<g class="gm-ucr-type-bar" data-name="' + esc(r.name) + '" style="cursor:pointer;"><title>' + esc(r.name) + ': ' + tot + ' resource' + (tot === 1 ? '' : 's') + (over ? ', ' + over + ' over estimate' : '') + '</title>'
+          + '<rect x="' + x + '" y="' + (base - hW) + '" width="' + barW.toFixed(1) + '" height="' + hW + '" fill="#3a4a5f"/>'
+          + (over ? '<rect x="' + x + '" y="' + (base - hT) + '" width="' + barW.toFixed(1) + '" height="' + (hT - hW) + '" fill="#d84a30"/>' : '')
+          + '<text x="' + cx.toFixed(1) + '" y="' + (base - hT - 6) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#000">' + tot + '</text>'
+          + (over && hW > 16 ? '<text x="' + cx.toFixed(1) + '" y="' + (base - hW + 14) + '" text-anchor="middle" font-size="11" fill="#fff">' + within + '</text>' : '')
+          + '<text x="' + cx.toFixed(1) + '" y="' + (base + 20) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#111">' + esc(nm) + '</text>'
+          + '</g>';
+      });
+      var leg = function(c, t){ return '<span style="white-space:nowrap;"><span style="display:inline-block;width:12px;height:9px;background:' + c + ';margin-right:4px;vertical-align:middle;"></span>' + t + '</span>'; };
+      return '<div style="display:flex;flex-direction:column;flex:1;min-height:150px;width:100%;font-family:Barlow Condensed,Arial;">'
+        + '<div style="display:flex;gap:10px;justify-content:flex-start;font-size:11px;color:#111;padding:0 0 4px;">' + leg('#3a4a5f', 'Within estimate') + leg('#d84a30', 'Over estimate') + '</div>'
+        + '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;flex:1;min-height:0;font-family:Barlow Condensed,Arial;">'
+        + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg></div>';
+    }
+
     function _renderUcrTypePanel(elId, metric, items, actName) {
       var el = document.getElementById(elId);
       if (!el) return;
@@ -2576,10 +2608,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       // outgrows the panel's own height.
       var chartOpts = { onClick: 'gm-ucr-type', integerTicks: true, showOverrun: true, hideBarVal: true };
       var anyOver = rows.some(function(r){ return (+r.overCount || 0) > 0; });
-      var chartHtml = '<div style="display:flex;flex-direction:column;flex:1;min-height:150px;">'
-        + _renderVBarChart(rows, chartOpts)
-        + (anyOver ? '<div class="gm-vchart-legend gm-vchart-legend-sm"><span><i style="background:#e64a19;"></i>Over estimate</span></div>' : '')
-        + '</div>';
+      var chartHtml = (metric === 'ucr' || metric === 'rcon')
+        ? _renderTiStyleTypeBars(rows)
+        : '<div style="display:flex;flex-direction:column;flex:1;min-height:150px;">'
+          + _renderVBarChart(rows, chartOpts)
+          + (anyOver ? '<div class="gm-vchart-legend gm-vchart-legend-sm"><span><i style="background:#e64a19;"></i>Over estimate</span></div>' : '')
+          + '</div>';
       html += '<div data-metric="' + metric + '" style="width:100%;box-sizing:border-box;padding:8px 10px;flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:center;overflow-y:auto;">'
         + chartHtml
         + '</div>';
