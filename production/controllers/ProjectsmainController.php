@@ -2473,7 +2473,6 @@ class ProjectsmainController extends Controller
         $pid = $this->_cfPid();
         if (!$pid) return ['error' => 'No project selected'];
         $w = $this->actionCfwipcycles();
-        $b = $this->actionCfbillsreceivablecycles();
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $cur = self::cfCurrentCycle($pid);
         $cyc = $w['cycles'] ?? [];
@@ -2485,13 +2484,13 @@ class ProjectsmainController extends Controller
         $in = [];   // receipts by date
         $addIn = function($ts, $amt) use (&$in) { $k = date('Y-m-d', $ts); $in[$k] = ($in[$k] ?? 0) + $amt; };
         if ($fg['br'] > 0) $addIn($today + $coll * $day, $fg['br']);
-        // Projected bank balance: today's bank balance, plus each bill when its money
-        // reaches the bank (bill raised at cycle end + collection days). Nothing is
-        // deducted. Each point = the balance at the end of the cycle.
-        $brT = $b['cycles'] ?? [];
+        // Projected bank balance: today's bank balance, plus each cycle's revenue
+        // (planned quantity x quoted rate) when its money reaches the bank (bill raised
+        // at cycle end + collection days). Nothing is deducted. Each point = the
+        // balance at the end of the cycle.
         foreach ($cyc as $i => $c) {
             if ((int)$c['cycle'] < (int)$cur['cycle']) continue;
-            $addIn(strtotime($c['end_date']) + $coll * $day, (float)($brT[$i]['target'] ?? 0));
+            $addIn(strtotime($c['end_date']) + $coll * $day, (float)($c['revenue'] ?? 0));
         }
         $out = []; $bal = (float)$fg['bank'];
         $live = array_values(array_filter($cyc, function($c) use ($cur){ return (int)$c['cycle'] >= (int)$cur['cycle']; }));
@@ -5102,6 +5101,12 @@ class ProjectsmainController extends Controller
         $cyc = self::cfCurrentCycle($pid);
         $cycEnd = $cyc ? $cyc['end'] : null;
         $bars = array_fill(1, $n, 0.0);
+        // Revenue per cycle = quantity planned in the cycle x quoted rate (Project Cost
+        // popup's Qtd Rate), by the same overlap method as the cost.
+        $revs = array_fill(1, $n, 0.0);
+        $qtd = $db->createCommand(
+            "SELECT metric_key, target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key LIKE 'qtd\\_rate\\_%'", [':p' => $pid]
+        )->queryAll(\PDO::FETCH_KEY_PAIR);
         $currentItems = [];
         foreach ($acts as $a) {
             $curDuration = max(1, (int)$a['duration']);
@@ -5116,6 +5121,7 @@ class ProjectsmainController extends Controller
                 if ($overlap > 0) {
                     $part = $value * $overlap / $curDuration;
                     $bars[$k] += $part;
+                    $revs[$k] += (float)$a['quantity'] * (float)($qtd['qtd_rate_' . $a['wan_id']] ?? 0) * $overlap / $curDuration;
                     if ($k === $current) { $curPart = $part; $curDays = $overlap; }
                 }
             }
@@ -5207,6 +5213,8 @@ class ProjectsmainController extends Controller
             $perDay = in_array(strtolower(trim((string)$o['unit'])), ['day', 'days', 'dys', 'dy'], true);
             for ($k = 1; $k <= $n; $k++) {
                 $bars[$k] += $perDay ? $rate * $cycDays($k) : ($duration > 0 ? $qty * $rate * $cycDays($k) / $duration : 0);
+                $oq = (float)($qtd['qtd_rate_' . $o['wan_id']] ?? 0);
+                if ($oq) $revs[$k] += $perDay ? $oq * $cycDays($k) : ($duration > 0 ? $qty * $oq * $cycDays($k) / $duration : 0);
             }
             $d = $cycDays($current);
             $cq = $perDay ? $d : ($duration > 0 ? $qty * $d / $duration : 0);
@@ -5222,9 +5230,6 @@ class ProjectsmainController extends Controller
 
         // Quoted rate per project activity, entered in the Project Cost popup (kept in
         // cf_dashboard_targets as qtd_rate_<wan_id> until it is filled from the BOQ).
-        $qtd = $db->createCommand(
-            "SELECT metric_key, target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key LIKE 'qtd\\_rate\\_%'", [':p' => $pid]
-        )->queryAll(\PDO::FETCH_KEY_PAIR);
         foreach ($currentItems as &$ci) {
             $k = 'qtd_rate_' . $ci['wan_id'];
             $ci['qtd_rate'] = isset($qtd[$k]) ? (float)$qtd[$k] : null;
@@ -5239,6 +5244,7 @@ class ProjectsmainController extends Controller
                 'end_date'  => date('Y-m-d', $base + $labelDay * 86400),
                 'end_label' => date('M', $base + $labelDay * 86400),
                 'target'    => round($bars[$k], 2),
+                'revenue'   => round($revs[$k], 2),
             ];
         }
 
