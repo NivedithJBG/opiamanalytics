@@ -964,10 +964,11 @@ function _cfShowRaiseWo(r){
     var esc = function(t){ return $('<div>').text(t || '').html(); };
     var lbl = 'style="display:block;font-size:12px;font-weight:700;color:#465365;margin:0 0 5px;"', inp = 'width:100%;box-sizing:border-box;height:34px;border:1px solid #c5ccd4;border-radius:4px;padding:2px 10px;font-size:13px;color:#333;';
     var names = acts.map(function(a){ return esc(a.activity_name); }).filter(Boolean).join(', ');
-    var body = '<div style="margin-bottom:9px;font-size:12px;color:#465365;"><b>' + esc(r.name) + '</b>' + (names ? ' &mdash; ' + names : '') + '</div>'
+    var body = '<div style="margin-bottom:9px;max-width:200px;"><label ' + lbl + '>Date</label><input type="date" id="cf-wo-date" style="' + inp + '"></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Vendor</label><select id="cf-wo-vendor" style="' + inp + '"><option value="">Loading...</option></select></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Subject</label><input type="text" id="cf-wo-subject" placeholder="Work Order subject..." style="' + inp + '"></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Scope of Work</label><textarea id="cf-wo-scope" rows="4" placeholder="Describe the scope of work..." style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
+        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Activity</label><input type="text" id="cf-wo-act" style="' + inp + '"></div>'
         + '<div style="display:flex;gap:10px;margin-bottom:9px;">'
         +   '<div style="flex:0.8;min-width:0;"><label ' + lbl + '>Unit</label><input type="text" id="cf-wo-unit" style="' + inp + '"></div>'
         +   '<div style="flex:1;min-width:0;"><label ' + lbl + '>Qnty</label><input type="text" inputmode="decimal" id="cf-wo-qty" style="' + inp + 'text-align:right;"></div>'
@@ -986,6 +987,8 @@ function _cfShowRaiseWo(r){
     var win = _cfOrderPopupShell('cf-po-popup', 'Raise Work Order', body, foot);
     win.style.width = '540px';
     // Unit, quantity (this cycle) and rate of the resource; Amount = Qnty x Rate.
+    var _wd = new Date(); $('#cf-wo-date').val(_wd.getFullYear() + '-' + ('0' + (_wd.getMonth() + 1)).slice(-2) + '-' + ('0' + _wd.getDate()).slice(-2));
+    $('#cf-wo-act').val(acts.map(function(a){ return a.activity_name; }).filter(Boolean).join(', '));
     $('#cf-wo-unit').val(r.unit || '');
     $('#cf-wo-qty').val(Math.round((+r.cycle_qty || 0) * 1000) / 1000); $('#cf-wo-rate').val(+r.rate || 0);
     var woNum = function(id){ return +String($(id).val()).replace(/,/g, '') || 0; };
@@ -1015,7 +1018,8 @@ function _cfShowRaiseWo(r){
                         data: { vendor_id: $('#cf-wo-vendor').val(), subject: $('#cf-wo-subject').val().trim(), scope: $('#cf-wo-scope').val().trim(),
                                 lead_time: $('#cf-wo-dur').val().trim(), start_date: $('#cf-wo-start').val(), payment_cycle: $('#cf-wo-cycle').val(),
                                 terms: JSON.stringify(terms),
-                                activities: JSON.stringify([{ activity_id: acts[0].activity_id, activity_name: acts.map(function(a){ return a.activity_name; }).filter(Boolean).join(', '), unit: acts[0].unit, qty: 0,
+                                wo_date: $('#cf-wo-date').val(),
+                                activities: JSON.stringify([{ activity_id: acts[0].activity_id, activity_name: $('#cf-wo-act').val().trim(), unit: acts[0].unit, qty: 0,
                                     tasks: [{ task_id: 0, task_name: r.name, task_unit: $('#cf-wo-unit').val().trim(), task_qty: 0, approx_qty: Math.round(woQty * 1000) / 1000, rate: woRate, amount: Math.round(woQty * woRate * 100) / 100 }] }]) },
                         success: function(d){
                             if (!d || d.error !== 'No') { fail((d && d.errortext) || 'Could not raise the Work Order.'); return; }

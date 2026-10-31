@@ -1446,7 +1446,7 @@ class ProcurementController extends Controller
             'start_date'       => $startDate,
             'payment_cycle'    => $paymentCycle,
             'Terms'            => $termsJson,
-            'Date_requested'   => $today,
+            'Date_requested'   => (preg_match('/^\d{4}-\d{2}-\d{2}$/', $_POST['wo_date'] ?? '') ? $_POST['wo_date'] : $today),
             'User_Id'          => (int)$uid,
             'WO_Status'        => 2,
             'WO_Address'       => $shipTo,
