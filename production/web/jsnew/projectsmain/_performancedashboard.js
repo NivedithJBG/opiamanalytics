@@ -1346,6 +1346,28 @@ function _cfRedrawNetInvBreakdown(){
 // The actual Total Investment (Advances + WIP at the cycle end, today for the
 // current cycle) is marked across the pair: green-blue at or above the
 // combined target, red-orange below it. Cycles still to come show targets only.
+// Cycle charts (Total Investment, WIP, Bills Receivable, Bank): every period gets at
+// least CF_MIN_SLOT px so its date label never runs into the next one. A chart wider
+// than its popup widens the popup (up to the screen width); beyond that it scrolls.
+var CF_MIN_SLOT = 72;
+function _cfChartW(baseW, pads, n){ return Math.max(baseW, pads + (n || 0) * CF_MIN_SLOT); }
+function _cfChartAttr(W){ setTimeout(_cfFitChartWins, 0); return ' data-minw="' + Math.round(W) + '"'; }
+function _cfFitChartWins(){
+    document.querySelectorAll('[data-minw]').forEach(function(svg){
+        var box = svg.parentNode; if (!box || !svg.getClientRects().length) return;
+        box.style.overflowX = 'auto';
+        var need = (+svg.getAttribute('data-minw') || 0) - box.clientWidth;
+        if (need <= 0) return;
+        var win = box; while (win && win !== document.body && getComputedStyle(win).position !== 'fixed') win = win.parentElement;
+        if (!win || win === document.body) return;
+        var r = win.getBoundingClientRect();
+        var w = Math.min(r.width + need + 6, window.innerWidth - 20);
+        if (w <= r.width) return;
+        win.style.width = w + 'px'; win.style.maxWidth = 'none';
+        var left = r.left; if (left + w > window.innerWidth - 10) left = Math.max(10, window.innerWidth - w - 10);
+        win.style.left = left + 'px'; win.style.transform = 'none'; win.style.top = r.top + 'px';
+    });
+}
 function _cfNetInvCycleBarsHtml(cyc){
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycle targets.</div>';
     // One bar per billing cycle, the current one and those still to come: the
@@ -1361,6 +1383,7 @@ function _cfNetInvCycleBarsHtml(cyc){
     var maxV = 0;
     cyc.forEach(function(c){ maxV = Math.max(maxV, tot(c), has(c) ? +c.actual || 0 : 0); });
     var W = 600, H = 300, base = 262, top = 40, pad = 20;
+    W = _cfChartW(W, 2 * pad, cyc.length);
     var slot = (W - 2 * pad) / cyc.length;
     var barW = Math.min(slot * 0.5, 90);
     var hOf = function(v){ return maxV > 0 ? Math.max(0, Math.round((v / maxV) * (base - top))) : 0; };
@@ -1389,7 +1412,7 @@ function _cfNetInvCycleBarsHtml(cyc){
         bars += '<text x="' + cx.toFixed(1) + '" y="' + tgtY + '" text-anchor="middle" font-size="11" fill="' + tgtFill + '">' + L(v) + '</text>'
             + '<text x="' + cx.toFixed(1) + '" y="' + (base + 22) + '" text-anchor="middle" font-size="13" fill="#111"' + (cur ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
-    return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
+    return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"' + _cfChartAttr(W) + ' style="display:block;min-width:' + W + 'px;">'
         + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg>';
 }
 function _cfShowNetInvCycles(cycles, info){
@@ -1665,14 +1688,14 @@ function _cfInvestBreakdownChartHtml(accounts, chartH, unitMode){
         var barPx = Math.max(2, (fmt.value / niceMax) * chartH);
         var col = _cfInvestBarColours[j % _cfInvestBarColours.length];
         var hasMembers = acct.members && acct.members.length;
-        barsHtml += '<div class="cf-breakdown-bar-col" data-idx="' + j + '" style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + chartH + 'px;flex:1 1 0;min-width:0;position:relative;' + (hasMembers ? 'cursor:pointer;' : '') + '">'
+        barsHtml += '<div class="cf-breakdown-bar-col" data-idx="' + j + '" style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + chartH + 'px;flex:1 1 0;min-width:72px;position:relative;' + (hasMembers ? 'cursor:pointer;' : '') + '">'
             + '<div style="font-size:11px;font-weight:700;color:#251840;margin-bottom:4px;white-space:nowrap;">' + fmt.value.toFixed(2) + '</div>'
             + '<div style="width:70%;max-width:34px;height:' + barPx.toFixed(1) + 'px;background:' + col + ';border-radius:2px 2px 0 0;"></div>'
             + '</div>';
     }
     var labelsHtml = '';
     for (var k = 0; k < accounts.length; k++) {
-        labelsHtml += '<div style="flex:1 1 0;min-width:0;font-size:11px;color:#333;text-align:center;line-height:1.2;padding:0 3px;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;">' + _cfShortLabel(accounts[k].name) + '</div>';
+        labelsHtml += '<div style="flex:1 1 0;min-width:72px;font-size:11px;color:#333;text-align:center;line-height:1.2;padding:0 3px;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;">' + _cfShortLabel(accounts[k].name) + '</div>';
     }
 
     // Always render the gridlines/axis frame, even with zero bars — an
@@ -1680,7 +1703,7 @@ function _cfInvestBreakdownChartHtml(accounts, chartH, unitMode){
     // bars themselves are conditional, plus a centered placeholder
     // message when there's nothing to plot yet.
     var emptyMsgHtml = accounts.length ? '' : '<div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;color:#8a94a3;font-size:12px;font-family:Barlow Condensed,Arial;">No data yet</div>';
-    var body = '<div style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;">'
+    var body = '<div' + _cfChartAttr(axisW + 4 + accounts.length * 78) + ' style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;">'
         + '<div class="cf-breakdown-chart-area" style="position:relative;flex:1;min-width:0;display:flex;align-items:flex-end;gap:6px;height:' + chartH + 'px;background-image:' + gridBg + ';">'
         + gridLabelsHtml
         + barsHtml
@@ -2708,6 +2731,7 @@ function _cfWipCycleBarsHtml(){
     // bars fill the window. Each cycle gets an equal slot, with the bar
     // occupying 60% of it, leaving clear space between bars.
     var W = 600, H = 300, base = 262, top = 40, pad = 20;
+    W = _cfChartW(W, 2 * pad, cyc.length);
     var slot = (W - 2 * pad) / cyc.length;
     var barW = slot * 0.6;
     var bars = '';
@@ -2719,7 +2743,7 @@ function _cfWipCycleBarsHtml(){
             + '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (base - h - 6) + '" text-anchor="middle" font-size="12" fill="#111">' + (c.target / 100000).toFixed(1) + '</text>'
             + '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (base + 18) + '" text-anchor="middle" font-size="12" fill="#333">' + c.end_label + '</text>';
     });
-    return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
+    return '<svg width="100%" height="auto" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"' + _cfChartAttr(W) + ' style="display:block;min-width:' + W + 'px;">'
         + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg>'
         + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;">Cycle target (Lakhs) · highlighted = current cycle</div>';
 }
@@ -3480,6 +3504,7 @@ function _cfBillsRecvBarsHtml(){
     var rawStep = Math.max(1, maxV / 100000 / 5), mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
     var tick = [1, 2, 2.5, 5, 10].map(function(m){ return m * mag; }).filter(function(t){ return t >= rawStep; })[0] * 100000;
     var maxS = Math.max(tick, Math.ceil(maxV / tick) * tick);
+    W = _cfChartW(W, padL + padR, cyc.length);
     var slot = (W - padL - padR) / cyc.length;
     var xOf = function(i){ return padL + (i + 0.5) * slot; };
     var yOf = function(v){ return base - (v / maxS) * (base - top); };
@@ -3513,7 +3538,7 @@ function _cfBillsRecvBarsHtml(){
         out += '<line x1="' + x.toFixed(1) + '" y1="' + base + '" x2="' + x.toFixed(1) + '" y2="' + (base + 5) + '" stroke="#555"/>'
             + '<text x="' + x.toFixed(1) + '" y="' + (base + 40) + '" text-anchor="middle" font-size="12" fill="#111"' + ((c.cycle || i + 1) === cur ? ' font-weight="700"' : '') + '>' + (c.end_label || '') + '</text>';
     });
-    return '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible;">' + out + '</svg>'
+    return '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"' + _cfChartAttr(W) + ' style="display:block;overflow:visible;min-width:' + W + 'px;">' + out + '</svg>'
         + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;"><span style="display:inline-block;width:18px;border-top:3px solid #1f2a3a;margin-right:5px;vertical-align:middle;"></span>Target &nbsp; <span style="display:inline-block;width:18px;border-top:3.5px solid #1e8073;margin-right:5px;vertical-align:middle;"></span>Actual credited (red point = below target)</div>';
 }
 function _cfRedrawBillsRecvBreakdown(){
@@ -3982,6 +4007,7 @@ function _cfBankTiLinesSvg(cyc){
     var tick = [1, 2, 2.5, 5, 10].map(function(m){ return m * mag; }).filter(function(t){ return t >= rawStep; })[0] * 100000;
     minV = Math.floor(minV / tick) * tick; maxV = Math.ceil(maxV / tick) * tick;
     if (maxV === minV) maxV = minV + tick;
+    W = _cfChartW(W, padL + padR, cyc.length);
     var slot = (W - padL - padR) / cyc.length;
     var xOf = function(i){ return padL + (i + 0.5) * slot; };
     var yOf = function(v){ return base - ((v - minV) / (maxV - minV)) * (base - top); };
@@ -4019,7 +4045,7 @@ function _cfBankTiLinesSvg(cyc){
         out += '<line x1="' + x.toFixed(1) + '" y1="' + base + '" x2="' + x.toFixed(1) + '" y2="' + (base + 5) + '" stroke="#555"/>'
             + '<text x="' + x.toFixed(1) + '" y="' + (base + 40) + '" text-anchor="middle" font-size="12" fill="#111"' + (c.current ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
-    return '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible;">' + out + '</svg>';
+    return '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"' + _cfChartAttr(W) + ' style="display:block;overflow:visible;min-width:' + W + 'px;">' + out + '</svg>';
 }
 function _cfShowBankTiLines(cycles, note){
     $('#cf-bank-ti-win').remove();
@@ -4408,7 +4434,7 @@ function _cfContractIncomeGroupedChartHtml(accounts, chartH){
         var cumVal = (+acct.amount || 0) / divisor;
         var cyclePx = Math.max(2, (cycleVal / niceMax) * chartH);
         var cumPx = Math.max(2, (cumVal / niceMax) * chartH);
-        barsHtml += '<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + chartH + 'px;flex:1 1 0;min-width:0;">'
+        barsHtml += '<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + chartH + 'px;flex:1 1 0;min-width:72px;">'
             + '<div style="display:flex;align-items:flex-end;justify-content:center;width:100%;position:relative;height:' + Math.max(cyclePx, cumPx).toFixed(1) + 'px;">'
             + '<div style="position:absolute;bottom:' + (cyclePx + 2).toFixed(1) + 'px;right:22px;font-size:10px;font-weight:700;color:' + cycleCol + ';white-space:nowrap;">' + cycleVal.toFixed(2) + '</div>'
             + '<div style="width:22px;height:' + cyclePx.toFixed(1) + 'px;background:' + cycleCol + ';border-radius:2px 0 0 0;"></div>'
@@ -4419,11 +4445,11 @@ function _cfContractIncomeGroupedChartHtml(accounts, chartH){
     }
     var labelsHtml = '';
     for (var k = 0; k < accounts.length; k++) {
-        labelsHtml += '<div style="flex:1 1 0;min-width:0;font-size:11px;color:#333;text-align:center;line-height:1.2;padding:0 3px;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;">' + accounts[k].name + '</div>';
+        labelsHtml += '<div style="flex:1 1 0;min-width:72px;font-size:11px;color:#333;text-align:center;line-height:1.2;padding:0 3px;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;">' + accounts[k].name + '</div>';
     }
 
     var emptyMsgHtml = accounts.length ? '' : '<div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;color:#8a94a3;font-size:12px;font-family:Barlow Condensed,Arial;">No data yet</div>';
-    var body = '<div style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;">'
+    var body = '<div' + _cfChartAttr(axisW + 4 + accounts.length * 78) + ' style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;">'
         + '<div style="position:relative;flex:1;min-width:0;display:flex;align-items:flex-end;gap:6px;height:' + chartH + 'px;background-image:' + gridBg + ';">'
         + gridLabelsHtml
         + barsHtml
