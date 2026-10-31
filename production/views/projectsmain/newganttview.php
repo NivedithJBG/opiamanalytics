@@ -724,7 +724,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       <div class="gcm-pop-panel"><div class="gcm-pop-panel-title" id="gcm-title-g4">Work Done</div><div class="gcm-pop-panel-body" id="gm-cd-g4" style="align-items:center;justify-content:flex-start"></div></div>
       <div class="gcm-pop-panel"><div class="gcm-pop-panel-title" id="gcm-title-g2">Cost of Activity</div><div class="gcm-pop-panel-body" id="gm-cd-g2"></div></div>
       <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Unit Cost of Resources</div><div class="gcm-pop-panel-body" id="gm-cd-ucr" style="align-items:center;justify-content:flex-start"></div></div>
-      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title" id="gcm-title-rcon">Yield</div><div class="gcm-pop-panel-body" id="gm-cd-rcon" style="align-items:center;justify-content:flex-start"></div></div>
+      <div class="gcm-pop-panel"><div class="gcm-pop-panel-title" id="gcm-title-rcon">Consumption</div><div class="gcm-pop-panel-body" id="gm-cd-rcon" style="align-items:center;justify-content:flex-start"></div></div>
       <div class="gcm-pop-panel"><div class="gcm-pop-panel-title">Cost of Resources</div><div class="gcm-pop-panel-body" id="gm-cd-rcost" style="align-items:center;justify-content:flex-start"></div></div>
     </div>
     <div id="gcm-pop-row2" style="display:none"></div>
@@ -2608,7 +2608,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       // outgrows the panel's own height.
       var chartOpts = { onClick: 'gm-ucr-type', integerTicks: true, showOverrun: true, hideBarVal: true };
       var anyOver = rows.some(function(r){ return (+r.overCount || 0) > 0; });
-      var chartHtml = (metric === 'ucr' || metric === 'rcon')
+      var chartHtml = (metric === 'ucr' || metric === 'rcon' || metric === 'rcost')
         ? _renderTiStyleTypeBars(rows)
         : '<div style="display:flex;flex-direction:column;flex:1;min-height:150px;">'
           + _renderVBarChart(rows, chartOpts)
@@ -3397,7 +3397,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         document.getElementById('gcm-title-g5').textContent   = isProjectOverhead ? 'Cost Per Day'          : 'Unit Cost of Activity';
         document.getElementById('gcm-title-g4').textContent   = isProjectOverhead ? 'Elapsed Days'          : 'Work Done';
         document.getElementById('gcm-title-g2').textContent   = isProjectOverhead ? 'Project Overhead Cost' : 'Cost of Activity';
-        document.getElementById('gcm-title-rcon').textContent = isProjectOverhead ? 'Days'                  : 'Yield';
+        document.getElementById('gcm-title-rcon').textContent = isProjectOverhead ? 'Days'                  : 'Consumption';
         document.getElementById('gcm-pop-loading').style.display = 'none';
         document.getElementById('gcm-pop-row1').style.display = 'grid';
         _renderResourceCost(d.items, d.activity_name, d.unit, d.schedule_qty, d.activity_qty);
