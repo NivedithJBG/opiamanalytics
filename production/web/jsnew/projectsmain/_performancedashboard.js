@@ -965,8 +965,7 @@ function _cfShowRaiseWo(r){
     var lbl = 'style="display:block;font-size:12px;font-weight:700;color:#465365;margin:0 0 5px;"', inp = 'width:100%;box-sizing:border-box;height:34px;border:1px solid #c5ccd4;border-radius:4px;padding:2px 10px;font-size:13px;color:#333;';
     var names = acts.map(function(a){ return esc(a.activity_name); }).filter(Boolean).join(', ');
     var body = '<div style="margin-bottom:9px;max-width:200px;"><label ' + lbl + '>Date</label><input type="date" id="cf-wo-date" style="' + inp + '"></div>'
-        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Vendor</label><select id="cf-wo-vendor" style="' + inp + '"><option value="">Loading...</option></select>'
-        + '<input type="text" id="cf-wo-vname" placeholder="Vendor name on this Work Order" title="Edit the name for this Work Order only (the Vendor Library is not changed)" style="' + inp + 'margin-top:6px;display:none;"></div>'
+        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Vendor</label><input type="text" id="cf-wo-vname" list="cf-wo-vlist" autocomplete="off" placeholder="Select or type the vendor..." title="Pick a vendor, then edit the name if needed (this Work Order only; the Vendor Library is not changed)" style="' + inp + '"><datalist id="cf-wo-vlist"></datalist><input type="hidden" id="cf-wo-vendor"></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Subject</label><input type="text" id="cf-wo-subject" placeholder="Work Order subject..." style="' + inp + '"></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Scope of Work</label><textarea id="cf-wo-scope" rows="4" placeholder="Describe the scope of work..." style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Activity</label><textarea id="cf-wo-act" rows="2" style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
@@ -1001,20 +1000,22 @@ function _cfShowRaiseWo(r){
     woAmt();
     $(win).on('input', '#cf-wo-qty, #cf-wo-rate', function(){ this.value = this.value.replace(/[^0-9.]/g, ''); woAmt(); });
     $.ajax({ type: 'POST', url: '../procurement/getvendors', dataType: 'json', data: { context: 'wo' }, success: function(v){
-        var opts = '<option value="">&mdash; Select Vendor &mdash;</option>';
-        ((v && v.vendors) || []).forEach(function(x){ opts += '<option value="' + x.Vendor_Id + '">' + esc(x.Name) + '</option>'; });
-        $('#cf-wo-vendor').html(opts);
+        win._woVendors = (v && v.vendors) || [];
+        $('#cf-wo-vlist').html(win._woVendors.map(function(x){ return '<option value="' + esc(x.Name) + '"></option>'; }).join(''));
     } });
     // Choosing a vendor fills an editable name box (used on this WO only).
-    $(win).on('change', '#cf-wo-vendor', function(){
-        var v = $(this).val(), $n = $('#cf-wo-vname');
-        if (!v) { $n.val('').hide(); return; }
-        $n.val($(this).find('option:selected').text()).show();
+    // A name matching a library vendor selects that vendor; editing it afterwards keeps
+    // the vendor and changes only the name written on this Work Order.
+    $(win).on('input', '#cf-wo-vname', function(){
+        var t = this.value.trim().toLowerCase();
+        var m = (win._woVendors || []).filter(function(x){ return String(x.Name).trim().toLowerCase() === t; })[0];
+        if (m) { $('#cf-wo-vendor').val(m.Vendor_Id); win._woVendorName = m.Name; }
+        else if (!t) { $('#cf-wo-vendor').val(''); win._woVendorName = ''; }
     });
     $(win).on('click', '#cf-po-term-add', function(){ $('#cf-po-terms').append(_cfTermRow('')); })
         .on('click', '.cf-po-term-del', function(){ if ($('.cf-po-term-row').length > 1) $(this).closest('.cf-po-term-row').remove(); else $(this).siblings('input').val(''); })
         .on('click', '#cf-wo-save', function(){
-            if (!$('#cf-wo-vendor').val()) { alert('Please select a vendor.'); return; }
+            if (!$('#cf-wo-vendor').val()) { alert('Please select a vendor from the list first.'); return; }
             var woQty = woNum('#cf-wo-qty'), woRate = woNum('#cf-wo-rate');
             if (!(woQty > 0) || !(woRate > 0)) { alert('Quantity and rate are needed to raise the Work Order.'); return; }
             var terms = []; $('.cf-po-term').each(function(){ var x = $(this).val().trim(); if (x) terms.push(x); });
@@ -1027,7 +1028,7 @@ function _cfShowRaiseWo(r){
                     if (!chk || chk.error !== 'No') { fail((chk && chk.errortext) || 'Please allocate a contractor for this task'); return; }
                     $.ajax({ type: 'POST', url: '../procurement/raiseworkorder', dataType: 'json',
                         data: { vendor_id: $('#cf-wo-vendor').val(),
-                                vendor_name: ($('#cf-wo-vname').val().trim() !== $('#cf-wo-vendor option:selected').text()) ? $('#cf-wo-vname').val().trim() : '',
+                                vendor_name: ($('#cf-wo-vname').val().trim() !== String(win._woVendorName || '').trim()) ? $('#cf-wo-vname').val().trim() : '',
                                 subject: $('#cf-wo-subject').val().trim(), scope: $('#cf-wo-scope').val().trim(),
                                 lead_time: $('#cf-wo-dur').val().trim(), start_date: $('#cf-wo-start').val(), payment_cycle: $('#cf-wo-cycle').val(),
                                 terms: JSON.stringify(terms),
