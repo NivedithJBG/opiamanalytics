@@ -989,6 +989,10 @@ function _cfShowRaiseWo(r){
     // Unit, quantity (this cycle) and rate of the resource; Amount = Qnty x Rate.
     var _wd = new Date(); $('#cf-wo-date').val(_wd.getFullYear() + '-' + ('0' + (_wd.getMonth() + 1)).slice(-2) + '-' + ('0' + _wd.getDate()).slice(-2));
     $('#cf-wo-act').val(acts.map(function(a){ return a.activity_name; }).filter(Boolean).join(', '));
+    // Activity box grows with its text.
+    var woGrow = function(el){ el.style.height = 'auto'; el.style.height = (el.scrollHeight + 2) + 'px'; };
+    $(win).on('input', '#cf-wo-act', function(){ woGrow(this); });
+    woGrow(document.getElementById('cf-wo-act'));
     $('#cf-wo-unit').val(r.unit || '');
     $('#cf-wo-qty').val(Math.round((+r.cycle_qty || 0) * 1000) / 1000); $('#cf-wo-rate').val(+r.rate || 0);
     var woNum = function(id){ return +String($(id).val()).replace(/,/g, '') || 0; };
