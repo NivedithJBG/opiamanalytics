@@ -7264,6 +7264,11 @@ class ProjectsmainController extends Controller
             foreach ($rows as $r) {
                 $resQty  = (float)$r['quantity'];
                 $typeId  = (int)$r['type_id'];
+                // Every resource now carries an Account Head (mandatory), so the
+                // Account Head alone no longer marks a Support Resource: Sub-Contractors
+                // (4) and Materials/Consumables/Purchased Inputs/Tools (2,6,7,8) keep
+                // their own actuals (MB / GRN) even when an Account Head is set.
+                $isSupportRes = !empty($r['Resource_Acc_Id']) && !in_array($typeId, [2, 4, 6, 7, 8], true);
                 if ($typeId === 4) {
                     // Actual rate = SUM(work_done_value) / SUM(work_done_qty) from sent MBs
                     $taskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
@@ -7295,7 +7300,7 @@ class ProjectsmainController extends Controller
                 // already produced a value, and only when a transaction
                 // actually exists (first_txn_date from the join is NULL
                 // until then) — no transaction yet means unknown, not zero.
-                if ($actUnit === null && $r['Resource_Acc_Id'] && $r['acc_first_txn_date'] !== null) {
+                if ($actUnit === null && $isSupportRes && $r['acc_first_txn_date'] !== null) {
                     $actUnit = (float)$r['acc_total_expense'] / max(1, (int)($elapsedDays ?? 0));
                 }
                 // Planned Consumption = res_qty × (estQty / schedQty)
@@ -7325,7 +7330,7 @@ class ProjectsmainController extends Controller
                     } else {
                         $actualConsumption = $plannedConsumption;
                     }
-                } elseif ($r['Resource_Acc_Id']) {
+                } elseif ($isSupportRes) {
                     // Support Resources: Unit Cost of Activity uses Actual
                     // Rate × Planned Consumption (same Consumption factor as
                     // Estimate — only the Rate side changes to Actual).
@@ -7338,7 +7343,7 @@ class ProjectsmainController extends Controller
                     $actualConsumption = $plannedConsumption;
                 }
 
-                $actualConsumptionForCost = $r['Resource_Acc_Id'] && $supportResActualDuration !== null
+                $actualConsumptionForCost = $isSupportRes && $supportResActualDuration !== null
                     ? round($supportResActualDuration, 3)
                     : $actualConsumption;
 
@@ -7382,7 +7387,7 @@ class ProjectsmainController extends Controller
                     'actual_consumption_cost' => $actualConsumptionForCost,
                     'indent_raised'        => ($r['stock_at_site'] !== null),
                     'has_mb'               => ($typeId === 4 && isset($taskWorkDoneById) && !empty(array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')), function($tid) use ($taskWorkDoneById){ return ($taskWorkDoneById[$tid] ?? 0) > 0; }))),
-                    'has_acc_head'         => !empty($r['Resource_Acc_Id']),
+                    'has_acc_head'         => $isSupportRes,
                 ];
             }
         }
