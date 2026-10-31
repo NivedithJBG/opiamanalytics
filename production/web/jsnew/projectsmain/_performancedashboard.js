@@ -4010,6 +4010,8 @@ function _cfBankTiLinesSvg(cyc){
     var has = function(){ return true; };
     var SER = [ { key: 'low', col: '#3a4a5f', name: 'Lowest bank balance' } ];
     cyc = _cfTrimZeroTail(cyc, function(c){ return [c.low]; });
+    // Once the balance stops changing, the repeated periods add nothing: keep the first of them only.
+    while (cyc.length > 1 && Math.abs((+cyc[cyc.length - 1].low || 0) - (+cyc[cyc.length - 2].low || 0)) < 1) cyc = cyc.slice(0, -1);
     var maxV = 0, minV = 0;
     cyc.forEach(function(c){ if (has(c)) SER.forEach(function(s){ var v = +c[s.key] || 0; maxV = Math.max(maxV, v); minV = Math.min(minV, v); }); });
     // X axis = period (billing cycles), Y axis = value in Lakhs, with tick marks.
