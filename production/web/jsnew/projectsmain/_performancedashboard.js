@@ -1356,7 +1356,7 @@ function _cfTrimZeroTail(cyc, vals){
     while (n > 1 && vals(cyc[n - 1]).every(function(v){ return !(+v); })) n--;
     return n < cyc.length ? cyc.slice(0, n) : cyc;
 }
-function _cfChartW(baseW, pads, n){ return Math.max(320, pads + (n || 0) * CF_MIN_SLOT); }
+function _cfChartW(baseW, pads, n, slot){ return Math.max(320, pads + (n || 0) * (slot || CF_MIN_SLOT)); }
 function _cfChartAttr(W){ setTimeout(_cfFitChartWins, 0); return ' data-minw="' + Math.round(W) + '"'; }
 function _cfFitChartWins(){
     document.querySelectorAll('[data-minw]:not([data-fitted])').forEach(function(svg){
@@ -1365,14 +1365,22 @@ function _cfFitChartWins(){
         box.style.overflowX = 'auto';
         var bcs = getComputedStyle(box), inner = box.clientWidth - (parseFloat(bcs.paddingLeft) || 0) - (parseFloat(bcs.paddingRight) || 0);
         var need = (+svg.getAttribute('data-minw') || 0) - inner;
-        if (Math.abs(need) < 4) return;
         var win = box; while (win && win !== document.body && getComputedStyle(win).position !== 'fixed') win = win.parentElement;
         if (!win || win === document.body) return;
-        var r = win.getBoundingClientRect();
-        var w = Math.max(360, Math.min(r.width + need + 6, window.innerWidth - 20));
-        win.style.width = w + 'px'; win.style.maxWidth = 'none'; win.style.minWidth = '0';
-        var left = r.left; if (left + w > window.innerWidth - 10) left = Math.max(10, window.innerWidth - w - 10);
-        win.style.left = left + 'px'; win.style.transform = 'none'; win.style.top = r.top + 'px';
+        var r = win.getBoundingClientRect(), w = r.width, left = r.left, top = r.top;
+        if (Math.abs(need) >= 4) {
+            w = Math.max(360, Math.min(r.width + need + 6, window.innerWidth - 20));
+            win.style.width = w + 'px'; win.style.maxWidth = 'none'; win.style.minWidth = '0';
+            if (left + w > window.innerWidth - 10) left = Math.max(10, window.innerWidth - w - 10);
+        }
+        // Tall enough for the whole chart: no vertical scroll.
+        var extraH = box.scrollHeight - box.clientHeight;
+        if (extraH > 0) {
+            var h = Math.min(r.height + extraH + 6, window.innerHeight - 20);
+            win.style.height = h + 'px'; win.style.maxHeight = 'none';
+            if (top + h > window.innerHeight - 10) top = Math.max(10, window.innerHeight - h - 10);
+        }
+        win.style.left = left + 'px'; win.style.transform = 'none'; win.style.top = top + 'px';
     });
 }
 function _cfNetInvCycleBarsHtml(cyc){
@@ -4020,7 +4028,7 @@ function _cfBankTiLinesSvg(cyc){
     var tick = [1, 2, 2.5, 5, 10].map(function(m){ return m * mag; }).filter(function(t){ return t >= rawStep; })[0] * 100000;
     minV = Math.floor(minV / tick) * tick; maxV = Math.ceil(maxV / tick) * tick;
     if (maxV === minV) maxV = minV + tick;
-    W = _cfChartW(W, padL + padR, cyc.length);
+    W = _cfChartW(W, padL + padR, cyc.length, 96);
     var slot = (W - padL - padR) / cyc.length;
     var xOf = function(i){ return padL + (i + 0.5) * slot; };
     var yOf = function(v){ return base - ((v - minV) / (maxV - minV)) * (base - top); };
