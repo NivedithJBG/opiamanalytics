@@ -7264,11 +7264,20 @@ class ProjectsmainController extends Controller
             foreach ($rows as $r) {
                 $resQty  = (float)$r['quantity'];
                 $typeId  = (int)$r['type_id'];
+                // Resource Type ids differ between databases (GOSPL: Sub: Contractors = 21,
+                // Materials = 10..12, …), so the type is recognised by its name and mapped
+                // to the ids the formulas below (and the panels' JS) are written for:
+                // 4 = Sub-Contractor, 2 = Materials, 6/7/8 = Consumables/Purchased Inputs/Tools.
+                $tn = strtolower(trim((string)$r['type_name']));
+                if (preg_match('/sub\W*contract/', $tn))      $typeId = 4;
+                elseif (strpos($tn, 'material') === 0)          $typeId = 2;
+                elseif (strpos($tn, 'consumable') === 0)        $typeId = 6;
+                elseif (strpos($tn, 'purchased input') === 0)   $typeId = 7;
+                elseif (strpos($tn, 'tool') === 0)              $typeId = 8;
                 // Every resource now carries an Account Head (mandatory), so the
-                // Account Head alone no longer marks a Support Resource: Sub-Contractors
-                // (4) and Materials/Consumables/Purchased Inputs/Tools (2,6,7,8) keep
-                // their own actuals (MB / GRN) even when an Account Head is set.
-                $isSupportRes = !empty($r['Resource_Acc_Id']) && !in_array($typeId, [2, 4, 6, 7, 8], true);
+                // Account Head alone no longer marks a Support Resource: only the
+                // Support Resources type takes its actual from the Account Head ledger.
+                $isSupportRes = !empty($r['Resource_Acc_Id']) && strpos($tn, 'support') === 0;
                 if ($typeId === 4) {
                     // Actual rate = SUM(work_done_value) / SUM(work_done_qty) from sent MBs
                     $taskIds = array_filter(array_map('intval', explode(',', $r['task_ids'] ?? '')));
