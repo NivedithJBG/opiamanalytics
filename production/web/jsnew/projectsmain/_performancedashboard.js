@@ -964,9 +964,11 @@ function _cfShowRaiseWo(r){
     var esc = function(t){ return $('<div>').text(t || '').html(); };
     var lbl = 'style="display:block;font-size:12px;font-weight:700;color:#465365;margin:0 0 5px;"', inp = 'width:100%;box-sizing:border-box;height:34px;border:1px solid #c5ccd4;border-radius:4px;padding:2px 10px;font-size:13px;color:#333;';
     var names = acts.map(function(a){ return esc(a.activity_name); }).filter(Boolean).join(', ');
-    var body = '<div style="margin-bottom:9px;max-width:200px;"><label ' + lbl + '>Date</label><input type="date" id="cf-wo-date" style="' + inp + '"></div>'
-        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Vendor</label><input type="text" id="cf-wo-vname" list="cf-wo-vlist" autocomplete="off" placeholder="Select or type the vendor..." title="Pick a vendor, then edit the name if needed (this Work Order only; the Vendor Library is not changed)" style="' + inp + '"><datalist id="cf-wo-vlist"></datalist><input type="hidden" id="cf-wo-vendor"></div>'
-        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Contact Person</label><input type="text" id="cf-wo-contact" autocomplete="off" style="' + inp + '"></div>'
+    var body = '<div style="margin-bottom:9px;"><label ' + lbl + '>Vendor</label><input type="text" id="cf-wo-vname" list="cf-wo-vlist" autocomplete="off" placeholder="Select or type the vendor..." title="Pick a vendor, then edit the name if needed (this Work Order only; the Vendor Library is not changed)" style="' + inp + '"><datalist id="cf-wo-vlist"></datalist><input type="hidden" id="cf-wo-vendor"></div>'
+        + '<div style="display:flex;gap:10px;margin-bottom:9px;">'
+        +   '<div style="flex:1;min-width:0;"><label ' + lbl + '>Contact Person</label><input type="text" id="cf-wo-contact" autocomplete="off" style="' + inp + '"></div>'
+        +   '<div style="flex:0 0 170px;"><label ' + lbl + '>Date</label><input type="date" id="cf-wo-date" style="' + inp + '"></div>'
+        + '</div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Subject</label><input type="text" id="cf-wo-subject" placeholder="Work Order subject..." style="' + inp + '"></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Scope of Work</label><textarea id="cf-wo-scope" rows="4" placeholder="Describe the scope of work..." style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Activity</label><textarea id="cf-wo-act" rows="2" style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
