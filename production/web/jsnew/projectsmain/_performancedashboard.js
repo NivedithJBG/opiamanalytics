@@ -1350,6 +1350,12 @@ function _cfRedrawNetInvBreakdown(){
 // least CF_MIN_SLOT px so its date label never runs into the next one. A chart wider
 // than its popup widens the popup (up to the screen width); beyond that it scrolls.
 var CF_MIN_SLOT = 72;
+// Trailing periods with nothing to show (all values 0) are left off the chart.
+function _cfTrimZeroTail(cyc, vals){
+    var n = cyc.length;
+    while (n > 1 && vals(cyc[n - 1]).every(function(v){ return !(+v); })) n--;
+    return n < cyc.length ? cyc.slice(0, n) : cyc;
+}
 function _cfChartW(baseW, pads, n){ return Math.max(320, pads + (n || 0) * CF_MIN_SLOT); }
 function _cfChartAttr(W){ setTimeout(_cfFitChartWins, 0); return ' data-minw="' + Math.round(W) + '"'; }
 function _cfFitChartWins(){
@@ -1381,6 +1387,7 @@ function _cfNetInvCycleBarsHtml(cyc){
     var tot = function(c){ return (+c.wip || 0) + (+c.adv || 0); };
     var has = function(c){ return c.actual !== null && c.actual !== undefined; };
     var GB = '#2ba899', RO = '#d84a30';
+    cyc = _cfTrimZeroTail(cyc, function(c){ return [tot(c), has(c) ? c.actual : 0]; });
     var maxV = 0;
     cyc.forEach(function(c){ maxV = Math.max(maxV, tot(c), has(c) ? +c.actual || 0 : 0); });
     var W = 600, H = 300, base = 262, top = 40, pad = 20;
@@ -2726,6 +2733,7 @@ function _cfWipCycleBarsHtml(){
     var s = _cfWipState;
     var cyc = s.cycles || [];
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycle targets.</div>';
+    cyc = _cfTrimZeroTail(cyc, function(c){ return [c.target]; });
     var maxV = 0;
     cyc.forEach(function(c){ if (c.target > maxV) maxV = c.target; });
     // Drawn in a fixed 600 x 300 viewBox that scales to the popup width, so the
@@ -3499,6 +3507,7 @@ function _cfBillsRecvBarsHtml(){
     var cyc = s.cycles || [], cur = +s.currentCycle || 0;
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration, Billing Cycle, Project Value and an estimate to see the cycle targets.</div>';
     var reached = function(c, i){ return !cur || (c.cycle || i + 1) <= cur; };
+    cyc = _cfTrimZeroTail(cyc, function(c){ return [c.target, c.actual]; });
     var maxV = 0;
     cyc.forEach(function(c, i){ maxV = Math.max(maxV, +c.target || 0, reached(c, i) ? +c.actual || 0 : 0); });
     var W = 660, H = 362, base = 270, top = 30, padL = 70, padR = 24;
@@ -4000,6 +4009,7 @@ function _cfBankTiLinesSvg(cyc){
     // (from cfbankprojection).
     var has = function(){ return true; };
     var SER = [ { key: 'low', col: '#3a4a5f', name: 'Lowest bank balance' } ];
+    cyc = _cfTrimZeroTail(cyc, function(c){ return [c.low]; });
     var maxV = 0, minV = 0;
     cyc.forEach(function(c){ if (has(c)) SER.forEach(function(s){ var v = +c[s.key] || 0; maxV = Math.max(maxV, v); minV = Math.min(minV, v); }); });
     // X axis = period (billing cycles), Y axis = value in Lakhs, with tick marks.
