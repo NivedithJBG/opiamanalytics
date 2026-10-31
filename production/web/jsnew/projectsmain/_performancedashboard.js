@@ -968,7 +968,7 @@ function _cfShowRaiseWo(r){
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Vendor</label><select id="cf-wo-vendor" style="' + inp + '"><option value="">Loading...</option></select></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Subject</label><input type="text" id="cf-wo-subject" placeholder="Work Order subject..." style="' + inp + '"></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Scope of Work</label><textarea id="cf-wo-scope" rows="4" placeholder="Describe the scope of work..." style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
-        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Activity</label><input type="text" id="cf-wo-act" style="' + inp + '"></div>'
+        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Activity</label><textarea id="cf-wo-act" rows="2" style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
         + '<div style="display:flex;gap:10px;margin-bottom:9px;">'
         +   '<div style="flex:0.8;min-width:0;"><label ' + lbl + '>Unit</label><input type="text" id="cf-wo-unit" style="' + inp + '"></div>'
         +   '<div style="flex:1;min-width:0;"><label ' + lbl + '>Qnty</label><input type="text" inputmode="decimal" id="cf-wo-qty" style="' + inp + 'text-align:right;"></div>'
