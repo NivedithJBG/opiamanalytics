@@ -4016,7 +4016,7 @@ function _cfBankTiLinesSvg(cyc){
     // One line: lowest projected bank balance in each billing cycle (fund requirement) — negative = overdraft, positive = surplus
     // (from cfbankprojection).
     var has = function(){ return true; };
-    var SER = [ { key: 'low', col: '#3a4a5f', name: 'Lowest bank balance' } ];
+    var SER = [ { key: 'low', col: '#3a4a5f', name: 'Bank balance' } ];
     cyc = _cfTrimZeroTail(cyc, function(c){ return [c.low]; });
     // Once the balance stops changing, the repeated periods add nothing: keep the first of them only.
     while (cyc.length > 1 && Math.abs((+cyc[cyc.length - 1].low || 0) - (+cyc[cyc.length - 2].low || 0)) < 1) cyc = cyc.slice(0, -1);
@@ -4076,7 +4076,7 @@ function _cfShowBankTiLines(cycles, note){
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Bank Balance per Cycle (Lakhs)</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
-        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #3a4a5f;margin-right:5px;vertical-align:middle;"></span>Lowest bank balance in the cycle (&minus; overdraft, + surplus)</span>' + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'
+        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #3a4a5f;margin-right:5px;vertical-align:middle;"></span>Bank balance at the end of the cycle, as bills are paid in (&minus; overdraft, + surplus)</span>' + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;padding:10px 16px 16px;">' + _cfBankTiLinesSvg(cycles) + '</div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;

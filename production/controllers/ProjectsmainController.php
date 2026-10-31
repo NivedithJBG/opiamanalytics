@@ -2485,33 +2485,31 @@ class ProjectsmainController extends Controller
         $in = [];   // receipts by date
         $addIn = function($ts, $amt) use (&$in) { $k = date('Y-m-d', $ts); $in[$k] = ($in[$k] ?? 0) + $amt; };
         if ($fg['br'] > 0) $addIn($today + $coll * $day, $fg['br']);
+        // Projected bank balance: today's bank balance, plus each bill when its money
+        // reaches the bank (bill raised at cycle end + collection days). Nothing is
+        // deducted. Each point = the balance at the end of the cycle.
         $brT = $b['cycles'] ?? [];
-        $out = []; $bal = (float)$fg['bank'];
-        $advTarget = 100000 * (float)Yii::$app->db->createCommand(
-            "SELECT target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key = 'investments_target'", [':p' => $pid])->queryScalar();
-        $advExtra = max(0, $advTarget - (float)$fg['adv']);
-        $bal -= $advExtra;
-        $prevEnd = null;
         foreach ($cyc as $i => $c) {
+            if ((int)$c['cycle'] < (int)$cur['cycle']) continue;
+            $addIn(strtotime($c['end_date']) + $coll * $day, (float)($brT[$i]['target'] ?? 0));
+        }
+        $out = []; $bal = (float)$fg['bank'];
+        $live = array_values(array_filter($cyc, function($c) use ($cur){ return (int)$c['cycle'] >= (int)$cur['cycle']; }));
+        $from = $today;
+        foreach ($live as $j => $c) {
             $k = (int)$c['cycle'];
             $end = strtotime($c['end_date']);
-            $start = $k === (int)$cur['cycle'] ? strtotime($cur['start']) : ($prevEnd !== null ? $prevEnd + $day : $end);
-            $prevEnd = $end;
-            if ($k < (int)$cur['cycle']) continue;
-            $days = max(1, (int)round(($end - $start) / $day) + 1);
-            $perDay = (float)$c['target'] / $days;
-            $addIn($end + $coll * $day, (float)($brT[$i]['target'] ?? 0));
-            $lo = null; $hi = null;
-            for ($t = max($start, $today); $t <= $end; $t += $day) {
-                $bal += ($in[date('Y-m-d', $t)] ?? 0) - $perDay;
-                $lo = $lo === null ? $bal : min($lo, $bal);
-                $hi = $hi === null ? $bal : max($hi, $bal);
+            $last = $j === count($live) - 1;
+            foreach ($in as $d => $amt) {
+                $t = strtotime($d);
+                // received in this cycle (the last cycle also takes money still to come in after it)
+                if ($t >= $from && ($t <= $end || $last)) $bal += $amt;
             }
-            if ($lo === null) { $lo = $hi = $bal; }
+            $from = $end + $day;
             $out[] = ['cycle' => $k, 'end_date' => $c['end_date'], 'current' => $k === (int)$cur['cycle'],
-                      'low' => round($lo, 2), 'high' => round($hi, 2), 'end' => round($bal, 2)];
+                      'low' => round($bal, 2), 'high' => round($bal, 2), 'end' => round($bal, 2)];
         }
-        return ['error' => 'No', 'cycles' => $out, 'opening' => round((float)$fg['bank'], 2), 'collection_days' => $coll, 'advances_extra' => round($advExtra, 2)];
+        return ['error' => 'No', 'cycles' => $out, 'opening' => round((float)$fg['bank'], 2), 'collection_days' => $coll];
     }
 
     // Bank/Working Capital panel breakdown (Cashflow Dashboard popup):
