@@ -1452,7 +1452,7 @@ class ProcurementController extends Controller
             'WO_Address'       => $shipTo,
             'WO_tax'           => 0,
             'WO_Vendor'        => $vendorId,
-            'WO_Approved_Name' => '',
+            'WO_Approved_Name' => trim($_POST['vendor_name'] ?? ''),   // vendor name as written on this WO (library unchanged)
             'WO_Designation'   => '',
             'WO_retention'     => 0,
             'WO_tds'           => 0,
@@ -1485,7 +1485,7 @@ class ProcurementController extends Controller
     {
         $db = Yii::$app->db;
         $wo = $db->createCommand(
-            'SELECT wo.*, v.Name AS vendor_name, v.Email AS vendor_email,
+            'SELECT wo.*, COALESCE(NULLIF(wo.WO_Approved_Name, \'\'), v.Name) AS vendor_name, v.Email AS vendor_email,
                     v.Address AS vendor_address,
                     p.Name AS project_name, p.location AS project_location
              FROM work_order wo
@@ -1754,7 +1754,7 @@ class ProcurementController extends Controller
         $db = Yii::$app->db;
 
         $sql = "SELECT wo.WO_Id, wo.WO_Number, wo.Date_requested, wo.WO_Status,
-                       v.Name AS vendor_name, v.Email AS vendor_email
+                       COALESCE(NULLIF(wo.WO_Approved_Name, ''), v.Name) AS vendor_name, v.Email AS vendor_email
                 FROM work_order wo
                 JOIN vendors v ON v.Vendor_Id = wo.WO_Vendor
                 WHERE wo.Project_Id = :pid AND wo.WO_Status IN (0, 1)
