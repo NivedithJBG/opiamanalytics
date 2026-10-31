@@ -90,6 +90,14 @@
   background:#6b7c93; color:#fff; font-weight:700; font-size:13px; border:1px solid #55647a;
   padding:5px 9px; white-space:nowrap;   /* one line: the total no longer wraps and doubles the row height */
 }
+/* Smaller type throughout the estimate sheet (beats the app's global td/th sizes). */
+#estreport-win .er-table th, #estreport-win .er-table td { font-size:11px; line-height:1.3; }
+#estreport-win .er-table th { padding:5px 7px; }
+#estreport-win .er-table td { padding:4px 7px; }
+#estreport-win .er-table tr.er-iow-row td, #estreport-win .er-table tr.er-sub-row td { font-size:11.5px; padding:4px 7px; }
+#estreport-win .er-table tr.er-grand-row td { font-size:12px; padding:4px 7px; }
+#estreport-win .er-sheet-hdr h2 { font-size:15px; }
+#estreport-win .er-sheet-hdr .er-sheet-sub { font-size:10px; }
 .er-table td.er-editable{cursor:pointer;}
 .er-table td.er-editable:hover{background:#eef4fb;outline:1px dashed #7ba3d0;outline-offset:-2px;}
 .er-table td.er-editable input{
