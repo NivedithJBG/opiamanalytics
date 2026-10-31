@@ -966,6 +966,7 @@ function _cfShowRaiseWo(r){
     var names = acts.map(function(a){ return esc(a.activity_name); }).filter(Boolean).join(', ');
     var body = '<div style="margin-bottom:9px;max-width:200px;"><label ' + lbl + '>Date</label><input type="date" id="cf-wo-date" style="' + inp + '"></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Vendor</label><input type="text" id="cf-wo-vname" list="cf-wo-vlist" autocomplete="off" placeholder="Select or type the vendor..." title="Pick a vendor, then edit the name if needed (this Work Order only; the Vendor Library is not changed)" style="' + inp + '"><datalist id="cf-wo-vlist"></datalist><input type="hidden" id="cf-wo-vendor"></div>'
+        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Contact Person</label><input type="text" id="cf-wo-contact" autocomplete="off" style="' + inp + '"></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Subject</label><input type="text" id="cf-wo-subject" placeholder="Work Order subject..." style="' + inp + '"></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Scope of Work</label><textarea id="cf-wo-scope" rows="4" placeholder="Describe the scope of work..." style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Activity</label><textarea id="cf-wo-act" rows="2" style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
@@ -1009,7 +1010,7 @@ function _cfShowRaiseWo(r){
     $(win).on('input', '#cf-wo-vname', function(){
         var t = this.value.trim().toLowerCase();
         var m = (win._woVendors || []).filter(function(x){ return String(x.Name).trim().toLowerCase() === t; })[0];
-        if (m) { $('#cf-wo-vendor').val(m.Vendor_Id); win._woVendorName = m.Name; }
+        if (m) { $('#cf-wo-vendor').val(m.Vendor_Id); win._woVendorName = m.Name; $('#cf-wo-contact').val(m.contact_person || ''); }
         else if (!t) { $('#cf-wo-vendor').val(''); win._woVendorName = ''; }
     });
     $(win).on('click', '#cf-po-term-add', function(){ $('#cf-po-terms').append(_cfTermRow('')); })
@@ -1029,6 +1030,7 @@ function _cfShowRaiseWo(r){
                     $.ajax({ type: 'POST', url: '../procurement/raiseworkorder', dataType: 'json',
                         data: { vendor_id: $('#cf-wo-vendor').val(),
                                 vendor_name: ($('#cf-wo-vname').val().trim() !== String(win._woVendorName || '').trim()) ? $('#cf-wo-vname').val().trim() : '',
+                                contact_person: $('#cf-wo-contact').val().trim(),
                                 subject: $('#cf-wo-subject').val().trim(), scope: $('#cf-wo-scope').val().trim(),
                                 lead_time: $('#cf-wo-dur').val().trim(), start_date: $('#cf-wo-start').val(), payment_cycle: $('#cf-wo-cycle').val(),
                                 terms: JSON.stringify(terms),

@@ -323,7 +323,7 @@ class ProcurementController extends Controller
 
         if ($resourceId) {
             $rows = $db->createCommand(
-                'SELECT DISTINCT v.Vendor_Id, v.Name FROM vendors v
+                'SELECT DISTINCT v.Vendor_Id, v.Name, v.contact_person FROM vendors v
                  JOIN vendor_resources vr ON vr.vendor_id = v.Vendor_Id
                  WHERE v.Status = 0 AND vr.resource_id = :rid ORDER BY v.Name',
                 [':rid' => $resourceId]
@@ -331,7 +331,7 @@ class ProcurementController extends Controller
         } elseif ($context === 'po') {
             $poIds = ResourceTypeCategories::ids('po');
             $rows = $poIds ? $db->createCommand(
-                "SELECT v.Vendor_Id, v.Name FROM vendors v
+                "SELECT v.Vendor_Id, v.Name, v.contact_person FROM vendors v
                  WHERE v.Status = 0
                    AND v.resource_type_id IN (" . implode(',', $poIds) . ")
                  ORDER BY v.Name"
@@ -339,14 +339,14 @@ class ProcurementController extends Controller
         } elseif ($context === 'wo') {
             $woIds = ResourceTypeCategories::ids('wo');
             $rows = $woIds ? $db->createCommand(
-                "SELECT v.Vendor_Id, v.Name FROM vendors v
+                "SELECT v.Vendor_Id, v.Name, v.contact_person FROM vendors v
                  WHERE v.Status = 0
                    AND v.resource_type_id IN (" . implode(',', $woIds) . ")
                  ORDER BY v.Name"
             )->queryAll() : [];
         } else {
             $rows = $db->createCommand(
-                'SELECT Vendor_Id, Name FROM vendors WHERE Status = 0 ORDER BY Name'
+                'SELECT Vendor_Id, Name, contact_person FROM vendors WHERE Status = 0 ORDER BY Name'
             )->queryAll();
         }
 
@@ -1453,7 +1453,7 @@ class ProcurementController extends Controller
             'WO_tax'           => 0,
             'WO_Vendor'        => $vendorId,
             'WO_Approved_Name' => trim($_POST['vendor_name'] ?? ''),   // vendor name as written on this WO (library unchanged)
-            'WO_Designation'   => '',
+            'WO_Designation'   => trim($_POST['contact_person'] ?? ''),   // vendor contact person for this WO
             'WO_retention'     => 0,
             'WO_tds'           => 0,
             'WO_vat'           => 0,
@@ -1586,6 +1586,7 @@ class ProcurementController extends Controller
             . '<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Vendor</div>'
             . '<div style="font-size:13px;font-weight:600;color:#222;">' . htmlspecialchars($wo['vendor_name'] ?? '') . '</div>'
             . (!empty($wo['vendor_address']) ? '<div style="font-size:12px;color:#555;margin-top:4px;">' . htmlspecialchars($wo['vendor_address']) . '</div>' : '')
+            . (!empty($wo['WO_Designation']) ? '<div style="font-size:12px;color:#555;margin-top:4px;">Contact: ' . htmlspecialchars($wo['WO_Designation']) . '</div>' : '')
             . '</td>'
             . '<td style="padding:14px 18px;vertical-align:top;">'
             . '<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Project Name</div>'
