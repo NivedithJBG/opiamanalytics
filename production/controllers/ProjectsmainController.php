@@ -5346,7 +5346,7 @@ class ProjectsmainController extends Controller
     }
 
     // Bills Receivable, per payment cycle.
-    // target(k) = WIP target of cycle k / total estimate cost x project value.
+    // target(k) = revenue of cycle k = sum of quoted rate x estimated quantity in cycle k.
     // actual(k) = amount credited to Contract Income with a date in cycle k.
     // Cycle 1 is open at the start and the last cycle is open at the end, the
     // same as the WIP cycles.
@@ -5364,7 +5364,7 @@ class ProjectsmainController extends Controller
         $totalCost = (float)($wip['total_cost'] ?? 0);
         $projectValue = (float)($proj['project_value'] ?? 0);
         $wipCycles = $wip['cycles'] ?? [];
-        if (!$proj || empty($wipCycles) || $totalCost <= 0 || $projectValue <= 0) {
+        if (!$proj || empty($wipCycles)) {
             return ['error' => 'No', 'cycles' => [], 'current_cycle' => 0, 'current_target' => 0];
         }
 
@@ -5397,7 +5397,7 @@ class ProjectsmainController extends Controller
             $cycles[] = [
                 'cycle'     => $k,
                 'end_label' => $c['end_label'],
-                'target'    => round($c['target'] / $totalCost * $projectValue, 2),
+                'target'    => round((float)($c['revenue'] ?? 0), 2),   // quoted rate x estimated quantity of the cycle
                 'actual'    => round($actual, 2),
             ];
         }
