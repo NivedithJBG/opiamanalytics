@@ -72,6 +72,7 @@ $(function(){
   function openVendorlib(){
     win.classList.add('rl-open');
     document.dispatchEvent(new Event('vendorlib:open'));
+    $('#listvendorslib').trigger('click');   // vendors listed on open
   }
   function closeVendorlib(){
     win.classList.remove('rl-open');

@@ -2,13 +2,8 @@ $(function(){
 
     // ── List / Search ──────────────────────────────────────────────────────
     $('#listvendorslib').on('click', function(){
-        var typeId = $('#search-restype').val();
-        // Only load if a resource type is selected
-        if (!typeId || typeId === '0') {
-            $('#vendorliblistsection').html('');
-            $('#vendor-list-body').html('<tr><td colspan="8" style="text-align:center;padding:30px;color:#aaa;font-size:13px;border:1px solid #eee;">Select a Resource Type to view vendors</td></tr>');
-            return;
-        }
+        // No Resource Type selected: all vendors are listed.
+        var typeId = $('#search-restype').val() || 0;
         $('.add-vendor-form').hide();
         $('#vendor-search-bar').show();
         $('#vendorliblistsection').show();

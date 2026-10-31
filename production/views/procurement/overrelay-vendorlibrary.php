@@ -152,7 +152,7 @@ $resourceTypes = $db->createCommand("SELECT ResourceType_Id, Name FROM resourcet
                     </div>
                     <div class="col-md-2" id="vlf-resid-group">
                         <div class="form-group">
-                            <label>Resource Name</label>
+                            <label>Resource</label>
                             <select class="form-control" id="vlf-resid">
                                 <option value="0">-- Select Resource Type first --</option>
                             </select>
@@ -187,7 +187,7 @@ $resourceTypes = $db->createCommand("SELECT ResourceType_Id, Name FROM resourcet
             <thead>
                 <tr>
                     <th style="background:#555;color:#fff;font-weight:bold;padding:7px 10px;border:1px solid #444;font-size:13px;text-align:center;">#</th>
-                    <th style="background:#555;color:#fff;font-weight:bold;padding:7px 10px;border:1px solid #444;font-size:13px;">Resource Name</th>
+                    <th style="background:#555;color:#fff;font-weight:bold;padding:7px 10px;border:1px solid #444;font-size:13px;">Resource</th>
                     <th style="background:#555;color:#fff;font-weight:bold;padding:7px 10px;border:1px solid #444;font-size:13px;">Vendor</th>
                     <th style="background:#555;color:#fff;font-weight:bold;padding:7px 10px;border:1px solid #444;font-size:13px;">Address</th>
                     <th style="background:#555;color:#fff;font-weight:bold;padding:7px 10px;border:1px solid #444;font-size:13px;">Contact Person</th>

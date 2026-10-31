@@ -184,14 +184,8 @@ class VendorlibraryController extends Controller
                 $typeId    = (int)($row['vendor_type_id']   ?? 0);
                 $rTypeId   = (int)($row['resource_type_id'] ?? 0);
 
-                $resCell = '';
-                foreach ($allocMap[$id] ?? [] as $ar) {
-                    $resCell .= '<span style="display:inline-block;background:#e8ecf0;border:1px solid #c5ccd4;border-radius:12px;padding:1px 8px;margin:2px 4px 2px 0;font-size:12px;white-space:nowrap;">'
-                              . htmlspecialchars($ar['Name'], ENT_QUOTES)
-                              . '<a href="javascript:void(0)" class="vlf-res-remove" data-vid="' . $id . '" data-rid="' . (int)$ar['Resource_Id'] . '" '
-                              .     'title="Remove allocation" style="color:#c0392b;font-weight:700;text-decoration:none;margin-left:5px;">&times;</a>'
-                              . '</span>';
-                }
+                // Resources as plain text, one per line.
+                $resCell = implode('<br>', array_map(function($ar){ return htmlspecialchars($ar['Name'], ENT_QUOTES); }, $allocMap[$id] ?? []));
 
                 $html .= '<tr id="vendorrow' . $id . '">'
                        . '<td ' . $tdStyle . ' style="padding:6px 10px;border:1px solid #ddd;font-size:13px;text-align:center;color:#999;">' . ($i + 1) . '</td>'
