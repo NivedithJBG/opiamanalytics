@@ -954,11 +954,76 @@ function _cfShowRaisePo(r){
             });
         });
 }
+// Sub-Contractors: the Raise Work Order popup (same fields and endpoints as
+// Order Management > Work Orders) for the activities the resource is allocated to.
+// The WO is raised, issued and mailed to the vendor in one go, like the PO above.
+function _cfShowRaiseWo(r){
+    var acts = r.activities ? Object.keys(r.activities).map(function(k){ return r.activities[k]; }) : [];
+    if (!acts.length && r.activity_id) acts = [{ activity_id: r.activity_id, activity_name: '', unit: '' }];
+    if (!acts.length) { alert(r.name + ' is not allocated to any activity in this project.'); return; }
+    var esc = function(t){ return $('<div>').text(t || '').html(); };
+    var lbl = 'style="display:block;font-size:12px;font-weight:700;color:#465365;margin:0 0 5px;"', inp = 'width:100%;box-sizing:border-box;height:34px;border:1px solid #c5ccd4;border-radius:4px;padding:2px 10px;font-size:13px;color:#333;';
+    var names = acts.map(function(a){ return esc(a.activity_name); }).filter(Boolean).join(', ');
+    var body = '<div style="margin-bottom:9px;font-size:12px;color:#465365;"><b>' + esc(r.name) + '</b>' + (names ? ' &mdash; ' + names : '') + '</div>'
+        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Vendor</label><select id="cf-wo-vendor" style="' + inp + '"><option value="">Loading...</option></select></div>'
+        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Subject</label><input type="text" id="cf-wo-subject" placeholder="Work Order subject..." style="' + inp + '"></div>'
+        + '<div style="margin-bottom:9px;"><label ' + lbl + '>Scope of Work</label><textarea id="cf-wo-scope" rows="4" placeholder="Describe the scope of work..." style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
+        + '<div style="display:flex;gap:10px;margin-bottom:9px;">'
+        +   '<div style="flex:1;min-width:0;"><label ' + lbl + '>Start Date</label><input type="date" id="cf-wo-start" style="' + inp + '"></div>'
+        +   '<div style="flex:1;min-width:0;"><label ' + lbl + '>Duration</label><input type="text" id="cf-wo-dur" placeholder="e.g. 30 days" style="' + inp + '"></div>'
+        +   '<div style="flex:1;min-width:0;"><label ' + lbl + '>Payment Cycle</label><select id="cf-wo-cycle" style="' + inp + '"><option value="">&mdash; Select &mdash;</option><option>Daily</option><option>Weekly</option><option>Fortnightly</option><option>Monthly</option></select></div>'
+        + '</div>'
+        + '<div><label ' + lbl + '>Terms &amp; Conditions</label><div id="cf-po-terms">' + _cfTermRow('') + '</div>'
+        + '<button type="button" id="cf-po-term-add" style="margin-top:4px;background:none;border:1px dashed #c5ccd4;border-radius:4px;padding:3px 12px;font-size:11px;color:#465365;cursor:pointer;">+ Add Term</button></div>';
+    var foot = '<button type="button" class="cf-ord-cancel" style="background:#f0f4f8;border:1px solid #c5ccd4;border-radius:20px;padding:6px 20px;font-size:13px;color:#465365;cursor:pointer;margin-right:8px;">Cancel</button>'
+        + '<button type="button" id="cf-wo-save" style="background:#072c47;color:#fff;border:none;border-radius:20px;padding:6px 24px;font-size:13px;font-weight:600;cursor:pointer;">Raise WO</button>';
+    var win = _cfOrderPopupShell('cf-po-popup', 'Raise Work Order', body, foot);
+    win.style.width = '540px';
+    $.ajax({ type: 'POST', url: '../procurement/getvendors', dataType: 'json', data: { context: 'wo' }, success: function(v){
+        var opts = '<option value="">&mdash; Select Vendor &mdash;</option>';
+        ((v && v.vendors) || []).forEach(function(x){ opts += '<option value="' + x.Vendor_Id + '">' + esc(x.Name) + '</option>'; });
+        $('#cf-wo-vendor').html(opts);
+    } });
+    $(win).on('click', '#cf-po-term-add', function(){ $('#cf-po-terms').append(_cfTermRow('')); })
+        .on('click', '.cf-po-term-del', function(){ if ($('.cf-po-term-row').length > 1) $(this).closest('.cf-po-term-row').remove(); else $(this).siblings('input').val(''); })
+        .on('click', '#cf-wo-save', function(){
+            if (!$('#cf-wo-vendor').val()) { alert('Please select a vendor.'); return; }
+            var terms = []; $('.cf-po-term').each(function(){ var x = $(this).val().trim(); if (x) terms.push(x); });
+            var $b = $(this).prop('disabled', true).text('Processing...');
+            var fail = function(msg){ $b.prop('disabled', false).text('Raise WO'); alert(msg); };
+            var done = function(msg){ $(win).remove(); $(document).off('.cford'); alert(msg); };
+            var issue = function(no){ $.post('../procurement/issueworkorder', { order_id: no }); };
+            $.ajax({ type: 'POST', url: '../procurement/checkworesources', dataType: 'json', data: { activity_ids: JSON.stringify(acts.map(function(a){ return a.activity_id; })) },
+                success: function(chk){
+                    if (!chk || chk.error !== 'No') { fail((chk && chk.errortext) || 'Please allocate a contractor for this task'); return; }
+                    $.ajax({ type: 'POST', url: '../procurement/raiseworkorder', dataType: 'json',
+                        data: { vendor_id: $('#cf-wo-vendor').val(), subject: $('#cf-wo-subject').val().trim(), scope: $('#cf-wo-scope').val().trim(),
+                                lead_time: $('#cf-wo-dur').val().trim(), start_date: $('#cf-wo-start').val(), payment_cycle: $('#cf-wo-cycle').val(),
+                                terms: JSON.stringify(terms),
+                                activities: JSON.stringify(acts.map(function(a){ return { activity_id: a.activity_id, activity_name: a.activity_name, unit: a.unit, qty: 0, tasks: [] }; })) },
+                        success: function(d){
+                            if (!d || d.error !== 'No') { fail((d && d.errortext) || 'Could not raise the Work Order.'); return; }
+                            var no = d.ordernumber || d.order_id || '';
+                            if (!d.vendor_email) { issue(no); done('Work Order ' + no + ' raised, but the vendor has no e-mail address, so no mail was sent.'); return; }
+                            $b.text('Sending mail...');
+                            $.ajax({ type: 'POST', url: '../procurement/emailwo', dataType: 'json', data: { order_id: no, to: d.vendor_email },
+                                success: function(m){
+                                    if (m && m.error === 'No') done('Work Order ' + no + ' raised and mailed to ' + d.vendor_email + '.');
+                                    else { issue(no); done('Work Order ' + no + ' raised, but the mail failed: ' + ((m && m.errortext) || 'unknown error') + '.'); }
+                                },
+                                error: function(){ issue(no); done('Work Order ' + no + ' raised, but the mail could not be sent.'); } });
+                        },
+                        error: function(){ fail('Could not raise the Work Order.'); } });
+                },
+                error: function(){ fail('Validation failed. Please try again.'); } });
+        });
+}
 $(document).on('click', '.cf-res-order', function(e){
     e.stopPropagation();
     var r = (window._cfResRows || [])[+$(this).data('i')];
     if (!r) return;
     if (CF_PO_TYPES.indexOf(r.type) !== -1) { _cfShowRaisePo(r); return; }
+    if (/sub\W*contract/i.test(r.type || '')) { _cfShowRaiseWo(r); return; }
     _cfOrderPopupShell('cf-po-popup', 'Order &mdash; ' + $('<div>').text(r.type).html(),
         '<div style="font-size:13px;color:#333;">' + $('<div>').text(r.name).html() + '</div><div style="font-size:12px;color:#8a97ad;margin-top:8px;">The order screen for ' + $('<div>').text(r.type).html() + ' is still to be defined.</div>',
         '<button type="button" class="cf-ord-cancel" style="background:#f0f4f8;border:1px solid #c5ccd4;border-radius:20px;padding:6px 20px;font-size:13px;color:#465365;cursor:pointer;">Close</button>');

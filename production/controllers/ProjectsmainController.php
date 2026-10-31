@@ -4510,6 +4510,10 @@ class ProjectsmainController extends Controller
                 $res[$key]['cycle_qty'] += $cycQty;
                 $res[$key]['cost']      += $cycQty * (float)$ri['rate'];
                 $res[$key]['used']      += (float)($ri['actual_consumption'] ?? 0) * $done;
+                // Every project activity the resource is allocated to (a Sub-Contractor's
+                // Work Order covers these activities).
+                $aid = (int)($ri['activity_id'] ?? 0);
+                if ($aid) $res[$key]['activities'][$aid] = ['activity_id' => $aid, 'activity_name' => (string)($cd['activity_name'] ?? ''), 'unit' => (string)($cd['unit'] ?? '')];
             }
         }
         $_POST = $origPost;
