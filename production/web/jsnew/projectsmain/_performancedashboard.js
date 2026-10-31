@@ -966,6 +966,12 @@ function _cfShowRaiseWo(r){
     var names = acts.map(function(a){ return esc(a.activity_name); }).filter(Boolean).join(', ');
     var body = '<div style="margin-bottom:9px;font-size:12px;color:#465365;"><b>' + esc(r.name) + '</b>' + (names ? ' &mdash; ' + names : '') + '</div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Vendor</label><select id="cf-wo-vendor" style="' + inp + '"><option value="">Loading...</option></select></div>'
+        + '<div style="display:flex;gap:10px;margin-bottom:9px;">'
+        +   '<div style="flex:0.8;min-width:0;"><label ' + lbl + '>Unit</label><input type="text" id="cf-wo-unit" style="' + inp + '"></div>'
+        +   '<div style="flex:1;min-width:0;"><label ' + lbl + '>Qnty</label><input type="text" inputmode="decimal" id="cf-wo-qty" style="' + inp + 'text-align:right;"></div>'
+        +   '<div style="flex:1;min-width:0;"><label ' + lbl + '>Rate</label><input type="text" inputmode="decimal" id="cf-wo-rate" style="' + inp + 'text-align:right;"></div>'
+        +   '<div style="flex:1.3;min-width:0;"><label ' + lbl + '>Amount</label><input type="text" id="cf-wo-amt" readonly tabindex="-1" style="' + inp + 'text-align:right;font-weight:700;"></div>'
+        + '</div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Subject</label><input type="text" id="cf-wo-subject" placeholder="Work Order subject..." style="' + inp + '"></div>'
         + '<div style="margin-bottom:9px;"><label ' + lbl + '>Scope of Work</label><textarea id="cf-wo-scope" rows="4" placeholder="Describe the scope of work..." style="' + inp + 'height:auto;padding:8px 10px;resize:vertical;"></textarea></div>'
         + '<div style="display:flex;gap:10px;margin-bottom:9px;">'
@@ -979,6 +985,13 @@ function _cfShowRaiseWo(r){
         + '<button type="button" id="cf-wo-save" style="background:#072c47;color:#fff;border:none;border-radius:20px;padding:6px 24px;font-size:13px;font-weight:600;cursor:pointer;">Raise WO</button>';
     var win = _cfOrderPopupShell('cf-po-popup', 'Raise Work Order', body, foot);
     win.style.width = '540px';
+    // Unit, quantity (this cycle) and rate of the resource; Amount = Qnty x Rate.
+    $('#cf-wo-unit').val(r.unit || '');
+    $('#cf-wo-qty').val(Math.round((+r.cycle_qty || 0) * 1000) / 1000); $('#cf-wo-rate').val(+r.rate || 0);
+    var woNum = function(id){ return +String($(id).val()).replace(/,/g, '') || 0; };
+    function woAmt(){ $('#cf-wo-amt').val((woNum('#cf-wo-qty') * woNum('#cf-wo-rate')).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })); }
+    woAmt();
+    $(win).on('input', '#cf-wo-qty, #cf-wo-rate', function(){ this.value = this.value.replace(/[^0-9.]/g, ''); woAmt(); });
     $.ajax({ type: 'POST', url: '../procurement/getvendors', dataType: 'json', data: { context: 'wo' }, success: function(v){
         var opts = '<option value="">&mdash; Select Vendor &mdash;</option>';
         ((v && v.vendors) || []).forEach(function(x){ opts += '<option value="' + x.Vendor_Id + '">' + esc(x.Name) + '</option>'; });
@@ -988,6 +1001,8 @@ function _cfShowRaiseWo(r){
         .on('click', '.cf-po-term-del', function(){ if ($('.cf-po-term-row').length > 1) $(this).closest('.cf-po-term-row').remove(); else $(this).siblings('input').val(''); })
         .on('click', '#cf-wo-save', function(){
             if (!$('#cf-wo-vendor').val()) { alert('Please select a vendor.'); return; }
+            var woQty = woNum('#cf-wo-qty'), woRate = woNum('#cf-wo-rate');
+            if (!(woQty > 0) || !(woRate > 0)) { alert('Quantity and rate are needed to raise the Work Order.'); return; }
             var terms = []; $('.cf-po-term').each(function(){ var x = $(this).val().trim(); if (x) terms.push(x); });
             var $b = $(this).prop('disabled', true).text('Processing...');
             var fail = function(msg){ $b.prop('disabled', false).text('Raise WO'); alert(msg); };
@@ -1000,7 +1015,8 @@ function _cfShowRaiseWo(r){
                         data: { vendor_id: $('#cf-wo-vendor').val(), subject: $('#cf-wo-subject').val().trim(), scope: $('#cf-wo-scope').val().trim(),
                                 lead_time: $('#cf-wo-dur').val().trim(), start_date: $('#cf-wo-start').val(), payment_cycle: $('#cf-wo-cycle').val(),
                                 terms: JSON.stringify(terms),
-                                activities: JSON.stringify(acts.map(function(a){ return { activity_id: a.activity_id, activity_name: a.activity_name, unit: a.unit, qty: 0, tasks: [] }; })) },
+                                activities: JSON.stringify([{ activity_id: acts[0].activity_id, activity_name: acts.map(function(a){ return a.activity_name; }).filter(Boolean).join(', '), unit: acts[0].unit, qty: 0,
+                                    tasks: [{ task_id: 0, task_name: r.name, task_unit: $('#cf-wo-unit').val().trim(), task_qty: 0, approx_qty: Math.round(woQty * 1000) / 1000, rate: woRate, amount: Math.round(woQty * woRate * 100) / 100 }] }]) },
                         success: function(d){
                             if (!d || d.error !== 'No') { fail((d && d.errortext) || 'Could not raise the Work Order.'); return; }
                             var no = d.ordernumber || d.order_id || '';
