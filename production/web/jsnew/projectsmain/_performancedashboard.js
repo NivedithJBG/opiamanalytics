@@ -344,7 +344,7 @@ function _cfBuildC2cDiagram(){
     var slots = [
         ['cf-bankdial',        'Bank',                   'c2c-bank'],
         ['cf-contract-income', 'Bills Receivable',       'c2c-br'],
-        ['cf-c2cdial',         'days cash is tied up',   'c2c-mid'],
+        ['cf-c2cdial',         'Cash-to-Cash Cycle',     'c2c-mid'],
         ['cf-currentassets',   'Advances &amp; Deposits','c2c-adv'],
         ['cf-netinvestment',   'Total Investment',       'c2c-ti'],
         ['cf-billsreceivable', 'Work in Progress',       'c2c-wip']
@@ -361,10 +361,10 @@ function _cfBuildC2cDiagram(){
         if (!gp) return;
         var box = document.createElement('div');
         box.className = 'c2c-node ' + sl[2];
-        box.innerHTML = sl[2] === 'c2c-mid' ? '' : '<h3>' + sl[1] + '</h3>';
+        box.innerHTML = '<h3>' + sl[1] + '</h3>';
         var panel = gp.closest('.panel');
         box.appendChild(gp);
-        if (sl[2] === 'c2c-mid') box.insertAdjacentHTML('beforeend', '<div class="c2c-midlbl">' + sl[1] + '</div>');
+        if (sl[2] === 'c2c-mid') box.insertAdjacentHTML('beforeend', '<div class="c2c-midlbl">days</div>');
         if (panel) panel.remove();
         dia.appendChild(box);
     });
