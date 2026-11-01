@@ -800,7 +800,7 @@ function _cfShowCostCyclePopup(d){
         + '<tbody>' + rows + '</tbody>'
         + '<tfoot><tr><td colspan="7" style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">Total</td><td style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;">' + n2(total) + '</td><td style="border-top:2px solid #4a4f57;"></td><td id="cf-rv-tot" style="padding:6px 8px;font-weight:700;border-top:2px solid #4a4f57;"></td><td style="border-top:2px solid #4a4f57;"></td></tr></tfoot>'
         + '</table></div>'
-        + '<div style="flex:none;padding:4px 12px 8px;color:#5a6e8c;font-size:11px;">Cost in cycle = Quantity &times; Rate &times; (activity days in this cycle &divide; activity duration).</div>'
+        + '<div style="flex:none;padding:4px 12px 8px;color:#5a6e8c;font-size:11px;">Cost in cycle = (Quantity &minus; Quantity done) &times; Rate &times; (remaining activity days in this cycle &divide; remaining activity days).</div>'
         + '</div>';
     $('body').append(html);
     $('#cf-costcycle-win td').css({ padding: '5px 8px', borderBottom: '1px solid #b8c2d3', borderRight: '1px solid #b8c2d3' });

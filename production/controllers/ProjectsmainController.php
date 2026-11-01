@@ -5129,14 +5129,32 @@ class ProjectsmainController extends Controller
             $aStart = $dayOf($a['start_date']);
             $aEnd = $aStart + $curDuration - 1;
             $curPart = 0.0; $curDays = 0;
+            $qrate = (float)($qtd['qtd_rate_' . $a['wan_id']] ?? 0);
+            // Completed cycles: the planned spread (they are shown with actual values).
+            // Current and future cycles: only the value still to be done,
+            // (quantity - quantity done) x rate, spread over the activity's remaining days
+            // on the current Gantt from today to its end; an overdue activity's remainder
+            // falls in the current cycle.
+            $remQty = (int)$a['completed_status'] === 1 ? 0.0 : max(0.0, (float)$a['quantity'] - (float)$a['executed']);
+            $remStart = max($aStart, $today);
+            $remEnd = max($aEnd, $remStart);
+            $remDays = $remEnd - $remStart + 1;
             for ($k = 1; $k <= $n; $k++) {
                 $cStart = ($k === 1) ? -100000000 : ($k - 1) * $cycleLen;
                 $cEnd   = ($k === $n) ? 100000000 : min($k * $cycleLen, $duration) - 1;
-                $overlap = min($aEnd, $cEnd) - max($aStart, $cStart) + 1;
-                if ($overlap > 0) {
-                    $part = $value * $overlap / $curDuration;
+                if ($k < $current) {
+                    $overlap = min($aEnd, $cEnd) - max($aStart, $cStart) + 1;
+                    if ($overlap > 0) {
+                        $bars[$k] += $value * $overlap / $curDuration;
+                        $revs[$k] += (float)$a['quantity'] * $qrate * $overlap / $curDuration;
+                    }
+                    continue;
+                }
+                $overlap = min($remEnd, $cEnd) - max($remStart, $cStart) + 1;
+                if ($overlap > 0 && $remQty > 0) {
+                    $part = $remQty * (float)$a['rate'] * $overlap / $remDays;
                     $bars[$k] += $part;
-                    $revs[$k] += (float)$a['quantity'] * (float)($qtd['qtd_rate_' . $a['wan_id']] ?? 0) * $overlap / $curDuration;
+                    $revs[$k] += $remQty * $qrate * $overlap / $remDays;
                     if ($k === $current) { $curPart = $part; $curDays = $overlap; }
                 }
             }
