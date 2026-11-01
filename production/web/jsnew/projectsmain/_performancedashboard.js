@@ -299,6 +299,8 @@ function cfFitLayout(){
     var s = Math.min(maxS, (vw - (portrait ? 12 : 24)) / GROUP_W);
     var top = Math.max(64, Math.round(vh * 0.10));          // windows start below the toolbar
     var winH = Math.min(vh * (touch && !portrait ? 0.74 : 0.68), vh - top - 16, GROUP_W * s * (portrait ? 0.50 : (touch ? 0.48 : 0.72)));   // iPad: wider than tall
+    // Desktop: the whole dashboard drawn 15% smaller.
+    if (!touch) { s *= 0.85; winH *= 0.85; }
     var groupLeft = (vw - GROUP_W * s) / 2;
     var hdr = document.getElementById('cf-shared-hdr');
     if (hdr) {
