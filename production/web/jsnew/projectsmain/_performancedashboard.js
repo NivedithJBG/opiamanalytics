@@ -330,6 +330,7 @@ $(window).on('resize orientationchange', function(){
 // Larger touch targets for the close buttons and title bars on touch screens (iPad).
 $('head').append('<style>@media (pointer:coarse){#cf-shared-close,.cf-seg-close{min-width:28px;min-height:24px;font-size:20px !important;}.cf-seg-hdr{padding:3px 10px !important;}}</style>');
 function cfShowSegmentWindows(){
+    window._cfUserScale = 1;   // every open starts at the original size
     _cfSegWins.forEach(function(w){ $('#' + w.id).css('display', 'flex'); });
     $('#cf-shared-hdr').css('display', 'flex');
     cfFitLayout();
@@ -399,7 +400,7 @@ function _cfBuildC2cDiagram(){
     }
 }
 // Resize grip: dragging it scales the whole dashboard (all three windows together).
-try { window._cfUserScale = +localStorage.getItem('cfUserScale') || 1; } catch (e) { window._cfUserScale = 1; }
+window._cfUserScale = 1;   // resizing lasts until the dashboard is closed
 function _cfAddResizeGrip(){
     // Every window gets a resize grip (bottom-right corner) and resizable right/bottom
     // edges; dragging any of them scales the whole dashboard (all three windows).
@@ -425,7 +426,7 @@ $(document).on('mousedown touchstart', '.cf-grip', function(e){
         window._cfUserScale = Math.max(0.5, Math.min(1.6, s0 * f)); cfFitLayout(); if (ev.cancelable) ev.preventDefault(); }
     function up(){ document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
         document.removeEventListener('touchmove', mv); document.removeEventListener('touchend', up);
-        try { localStorage.setItem('cfUserScale', String(window._cfUserScale)); } catch (er) {} }
+    }
     document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
     document.addEventListener('touchmove', mv, { passive: false }); document.addEventListener('touchend', up);
 });
