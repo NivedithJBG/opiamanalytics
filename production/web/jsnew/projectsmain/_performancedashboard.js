@@ -4211,7 +4211,7 @@ function _cfShowBankTiLines(cycles, note){
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Bank Balance per Cycle (Lakhs)</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
-        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #3a4a5f;margin-right:5px;vertical-align:middle;"></span>Bank balance at the end of the cycle, as bills are paid in (&minus; overdraft, + surplus)</span>' + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'
+        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #3a4a5f;margin-right:5px;vertical-align:middle;"></span>Projected bank balance = &minus;(Advances &amp; Deposits target + cost of the cycle)</span>' + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;padding:10px 16px 16px;">' + _cfBankTiLinesSvg(cycles) + '</div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;

@@ -2469,6 +2469,10 @@ class ProjectsmainController extends Controller
     //    difference is paid out on day 1 (advances already paid are in today's balance).
     public function actionCfbankprojection()
     {
+        // Projected bank balance per billing cycle (Bank popup):
+        //   Bank(k) = -(Advances & Deposits target + cost of cycle k)
+        // i.e. the overdraft needed in cycle k, taking earlier cycles' bills as collected;
+        // the same figure as the Total Investment projection, shown as a bank balance.
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $pid = $this->_cfPid();
         if (!$pid) return ['error' => 'No project selected'];
@@ -2477,38 +2481,17 @@ class ProjectsmainController extends Controller
         $cur = self::cfCurrentCycle($pid);
         $cyc = $w['cycles'] ?? [];
         if (!$cyc || !$cur) return ['error' => 'No', 'cycles' => []];
-        $fg = $this->_cfFlowGroups($pid);
-        $coll = (int)round($this->_cfCollectionCycleDaysAverage($pid));
-        if ($coll <= 0) $coll = (int)$cur['length'];
-        $day = 86400; $today = strtotime(date('Y-m-d'));
-        $in = [];   // receipts by date
-        $addIn = function($ts, $amt) use (&$in) { $k = date('Y-m-d', $ts); $in[$k] = ($in[$k] ?? 0) + $amt; };
-        if ($fg['br'] > 0) $addIn($today + $coll * $day, $fg['br']);
-        // Projected bank balance: today's bank balance, plus each cycle's revenue
-        // (planned quantity x quoted rate) when its money reaches the bank (bill raised
-        // at cycle end + collection days). Nothing is deducted. Each point = the
-        // balance at the end of the cycle.
-        foreach ($cyc as $i => $c) {
-            if ((int)$c['cycle'] < (int)$cur['cycle']) continue;
-            $addIn(strtotime($c['end_date']) + $coll * $day, (float)($c['revenue'] ?? 0));
-        }
-        $out = []; $bal = (float)$fg['bank'];
-        $live = array_values(array_filter($cyc, function($c) use ($cur){ return (int)$c['cycle'] >= (int)$cur['cycle']; }));
-        $from = $today;
-        foreach ($live as $j => $c) {
+        $advTarget = 100000 * (float)Yii::$app->db->createCommand(
+            "SELECT target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key = 'investments_target'", [':p' => $pid])->queryScalar();
+        $out = [];
+        foreach ($cyc as $c) {
             $k = (int)$c['cycle'];
-            $end = strtotime($c['end_date']);
-            $last = $j === count($live) - 1;
-            foreach ($in as $d => $amt) {
-                $t = strtotime($d);
-                // received in this cycle (the last cycle also takes money still to come in after it)
-                if ($t >= $from && ($t <= $end || $last)) $bal += $amt;
-            }
-            $from = $end + $day;
+            if ($k < (int)$cur['cycle']) continue;
+            $bal = -($advTarget + (float)$c['target']);
             $out[] = ['cycle' => $k, 'end_date' => $c['end_date'], 'current' => $k === (int)$cur['cycle'],
                       'low' => round($bal, 2), 'high' => round($bal, 2), 'end' => round($bal, 2)];
         }
-        return ['error' => 'No', 'cycles' => $out, 'opening' => round((float)$fg['bank'], 2), 'collection_days' => $coll];
+        return ['error' => 'No', 'cycles' => $out, 'advances_target' => round($advTarget, 2)];
     }
 
     // Bank/Working Capital panel breakdown (Cashflow Dashboard popup):
