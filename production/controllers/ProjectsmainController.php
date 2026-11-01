@@ -7269,6 +7269,18 @@ class ProjectsmainController extends Controller
                 }
             }
 
+            // Vendor(s) of each resource (Vendor Library links), shown under the bars.
+            $vendorsOf = [];
+            $rids = array_values(array_filter(array_map(function($x){ return (int)$x['resource_id']; }, $rows)));
+            if ($rids) {
+                try {
+                    foreach ($db->createCommand(
+                        'SELECT vr.resource_id, GROUP_CONCAT(DISTINCT v.Name ORDER BY v.Name SEPARATOR ", ") AS names
+                         FROM vendor_resources vr JOIN vendors v ON v.Vendor_Id = vr.vendor_id AND v.Status = 0
+                         WHERE vr.resource_id IN (' . implode(',', $rids) . ') GROUP BY vr.resource_id')->queryAll() as $vn)
+                        $vendorsOf[(int)$vn['resource_id']] = $vn['names'];
+                } catch (\Exception $e) {}
+            }
             foreach ($rows as $r) {
                 $resQty  = (float)$r['quantity'];
                 $typeId  = (int)$r['type_id'];
@@ -7384,6 +7396,7 @@ class ProjectsmainController extends Controller
                 $items[] = [
                     'name'                 => $r['name'],
                     'resource_id'          => (int)($r['resource_id'] ?? 0),
+                    'vendors'              => $vendorsOf[(int)($r['resource_id'] ?? 0)] ?? '',
                     'allocation_id'        => (int)($r['pricing_resourceid'] ?? 0),
                     'activity_id'          => (int)$wbId,
                     'task_ids'             => (string)($r['task_ids'] ?? ''),

@@ -2551,7 +2551,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       });
       html += '</div></div></div>';
       html += '<div class="gm-vchart-xaxis"><div class="gm-vchart-xaxis-spacer"></div><div class="gm-vchart-xlabels">';
-      rows.forEach(function(r) { html += '<div class="gm-vchart-xlbl" title="' + $('<span>').text(r.name).html() + '">' + $('<span>').text(r.name).html() + '</div>'; });
+      rows.forEach(function(r) { html += '<div class="gm-vchart-xlbl" title="' + $('<span>').text(r.name).html() + (r.sub ? ' — ' + $('<span>').text(r.sub).html() : '') + '">' + $('<span>').text(r.name).html() + (r.sub ? '<div style="color:#0f766e;font-style:italic;margin-top:1px;">' + $('<span>').text(r.sub).html() + '</div>' : '') + '</div>'; });
       html += '</div></div>';
       if (opts.yTitle) html += '<div class="gm-vchart-ytitle">' + opts.yTitle + '</div>';
       html += '</div>';
@@ -2568,7 +2568,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     // red-orange. Each bar still opens the Type → Group drill-down on click.
     function _renderTiStyleTypeBars(rows) {
       var esc = function(t){ return $('<span>').text(t).html(); };
-      var n = rows.length, W = Math.max(300, n * 110), H = 190, top = 26, base = 150;
+      var n = rows.length, W = Math.max(300, n * 110), H = 206, top = 26, base = 150;
       var slot = W / n, barW = Math.min(slot * 0.5, 70);
       var maxV = 0;
       rows.forEach(function(r){ maxV = Math.max(maxV, +r.value || 0); });
@@ -2585,6 +2585,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           + '<text x="' + cx.toFixed(1) + '" y="' + (base - hT - 6) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#000">' + tot + '</text>'
           + (over && hW > 16 ? '<text x="' + cx.toFixed(1) + '" y="' + (base - hW + 14) + '" text-anchor="middle" font-size="11" fill="#fff">' + within + '</text>' : '')
           + '<text x="' + cx.toFixed(1) + '" y="' + (base + 20) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#111">' + esc(nm) + '</text>'
+          + (r.sub ? '<text x="' + cx.toFixed(1) + '" y="' + (base + 38) + '" text-anchor="middle" font-size="12" font-style="italic" fill="#0f766e">' + esc(r.sub.length > 24 ? r.sub.slice(0, 23) + '…' : r.sub) + '<title>' + esc(r.sub) + '</title></text>' : '')
           + '</g>';
       });
       var leg = function(c, t){ return '<span style="white-space:nowrap;"><span style="display:inline-block;width:12px;height:9px;background:' + c + ';margin-right:4px;vertical-align:middle;"></span>' + t + '</span>'; };
@@ -2793,7 +2794,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         counts[name]++;
         if (_UCR_METRICS[metric].isOver(r)) overs[name]++;
       });
-      return order.map(function(name) { return { name: name, value: counts[name], overCount: overs[name] }; });
+      return order.map(function(name) { return { name: name, value: counts[name], overCount: overs[name], sub: _ucrVendorsOf(items.filter(function(r){ return (r.type_name || 'Unassigned') === name; })) }; });
     }
 
     function _ucrGroupsForType(metric, typeName) {
@@ -2814,12 +2815,17 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       });
     }
 
+    function _ucrVendorsOf(resRows) {
+      var seen = {}, out = [];
+      resRows.forEach(function(r){ String(r.vendors || '').split(', ').forEach(function(v){ v = v.trim(); if (v && !seen[v]) { seen[v] = 1; out.push(v); } }); });
+      return out.join(', ');
+    }
     function _renderUcrGroupBars(metric, typeName) {
       var m = _UCR_METRICS[metric];
       var groups = _ucrGroupsForType(metric, typeName);
       var rows = groups.map(function(name) {
         var resRows = _ucrResourcesForGroup(metric, typeName, name);
-        return { name: name, value: resRows.length, overCount: resRows.filter(m.isOver).length };
+        return { name: name, value: resRows.length, overCount: resRows.filter(m.isOver).length, sub: _ucrVendorsOf(resRows) };
       });
       var typeColor = _ucrColorForType(metric, typeName);
       var anyOver = rows.some(function(r){ return (+r.overCount || 0) > 0; });
@@ -2841,7 +2847,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var unit = m.unitOf(resRows[0]);
       var rows = resRows.map(function(r) {
         var ea = m.estAct(r);
-        return { name: r.name || '', est: ea.est, act: ea.act, hasActual: ea.hasActual };
+        return { name: r.name || '', est: ea.est, act: ea.act, hasActual: ea.hasActual, sub: r.vendors || '' };
       });
       var typeColor = _ucrColorForType(metric, typeName);
 
