@@ -805,8 +805,13 @@
     $.ajax({ type:'POST', url:'../relation/list', dataType:'json',
       data:{ projectid: _pid },
       success:function(d){
+        if(pTarget){
+          $('#rel-live-content').css('visibility', 'hidden');
+          clearTimeout(window._relRevealT);
+          window._relRevealT = setTimeout(_relReveal, 3000);   // never stay hidden
+        }
         renderLiveList(d && d.error==='No' ? d.rows : []);
-        if(pTarget) _jumpToEdit(pTarget);
+        if(pTarget) _jumpToEdit(pTarget); else _relReveal();
       },
       error:function(){ $('#rel-live-content').html('<p style="color:#e57373;text-align:center;padding:20px;">Could not load.</p>'); }
     });
@@ -830,6 +835,8 @@
   // When pTarget.actId has NO existing relationship at all (neither as
   // precedent nor dependent), falls through to _openAddWithPrecedent
   // instead of leaving the (now-empty) live list showing — see there.
+  function _relReveal(){ clearTimeout(window._relRevealT); $('#rel-live-content').css('visibility', ''); }
+
   function _jumpToEdit(pTarget){
     var $all = $('#rel-live-content tr[data-id]');
     var $rows;
@@ -843,10 +850,12 @@
         return String($(this).data('precact')) === String(pTarget.actId);
       });
     } else {
+      _relReveal();
       return;
     }
     if(!$rows.length){
       if(pTarget.actId !== undefined) _openAddWithPrecedent(pTarget.actId);
+      else _relReveal();
       return;
     }
     // Hide every non-matching row so the popup reads as "this activity's
@@ -861,6 +870,7 @@
     // replaced the first. Show the existing rows read-only and open a new Add row.
     if(pTarget.precAct === undefined && pTarget.actId !== undefined){ _openAddWithPrecedent(pTarget.actId); return; }
     $rows.show().each(function(){ $(this).find('.rl2-live-edit-btn').trigger('click'); });
+    _relReveal();
     $rows[0].scrollIntoView({ block: 'center' });
 
     if(!$('#rel-live-showall').length){
@@ -929,7 +939,10 @@
       var $existing = $table.find('tbody tr[data-id]');
       $existing.filter(function(){ return String($(this).data('precact')) !== String(actId); }).hide();
       $table.find('tbody tr td[colspan]').closest('tr').remove();
+      $table.find('tbody .rl2-gap-row').remove();
       $table.find('tbody').prepend($row);
+      if($existing.filter(function(){ return this.style.display !== 'none'; }).length) $row.after('<tr class="rl2-gap-row"><td colspan="7" style="height:18px;padding:0;border:none;background:#fff;"></td></tr>');
+      _relReveal();
       $row[0].scrollIntoView({ block: 'center' });
 
       if(!$('#rel-live-showall').length){
@@ -983,7 +996,9 @@
   });
 
   $(document).on('click', '.rl2-new-cancel-btn', function(){
-    $(this).closest('tr').remove();
+    var $tr = $(this).closest('tr');
+    $tr.next('.rl2-gap-row').remove();
+    $tr.remove();
   });
 
   function renderLiveList(rows){
