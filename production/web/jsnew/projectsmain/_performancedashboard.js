@@ -1839,14 +1839,14 @@ function _cfInvestBreakdownChartHtml(accounts, chartH, unitMode){
         var barPx = Math.max(2, (fmt.value / niceMax) * chartH);
         var col = _cfInvestBarColours[j % _cfInvestBarColours.length];
         var hasMembers = acct.members && acct.members.length;
-        barsHtml += '<div class="cf-breakdown-bar-col" data-idx="' + j + '" style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + chartH + 'px;flex:0 0 72px;min-width:72px;position:relative;' + (hasMembers ? 'cursor:pointer;' : '') + '">'
+        barsHtml += '<div class="cf-breakdown-bar-col" data-idx="' + j + '" style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + chartH + 'px;flex:0 0 56px;min-width:56px;position:relative;' + (hasMembers ? 'cursor:pointer;' : '') + '">'
             + '<div style="font-size:11px;font-weight:700;color:#251840;margin-bottom:4px;white-space:nowrap;">' + fmt.value.toFixed(2) + '</div>'
             + '<div style="width:70%;max-width:34px;height:' + barPx.toFixed(1) + 'px;background:' + col + ';border-radius:2px 2px 0 0;"></div>'
             + '</div>';
     }
     var labelsHtml = '';
     for (var k = 0; k < accounts.length; k++) {
-        labelsHtml += '<div style="flex:0 0 72px;min-width:72px;font-size:11px;color:#333;text-align:center;line-height:1.2;padding:0 3px;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;">' + _cfShortLabel(accounts[k].name) + '</div>';
+        labelsHtml += '<div style="flex:0 0 56px;min-width:56px;font-size:11px;color:#333;text-align:center;line-height:1.2;padding:0 3px;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;">' + _cfShortLabel(accounts[k].name) + '</div>';
     }
 
     // Always render the gridlines/axis frame, even with zero bars — an
@@ -1854,7 +1854,7 @@ function _cfInvestBreakdownChartHtml(accounts, chartH, unitMode){
     // bars themselves are conditional, plus a centered placeholder
     // message when there's nothing to plot yet.
     var emptyMsgHtml = accounts.length ? '' : '<div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;color:#8a94a3;font-size:12px;font-family:Barlow Condensed,Arial;">No data yet</div>';
-    var body = '<div' + _cfChartAttr(axisW + 4 + accounts.length * 78) + ' style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;">'
+    var body = '<div' + _cfChartAttr(axisW + 4 + accounts.length * 62) + ' style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;">'
         + '<div class="cf-breakdown-chart-area" style="position:relative;flex:1;min-width:0;display:flex;align-items:flex-end;gap:6px;height:' + chartH + 'px;background-image:' + gridBg + ';">'
         + gridLabelsHtml
         + barsHtml
@@ -4590,7 +4590,7 @@ function _cfContractIncomeGroupedChartHtml(accounts, chartH){
         var cumVal = (+acct.amount || 0) / divisor;
         var cyclePx = Math.max(2, (cycleVal / niceMax) * chartH);
         var cumPx = Math.max(2, (cumVal / niceMax) * chartH);
-        barsHtml += '<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + chartH + 'px;flex:0 0 72px;min-width:72px;">'
+        barsHtml += '<div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + chartH + 'px;flex:0 0 56px;min-width:56px;">'
             + '<div style="display:flex;align-items:flex-end;justify-content:center;width:100%;position:relative;height:' + Math.max(cyclePx, cumPx).toFixed(1) + 'px;">'
             + '<div style="position:absolute;bottom:' + (cyclePx + 2).toFixed(1) + 'px;right:22px;font-size:10px;font-weight:700;color:' + cycleCol + ';white-space:nowrap;">' + cycleVal.toFixed(2) + '</div>'
             + '<div style="width:22px;height:' + cyclePx.toFixed(1) + 'px;background:' + cycleCol + ';border-radius:2px 0 0 0;"></div>'
@@ -4601,11 +4601,11 @@ function _cfContractIncomeGroupedChartHtml(accounts, chartH){
     }
     var labelsHtml = '';
     for (var k = 0; k < accounts.length; k++) {
-        labelsHtml += '<div style="flex:0 0 72px;min-width:72px;font-size:11px;color:#333;text-align:center;line-height:1.2;padding:0 3px;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;">' + accounts[k].name + '</div>';
+        labelsHtml += '<div style="flex:0 0 56px;min-width:56px;font-size:11px;color:#333;text-align:center;line-height:1.2;padding:0 3px;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;">' + accounts[k].name + '</div>';
     }
 
     var emptyMsgHtml = accounts.length ? '' : '<div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;color:#8a94a3;font-size:12px;font-family:Barlow Condensed,Arial;">No data yet</div>';
-    var body = '<div' + _cfChartAttr(axisW + 4 + accounts.length * 78) + ' style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;">'
+    var body = '<div' + _cfChartAttr(axisW + 4 + accounts.length * 62) + ' style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;">'
         + '<div style="position:relative;flex:1;min-width:0;display:flex;align-items:flex-end;gap:6px;height:' + chartH + 'px;background-image:' + gridBg + ';">'
         + gridLabelsHtml
         + barsHtml
