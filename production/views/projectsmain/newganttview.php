@@ -460,7 +460,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 .gm-vchart-xaxis-spacer { width:32px; flex-shrink:0; }
 .gm-vchart-xlabels { flex:1; display:flex; gap:14px; padding:0 10px; box-sizing:border-box; }
 .gm-vchart-xlbl {
-  flex:1; max-width:110px; text-align:center; font-size:11.5px; color:#1a2540;
+  flex:1; max-width:130px; text-align:center; font-size:13px; font-weight:600; color:#1a2540;
   white-space:normal; word-break:break-word; line-height:1.2;
 }
 .gm-vchart-ytitle {
@@ -2567,32 +2567,32 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     // below, no axis/gridlines; resources over estimate stacked on top in
     // red-orange. Each bar still opens the Type → Group drill-down on click.
     function _renderTiStyleTypeBars(rows) {
+      // HTML (not a scaled SVG) so the labels keep a readable size in the small panel.
       var esc = function(t){ return $('<span>').text(t).html(); };
-      var n = rows.length, W = Math.max(300, n * 110), H = 222, top = 26, base = 150;
-      var slot = W / n, barW = Math.min(slot * 0.5, 70);
       var maxV = 0;
       rows.forEach(function(r){ maxV = Math.max(maxV, +r.value || 0); });
-      var hOf = function(v){ return maxV > 0 ? Math.round((v / maxV) * (base - top)) : 0; };
-      var bars = '';
-      rows.forEach(function(r, i){
+      var pct = function(v){ return maxV > 0 ? (v / maxV) * 100 : 0; };
+      var cols = '', lbls = '';
+      rows.forEach(function(r){
         var tot = +r.value || 0, over = Math.min(tot, +r.overCount || 0), within = tot - over;
-        var cx = (i + 0.5) * slot, x = (cx - barW / 2).toFixed(1);
-        var hT = hOf(tot), hW = hOf(within);
-        var nm = r.name.length > 18 ? r.name.slice(0, 17) + '…' : r.name;
-        bars += '<g class="gm-ucr-type-bar" data-name="' + esc(r.name) + '" style="cursor:pointer;"><title>' + esc(r.name) + ': ' + tot + ' resource' + (tot === 1 ? '' : 's') + (over ? ', ' + over + ' over estimate' : '') + '</title>'
-          + '<rect x="' + x + '" y="' + (base - hW) + '" width="' + barW.toFixed(1) + '" height="' + hW + '" fill="#3a4a5f"/>'
-          + (over ? '<rect x="' + x + '" y="' + (base - hT) + '" width="' + barW.toFixed(1) + '" height="' + (hT - hW) + '" fill="#d84a30"/>' : '')
-          + '<text x="' + cx.toFixed(1) + '" y="' + (base - hT - 6) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#000">' + tot + '</text>'
-          + (over && hW > 16 ? '<text x="' + cx.toFixed(1) + '" y="' + (base - hW + 14) + '" text-anchor="middle" font-size="11" fill="#fff">' + within + '</text>' : '')
-          + '<text x="' + cx.toFixed(1) + '" y="' + (base + 22) + '" text-anchor="middle" font-size="17" font-weight="700" fill="#111">' + esc(nm) + '</text>'
-          + (r.sub ? '<text x="' + cx.toFixed(1) + '" y="' + (base + 46) + '" text-anchor="middle" font-size="16" font-style="italic" fill="#0f766e">' + esc(r.sub.length > 22 ? r.sub.slice(0, 21) + '…' : r.sub) + '<title>' + esc(r.sub) + '</title></text>' : '')
-          + '</g>';
+        var tip = esc(r.name) + ': ' + tot + ' resource' + (tot === 1 ? '' : 's') + (over ? ', ' + over + ' over estimate' : '') + (r.sub ? ' — ' + esc(r.sub) : '');
+        cols += '<div class="gm-ucr-type-bar" data-name="' + esc(r.name) + '" title="' + tip + '" style="flex:1;max-width:120px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;cursor:pointer;">'
+          + '<div style="font-size:13px;font-weight:700;color:#000;line-height:1;margin-bottom:3px;">' + tot + '</div>'
+          + '<div style="width:46%;height:' + pct(tot).toFixed(1) + '%;display:flex;flex-direction:column;">'
+          +   (over ? '<div style="flex:' + over + ';background:#d84a30;"></div>' : '')
+          +   (within ? '<div style="flex:' + within + ';background:#3a4a5f;"></div>' : '')
+          + '</div></div>';
+        lbls += '<div class="gm-ucr-type-bar" data-name="' + esc(r.name) + '" title="' + tip + '" style="flex:1;max-width:120px;text-align:center;cursor:pointer;line-height:1.2;min-width:0;">'
+          + '<div style="font-size:13px;font-weight:700;color:#111;">' + esc(r.name) + '</div>'
+          + (r.sub ? '<div style="font-size:12px;font-style:italic;color:#0f766e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(r.sub) + '</div>' : '')
+          + '</div>';
       });
       var leg = function(c, t){ return '<span style="white-space:nowrap;"><span style="display:inline-block;width:12px;height:9px;background:' + c + ';margin-right:4px;vertical-align:middle;"></span>' + t + '</span>'; };
       return '<div style="display:flex;flex-direction:column;flex:1;min-height:150px;width:100%;font-family:Barlow Condensed,Arial;">'
         + '<div style="display:flex;gap:10px;justify-content:flex-start;font-size:11px;color:#111;padding:0 0 4px;">' + leg('#3a4a5f', 'Within estimate') + leg('#d84a30', 'Over estimate') + '</div>'
-        + '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;flex:1;min-height:0;font-family:Barlow Condensed,Arial;">'
-        + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg></div>';
+        + '<div style="flex:1;min-height:90px;display:flex;justify-content:center;gap:10px;padding-top:6px;border-bottom:1px solid #999;">' + cols + '</div>'
+        + '<div style="display:flex;justify-content:center;gap:10px;padding-top:4px;">' + lbls + '</div>'
+        + '</div>';
     }
 
     function _renderUcrTypePanel(elId, metric, items, actName) {
