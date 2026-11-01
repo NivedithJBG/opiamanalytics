@@ -460,7 +460,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 .gm-vchart-xaxis-spacer { width:32px; flex-shrink:0; }
 .gm-vchart-xlabels { flex:1; display:flex; gap:14px; padding:0 10px; box-sizing:border-box; }
 .gm-vchart-xlbl {
-  flex:1; max-width:70px; text-align:center; font-size:8.5px; color:#1a2540;
+  flex:1; max-width:110px; text-align:center; font-size:11.5px; color:#1a2540;
   white-space:normal; word-break:break-word; line-height:1.2;
 }
 .gm-vchart-ytitle {
@@ -2568,7 +2568,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     // red-orange. Each bar still opens the Type → Group drill-down on click.
     function _renderTiStyleTypeBars(rows) {
       var esc = function(t){ return $('<span>').text(t).html(); };
-      var n = rows.length, W = Math.max(300, n * 110), H = 206, top = 26, base = 150;
+      var n = rows.length, W = Math.max(300, n * 110), H = 222, top = 26, base = 150;
       var slot = W / n, barW = Math.min(slot * 0.5, 70);
       var maxV = 0;
       rows.forEach(function(r){ maxV = Math.max(maxV, +r.value || 0); });
@@ -2584,8 +2584,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           + (over ? '<rect x="' + x + '" y="' + (base - hT) + '" width="' + barW.toFixed(1) + '" height="' + (hT - hW) + '" fill="#d84a30"/>' : '')
           + '<text x="' + cx.toFixed(1) + '" y="' + (base - hT - 6) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#000">' + tot + '</text>'
           + (over && hW > 16 ? '<text x="' + cx.toFixed(1) + '" y="' + (base - hW + 14) + '" text-anchor="middle" font-size="11" fill="#fff">' + within + '</text>' : '')
-          + '<text x="' + cx.toFixed(1) + '" y="' + (base + 20) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#111">' + esc(nm) + '</text>'
-          + (r.sub ? '<text x="' + cx.toFixed(1) + '" y="' + (base + 38) + '" text-anchor="middle" font-size="12" font-style="italic" fill="#0f766e">' + esc(r.sub.length > 24 ? r.sub.slice(0, 23) + '…' : r.sub) + '<title>' + esc(r.sub) + '</title></text>' : '')
+          + '<text x="' + cx.toFixed(1) + '" y="' + (base + 22) + '" text-anchor="middle" font-size="17" font-weight="700" fill="#111">' + esc(nm) + '</text>'
+          + (r.sub ? '<text x="' + cx.toFixed(1) + '" y="' + (base + 46) + '" text-anchor="middle" font-size="16" font-style="italic" fill="#0f766e">' + esc(r.sub.length > 22 ? r.sub.slice(0, 21) + '…' : r.sub) + '<title>' + esc(r.sub) + '</title></text>' : '')
           + '</g>';
       });
       var leg = function(c, t){ return '<span style="white-space:nowrap;"><span style="display:inline-block;width:12px;height:9px;background:' + c + ';margin-right:4px;vertical-align:middle;"></span>' + t + '</span>'; };
