@@ -299,8 +299,10 @@ function cfFitLayout(){
     var s = Math.min(maxS, (vw - (portrait ? 12 : 24)) / GROUP_W);
     var top = Math.max(64, Math.round(vh * 0.10));          // windows start below the toolbar
     var winH = Math.min(vh * (touch && !portrait ? 0.74 : 0.68), vh - top - 16, GROUP_W * s * (portrait ? 0.50 : (touch ? 0.48 : 0.72)));   // iPad: wider than tall
-    // Desktop: the whole dashboard drawn 15% smaller.
+    // Desktop: the whole dashboard drawn 15% smaller, then the size the user set with
+    // the resize grip (bottom-right corner of the Earnings window).
     if (!touch) { s *= 0.85; winH *= 0.85; }
+    var us = window._cfUserScale || 1; s *= us; winH *= us;
     var groupLeft = (vw - GROUP_W * s) / 2;
     var hdr = document.getElementById('cf-shared-hdr');
     if (hdr) {
@@ -396,6 +398,23 @@ function _cfBuildC2cDiagram(){
             + '</style>');
     }
 }
+// Resize grip: dragging it scales the whole dashboard (all three windows together).
+try { window._cfUserScale = +localStorage.getItem('cfUserScale') || 1; } catch (e) { window._cfUserScale = 1; }
+function _cfAddResizeGrip(){
+    var win = document.getElementById('cf-win-roi');
+    if (!win || win.querySelector('.cf-grip')) return;
+    var g = document.createElement('div');
+    g.className = 'cf-grip'; g.title = 'Drag to resize the dashboard';
+    g.style.cssText = 'position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;z-index:5;background:linear-gradient(135deg,transparent 50%,#8a94a6 50%,#8a94a6 60%,transparent 60%,transparent 70%,#8a94a6 70%,#8a94a6 80%,transparent 80%);';
+    win.appendChild(g);
+    g.addEventListener('mousedown', function(e){
+        e.preventDefault(); e.stopPropagation();
+        var sx = e.clientX, s0 = window._cfUserScale || 1, w0 = Math.max(1, document.getElementById('cf-shared-hdr').getBoundingClientRect().width);
+        function mv(ev){ window._cfUserScale = Math.max(0.5, Math.min(1.6, s0 * (1 + (ev.clientX - sx) / w0))); cfFitLayout(); }
+        function up(){ document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); try { localStorage.setItem('cfUserScale', String(window._cfUserScale)); } catch (e) {} }
+        document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+    });
+}
 function cfBuildSegmentWindows(){
     if (document.getElementById('cf-win-value')) return;
     // Shared header above the three windows: "Project Management" and the project name.
@@ -439,6 +458,7 @@ function cfBuildSegmentWindows(){
         $('#' + w.id + ' .cf-seg-body').append(p);
     });
     _cfBuildC2cDiagram();
+    _cfAddResizeGrip();
     // The C2C legend (T / A days) sits in the Cash-to-Cash window header.
     var legend = document.getElementById('cf-c2c-legend');
     // The C2C figures now sit in the Cash-to-Cash dial, not in the window header.
