@@ -4151,10 +4151,11 @@ function _cfBankTiLinesSvg(cyc){
     // One line: lowest projected bank balance in each billing cycle (fund requirement) — negative = overdraft, positive = surplus
     // (from cfbankprojection).
     var has = function(){ return true; };
-    var SER = [ { key: 'low', col: '#3a4a5f', name: 'Bank balance' } ];
-    cyc = _cfTrimZeroTail(cyc, function(c){ return [c.low]; });
-    // Once the balance stops changing, the repeated periods add nothing: keep the first of them only.
-    while (cyc.length > 1 && Math.abs((+cyc[cyc.length - 1].low || 0) - (+cyc[cyc.length - 2].low || 0)) < 1) cyc = cyc.slice(0, -1);
+    var SER = [ { key: 'low', col: '#3a4a5f', name: 'Bank balance' }, { key: 'after', col: '#1e8073', name: 'After receipt of income' } ];
+    cyc = _cfTrimZeroTail(cyc, function(c){ return [c.low, c.after]; });
+    // Once the balances stop changing, the repeated periods add nothing: keep the first of them only.
+    var same = function(a, b){ return Math.abs((+a.low || 0) - (+b.low || 0)) < 1 && Math.abs((+a.after || 0) - (+b.after || 0)) < 1; };
+    while (cyc.length > 1 && same(cyc[cyc.length - 1], cyc[cyc.length - 2])) cyc = cyc.slice(0, -1);
     var maxV = 0, minV = 0;
     cyc.forEach(function(c){ if (has(c)) SER.forEach(function(s){ var v = +c[s.key] || 0; maxV = Math.max(maxV, v); minV = Math.min(minV, v); }); });
     // X axis = period (billing cycles), Y axis = value in Lakhs, with tick marks.
@@ -4190,7 +4191,7 @@ function _cfBankTiLinesSvg(cyc){
         if (pts.length > 1) out += '<polyline points="' + pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="3"/>';
         pts.forEach(function(p){
             // Bank balance: overdraft points red-orange, surplus points green-blue.
-            var pc = s.key === 'low' ? (p[2] < 0 ? '#d84a30' : '#2ba899') : s.col;
+            var pc = s.key === 'low' ? (p[2] < 0 ? '#d84a30' : '#3a4a5f') : s.col;
             out += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="5" fill="' + pc + '"><title>' + s.name + ' ' + L(p[2]) + ' L</title></circle>'
                 // At each cycle the higher value is labelled above its point, the other below.
                 + '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] + (function(){ var o = SER.length > 1 ? +p[3][SER[1 - si].key] || 0 : -Infinity; return (p[2] > o || (p[2] === o && si === 0)) ? -10 : 19; })()).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + pc + '">' + L(p[2]) + '</text>';
@@ -4203,7 +4204,21 @@ function _cfBankTiLinesSvg(cyc){
     });
     return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg"' + _cfChartAttr(W) + ' style="display:block;overflow:visible;">' + out + '</svg>';
 }
-function _cfShowBankTiLines(cycles, note){
+$(document).on('keydown', '.cf-bank-pct', function(e){ if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
+$(document).on('change', '.cf-bank-pct', function(){
+    var v = parseFloat(String(this.value).replace(/,/g, '')); if (!isFinite(v) || v < 0) v = 0;
+    var win = document.getElementById('cf-bank-ti-win'), pos = win ? { l: win.style.left, t: win.style.top } : null;
+    $.ajax({ type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json', data: { metric_key: $(this).data('key'), target_value: v },
+        success: function(){
+            $.ajax({ type: 'POST', url: '../projectsmain/cfbankprojection', dataType: 'json', success: function(d){
+                if (!d || d.error !== 'No') return;
+                _cfShowBankTiLines(d.cycles || [], '', d);
+                var w = document.getElementById('cf-bank-ti-win'); if (w && pos) { w.style.left = pos.l; w.style.top = pos.t; }
+            } });
+        } });
+});
+function _cfShowBankTiLines(cycles, note, d){
+    d = d || {};
     $('#cf-bank-ti-win').remove();
     var winW = 720, winH = 430;
     var html = '<div id="cf-bank-ti-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - winW) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - winH) / 2) + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:360px;min-height:260px;max-width:98vw;resize:both;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
@@ -4211,7 +4226,11 @@ function _cfShowBankTiLines(cycles, note){
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Bank Balance per Cycle (Lakhs)</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
-        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #3a4a5f;margin-right:5px;vertical-align:middle;"></span>Projected bank balance = &minus;(Advances &amp; Deposits target + cost of the cycle)</span>' + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'
+        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #3a4a5f;margin-right:5px;vertical-align:middle;"></span>Projected bank balance = &minus;(Advances &amp; Deposits target + cost of the cycle)</span>'
+        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #1e8073;margin-right:5px;vertical-align:middle;"></span>After receipt of income = + Revenue/Cycle &minus; TDS &minus; Retention</span>'
+        + '<span>TDS % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_tds_pct" value="' + (+d.tds_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
+        + '<span>Retention % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_retention_pct" value="' + (+d.retention_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
+        + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;padding:10px 16px 16px;">' + _cfBankTiLinesSvg(cycles) + '</div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;
@@ -4233,7 +4252,7 @@ $(document).on('click', '#cf-bankdial', function(e){
         type: 'POST', url: '../projectsmain/cfbankprojection', dataType: 'json', priority: true,
         success: function(d){
             if (!d || d.error !== 'No') return;
-            _cfShowBankTiLines(d.cycles || [], '');
+            _cfShowBankTiLines(d.cycles || [], '', d);
         }
     });
 });

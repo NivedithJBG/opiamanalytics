@@ -2483,15 +2483,23 @@ class ProjectsmainController extends Controller
         if (!$cyc || !$cur) return ['error' => 'No', 'cycles' => []];
         $advTarget = 100000 * (float)Yii::$app->db->createCommand(
             "SELECT target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key = 'investments_target'", [':p' => $pid])->queryScalar();
+        // Income received at each cycle = Revenue/Cycle less TDS % and Retention %
+        // (percentages entered per project in the Bank popup, never fixed in code).
+        $pct = Yii::$app->db->createCommand(
+            "SELECT metric_key, target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key IN ('bank_tds_pct', 'bank_retention_pct')", [':p' => $pid]
+        )->queryAll(\PDO::FETCH_KEY_PAIR);
+        $tds = (float)($pct['bank_tds_pct'] ?? 0); $ret = (float)($pct['bank_retention_pct'] ?? 0);
         $out = [];
         foreach ($cyc as $c) {
             $k = (int)$c['cycle'];
             if ($k < (int)$cur['cycle']) continue;
             $bal = -($advTarget + (float)$c['target']);
+            $income = (float)($c['revenue'] ?? 0) * (1 - ($tds + $ret) / 100);
             $out[] = ['cycle' => $k, 'end_date' => $c['end_date'], 'current' => $k === (int)$cur['cycle'],
-                      'low' => round($bal, 2), 'high' => round($bal, 2), 'end' => round($bal, 2)];
+                      'low' => round($bal, 2), 'high' => round($bal, 2), 'end' => round($bal, 2),
+                      'after' => round($bal + $income, 2), 'income' => round($income, 2)];
         }
-        return ['error' => 'No', 'cycles' => $out, 'advances_target' => round($advTarget, 2)];
+        return ['error' => 'No', 'cycles' => $out, 'advances_target' => round($advTarget, 2), 'tds_pct' => $tds, 'retention_pct' => $ret];
     }
 
     // Bank/Working Capital panel breakdown (Cashflow Dashboard popup):
