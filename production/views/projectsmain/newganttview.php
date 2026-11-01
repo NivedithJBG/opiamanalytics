@@ -2551,7 +2551,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       });
       html += '</div></div></div>';
       html += '<div class="gm-vchart-xaxis"><div class="gm-vchart-xaxis-spacer"></div><div class="gm-vchart-xlabels">';
-      rows.forEach(function(r) { html += '<div class="gm-vchart-xlbl" title="' + $('<span>').text(r.name).html() + (r.sub ? ' — ' + $('<span>').text(r.sub).html() : '') + '">' + $('<span>').text(r.name).html() + (r.sub ? '<div style="color:#0f766e;font-style:italic;margin-top:1px;">' + $('<span>').text(r.sub).html() + '</div>' : '') + '</div>'; });
+      rows.forEach(function(r) { html += '<div class="gm-vchart-xlbl" title="' + $('<span>').text(r.name).html() + (r.sub ? ' — ' + $('<span>').text(r.sub).html() : '') + '">' + $('<span>').text(r.name).html() + (r.sub ? '<div style="color:#0f766e;font-weight:400;margin-top:1px;">' + $('<span>').text(r.sub).html() + '</div>' : '') + '</div>'; });
       html += '</div></div>';
       if (opts.yTitle) html += '<div class="gm-vchart-ytitle">' + opts.yTitle + '</div>';
       html += '</div>';
