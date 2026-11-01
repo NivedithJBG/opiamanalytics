@@ -441,13 +441,18 @@ function cfBuildSegmentWindows(){
         + '</div>'
     );
     var $sh = $('#cf-shared-hdr');
-    $sh.draggable({
-        containment: 'window', scroll: false,
-        start: function(e, ui){ $sh.data('lx', ui.position.left); $sh.data('ly', ui.position.top); },
-        drag: function(e, ui){
-            cfMoveSegmentWindows(ui.position.left - $sh.data('lx'), ui.position.top - $sh.data('ly'));
-            $sh.data('lx', ui.position.left); $sh.data('ly', ui.position.top);
+    // Dragging the shared header moves it and all three windows by the same amount.
+    $sh.on('mousedown', function(e){
+        if ($(e.target).closest('#cf-shared-close').length || e.which !== 1) return;
+        e.preventDefault();
+        var hdr = this, lx = e.clientX, ly = e.clientY;
+        function mv(ev){
+            var dx = ev.clientX - lx, dy = ev.clientY - ly; lx = ev.clientX; ly = ev.clientY;
+            hdr.style.left = (hdr.offsetLeft + dx) + 'px'; hdr.style.top = (hdr.offsetTop + dy) + 'px';
+            cfMoveSegmentWindows(dx, dy);
         }
+        function up(){ document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); }
+        document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
     });
     var panels = $('#cf-grid > .panel').toArray();
     _cfSegWins.forEach(function(w){
