@@ -4151,7 +4151,7 @@ function _cfBankTiLinesSvg(cyc){
     // One line: lowest projected bank balance in each billing cycle (fund requirement) — negative = overdraft, positive = surplus
     // (from cfbankprojection).
     var has = function(){ return true; };
-    var SER = [ { key: 'low', col: '#3a4a5f', name: 'Bank balance' }, { key: 'after', col: '#1e8073', name: 'After receipt of income' } ];
+    var SER = [ { key: 'low', col: '#3a4a5f', name: 'Investments Required' }, { key: 'after', col: '#1e8073', name: 'Bank' } ];
     cyc = _cfTrimZeroTail(cyc, function(c){ return [c.low, c.after]; });
     // Once the balances stop changing, the repeated periods add nothing: keep the first of them only.
     var same = function(a, b){ return Math.abs((+a.low || 0) - (+b.low || 0)) < 1 && Math.abs((+a.after || 0) - (+b.after || 0)) < 1; };
@@ -4226,8 +4226,8 @@ function _cfShowBankTiLines(cycles, note, d){
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Bank Balance per Cycle (Lakhs)</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
-        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #3a4a5f;margin-right:5px;vertical-align:middle;"></span>Projected bank balance = &minus;(Advances &amp; Deposits target + cost of the cycle)</span>'
-        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #1e8073;margin-right:5px;vertical-align:middle;"></span>After receipt of income = + Revenue/Cycle &minus; TDS &minus; Retention</span>'
+        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #3a4a5f;margin-right:5px;vertical-align:middle;"></span>Investments Required</span>'
+        + '<span><span style="display:inline-block;width:18px;border-top:3px solid #1e8073;margin-right:5px;vertical-align:middle;"></span>Bank</span>'
         + '<span>TDS % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_tds_pct" value="' + (+d.tds_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
         + '<span>Retention % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_retention_pct" value="' + (+d.retention_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
         + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'
