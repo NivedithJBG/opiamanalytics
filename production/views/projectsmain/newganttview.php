@@ -3381,6 +3381,8 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
     function _showCostPopup(actId, anchorEl, isWanId) {
       var pop = document.getElementById('gcm-popup');
       if (!pop) return;
+      // Always opens above every window on screen (even when it is already open behind them).
+      if (typeof window.popupBringToFront === 'function') window.popupBringToFront('gcm-popup');
 
       function _doRender(d) {
         document.getElementById('gcm-pop-hdr-left').textContent = 'Manage Cost';
