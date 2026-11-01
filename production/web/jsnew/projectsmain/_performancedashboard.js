@@ -344,7 +344,7 @@ function _cfBuildC2cDiagram(){
     var slots = [
         ['cf-bankdial',        'Bank',                   'c2c-bank'],
         ['cf-contract-income', 'Bills Receivable',       'c2c-br'],
-        ['cf-c2cdial',         'Cash-to-Cash Cycle',     'c2c-mid'],
+        ['cf-c2cdial',         'days cash is tied up',   'c2c-mid'],
         ['cf-currentassets',   'Advances &amp; Deposits','c2c-adv'],
         ['cf-netinvestment',   'Total Investment',       'c2c-ti'],
         ['cf-billsreceivable', 'Work in Progress',       'c2c-wip']
@@ -361,10 +361,10 @@ function _cfBuildC2cDiagram(){
         if (!gp) return;
         var box = document.createElement('div');
         box.className = 'c2c-node ' + sl[2];
-        box.innerHTML = '<h3>' + sl[1] + '</h3>';
+        box.innerHTML = sl[2] === 'c2c-mid' ? '' : '<h3>' + sl[1] + '</h3>';
         var panel = gp.closest('.panel');
         box.appendChild(gp);
-        if (sl[2] === 'c2c-mid') box.insertAdjacentHTML('beforeend', '<div class="c2c-midlbl">days</div>');
+        if (sl[2] === 'c2c-mid') box.insertAdjacentHTML('beforeend', '<div class="c2c-midlbl">' + sl[1] + '</div>');
         if (panel) panel.remove();
         dia.appendChild(box);
     });
@@ -388,7 +388,7 @@ function _cfBuildC2cDiagram(){
             + '.c2c-bank{grid-area:1/2;} .c2c-adv{grid-area:2/3;} .c2c-wip{grid-area:3/2;} .c2c-br{grid-area:2/1;}'
             + '.c2c-ti{grid-area:3/1;align-self:end;background:transparent;border:none;box-shadow:none;} .c2c-ti::before{display:none;}'
             + '.c2c-mid{grid-area:2/2;background:transparent;border:none;box-shadow:none;} .c2c-mid::before{display:none;}'
-            + '.c2c-mid .gp > div[style*="space-between"] > span:first-child{font-size:40px !important;line-height:1;color:#081142 !important;}'
+            + '.c2c-mid .gp > div[style*="space-between"] > span:first-child{font-size:24px !important;line-height:1.1;color:#081142 !important;}'
             + '.c2c-midlbl{font:700 13px Nunito,Arial,sans-serif;color:#081142;}'
             + '.c2c-node:hover{outline:2px solid #1b9e8e;outline-offset:2px;}'
             + '</style>');
