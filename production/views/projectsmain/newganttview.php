@@ -2584,7 +2584,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
           + '</div></div>';
         lbls += '<div class="gm-ucr-type-bar" data-name="' + esc(r.name) + '" title="' + tip + '" style="flex:1;max-width:120px;text-align:center;cursor:pointer;line-height:1.2;min-width:0;">'
           + '<div style="font-size:13px;font-weight:700;color:#111;">' + esc(r.name) + '</div>'
-          + (r.sub ? '<div style="font-size:12px;font-style:italic;color:#0f766e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(r.sub) + '</div>' : '')
+          + (r.sub ? '<div style="font-size:12px;color:#0f766e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(r.sub) + '</div>' : '')
           + '</div>';
       });
       var leg = function(c, t){ return '<span style="white-space:nowrap;"><span style="display:inline-block;width:12px;height:9px;background:' + c + ';margin-right:4px;vertical-align:middle;"></span>' + t + '</span>'; };
