@@ -941,7 +941,7 @@
       $table.find('tbody tr td[colspan]').closest('tr').remove();
       $table.find('tbody .rl2-gap-row').remove();
       $table.find('tbody').prepend($row);
-      if($existing.filter(function(){ return this.style.display !== 'none'; }).length) $row.after('<tr class="rl2-gap-row"><td colspan="7" style="height:18px;padding:0;border:none;background:#fff;"></td></tr>');
+      if($existing.filter(function(){ return this.style.display !== 'none'; }).length) $row.after('<tr class="rl2-gap-row"><td colspan="7" style="height:18px;padding:0;border:none;background:linear-gradient(#fff 8px,#5c3d8f 8px,#5c3d8f 10px,#fff 10px);"></td></tr>');
       _relReveal();
       $row[0].scrollIntoView({ block: 'center' });
 
