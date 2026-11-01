@@ -2492,7 +2492,14 @@ class ProjectsmainController extends Controller
         $out = [];
         foreach ($cyc as $c) {
             $k = (int)$c['cycle'];
-            if ($k < (int)$cur['cycle']) continue;
+            if ($k < (int)$cur['cycle']) {
+                // Completed cycle: actual Total Investment and actual bank balance at its end.
+                $g = $this->_cfFlowGroups($pid, $c['end_date']);
+                $out[] = ['cycle' => $k, 'end_date' => $c['end_date'], 'current' => false, 'actual' => true,
+                          'low' => round(-$g['ti'], 2), 'high' => round(-$g['ti'], 2), 'end' => round($g['bank'], 2),
+                          'after' => round($g['bank'], 2), 'income' => null];
+                continue;
+            }
             $bal = -($advTarget + (float)$c['target']);
             $income = (float)($c['revenue'] ?? 0) * (1 - ($tds + $ret) / 100);
             $out[] = ['cycle' => $k, 'end_date' => $c['end_date'], 'current' => $k === (int)$cur['cycle'],
@@ -4421,6 +4428,23 @@ class ProjectsmainController extends Controller
         return $d ? substr($d, 0, 10) : $fallback;
     }
 
+    // Days from the cycle base to the projected project end: the planned duration, or
+    // longer when the current Gantt (delays included) ends later. A delay that pushes
+    // the end out adds billing cycles instead of piling into the last one.
+    public static function cfEffectiveDuration($pid, $base, $duration)
+    {
+        $end = Yii::$app->db->createCommand(
+            "SELECT MAX(DATE_ADD(s.start_date, INTERVAL GREATEST(COALESCE(s.duration, 1), 1) - 1 DAY))
+             FROM scheduleactivities s
+             WHERE s.projectId = :p AND s.status = 0 AND s.quantity > 0
+               AND s.start_date IS NOT NULL AND s.start_date <> '0000-00-00'
+               AND s.iow_group_id IN (SELECT iow_group_id FROM iow_group_order WHERE project_id = :p2)",
+            [':p' => (int)$pid, ':p2' => (int)$pid])->queryScalar();
+        if (!$end) return (int)$duration;
+        $days = (int)round((strtotime(substr($end, 0, 10)) - $base) / 86400) + 1;
+        return max((int)$duration, $days);
+    }
+
     public static function cfCurrentCycle($pid)
     {
         $db = Yii::$app->db;
@@ -4430,7 +4454,7 @@ class ProjectsmainController extends Controller
         )->queryScalar());
         if (!$proj || empty($proj['start_date']) || substr($proj['start_date'], 0, 10) === '0000-00-00' || (int)$proj['duration'] <= 0 || $len <= 0) return null;
         $base = strtotime(self::cfCycleBase($pid, substr($proj['start_date'], 0, 10)));
-        $duration = (int)$proj['duration'];
+        $duration = self::cfEffectiveDuration($pid, $base, (int)$proj['duration']);
         $n = (int)ceil($duration / $len);
         $today = (int)round((strtotime(date('Y-m-d')) - $base) / 86400);
         $k = max(1, min($n, (int)floor(max(0, $today) / $len) + 1));
@@ -5041,7 +5065,7 @@ class ProjectsmainController extends Controller
 
         // Cycles start at the earliest activity start (see cfCycleBase), not the project start.
         $base     = strtotime(self::cfCycleBase($pid, substr($proj['start_date'], 0, 10)));
-        $duration = (int)$proj['duration'];
+        $duration = self::cfEffectiveDuration($pid, $base, (int)$proj['duration']);   // extended by Gantt delays
         $cycleLen = (int)round($billing);
         $n        = (int)ceil($duration / $cycleLen);
         $dayOf    = function ($date) use ($base) { return (int)round((strtotime($date) - $base) / 86400); };
@@ -5364,7 +5388,7 @@ class ProjectsmainController extends Controller
         )->queryScalar();
 
         $base = strtotime($proj['start_date']);
-        $duration = (int)$proj['duration'];
+        $duration = self::cfEffectiveDuration($pid, $base, (int)$proj['duration']);
         $cycleLen = (int)round((float)$db->createCommand(
             "SELECT target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key='billing_cycle'",
             [':pid' => $pid]

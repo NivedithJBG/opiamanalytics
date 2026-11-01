@@ -4192,7 +4192,7 @@ function _cfBankTiLinesSvg(cyc){
         pts.forEach(function(p){
             // Bank balance: overdraft points red-orange, surplus points green-blue.
             var pc = s.key === 'low' ? (p[2] < 0 ? '#d84a30' : '#3a4a5f') : s.col;
-            out += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="5" fill="' + pc + '"><title>' + s.name + ' ' + L(p[2]) + ' L</title></circle>'
+            out += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="5" fill="' + (p[3].actual ? '#fff' : pc) + '" stroke="' + pc + '" stroke-width="' + (p[3].actual ? 2.5 : 0) + '"><title>' + s.name + ' ' + L(p[2]) + ' L' + (p[3].actual ? ' (actual)' : ' (projected)') + '</title></circle>'
                 // At each cycle the higher value is labelled above its point, the other below.
                 + '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] + (function(){ var o = SER.length > 1 ? +p[3][SER[1 - si].key] || 0 : -Infinity; return (p[2] > o || (p[2] === o && si === 0)) ? -10 : 19; })()).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + pc + '">' + L(p[2]) + '</text>';
         });
@@ -4228,6 +4228,7 @@ function _cfShowBankTiLines(cycles, note, d){
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
         + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Investments Required</span>'
         + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Bank</span>'
+        + '<span style="color:#5a6e8c;">Hollow dots = actual (completed cycles)</span>'
         + '<span>TDS % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_tds_pct" value="' + (+d.tds_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
         + '<span>Retention % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_retention_pct" value="' + (+d.retention_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
         + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'
