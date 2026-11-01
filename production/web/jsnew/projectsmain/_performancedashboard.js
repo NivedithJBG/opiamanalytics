@@ -401,20 +401,34 @@ function _cfBuildC2cDiagram(){
 // Resize grip: dragging it scales the whole dashboard (all three windows together).
 try { window._cfUserScale = +localStorage.getItem('cfUserScale') || 1; } catch (e) { window._cfUserScale = 1; }
 function _cfAddResizeGrip(){
-    var win = document.getElementById('cf-win-roi');
-    if (!win || win.querySelector('.cf-grip')) return;
-    var g = document.createElement('div');
-    g.className = 'cf-grip'; g.title = 'Drag to resize the dashboard';
-    g.style.cssText = 'position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;z-index:5;background:linear-gradient(135deg,transparent 50%,#8a94a6 50%,#8a94a6 60%,transparent 60%,transparent 70%,#8a94a6 70%,#8a94a6 80%,transparent 80%);';
-    win.appendChild(g);
-    g.addEventListener('mousedown', function(e){
-        e.preventDefault(); e.stopPropagation();
-        var sx = e.clientX, s0 = window._cfUserScale || 1, w0 = Math.max(1, document.getElementById('cf-shared-hdr').getBoundingClientRect().width);
-        function mv(ev){ window._cfUserScale = Math.max(0.5, Math.min(1.6, s0 * (1 + (ev.clientX - sx) / w0))); cfFitLayout(); }
-        function up(){ document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); try { localStorage.setItem('cfUserScale', String(window._cfUserScale)); } catch (e) {} }
-        document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+    // Every window gets a resize grip (bottom-right corner) and resizable right/bottom
+    // edges; dragging any of them scales the whole dashboard (all three windows).
+    _cfSegWins.forEach(function(w){
+        var win = document.getElementById(w.id);
+        if (!win || win.querySelector('.cf-grip')) return;
+        var mk = function(cls, css, cur){ var d = document.createElement('div'); d.className = 'cf-grip ' + cls; d.title = 'Drag to resize the dashboard';
+            d.style.cssText = 'position:absolute;z-index:50;cursor:' + cur + ';' + css; win.appendChild(d); return d; };
+        mk('cf-grip-c', 'right:0;bottom:0;width:22px;height:22px;background:linear-gradient(135deg,transparent 45%,#081142 45%,#081142 55%,transparent 55%,transparent 65%,#081142 65%,#081142 75%,transparent 75%);', 'nwse-resize');
+        mk('cf-grip-r', 'right:0;top:40px;bottom:22px;width:7px;', 'ew-resize');
+        mk('cf-grip-b', 'left:0;right:22px;bottom:0;height:7px;', 'ns-resize');
     });
 }
+$(document).on('mousedown touchstart', '.cf-grip', function(e){
+    var oe = e.originalEvent || e, p = oe.touches ? oe.touches[0] : oe;
+    e.preventDefault(); e.stopPropagation();
+    var vert = $(this).hasClass('cf-grip-b');
+    var sx = p.clientX, sy = p.clientY, s0 = window._cfUserScale || 1;
+    var hdr = document.getElementById('cf-shared-hdr');
+    var w0 = Math.max(1, hdr ? hdr.getBoundingClientRect().width : 1000), h0 = Math.max(1, (document.getElementById('cf-win-c2c') || hdr).getBoundingClientRect().height);
+    function mv(ev){ var q = ev.touches ? ev.touches[0] : ev;
+        var f = vert ? 1 + (q.clientY - sy) / h0 : 1 + (q.clientX - sx) / w0;
+        window._cfUserScale = Math.max(0.5, Math.min(1.6, s0 * f)); cfFitLayout(); if (ev.cancelable) ev.preventDefault(); }
+    function up(){ document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
+        document.removeEventListener('touchmove', mv); document.removeEventListener('touchend', up);
+        try { localStorage.setItem('cfUserScale', String(window._cfUserScale)); } catch (er) {} }
+    document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+    document.addEventListener('touchmove', mv, { passive: false }); document.addEventListener('touchend', up);
+});
 function cfBuildSegmentWindows(){
     if (document.getElementById('cf-win-value')) return;
     // Shared header above the three windows: "Project Management" and the project name.
