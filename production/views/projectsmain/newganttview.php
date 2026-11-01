@@ -3229,7 +3229,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var maxVal = Math.max(estQty, lastQty, 1) * 1.1;
       var targetFrac = estQty / maxVal;
       el.innerHTML = '<div style="font-size:10px;color:#3461b8;font-weight:600;padding:4px 6px 3px;border-bottom:1px solid #e8efff;flex-shrink:0;width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _sh(actName, 40) + '</div>';
-      _gauge('gm-cd-g4', lastQty, maxVal, 'esttarget-prop', targetFrac, 'Est', _fmtFull(estQty) + (unit ? ' ' + unit : ''), 'Done', _fmtFull(lastQty) + (unit ? ' ' + unit : ''), estQty, null, null, true);
+      _gauge('gm-cd-g4', lastQty, maxVal, 'esttarget-prop', targetFrac, 'Done', _fmtFull(lastQty) + (unit ? ' ' + unit : ''), 'Est', _fmtFull(estQty) + (unit ? ' ' + unit : ''), estQty, null, null, true);
     }
 
     // 6. Cost of Activity → gm-cd-g2
