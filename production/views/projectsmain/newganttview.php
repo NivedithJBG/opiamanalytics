@@ -1677,7 +1677,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         var _overPx = Math.min(_obarW, Math.round(_obarW * _overDays / _totalDays));
         var _redOv = document.createElement('div');
         _redOv.title = 'Scheduled beyond the project end date (' + _projEndStr + ')';
-        _redOv.style.cssText = 'position:absolute;left:' + (_obarW - _overPx) + 'px;width:' + _overPx + 'px;top:0;height:100%;background:#d32f2f;pointer-events:none;z-index:3;';
+        // Match the visible inner bar exactly; the container is taller than the bar.
+        var _otb = document.getElementById('gantt-container' + 'taskbar_' + _oid);
+        var _oTop = _otb ? _otb.offsetTop : 0, _oH = _otb ? _otb.offsetHeight : 0;
+        _redOv.style.cssText = 'position:absolute;left:' + (_obarW - _overPx) + 'px;width:' + _overPx + 'px;top:' + _oTop + 'px;height:' + (_oH ? _oH + 'px' : '100%') + ';background:#d32f2f;pointer-events:none;z-index:3;';
         _obar.appendChild(_redOv);
       }
     }
