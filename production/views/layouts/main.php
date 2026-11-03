@@ -103,7 +103,7 @@ $subDomain = array_shift(($HTTP_HOST));
 
     <link rel="stylesheet" type="text/css" href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/jsgantt.css?v=20260827f" />
     <link rel="stylesheet" type="text/css" href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/jsgantt-extra.css?v=20260827f" />
-    <script language="javascript" src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/jsgantt.js"></script>
+    <script language="javascript" src="<?php echo Yii::$app->request->baseUrl; ?>/jsnew/projectsmain/jsgantt.js?v=<?php echo filemtime(Yii::getAlias('@webroot') . '/jsnew/projectsmain/jsgantt.js'); ?>"></script>
 
     <link href="<?php echo Yii::$app->request->baseUrl; ?>/cssnew/custom.css?v=20260716d" rel="stylesheet">
 
