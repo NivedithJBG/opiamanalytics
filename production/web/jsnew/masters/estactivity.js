@@ -846,6 +846,7 @@ $(document).on('click','.resource-list-btn', function(e){
     $(".allocation-cntnt-wrpr").css("cssText", "display:flex  !important;");
     e.preventDefault();
 
+    $('.resources-from-selected-item-wrpr').css('display', 'block');
     var actId = $('#EstActivity_Id').val();
     if (actId) {
         $.ajax({
