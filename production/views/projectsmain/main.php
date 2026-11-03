@@ -5568,15 +5568,18 @@ if($action=='login')
   }
 
   function eamViewCellsHtml(it){
+    var prod = it.productivity || '—';
     return '<td class="eam-col-name">' + $('<div>').text(it.name).html() + '</td>'
       + '<td>' + $('<div>').text(it.unit).html() + '</td>'
-      + '<td id="eam-col-qty">' + it.quantity + '</td>';
+      + '<td id="eam-col-qty">' + it.quantity + '</td>'
+      + '<td id="eam-col-prod">' + prod + '</td>';
   }
 
   function eamEditCellsHtml(it){
     return '<td class="eam-col-name"><input type="text" class="eam-name-input" value="' + $('<div>').text(it.name).html() + '"></td>'
       + '<td><input type="text" class="eam-unit-input" value="' + $('<div>').text(it.unit).html() + '"></td>'
-      + '<td id="eam-col-qty"><input type="number" class="eam-qty-input" value="' + it.quantity + '" step="0.01" min="0"></td>';
+      + '<td id="eam-col-qty"><input type="number" class="eam-qty-input" value="' + it.quantity + '" step="0.01" min="0"></td>'
+      + '<td id="eam-col-prod"><input type="number" class="eam-prod-input" value="' + (it.productivity || '') + '" step="0.01" min="0"></td>';
   }
 
   function eamLoadList(){
@@ -5593,7 +5596,7 @@ if($action=='login')
           return;
         }
         var html = '<table><thead><tr>'
-          + '<th style="width:36px;">#</th><th>Activity</th><th style="width:70px;">Unit</th><th style="width:110px;">Quantity</th>'
+          + '<th style="width:36px;">#</th><th>Activity</th><th style="width:70px;">Unit</th><th style="width:110px;">Quantity</th><th style="width:110px;">Productivity/day</th>'
           + '<th style="width:90px;">Task</th><th style="width:44px;"></th><th style="width:40px;"></th>'
           + '</tr></thead><tbody>';
         items.forEach(function(it, idx){
@@ -5667,17 +5670,19 @@ if($action=='login')
       var current = {
         name: row.cells[1].textContent.trim(),
         unit: row.cells[2].textContent.trim(),
-        quantity: row.cells[3].textContent.trim()
+        quantity: row.cells[3].textContent.trim(),
+        productivity: row.cells[4].textContent.trim()
       };
       var wrap = document.createElement('tbody');
       wrap.innerHTML = '<tr>' + eamEditCellsHtml(current) + '</tr>';
-      // Snapshot the 3 new cells BEFORE replacing anything — each
+      // Snapshot the 4 new cells BEFORE replacing anything — each
       // replaceChild below mutates row.cells' live indices, so reading
       // them from a separate, untouched NodeList avoids off-by-one bugs.
       var editCells = [].slice.call(wrap.querySelector('tr').cells);
       row.replaceChild(editCells[0], row.cells[1]);
       row.replaceChild(editCells[1], row.cells[2]);
       row.replaceChild(editCells[2], row.cells[3]);
+      row.replaceChild(editCells[3], row.cells[4]);
       editBtn.classList.add('eam-editing');
       editBtn.title = 'Save';
       return;
@@ -5686,9 +5691,9 @@ if($action=='login')
     eamSaveActivity(saId, row, editBtn);
   }
 
-  // Shared save path for an Edit Activities row — POSTs Activity/Unit/Qty
+  // Shared save path for an Edit Activities row — POSTs Activity/Unit/Qty/Productivity
   // plus whatever tasks are currently staged in _eamTasksByAct[saId] to
-  // wbsactivityupdate. Reads Name/Unit/Qty from the row's edit <input>s if
+  // wbsactivityupdate. Reads Name/Unit/Qty/Prod from the row's edit <input>s if
   // it's mid-edit (eamToggleEdit's second click), otherwise from the plain
   // <td> text (called straight from the Tasks popup's DONE button, where
   // the row is still in view mode). editBtn is optional — only present
@@ -5700,6 +5705,8 @@ if($action=='login')
     var unit = unitInput ? unitInput.value.trim() : row.cells[2].textContent.trim();
     var qtyInput = row.querySelector('.eam-qty-input');
     var qty = qtyInput ? (parseFloat(qtyInput.value) || 0) : (parseFloat(row.cells[3].textContent) || 0);
+    var prodInput = row.querySelector('.eam-prod-input');
+    var prod = prodInput ? (parseFloat(prodInput.value) || 0) : (parseFloat(row.cells[4].textContent) || 0);
     if (!name) { alert('Activity name is required.'); return; }
     if (!qty)  { alert('Please enter a Qty before saving.'); return; }
 
@@ -5708,7 +5715,7 @@ if($action=='login')
     $.ajax({
       type: 'POST', url: '../projectsmain/wbsactivityupdate', dataType: 'json',
       data: { payload: JSON.stringify({
-        sa_id: saId, name: name, unit: unit, qty: qty,
+        sa_id: saId, name: name, unit: unit, qty: qty, productivity: prod,
         tasks: tasks.map(function(t){ return { id: t.id, name: t.name, qty: t.qty, productivity: t.productivity, resunits: t.resunits }; })
       }) },
       success: function(d){
@@ -5724,6 +5731,8 @@ if($action=='login')
           cells[2].outerHTML = '<td>' + $('<div>').text(unit).html() + '</td>';
           cells = row.cells;
           cells[3].outerHTML = '<td id="eam-col-qty">' + qty + '</td>';
+          cells = row.cells;
+          cells[4].outerHTML = '<td id="eam-col-prod">' + (prod || '—') + '</td>';
         }
         if (editBtn) { editBtn.classList.remove('eam-editing'); editBtn.title = 'Edit'; }
         var taskBtn = row.querySelector('.eam-task-btn');
