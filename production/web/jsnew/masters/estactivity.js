@@ -846,15 +846,6 @@ $(document).on('click','.resource-list-btn', function(e){
     $(".allocation-cntnt-wrpr").css("cssText", "display:flex  !important;");
     e.preventDefault();
 
-    $('.resources-from-selected-item-wrpr').css('display', 'block');
-    var actId = $('#EstActivity_Id').val();
-    if (actId) {
-        $.ajax({
-            type: 'POST', url: '../projects/allocationlist', dataType: 'json', data: { id: actId },
-            success: function(d){ if (d.error == 'No') $('.items-select-bar').html(d.result); }
-        });
-    }
-
     $('#resourcegroup1').val('');
 
     $('.allocate-resource-tabss').addClass('add-allocation-list-active');

@@ -591,6 +591,8 @@ $('#estactivitysearch').css('display', 'inline-flex');
 $('#addestactivity').css({ float: 'right', marginRight: '14px', marginTop: '2px', fontSize: '13px', fontWeight: 700, padding: '4px 14px' })
     .insertAfter('#alListPopup .modal-header .close');
 $('#estactivity .content-wrpr').first().appendTo('#alListBody');
+// The resource panel sits outside .content-wrpr in the markup; move it too or it opens in the hidden library window.
+$('#estactivity .allocation-cntnt-wrpr').first().appendTo('#alListBody');
 
 /* Open the IOW Group and IOW windows near the top of the screen, never taller
    than the screen (the body scrolls instead), so the whole window is visible. */
