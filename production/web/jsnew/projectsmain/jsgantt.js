@@ -3906,6 +3906,8 @@ exports.getMaxDate = function (pList, pFormat, pMaxDate) {
         vDate.setDate(vDate.getDate() + 1);
         while (vDate.getDay() % 7 != 0)
             vDate.setDate(vDate.getDate() + 1);
+        // One extra week so the last bar never ends inside the final column.
+        vDate.setDate(vDate.getDate() + 7);
     }
     else if (pFormat == 'month') {
         // Set to last day of current Month
