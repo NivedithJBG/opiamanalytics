@@ -496,8 +496,6 @@ $(document).on( "click", ".cancelactivity", function(){
                          $('.resource-saved').hide();
                          $('.resource-not-allocated-info').css('display','flex');
                          $('.allocation-cntnt-wrpr').addClass('resource-not-allocated');
-                         $('.infodisplay').html('<div style="margin-top: 11px;" class="info-box"><span class="icon-info"></span> <span>Resources not added. Please add resources.  </span></div>');
-
                      }
                      else
                      {
