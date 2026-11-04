@@ -4221,23 +4221,24 @@ function _cfBankTiLinesSvg(cyc, ser){
     });
     return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg"' + _cfChartAttr(W) + ' style="display:block;overflow:visible;">' + out + '</svg>';
 }
-// Bank popup, right half: cumulative Investment up to each billing cycle (Cost/cycle, plus the
-// Advances & Deposits target in the first cycle, added up cycle by cycle), one bar per cycle with
-// the amount on the bar. Same cycles as the bank balance line.
+// Bank popup, right half: first cycle = its Investment (Cost/cycle plus the Advances & Deposits
+// target); every later cycle = Revenue/cycle - Investment of that cycle (green above 0, red below).
+// Amount on the bar. Same cycles as the bank balance line.
 function _cfBankNetBarsSvg(cyc){
     if (!cyc.length) return '';
     cyc = _cfTrimZeroTail(cyc, function(c){ return [c.bal]; });
     while (cyc.length > 1 && Math.abs((+cyc[cyc.length - 1].bal || 0) - (+cyc[cyc.length - 2].bal || 0)) < 1) cyc = cyc.slice(0, -1);
-    var INV = '#3a4a5f';
+    var INV = '#3a4a5f', RED = '#d84a30', GRN = '#1e8073';
     var inv = function(c){ return (+c.cost || 0) + (+c.adv || 0); };
-    var cum = [], run = 0;
-    cyc.forEach(function(c){ run += inv(c); cum.push(run); });
-    var maxV = run;
-    maxV *= 1.12;
-    var W = 660, H = 362, base = 270, top = 30, padL = 70, padR = 24, minV = 0;
-    var rawStep = Math.max(1, maxV / 100000 / 5), mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    var vals = cyc.map(function(c, i){ return i === 0 ? inv(c) : (+c.receivable || 0) - inv(c); });
+    var maxV = 0, minV = 0;
+    vals.forEach(function(v){ maxV = Math.max(maxV, v); minV = Math.min(minV, v); });
+    maxV *= 1.12; minV *= 1.12;
+    var W = 660, H = 362, base = 270, top = 30, padL = 70, padR = 24;
+    var rawStep = Math.max(1, (maxV - minV) / 100000 / 5), mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
     var tick = [1, 2, 2.5, 5, 10].map(function(m){ return m * mag; }).filter(function(t){ return t >= rawStep; })[0] * 100000;
-    maxV = Math.ceil(maxV / tick) * tick || tick;
+    minV = Math.floor(minV / tick) * tick; maxV = Math.ceil(maxV / tick) * tick;
+    if (maxV === minV) maxV = minV + tick;
     W = _cfChartW(W, padL + padR, cyc.length, 96);
     var slot = (W - padL - padR) / cyc.length, bw = Math.min(48, slot * 0.6);
     var xOf = function(i){ return padL + (i + 0.5) * slot; };
@@ -4258,14 +4259,18 @@ function _cfBankNetBarsSvg(cyc){
 
         + '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700">Billing cycle (period)</text>';
     cyc.forEach(function(c, i){
-        var C = cum[i], x = xOf(i), yC = yOf(C);
-        out += '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + yC.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(0, base - yC).toFixed(1) + '" fill="' + INV + '">'
-            + '<title>Cumulative investment ' + L(C) + ' L (this cycle ' + L(inv(c)) + ' L)</title></rect>'
-            // Cumulative investment on the face of the bar (white, near its top).
-            + '<text x="' + x.toFixed(1) + '" y="' + Math.min(yC + 15, base - 4).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" pointer-events="none">' + L(C) + '</text>'
+        var v = vals[i], x = xOf(i), yV = yOf(v), y0 = yOf(0), col = i === 0 ? INV : (v < 0 ? RED : GRN);
+        var tip = i === 0 ? 'Investment ' + L(v) + ' L' : 'Revenue/cycle ' + L(+c.receivable || 0) + ' L - Investment ' + L(inv(c)) + ' L = ' + L(v) + ' L';
+        var hgt = Math.abs(y0 - yV), yTxt = v >= 0 ? Math.min(yV + 15, y0 - 4) : Math.max(yV - 6, y0 + 13);
+        out += '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + Math.min(yV, y0).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, hgt).toFixed(1) + '" fill="' + col + '">'
+            + '<title>' + tip + '</title></rect>'
+            // Amount on the face of the bar (white).
+            + (hgt >= 16 ? '<text x="' + x.toFixed(1) + '" y="' + yTxt.toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" pointer-events="none">' + (i > 0 && v > 0 ? '+' : '') + L(v) + '</text>'
+                : '<text x="' + x.toFixed(1) + '" y="' + (v >= 0 ? yV - 6 : yV + 14).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + col + '">' + L(v) + '</text>')
             + '<line x1="' + x.toFixed(1) + '" y1="' + base + '" x2="' + x.toFixed(1) + '" y2="' + (base + 5) + '" stroke="#555"/>'
             + '<text x="' + x.toFixed(1) + '" y="' + (base + 40) + '" text-anchor="middle" font-size="12" fill="#111"' + (c.current ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
+    if (minV < 0) out += '<line x1="' + padL + '" y1="' + yOf(0).toFixed(1) + '" x2="' + (W - padR) + '" y2="' + yOf(0).toFixed(1) + '" stroke="#222" stroke-width="1.6"/>';
     return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg"' + _cfChartAttr(W) + ' style="display:block;overflow:visible;">' + out + '</svg>';
 }
 function _cfShowBankTiLines(cycles, note, d){
@@ -4274,7 +4279,7 @@ function _cfShowBankTiLines(cycles, note, d){
     var winW = Math.min(1440, window.innerWidth - 20), winH = 470;
     var html = '<div id="cf-bank-ti-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - winW) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - winH) / 2) + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:360px;min-height:260px;max-width:98vw;resize:both;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + '<div id="cf-bank-ti-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;touch-action:none;">'
-        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Bank Balance and Cumulative Investment per Cycle (Lakhs)</span>'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Bank Balance and Investment per Cycle (Lakhs)</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
         + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#d84a30;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Bank balance (red = negative, green = surplus)</span>'
@@ -4283,7 +4288,7 @@ function _cfShowBankTiLines(cycles, note, d){
         + '<div style="flex:1;min-height:0;display:flex;gap:12px;padding:8px 16px 16px;">'
         + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Bank balance after each cycle</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;">' + _cfBankTiLinesSvg(cycles) + '</div></div>'
-        + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;border-left:1px solid #d5dbe3;padding-left:12px;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Cumulative investment up to each cycle</div>'
+        + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;border-left:1px solid #d5dbe3;padding-left:12px;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">First cycle = Investment (slate); later cycles = Revenue/cycle &minus; Investment (green = surplus, red = shortfall)</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;">' + _cfBankNetBarsSvg(cycles) + '</div></div></div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;
