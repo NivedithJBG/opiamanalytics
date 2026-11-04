@@ -4477,33 +4477,57 @@ class ProjectsmainController extends Controller
             [':cl' => (int)$client, ':p' => (int)$pid])->queryAll();
     }
 
-    // Billing cycles follow actual receipts: a cycle ends when the client's payment
-    // reaches the bank. The open cycle starts the day after the last receipt (or at
-    // the earliest activity start), runs Billing + Collection Period days, and keeps
-    // running past that until the money comes in (overdue). Later cycles are
-    // re-planned from there, Billing + Collection Period each, to the project end.
+    // Two cycles, independent of each other:
+    //   Revenue (bill) cycle: from one bill (Contract Income credit) to the next, every
+    //     Billing Period days. Each bill covers the work done since the previous bill.
+    //   Cost cycle: from one receipt of the client's money in the bank to the next.
+    //     Each bill is received Collection Period days after it is raised, so cycle 1
+    //     runs from the start to the first receipt (Billing + Collection Period) and
+    //     later cycles are one Billing Period each.
+    // The open cycle starts the day after the last receipt (or at the earliest activity
+    // start). Its bill is the one already raised and not yet paid, otherwise the last
+    // bill + Billing Period. It keeps running past its receipt date until the money
+    // comes in (overdue), and later bills are re-planned from there.
     // Offsets are days from 'base'; cycle numbers continue after the received ones.
+    //   bills[k] = bill date of cycle k, ends[k] = its receipt date (cost cycle end).
     public static function cfCycleGrid($pid)
     {
-        $proj = Yii::$app->db->createCommand("SELECT start_date, duration FROM projects WHERE Project_Id=:pid", [':pid' => (int)$pid])->queryOne();
-        $cd = self::cfCycleDays($pid); $len = $cd['length'];
-        if (!$proj || empty($proj['start_date']) || substr($proj['start_date'], 0, 10) === '0000-00-00' || (int)$proj['duration'] <= 0 || $len <= 0) return null;
+        $db = Yii::$app->db;
+        $proj = $db->createCommand("SELECT start_date, duration FROM projects WHERE Project_Id=:pid", [':pid' => (int)$pid])->queryOne();
+        $cd = self::cfCycleDays($pid); $B = (int)$cd['billing']; $C = (int)$cd['collection'];
+        if (!$proj || empty($proj['start_date']) || substr($proj['start_date'], 0, 10) === '0000-00-00' || (int)$proj['duration'] <= 0 || $B <= 0) return null;
         $base0 = strtotime(self::cfCycleBase($pid, substr($proj['start_date'], 0, 10)));
         $full = self::cfEffectiveDuration($pid, $base0, (int)$proj['duration']);
         $endAbs = $base0 + ($full - 1) * 86400;
         $rc = self::cfClientReceipts($pid);
-        $base = $rc ? strtotime($rc[count($rc) - 1]['date']) + 86400 : $base0;
-        $today = (int)round((strtotime(date('Y-m-d')) - $base) / 86400);
-        $L1 = max($len, $today + 1);
-        $total = max($L1, (int)round(($endAbs - $base) / 86400) + 1);
-        $n = 1 + (int)ceil(max(0, $total - $L1) / $len);
-        $starts = [1 => 0]; $ends = [1 => $L1 - 1];
-        for ($k = 2; $k <= $n; $k++) { $starts[$k] = $L1 + ($k - 2) * $len; $ends[$k] = min($L1 + ($k - 1) * $len, $total) - 1; }
-        return ['base' => $base, 'starts' => $starts, 'ends' => $ends, 'n' => $n, 'total' => $total, 'full' => $full,
-                'len' => $len, 'billing' => $cd['billing'], 'offset' => count($rc), 'receipts' => $rc,
-                'today' => $today, 'overdue' => $today > $len - 1];
+        $lastRc = $rc ? $rc[count($rc) - 1]['date'] : null;
+        $base = $lastRc ? strtotime($lastRc) + 86400 : $base0;
+        $day = function($ts) use ($base) { return (int)round(($ts - $base) / 86400); };
+        $today = $day(strtotime(date('Y-m-d')));
+        $ci = $db->createCommand("SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1")->queryScalar();
+        $lastBill = $ci ? $db->createCommand(
+            "SELECT MAX(date) FROM journalvoucher WHERE creditacnt = :c AND project_id = :p AND COALESCE(delete_status, 0) = 0 AND date <= CURDATE()",
+            [':c' => (int)$ci, ':p' => (int)$pid])->queryScalar() : null;
+        $lastBill = $lastBill ? substr($lastBill, 0, 10) : null;
+        if ($lastBill && (!$lastRc || $lastBill > $lastRc)) $b1 = $day(strtotime($lastBill));   // raised, not yet paid
+        elseif ($lastBill) $b1 = $day(strtotime($lastBill)) + $B;
+        else $b1 = $B - 1;
+        $e1 = max($b1 + $C, $today, 0);
+        $shift = $e1 - ($b1 + $C);
+        $endOff = $day($endAbs);
+        $total = max(1, $endOff + 1);
+        $bills = [1 => $b1]; $recv = [1 => $e1];
+        for ($k = 2; $bills[$k - 1] < $endOff && $k <= 500; $k++) {
+            $bills[$k] = $b1 + ($k - 1) * $B + $shift;
+            $recv[$k] = $bills[$k] + $C;
+        }
+        $n = count($bills);
+        $starts = [1 => 0]; $ends = [1 => $e1];
+        for ($k = 2; $k <= $n; $k++) { $starts[$k] = $recv[$k - 1] + 1; $ends[$k] = $recv[$k]; }
+        return ['base' => $base, 'starts' => $starts, 'ends' => $ends, 'bills' => $bills, 'n' => $n, 'total' => $total, 'full' => $full,
+                'len' => $e1 + 1, 'billing' => $B, 'collection' => $C, 'offset' => count($rc), 'receipts' => $rc,
+                'today' => $today, 'overdue' => $today > $b1 + $C];
     }
-
     public static function cfCurrentCycle($pid)
     {
         $g = self::cfCycleGrid($pid);
@@ -5123,7 +5147,7 @@ class ProjectsmainController extends Controller
         $cycleLen = (int)$grid['len'];
         $n        = $grid['n'];
         $cyOff    = $grid['offset'];
-        $gS = $grid['starts']; $gE = $grid['ends'];
+        $gS = $grid['starts']; $gE = $grid['ends']; $gB = $grid['bills'];
         $dayOf    = function ($date) use ($base) { return (int)round((strtotime($date) - $base) / 86400); };
 
         $acts = $db->createCommand(
@@ -5198,8 +5222,8 @@ class ProjectsmainController extends Controller
             for ($k = 1; $k <= $n; $k++) {
                 $cStart = ($k === 1) ? -100000000 : $gS[$k];
                 $cEnd   = ($k === $n) ? 100000000 : $gE[$k];
-                $rStart = ($k === 1) ? -100000000 : $gS[$k - 1] + $billDays;   // bill k: work since bill k-1
-                $rEnd   = ($k === $n) ? 100000000 : $gS[$k] + $billDays - 1;
+                $rStart = ($k === 1) ? -100000000 : $gB[$k - 1] + 1;   // bill k: work since bill k-1
+                $rEnd   = ($k === $n) ? 100000000 : $gB[$k];
                 if ($k < $current) {
                     $overlap = min($aEnd, $cEnd) - max($aStart, $cStart) + 1;
                     if ($overlap > 0) $bars[$k] += $value * $overlap / $curDuration;
@@ -5264,8 +5288,8 @@ class ProjectsmainController extends Controller
             $bDur = max(1, (int)($a['old_duration'] ?: $a['duration']));
             $cycleOnlyQty = max(0, ((float)$a['quantity'] - $doneCycle) / $bDur * min($barDays, $inCycle));
             // Quantity in the Billing Period only (the cycle's first billing days): drives Revenue/Cycle.
-            $bEnd = min($cE, ($cyc ? strtotime($cyc['start']) : $bS) + ($billDays - 1) * 86400);
-            $bFrom = ($cyc && (int)$cyc['cycle'] > 1) ? $cS - (int)$grid['len'] * 86400 + $billDays * 86400 : $cS;
+            $bEnd = $base + $gB[1] * 86400;
+            $bFrom = ($cyc && (int)$cyc['cycle'] > 1) ? $base + ($gB[1] - $billDays + 1) * 86400 : $bS;
             $inBill = max(0, (int)round((min($bE, $bEnd) - max($bS, $bFrom)) / 86400) + 1);
             $billQty = max(0, ((float)$a['quantity'] - $doneCycle) / $bDur * min($barDays, $inBill));
             $currentItems[] = [
@@ -5304,11 +5328,11 @@ class ProjectsmainController extends Controller
              ORDER BY wa.sortorder ASC, wa.id ASC",
             [':p' => $pid]
         )->queryAll();
-        $cycDays = function($k) use ($gS, $gE) { return max(0, $gE[$k] - $gS[$k] + 1); };
+        $cycDays = function($k) use ($gS, $gE, $n, $grid) { return max(0, ($k === $n ? max($gE[$k], $grid['total'] - 1) : $gE[$k]) - $gS[$k] + 1); };
         $duration = (int)$grid['full'];   // Project Overhead L.S items spread over the whole project
-        $billDaysK = function($k) use ($gS, $n, $billDays, $grid) {
-            $from = $k === 1 ? 0 : $gS[$k - 1] + $billDays;
-            $to = $k === $n ? $grid['total'] - 1 : $gS[$k] + $billDays - 1;
+        $billDaysK = function($k) use ($gB, $n, $billDays, $grid) {
+            $from = $k === 1 ? max(0, $gB[1] - $billDays + 1) : $gB[$k - 1] + 1;
+            $to = $k === $n ? $grid['total'] - 1 : $gB[$k];
             return max(0, $to - $from + 1);
         };
         foreach ($ohRows as $o) {
@@ -5347,6 +5371,8 @@ class ProjectsmainController extends Controller
             $cycles[] = [
                 'cycle'     => $cyOff + $k,
                 'start_date' => date('Y-m-d', $base + $gS[$k] * 86400),
+                'bill_from' => date('Y-m-d', $base + ($k === 1 ? $gB[1] - $billDays + 1 : $gB[$k - 1] + 1) * 86400),
+                'bill_date' => date('Y-m-d', $base + $gB[$k] * 86400),
                 'end_date'  => date('Y-m-d', $base + $labelDay * 86400),
                 'end_label' => date('M', $base + $labelDay * 86400),
                 'target'    => round($bars[$k], 2),
@@ -5492,8 +5518,8 @@ class ProjectsmainController extends Controller
         $cycles = [];
         foreach ($wipCycles as $i => $c) {
             $k = $i + 1;
-            $from = ($k === 1) ? '1900-01-01' : $c['start_date'];
-            $to   = ($k === $n) ? '2999-12-31' : $c['end_date'];
+            $from = ($k === 1) ? '1900-01-01' : $c['bill_from'];
+            $to   = ($k === $n) ? '2999-12-31' : $c['bill_date'];
             $actual = 0.0;
             if ($contractIncomeId) {
                 $actual = (float)$db->createCommand(
