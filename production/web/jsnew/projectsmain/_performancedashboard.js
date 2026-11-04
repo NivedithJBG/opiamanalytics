@@ -4151,21 +4151,10 @@ function _cfBankTiLinesSvg(cyc, ser){
     // One line: lowest projected bank balance in each billing cycle (fund requirement) — negative = overdraft, positive = surplus
     // (from cfbankprojection).
     var has = function(){ return true; };
-    // Bank popup: Investments Required of each cycle, and the bank balance after that
-    // cycle's money is received = previous balance + (Bills Receivable - cost of the cycle),
-    // starting from minus the Advances & Deposits target. Bank line red while below the
-    // cycle's investment, green once above; the gap is shown in figures.
-    var SER = ser || [ { key: 'inv', col: '#3a4a5f', name: 'Investments Required' }, { key: 'bal', col: '#1e8073', name: 'Bank balance' } ];
+    // Bank popup: projected bank balance after each cycle, red below 0 (overdraft), green at or above 0.
+    var SER = ser || [ { key: 'bal', col: '#1e8073', name: 'Bank balance' } ];
     var bank = !ser, RED = '#d84a30', GRN = '#1e8073';
-    if (bank) {
-        var last = cyc[cyc.length - 1], adv0 = (+last.inv || 0) - (+last.cost || 0), bal = -adv0;
-        cyc = cyc.map(function(c){
-            var cost = c.cost !== undefined ? +c.cost || 0 : (+c.inv || 0) - adv0;
-            bal += (+c.br || 0) - cost;
-            return $.extend({}, c, { bal: bal });
-        });
-    }
-    var gapOf = function(c){ return (+c.inv || 0) - (+c.bal || 0); };
+    var gapOf = function(c){ return -(+c.bal || 0); };
     cyc = _cfTrimZeroTail(cyc, function(c){ return SER.map(function(s){ return c[s.key]; }); });
     // Once the balances stop changing, the repeated periods add nothing: keep the first of them only.
     var same = function(a, b){ return SER.every(function(s){ return Math.abs((+a[s.key] || 0) - (+b[s.key] || 0)) < 1; }); };
@@ -4205,11 +4194,6 @@ function _cfBankTiLinesSvg(cyc, ser){
         + '<line x1="' + padL + '" y1="' + yOf(0).toFixed(1) + '" x2="' + (W - padR) + '" y2="' + yOf(0).toFixed(1) + '" stroke="#222" stroke-width="1.6"/>'
         + '<text x="16" y="' + ((top + base) / 2) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700" transform="rotate(-90 16 ' + ((top + base) / 2) + ')">Lakhs</text>'
         + '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700">Billing cycle (period)</text>';
-    if (bank) cyc.forEach(function(c, i){
-        var d = gapOf(c); if (Math.abs(d) < 1) return;
-        var y = (yOf(+c.inv || 0) + yOf(+c.bal || 0)) / 2 + 4;
-        out += '<text x="' + (xOf(i) + 10).toFixed(1) + '" y="' + y.toFixed(1) + '" font-size="11" font-weight="700" fill="' + (d > 0 ? RED : GRN) + '"><title>' + (d > 0 ? 'Funding gap' : 'Surplus') + '</title>' + (d > 0 ? '&minus;' : '+') + L(Math.abs(d)) + '</text>';
-    });
     SER.forEach(function(s, si){
         var pts = [];
         cyc.forEach(function(c, i){ if (has(c)) pts.push([xOf(i), yOf(+c[s.key] || 0), +c[s.key] || 0, c]); });
@@ -4240,12 +4224,16 @@ function _cfBankTiLinesSvg(cyc, ser){
 function _cfShowBankTiLines(cycles, note, d){
     d = d || {};
     $('#cf-bank-ti-win').remove();
-    var winW = 480, winH = 200;
+    var winW = 720, winH = 430;
     var html = '<div id="cf-bank-ti-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - winW) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - winH) / 2) + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:360px;min-height:260px;max-width:98vw;resize:both;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + '<div id="cf-bank-ti-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;touch-action:none;">'
-        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank</span>'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Bank Balance after each Cycle (Lakhs)</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
-        + '<div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:24px 16px;font-family:Barlow Condensed,Arial;font-size:15px;color:#5a6e8c;">Bank formula to be designed.</div></div>';
+        + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
+        + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#d84a30;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Bank balance (red = negative, green = surplus)</span>'
+        + '<span style="color:#5a6e8c;">Opening = bank today ' + ((+d.bank_now || 0) / 100000).toFixed(2) + ' L</span>'
+        + '<span style="color:#5a6e8c;">Each cycle: + Receivable &minus; Cost/cycle + Advances &amp; Deposits (' + (+d.adv_ratio || 0).toFixed(1) + '% of Total Investment)</span></div>'
+        + '<div style="flex:1;min-height:0;overflow:auto;padding:10px 16px 16px;">' + _cfBankTiLinesSvg(cycles) + '</div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;
     window.bindDragTouch(hdr, 'mousedown', function(e){
@@ -4262,7 +4250,10 @@ function _cfShowBankTiLines(cycles, note, d){
 $(document).on('click', '#cf-bank-ti-close', function(){ $('#cf-bank-ti-win').remove(); });
 $(document).on('click', '#cf-bankdial', function(e){
     if (e.target.closest('.cf-bank-pencil') || e.target.closest('.cf-bank-input')) return;
-    _cfShowBankTiLines([], '', {});
+    _cfQueueAjax({
+        type: 'POST', url: '../projectsmain/cfbankprojection', dataType: 'json', priority: true,
+        success: function(d){ if (d && d.error === 'No') _cfShowBankTiLines(d.cycles || [], '', d); }
+    });
 });
 
 // Half blue-green / half dark orange dial, shared by every Cashflow panel

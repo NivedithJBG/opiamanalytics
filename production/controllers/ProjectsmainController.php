@@ -2469,10 +2469,14 @@ class ProjectsmainController extends Controller
     //    difference is paid out on day 1 (advances already paid are in today's balance).
     public function actionCfbankprojection()
     {
-        // Bank popup, per billing cycle (both positive; the gap is the funding still needed):
-        //   Investments Required(k) = Advances & Deposits target + cost of cycle k
-        //   Bills Receivable(k)     = Revenue/Cycle(k) less TDS % and Retention %
-        // Completed cycles: actual Total Investment and actual Contract Income billed in the cycle.
+        // Bank popup: projected bank balance after each billing cycle, from today's balance:
+        //   Balance(k) = Balance(k-1) + Receivable(k) - Cost(k) + A&D(k)
+        // Receivable = Revenue/Cycle (each bill covers all work since the previous one);
+        // for the open cycle, a bill already raised since the last receipt.
+        // A&D(k): the Advances & Deposits target for the project's first cycle; otherwise
+        // r x Total Investment(k) with Total Investment = A&D + Cost, i.e. Cost x r / (1 - r),
+        // r = A&D / Total Investment of the latest cycle with actual figures (or of the
+        // first cycle's projection until actuals exist).
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $pid = $this->_cfPid();
         if (!$pid) return ['error' => 'No project selected'];
@@ -2481,38 +2485,42 @@ class ProjectsmainController extends Controller
         $cur = self::cfCurrentCycle($pid);
         $cyc = $w['cycles'] ?? [];
         if (!$cyc || !$cur) return ['error' => 'No', 'cycles' => []];
-        $advTarget = 100000 * (float)Yii::$app->db->createCommand(
+        $db = Yii::$app->db;
+        $advTarget = 100000 * (float)$db->createCommand(
             "SELECT target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key = 'investments_target'", [':p' => $pid])->queryScalar();
-        // Income received at each cycle = Revenue/Cycle less TDS % and Retention %
-        // (percentages entered per project in the Bank popup, never fixed in code).
-        $pct = Yii::$app->db->createCommand(
-            "SELECT metric_key, target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key IN ('bank_tds_pct', 'bank_retention_pct')", [':p' => $pid]
-        )->queryAll(\PDO::FETCH_KEY_PAIR);
-        $tds = (float)($pct['bank_tds_pct'] ?? 0); $ret = (float)($pct['bank_retention_pct'] ?? 0);
-        $net = 1 - ($tds + $ret) / 100;
-        $out = [];
-        // Completed cycles = payments actually received: Total Investment on the receipt
-        // date and the amount received in the bank.
-        foreach (self::cfClientReceipts($pid) as $i => $r) {
-            $g = $this->_cfFlowGroups($pid, $r['date']);
-            $out[] = ['cycle' => $i + 1, 'end_date' => $r['date'], 'current' => false, 'actual' => true,
-                      'inv' => round($g['ti'], 2), 'br' => round((float)$r['amount'], 2)];
+        $g = $this->_cfFlowGroups($pid);
+        $bankNow = (float)$g['bank'];
+        // Share of Advances & Deposits in Total Investment from the latest actual cycle.
+        $r = null;
+        $rc = self::cfClientReceipts($pid);
+        if ($rc) {
+            $ga = $this->_cfFlowGroups($pid, $rc[count($rc) - 1]['date']);
+            if ((float)$ga['ti'] > 0) $r = max(0.0, min(0.95, (float)$ga['adv'] / (float)$ga['ti']));
         }
-        // Open cycle: a bill already raised since the last receipt is what will be received.
-        $ci = Yii::$app->db->createCommand("SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1")->queryScalar();
-        $billedOpen = $ci ? (float)Yii::$app->db->createCommand(
+        $ci = $db->createCommand("SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1")->queryScalar();
+        $billedOpen = $ci ? (float)$db->createCommand(
             "SELECT COALESCE(SUM(amount), 0) FROM journalvoucher WHERE creditacnt = :c AND project_id = :p AND COALESCE(delete_status, 0) = 0 AND date >= :s",
             [':c' => (int)$ci, ':p' => $pid, ':s' => $cur['start']])->queryScalar() : 0;
+        $bal = $bankNow;
+        $out = [];
         foreach ($cyc as $c) {
             $k = (int)$c['cycle'];
             $isOpen = $k === (int)$cur['cycle'];
-            $br = ($isOpen && $billedOpen > 0) ? $billedOpen * $net : (float)($c['revenue'] ?? 0) * $net;
-            // Overdue open cycle: its payment is expected now, so it is plotted at today.
-            $end = ($isOpen && !empty($cur['overdue'])) ? date('Y-m-d') : $c['end_date'];
-            $out[] = ['cycle' => $k, 'end_date' => $end, 'current' => $isOpen, 'overdue' => $isOpen && !empty($cur['overdue']),
-                      'inv' => round($advTarget + (float)$c['target'], 2), 'cost' => round((float)$c['target'], 2), 'br' => round($br, 2)];
+            $recv = ($isOpen && $billedOpen > 0) ? $billedOpen : (float)($c['revenue'] ?? 0);
+            $cost = (float)$c['target'];
+            if ($k === 1) {
+                $adv = $advTarget;
+                if ($r === null) $r = ($advTarget + $cost) > 0 ? min(0.95, $advTarget / ($advTarget + $cost)) : 0.0;
+            } else {
+                if ($r === null) $r = 0.0;
+                $adv = $cost * $r / (1 - $r);
+            }
+            $bal += $recv - $cost + $adv;
+            $out[] = ['cycle' => $k, 'end_date' => ($isOpen && !empty($cur['overdue'])) ? date('Y-m-d') : $c['end_date'],
+                      'current' => $isOpen, 'overdue' => $isOpen && !empty($cur['overdue']),
+                      'receivable' => round($recv, 2), 'cost' => round($cost, 2), 'adv' => round($adv, 2), 'bal' => round($bal, 2)];
         }
-        return ['error' => 'No', 'cycles' => $out, 'advances_target' => round($advTarget, 2), 'tds_pct' => $tds, 'retention_pct' => $ret];
+        return ['error' => 'No', 'cycles' => $out, 'bank_now' => round($bankNow, 2), 'adv_ratio' => round((float)$r * 100, 2)];
     }
 
     // Bank/Working Capital panel breakdown (Cashflow Dashboard popup):
