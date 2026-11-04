@@ -1365,7 +1365,7 @@ function _cfDrawInvestDial(){
         + _cfInvestDialSvg(s.target, s.actual)
         + '<div style="display:flex;justify-content:space-between;align-items:center;font-family:Barlow Condensed,Arial;padding:0 8px;width:100%;box-sizing:border-box;">'
         + '<span style="font-size:13px;color:#111;">Actual: <span style="font-size:13px;color:' + needleCol + ';font-weight:700;">' + (s.actual * divisor).toFixed(2) + '</span></span>'
-        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Avg. Target: ' + targetCell + ' <button class="cf-invest-pencil" title="Edit Target" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>'
+        + '<span style="font-size:13px;color:#111;"><span style="display:inline-block;width:14px;height:5px;background:#ffff00;border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Target: ' + targetCell + ' <button class="cf-invest-pencil" title="Edit Target" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:12px;">&#9998;</button></span>'
         + '</div>'
         + '<div style="width:100%;height:2px;background:#fff;border-top:1px solid #d8dde6;flex:none;"></div>';
 }
@@ -4232,7 +4232,7 @@ function _cfShowBankTiLines(cycles, note, d){
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
         + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#d84a30;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Bank balance (red = negative, green = surplus)</span>'
         + '<span style="color:#5a6e8c;">Opening = bank today ' + ((+d.bank_now || 0) / 100000).toFixed(2) + ' L</span>'
-        + '<span style="color:#5a6e8c;">Each cycle: + Receivable &minus; Cost/cycle + Advances &amp; Deposits avg. target (' + ((+d.adv_target || 0) / 100000).toFixed(2) + ' L)</span></div>'
+        + '<span style="color:#5a6e8c;">Each cycle: + Receivable &minus; Cost/cycle + Advances &amp; Deposits (' + (+d.adv_ratio || 0).toFixed(1) + '% of Total Investment)</span></div>'
         + '<div style="flex:1;min-height:0;overflow:auto;padding:10px 16px 16px;">' + _cfBankTiLinesSvg(cycles) + '</div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;
