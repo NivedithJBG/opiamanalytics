@@ -4445,13 +4445,23 @@ class ProjectsmainController extends Controller
         return max((int)$duration, $days);
     }
 
+    // Cycle = Billing Period + Collection Period (cost runs over the whole cycle);
+    // revenue is earned only in the Billing Period, the first days of each cycle.
+    public static function cfCycleDays($pid)
+    {
+        $v = Yii::$app->db->createCommand(
+            "SELECT metric_key, target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key IN ('billing_cycle', 'collection_period')", [':pid' => (int)$pid]
+        )->queryAll(\PDO::FETCH_KEY_PAIR);
+        $bill = (int)round((float)($v['billing_cycle'] ?? 0));
+        $coll = max(0, (int)round((float)($v['collection_period'] ?? 0)));
+        return ['billing' => $bill, 'collection' => $coll, 'length' => $bill > 0 ? $bill + $coll : 0];
+    }
+
     public static function cfCurrentCycle($pid)
     {
         $db = Yii::$app->db;
         $proj = $db->createCommand("SELECT start_date, duration FROM projects WHERE Project_Id=:pid", [':pid' => (int)$pid])->queryOne();
-        $len = (int)round((float)$db->createCommand(
-            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key='billing_cycle'", [':pid' => (int)$pid]
-        )->queryScalar());
+        $len = self::cfCycleDays($pid)['length'];
         if (!$proj || empty($proj['start_date']) || substr($proj['start_date'], 0, 10) === '0000-00-00' || (int)$proj['duration'] <= 0 || $len <= 0) return null;
         $base = strtotime(self::cfCycleBase($pid, substr($proj['start_date'], 0, 10)));
         $duration = self::cfEffectiveDuration($pid, $base, (int)$proj['duration']);
@@ -5054,10 +5064,9 @@ class ProjectsmainController extends Controller
         $proj = $db->createCommand(
             "SELECT start_date, duration FROM projects WHERE Project_Id=:pid", [':pid' => $pid]
         )->queryOne();
-        $billing = (float)$db->createCommand(
-            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key='billing_cycle'",
-            [':pid' => $pid]
-        )->queryScalar();
+        $cd = self::cfCycleDays($pid);
+        $billing = (float)$cd['length'];
+        $billDays = (int)$cd['billing'];
         if (!$proj || empty($proj['start_date']) || $proj['start_date'] === '0000-00-00'
             || (int)$proj['duration'] <= 0 || $billing <= 0) {
             return ['error' => 'No', 'cycles' => [], 'current_cycle' => 0, 'current_target' => 0];
@@ -5142,21 +5151,22 @@ class ProjectsmainController extends Controller
             for ($k = 1; $k <= $n; $k++) {
                 $cStart = ($k === 1) ? -100000000 : ($k - 1) * $cycleLen;
                 $cEnd   = ($k === $n) ? 100000000 : min($k * $cycleLen, $duration) - 1;
+                $rEnd   = min($cEnd, ($k - 1) * $cycleLen + $billDays - 1);   // Billing Period of the cycle
                 if ($k < $current) {
                     $overlap = min($aEnd, $cEnd) - max($aStart, $cStart) + 1;
-                    if ($overlap > 0) {
-                        $bars[$k] += $value * $overlap / $curDuration;
-                        $revs[$k] += (float)$a['quantity'] * $qrate * $overlap / $curDuration;
-                    }
+                    if ($overlap > 0) $bars[$k] += $value * $overlap / $curDuration;
+                    $rOv = min($aEnd, $rEnd) - max($aStart, $cStart) + 1;
+                    if ($rOv > 0) $revs[$k] += (float)$a['quantity'] * $qrate * $rOv / $curDuration;
                     continue;
                 }
                 $overlap = min($remEnd, $cEnd) - max($remStart, $cStart) + 1;
                 if ($overlap > 0 && $remQty > 0) {
                     $part = $remQty * (float)$a['rate'] * $overlap / $remDays;
                     $bars[$k] += $part;
-                    $revs[$k] += $remQty * $qrate * $overlap / $remDays;
                     if ($k === $current) { $curPart = $part; $curDays = $overlap; }
                 }
+                $rOv = min($remEnd, $rEnd) - max($remStart, $cStart) + 1;
+                if ($rOv > 0 && $remQty > 0) $revs[$k] += $remQty * $qrate * $rOv / $remDays;
             }
             $barStart = substr((string)$a['bar_start'], 0, 10);
             if ((int)$a['completed_status'] === 1) continue;
@@ -5205,6 +5215,10 @@ class ProjectsmainController extends Controller
             // Duration (baseline, old_duration) x activity days inside this cycle.
             $bDur = max(1, (int)($a['old_duration'] ?: $a['duration']));
             $cycleOnlyQty = max(0, ((float)$a['quantity'] - $doneCycle) / $bDur * min($barDays, $inCycle));
+            // Quantity in the Billing Period only (the cycle's first billing days): drives Revenue/Cycle.
+            $bEnd = min($cE, ($cyc ? strtotime($cyc['start']) : $bS) + ($billDays - 1) * 86400);
+            $inBill = max(0, (int)round((min($bE, $bEnd) - max($bS, $cS)) / 86400) + 1);
+            $billQty = max(0, ((float)$a['quantity'] - $doneCycle) / $bDur * min($barDays, $inBill));
             $currentItems[] = [
                 'sched_id' => (int)$a['id'],
                 'wan_id'   => (int)$a['wan_id'],
@@ -5216,6 +5230,7 @@ class ProjectsmainController extends Controller
                 'executed' => (float)$a['executed'],
                 'remaining' => round($cycleQty, 2),
                 'cycle_qty' => round($cycleOnlyQty, 2),
+                'bill_qty'  => round($billQty, 2),
                 'done_cycle' => round($doneCycle, 2),
                 'rate'     => (float)$a['rate'],
                 'days'     => $curDays,
@@ -5241,20 +5256,23 @@ class ProjectsmainController extends Controller
             [':p' => $pid]
         )->queryAll();
         $cycDays = function($k) use ($cycleLen, $duration) { return max(0, min($k * $cycleLen, $duration) - ($k - 1) * $cycleLen); };
+        $billDaysK = function($k) use ($cycDays, $billDays) { return min($cycDays($k), $billDays); };
         foreach ($ohRows as $o) {
             $rate = (float)$o['rate']; $qty = (float)$o['quantity'];
             $perDay = in_array(strtolower(trim((string)$o['unit'])), ['day', 'days', 'dys', 'dy'], true);
             for ($k = 1; $k <= $n; $k++) {
                 $bars[$k] += $perDay ? $rate * $cycDays($k) : ($duration > 0 ? $qty * $rate * $cycDays($k) / $duration : 0);
                 $oq = (float)($qtd['qtd_rate_' . $o['wan_id']] ?? 0);
-                if ($oq) $revs[$k] += $perDay ? $oq * $cycDays($k) : ($duration > 0 ? $qty * $oq * $cycDays($k) / $duration : 0);
+                if ($oq) $revs[$k] += $perDay ? $oq * $billDaysK($k) : ($duration > 0 ? $qty * $oq * $billDaysK($k) / $duration : 0);
             }
             $d = $cycDays($current);
             $cq = $perDay ? $d : ($duration > 0 ? $qty * $d / $duration : 0);
+            $bd = $billDaysK($current);
+            $bq = $perDay ? $bd : ($duration > 0 ? $qty * $bd / $duration : 0);
             $currentItems[] = [
                 'sched_id' => 0, 'wan_id' => (int)$o['wan_id'], 'lib_activity_id' => (int)$o['lib_activity_id'],
                 'group' => $o['group_name'], 'name' => $o['name'], 'unit' => $o['unit'],
-                'quantity' => $qty, 'executed' => 0, 'remaining' => round($cq, 2), 'cycle_qty' => round($cq, 2),
+                'quantity' => $qty, 'executed' => 0, 'remaining' => round($cq, 2), 'cycle_qty' => round($cq, 2), 'bill_qty' => round($bq, 2),
                 'done_cycle' => 0, 'rate' => $rate, 'days' => $d, 'duration' => $duration,
                 'cost' => round($cq * $rate, 2), 'overhead' => true,
             ];
@@ -5407,10 +5425,7 @@ class ProjectsmainController extends Controller
 
         $base = strtotime($proj['start_date']);
         $duration = self::cfEffectiveDuration($pid, $base, (int)$proj['duration']);
-        $cycleLen = (int)round((float)$db->createCommand(
-            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key='billing_cycle'",
-            [':pid' => $pid]
-        )->queryScalar());
+        $cycleLen = self::cfCycleDays($pid)['length'];
         $n = count($wipCycles);
         // Bills Receivable of a cycle = Revenue/Cycle less TDS % and Retention % (the Bank popup's percentages).
         $pct = $db->createCommand(

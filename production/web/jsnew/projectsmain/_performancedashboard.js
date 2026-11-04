@@ -782,7 +782,7 @@ function _cfShowCostCyclePopup(d){
             + '<td>' + n2(it.quantity) + '</td><td>' + n2(it.cycle_qty) + '</td><td>' + n2(it.done_cycle) + '</td><td>' + n2(it.rate) + '</td>'
             + '<td style="font-weight:700;">' + n2(it.cost) + '</td>'
             // Quoted rate: typed here for now (to be filled from the BOQ later).
-            + '<td style="padding:2px 4px;"><input type="text" inputmode="decimal" class="cf-qtd-in" data-wan="' + (+it.wan_id || 0) + '" data-rq="' + (+it.cycle_qty || 0) + '" value="' + (it.qtd_rate === null || it.qtd_rate === undefined ? '' : (+it.qtd_rate).toFixed(2)) + '" placeholder="-" title="Quoted rate (from the BOQ, or type it here and press Enter)" style="width:72px;box-sizing:border-box;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:3px 5px;font:inherit;background:#fffbe6;"></td>'
+            + '<td style="padding:2px 4px;"><input type="text" inputmode="decimal" class="cf-qtd-in" data-wan="' + (+it.wan_id || 0) + '" data-rq="' + (it.bill_qty !== undefined ? +it.bill_qty || 0 : +it.cycle_qty || 0) + '" value="' + (it.qtd_rate === null || it.qtd_rate === undefined ? '' : (+it.qtd_rate).toFixed(2)) + '" placeholder="-" title="Quoted rate (from the BOQ, or type it here and press Enter)" style="width:72px;box-sizing:border-box;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:3px 5px;font:inherit;background:#fffbe6;"></td>'
             + '<td class="cf-rv"></td><td>-</td></tr>';
     });
     closeGroup();
@@ -836,7 +836,7 @@ $(document).on('click', '.cf-cc-row', function(){
     if (typeof window.showCostDashboardPopup === 'function') open();
     else if (typeof window.ensureGanttLoaded === 'function') window.ensureGanttLoaded(open);
 });
-// Revenue/Cycle = Cycle Qnty x Qtd Rate per row, with group
+// Revenue/Cycle = quantity in the Billing Period of the cycle x Qtd Rate per row, with group
 // subtotals and the total (recalculated whenever a quoted rate changes).
 function _cfCostRevenue(){
     var n2 = function(v){ return (+v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
