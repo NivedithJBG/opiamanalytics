@@ -435,7 +435,7 @@ function cfBuildSegmentWindows(){
     // Shared header above the three windows: "Project Management" and the project name.
     // Dragging it (or touching it) moves all three windows together; its × closes all.
     $('body').append(
-        '<div id="cf-shared-hdr" style="display:none;position:fixed;left:calc(50% - 671px);top:calc(12vh - 44px);width:1342px;height:30px;box-sizing:border-box;background:#081142;color:#fff;padding:0 12px;align-items:center;justify-content:space-between;cursor:move;user-select:none;touch-action:none;z-index:100200;font-family:Nunito,Arial,sans-serif;">'
+        '<div id="cf-shared-hdr" style="display:none;position:fixed;left:calc(50% - 671px);top:calc(12vh - 44px);width:1342px;height:30px;box-sizing:border-box;background:#1a0a2e;color:#fff;padding:0 12px;align-items:center;justify-content:space-between;cursor:move;user-select:none;touch-action:none;z-index:100200;font-family:Nunito,Arial,sans-serif;">'
         + '<span><span style="font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;">Project Management</span>'
         + '<span id="cf-shared-name" style="font-size:12px;margin-left:12px;opacity:.9;"></span></span>'
         + '<button type="button" id="cf-shared-close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;padding:0 3px;">&times;</button>'
@@ -789,7 +789,7 @@ function _cfShowCostCyclePopup(d){
     if (!items.length) rows = '<tr><td colspan="11" style="text-align:center;color:#666;padding:12px;">' + ((d.cycles || []).length ? 'No activities in the current billing cycle.' : 'Set Project Duration and Billing Cycle to see the cycle.') + '</td></tr>';
     var th = 'style="background:#4a4f57;color:#fff;padding:6px 8px;font-weight:700;white-space:nowrap;"';
     var html = '<div id="cf-costcycle-win" style="position:fixed;z-index:100300;left:50%;top:14vh;transform:translateX(-50%);width:990px;max-width:96vw;max-height:72vh;display:flex;flex-direction:column;background:#fff;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.45);font-family:Nunito,Arial,sans-serif;font-size:12px;color:#111;">'
-        + '<div id="cf-costcycle-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;background:#081142;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;cursor:move;user-select:none;touch-action:none;">'
+        + '<div id="cf-costcycle-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#37475a,#26313f);color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;cursor:move;user-select:none;touch-action:none;">'
         // Same label and value as this cycle's bar in the WIP popup (month, lakhs).
         + '<span style="font-weight:700;">PROJECT COST &middot; Cycle ' + (d.current_cycle || '') + (cyc.end_label ? ' (' + esc(cyc.end_label) + ')' : '')
         + ' &middot; ' + ((+cyc.target || 0) / 100000).toFixed(2) + ' Lakhs' + (cyc.end_date ? ' &middot; ends ' + esc(cyc.end_date) : '') + '</span>'
@@ -917,7 +917,7 @@ function _cfShowResourcesPopup(d){
     var th = 'style="background:#4a4f57;color:#fff;padding:6px 8px;font-weight:700;white-space:nowrap;"';
     function h(t, tip){ return '<th ' + th + (tip ? ' title="' + tip + '"' : '') + '>' + t + '</th>'; }
     var html = '<div id="cf-rescycle-win" style="position:fixed;z-index:100300;left:50%;top:12vh;transform:translateX(-50%);width:1180px;max-width:96vw;max-height:76vh;display:flex;flex-direction:column;background:#fff;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.45);font-family:Nunito,Arial,sans-serif;font-size:12px;color:#111;">'
-        + '<div id="cf-rescycle-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;background:#081142;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;cursor:move;user-select:none;touch-action:none;">'
+        + '<div id="cf-rescycle-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#37475a,#26313f);color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;cursor:move;user-select:none;touch-action:none;">'
         + '<span style="font-weight:700;">PROJECT RESOURCES &middot; Cycle ' + (d.current_cycle || '') + (cyc.end_label ? ' (' + esc(cyc.end_label) + ')' : '')
         + ' &middot; ' + (total / 100000).toFixed(2) + ' Lakhs' + (cyc.end_date ? ' &middot; ends ' + esc(cyc.end_date) : '') + '</span>'
         + '<button type="button" id="cf-rescycle-close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;">&times;</button></div>'
@@ -1612,7 +1612,7 @@ function _cfShowNetInvCycles(cycles, info){
     }
     var html = '<div id="cf-netinv-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + topP + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
-        + '<div id="cf-ni-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#081142;cursor:move;user-select:none;">'
+        + '<div id="cf-ni-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Total Investment — Current and Projected</span>'
         + '<button id="cf-netinv-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
@@ -1681,7 +1681,7 @@ function _cfShowNetInvBreakdown(accounts, average){
 
     var html = '<div id="cf-netinv-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
-        + '<div id="cf-netinv-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#251840;cursor:move;user-select:none;">'
+        + '<div id="cf-netinv-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Total Investment — Per-Cycle Breakdown</span>'
         + '<button id="cf-netinv-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
@@ -1992,7 +1992,7 @@ function _cfShowInvestBreakdown(accounts){
 
     var html = '<div id="cf-invest-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
-        + '<div id="cf-invest-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#251840;cursor:move;user-select:none;">'
+        + '<div id="cf-invest-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Investments — Account Breakdown</span>'
         + '<button id="cf-invest-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
@@ -2242,7 +2242,7 @@ function _cfShowCurrLiabTip(){
     if (left < 10) left = 10;
     if (top < 10) top = 10;
     var html = '<div id="cf-currliab-tip-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
-        + '<div id="cf-currliab-tip-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:#251840;cursor:move;user-select:none;">'
+        + '<div id="cf-currliab-tip-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:14px;font-weight:700;color:#fff;">Current Liabilities vs Total Investment</span>'
         + '<button id="cf-currliab-tip-close" style="background:none;border:none;font-size:18px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
@@ -2474,7 +2474,7 @@ function _cfShowCurrLiabBreakdown(accounts, title){   // title: also used for th
 
     var html = '<div id="cf-currliab-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
-        + '<div id="cf-currliab-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#251840;cursor:move;user-select:none;">'
+        + '<div id="cf-currliab-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">' + (title || 'Current Liabilities — Account Breakdown') + '</span>'
         + '<button id="cf-currliab-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
@@ -2688,7 +2688,7 @@ function _cfShowProjExpBreakdown(accounts){
 
     var html = '<div id="cf-projexp-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
-        + '<div id="cf-projexp-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#251840;cursor:move;user-select:none;">'
+        + '<div id="cf-projexp-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Project Expenditure — Group Breakdown</span>'
         + '<button id="cf-projexp-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
@@ -3401,7 +3401,7 @@ function _cfShowWipBreakdown(){
 
     var html = '<div id="cf-wip-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
-        + '<div id="cf-wip-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#081142;cursor:move;user-select:none;">'
+        + '<div id="cf-wip-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Work In Progress — Cycle Targets</span>'
         + '<button id="cf-wip-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
@@ -3731,7 +3731,7 @@ function _cfShowBillsRecvBreakdown(){
 
     var html = '<div id="cf-billsrecv-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
-        + '<div id="cf-billsrecv-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#334455;cursor:move;user-select:none;">'
+        + '<div id="cf-billsrecv-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bills Receivable — Cycle Targets</span>'
         + '<button id="cf-billsrecv-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
@@ -4084,7 +4084,7 @@ function _cfShowBankBreakdown(points){
 
     var html = '<div id="cf-bank-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
-        + '<div id="cf-bank-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#5a5a5a;cursor:move;user-select:none;">'
+        + '<div id="cf-bank-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Working Capital — Projected Requirement per 45-Day Cycle</span>'
         + '<button id="cf-bank-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
@@ -4222,7 +4222,7 @@ function _cfShowBankTiLines(cycles, note, d){
     $('#cf-bank-ti-win').remove();
     var winW = 720, winH = 430;
     var html = '<div id="cf-bank-ti-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - winW) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - winH) / 2) + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:360px;min-height:260px;max-width:98vw;resize:both;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
-        + '<div id="cf-bank-ti-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#081142;cursor:move;user-select:none;touch-action:none;">'
+        + '<div id="cf-bank-ti-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;touch-action:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Bank Balance per Cycle (Lakhs)</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
@@ -4485,7 +4485,7 @@ function _cfShowC2cBreakdown(accounts, average){
 
     var html = '<div id="cf-c2c-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
-        + '<div id="cf-c2c-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#334455;cursor:move;user-select:none;">'
+        + '<div id="cf-c2c-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Cash-to-Cash Cycle — Per-Cycle Breakdown</span>'
         + '<button id="cf-c2c-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
@@ -4687,7 +4687,7 @@ function _cfShowContractIncomeBreakdown(accounts, average, cumulative){
 
     var html = '<div id="cf-ci-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + top + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + rsHtml
-        + '<div id="cf-ci-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#334455;cursor:move;user-select:none;">'
+        + '<div id="cf-ci-breakdown-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Contract Income — Per-Cycle Breakdown</span>'
         + '<button id="cf-ci-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'

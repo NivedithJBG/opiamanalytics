@@ -58,7 +58,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 #gkm-modal.gkm-open { display:flex; }
 #gkm-header {
-  background:#1a2540; color:#fff; padding:10px 16px;
+  background:linear-gradient(135deg,#37475a,#26313f); color:#fff; padding:10px 16px;
   display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
   cursor:move; user-select:none;
 }
@@ -102,7 +102,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 #gkp-popup.gkp-visible { display: flex; }
 #gkp-hdr {
-  background: #1a2540; color: #fff; padding: 10px 14px;
+  background:linear-gradient(135deg,#37475a,#26313f); color: #fff; padding: 10px 14px;
   display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
   cursor: move; user-select: none;
 }
@@ -165,7 +165,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 #gpd-tip-title {
   font-size: 12px; font-weight: 700; color: #e8efff; text-transform: uppercase;
   letter-spacing: 0.04em; text-align: center;
-  padding: 8px 12px; background: #1a2540;
+  padding: 8px 12px; background:linear-gradient(135deg,#37475a,#26313f);
   border-bottom: 1px solid #0d1f3c;
   cursor: move; user-select: none;
 }
@@ -226,7 +226,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 #gcm-popup.gcm-visible { display: flex; }
 #gcm-pop-hdr {
-  background: #1a2540; color: #fff; padding: 10px 14px;
+  background:linear-gradient(135deg,#37475a,#26313f); color: #fff; padding: 10px 14px;
   display: flex; align-items: center; flex-shrink: 0;
   cursor: move; user-select: none;
 }
@@ -326,7 +326,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 .gm-bar-tip.gm-ucr-drill-open.gm-bar-tip-open { display: flex; }
 #gm-ucr-tip-hdr {
   font-size: 12px; margin-bottom: 10px; flex-shrink: 0;
-  background: #1a2540; color: #fff; padding: 10px 12px 10px 16px;
+  background:linear-gradient(135deg,#37475a,#26313f); color: #fff; padding: 10px 12px 10px 16px;
   border-radius: 6px 6px 0 0; text-transform: uppercase; letter-spacing: .04em;
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   cursor: move; user-select: none;
@@ -508,12 +508,12 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 }
 <?php endif; ?>
 #gantt-float-hdr {
-  background: #fff; color: #333;
+  background:linear-gradient(135deg,#37475a,#26313f); color:#fff;
   padding: 10px 15px;
   display: flex; align-items: center; justify-content: space-between;
   cursor: move; user-select: none; flex-shrink: 0;
   font-family: 'Nunito',sans-serif; font-size: 18px; font-weight: 700;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom:none;
 }
 #gantt-float-body {
   flex: 1; min-height: 0; display: flex; flex-direction: column;

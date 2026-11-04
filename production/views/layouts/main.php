@@ -207,7 +207,7 @@ $subDomain = array_shift(($HTTP_HOST));
         }
         #pdoc-popup.pdoc-open { display:flex; }
         #pdoc-header {
-            background:linear-gradient(135deg,#1565C0,#0d47a1);
+            background:linear-gradient(135deg,#37475a,#26313f);
             color:#fff; padding:10px 16px; display:flex; align-items:center; gap:8px;
             cursor:move; user-select:none; flex-shrink:0;
         }
@@ -279,7 +279,7 @@ $subDomain = array_shift(($HTTP_HOST));
         }
         #cwbs-popup.cwbs-open { display:flex; }
         #cwbs-header {
-            background:linear-gradient(135deg,#0d3b4f,#0f5c52);
+            background:linear-gradient(135deg,#37475a,#26313f);
             color:#fff; padding:10px 16px; display:flex; align-items:center; gap:8px;
             cursor:move; user-select:none; flex-shrink:0;
         }
@@ -301,7 +301,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .cwbs-hp { position:fixed; display:none; flex-direction:column; width:720px; max-width:94vw; max-height:80vh; background:#fff; border-radius:10px;
             box-shadow:0 12px 40px rgba(0,0,0,.35); overflow:hidden; font-family:Nunito,Arial,sans-serif; }
         .cwbs-hp.on { display:flex; }
-        .cwbs-hp-hdr { background:linear-gradient(135deg,#0d3b4f,#0f5c52); color:#fff; padding:10px 14px; display:flex; align-items:center; cursor:move; }
+        .cwbs-hp-hdr { background:linear-gradient(135deg,#37475a,#26313f); color:#fff; padding:10px 14px; display:flex; align-items:center; cursor:move; }
         .cwbs-hp-hdr h4 { margin:0; font-size:14px; font-weight:700; flex:1; }
         .cwbs-hp-x { background:rgba(255,255,255,0.2); border:none; color:#fff; width:26px; height:26px; border-radius:50%; font-size:16px; line-height:1; cursor:pointer; }
         .cwbs-hp-body { padding:12px 14px; overflow-y:auto; flex:1; min-height:0; }
@@ -462,7 +462,7 @@ $subDomain = array_shift(($HTTP_HOST));
         }
         #cwbsed-popup.cwbsed-open { display:flex; }
         #cwbsed-header {
-            background:linear-gradient(135deg,#0d3b4f,#0f5c52);
+            background:linear-gradient(135deg,#37475a,#26313f);
             color:#fff; padding:10px 16px; display:flex; align-items:center; gap:8px;
             cursor:move; user-select:none; flex-shrink:0;
         }
@@ -516,7 +516,7 @@ $subDomain = array_shift(($HTTP_HOST));
         }
         #pdoc-viewer-popup.pdoc-open { display:flex; }
         #pdoc-viewer-header {
-            background:#1565C0; color:#fff; padding:9px 14px;
+            background:linear-gradient(135deg,#37475a,#26313f); color:#fff; padding:9px 14px;
             display:flex; align-items:center; gap:8px; cursor:move; user-select:none; flex-shrink:0;
         }
         #pdoc-viewer-title { flex:1; font-size:12px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -543,6 +543,8 @@ $subDomain = array_shift(($HTTP_HOST));
        tableauDashboardVisible = true;
     </script>
 
+
+<style id="slate-modal-hdr">.modal-header{background:linear-gradient(135deg,#37475a,#26313f) !important;color:#fff;border-bottom:none;}.modal-header .modal-title,.modal-header h4{color:#fff !important;}.modal-header .close{color:#fff !important;opacity:.85;text-shadow:none;}.modal-header .close:hover{opacity:1;}</style>
 </head>
 
 <?php
@@ -1919,7 +1921,7 @@ if($action=='login')
 }
 
 /* Header */
-#cb-hdr{background:#1a2540;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;font-family:'Times New Roman',Times,serif;flex-shrink:0}
+#cb-hdr{background:linear-gradient(135deg,#37475a,#26313f);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;font-family:'Times New Roman',Times,serif;flex-shrink:0}
 #cb-hdr-title{font-size:17px;font-weight:700;line-height:1.2}
 #cb-hdr-sub{font-size:13px;opacity:.65;font-weight:400;margin-top:2px}
 #cb-hdr-actions{display:flex;align-items:center;gap:10px}
@@ -2129,7 +2131,7 @@ if($action=='login')
 #nt-btn.nt-msg{background:#1565c0}
 #nt-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:#fff;color:#d84a30;font:700 11px/18px Nunito,Arial,sans-serif;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.3);display:none}
 #nt-win{position:fixed;right:24px;bottom:80px;width:380px;height:480px;min-width:280px;min-height:220px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);z-index:100600;background:#f0f2f7;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.45);display:none;flex-direction:column;overflow:hidden;font-family:Nunito,Arial,sans-serif}
-#nt-hdr{flex:none;display:flex;align-items:center;justify-content:space-between;background:#1a0a2e;color:#fff;padding:8px 12px;cursor:move;user-select:none;touch-action:none;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+#nt-hdr{flex:none;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#37475a,#26313f);color:#fff;padding:8px 12px;cursor:move;user-select:none;touch-action:none;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
 #nt-close{background:none;border:none;color:#fff;font-size:20px;line-height:1;cursor:pointer;padding:0 2px}
 #nt-tabs{flex:none;display:flex;background:#fff;border-bottom:1px solid #c8d0e0}
 .nt-tab{flex:1;background:none;border:none;border-bottom:3px solid transparent;padding:8px 4px;font-size:12px;font-weight:700;color:#5a6e8c;cursor:pointer}
@@ -4837,7 +4839,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
 }
 #apt-modal.apt-open{display:flex}
 #apt-hdr{
-  background:#5a6470;color:#fff;padding:12px 20px;display:flex;justify-content:space-between;
+  background:linear-gradient(135deg,#37475a,#26313f);color:#fff;padding:12px 20px;display:flex;justify-content:space-between;
   align-items:center;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;
   text-transform:uppercase;flex-shrink:0;
 }
@@ -5010,12 +5012,12 @@ window.loadIowGroupOptions = function(selectEl, cb){
 .eam-rs-ne{right:0;top:0;width:14px;height:14px;cursor:ne-resize;}
 .eam-rs-nw{left:0;top:0;width:14px;height:14px;cursor:nw-resize;}
 #eam-hdr{
-  background:#fff;color:#333;padding:8px 14px;display:flex;justify-content:space-between;
+  background:linear-gradient(135deg,#37475a,#26313f);color:#fff;padding:8px 14px;display:flex;justify-content:space-between;
   align-items:center;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;
-  border-bottom:2px solid #b0b4b9;flex-shrink:0;cursor:move;
+  border-bottom:none;flex-shrink:0;cursor:move;
 }
-#eam-hdr-title-suffix{font-size:13px;font-weight:700;color:#00838f;margin-left:8px;}
-#eam-close{background:none;border:none;color:#333;font-size:20px;line-height:1;cursor:pointer;padding:0 4px;opacity:.6;}
+#eam-hdr-title-suffix{font-size:13px;font-weight:700;color:#9fe3ea;margin-left:8px;}
+#eam-close{background:none;border:none;color:#fff;font-size:20px;line-height:1;cursor:pointer;padding:0 4px;opacity:.6;}
 #eam-close:hover{opacity:1;}
 #eam-iow-row{
   display:flex;align-items:center;gap:10px;padding:10px 18px;background:#f4f5f6;
@@ -5612,7 +5614,7 @@ $(document).on('click', '#gantt-win-min', function(e){
   background:#fff; border-radius:8px; box-shadow:0 8px 28px rgba(0,0,0,.35); z-index:100050; flex-direction:column;
   overflow:hidden; resize:both; font-family:Nunito,Arial,sans-serif; }
 #gn-win.gn-open { display:flex; }
-#gn-hdr { flex:none; display:flex; justify-content:space-between; align-items:center; background:#081142; color:#fff;
+#gn-hdr { flex:none; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg,#37475a,#26313f); color:#fff;
   padding:8px 12px; font-weight:700; font-size:14px; cursor:move; user-select:none; touch-action:none; }
 #gn-close { background:none; border:none; color:#fff; font-size:20px; line-height:1; cursor:pointer; }
 #gn-form { flex:none; display:flex; gap:6px; padding:8px 10px; border-bottom:1px solid #e3e7ee; }

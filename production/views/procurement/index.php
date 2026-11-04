@@ -139,7 +139,7 @@
     overflow: hidden;
 }
 .po-param-popup-header {
-    background: #072c47;
+    background:linear-gradient(135deg,#37475a,#26313f);
     color: #fff;
     padding: 8px 14px;
     font-size: 12px;

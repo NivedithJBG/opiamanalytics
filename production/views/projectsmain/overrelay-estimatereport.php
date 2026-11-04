@@ -149,7 +149,7 @@
 #ecs-tip-title {
   font-size: 12px; font-weight: 700; color: #e8efff; text-transform: uppercase;
   letter-spacing: 0.04em; text-align: center;
-  padding: 8px 12px; background: #1a2540;
+  padding: 8px 12px; background:linear-gradient(135deg,#37475a,#26313f);
   border-bottom: 1px solid #0d1f3c;
   cursor: move; user-select: none;
 }
@@ -196,12 +196,12 @@
 .eriow-rs-ne{right:0;top:0;width:14px;height:14px;cursor:ne-resize;}
 .eriow-rs-nw{left:0;top:0;width:14px;height:14px;cursor:nw-resize;}
 #eriow-hdr{
-  background:#fff;color:#333;padding:8px 14px;display:flex;justify-content:space-between;
-  align-items:center;font-size:15px;font-weight:700;border-bottom:2px solid #b0b4b9;
+  background:linear-gradient(135deg,#37475a,#26313f);color:#fff;padding:8px 14px;display:flex;justify-content:space-between;
+  align-items:center;font-size:15px;font-weight:700;border-bottom:none;
   flex-shrink:0;cursor:move;
 }
-#eriow-hdr-suffix{font-size:13px;font-weight:700;color:#00838f;margin-left:8px;}
-#eriow-close{background:none;border:none;color:#333;font-size:20px;line-height:1;cursor:pointer;padding:0 4px;opacity:.6;}
+#eriow-hdr-suffix{font-size:13px;font-weight:700;color:#9fe3ea;margin-left:8px;}
+#eriow-close{background:none;border:none;color:#fff;font-size:20px;line-height:1;cursor:pointer;padding:0 4px;opacity:.6;}
 #eriow-close:hover{opacity:1;}
 #eriow-body{padding:14px 18px;overflow:auto;flex:1;}
 #eriow-body table{table-layout:auto;width:100%;border-collapse:collapse;}
@@ -250,7 +250,7 @@
 .erra-rs-ne{right:0;top:0;width:14px;height:14px;cursor:ne-resize;}
 .erra-rs-nw{left:0;top:0;width:14px;height:14px;cursor:nw-resize;}
 #erra-hdr{
-  background:#4a4f57;color:#fff;padding:8px 14px;display:flex;justify-content:space-between;
+  background:linear-gradient(135deg,#37475a,#26313f);color:#fff;padding:8px 14px;display:flex;justify-content:space-between;
   align-items:center;font-size:15px;font-weight:700;flex-shrink:0;cursor:move;
   border-bottom:2px solid #b0b4b9;
 }
@@ -295,11 +295,11 @@
 }
 #ertask-popup.ertask-open{display:flex}
 #ertask-hdr{
-  background:#fff;color:#333;padding:10px 14px;display:flex;justify-content:space-between;
-  align-items:center;font-size:15px;font-weight:700;flex-shrink:0;border-bottom:2px solid #b0b4b9;
+  background:linear-gradient(135deg,#37475a,#26313f);color:#fff;padding:10px 14px;display:flex;justify-content:space-between;
+  align-items:center;font-size:15px;font-weight:700;flex-shrink:0;border-bottom:none;
 }
-#ertask-hdr-resname{font-size:12px;font-weight:500;color:#888;margin-left:8px;}
-#ertask-close{background:none;border:none;color:#333;font-size:20px;line-height:1;cursor:pointer;padding:0 4px;opacity:.6;}
+#ertask-hdr-resname{font-size:12px;font-weight:500;color:#c9d2dc;margin-left:8px;}
+#ertask-close{background:none;border:none;color:#fff;font-size:20px;line-height:1;cursor:pointer;padding:0 4px;opacity:.6;}
 #ertask-close:hover{opacity:1;}
 #ertask-body{padding:14px 16px;overflow-y:auto;flex:1;min-height:80px;}
 .ertask-row{display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid #f0f0f0;font-size:13px;}

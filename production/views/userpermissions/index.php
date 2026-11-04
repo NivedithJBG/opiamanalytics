@@ -33,7 +33,7 @@
 .uperm-adduser-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9998; }
 .uperm-adduser-popup { display:none; position:fixed; z-index:9999; left:50%; top:50%; transform:translate(-50%,-50%);
   width:420px; max-width:92vw; background:#fff; border-radius:8px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden; }
-.uperm-adduser-hdr { background:#3a3f47; color:#fff; padding:12px 18px; font-size:14px; font-weight:700; display:flex; justify-content:space-between; align-items:center; }
+.uperm-adduser-hdr { background:linear-gradient(135deg,#37475a,#26313f); color:#fff; padding:12px 18px; font-size:14px; font-weight:700; display:flex; justify-content:space-between; align-items:center; }
 .uperm-adduser-close { background:none; border:none; color:#fff; font-size:18px; cursor:pointer; opacity:.85; }
 .uperm-adduser-body { padding:18px; }
 .uperm-adduser-field { margin-bottom:12px; }
