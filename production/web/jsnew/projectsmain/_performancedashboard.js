@@ -4173,7 +4173,7 @@ function _cfBankTiLinesSvg(cyc, ser){
     var tick = [1, 2, 2.5, 5, 10].map(function(m){ return m * mag; }).filter(function(t){ return t >= rawStep; })[0] * 100000;
     minV = Math.floor(minV / tick) * tick; maxV = Math.ceil(maxV / tick) * tick;
     if (maxV === minV) maxV = minV + tick;
-    W = _cfChartW(W, padL + padR, cyc.length, bank ? 56 : 96);
+    W = _cfChartW(W, padL + padR, cyc.length, bank ? 46 : 96);
     var slot = (W - padL - padR) / cyc.length;
     var xOf = function(i){ return padL + (i + 0.5) * slot; };
     var yOf = function(v){ return base - ((v - minV) / (maxV - minV)) * (base - top); };
@@ -4242,7 +4242,7 @@ function _cfBankNetBarsSvg(cyc, bankNow){
     var tick = [1, 2, 2.5, 5, 10].map(function(m){ return m * mag; }).filter(function(t){ return t >= rawStep; })[0] * 100000;
     minV = Math.floor(minV / tick) * tick; maxV = Math.ceil(maxV / tick) * tick;
     if (maxV === minV) maxV = minV + tick;
-    W = _cfChartW(W, padL + padR, cyc.length, 56);
+    W = _cfChartW(W, padL + padR, cyc.length, 46);
     var slot = (W - padL - padR) / cyc.length, bw = Math.min(48, slot * 0.6);
     var xOf = function(i){ return padL + (i + 0.5) * slot; };
     var yOf = function(v){ return base - ((v - minV) / (maxV - minV)) * (base - top); };
@@ -4278,7 +4278,7 @@ function _cfBankNetBarsSvg(cyc, bankNow){
 function _cfShowBankTiLines(cycles, note, d){
     d = d || {};
     $('#cf-bank-ti-win').remove();
-    var winW = Math.min(980, window.innerWidth - 20), winH = 470;
+    var winW = Math.min(860, window.innerWidth - 20), winH = 470;
     var html = '<div id="cf-bank-ti-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - winW) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - winH) / 2) + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:360px;min-height:260px;max-width:98vw;resize:both;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + '<div id="cf-bank-ti-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;touch-action:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Bank Balance and Investment per Cycle (Lakhs)</span>'
