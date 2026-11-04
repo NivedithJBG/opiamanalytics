@@ -4151,10 +4151,21 @@ function _cfBankTiLinesSvg(cyc, ser){
     // One line: lowest projected bank balance in each billing cycle (fund requirement) — negative = overdraft, positive = surplus
     // (from cfbankprojection).
     var has = function(){ return true; };
-    var SER = ser || [ { key: 'inv', col: '#3a4a5f', name: 'Investments Required' }, { key: 'br', col: '#1e8073', name: 'Bills Receivable' } ];
-    // Bank popup: Bills Receivable line red while below Investments Required, green once above; gap shown in figures.
+    // Bank popup: Investments Required of each cycle, and the bank balance after that
+    // cycle's money is received = previous balance + (Bills Receivable - cost of the cycle),
+    // starting from minus the Advances & Deposits target. Bank line red while below the
+    // cycle's investment, green once above; the gap is shown in figures.
+    var SER = ser || [ { key: 'inv', col: '#3a4a5f', name: 'Investments Required' }, { key: 'bal', col: '#1e8073', name: 'Bank balance' } ];
     var bank = !ser, RED = '#d84a30', GRN = '#1e8073';
-    var gapOf = function(c){ return (+c.inv || 0) - (+c.br || 0); };
+    if (bank) {
+        var last = cyc[cyc.length - 1], adv0 = (+last.inv || 0) - (+last.cost || 0), bal = -adv0;
+        cyc = cyc.map(function(c){
+            var cost = c.cost !== undefined ? +c.cost || 0 : (+c.inv || 0) - adv0;
+            bal += (+c.br || 0) - cost;
+            return $.extend({}, c, { bal: bal });
+        });
+    }
+    var gapOf = function(c){ return (+c.inv || 0) - (+c.bal || 0); };
     cyc = _cfTrimZeroTail(cyc, function(c){ return SER.map(function(s){ return c[s.key]; }); });
     // Once the balances stop changing, the repeated periods add nothing: keep the first of them only.
     var same = function(a, b){ return SER.every(function(s){ return Math.abs((+a[s.key] || 0) - (+b[s.key] || 0)) < 1; }); };
@@ -4196,13 +4207,13 @@ function _cfBankTiLinesSvg(cyc, ser){
         + '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700">Billing cycle (period)</text>';
     if (bank) cyc.forEach(function(c, i){
         var d = gapOf(c); if (Math.abs(d) < 1) return;
-        var y = (yOf(+c.inv || 0) + yOf(+c.br || 0)) / 2 + 4;
+        var y = (yOf(+c.inv || 0) + yOf(+c.bal || 0)) / 2 + 4;
         out += '<text x="' + (xOf(i) + 10).toFixed(1) + '" y="' + y.toFixed(1) + '" font-size="11" font-weight="700" fill="' + (d > 0 ? RED : GRN) + '"><title>' + (d > 0 ? 'Funding gap' : 'Surplus') + '</title>' + (d > 0 ? '&minus;' : '+') + L(Math.abs(d)) + '</text>';
     });
     SER.forEach(function(s, si){
         var pts = [];
         cyc.forEach(function(c, i){ if (has(c)) pts.push([xOf(i), yOf(+c[s.key] || 0), +c[s.key] || 0, c]); });
-        if (bank && s.key === 'br') {
+        if (bank && s.key === 'bal') {
             // Segment by segment, split where the two lines cross so each part takes its own colour.
             var seg = function(x1, y1, x2, y2, col){ out += '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="' + col + '" stroke-width="3" stroke-linecap="round"/>'; };
             for (var q = 1; q < pts.length; q++) {
@@ -4213,21 +4224,14 @@ function _cfBankTiLinesSvg(cyc, ser){
             }
         } else if (pts.length > 1) out += '<polyline points="' + pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="3"/>';
         pts.forEach(function(p){
-            var pc = (bank && s.key === 'br') ? (gapOf(p[3]) > 0 ? RED : GRN) : s.col;
+            var pc = (bank && s.key === 'bal') ? (gapOf(p[3]) > 0 ? RED : GRN) : s.col;
             out += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="5" fill="' + (p[3].actual ? '#fff' : pc) + '" stroke="' + pc + '" stroke-width="' + (p[3].actual ? 2.5 : 0) + '"><title>' + s.name + ' ' + L(p[2]) + ' L' + (p[3].actual ? ' (actual)' : ' (projected)') + '</title></circle>'
                 // At each cycle the higher value is labelled above its point, the other below.
                 + '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] + (function(){ var o = SER.length > 1 ? +p[3][SER[1 - si].key] || 0 : -Infinity; return (p[2] > o || (p[2] === o && si === 0)) ? -10 : 19; })()).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + pc + '">' + L(p[2]) + '</text>';
         });
     });
-    var run = 0, adv0 = cyc.length ? (+cyc[cyc.length - 1].inv || 0) - (+cyc[cyc.length - 1].cost || 0) : 0;
     cyc.forEach(function(c, i){
         var x = xOf(i);
-        if (bank) {
-            var cost = c.cost !== undefined ? +c.cost || 0 : (+c.inv || 0) - adv0;
-            run += (+c.br || 0) - cost;
-            var rv = run - adv0;
-            out += '<text x="' + x.toFixed(1) + '" y="' + (base + 22) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + (rv < 0 ? RED : GRN) + '"><title>Running total: bills received so far less cost so far</title>' + (rv < 0 ? '&minus;' : '+') + L(Math.abs(rv)) + '</text>';
-        }
         out += '<line x1="' + x.toFixed(1) + '" y1="' + base + '" x2="' + x.toFixed(1) + '" y2="' + (base + 5) + '" stroke="#555"/>'
             + '<text x="' + x.toFixed(1) + '" y="' + (base + 40) + '" text-anchor="middle" font-size="12" fill="#111"' + (c.current ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
@@ -4252,13 +4256,13 @@ function _cfShowBankTiLines(cycles, note, d){
     var winW = 720, winH = 430;
     var html = '<div id="cf-bank-ti-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - winW) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - winH) / 2) + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:360px;min-height:260px;max-width:98vw;resize:both;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + '<div id="cf-bank-ti-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;touch-action:none;">'
-        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Investments Required vs Bills Receivable per Cycle (Lakhs)</span>'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Investment per Cycle vs Bank Balance (Lakhs)</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
         + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Investments Required</span>'
-        + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#d84a30;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Bills Receivable (red = below investment, green = above)</span>'
+        + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#d84a30;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Bank balance after receipt (red = below the investment, green = above)</span>'
         + '<span style="color:#5a6e8c;">Hollow dots = actual (completed cycles)</span>'
-        + '<span style="color:#5a6e8c;">Figure under each cycle = running total (bills received so far &minus; cost so far)</span>'
+
         + '<span>TDS % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_tds_pct" value="' + (+d.tds_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
         + '<span>Retention % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_retention_pct" value="' + (+d.retention_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
         + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'
