@@ -4221,19 +4221,18 @@ function _cfBankTiLinesSvg(cyc, ser){
     });
     return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg"' + _cfChartAttr(W) + ' style="display:block;overflow:visible;">' + out + '</svg>';
 }
-// Bank popup, right half: the Investment of each billing cycle (Cost/cycle, plus the Advances &
-// Deposits target in the first cycle), one bar per cycle, with the Revenue/cycle overlaid: when the
-// revenue is less than the investment the shortfall is the red top part of the bar; when it is more,
-// the excess is a green part on top of the bar. Same cycles as the bank balance line.
+// Bank popup, right half: cumulative Investment up to each billing cycle (Cost/cycle, plus the
+// Advances & Deposits target in the first cycle, added up cycle by cycle), one bar per cycle with
+// the amount on the bar. Same cycles as the bank balance line.
 function _cfBankNetBarsSvg(cyc){
     if (!cyc.length) return '';
     cyc = _cfTrimZeroTail(cyc, function(c){ return [c.bal]; });
     while (cyc.length > 1 && Math.abs((+cyc[cyc.length - 1].bal || 0) - (+cyc[cyc.length - 2].bal || 0)) < 1) cyc = cyc.slice(0, -1);
-    var INV = '#3a4a5f', RED = '#d84a30', GRN = '#1e8073';
-    var rev = function(c){ return +c.receivable || 0; };
+    var INV = '#3a4a5f';
     var inv = function(c){ return (+c.cost || 0) + (+c.adv || 0); };
-    var maxV = 0;
-    cyc.forEach(function(c){ maxV = Math.max(maxV, inv(c), rev(c)); });
+    var cum = [], run = 0;
+    cyc.forEach(function(c){ run += inv(c); cum.push(run); });
+    var maxV = run;
     maxV *= 1.12;
     var W = 660, H = 362, base = 270, top = 30, padL = 70, padR = 24, minV = 0;
     var rawStep = Math.max(1, maxV / 100000 / 5), mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
@@ -4259,14 +4258,11 @@ function _cfBankNetBarsSvg(cyc){
 
         + '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700">Billing cycle (period)</text>';
     cyc.forEach(function(c, i){
-        var I = inv(c), R = rev(c), D = R - I, x = xOf(i), yI = yOf(I), yR = yOf(R), yLo = yOf(Math.min(I, R)), yHi = yOf(Math.max(I, R));
-        var col = D < 0 ? RED : GRN, tip = 'Investment ' + L(I) + ' L, Revenue/cycle ' + L(R) + ' L, difference ' + L(D) + ' L';
-        out += '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + yLo.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(0, base - yLo).toFixed(1) + '" fill="' + INV + '">'
-            + '<title>' + tip + '</title></rect>'
-            + (Math.abs(D) >= 1 ? '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + yHi.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, yLo - yHi).toFixed(1) + '" fill="' + col + '"><title>' + tip + '</title></rect>' : '')
-            + '<text x="' + x.toFixed(1) + '" y="' + (yHi - 7).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + (Math.abs(D) >= 1 ? col : INV) + '">' + (D >= 1 ? '+' : (D <= -1 ? '&minus;' : '')) + L(Math.abs(D)) + '</text>'
-            // Investment amount on the face of the investment bar (white, near its top).
-            + '<text x="' + x.toFixed(1) + '" y="' + Math.min(yI + 15, base - 4).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" pointer-events="none">' + L(I) + '</text>'
+        var C = cum[i], x = xOf(i), yC = yOf(C);
+        out += '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + yC.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(0, base - yC).toFixed(1) + '" fill="' + INV + '">'
+            + '<title>Cumulative investment ' + L(C) + ' L (this cycle ' + L(inv(c)) + ' L)</title></rect>'
+            // Cumulative investment on the face of the bar (white, near its top).
+            + '<text x="' + x.toFixed(1) + '" y="' + Math.min(yC + 15, base - 4).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" pointer-events="none">' + L(C) + '</text>'
             + '<line x1="' + x.toFixed(1) + '" y1="' + base + '" x2="' + x.toFixed(1) + '" y2="' + (base + 5) + '" stroke="#555"/>'
             + '<text x="' + x.toFixed(1) + '" y="' + (base + 40) + '" text-anchor="middle" font-size="12" fill="#111"' + (c.current ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
@@ -4278,7 +4274,7 @@ function _cfShowBankTiLines(cycles, note, d){
     var winW = Math.min(1440, window.innerWidth - 20), winH = 470;
     var html = '<div id="cf-bank-ti-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - winW) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - winH) / 2) + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:360px;min-height:260px;max-width:98vw;resize:both;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + '<div id="cf-bank-ti-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;touch-action:none;">'
-        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Bank Balance and Receipts &minus; Investment per Cycle (Lakhs)</span>'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Bank Balance and Cumulative Investment per Cycle (Lakhs)</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
         + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#d84a30;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Bank balance (red = negative, green = surplus)</span>'
@@ -4287,7 +4283,7 @@ function _cfShowBankTiLines(cycles, note, d){
         + '<div style="flex:1;min-height:0;display:flex;gap:12px;padding:8px 16px 16px;">'
         + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Bank balance after each cycle</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;">' + _cfBankTiLinesSvg(cycles) + '</div></div>'
-        + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;border-left:1px solid #d5dbe3;padding-left:12px;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Investment per cycle (slate) vs Revenue/cycle: red = revenue short of investment, green = revenue above; figure on top = difference, on the bar = investment</div>'
+        + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;border-left:1px solid #d5dbe3;padding-left:12px;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Cumulative investment up to each cycle</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;">' + _cfBankNetBarsSvg(cycles) + '</div></div></div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;
