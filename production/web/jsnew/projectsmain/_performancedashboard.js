@@ -4221,16 +4221,19 @@ function _cfBankTiLinesSvg(cyc, ser){
     });
     return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg"' + _cfChartAttr(W) + ' style="display:block;overflow:visible;">' + out + '</svg>';
 }
-// Bank popup, right half: the bank is an overdraft account, so the money required from the bank
-// in a cycle is the overdraft after that cycle = the negative bank balance (0 once the balance
-// is in surplus). Amount on the bar. Same cycles as the bank balance line.
+// Bank popup, right half: the bank is an overdraft account. The cycle's cost is paid out during
+// the cycle and the client's money comes in only at its end, so the overdraft required in a cycle
+// is its peak, just before the receipt = Investment of the cycle (Cost/cycle, plus the Advances &
+// Deposits target in the first cycle) - bank balance at the start of the cycle (an overdraft
+// already running adds to it, a surplus reduces it); 0 once the surplus covers the investment.
 function _cfBankNetBarsSvg(cyc, bankNow){
     if (!cyc.length) return '';
     cyc = _cfTrimZeroTail(cyc, function(c){ return [c.bal]; });
     while (cyc.length > 1 && Math.abs((+cyc[cyc.length - 1].bal || 0) - (+cyc[cyc.length - 2].bal || 0)) < 1) cyc = cyc.slice(0, -1);
     var INV = '#3a4a5f', RED = '#d84a30', GRN = '#1e8073';
     var inv = function(c){ return (+c.cost || 0) + (+c.adv || 0); };
-    var vals = cyc.map(function(c){ return Math.max(0, -(+c.bal || 0)); });
+    var startBal = function(i){ return i === 0 ? (+bankNow || 0) : (+cyc[i - 1].bal || 0); };
+    var vals = cyc.map(function(c, i){ return Math.max(0, inv(c) - startBal(i)); });
     var maxV = 0, minV = 0;
     vals.forEach(function(v){ maxV = Math.max(maxV, v); minV = Math.min(minV, v); });
     maxV *= 1.12; minV *= 1.12;
@@ -4260,7 +4263,7 @@ function _cfBankNetBarsSvg(cyc, bankNow){
         + '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700">Billing cycle (period)</text>';
     cyc.forEach(function(c, i){
         var v = vals[i], x = xOf(i), yV = yOf(v), y0 = yOf(0), col = RED;
-        var tip = 'Bank balance ' + L(+c.bal || 0) + ' L: overdraft required ' + L(v) + ' L';
+        var tip = 'Investment ' + L(inv(c)) + ' L - bank balance at start ' + L(startBal(i)) + ' L = overdraft required ' + L(v) + ' L';
         var hgt = Math.abs(y0 - yV), yTxt = v >= 0 ? Math.min(yV + 15, y0 - 4) : Math.max(yV - 6, y0 + 13);
         out += '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + Math.min(yV, y0).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, hgt).toFixed(1) + '" fill="' + col + '">'
             + '<title>' + tip + '</title></rect>'
