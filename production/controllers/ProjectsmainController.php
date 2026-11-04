@@ -2473,10 +2473,7 @@ class ProjectsmainController extends Controller
         //   Balance(k) = Balance(k-1) + Receivable(k) - Cost(k) + A&D(k)
         // Receivable = Revenue/Cycle (each bill covers all work since the previous one);
         // for the open cycle, a bill already raised since the last receipt.
-        // A&D(k): the Advances & Deposits target for the project's first cycle; otherwise
-        // r x Total Investment(k) with Total Investment = A&D + Cost, i.e. Cost x r / (1 - r),
-        // r = A&D / Total Investment of the latest cycle with actual figures (or of the
-        // first cycle's projection until actuals exist).
+        // A&D(k) = the Advances & Deposits average target, every projected cycle.
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $pid = $this->_cfPid();
         if (!$pid) return ['error' => 'No project selected'];
@@ -2490,13 +2487,7 @@ class ProjectsmainController extends Controller
             "SELECT target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key = 'investments_target'", [':p' => $pid])->queryScalar();
         $g = $this->_cfFlowGroups($pid);
         $bankNow = (float)$g['bank'];
-        // Share of Advances & Deposits in Total Investment from the latest actual cycle.
-        $r = null;
-        $rc = self::cfClientReceipts($pid);
-        if ($rc) {
-            $ga = $this->_cfFlowGroups($pid, $rc[count($rc) - 1]['date']);
-            if ((float)$ga['ti'] > 0) $r = max(0.0, min(0.95, (float)$ga['adv'] / (float)$ga['ti']));
-        }
+
         $ci = $db->createCommand("SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1")->queryScalar();
         $billedOpen = $ci ? (float)$db->createCommand(
             "SELECT COALESCE(SUM(amount), 0) FROM journalvoucher WHERE creditacnt = :c AND project_id = :p AND COALESCE(delete_status, 0) = 0 AND date >= :s",
@@ -2508,19 +2499,13 @@ class ProjectsmainController extends Controller
             $isOpen = $k === (int)$cur['cycle'];
             $recv = ($isOpen && $billedOpen > 0) ? $billedOpen : (float)($c['revenue'] ?? 0);
             $cost = (float)$c['target'];
-            if ($k === 1) {
-                $adv = $advTarget;
-                if ($r === null) $r = ($advTarget + $cost) > 0 ? min(0.95, $advTarget / ($advTarget + $cost)) : 0.0;
-            } else {
-                if ($r === null) $r = 0.0;
-                $adv = $cost * $r / (1 - $r);
-            }
+            $adv = $advTarget;
             $bal += $recv - $cost + $adv;
             $out[] = ['cycle' => $k, 'end_date' => ($isOpen && !empty($cur['overdue'])) ? date('Y-m-d') : $c['end_date'],
                       'current' => $isOpen, 'overdue' => $isOpen && !empty($cur['overdue']),
                       'receivable' => round($recv, 2), 'cost' => round($cost, 2), 'adv' => round($adv, 2), 'bal' => round($bal, 2)];
         }
-        return ['error' => 'No', 'cycles' => $out, 'bank_now' => round($bankNow, 2), 'adv_ratio' => round((float)$r * 100, 2)];
+        return ['error' => 'No', 'cycles' => $out, 'bank_now' => round($bankNow, 2), 'adv_target' => round($advTarget, 2)];
     }
 
     // Bank/Working Capital panel breakdown (Cashflow Dashboard popup):
