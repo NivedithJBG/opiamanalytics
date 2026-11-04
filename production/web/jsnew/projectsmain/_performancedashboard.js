@@ -4159,6 +4159,12 @@ function _cfBankTiLinesSvg(cyc, ser){
     while (cyc.length > 1 && same(cyc[cyc.length - 1], cyc[cyc.length - 2])) cyc = cyc.slice(0, -1);
     var maxV = 0, minV = 0;
     cyc.forEach(function(c){ if (has(c)) SER.forEach(function(s){ var v = +c[s.key] || 0; maxV = Math.max(maxV, v); minV = Math.min(minV, v); }); });
+    // Bank popup: raise the top of the Y axis so the lines sit near the middle of the chart.
+    if (bank && minV >= 0 && maxV > 0) {
+        var lo = maxV;
+        cyc.forEach(function(c){ SER.forEach(function(s){ lo = Math.min(lo, +c[s.key] || 0); }); });
+        maxV = Math.max(maxV * 1.15, lo + maxV);
+    }
     // X axis = period (billing cycles), Y axis = value in Lakhs, with tick marks.
     var W = 660, H = 362, base = 270, top = 30, padL = 70, padR = 24;
     var rawStep = Math.max(1, (maxV - minV) / 100000 / 5), mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
@@ -4189,7 +4195,7 @@ function _cfBankTiLinesSvg(cyc, ser){
     if (bank) cyc.forEach(function(c, i){
         var d = gapOf(c); if (Math.abs(d) < 1) return;
         var y = (yOf(+c.inv || 0) + yOf(+c.br || 0)) / 2 + 4;
-        out += '<text x="' + (xOf(i) + 10).toFixed(1) + '" y="' + y.toFixed(1) + '" font-size="11" font-weight="700" fill="' + (d > 0 ? RED : GRN) + '"><title>' + (d > 0 ? 'Funding gap' : 'Surplus') + '</title>' + (d > 0 ? 'Gap ' : 'Surplus ') + L(Math.abs(d)) + '</text>';
+        out += '<text x="' + (xOf(i) + 10).toFixed(1) + '" y="' + y.toFixed(1) + '" font-size="11" font-weight="700" fill="' + (d > 0 ? RED : GRN) + '"><title>' + (d > 0 ? 'Funding gap' : 'Surplus') + '</title>' + (d > 0 ? '&minus;' : '+') + L(Math.abs(d)) + '</text>';
     });
     SER.forEach(function(s, si){
         var pts = [];
