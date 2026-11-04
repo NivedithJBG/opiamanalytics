@@ -3737,9 +3737,7 @@ function _cfShowBillsRecvBreakdown(){
         + '<button id="cf-billsrecv-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
         + '<div id="cf-billsrecv-breakdown-unit" style="flex:none;font-family:Barlow Condensed,Arial;font-size:12px;color:#5a6e8c;padding:8px 16px 0;overflow:hidden;"></div>'
-        + '<div style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;">'
-        + '<div id="cf-billsrecv-breakdown-chart" style="min-width:0;"></div>'
-        + '</div>'
+        + '<div id="cf-billsrecv-breakdown-chart" style="flex:1;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;padding:10px 16px 16px;box-sizing:border-box;"></div>'
         + '</div>';
     $('body').append(html);
     _cfRedrawBillsRecvBreakdown();
@@ -3773,7 +3771,6 @@ function _cfShowBillsRecvBreakdown(){
             if (_action.indexOf('n') > -1) { var nh = Math.max(MIN_H, _oh - dy); t = _oy + (_oh - nh); h = nh; }
             win.style.left = l + 'px'; win.style.top = t + 'px';
             win.style.width = w + 'px'; win.style.height = h + 'px';
-            _cfRedrawBillsRecvBreakdown();
         }
     }
     function onUp(){ _action = null; }
