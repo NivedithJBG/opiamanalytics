@@ -4237,36 +4237,15 @@ function _cfBankTiLinesSvg(cyc, ser){
     });
     return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg"' + _cfChartAttr(W) + ' style="display:block;overflow:visible;">' + out + '</svg>';
 }
-$(document).on('keydown', '.cf-bank-pct', function(e){ if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
-$(document).on('change', '.cf-bank-pct', function(){
-    var v = parseFloat(String(this.value).replace(/,/g, '')); if (!isFinite(v) || v < 0) v = 0;
-    var win = document.getElementById('cf-bank-ti-win'), pos = win ? { l: win.style.left, t: win.style.top } : null;
-    $.ajax({ type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json', data: { metric_key: $(this).data('key'), target_value: v },
-        success: function(){
-            $.ajax({ type: 'POST', url: '../projectsmain/cfbankprojection', dataType: 'json', success: function(d){
-                if (!d || d.error !== 'No') return;
-                _cfShowBankTiLines(d.cycles || [], '', d);
-                var w = document.getElementById('cf-bank-ti-win'); if (w && pos) { w.style.left = pos.l; w.style.top = pos.t; }
-            } });
-        } });
-});
 function _cfShowBankTiLines(cycles, note, d){
     d = d || {};
     $('#cf-bank-ti-win').remove();
-    var winW = 720, winH = 430;
+    var winW = 480, winH = 200;
     var html = '<div id="cf-bank-ti-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - winW) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - winH) / 2) + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:360px;min-height:260px;max-width:98vw;resize:both;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + '<div id="cf-bank-ti-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;touch-action:none;">'
-        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Investment per Cycle vs Bank Balance (Lakhs)</span>'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
-        + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
-        + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Investments Required</span>'
-        + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#d84a30;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Bank balance after receipt (red = below the investment, green = above)</span>'
-        + '<span style="color:#5a6e8c;">Hollow dots = actual (completed cycles)</span>'
-
-        + '<span>TDS % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_tds_pct" value="' + (+d.tds_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
-        + '<span>Retention % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_retention_pct" value="' + (+d.retention_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
-        + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'
-        + '<div style="flex:1;min-height:0;overflow:auto;padding:10px 16px 16px;">' + _cfBankTiLinesSvg(cycles) + '</div></div>';
+        + '<div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:24px 16px;font-family:Barlow Condensed,Arial;font-size:15px;color:#5a6e8c;">Bank formula to be designed.</div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;
     window.bindDragTouch(hdr, 'mousedown', function(e){
@@ -4283,13 +4262,7 @@ function _cfShowBankTiLines(cycles, note, d){
 $(document).on('click', '#cf-bank-ti-close', function(){ $('#cf-bank-ti-win').remove(); });
 $(document).on('click', '#cf-bankdial', function(e){
     if (e.target.closest('.cf-bank-pencil') || e.target.closest('.cf-bank-input')) return;
-    _cfQueueAjax({
-        type: 'POST', url: '../projectsmain/cfbankprojection', dataType: 'json', priority: true,
-        success: function(d){
-            if (!d || d.error !== 'No') return;
-            _cfShowBankTiLines(d.cycles || [], '', d);
-        }
-    });
+    _cfShowBankTiLines([], '', {});
 });
 
 // Half blue-green / half dark orange dial, shared by every Cashflow panel
