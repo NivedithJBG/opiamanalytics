@@ -4221,17 +4221,16 @@ function _cfBankTiLinesSvg(cyc, ser){
     });
     return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg"' + _cfChartAttr(W) + ' style="display:block;overflow:visible;">' + out + '</svg>';
 }
-// Bank popup, right half: money required from the bank for the investment of each cycle =
-// Investment of the cycle (Cost/cycle, plus the Advances & Deposits target in the first cycle)
-// less the surplus already in the bank at the start of the cycle (the previous cycle's balance,
-// today's balance for the first). Amount on the bar. Same cycles as the bank balance line.
+// Bank popup, right half: the bank is an overdraft account, so the money required from the bank
+// in a cycle is the overdraft after that cycle = the negative bank balance (0 once the balance
+// is in surplus). Amount on the bar. Same cycles as the bank balance line.
 function _cfBankNetBarsSvg(cyc, bankNow){
     if (!cyc.length) return '';
     cyc = _cfTrimZeroTail(cyc, function(c){ return [c.bal]; });
     while (cyc.length > 1 && Math.abs((+cyc[cyc.length - 1].bal || 0) - (+cyc[cyc.length - 2].bal || 0)) < 1) cyc = cyc.slice(0, -1);
     var INV = '#3a4a5f', RED = '#d84a30', GRN = '#1e8073';
     var inv = function(c){ return (+c.cost || 0) + (+c.adv || 0); };
-    var vals = cyc.map(function(c, i){ var prev = i === 0 ? (+bankNow || 0) : (+cyc[i - 1].bal || 0); return Math.max(0, inv(c) - Math.max(0, prev)); });
+    var vals = cyc.map(function(c){ return Math.max(0, -(+c.bal || 0)); });
     var maxV = 0, minV = 0;
     vals.forEach(function(v){ maxV = Math.max(maxV, v); minV = Math.min(minV, v); });
     maxV *= 1.12; minV *= 1.12;
@@ -4260,9 +4259,8 @@ function _cfBankNetBarsSvg(cyc, bankNow){
 
         + '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700">Billing cycle (period)</text>';
     cyc.forEach(function(c, i){
-        var v = vals[i], x = xOf(i), yV = yOf(v), y0 = yOf(0), col = INV;
-        var prevB = i === 0 ? (+bankNow || 0) : (+cyc[i - 1].bal || 0);
-        var tip = 'Investment ' + L(inv(c)) + ' L - bank surplus at start ' + L(Math.max(0, prevB)) + ' L = required from bank ' + L(v) + ' L';
+        var v = vals[i], x = xOf(i), yV = yOf(v), y0 = yOf(0), col = RED;
+        var tip = 'Bank balance ' + L(+c.bal || 0) + ' L: overdraft required ' + L(v) + ' L';
         var hgt = Math.abs(y0 - yV), yTxt = v >= 0 ? Math.min(yV + 15, y0 - 4) : Math.max(yV - 6, y0 + 13);
         out += '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + Math.min(yV, y0).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, hgt).toFixed(1) + '" fill="' + col + '">'
             + '<title>' + tip + '</title></rect>'
@@ -4290,7 +4288,7 @@ function _cfShowBankTiLines(cycles, note, d){
         + '<div style="flex:1;min-height:0;display:flex;gap:12px;padding:8px 16px 16px;">'
         + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Bank balance after each cycle</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;">' + _cfBankTiLinesSvg(cycles) + '</div></div>'
-        + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;border-left:1px solid #d5dbe3;padding-left:12px;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Money required from bank per cycle</div>'
+        + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;border-left:1px solid #d5dbe3;padding-left:12px;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Overdraft required from bank per cycle</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;">' + _cfBankNetBarsSvg(cycles, d.bank_now) + '</div></div></div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;
