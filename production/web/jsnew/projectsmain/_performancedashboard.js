@@ -4188,13 +4188,12 @@ function _cfBankTiLinesSvg(cyc, ser){
         var a = +c.inv || 0, b = +c.br || 0, d = a - b;
         if (Math.abs(d) < 1) return;
         var x = xOf(i), y1 = yOf(Math.max(a, b)), y2 = yOf(Math.min(a, b)), need = d > 0;
-        out += '<rect x="' + (x - 9).toFixed(1) + '" y="' + y1.toFixed(1) + '" width="18" height="' + Math.max(1, y2 - y1).toFixed(1) + '" fill="' + (need ? '#d84a30' : '#2ba899') + '" fill-opacity=".28" stroke="' + (need ? '#d84a30' : '#2ba899') + '" stroke-dasharray="3 2"><title>' + (need ? 'Funding needed ' : 'Surplus ') + L(Math.abs(d)) + ' L</title></rect>'
-            + '<text x="' + (x + 13).toFixed(1) + '" y="' + ((y1 + y2) / 2 + 4).toFixed(1) + '" font-size="11" font-weight="700" fill="' + (need ? '#c0392b' : '#1e8073') + '">' + (need ? '+' : '&minus;') + L(Math.abs(d)) + '</text>';
+        out += '<text x="' + (x + 13).toFixed(1) + '" y="' + ((y1 + y2) / 2 + 4).toFixed(1) + '" font-size="11" font-weight="700" fill="' + (need ? '#c0392b' : '#1e8073') + '">' + (need ? '+' : '&minus;') + L(Math.abs(d)) + '</text>';
     });
     SER.forEach(function(s, si){
         var pts = [];
         cyc.forEach(function(c, i){ if (has(c)) pts.push([xOf(i), yOf(+c[s.key] || 0), +c[s.key] || 0, c]); });
-        if (pts.length > 1) out += '<polyline points="' + pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="3"/>';
+        if (pts.length > 1 && !gap) out += '<polyline points="' + pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="3"/>';
         pts.forEach(function(p){
             // Bank balance: overdraft points red-orange, surplus points green-blue.
             var pc = s.col;
@@ -4234,8 +4233,7 @@ function _cfShowBankTiLines(cycles, note, d){
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
         + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Investments Required</span>'
         + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Bills Receivable</span>'
-        + '<span><span style="display:inline-block;width:11px;height:11px;background:rgba(216,74,48,.28);border:1px dashed #d84a30;margin-right:5px;vertical-align:middle;"></span>Funding needed</span>'
-        + '<span><span style="display:inline-block;width:11px;height:11px;background:rgba(43,168,153,.28);border:1px dashed #2ba899;margin-right:5px;vertical-align:middle;"></span>Surplus</span>'
+        + '<span style="color:#5a6e8c;">Value beside each cycle = difference (<b style="color:#c0392b;">+</b> funding needed, <b style="color:#1e8073;">&minus;</b> surplus)</span>'
         + '<span style="color:#5a6e8c;">Hollow dots = actual (completed cycles)</span>'
         + '<span>TDS % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_tds_pct" value="' + (+d.tds_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
         + '<span>Retention % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_retention_pct" value="' + (+d.retention_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
