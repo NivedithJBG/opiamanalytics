@@ -24,7 +24,7 @@
 #estreport-win.er-resizing #estreport-body { overflow:hidden; }
 
 #estreport-win-hdr {
-  background:linear-gradient(135deg,#37475a,#26313f); color:#fff; padding:10px 15px;
+  background:#1a0a2e; color:#fff; padding:10px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
 }

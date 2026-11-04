@@ -20,7 +20,7 @@
 }
 .procu-tab-win.pw2-open { display: flex; }
 .procu-tab-win-hdr {
-    background: #1a2f57; color: #fff; padding: 10px 16px;
+    background: #1a0a2e; color: #fff; padding: 10px 16px;
     display: flex; align-items: center; justify-content: space-between;
     cursor: move; user-select: none; flex-shrink: 0;
 }

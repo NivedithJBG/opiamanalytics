@@ -23,7 +23,7 @@
 #rel-win.rl2-open { display:flex; }
 
 #rel-win-hdr {
-  background:#3d2060; color:#fff; padding:10px 15px;
+  background:#1a0a2e; color:#fff; padding:10px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
 }

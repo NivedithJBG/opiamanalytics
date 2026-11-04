@@ -5973,7 +5973,7 @@ $(document).on('click', '#gantt-win-min', function(e){
 }
 #procurement-win.pw-open { display:flex; }
 #procurement-win-hdr {
-  background:#1a2f57; color:#fff; padding:7px 15px;
+  background:#1a0a2e; color:#fff; padding:7px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   font-family:'Nunito',sans-serif;
@@ -6139,7 +6139,7 @@ $(document).on('click', '#gantt-win-min', function(e){
 }
 #storeoffice-win.pw-open { display:flex; }
 #storeoffice-win-hdr {
-  background:#2c4a4a; color:#fff; padding:7px 15px;
+  background:#1a0a2e; color:#fff; padding:7px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   font-family:'Nunito',sans-serif;
@@ -6297,7 +6297,7 @@ $(document).on('click', '#gantt-win-min', function(e){
 }
 #userpermissions-win.pw-open { display:flex; }
 #userpermissions-win-hdr {
-  background:#3a3f47; color:#fff; padding:7px 15px;
+  background:#1a0a2e; color:#fff; padding:7px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   font-family:'Nunito',sans-serif;

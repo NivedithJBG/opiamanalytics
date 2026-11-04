@@ -5916,7 +5916,7 @@ if($action=='login')
 }
 #gantt-win.gw-open { display:flex; }
 #gantt-win-hdr {
-  background:#4a5a6a; color:#fff; padding:10px 15px;
+  background:#1a0a2e; color:#fff; padding:10px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   font-family:'Nunito',sans-serif;
@@ -6350,7 +6350,7 @@ if($action=='login')
 }
 #procurement-win.pw-open { display:flex; }
 #procurement-win-hdr {
-  background:#1a2f57; color:#fff; padding:7px 15px;
+  background:#1a0a2e; color:#fff; padding:7px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   font-family:'Nunito',sans-serif;
@@ -6516,7 +6516,7 @@ if($action=='login')
 }
 #storeoffice-win.pw-open { display:flex; }
 #storeoffice-win-hdr {
-  background:#2c4a4a; color:#fff; padding:7px 15px;
+  background:#1a0a2e; color:#fff; padding:7px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   font-family:'Nunito',sans-serif;
@@ -6674,7 +6674,7 @@ if($action=='login')
 }
 #userpermissions-win.pw-open { display:flex; }
 #userpermissions-win-hdr {
-  background:#3a3f47; color:#fff; padding:7px 15px;
+  background:#1a0a2e; color:#fff; padding:7px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   font-family:'Nunito',sans-serif;

@@ -34,14 +34,14 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 #reslib-win.rl-open { display:flex; }
 
 #reslib-win-hdr {
-  background:#fff; color:#333; padding:10px 15px;
+  background:#1a0a2e; color:#fff; padding:10px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   border-bottom:1px solid #e5e5e5;
 }
 #reslib-win-hdr-btns { display:flex; align-items:center; gap:4px; }
 #reslib-win-hdr-btns button {
-  background:none; border:none; color:#333;
+  background:none; border:none; color:#fff;
   font-size:22px; line-height:1; cursor:pointer; padding:0 4px; opacity:.6;
 }
 #reslib-win-hdr-btns button:hover { opacity:1; }
@@ -111,7 +111,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
   <div class="rl-rs rl-rs-se" data-dir="se"></div><div class="rl-rs rl-rs-sw" data-dir="sw"></div>
 
   <div id="reslib-win-hdr">
-    <span style="font-size:18px;font-weight:700;color:#004d40;">Resource Library</span>
+    <span style="font-size:18px;font-weight:700;color:#fff;">Resource Library</span>
     <div id="reslib-win-hdr-btns">
       <button id="reslib-expand" title="Fullscreen">&#x26F6;</button>
       <button id="reslib-close" title="Close">&times;</button>

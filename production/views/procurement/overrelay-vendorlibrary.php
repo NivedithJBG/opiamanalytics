@@ -27,14 +27,14 @@ $resourceTypes = $db->createCommand("SELECT ResourceType_Id, Name FROM resourcet
 #vendorlib-win.rl-open { display:flex; }
 
 #vendorlib-win-hdr {
-  background:#fff; color:#333; padding:5px 15px;
+  background:#1a0a2e; color:#fff; padding:5px 15px;
   display:flex; align-items:center; justify-content:space-between;
   cursor:move; user-select:none; flex-shrink:0;
   border-bottom:1px solid #e5e5e5;
 }
 #vendorlib-win-hdr-btns { display:flex; align-items:center; gap:4px; }
 #vendorlib-win-hdr-btns button {
-  background:none; border:none; color:#333;
+  background:none; border:none; color:#fff;
   font-size:22px; line-height:1; cursor:pointer; padding:0 4px; opacity:.6;
 }
 #vendorlib-win-hdr-btns button:hover { opacity:1; }
@@ -64,7 +64,7 @@ $resourceTypes = $db->createCommand("SELECT ResourceType_Id, Name FROM resourcet
   <div class="rl-rs rl-rs-se" data-dir="se"></div><div class="rl-rs rl-rs-sw" data-dir="sw"></div>
 
   <div id="vendorlib-win-hdr">
-    <span style="font-size:18px;font-weight:700;color:#004d40;">Vendor Library</span>
+    <span style="font-size:18px;font-weight:700;color:#fff;">Vendor Library</span>
     <div id="vendorlib-win-hdr-btns">
       <button id="vendorlib-close" title="Close">&times;</button>
     </div>
