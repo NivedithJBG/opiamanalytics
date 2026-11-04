@@ -3697,10 +3697,10 @@ function _cfBillsRecvBarsHtml(){
 function _cfRedrawBillsRecvBreakdown(){
     var s = window._cfBillsRecvBreakdownState;
     if (!s) return;
-    var tot = (s.cycles || []).reduce(function(sum, c){ return sum + (+c.actual || 0); }, 0);
+    var tot = (s.cycles || []).reduce(function(sum, c){ return sum + (+c.target || 0); }, 0);
     $('#cf-billsrecv-breakdown-unit').html(
         '<span style="font-weight:700;color:#251840;">Bills Receivable per billing cycle = Revenue/Cycle &minus; TDS &minus; Retention (Lakhs)</span>'
-        + '<span style="float:right;font-weight:700;color:#251840;">Total credited: ' + (tot / 100000).toFixed(2) + ' Lakhs</span>'
+        + '<span style="float:right;font-weight:700;color:#251840;">Bills Receivable Total: ' + (tot / 100000).toFixed(2) + ' Lakhs</span>'
     );
     var cyc = (s.cycles || []).map(function(c){ return { cycle: c.cycle, end_label: c.end_label, end_date: c.end_date, current: +c.cycle === +s.currentCycle, br: +c.target || 0 }; });
     $('#cf-billsrecv-breakdown-chart').html(_cfBankTiLinesSvg(cyc, [ { key: 'br', col: '#1e8073', name: 'Bills Receivable' } ]));
