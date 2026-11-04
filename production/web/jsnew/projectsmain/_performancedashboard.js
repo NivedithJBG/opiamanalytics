@@ -4168,12 +4168,12 @@ function _cfBankTiLinesSvg(cyc, ser){
         maxV = Math.max(maxV * 1.15, lo + maxV);
     }
     // X axis = period (billing cycles), Y axis = value in Lakhs, with tick marks.
-    var W = 660, H = 362, base = 270, top = 30, padL = 70, padR = 24;
+    var W = 660, H = 362, base = 270, top = 30, padL = bank ? 56 : 70, padR = bank ? 14 : 24;
     var rawStep = Math.max(1, (maxV - minV) / 100000 / 5), mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
     var tick = [1, 2, 2.5, 5, 10].map(function(m){ return m * mag; }).filter(function(t){ return t >= rawStep; })[0] * 100000;
     minV = Math.floor(minV / tick) * tick; maxV = Math.ceil(maxV / tick) * tick;
     if (maxV === minV) maxV = minV + tick;
-    W = _cfChartW(W, padL + padR, cyc.length, 96);
+    W = _cfChartW(W, padL + padR, cyc.length, bank ? 56 : 96);
     var slot = (W - padL - padR) / cyc.length;
     var xOf = function(i){ return padL + (i + 0.5) * slot; };
     var yOf = function(v){ return base - ((v - minV) / (maxV - minV)) * (base - top); };
@@ -4235,12 +4235,12 @@ function _cfBankNetBarsSvg(cyc, bankNow){
     var maxV = 0, minV = 0;
     vals.forEach(function(v){ maxV = Math.max(maxV, v); minV = Math.min(minV, v); });
     maxV *= 1.12; minV *= 1.12;
-    var W = 660, H = 362, base = 270, top = 30, padL = 70, padR = 24;
+    var W = 660, H = 362, base = 270, top = 30, padL = 56, padR = 14;
     var rawStep = Math.max(1, (maxV - minV) / 100000 / 5), mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
     var tick = [1, 2, 2.5, 5, 10].map(function(m){ return m * mag; }).filter(function(t){ return t >= rawStep; })[0] * 100000;
     minV = Math.floor(minV / tick) * tick; maxV = Math.ceil(maxV / tick) * tick;
     if (maxV === minV) maxV = minV + tick;
-    W = _cfChartW(W, padL + padR, cyc.length, 96);
+    W = _cfChartW(W, padL + padR, cyc.length, 56);
     var slot = (W - padL - padR) / cyc.length, bw = Math.min(48, slot * 0.6);
     var xOf = function(i){ return padL + (i + 0.5) * slot; };
     var yOf = function(v){ return base - ((v - minV) / (maxV - minV)) * (base - top); };
@@ -4278,7 +4278,7 @@ function _cfBankNetBarsSvg(cyc, bankNow){
 function _cfShowBankTiLines(cycles, note, d){
     d = d || {};
     $('#cf-bank-ti-win').remove();
-    var winW = Math.min(1440, window.innerWidth - 20), winH = 470;
+    var winW = Math.min(980, window.innerWidth - 20), winH = 470;
     var html = '<div id="cf-bank-ti-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - winW) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - winH) / 2) + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:360px;min-height:260px;max-width:98vw;resize:both;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
         + '<div id="cf-bank-ti-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;touch-action:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Bank Balance and Investment per Cycle (Lakhs)</span>'
@@ -4290,7 +4290,7 @@ function _cfShowBankTiLines(cycles, note, d){
         + '<div style="flex:1;min-height:0;display:flex;gap:12px;padding:8px 16px 16px;">'
         + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Bank balance after each cycle</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;">' + _cfBankTiLinesSvg(cycles) + '</div></div>'
-        + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;border-left:1px solid #d5dbe3;padding-left:12px;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Money required from the bank for each cycle&rsquo;s investment (Investment &minus; bank surplus at the start of the cycle)</div>'
+        + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;border-left:1px solid #d5dbe3;padding-left:12px;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Money required from bank per cycle</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;">' + _cfBankNetBarsSvg(cycles, d.bank_now) + '</div></div></div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;
