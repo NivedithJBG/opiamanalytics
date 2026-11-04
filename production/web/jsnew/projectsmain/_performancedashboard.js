@@ -4265,7 +4265,8 @@ function _cfBankNetBarsSvg(cyc){
             + '<title>' + tip + '</title></rect>'
             + (Math.abs(D) >= 1 ? '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + yHi.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, yLo - yHi).toFixed(1) + '" fill="' + col + '"><title>' + tip + '</title></rect>' : '')
             + '<text x="' + x.toFixed(1) + '" y="' + (yHi - 7).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + (Math.abs(D) >= 1 ? col : INV) + '">' + (D >= 1 ? '+' : (D <= -1 ? '&minus;' : '')) + L(Math.abs(D)) + '</text>'
-            + '<text x="' + x.toFixed(1) + '" y="' + (base + 20) + '" text-anchor="middle" font-size="11" fill="#3a4a5f">' + L(I) + '</text>'
+            // Investment amount on the face of the investment bar (white, near its top).
+            + '<text x="' + x.toFixed(1) + '" y="' + Math.min(yI + 15, base - 4).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" pointer-events="none">' + L(I) + '</text>'
             + '<line x1="' + x.toFixed(1) + '" y1="' + base + '" x2="' + x.toFixed(1) + '" y2="' + (base + 5) + '" stroke="#555"/>'
             + '<text x="' + x.toFixed(1) + '" y="' + (base + 40) + '" text-anchor="middle" font-size="12" fill="#111"' + (c.current ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
@@ -4286,7 +4287,7 @@ function _cfShowBankTiLines(cycles, note, d){
         + '<div style="flex:1;min-height:0;display:flex;gap:12px;padding:8px 16px 16px;">'
         + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Bank balance after each cycle</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;">' + _cfBankTiLinesSvg(cycles) + '</div></div>'
-        + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;border-left:1px solid #d5dbe3;padding-left:12px;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Investment per cycle (slate) vs Revenue/cycle: red = revenue short of investment, green = revenue above; figure on top = difference, below the bar = investment</div>'
+        + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;border-left:1px solid #d5dbe3;padding-left:12px;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Investment per cycle (slate) vs Revenue/cycle: red = revenue short of investment, green = revenue above; figure on top = difference, on the bar = investment</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;">' + _cfBankNetBarsSvg(cycles) + '</div></div></div></div>';
     $('body').append(html);
     var win = document.getElementById('cf-bank-ti-win'), hdr = document.getElementById('cf-bank-ti-hdr'), drag = null;
