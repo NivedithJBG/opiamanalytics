@@ -782,7 +782,7 @@ function _cfShowCostCyclePopup(d){
             + '<td>' + n2(it.quantity) + '</td><td>' + n2(it.cycle_qty) + '</td><td>' + n2(it.done_cycle) + '</td><td>' + n2(it.rate) + '</td>'
             + '<td style="font-weight:700;">' + n2(it.cost) + '</td>'
             // Quoted rate: typed here for now (to be filled from the BOQ later).
-            + '<td style="padding:2px 4px;"><input type="text" inputmode="decimal" class="cf-qtd-in' + (+it.cost > 0 ? '' : ' cf-qtd-lock" readonly="readonly') + '" data-wan="' + (+it.wan_id || 0) + '" data-rq="' + (it.bill_qty !== undefined ? +it.bill_qty || 0 : +it.cycle_qty || 0) + '" value="' + (it.qtd_rate === null || it.qtd_rate === undefined ? '' : (+it.qtd_rate).toFixed(2)) + '" placeholder="-" title="' + (+it.cost > 0 ? 'Quoted rate (from the BOQ, or type it here and press Enter)' : 'No cost in this cycle: allocate resources to this activity first') + '" style="width:72px;box-sizing:border-box;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:3px 5px;font:inherit;background:' + (+it.cost > 0 ? '#fffbe6' : '#eef1f5;cursor:not-allowed') + ';"></td>'
+            + '<td style="padding:2px 4px;"><input type="text" inputmode="decimal" class="cf-qtd-in" data-wan="' + (+it.wan_id || 0) + '" data-rq="' + (it.bill_qty !== undefined ? +it.bill_qty || 0 : +it.cycle_qty || 0) + '" value="' + (it.qtd_rate === null || it.qtd_rate === undefined ? '' : (+it.qtd_rate).toFixed(2)) + '" placeholder="-" title="Quoted rate (from the BOQ, or type it here and press Enter)" style="width:72px;box-sizing:border-box;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:3px 5px;font:inherit;background:#fffbe6;"></td>'
             + '<td class="cf-rv"></td><td>-</td></tr>';
     });
     closeGroup();
@@ -854,16 +854,6 @@ function _cfCostRevenue(){
 // Quoted rate entry in the Project Cost popup: saved per project activity on Enter / leaving the box.
 $(document).on('click mousedown touchstart', '.cf-qtd-in', function(e){ e.stopPropagation(); });
 $(document).on('keydown', '.cf-qtd-in', function(e){ if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
-$(document).on('focus mousedown', '.cf-qtd-lock', function(e){
-    e.preventDefault(); this.blur();
-    $('.cf-qtd-msg').remove();
-    var r = this.getBoundingClientRect();
-    var m = $('<div class="cf-qtd-msg">No cost in this cycle for this activity. Allocate resources first, then enter the Quoted Rate.</div>').css({
-        position: 'fixed', left: Math.max(8, r.right - 260) + 'px', top: (r.bottom + 4) + 'px', width: '260px', zIndex: 2147483000,
-        background: '#26313f', color: '#fff', font: '12px/1.4 Arial,sans-serif', padding: '7px 10px', borderRadius: '5px', boxShadow: '0 4px 14px rgba(0,0,0,.3)'
-    }).appendTo('body');
-    setTimeout(function(){ m.fadeOut(200, function(){ m.remove(); }); }, 2800);
-});
 $(document).on('change', '.cf-qtd-in', function(){
     var el = this, wan = +$(el).data('wan'), raw = el.value.replace(/,/g, '').trim();
     if (!wan) return;
