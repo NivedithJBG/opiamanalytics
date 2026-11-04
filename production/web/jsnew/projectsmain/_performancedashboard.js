@@ -4219,8 +4219,15 @@ function _cfBankTiLinesSvg(cyc, ser){
                 + '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] + (function(){ var o = SER.length > 1 ? +p[3][SER[1 - si].key] || 0 : -Infinity; return (p[2] > o || (p[2] === o && si === 0)) ? -10 : 19; })()).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + pc + '">' + L(p[2]) + '</text>';
         });
     });
+    var run = 0, adv0 = cyc.length ? (+cyc[cyc.length - 1].inv || 0) - (+cyc[cyc.length - 1].cost || 0) : 0;
     cyc.forEach(function(c, i){
         var x = xOf(i);
+        if (bank) {
+            var cost = c.cost !== undefined ? +c.cost || 0 : (+c.inv || 0) - adv0;
+            run += (+c.br || 0) - cost;
+            var rv = run - adv0;
+            out += '<text x="' + x.toFixed(1) + '" y="' + (base + 22) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + (rv < 0 ? RED : GRN) + '"><title>Running total: bills received so far less cost so far</title>' + (rv < 0 ? '&minus;' : '+') + L(Math.abs(rv)) + '</text>';
+        }
         out += '<line x1="' + x.toFixed(1) + '" y1="' + base + '" x2="' + x.toFixed(1) + '" y2="' + (base + 5) + '" stroke="#555"/>'
             + '<text x="' + x.toFixed(1) + '" y="' + (base + 40) + '" text-anchor="middle" font-size="12" fill="#111"' + (c.current ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
@@ -4251,6 +4258,7 @@ function _cfShowBankTiLines(cycles, note, d){
         + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Investments Required</span>'
         + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#d84a30;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Bills Receivable (red = below investment, green = above)</span>'
         + '<span style="color:#5a6e8c;">Hollow dots = actual (completed cycles)</span>'
+        + '<span style="color:#5a6e8c;">Figure under each cycle = running total (bills received so far &minus; cost so far)</span>'
         + '<span>TDS % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_tds_pct" value="' + (+d.tds_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
         + '<span>Retention % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_retention_pct" value="' + (+d.retention_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
         + (note ? '<span style="color:#5a6e8c;">' + note + '</span>' : '') + '</div>'

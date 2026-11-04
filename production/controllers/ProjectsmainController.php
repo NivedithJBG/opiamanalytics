@@ -2510,7 +2510,7 @@ class ProjectsmainController extends Controller
             // Overdue open cycle: its payment is expected now, so it is plotted at today.
             $end = ($isOpen && !empty($cur['overdue'])) ? date('Y-m-d') : $c['end_date'];
             $out[] = ['cycle' => $k, 'end_date' => $end, 'current' => $isOpen, 'overdue' => $isOpen && !empty($cur['overdue']),
-                      'inv' => round($advTarget + (float)$c['target'], 2), 'br' => round($br, 2)];
+                      'inv' => round($advTarget + (float)$c['target'], 2), 'cost' => round((float)$c['target'], 2), 'br' => round($br, 2)];
         }
         return ['error' => 'No', 'cycles' => $out, 'advances_target' => round($advTarget, 2), 'tds_pct' => $tds, 'retention_pct' => $ret];
     }
@@ -5205,11 +5205,12 @@ class ProjectsmainController extends Controller
             for ($k = 1; $k <= $n; $k++) {
                 $cStart = ($k === 1) ? -100000000 : $gS[$k];
                 $cEnd   = ($k === $n) ? 100000000 : $gE[$k];
-                $rEnd   = min($cEnd, $gS[$k] + $billDays - 1);   // Billing Period of the cycle
+                $rStart = ($k === 1) ? -100000000 : $gS[$k - 1] + $billDays;   // bill k: work since bill k-1
+                $rEnd   = ($k === $n) ? 100000000 : $gS[$k] + $billDays - 1;
                 if ($k < $current) {
                     $overlap = min($aEnd, $cEnd) - max($aStart, $cStart) + 1;
                     if ($overlap > 0) $bars[$k] += $value * $overlap / $curDuration;
-                    $rOv = min($aEnd, $rEnd) - max($aStart, $cStart) + 1;
+                    $rOv = min($aEnd, $rEnd) - max($aStart, $rStart) + 1;
                     if ($rOv > 0) $revs[$k] += (float)$a['quantity'] * $qrate * $rOv / $curDuration;
                     continue;
                 }
@@ -5219,7 +5220,7 @@ class ProjectsmainController extends Controller
                     $bars[$k] += $part;
                     if ($k === $current) { $curPart = $part; $curDays = $overlap; }
                 }
-                $rOv = min($remEnd, $rEnd) - max($remStart, $cStart) + 1;
+                $rOv = min($remEnd, $rEnd) - max($remStart, $rStart) + 1;
                 if ($rOv > 0 && $remQty > 0) $revs[$k] += $remQty * $qrate * $rOv / $remDays;
             }
             $barStart = substr((string)$a['bar_start'], 0, 10);
@@ -5271,7 +5272,8 @@ class ProjectsmainController extends Controller
             $cycleOnlyQty = max(0, ((float)$a['quantity'] - $doneCycle) / $bDur * min($barDays, $inCycle));
             // Quantity in the Billing Period only (the cycle's first billing days): drives Revenue/Cycle.
             $bEnd = min($cE, ($cyc ? strtotime($cyc['start']) : $bS) + ($billDays - 1) * 86400);
-            $inBill = max(0, (int)round((min($bE, $bEnd) - max($bS, $cS)) / 86400) + 1);
+            $bFrom = ($cyc && (int)$cyc['cycle'] > 1) ? $cS - (int)$grid['len'] * 86400 + $billDays * 86400 : $cS;
+            $inBill = max(0, (int)round((min($bE, $bEnd) - max($bS, $bFrom)) / 86400) + 1);
             $billQty = max(0, ((float)$a['quantity'] - $doneCycle) / $bDur * min($barDays, $inBill));
             $currentItems[] = [
                 'sched_id' => (int)$a['id'],
@@ -5311,7 +5313,11 @@ class ProjectsmainController extends Controller
         )->queryAll();
         $cycDays = function($k) use ($gS, $gE) { return max(0, $gE[$k] - $gS[$k] + 1); };
         $duration = (int)$grid['full'];   // Project Overhead L.S items spread over the whole project
-        $billDaysK = function($k) use ($cycDays, $billDays) { return min($cycDays($k), $billDays); };
+        $billDaysK = function($k) use ($gS, $n, $billDays, $grid) {
+            $from = $k === 1 ? 0 : $gS[$k - 1] + $billDays;
+            $to = $k === $n ? $grid['total'] - 1 : $gS[$k] + $billDays - 1;
+            return max(0, $to - $from + 1);
+        };
         foreach ($ohRows as $o) {
             $rate = (float)$o['rate']; $qty = (float)$o['quantity'];
             $perDay = in_array(strtolower(trim((string)$o['unit'])), ['day', 'days', 'dys', 'dy'], true);
