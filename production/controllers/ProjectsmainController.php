@@ -5412,6 +5412,11 @@ class ProjectsmainController extends Controller
             [':pid' => $pid]
         )->queryScalar());
         $n = count($wipCycles);
+        // Bills Receivable of a cycle = Revenue/Cycle less TDS % and Retention % (the Bank popup's percentages).
+        $pct = $db->createCommand(
+            "SELECT metric_key, target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key IN ('bank_tds_pct', 'bank_retention_pct')", [':p' => $pid]
+        )->queryAll(\PDO::FETCH_KEY_PAIR);
+        $net = 1 - ((float)($pct['bank_tds_pct'] ?? 0) + (float)($pct['bank_retention_pct'] ?? 0)) / 100;
 
         $cycles = [];
         foreach ($wipCycles as $i => $c) {
@@ -5430,7 +5435,8 @@ class ProjectsmainController extends Controller
             $cycles[] = [
                 'cycle'     => $k,
                 'end_label' => $c['end_label'],
-                'target'    => round((float)($c['revenue'] ?? 0), 2),   // quoted rate x estimated quantity of the cycle
+                'end_date'  => $c['end_date'] ?? '',
+                'target'    => round((float)($c['revenue'] ?? 0) * $net, 2),   // (quoted rate x estimated quantity of the cycle) less TDS and Retention
                 'actual'    => round($actual, 2),
             ];
         }

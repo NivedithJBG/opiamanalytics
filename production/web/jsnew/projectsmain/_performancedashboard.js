@@ -3699,10 +3699,11 @@ function _cfRedrawBillsRecvBreakdown(){
     if (!s) return;
     var tot = (s.cycles || []).reduce(function(sum, c){ return sum + (+c.actual || 0); }, 0);
     $('#cf-billsrecv-breakdown-unit').html(
-        '<span style="font-weight:700;color:#251840;">Target per billing cycle (Lakhs)</span>'
+        '<span style="font-weight:700;color:#251840;">Bills Receivable per billing cycle = Revenue/Cycle &minus; TDS &minus; Retention (Lakhs)</span>'
         + '<span style="float:right;font-weight:700;color:#251840;">Total credited: ' + (tot / 100000).toFixed(2) + ' Lakhs</span>'
     );
-    $('#cf-billsrecv-breakdown-chart').html(_cfBillsRecvBarsHtml());
+    var cyc = (s.cycles || []).map(function(c){ return { cycle: c.cycle, end_label: c.end_label, end_date: c.end_date, current: +c.cycle === +s.currentCycle, br: +c.target || 0 }; });
+    $('#cf-billsrecv-breakdown-chart').html(_cfBankTiLinesSvg(cyc, [ { key: 'br', col: '#1e8073', name: 'Bills Receivable' } ]));
 }
 
 function _cfShowBillsRecvBreakdown(){
@@ -4146,15 +4147,15 @@ function _cfShowBankBreakdown(points){
 // (cycle target = WIP target + Advances and Deposits target) and actual (Total
 // Investment at each cycle end, today for the current cycle), from
 // cfnetinvestmentbreakdown (same cycles as the Total Investment popup).
-function _cfBankTiLinesSvg(cyc){
+function _cfBankTiLinesSvg(cyc, ser){
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycles.</div>';
     // One line: lowest projected bank balance in each billing cycle (fund requirement) — negative = overdraft, positive = surplus
     // (from cfbankprojection).
     var has = function(){ return true; };
-    var SER = [ { key: 'low', col: '#3a4a5f', name: 'Investments Required' }, { key: 'after', col: '#1e8073', name: 'Bank' } ];
-    cyc = _cfTrimZeroTail(cyc, function(c){ return [c.low, c.after]; });
+    var SER = ser || [ { key: 'low', col: '#3a4a5f', name: 'Investments Required' }, { key: 'after', col: '#1e8073', name: 'Bank' } ];
+    cyc = _cfTrimZeroTail(cyc, function(c){ return SER.map(function(s){ return c[s.key]; }); });
     // Once the balances stop changing, the repeated periods add nothing: keep the first of them only.
-    var same = function(a, b){ return Math.abs((+a.low || 0) - (+b.low || 0)) < 1 && Math.abs((+a.after || 0) - (+b.after || 0)) < 1; };
+    var same = function(a, b){ return SER.every(function(s){ return Math.abs((+a[s.key] || 0) - (+b[s.key] || 0)) < 1; }); };
     while (cyc.length > 1 && same(cyc[cyc.length - 1], cyc[cyc.length - 2])) cyc = cyc.slice(0, -1);
     var maxV = 0, minV = 0;
     cyc.forEach(function(c){ if (has(c)) SER.forEach(function(s){ var v = +c[s.key] || 0; maxV = Math.max(maxV, v); minV = Math.min(minV, v); }); });
