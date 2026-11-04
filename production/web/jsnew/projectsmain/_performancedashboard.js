@@ -4267,9 +4267,8 @@ function _cfBankNetBarsSvg(cyc, bankNow){
         var hgt = Math.abs(y0 - yV), yTxt = v >= 0 ? Math.min(yV + 15, y0 - 4) : Math.max(yV - 6, y0 + 13);
         out += '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + Math.min(yV, y0).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, hgt).toFixed(1) + '" fill="' + col + '">'
             + '<title>' + tip + '</title></rect>'
-            // Amount on the face of the bar (white).
-            + (hgt >= 16 ? '<text x="' + x.toFixed(1) + '" y="' + yTxt.toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" pointer-events="none">' + L(v) + '</text>'
-                : '<text x="' + x.toFixed(1) + '" y="' + (v >= 0 ? yV - 6 : yV + 14).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + col + '">' + L(v) + '</text>')
+            // Amount on top of the bar.
+            + '<text x="' + x.toFixed(1) + '" y="' + (yV - 6).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + col + '">' + L(v) + '</text>'
             + '<line x1="' + x.toFixed(1) + '" y1="' + base + '" x2="' + x.toFixed(1) + '" y2="' + (base + 5) + '" stroke="#555"/>'
             + '<text x="' + x.toFixed(1) + '" y="' + (base + 40) + '" text-anchor="middle" font-size="12" fill="#111"' + (c.current ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
