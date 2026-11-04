@@ -449,6 +449,7 @@ class ProjectsController extends Controller
                 // _seedProjectOverheadActivity for the fixed activity/IOW
                 // IDs and the (deliberately trivial) duration rule.
                 $this->_seedProjectOverheadActivity($model->Project_Id, $model->start_date, $model->end_date);
+                $this->_saveCycleDays($model->Project_Id);
 
                 $arr = array('Id' => $model->Project_Id, 'Name' => $model->Name, 'error' => 'No');
                 return json_encode($arr);
@@ -696,18 +697,39 @@ class ProjectsController extends Controller
             'wrkhours'      => $p->wrkhours,
             'bank_account_id' => $bankAccount ? $bankAccount->id : '',
             'billing_cycle'   => $this->_billingCycleTarget($id),
+            'collection_period' => $this->_billingCycleTarget($id, 'collection_period'),
         ]);
     }
 
     /* Billing Cycle = length of one payment cycle in days
      * (cf_dashboard_targets, metric_key='billing_cycle'). Returns '' when unset. */
-    private function _billingCycleTarget($pid)
+    private function _billingCycleTarget($pid, $key = 'billing_cycle')
     {
         $v = \Yii::$app->db->createCommand(
-            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key='billing_cycle'",
-            [':pid' => $pid]
+            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key=:k",
+            [':pid' => $pid, ':k' => $key]
         )->queryScalar();
         return ($v === false || $v === null) ? '' : (int)round((float)$v);
+    }
+
+    // Billing Period (days per bill, key billing_cycle) and Collection Period (days from bill to payment).
+    private function _saveCycleDays($pid)
+    {
+        $db = \Yii::$app->db;
+        foreach (['billingcycle' => 'billing_cycle', 'collectionperiod' => 'collection_period'] as $post => $key) {
+            if (!array_key_exists($post, $_POST)) continue;
+            $v = trim((string)$_POST[$post]);
+            if ($v === '') {
+                $db->createCommand("DELETE FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key=:k", [':pid' => $pid, ':k' => $key])->execute();
+            } else {
+                $db->createCommand(
+                    "INSERT INTO cf_dashboard_targets (project_id, metric_key, target_value, updated_by)
+                     VALUES (:pid, :k, :val, :uid)
+                     ON DUPLICATE KEY UPDATE target_value=:val, updated_by=:uid",
+                    [':pid' => $pid, ':k' => $key, ':val' => (float)$v, ':uid' => Yii::$app->user->Id]
+                )->execute();
+            }
+        }
     }
 
     /* Global popup: update a project */
@@ -734,17 +756,7 @@ class ProjectsController extends Controller
             // clearing the selection entirely (bankaccount posted empty).
             // Billing Cycle = length of one payment cycle in days (see
             // ProjectsmainController::_billingCycleCount). Blank clears it.
-            $billingCycle = trim($_POST['billingcycle'] ?? '');
-            if ($billingCycle === '') {
-                $connection->createCommand("DELETE FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key='billing_cycle'", [':pid' => $id])->execute();
-            } else {
-                $connection->createCommand(
-                    "INSERT INTO cf_dashboard_targets (project_id, metric_key, target_value, updated_by)
-                     VALUES (:pid, 'billing_cycle', :val, :uid)
-                     ON DUPLICATE KEY UPDATE target_value=:val, updated_by=:uid",
-                    [':pid' => $id, ':val' => (float)$billingCycle, ':uid' => Yii::$app->user->Id]
-                )->execute();
-            }
+            $this->_saveCycleDays($id);
 
             $connection->createCommand("UPDATE accounts_item SET projectid=0 WHERE projectid=:pid AND account_type=2", [':pid' => $id])->execute();
             if (!empty($_POST['bankaccount'])) {

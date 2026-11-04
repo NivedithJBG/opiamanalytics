@@ -2612,11 +2612,17 @@ document.addEventListener('click', function(e){
                 </select>
               </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-2">
               <div class="form-group">
-                <label>Billing Cycle (days) <span class="text-danger">*</span></label>
-                <input type="number" min="1" step="1" id="gpm_billingcycle" class="form-control" placeholder="e.g. 45">
+                <label>Billing Period (days) <span class="text-danger">*</span></label>
+                <input type="number" min="1" step="1" id="gpm_billingcycle" class="form-control" placeholder="e.g. 30">
                 <span class="text-danger gpm-err" id="gpm_billingcycle_err" style="display:none;font-size:12px;"></span>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="form-group">
+                <label>Collection Period (days)</label>
+                <input type="number" min="0" step="1" id="gpm_collectionperiod" class="form-control" placeholder="e.g. 15">
               </div>
             </div>
           </div>
@@ -2839,6 +2845,7 @@ document.addEventListener('click', function(e){
                 $('#gpm_wrkhrs').val(d.wrkhours);
                 $('#gpm_bankaccount').val(d.bank_account_id || '');
                 $('#gpm_billingcycle').val(d.billing_cycle || '');
+                $('#gpm_collectionperiod').val(d.collection_period === undefined ? '' : d.collection_period);
                 $('.gpm-err').hide();
                 gpmShowFormPanel(true);
                 gpmLoadFiles(d.Project_Id);
@@ -2883,7 +2890,7 @@ document.addEventListener('click', function(e){
         if(!val)    { $('#gpm_value_err').text('Enter project value').show(); err=1; }
         if(!client) { $('#gpm_client_err').text('Enter client name').show(); err=1; }
         if(!hrs)    { $('#gpm_wrkhrs_err').text('Select work hours').show(); err=1; }
-        if(!(parseInt($('#gpm_billingcycle').val(), 10) > 0)) { $('#gpm_billingcycle_err').text('Enter billing cycle (days)').show(); err=1; }
+        if(!(parseInt($('#gpm_billingcycle').val(), 10) > 0)) { $('#gpm_billingcycle_err').text('Enter billing period (days)').show(); err=1; }
         if(err) return;
 
         var isEdit = pid ? true : false;
@@ -2898,6 +2905,7 @@ document.addEventListener('click', function(e){
         fd.append('wrkhrss', hrs);
         fd.append('bankaccount', $('#gpm_bankaccount').val());
         fd.append('billingcycle', $('#gpm_billingcycle').val());
+        fd.append('collectionperiod', $('#gpm_collectionperiod').val());
         if(isEdit) fd.append('project_id', pid);
 
         var btn=$('#gpm-form-save').prop('disabled',true).text('Saving…');
