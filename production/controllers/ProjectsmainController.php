@@ -2469,10 +2469,10 @@ class ProjectsmainController extends Controller
     //    difference is paid out on day 1 (advances already paid are in today's balance).
     public function actionCfbankprojection()
     {
-        // Projected bank balance per billing cycle (Bank popup):
-        //   Bank(k) = -(Advances & Deposits target + cost of cycle k)
-        // i.e. the overdraft needed in cycle k, taking earlier cycles' bills as collected;
-        // the same figure as the Total Investment projection, shown as a bank balance.
+        // Bank popup, per billing cycle (both positive; the gap is the funding still needed):
+        //   Investments Required(k) = Advances & Deposits target + cost of cycle k
+        //   Bills Receivable(k)     = Revenue/Cycle(k) less TDS % and Retention %
+        // Completed cycles: actual Total Investment and actual Contract Income billed in the cycle.
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $pid = $this->_cfPid();
         if (!$pid) return ['error' => 'No project selected'];
@@ -2489,22 +2489,24 @@ class ProjectsmainController extends Controller
             "SELECT metric_key, target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key IN ('bank_tds_pct', 'bank_retention_pct')", [':p' => $pid]
         )->queryAll(\PDO::FETCH_KEY_PAIR);
         $tds = (float)($pct['bank_tds_pct'] ?? 0); $ret = (float)($pct['bank_retention_pct'] ?? 0);
+        $billed = [];
+        if ((int)$cur['cycle'] > 1) {
+            $brc = $this->actionCfbillsreceivablecycles();
+            Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+            foreach (($brc['cycles'] ?? []) as $b) $billed[(int)$b['cycle']] = (float)$b['actual'];
+        }
         $out = [];
         foreach ($cyc as $c) {
             $k = (int)$c['cycle'];
             if ($k < (int)$cur['cycle']) {
-                // Completed cycle: actual Total Investment and actual bank balance at its end.
                 $g = $this->_cfFlowGroups($pid, $c['end_date']);
                 $out[] = ['cycle' => $k, 'end_date' => $c['end_date'], 'current' => false, 'actual' => true,
-                          'low' => round(-$g['ti'], 2), 'high' => round(-$g['ti'], 2), 'end' => round($g['bank'], 2),
-                          'after' => round($g['bank'], 2), 'income' => null];
+                          'inv' => round($g['ti'], 2), 'br' => round($billed[$k] ?? 0, 2)];
                 continue;
             }
-            $bal = -($advTarget + (float)$c['target']);
-            $income = (float)($c['revenue'] ?? 0) * (1 - ($tds + $ret) / 100);
             $out[] = ['cycle' => $k, 'end_date' => $c['end_date'], 'current' => $k === (int)$cur['cycle'],
-                      'low' => round($bal, 2), 'high' => round($bal, 2), 'end' => round($bal, 2),
-                      'after' => round($bal + $income, 2), 'income' => round($income, 2)];
+                      'inv' => round($advTarget + (float)$c['target'], 2),
+                      'br' => round((float)($c['revenue'] ?? 0) * (1 - ($tds + $ret) / 100), 2)];
         }
         return ['error' => 'No', 'cycles' => $out, 'advances_target' => round($advTarget, 2), 'tds_pct' => $tds, 'retention_pct' => $ret];
     }
