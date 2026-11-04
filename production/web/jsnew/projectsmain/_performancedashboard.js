@@ -303,6 +303,8 @@ function cfFitLayout(){
     // the resize grip (bottom-right corner of the Earnings window).
     if (!touch) { s *= 0.93; winH *= 0.93; }
     var us = window._cfUserScale || 1; s *= us; winH *= us;
+    // Centre the whole dashboard (title bar + windows) vertically on the screen.
+    top = Math.max(44 * s + 8, Math.round((vh - winH - 44 * s) / 2 + 44 * s));
     var groupLeft = (vw - GROUP_W * s) / 2;
     var hdr = document.getElementById('cf-shared-hdr');
     if (hdr) {
