@@ -293,8 +293,8 @@ $subDomain = array_shift(($HTTP_HOST));
             padding:3px 12px; font-size:12px; font-weight:700; cursor:pointer; margin-right:8px; white-space:nowrap; }
         .cwbs-hdr-btn:hover { background:rgba(255,255,255,0.32); }
         #cwbs-tabs { display:flex; gap:6px; padding:8px 14px 0; border-bottom:2px solid #0f5c52; flex-shrink:0; }
-        .cwbs-tab { background:#e3efec; color:#0d3b4f; border:none; border-radius:8px 8px 0 0; padding:7px 20px; font-size:13px; font-weight:700; cursor:pointer; }
-        .cwbs-tab:hover { background:#d1e6e1; }
+        .cwbs-tab { background:#e4e8ee; color:#0d3b4f; border:none; border-radius:8px 8px 0 0; padding:7px 20px; font-size:13px; font-weight:700; cursor:pointer; }
+        .cwbs-tab:hover { background:#d2d9e2; }
         .cwbs-tab.on { background:#0f5c52; color:#fff; }
         #cwbs-popup #cwbs-main { display:none; }
         #cwbs-popup.cwbs-acts #cwbs-main { display:flex; }
@@ -307,33 +307,33 @@ $subDomain = array_shift(($HTTP_HOST));
         .cwbs-hp-body { padding:12px 14px; overflow-y:auto; flex:1; min-height:0; }
         .cwbs-hp-row { display:flex; gap:8px; align-items:flex-end; margin-bottom:10px; }
         .cwbs-hp-row label { font-size:11px; font-weight:700; color:#0d3b4f; display:block; margin-bottom:3px; }
-        .cwbs-hp-row input, .cwbs-hp-row select { width:100%; box-sizing:border-box; border:1px solid #bcd0cc; border-radius:5px; padding:6px 8px; font-size:12px; height:32px; outline:none; }
+        .cwbs-hp-row input, .cwbs-hp-row select { width:100%; box-sizing:border-box; border:1px solid #bcc6d2; border-radius:5px; padding:6px 8px; font-size:12px; height:32px; outline:none; }
         .cwbs-hp-msg { font-size:12px; min-height:16px; margin-bottom:6px; }
         .cwbs-hp table { width:100%; border-collapse:collapse; font-size:12.5px; }
-        .cwbs-hp td { border:1px solid #d6e3e0; padding:5px 8px; }
+        .cwbs-hp td { border:1px solid #d8dee6; padding:5px 8px; }
         .cwbs-hp th { background:#0f5c52; color:#fff; font-size:11.5px; font-weight:700; padding:6px 8px; border:1px solid #0d4d45; text-align:left; }
         .cwbs-hp th.n, .cwbs-hp th.c, .cwbs-hp th.b { text-align:center; }
         .cwbs-hp td.n, .cwbs-hp th.n { width:40px; text-align:center; } .cwbs-hp td.n { color:#888; }
         .cwbs-hp td.c { width:80px; text-align:center; color:#6c7a89; } .cwbs-hp th.c { width:80px; }
         .cwbs-hp td.b, .cwbs-hp th.b { width:150px; text-align:center; white-space:nowrap; }
-        .cwbs-hp-ib { border:1px solid #bcd0cc; background:#fff; border-radius:4px; width:26px; height:24px; cursor:pointer; font-size:12px; padding:0; margin-left:2px; }
+        .cwbs-hp-ib { border:1px solid #bcc6d2; background:#fff; border-radius:4px; width:26px; height:24px; cursor:pointer; font-size:12px; padding:0; margin-left:2px; }
         .cwbs-hp-ib:hover { border-color:#0f5c52; }
         .cwbs-hp-ib.del { color:#c0392b; }
         .cwbs-hp-names .cwbs-hp-nrow { display:flex; gap:6px; margin-bottom:6px; }
         .cwbs-hp-plus { border:1px solid #0f5c52; background:#fff; color:#0f5c52; border-radius:50%; width:32px; height:32px; font-size:20px; line-height:1; cursor:pointer; flex-shrink:0; padding:0; }
-        .cwbs-hp-plus:hover { background:#e3f1ee; }
+        .cwbs-hp-plus:hover { background:#e4e8ee; }
         .cwbs-hp-nrm { border:1px solid #e0b4ae; background:#fff; color:#c0392b; border-radius:5px; width:32px; height:32px; cursor:pointer; flex-shrink:0; padding:0; }
         .cwbs-hp-addrow { text-align:right; margin:4px 0 10px; }
         #cwbs-boq-toggle {
             display:flex; align-items:center; gap:8px; background:#fff;
-            border:none; border-bottom:1px solid #d6e3e0; padding:10px 16px;
+            border:none; border-bottom:1px solid #d8dee6; padding:10px 16px;
             font-size:12.5px; font-weight:700; color:#0d3b4f; cursor:pointer; width:100%; text-align:left; flex-shrink:0;
         }
-        #cwbs-boq-toggle:hover { background:#f6faf9; }
+        #cwbs-boq-toggle:hover { background:#f5f7fa; }
         #cwbs-boq-toggle .cwbs-boq-caret { transition:transform .15s; font-size:10px; }
         #cwbs-boq-toggle.cwbs-boq-open .cwbs-boq-caret { transform:rotate(90deg); }
         #cwbs-boq-section {
-            display:none; background:#fafcfc; border-bottom:1px solid #d6e3e0;
+            display:none; background:#fafbfc; border-bottom:1px solid #d8dee6;
             padding:12px 16px; flex-shrink:0; max-height:200px; overflow-y:auto;
             gap:20px;
         }
@@ -342,17 +342,17 @@ $subDomain = array_shift(($HTTP_HOST));
         #cwbs-boq-list-col { flex:1; min-width:0; }
         #cwbs-boq-dropzone {
             display:inline-flex; align-items:center; gap:10px; max-width:320px;
-            border:2px dashed #8fb8ae; border-radius:8px; background:#fff;
+            border:2px dashed #8e9bab; border-radius:8px; background:#fff;
             padding:10px 14px; text-align:left; cursor:pointer; transition:border-color .15s,background .15s;
         }
-        #cwbs-boq-dropzone:hover, #cwbs-boq-dropzone.cwbs-boq-drag-over { border-color:#0f5c52; background:#eef5f3; }
-        #cwbs-boq-dropzone .cwbs-boq-dz-icon { font-size:18px; color:#5c7a73; flex-shrink:0; }
+        #cwbs-boq-dropzone:hover, #cwbs-boq-dropzone.cwbs-boq-drag-over { border-color:#0f5c52; background:#eef1f5; }
+        #cwbs-boq-dropzone .cwbs-boq-dz-icon { font-size:18px; color:#5c6b7c; flex-shrink:0; }
         #cwbs-boq-dropzone .cwbs-boq-dz-text { font-size:12.5px; color:#2d333b; font-weight:600; }
-        #cwbs-boq-dropzone .cwbs-boq-dz-sub { font-size:10.5px; color:#8aa39c; margin-top:1px; }
+        #cwbs-boq-dropzone .cwbs-boq-dz-sub { font-size:10.5px; color:#8e9bab; margin-top:1px; }
         #cwbs-boq-file-input { display:none; }
         #cwbs-boq-selected-file {
             display:none; align-items:center; gap:10px; margin-top:10px;
-            background:#eef5f3; border:1px solid #c7ded8; border-radius:8px; padding:9px 12px;
+            background:#eef1f5; border:1px solid #c8d0db; border-radius:8px; padding:9px 12px;
         }
         #cwbs-boq-selected-file.show { display:flex; }
         #cwbs-boq-selected-file .cwbs-boq-sf-name { flex:1; min-width:0; font-size:12.5px; font-weight:600; color:#2d333b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -363,13 +363,13 @@ $subDomain = array_shift(($HTTP_HOST));
         }
         #cwbs-boq-upload-btn:hover { opacity:.88; }
         #cwbs-boq-upload-btn:disabled { opacity:.5; cursor:not-allowed; }
-        #cwbs-boq-list-hdr { font-size:11px; font-weight:700; color:#5c7a73; text-transform:uppercase; letter-spacing:.5px; margin:0 0 8px; }
+        #cwbs-boq-list-hdr { font-size:11px; font-weight:700; color:#5c6b7c; text-transform:uppercase; letter-spacing:.5px; margin:0 0 8px; }
         #cwbs-boq-list { display:flex; flex-direction:column; gap:6px; max-height:170px; overflow-y:auto; }
-        .cwbs-boq-file-row { display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #d6e3e0; border-radius:8px; padding:8px 12px; }
+        .cwbs-boq-file-row { display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #d8dee6; border-radius:8px; padding:8px 12px; }
         .cwbs-boq-file-row .cwbs-boq-fr-icon { font-size:15px; color:#0d3b4f; flex-shrink:0; }
         .cwbs-boq-file-row .cwbs-boq-fr-info { flex:1; min-width:0; }
         .cwbs-boq-file-row .cwbs-boq-fr-name { font-size:12.5px; font-weight:600; color:#2d333b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .cwbs-boq-file-row .cwbs-boq-fr-date { font-size:10.5px; color:#8aa39c; margin-top:2px; }
+        .cwbs-boq-file-row .cwbs-boq-fr-date { font-size:10.5px; color:#8e9bab; margin-top:2px; }
         .cwbs-boq-file-row .cwbs-boq-fr-view {
             background:#0f5c52; color:#fff; border:none; border-radius:14px; padding:4px 12px;
             font-size:11px; font-weight:700; cursor:pointer; flex-shrink:0;
@@ -380,59 +380,59 @@ $subDomain = array_shift(($HTTP_HOST));
         #cwbs-main { flex:1; display:flex; min-height:0; }
         #cwbs-right { flex:1; min-width:0; display:flex; flex-direction:column; }
         #cwbs-filters {
-            display:flex; gap:12px; background:#eef5f3; border-bottom:1px solid #d6e3e0;
+            display:flex; gap:12px; background:#eef1f5; border-bottom:1px solid #d8dee6;
             padding:12px 16px; flex-shrink:0; flex-wrap:wrap;
         }
         .cwbs-f { display:flex; flex-direction:column; gap:3px; flex:1; min-width:160px; }
         .cwbs-f label { font-size:11px; font-weight:700; color:#0d3b4f; }
         .cwbs-f select {
-            border:1px solid #bcd0cc; border-radius:5px; padding:6px 8px; font-size:12px;
+            border:1px solid #bcc6d2; border-radius:5px; padding:6px 8px; font-size:12px;
             height:32px; background:#fff; outline:none;
         }
         .cwbs-f select:focus { border-color:#0f5c52; }
         /* Searchable IOW Group: a text box over the hidden select, with a match list. */
         .cwbs-ss { position:relative; }
-        .cwbs-ss input { width:100%; box-sizing:border-box; border:1px solid #bcd0cc; border-radius:5px; padding:6px 26px 6px 8px; font-size:12px; height:32px; background:#fff; outline:none; }
+        .cwbs-ss input { width:100%; box-sizing:border-box; border:1px solid #bcc6d2; border-radius:5px; padding:6px 26px 6px 8px; font-size:12px; height:32px; background:#fff; outline:none; }
         .cwbs-ss input { cursor:pointer; }
         .cwbs-ss input:focus { border-color:#0f5c52; cursor:text; }
         .cwbs-ss:after { content:'\25BE'; position:absolute; right:9px; top:7px; font-size:12px; color:#555; pointer-events:none; }
-        .cwbs-ss-list { position:absolute; left:0; right:0; top:34px; max-height:260px; overflow-y:auto; background:#fff; border:1px solid #bcd0cc; border-radius:5px; box-shadow:0 6px 18px rgba(0,0,0,.18); z-index:50; display:none; }
+        .cwbs-ss-list { position:absolute; left:0; right:0; top:34px; max-height:260px; overflow-y:auto; background:#fff; border:1px solid #bcc6d2; border-radius:5px; box-shadow:0 6px 18px rgba(0,0,0,.18); z-index:50; display:none; }
         .cwbs-ss-item { padding:6px 10px; font-size:12px; cursor:pointer; }
-        .cwbs-ss-item:hover, .cwbs-ss-item.on { background:#e3f1ee; }
+        .cwbs-ss-item:hover, .cwbs-ss-item.on { background:#e4e8ee; }
         .cwbs-ss-none { padding:6px 10px; font-size:12px; color:#888; }
         #cwbs-msg { font-size:12px; color:#c0392b; padding:0 16px; flex-shrink:0; min-height:0; }
         #cwbs-msg:empty { display:none; }
         #cwbs-list-wrap { flex:1; overflow-y:auto; padding:10px 16px; min-height:0; }
         .cwbs-placeholder { text-align:center; color:#888; padding:40px 20px; font-size:13px; }
-        #cwbs-table { width:100%; border-collapse:collapse; font-size:13px; border:1px solid #8fb8ae; }
+        #cwbs-table { width:100%; border-collapse:collapse; font-size:13px; border:1px solid #8e9bab; }
         #cwbs-table thead th {
-            background:#cfe8e0; color:#0d3b4f; font-weight:700; font-size:11px;
-            text-align:left; padding:8px 10px; border:1px solid #8fb8ae;
+            background:#d2d9e2; color:#0d3b4f; font-weight:700; font-size:11px;
+            text-align:left; padding:8px 10px; border:1px solid #8e9bab;
             position:sticky; top:0; z-index:1;
         }
-        #cwbs-table tbody tr:nth-child(even) { background:#eaf5f1; }
-        #cwbs-table tbody tr:hover { background:#d7ede6; }
-        #cwbs-table td { padding:8px 10px; vertical-align:middle; border:1px solid #bcdcd2; }
+        #cwbs-table tbody tr:nth-child(even) { background:#eceff4; }
+        #cwbs-table tbody tr:hover { background:#d8dee6; }
+        #cwbs-table td { padding:8px 10px; vertical-align:middle; border:1px solid #bcc6d2; }
         .cwbs-sno-td { width:40px; text-align:center; color:#6c7a89; }
         .cwbs-act-name { color:#1a1a1a; }
         .cwbs-unit-td { width:70px; text-align:center; color:#6c7a89; }
         .cwbs-qty-td { width:90px; text-align:center; }
         .cwbs-runits-td { width:90px; text-align:center; }
         .cwbs-qty-input, .cwbs-runits-input {
-            width:100%; box-sizing:border-box; border:1px solid #bcd0cc; border-radius:5px;
+            width:100%; box-sizing:border-box; border:1px solid #bcc6d2; border-radius:5px;
             padding:5px 6px; font-size:12px; text-align:center; outline:none;
         }
         .cwbs-qty-input:focus, .cwbs-runits-input:focus { border-color:#0f5c52; }
         .cwbs-edit-td { width:40px; text-align:center; }
         .cwbs-tick-td { width:36px; text-align:center; }
         .cwbs-edit-btn {
-            background:#fff; border:2px solid #b7c4c1; color:#5c7a73;
+            background:#fff; border:2px solid #b8c1cc; color:#5c6b7c;
             border-radius:50%; width:26px; height:26px; cursor:pointer; flex-shrink:0;
             font-size:12px; line-height:1; transition:background .12s, border-color .12s, color .12s;
         }
         .cwbs-edit-btn:hover { border-color:#0f5c52; color:#0f5c52; }
         .cwbs-tick-btn {
-            background:#fff; border:2px solid #b7c4c1; color:transparent;
+            background:#fff; border:2px solid #b8c1cc; color:transparent;
             border-radius:50%; width:26px; height:26px; cursor:pointer; flex-shrink:0;
             font-size:14px; line-height:1; transition:background .12s, border-color .12s, color .12s;
         }
@@ -477,7 +477,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .cwbsed-f { display:flex; flex-direction:column; gap:3px; min-width:140px; }
         .cwbsed-f label { font-size:11px; font-weight:700; color:#0d3b4f; }
         .cwbsed-f select, .cwbsed-f input {
-            border:1px solid #bcd0cc; border-radius:5px; padding:6px 8px; font-size:12px;
+            border:1px solid #bcc6d2; border-radius:5px; padding:6px 8px; font-size:12px;
             height:32px; background:#fff; outline:none; width:100%; box-sizing:border-box;
         }
         .cwbsed-f select:focus, .cwbsed-f input:focus { border-color:#0f5c52; }
@@ -486,7 +486,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .cwbsed-task-col-hdr span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .cwbsed-task-row { display:flex; gap:6px; margin-top:6px; align-items:center; }
         .cwbsed-task-row input {
-            border:1px solid #bcd0cc; border-radius:5px; padding:5px 6px; font-size:11.5px;
+            border:1px solid #bcc6d2; border-radius:5px; padding:5px 6px; font-size:11.5px;
             height:30px; outline:none; box-sizing:border-box; min-width:0; width:100%;
         }
         .cwbsed-task-row input:focus { border-color:#0f5c52; }
@@ -2976,11 +2976,11 @@ document.addEventListener('click', function(e){
         </div>
         <div class="cwbs-f">
           <label>Sub Group</label>
-          <select id="cwbs-subgroup" style="border:1px solid #bcd0cc;border-radius:5px;padding:6px 8px;font-size:12px;height:32px;"><option value="">None (directly under the IOW Group)</option></select>
+          <select id="cwbs-subgroup" style="border:1px solid #bcc6d2;border-radius:5px;padding:6px 8px;font-size:12px;height:32px;"><option value="">None (directly under the IOW Group)</option></select>
         </div>
         <div class="cwbs-f">
           <label>Search Activity</label>
-          <input type="text" id="cwbs-act-search" placeholder="Type to search activities" autocomplete="off" style="border:1px solid #bcd0cc;border-radius:5px;padding:6px 8px;font-size:12px;height:32px;outline:none;">
+          <input type="text" id="cwbs-act-search" placeholder="Type to search activities" autocomplete="off" style="border:1px solid #bcc6d2;border-radius:5px;padding:6px 8px;font-size:12px;height:32px;outline:none;">
         </div>
       </div>
       <div id="cwbs-msg"></div>
@@ -3079,7 +3079,7 @@ document.addEventListener('click', function(e){
       <span style="width:28px;flex-shrink:0;"></span>
     </div>
     <div id="cwbsed-task-rows"></div>
-    <button type="button" id="cwbsed-add-task-row" class="cwbs-btn" style="background:#eef5f3;color:#0d3b4f;margin-top:8px;">+ Add Task</button>
+    <button type="button" id="cwbsed-add-task-row" class="cwbs-btn" style="background:#eef1f5;color:#0d3b4f;margin-top:8px;">+ Add Task</button>
   </div>
   <div id="cwbsed-footer">
     <button type="button" id="cwbsed-cancel-btn" class="cwbs-btn cwbs-btn-cancel">Close</button>
