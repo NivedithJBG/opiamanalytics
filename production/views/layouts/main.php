@@ -292,10 +292,10 @@ $subDomain = array_shift(($HTTP_HOST));
         .cwbs-hdr-btn { background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.35); color:#fff; border-radius:14px;
             padding:3px 12px; font-size:12px; font-weight:700; cursor:pointer; margin-right:8px; white-space:nowrap; }
         .cwbs-hdr-btn:hover { background:rgba(255,255,255,0.32); }
-        #cwbs-tabs { display:flex; gap:6px; padding:8px 14px 0; border-bottom:2px solid #0f5c52; flex-shrink:0; }
-        .cwbs-tab { background:#e4e8ee; color:#0d3b4f; border:none; border-radius:8px 8px 0 0; padding:7px 20px; font-size:13px; font-weight:700; cursor:pointer; }
+        #cwbs-tabs { display:flex; gap:6px; padding:8px 14px 0; border-bottom:2px solid #37475a; flex-shrink:0; }
+        .cwbs-tab { background:#e4e8ee; color:#26313f; border:none; border-radius:8px 8px 0 0; padding:7px 20px; font-size:13px; font-weight:700; cursor:pointer; }
         .cwbs-tab:hover { background:#d2d9e2; }
-        .cwbs-tab.on { background:#0f5c52; color:#fff; }
+        .cwbs-tab.on { background:#37475a; color:#fff; }
         #cwbs-popup #cwbs-main { display:none; }
         #cwbs-popup.cwbs-acts #cwbs-main { display:flex; }
         .cwbs-hp { position:fixed; display:none; flex-direction:column; width:720px; max-width:94vw; max-height:80vh; background:#fff; border-radius:10px;
@@ -327,7 +327,7 @@ $subDomain = array_shift(($HTTP_HOST));
         #cwbs-boq-toggle {
             display:flex; align-items:center; gap:8px; background:#fff;
             border:none; border-bottom:1px solid #d8dee6; padding:10px 16px;
-            font-size:12.5px; font-weight:700; color:#0d3b4f; cursor:pointer; width:100%; text-align:left; flex-shrink:0;
+            font-size:12.5px; font-weight:700; color:#26313f; cursor:pointer; width:100%; text-align:left; flex-shrink:0;
         }
         #cwbs-boq-toggle:hover { background:#f5f7fa; }
         #cwbs-boq-toggle .cwbs-boq-caret { transition:transform .15s; font-size:10px; }
@@ -345,7 +345,7 @@ $subDomain = array_shift(($HTTP_HOST));
             border:2px dashed #8e9bab; border-radius:8px; background:#fff;
             padding:10px 14px; text-align:left; cursor:pointer; transition:border-color .15s,background .15s;
         }
-        #cwbs-boq-dropzone:hover, #cwbs-boq-dropzone.cwbs-boq-drag-over { border-color:#0f5c52; background:#eef1f5; }
+        #cwbs-boq-dropzone:hover, #cwbs-boq-dropzone.cwbs-boq-drag-over { border-color:#37475a; background:#eef1f5; }
         #cwbs-boq-dropzone .cwbs-boq-dz-icon { font-size:18px; color:#5c6b7c; flex-shrink:0; }
         #cwbs-boq-dropzone .cwbs-boq-dz-text { font-size:12.5px; color:#2d333b; font-weight:600; }
         #cwbs-boq-dropzone .cwbs-boq-dz-sub { font-size:10.5px; color:#8e9bab; margin-top:1px; }
@@ -359,22 +359,22 @@ $subDomain = array_shift(($HTTP_HOST));
         #cwbs-boq-selected-file .cwbs-boq-sf-remove { background:none; border:none; color:#c0392b; font-size:16px; cursor:pointer; padding:0 4px; }
         #cwbs-boq-upload-btn {
             margin-top:10px; padding:8px 20px; border:none; border-radius:20px; align-self:flex-start;
-            background:linear-gradient(135deg,#0d3b4f,#0f5c52); color:#fff; font-size:12.5px; font-weight:700; cursor:pointer;
+            background:linear-gradient(135deg,#26313f,#37475a); color:#fff; font-size:12.5px; font-weight:700; cursor:pointer;
         }
         #cwbs-boq-upload-btn:hover { opacity:.88; }
         #cwbs-boq-upload-btn:disabled { opacity:.5; cursor:not-allowed; }
         #cwbs-boq-list-hdr { font-size:11px; font-weight:700; color:#5c6b7c; text-transform:uppercase; letter-spacing:.5px; margin:0 0 8px; }
         #cwbs-boq-list { display:flex; flex-direction:column; gap:6px; max-height:170px; overflow-y:auto; }
         .cwbs-boq-file-row { display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #d8dee6; border-radius:8px; padding:8px 12px; }
-        .cwbs-boq-file-row .cwbs-boq-fr-icon { font-size:15px; color:#0d3b4f; flex-shrink:0; }
+        .cwbs-boq-file-row .cwbs-boq-fr-icon { font-size:15px; color:#26313f; flex-shrink:0; }
         .cwbs-boq-file-row .cwbs-boq-fr-info { flex:1; min-width:0; }
         .cwbs-boq-file-row .cwbs-boq-fr-name { font-size:12.5px; font-weight:600; color:#2d333b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .cwbs-boq-file-row .cwbs-boq-fr-date { font-size:10.5px; color:#8e9bab; margin-top:2px; }
         .cwbs-boq-file-row .cwbs-boq-fr-view {
-            background:#0f5c52; color:#fff; border:none; border-radius:14px; padding:4px 12px;
+            background:#37475a; color:#fff; border:none; border-radius:14px; padding:4px 12px;
             font-size:11px; font-weight:700; cursor:pointer; flex-shrink:0;
         }
-        .cwbs-boq-file-row .cwbs-boq-fr-view:hover { background:#0a3f38; }
+        .cwbs-boq-file-row .cwbs-boq-fr-view:hover { background:#1e2833; }
         .cwbs-boq-file-row .cwbs-boq-fr-del { background:#e57373; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:11px; cursor:pointer; flex-shrink:0; }
         #cwbs-boq-empty { color:#aaa; font-size:12.5px; text-align:center; padding:10px 0; }
         #cwbs-main { flex:1; display:flex; min-height:0; }
@@ -384,17 +384,17 @@ $subDomain = array_shift(($HTTP_HOST));
             padding:12px 16px; flex-shrink:0; flex-wrap:wrap;
         }
         .cwbs-f { display:flex; flex-direction:column; gap:3px; flex:1; min-width:160px; }
-        .cwbs-f label { font-size:11px; font-weight:700; color:#0d3b4f; }
+        .cwbs-f label { font-size:11px; font-weight:700; color:#26313f; }
         .cwbs-f select {
             border:1px solid #bcc6d2; border-radius:5px; padding:6px 8px; font-size:12px;
             height:32px; background:#fff; outline:none;
         }
-        .cwbs-f select:focus { border-color:#0f5c52; }
+        .cwbs-f select:focus { border-color:#37475a; }
         /* Searchable IOW Group: a text box over the hidden select, with a match list. */
         .cwbs-ss { position:relative; }
         .cwbs-ss input { width:100%; box-sizing:border-box; border:1px solid #bcc6d2; border-radius:5px; padding:6px 26px 6px 8px; font-size:12px; height:32px; background:#fff; outline:none; }
         .cwbs-ss input { cursor:pointer; }
-        .cwbs-ss input:focus { border-color:#0f5c52; cursor:text; }
+        .cwbs-ss input:focus { border-color:#37475a; cursor:text; }
         .cwbs-ss:after { content:'\25BE'; position:absolute; right:9px; top:7px; font-size:12px; color:#555; pointer-events:none; }
         .cwbs-ss-list { position:absolute; left:0; right:0; top:34px; max-height:260px; overflow-y:auto; background:#fff; border:1px solid #bcc6d2; border-radius:5px; box-shadow:0 6px 18px rgba(0,0,0,.18); z-index:50; display:none; }
         .cwbs-ss-item { padding:6px 10px; font-size:12px; cursor:pointer; }
@@ -406,7 +406,7 @@ $subDomain = array_shift(($HTTP_HOST));
         .cwbs-placeholder { text-align:center; color:#888; padding:40px 20px; font-size:13px; }
         #cwbs-table { width:100%; border-collapse:collapse; font-size:13px; border:1px solid #8e9bab; }
         #cwbs-table thead th {
-            background:#d2d9e2; color:#0d3b4f; font-weight:700; font-size:11px;
+            background:#d2d9e2; color:#26313f; font-weight:700; font-size:11px;
             text-align:left; padding:8px 10px; border:1px solid #8e9bab;
             position:sticky; top:0; z-index:1;
         }
@@ -422,7 +422,7 @@ $subDomain = array_shift(($HTTP_HOST));
             width:100%; box-sizing:border-box; border:1px solid #bcc6d2; border-radius:5px;
             padding:5px 6px; font-size:12px; text-align:center; outline:none;
         }
-        .cwbs-qty-input:focus, .cwbs-runits-input:focus { border-color:#0f5c52; }
+        .cwbs-qty-input:focus, .cwbs-runits-input:focus { border-color:#37475a; }
         .cwbs-edit-td { width:40px; text-align:center; }
         .cwbs-tick-td { width:36px; text-align:center; }
         .cwbs-edit-btn {
@@ -430,14 +430,14 @@ $subDomain = array_shift(($HTTP_HOST));
             border-radius:50%; width:26px; height:26px; cursor:pointer; flex-shrink:0;
             font-size:12px; line-height:1; transition:background .12s, border-color .12s, color .12s;
         }
-        .cwbs-edit-btn:hover { border-color:#0f5c52; color:#0f5c52; }
+        .cwbs-edit-btn:hover { border-color:#37475a; color:#37475a; }
         .cwbs-tick-btn {
             background:#fff; border:2px solid #b8c1cc; color:transparent;
             border-radius:50%; width:26px; height:26px; cursor:pointer; flex-shrink:0;
             font-size:14px; line-height:1; transition:background .12s, border-color .12s, color .12s;
         }
-        .cwbs-tick-btn:hover { border-color:#0f5c52; }
-        .cwbs-tick-btn.cwbs-selected { background:#0f5c52; border-color:#0f5c52; color:#fff; }
+        .cwbs-tick-btn:hover { border-color:#37475a; }
+        .cwbs-tick-btn.cwbs-selected { background:#37475a; border-color:#37475a; color:#fff; }
         #cwbs-footer {
             display:flex; justify-content:flex-end; gap:10px; padding:12px 16px;
             border-top:1px solid #eee; flex-shrink:0;
@@ -445,11 +445,11 @@ $subDomain = array_shift(($HTTP_HOST));
         .cwbs-btn { border:none; border-radius:20px; padding:8px 20px; font-size:13px; font-weight:700; cursor:pointer; }
         .cwbs-btn-cancel { background:#eee; color:#444; }
         .cwbs-btn-cancel:hover { background:#e0e0e0; }
-        .cwbs-btn-add { background:linear-gradient(135deg,#0d3b4f,#0f5c52); color:#fff; }
+        .cwbs-btn-add { background:linear-gradient(135deg,#26313f,#37475a); color:#fff; }
         .cwbs-btn-add:hover { opacity:.88; }
         .cwbs-btn-add:disabled { opacity:.5; cursor:default; }
         .cwbs-hp .cwbs-btn-add { background:linear-gradient(135deg,#37475a,#26313f); }
-        #cwbs-popup .ui-resizable-se { background:#0f5c52; opacity:.4; border-radius:0 0 8px 0; }
+        #cwbs-popup .ui-resizable-se { background:#37475a; opacity:.4; border-radius:0 0 8px 0; }
         #cwbs-popup .ui-resizable-se:hover { opacity:.7; }
 
         /* ── Create WBS: Edit Activity Floating Popup ── */
@@ -476,12 +476,12 @@ $subDomain = array_shift(($HTTP_HOST));
         #cwbsed-body { flex:1; overflow-y:auto; padding:16px; min-height:0; }
         .cwbsed-row { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
         .cwbsed-f { display:flex; flex-direction:column; gap:3px; min-width:140px; }
-        .cwbsed-f label { font-size:11px; font-weight:700; color:#0d3b4f; }
+        .cwbsed-f label { font-size:11px; font-weight:700; color:#26313f; }
         .cwbsed-f select, .cwbsed-f input {
             border:1px solid #bcc6d2; border-radius:5px; padding:6px 8px; font-size:12px;
             height:32px; background:#fff; outline:none; width:100%; box-sizing:border-box;
         }
-        .cwbsed-f select:focus, .cwbsed-f input:focus { border-color:#0f5c52; }
+        .cwbsed-f select:focus, .cwbsed-f input:focus { border-color:#37475a; }
         .cwbsed-tasks-hdr { border-top:1px solid #eee; padding-top:10px; margin-top:4px; }
         .cwbsed-task-col-hdr { display:flex; gap:6px; margin-top:8px; font-size:11px; color:#777; }
         .cwbsed-task-col-hdr span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -490,7 +490,7 @@ $subDomain = array_shift(($HTTP_HOST));
             border:1px solid #bcc6d2; border-radius:5px; padding:5px 6px; font-size:11.5px;
             height:30px; outline:none; box-sizing:border-box; min-width:0; width:100%;
         }
-        .cwbsed-task-row input:focus { border-color:#0f5c52; }
+        .cwbsed-task-row input:focus { border-color:#37475a; }
         .cwbsed-task-row .cwbsed-task-name { flex:2.2; min-width:0; }
         .cwbsed-task-row .cwbsed-task-unit { flex:1; min-width:0; }
         .cwbsed-task-row .cwbsed-task-qty { flex:1; min-width:0; }
@@ -503,7 +503,7 @@ $subDomain = array_shift(($HTTP_HOST));
             display:flex; justify-content:flex-end; gap:10px; padding:12px 16px;
             border-top:1px solid #eee; flex-shrink:0;
         }
-        #cwbsed-popup .ui-resizable-se { background:#0f5c52; opacity:.4; border-radius:0 0 8px 0; }
+        #cwbsed-popup .ui-resizable-se { background:#37475a; opacity:.4; border-radius:0 0 8px 0; }
         #cwbsed-popup .ui-resizable-se:hover { opacity:.7; }
 
         /* ── File Viewer Floating Popup ── */
@@ -3070,7 +3070,7 @@ document.addEventListener('click', function(e){
       </div>
     </div>
     <div class="cwbsed-tasks-hdr">
-      <span style="font-weight:700;color:#0d3b4f;font-size:12px;">Tasks</span>
+      <span style="font-weight:700;color:#26313f;font-size:12px;">Tasks</span>
     </div>
     <div class="cwbsed-task-col-hdr">
       <span style="flex:2.2;">Task Name</span>
@@ -3080,7 +3080,7 @@ document.addEventListener('click', function(e){
       <span style="width:28px;flex-shrink:0;"></span>
     </div>
     <div id="cwbsed-task-rows"></div>
-    <button type="button" id="cwbsed-add-task-row" class="cwbs-btn" style="background:#eef1f5;color:#0d3b4f;margin-top:8px;">+ Add Task</button>
+    <button type="button" id="cwbsed-add-task-row" class="cwbs-btn" style="background:#eef1f5;color:#26313f;margin-top:8px;">+ Add Task</button>
   </div>
   <div id="cwbsed-footer">
     <button type="button" id="cwbsed-cancel-btn" class="cwbs-btn cwbs-btn-cancel">Close</button>
@@ -3679,7 +3679,7 @@ document.addEventListener('click', function(e){
     function cwbsAddState(){ $('#cwbs-add-btn').prop('disabled', !Object.keys(cwbsSelected).length); }
     function cwbsToast(msg){
         $('#cwbs-added-toast').remove();
-        $('<div id="cwbs-added-toast"></div>').html(msg).css({ position:'fixed', left:'50%', top:'40%', transform:'translate(-50%,-50%)', background:'#0f5c52', color:'#fff', padding:'14px 26px', borderRadius:'8px', fontSize:'16px', fontWeight:700, boxShadow:'0 8px 24px rgba(0,0,0,.3)', zIndex:300000 }).appendTo('body').delay(2200).fadeOut(400, function(){ $(this).remove(); });
+        $('<div id="cwbs-added-toast"></div>').html(msg).css({ position:'fixed', left:'50%', top:'40%', transform:'translate(-50%,-50%)', background:'#37475a', color:'#fff', padding:'14px 26px', borderRadius:'8px', fontSize:'16px', fontWeight:700, boxShadow:'0 8px 24px rgba(0,0,0,.3)', zIndex:300000 }).appendTo('body').delay(2200).fadeOut(400, function(){ $(this).remove(); });
     }
     function cwbsLoadActivities(){
         // All activities of the Project Type (not filtered by IOW Group); the chosen
@@ -3884,7 +3884,7 @@ document.addEventListener('click', function(e){
         if (a === 'ren') {
             var $in = $nameTd.find('input.cwbs-hp-ren');
             if (!$in.length) {
-                $nameTd.data('orig', name).html('<input type="text" class="cwbs-hp-ren" style="width:100%;box-sizing:border-box;border:1px solid #0f5c52;border-radius:4px;padding:3px 6px;font-size:12.5px;">');
+                $nameTd.data('orig', name).html('<input type="text" class="cwbs-hp-ren" style="width:100%;box-sizing:border-box;border:1px solid #37475a;border-radius:4px;padding:3px 6px;font-size:12.5px;">');
                 $nameTd.find('input').val(name).focus().select();
                 $(this).html('&#10003;').attr('title', 'Save');
                 return;
@@ -3996,7 +3996,7 @@ document.addEventListener('click', function(e){
                 $('#cwbs-msg').css('color','#197a3a').text('Added ' + ids.length + ' activity/activities to the Gantt.');
                 // Clear confirmation over the Create WBS window.
                 $('#cwbs-added-toast').remove();
-                $('<div id="cwbs-added-toast">&#10003; Added to Gantt Chart</div>').css({ position:'fixed', left:'50%', top:'40%', transform:'translate(-50%,-50%)', background:'#0f5c52', color:'#fff', padding:'14px 26px', borderRadius:'8px', fontSize:'16px', fontWeight:700, boxShadow:'0 8px 24px rgba(0,0,0,.3)', zIndex:300000 }).appendTo('body').delay(2200).fadeOut(400, function(){ $(this).remove(); });
+                $('<div id="cwbs-added-toast">&#10003; Added to Gantt Chart</div>').css({ position:'fixed', left:'50%', top:'40%', transform:'translate(-50%,-50%)', background:'#37475a', color:'#fff', padding:'14px 26px', borderRadius:'8px', fontSize:'16px', fontWeight:700, boxShadow:'0 8px 24px rgba(0,0,0,.3)', zIndex:300000 }).appendTo('body').delay(2200).fadeOut(400, function(){ $(this).remove(); });
                 cwbsSelected = {};
                 $('.cwbs-tick-btn').removeClass('cwbs-selected');
                 cwbsAddState();
@@ -4228,7 +4228,7 @@ document.addEventListener('click', function(e){
         // Update only the edited row in the Create WBS list, so the Qty/R.Unit/ticks
         // entered on the other rows are untouched.
         var $ed = $('#cwbs-tbody tr[data-actid="' + actId + '"]');
-        $ed.find('.cwbs-act-name').html($('<div>').text(actName).html() + ' <span style="font-size:10px;color:#2ba899;font-weight:700;">(edited for this project)</span>');
+        $ed.find('.cwbs-act-name').html($('<div>').text(actName).html() + ' <span style="font-size:10px;color:#5c6b7c;font-weight:700;">(edited for this project)</span>');
         $ed.find('.cwbs-unit-td').html($('<div>').text(actUnit).html());
         $ed.find('.cwbs-edit-btn, .cwbs-tick-btn').attr('data-actname', actName).data('actname', actName);
         if (cwbsSelected[actId]) cwbsSelected[actId].name = actName;
