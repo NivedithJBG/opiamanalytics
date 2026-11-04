@@ -4150,6 +4150,9 @@ function _cfBankTiLinesSvg(cyc, ser){
     // (from cfbankprojection).
     var has = function(){ return true; };
     var SER = ser || [ { key: 'inv', col: '#3a4a5f', name: 'Investments Required' }, { key: 'br', col: '#1e8073', name: 'Bills Receivable' } ];
+    // Bank popup: Bills Receivable line red while below Investments Required, green once above; gap shown in figures.
+    var bank = !ser, RED = '#d84a30', GRN = '#1e8073';
+    var gapOf = function(c){ return (+c.inv || 0) - (+c.br || 0); };
     cyc = _cfTrimZeroTail(cyc, function(c){ return SER.map(function(s){ return c[s.key]; }); });
     // Once the balances stop changing, the repeated periods add nothing: keep the first of them only.
     var same = function(a, b){ return SER.every(function(s){ return Math.abs((+a[s.key] || 0) - (+b[s.key] || 0)) < 1; }); };
@@ -4183,13 +4186,26 @@ function _cfBankTiLinesSvg(cyc, ser){
         + '<line x1="' + padL + '" y1="' + yOf(0).toFixed(1) + '" x2="' + (W - padR) + '" y2="' + yOf(0).toFixed(1) + '" stroke="#222" stroke-width="1.6"/>'
         + '<text x="16" y="' + ((top + base) / 2) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700" transform="rotate(-90 16 ' + ((top + base) / 2) + ')">Lakhs</text>'
         + '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700">Billing cycle (period)</text>';
+    if (bank) cyc.forEach(function(c, i){
+        var d = gapOf(c); if (Math.abs(d) < 1) return;
+        var y = (yOf(+c.inv || 0) + yOf(+c.br || 0)) / 2 + 4;
+        out += '<text x="' + (xOf(i) + 10).toFixed(1) + '" y="' + y.toFixed(1) + '" font-size="11" font-weight="700" fill="' + (d > 0 ? RED : GRN) + '"><title>' + (d > 0 ? 'Funding gap' : 'Surplus') + '</title>' + (d > 0 ? 'Gap ' : 'Surplus ') + L(Math.abs(d)) + '</text>';
+    });
     SER.forEach(function(s, si){
         var pts = [];
         cyc.forEach(function(c, i){ if (has(c)) pts.push([xOf(i), yOf(+c[s.key] || 0), +c[s.key] || 0, c]); });
-        if (pts.length > 1) out += '<polyline points="' + pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="3"/>';
+        if (bank && s.key === 'br') {
+            // Segment by segment, split where the two lines cross so each part takes its own colour.
+            var seg = function(x1, y1, x2, y2, col){ out += '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="' + col + '" stroke-width="3" stroke-linecap="round"/>'; };
+            for (var q = 1; q < pts.length; q++) {
+                var p0 = pts[q - 1], p1 = pts[q], d0 = gapOf(p0[3]), d1 = gapOf(p1[3]);
+                if ((d0 > 0) === (d1 > 0) || d0 === d1) { seg(p0[0], p0[1], p1[0], p1[1], (d0 > 0 || (d0 === 0 && d1 > 0)) ? RED : GRN); continue; }
+                var t = d0 / (d0 - d1), xm = p0[0] + (p1[0] - p0[0]) * t, ym = p0[1] + (p1[1] - p0[1]) * t;
+                seg(p0[0], p0[1], xm, ym, d0 > 0 ? RED : GRN); seg(xm, ym, p1[0], p1[1], d1 > 0 ? RED : GRN);
+            }
+        } else if (pts.length > 1) out += '<polyline points="' + pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="3"/>';
         pts.forEach(function(p){
-            // Bank balance: overdraft points red-orange, surplus points green-blue.
-            var pc = s.col;
+            var pc = (bank && s.key === 'br') ? (gapOf(p[3]) > 0 ? RED : GRN) : s.col;
             out += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="5" fill="' + (p[3].actual ? '#fff' : pc) + '" stroke="' + pc + '" stroke-width="' + (p[3].actual ? 2.5 : 0) + '"><title>' + s.name + ' ' + L(p[2]) + ' L' + (p[3].actual ? ' (actual)' : ' (projected)') + '</title></circle>'
                 // At each cycle the higher value is labelled above its point, the other below.
                 + '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] + (function(){ var o = SER.length > 1 ? +p[3][SER[1 - si].key] || 0 : -Infinity; return (p[2] > o || (p[2] === o && si === 0)) ? -10 : 19; })()).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + pc + '">' + L(p[2]) + '</text>';
@@ -4225,7 +4241,7 @@ function _cfShowBankTiLines(cycles, note, d){
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
         + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Investments Required</span>'
-        + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Bills Receivable</span>'
+        + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#d84a30;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Bills Receivable (red = below investment, green = above)</span>'
         + '<span style="color:#5a6e8c;">Hollow dots = actual (completed cycles)</span>'
         + '<span>TDS % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_tds_pct" value="' + (+d.tds_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
         + '<span>Retention % <input type="text" inputmode="decimal" class="cf-bank-pct" data-key="bank_retention_pct" value="' + (+d.retention_pct || 0) + '" style="width:44px;text-align:right;border:1px solid #b8c2d3;border-radius:3px;padding:1px 4px;font:inherit;background:#fffbe6;"></span>'
