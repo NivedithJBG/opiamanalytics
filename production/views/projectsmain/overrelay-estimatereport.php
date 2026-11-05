@@ -347,6 +347,7 @@
     <div id="estreport-empty">Loading estimate…</div>
     <div id="estreport-sheet" style="display:none;"></div>
   </div>
+  <button type="button" id="en-btn" class="gn-fab" title="Notes">&#128221;</button>
 </div>
 
 <div id="er-restip"></div>

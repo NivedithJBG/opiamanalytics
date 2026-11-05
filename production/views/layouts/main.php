@@ -5529,7 +5529,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
   <div id="gantt-win-body">
     <div id="gantt-win-loading">Loading Gantt chart&hellip;</div>
   </div>
-  <button type="button" id="gn-btn" title="Notes">&#128221;</button>
+  <button type="button" id="gn-btn" class="gn-fab" title="Notes">&#128221;</button>
 </div>
 
 <script>
@@ -5605,31 +5605,40 @@ $(document).on('click', '#gantt-win-min', function(e){
 });
 </script>
 
-<!-- Gantt Notes: the user's own notes for the project, kept open while working on
-     the Gantt (draggable, resizable). Each note is a strip; the tick removes it. -->
-<div id="gn-win">
-  <div id="gn-hdr"><span>Notes</span><button type="button" id="gn-close" title="Close">&times;</button></div>
-  <div id="gn-form">
-    <textarea id="gn-text" rows="2" placeholder="Write a note&hellip;"></textarea>
-    <button type="button" id="gn-add">Add</button>
+<!-- Notes: the user's own notes for the project, kept open while working on the
+     Gantt or the Project Estimate (draggable, resizable). Each window has its own
+     notes. Each note is a strip; the tick removes it. -->
+<div id="gn-win" class="gn-win">
+  <div class="gn-hdr"><span>Notes</span><button type="button" class="gn-close" title="Close">&times;</button></div>
+  <div class="gn-form">
+    <textarea class="gn-text" rows="2" placeholder="Write a note&hellip;"></textarea>
+    <button type="button" class="gn-add">Add</button>
   </div>
-  <div id="gn-list"></div>
+  <div class="gn-list"></div>
+</div>
+<div id="en-win" class="gn-win">
+  <div class="gn-hdr"><span>Estimate Notes</span><button type="button" class="gn-close" title="Close">&times;</button></div>
+  <div class="gn-form">
+    <textarea class="gn-text" rows="2" placeholder="Write a note&hellip;"></textarea>
+    <button type="button" class="gn-add">Add</button>
+  </div>
+  <div class="gn-list"></div>
 </div>
 <style>
-#gn-btn { position:absolute; right:18px; bottom:16px; width:42px; height:42px; border-radius:50%; border:none;
+.gn-fab { position:absolute; right:18px; bottom:16px; width:42px; height:42px; border-radius:50%; border:none;
   background:#0f5c52; color:#fff; font-size:19px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.3); z-index:30; }
-#gn-btn:hover { background:#0d4c44; }
-#gn-win { display:none; position:fixed; right:40px; top:120px; width:340px; height:420px; min-width:260px; min-height:200px;
+.gn-fab:hover { background:#0d4c44; }
+.gn-win { display:none; position:fixed; right:40px; top:120px; width:340px; height:420px; min-width:260px; min-height:200px;
   background:#fff; border-radius:8px; box-shadow:0 8px 28px rgba(0,0,0,.35); z-index:100050; flex-direction:column;
   overflow:hidden; resize:both; font-family:Nunito,Arial,sans-serif; }
-#gn-win.gn-open { display:flex; }
-#gn-hdr { flex:none; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg,#37475a,#26313f); color:#fff;
+.gn-win.gn-open { display:flex; }
+.gn-hdr { flex:none; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg,#37475a,#26313f); color:#fff;
   padding:8px 12px; font-weight:700; font-size:14px; cursor:move; user-select:none; touch-action:none; }
-#gn-close { background:none; border:none; color:#fff; font-size:20px; line-height:1; cursor:pointer; }
-#gn-form { flex:none; display:flex; gap:6px; padding:8px 10px; border-bottom:1px solid #e3e7ee; }
-#gn-text { flex:1; resize:none; min-height:40px; max-height:220px; overflow-y:auto; border:1px solid #bcc6d4; border-radius:5px; padding:5px 7px; font:inherit; font-size:13px; }
-#gn-add { flex:none; border:none; background:#0f5c52; color:#fff; border-radius:5px; padding:0 14px; font-weight:700; cursor:pointer; }
-#gn-list { flex:1; overflow-y:auto; padding:8px 10px; }
+.gn-close { background:none; border:none; color:#fff; font-size:20px; line-height:1; cursor:pointer; }
+.gn-form { flex:none; display:flex; gap:6px; padding:8px 10px; border-bottom:1px solid #e3e7ee; }
+.gn-text { flex:1; resize:none; min-height:40px; max-height:220px; overflow-y:auto; border:1px solid #bcc6d4; border-radius:5px; padding:5px 7px; font:inherit; font-size:13px; }
+.gn-add { flex:none; border:none; background:#0f5c52; color:#fff; border-radius:5px; padding:0 14px; font-weight:700; cursor:pointer; }
+.gn-list { flex:1; overflow-y:auto; padding:8px 10px; }
 .gn-strip { display:flex; align-items:flex-start; gap:8px; background:#f4f6fa; border-left:4px solid #2ba899;
   border-radius:5px; padding:7px 8px; margin-bottom:7px; font-size:13px; color:#111; }
 .gn-strip-text { flex:1; white-space:pre-wrap; word-wrap:break-word; }
@@ -5642,64 +5651,69 @@ $(document).on('click', '#gantt-win-min', function(e){
 .gn-empty { color:#8a94a3; font-size:12px; text-align:center; padding:16px 0; }
 </style>
 <script>
-(function(){
-  var win = document.getElementById('gn-win'), hdr = document.getElementById('gn-hdr');
+// One Notes window per owner window: the same features, each with its own notes
+// (kind = 'gantt' or 'estimate' on the server).
+function gnSetup(cfg){
+  var win = document.getElementById(cfg.win), $w = $(win), hdr = win.querySelector('.gn-hdr');
+  var $list = $w.find('.gn-list'), $text = $w.find('.gn-text'), $add = $w.find('.gn-add');
+  var EMPTY = '<div class="gn-empty">No notes yet.</div>';
   function esc(s){ return $('<div>').text(s == null ? '' : String(s)).html(); }
+  function post(act, data, opts){ return $.ajax($.extend({ type:'POST', url:'../projectsmain/' + act, dataType:'json', data:$.extend({ kind:cfg.kind }, data || {}) }, opts || {})); }
   function load(){
-    $('#gn-list').html('<div class="gn-empty">Loading&hellip;</div>');
-    $.ajax({ type:'POST', url:'../projectsmain/ganttnotes', dataType:'json', success:function(d){
+    $list.html('<div class="gn-empty">Loading&hellip;</div>');
+    post('ganttnotes', {}, { success:function(d){
       var n = (d && d.notes) || [];
-      $('#gn-list').html(n.length ? n.map(function(x){
+      $list.html(n.length ? n.map(function(x){
         return '<div class="gn-strip" data-id="' + x.id + '"><div class="gn-strip-text"><span class="gn-t">' + esc(x.text) + '</span>'
           + '<span class="gn-strip-date">' + esc((x.created_at || '').slice(0, 16)) + '</span></div>'
           + '<button type="button" class="gn-tick gn-wa" title="Send on WhatsApp"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21c5.46 0 9.91-4.45 9.91-9.91A9.85 9.85 0 0 0 12.04 2zm4.52 11.99c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.24 3.74 1.48.64 2.07.69 2.82.58.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.16-.47-.28z"/></svg></button>'
           + '<button type="button" class="gn-tick gn-edit" title="Edit">&#9998;</button>'
           + '<button type="button" class="gn-tick gn-done" title="Done">&#10003;</button></div>';
-      }).join('') : '<div class="gn-empty">No notes yet.</div>');
+      }).join('') : EMPTY);
     } });
   }
-  function add(){
-    var t = $.trim($('#gn-text').val()); if (!t) return;
-    $('#gn-add').prop('disabled', true);
-    $.ajax({ type:'POST', url:'../projectsmain/ganttnoteadd', dataType:'json', data:{ text:t },
-      success:function(d){ $('#gn-add').prop('disabled', false); if (d && d.error === 'No') { $('#gn-text').val('').focus(); fit(); load(); } else alert((d && d.errortext) || 'Could not save.'); },
-      error:function(){ $('#gn-add').prop('disabled', false); alert('Could not save.'); } });
-  }
-  // Keep Notes above the Gantt window (which raises itself on tap, e.g. on iPad).
-  function toTop(){ var g = document.getElementById('gantt-win'); var z = g ? (parseInt(window.getComputedStyle(g).zIndex, 10) || 100000) : 100000; win.style.zIndex = z + 50; }
-  $(document).on('click', '#gn-btn', function(e){ e.stopPropagation(); if (win.classList.contains('gn-open')) { win.classList.remove('gn-open'); return; } toTop(); win.classList.add('gn-open'); load(); $('#gn-text').focus(); });
-  $(document).on('mousedown touchstart', '#gn-win', toTop);
-  $(document).on('mousedown touchstart', '#gantt-win', function(){ if (win.classList.contains('gn-open')) setTimeout(toTop, 0); });
-  $(document).on('click', '#gn-close', function(){ win.classList.remove('gn-open'); });
-  $(document).on('click', '#gn-add', add);
   // The note box grows with the text, so the whole note is visible while typing.
-  function fit(){ var t = document.getElementById('gn-text'); t.style.height = 'auto'; t.style.height = Math.min(220, t.scrollHeight + 2) + 'px'; }
-  $(document).on('input', '#gn-text', fit);
-  $(document).on('keydown', '#gn-text', function(e){ if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); add(); } });
-  $(document).on('click', '.gn-done', function(){
+  function fit(){ var t = $text[0]; t.style.height = 'auto'; t.style.height = Math.min(220, t.scrollHeight + 2) + 'px'; }
+  function add(){
+    var t = $.trim($text.val()); if (!t) return;
+    $add.prop('disabled', true);
+    post('ganttnoteadd', { text:t }, {
+      success:function(d){ $add.prop('disabled', false); if (d && d.error === 'No') { $text.val('').focus(); fit(); load(); } else alert((d && d.errortext) || 'Could not save.'); },
+      error:function(){ $add.prop('disabled', false); alert('Could not save.'); } });
+  }
+  // Keep Notes above its owner window (which raises itself on tap, e.g. on iPad).
+  function toTop(){ var g = document.getElementById(cfg.owner); var z = g ? (parseInt(window.getComputedStyle(g).zIndex, 10) || 100000) : 100000; win.style.zIndex = Math.max(z, 100000) + 50; }
+  $(document).on('click', '#' + cfg.btn, function(e){ e.stopPropagation(); if (win.classList.contains('gn-open')) { win.classList.remove('gn-open'); return; } toTop(); win.classList.add('gn-open'); load(); $text.focus(); });
+  $w.on('mousedown touchstart', toTop);
+  $(document).on('mousedown touchstart', '#' + cfg.owner, function(){ if (win.classList.contains('gn-open')) setTimeout(toTop, 0); });
+  $w.on('click', '.gn-close', function(){ win.classList.remove('gn-open'); });
+  $add.on('click', add);
+  $text.on('input', fit);
+  $text.on('keydown', function(e){ if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); add(); } });
+  $w.on('click', '.gn-done', function(){
     var strip = $(this).closest('.gn-strip'), id = strip.data('id');
-    strip.fadeOut(200, function(){ strip.remove(); if (!$('#gn-list .gn-strip').length) $('#gn-list').html('<div class="gn-empty">No notes yet.</div>'); });
-    $.ajax({ type:'POST', url:'../projectsmain/ganttnotedone', dataType:'json', data:{ id:id } });
+    strip.fadeOut(200, function(){ strip.remove(); if (!$list.find('.gn-strip').length) $list.html(EMPTY); });
+    post('ganttnotedone', { id:id });
   });
   // Send a note on WhatsApp: opens WhatsApp with the note typed in (the app on a
   // phone/iPad, WhatsApp Web on a PC); the user picks the teammate and sends.
-  $(document).on('click', '.gn-wa', function(){
+  $w.on('click', '.gn-wa', function(){
     var strip = $(this).closest('.gn-strip');
-    var proj = $.trim($('#gantt-win-proj-name').text());
-    var msg = (proj ? 'Note - ' + proj + '\n' : '') + strip.find('.gn-t').text();
+    var proj = $.trim($('#' + cfg.projName).text());
+    var msg = (proj ? cfg.label + ' - ' + proj + '\n' : '') + strip.find('.gn-t').text();
     var touch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
     if (touch) { window.location.href = 'whatsapp://send?text=' + encodeURIComponent(msg); return; }
     // PC: WhatsApp Web only fills in the text when it knows the number, so the note
     // is copied first; pick the person, paste (Ctrl+V) and send.
     try { navigator.clipboard.writeText(msg); } catch (x) {}
-    var $t = $('<div>').text('Note copied. In WhatsApp, open the person\u2019s chat, press Ctrl+V, then Send.')
+    var $t = $('<div>').text('Note copied. In WhatsApp, open the person’s chat, press Ctrl+V, then Send.')
       .css({ position:'fixed', left:'50%', top:'30%', transform:'translate(-50%,-50%)', background:'#128c7e', color:'#fff', padding:'14px 22px', borderRadius:'8px', fontSize:'15px', fontWeight:700, zIndex:300000, boxShadow:'0 8px 24px rgba(0,0,0,.3)' })
       .appendTo('body').delay(4500).fadeOut(400, function(){ $(this).remove(); });
     var w = 520, h = Math.min(760, screen.availHeight - 80);
     window.open('https://web.whatsapp.com/send?text=' + encodeURIComponent(msg), 'opiam_whatsapp', 'width=' + w + ',height=' + h + ',left=' + (screen.availWidth - w - 20) + ',top=40');
   });
   // Edit a note in place: the strip text becomes a box with Save / Cancel.
-  $(document).on('click', '.gn-edit', function(){
+  $w.on('click', '.gn-edit', function(){
     var strip = $(this).closest('.gn-strip'), box = strip.find('.gn-strip-text');
     if (box.find('textarea').length) return;
     var old = strip.find('.gn-t').text();
@@ -5711,21 +5725,21 @@ $(document).on('click', '#gantt-win-min', function(e){
     var ta = box.find('textarea').val(old).focus()[0];
     ta.style.height = 'auto'; ta.style.height = Math.min(220, ta.scrollHeight + 2) + 'px';
   });
-  $(document).on('click', '.gn-edit-cancel', function(){ var box = $(this).closest('.gn-strip-text'); box.html(box.data('html')); });
-  $(document).on('click', '.gn-edit-save', function(){
+  $w.on('click', '.gn-edit-cancel', function(){ var box = $(this).closest('.gn-strip-text'); box.html(box.data('html')); });
+  $w.on('click', '.gn-edit-save', function(){
     var strip = $(this).closest('.gn-strip'), t = $.trim(strip.find('.gn-edit-text').val());
     if (!t) return;
     $(this).prop('disabled', true);
-    $.ajax({ type:'POST', url:'../projectsmain/ganttnoteedit', dataType:'json', data:{ id:strip.data('id'), text:t },
+    post('ganttnoteedit', { id:strip.data('id'), text:t }, {
       success:function(d){ if (d && d.error === 'No') load(); else alert((d && d.errortext) || 'Could not save.'); },
       error:function(){ alert('Could not save.'); } });
   });
-  // Close with the Gantt window.
-  $(document).on('click', '#gantt-win-close', function(){ win.classList.remove('gn-open'); });
+  // Close with the owner window.
+  $(document).on('click', '#' + cfg.ownerClose, function(){ win.classList.remove('gn-open'); });
   // Drag by the header (mouse and touch).
   var drag = null;
   window.bindDragTouch(hdr, 'mousedown', function(e){
-    if (e.target.id === 'gn-close') return;
+    if ($(e.target).closest('.gn-close').length) return;
     var r = win.getBoundingClientRect(); drag = { sx:e.clientX, sy:e.clientY, ox:r.left, oy:r.top };
     win.style.right = 'auto'; win.style.left = r.left + 'px'; e.preventDefault();
   });
@@ -5735,7 +5749,9 @@ $(document).on('click', '#gantt-win-min', function(e){
     win.style.top = Math.max(0, Math.min(drag.oy + e.clientY - drag.sy, window.innerHeight - 40)) + 'px';
   }, { passive:false });
   window.bindDragTouch(document, 'mouseup', function(){ drag = null; });
-})();
+}
+gnSetup({ win:'gn-win', btn:'gn-btn', kind:'gantt', owner:'gantt-win', ownerClose:'gantt-win-close', projName:'gantt-win-proj-name', label:'Note' });
+gnSetup({ win:'en-win', btn:'en-btn', kind:'estimate', owner:'estreport-win', ownerClose:'estreport-win-close', projName:'estreport-win-proj-name', label:'Estimate note' });
 </script>
 
 <script>

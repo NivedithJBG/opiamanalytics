@@ -5007,11 +5007,17 @@ class ProjectsmainController extends Controller
     }
 
     // Archive / restore a message or an alert from the Notifications window.
-    // ── Gantt notes: the user's own notes for the selected project (strips in the
-    // Gantt window's Notes popup). Ticking a note marks it done (hidden, kept).
+    // ── Gantt / Estimate notes: the user's own notes for the selected project (strips in
+    // the Notes popup of the Gantt window or the Project Estimate window, each with its
+    // own notes: kind=estimate uses estimate_notes). Ticking a note marks it done (hidden, kept).
+    private static function _gnTable()
+    {
+        return (($_POST['kind'] ?? '') === 'estimate') ? 'estimate_notes' : 'gantt_notes';
+    }
+
     private static function _gnEnsure()
     {
-        Yii::$app->db->createCommand("CREATE TABLE IF NOT EXISTS gantt_notes (
+        Yii::$app->db->createCommand("CREATE TABLE IF NOT EXISTS " . self::_gnTable() . " (
             id INT AUTO_INCREMENT PRIMARY KEY, project_id INT NOT NULL, user_id INT NOT NULL,
             note_text TEXT NOT NULL, done TINYINT NOT NULL DEFAULT 0,
             created_at DATETIME NOT NULL, done_at DATETIME NULL,
@@ -5025,7 +5031,7 @@ class ProjectsmainController extends Controller
         if (!$pid) return ['error' => 'Yes', 'errortext' => 'No project selected.'];
         self::_gnEnsure();
         $rows = Yii::$app->db->createCommand(
-            "SELECT id, note_text AS text, created_at FROM gantt_notes
+            "SELECT id, note_text AS text, created_at FROM " . self::_gnTable() . "
              WHERE project_id = :p AND user_id = :u AND done = 0 ORDER BY id DESC",
             [':p' => $pid, ':u' => (int)Yii::$app->user->Id])->queryAll();
         return ['error' => 'No', 'notes' => $rows];
@@ -5040,7 +5046,7 @@ class ProjectsmainController extends Controller
         if ($text === '') return ['error' => 'Yes', 'errortext' => 'Please write the note.'];
         self::_gnEnsure();
         $db = Yii::$app->db;
-        $db->createCommand()->insert('gantt_notes', ['project_id' => $pid, 'user_id' => (int)Yii::$app->user->Id,
+        $db->createCommand()->insert(self::_gnTable(), ['project_id' => $pid, 'user_id' => (int)Yii::$app->user->Id,
             'note_text' => $text, 'done' => 0, 'created_at' => date('Y-m-d H:i:s')])->execute();
         return ['error' => 'No', 'id' => (int)$db->getLastInsertID()];
     }
@@ -5050,7 +5056,8 @@ class ProjectsmainController extends Controller
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $text = trim((string)($_POST['text'] ?? ''));
         if ($text === '') return ['error' => 'Yes', 'errortext' => 'Please write the note.'];
-        Yii::$app->db->createCommand()->update('gantt_notes', ['note_text' => $text],
+        self::_gnEnsure();
+        Yii::$app->db->createCommand()->update(self::_gnTable(), ['note_text' => $text],
             ['id' => (int)($_POST['id'] ?? 0), 'user_id' => (int)Yii::$app->user->Id])->execute();
         return ['error' => 'No'];
     }
@@ -5058,7 +5065,8 @@ class ProjectsmainController extends Controller
     public function actionGanttnotedone()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        Yii::$app->db->createCommand()->update('gantt_notes', ['done' => 1, 'done_at' => date('Y-m-d H:i:s')],
+        self::_gnEnsure();
+        Yii::$app->db->createCommand()->update(self::_gnTable(), ['done' => 1, 'done_at' => date('Y-m-d H:i:s')],
             ['id' => (int)($_POST['id'] ?? 0), 'user_id' => (int)Yii::$app->user->Id])->execute();
         return ['error' => 'No'];
     }
