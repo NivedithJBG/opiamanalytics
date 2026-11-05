@@ -4819,6 +4819,7 @@ class ProjectsmainController extends Controller
         }
         // New messages and alerts are pushed to phones (first refresh that sees them).
         try { self::cfPushNewItems(); } catch (\Throwable $e) { Yii::warning('Message/alert push failed: ' . $e->getMessage()); }
+        try { self::cfPushSnoozedNotes(); } catch (\Throwable $e) { Yii::warning('Snoozed note push failed: ' . $e->getMessage()); }
         // archived = 1 when the item has been archived from the window.
         $messages = $db->createCommand(
             "SELECT id, title, message AS text, message_read AS archived FROM messages
@@ -5014,8 +5015,21 @@ class ProjectsmainController extends Controller
         } elseif ($kind === 'ap') {
             $db->createCommand()->update('action_plans', ['status' => $do === 'done' ? 1 : 0, 'updated_at' => date('Y-m-d H:i:s')], ['id' => $id])->execute();
         } elseif ($kind === 'gn' || $kind === 'en') {
-            $db->createCommand()->update($kind === 'en' ? 'estimate_notes' : 'gantt_notes',
-                ['done' => $do === 'done' ? 1 : 0, 'done_at' => $do === 'done' ? date('Y-m-d H:i:s') : null], ['id' => $id, 'user_id' => $uid])->execute();
+            $tb = $kind === 'en' ? 'estimate_notes' : 'gantt_notes';
+            if ($do === 'done') {
+                $db->createCommand()->update($tb, ['done' => 1, 'done_at' => date('Y-m-d H:i:s'), 'snooze_until' => null], ['id' => $id, 'user_id' => $uid])->execute();
+            } elseif ($do === 'snooze') {
+                // 1h = one hour from now; tomorrow = 9 AM IST tomorrow; 3d = 9 AM IST in 3 days.
+                $ist = new \DateTimeZone('Asia/Kolkata'); $at = new \DateTime('now', $ist);
+                $for = (string)($_POST['for'] ?? '1h');
+                if ($for === 'tomorrow') $at->modify('+1 day')->setTime(9, 0);
+                elseif ($for === '3d') $at->modify('+3 days')->setTime(9, 0);
+                else $at->modify('+1 hour');
+                $label = $at->format('j M, g:i A');
+                $at->setTimezone(new \DateTimeZone(date_default_timezone_get()));
+                $db->createCommand()->update($tb, ['done' => 0, 'snooze_until' => $at->format('Y-m-d H:i:s')], ['id' => $id, 'user_id' => $uid])->execute();
+                return ['error' => 'No', 'until' => $label];
+            }
         }
         return ['error' => 'No'];
     }
@@ -5032,7 +5046,7 @@ class ProjectsmainController extends Controller
         if ($kind === 'gn' || $kind === 'en') {
             $_POST['kind'] = $kind === 'en' ? 'estimate' : 'gantt'; self::_gnEnsure();
             return $db->createCommand(
-                "SELECT n.id, n.note_text AS text, n.done AS status, n.created_at, p.Name AS project
+                "SELECT n.id, n.note_text AS text, n.done AS status, n.created_at, n.snooze_until, p.Name AS project
                  FROM " . self::_gnTable() . " n LEFT JOIN projects p ON p.Project_Id = n.project_id
                  WHERE n.id = :i AND n.user_id = :u", [':i' => $id, ':u' => $uid])->queryOne() ?: null;
         }
@@ -5060,6 +5074,49 @@ class ProjectsmainController extends Controller
             note_text TEXT NOT NULL, done TINYINT NOT NULL DEFAULT 0,
             created_at DATETIME NOT NULL, done_at DATETIME NULL,
             KEY idx_proj_user (project_id, user_id, done)) DEFAULT CHARSET=utf8mb4")->execute();
+        // Snooze (phone note page): the note stays pending and is sent to the phone again at snooze_until.
+        static $cols = [];
+        $tb = self::_gnTable();
+        if (!isset($cols[$tb])) {
+            $db = Yii::$app->db;
+            if (!$db->createCommand("SHOW COLUMNS FROM $tb LIKE 'snooze_until'")->queryOne())
+                $db->createCommand("ALTER TABLE $tb ADD COLUMN snooze_until DATETIME NULL")->execute();
+            $cols[$tb] = true;
+        }
+    }
+
+    // Push one note to its owner's phone(s), as on the action plan notification.
+    private static function _gnPush($k, $id, $uid, $title = null)
+    {
+        $_POST['kind'] = $k === 'en' ? 'estimate' : 'gantt';
+        $n = Yii::$app->db->createCommand(
+            "SELECT n.id, n.note_text, p.Name AS project_name FROM " . self::_gnTable() . " n
+             LEFT JOIN projects p ON p.Project_Id = n.project_id WHERE n.id = :i AND n.user_id = :u", [':i' => $id, ':u' => $uid])->queryOne();
+        if (!$n) return -1;
+        return \app\components\WebPush::sendToUser($uid, [
+            'title' => $title ?: ($k === 'en' ? 'Estimate note' : 'Gantt note'),
+            'body' => ($n['project_name'] ? $n['project_name'] . ' — ' : '') . mb_substr($n['note_text'], 0, 1000),
+            'tag' => 'opiam-' . $k . '-' . $id, 'url' => '/projectsmain/notifview?k=' . $k . '&id=' . $id . '&u=' . $uid . '&t=' . self::nvToken($k, $id, $uid), 'badge' => self::_apDueCount($uid),
+        ]);
+    }
+
+    // Sends every snoozed note whose snooze time has come to its owner's phone again.
+    // Runs from the 2-minute notification refresh and the cron job.
+    public static function cfPushSnoozedNotes()
+    {
+        $n = 0; $now = date('Y-m-d H:i:s');
+        foreach (['gn' => 'gantt', 'en' => 'estimate'] as $k => $kind) {
+            $_POST['kind'] = $kind; self::_gnEnsure();
+            $tb = self::_gnTable();
+            $rows = Yii::$app->db->createCommand("SELECT id, user_id FROM $tb WHERE done = 0 AND snooze_until IS NOT NULL AND snooze_until <= :n", [':n' => $now])->queryAll();
+            foreach ($rows as $row) {
+                // Cleared first, so a slow push is never sent twice.
+                Yii::$app->db->createCommand()->update($tb, ['snooze_until' => null], ['id' => $row['id']])->execute();
+                $s = self::_gnPush($k, (int)$row['id'], (int)$row['user_id'], ($k === 'en' ? 'Estimate note' : 'Gantt note') . ' · reminder');
+                if ($s > 0) $n += $s;
+            }
+        }
+        return $n;
     }
 
     public function actionGanttnotes()
@@ -5113,18 +5170,9 @@ class ProjectsmainController extends Controller
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         self::_gnEnsure();
-        $db = Yii::$app->db; $uid = (int)Yii::$app->user->Id; $id = (int)($_POST['id'] ?? 0);
-        $est = self::_gnTable() === 'estimate_notes';
-        $n = $db->createCommand(
-            "SELECT n.id, n.note_text, p.Name AS project_name FROM " . self::_gnTable() . " n
-             LEFT JOIN projects p ON p.Project_Id = n.project_id WHERE n.id = :i AND n.user_id = :u", [':i' => $id, ':u' => $uid])->queryOne();
-        if (!$n) return ['error' => 'Yes', 'errortext' => 'This note no longer exists.'];
-        $k = $est ? 'en' : 'gn';
-        $sent = \app\components\WebPush::sendToUser($uid, [
-            'title' => $est ? 'Estimate note' : 'Gantt note',
-            'body' => ($n['project_name'] ? $n['project_name'] . ' — ' : '') . mb_substr($n['note_text'], 0, 1000),
-            'tag' => 'opiam-' . $k . '-' . $id, 'url' => '/projectsmain/notifview?k=' . $k . '&id=' . $id . '&u=' . $uid . '&t=' . self::nvToken($k, $id, $uid), 'badge' => self::_apDueCount($uid),
-        ]);
+        $uid = (int)Yii::$app->user->Id; $id = (int)($_POST['id'] ?? 0);
+        $sent = self::_gnPush(self::_gnTable() === 'estimate_notes' ? 'en' : 'gn', $id, $uid);
+        if ($sent < 0) return ['error' => 'Yes', 'errortext' => 'This note no longer exists.'];
         if (!$sent) return ['error' => 'Yes', 'errortext' => 'No phone has notifications turned on for you. On your phone, open Opiam > Notifications and tap the bell (+) to turn them on.'];
         return ['error' => 'No', 'sent' => $sent];
     }

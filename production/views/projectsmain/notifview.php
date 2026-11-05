@@ -10,7 +10,7 @@ $homeUrl = $url->createUrl(['/projectsmain/index', 'notif' => 1]);
 $today = (new DateTime('now', new DateTimeZone('Asia/Kolkata')))->format('Y-m-d');
 
 $label = ['msg' => 'Message', 'alert' => 'Alert', 'ap' => 'Action plan', 'gn' => 'Gantt note', 'en' => 'Estimate note'][$kind] ?? 'Notification';
-$title = ''; $meta = []; $done = false; $overdue = false;
+$title = ''; $meta = []; $done = false; $overdue = false; $snoozed = '';
 if ($item) {
     if ($kind === 'msg') { $title = $item['title'] ?: $item['sender']; if ($item['sender']) $meta[] = 'From ' . $item['sender']; $done = (int)$item['archived'] === 1; }
     if ($kind === 'alert') { $title = $item['title']; if ($item['project']) $meta[] = $item['project']; $done = (int)$item['archived'] === 1; }
@@ -27,6 +27,10 @@ if ($item) {
         if ($item['project']) $meta[] = $item['project'];
         if ($item['created_at']) $meta[] = 'Written ' . date('j M Y', strtotime($item['created_at']));
         $done = (int)$item['status'] === 1;
+        if (!$done && !empty($item['snooze_until'])) {
+            $sz = new DateTime($item['snooze_until']); $sz->setTimezone(new DateTimeZone('Asia/Kolkata'));
+            $snoozed = 'Snoozed till ' . $sz->format('j M, g:i A');
+        }
     }
 }
 $dot = $done ? '#9aa3b2' : ($overdue ? '#d84a30' : '#2ba899');
@@ -64,7 +68,7 @@ $dot = $done ? '#9aa3b2' : ($overdue ? '#d84a30' : '#2ba899');
 <body>
 <div class="card">
   <div class="hdr"><img src="/icons/opiam-192.png" alt=""><span class="k"><?= $h($label) ?></span>
-    <span class="st"><i></i><span id="st"><?= $done ? (in_array($kind, ['ap', 'gn', 'en']) ? 'Done' : 'Archived') : ($overdue ? 'Overdue' : 'Pending') ?></span></span></div>
+    <span class="st"><i></i><span id="st"><?= $done ? (in_array($kind, ['ap', 'gn', 'en']) ? 'Done' : 'Archived') : ($snoozed ?: ($overdue ? 'Overdue' : 'Pending')) ?></span></span></div>
 <?php if (!$item): ?>
   <div class="body"><h1>Not found</h1><div class="text">This item has been deleted or is not addressed to you.</div></div>
   <div class="btns"><a class="btn pri" href="<?= $h($homeUrl) ?>">Open Opiam</a></div>
@@ -75,7 +79,17 @@ $dot = $done ? '#9aa3b2' : ($overdue ? '#d84a30' : '#2ba899');
     <div class="text"><?= $h($kind === 'msg' ? strip_tags((string)$item['text']) : $item['text']) ?></div>
   </div>
   <div class="btns" id="btns">
-<?php if (in_array($kind, ['ap', 'gn', 'en'])): ?>
+<?php if ($kind === 'gn' || $kind === 'en'): ?>
+<?php if (!$done): ?>
+    <button type="button" class="pri" data-do="done">&#10003; Done</button>
+    <button type="button" data-do="snoozemenu">&#128164; Snooze</button>
+    <div id="sz" style="display:none;flex-basis:100%;gap:8px;flex-wrap:wrap;">
+      <button type="button" data-do="snooze" data-for="1h">1 hour</button>
+      <button type="button" data-do="snooze" data-for="tomorrow">Tomorrow 9 AM</button>
+      <button type="button" data-do="snooze" data-for="3d">In 3 days</button>
+    </div>
+<?php endif; ?>
+<?php elseif ($kind === 'ap'): ?>
     <button type="button" data-do="<?= $done ? 'open' : 'done' ?>"><?= $done ? '&#8634; Reopen' : '&#10003; Done' ?></button>
 <?php else: ?>
     <button type="button" data-do="<?= $done ? 'restore' : 'archive' ?>"><?= $done ? '&#8634; Restore' : 'Archive' ?></button>
@@ -91,9 +105,27 @@ $dot = $done ? '#9aa3b2' : ($overdue ? '#d84a30' : '#2ba899');
   var btns = document.getElementById('btns'); if (!btns) return;
   var kind = <?= json_encode($kind) ?>, id = <?= (int)($item['id'] ?? 0) ?>;
   var labels = { archive:['restore','&#8634; Restore','Archived'], restore:['archive','Archive','Pending'], done:['open','&#8634; Reopen','Done'], open:['done','&#10003; Done','Pending'] };
+  // Notes: Done = over, the note leaves the Notes list; Snooze = stays pending and comes back to the phone later.
+  function noteAct(b, act){
+    b.disabled = true;
+    var fd = new FormData(); fd.append('k', kind); fd.append('id', id); fd.append('do', act);
+    if (act === 'snooze') fd.append('for', b.getAttribute('data-for'));
+    var tok = <?= json_encode($tok ?? null) ?>; if (tok) { fd.append('u', tok.u); fd.append('t', tok.t); }
+    fetch(<?= json_encode($actUrl) ?>, { method:'POST', body:fd, credentials:'same-origin' }).then(function(r){ return r.json(); }).then(function(d){
+      b.disabled = false;
+      if (d.error !== 'No') { document.getElementById('msg').textContent = d.errortext || 'Could not save.'; return; }
+      btns.querySelectorAll('button').forEach(function(x){ x.remove(); });
+      var c = act === 'done' ? '#9aa3b2' : '#e0a100';
+      document.getElementById('st').textContent = act === 'done' ? 'Done' : 'Snoozed till ' + d.until;
+      document.getElementById('msg').textContent = act === 'done' ? 'Done. The note is removed from your Notes.' : 'Snoozed. You will get it again on ' + d.until + '.';
+      document.querySelector('.card').style.borderLeftColor = c; document.querySelector('.hdr .st i').style.background = c;
+    }).catch(function(){ b.disabled = false; document.getElementById('msg').textContent = 'No connection. Try again.'; });
+  }
   btns.addEventListener('click', function(e){
     var b = e.target.closest('button'); if (!b) return;
     var act = b.getAttribute('data-do');
+    if (act === 'snoozemenu') { document.getElementById('sz').style.display = 'flex'; return; }
+    if (kind === 'gn' || kind === 'en') return noteAct(b, act);
     if (act === 'delete' && !confirm('Delete this ' + (kind === 'msg' ? 'message' : 'alert') + '?')) return;
     b.disabled = true;
     var fd = new FormData(); fd.append('k', kind); fd.append('id', id); fd.append('do', act);
