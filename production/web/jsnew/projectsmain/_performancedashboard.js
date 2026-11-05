@@ -1554,7 +1554,7 @@ function _cfNetInvCycleBarsHtml(cyc){
             var a = +c.actual || 0, hA = hOf(a);
             // Same width as the target bar: the part above the target (exceeded) green-blue,
             // the part of the target not reached (short) red-orange.
-            var tip = 'Actual Total Investment ' + L(a) + ' L (WIP ' + L(+c.actual_wip || 0) + ' + Advances ' + L(+c.actual_adv || 0) + '), target ' + L(v) + ' L';
+            var tip = 'Actual Total Investment ' + L(a) + ' L (WIP ' + L(+c.actual_wip || 0) + ' + Advances ' + L(+c.actual_adv || 0) + ' + Bills Receivable at cost ' + L(+c.actual_br_cost || 0) + '), target ' + L(v) + ' L';
             if (hA > h) bars += '<rect x="' + (cx - barW / 2).toFixed(1) + '" y="' + (base - hA) + '" width="' + barW.toFixed(1) + '" height="' + (hA - h) + '" fill="' + GB + '"><title>' + tip + '</title></rect>';
             else if (h > hA) bars += '<rect x="' + (cx - barW / 2).toFixed(1) + '" y="' + (base - h) + '" width="' + barW.toFixed(1) + '" height="' + (h - hA) + '" fill="' + RO + '"><title>' + tip + '</title></rect>';
             // Actual value at the top of the actual: above the bar when exceeded,

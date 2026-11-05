@@ -2886,7 +2886,8 @@ class ProjectsmainController extends Controller
     //  - WIP = expense heads (type 8) + supplier work done, counted from the latest
     //    bill date (the cost up to each bill date is cleared when the bill is
     //    raised), less any non-client money received.
-    //  - Total Investment = Advances and Deposits + WIP (Bills Receivable is not added).
+    //  - Total Investment = Advances and Deposits + WIP + Bills Receivable at cost (the WIP
+    //    actually moved to Bills Receivable by bills not yet paid; see below).
     //  - Bills Receivable = balance of the "Bills Receivable" head (0 if credit).
     // $uptoDate (Y-m-d) limits every balance to that date; null = today.
     private function _cfFlowGroups($pid, $uptoDate = null, $costOnly = false)
@@ -2962,9 +2963,30 @@ class ProjectsmainController extends Controller
         // Refunds from suppliers / sub-contractors reduce WIP (refunds on expense accounts
         // already net off in wip_cost); loans, capital and advances received do not.
         $g['wip'] = $g['wip_cost'] - $costAtBill - $g['refunds'];
-        // Total Investment = Advances and Deposits + current WIP (agreed 2026-10-24).
-        // Bills Receivable is left out: it is billed money, not money invested.
-        $g['ti'] = $g['adv'] + $g['wip'];
+        // Bills Receivable at cost (agreed 2026-11-05): only the amount actually moved from
+        // WIP to Bills Receivable, i.e. the cost cleared from WIP at each bill (cost spent
+        // between the previous bill and this one), for the part of the bill not yet paid.
+        // Client payments settle the oldest bills first. Margin and GST in the bill amount
+        // are not investment, so they are not counted.
+        $g['br_cost'] = 0.0;
+        if ($brIds) {
+            $bills = $db->createCommand(
+                "SELECT date(date) d, SUM(amount) amt FROM journalvoucher WHERE project_id=:p AND debitacnt IN ($in)" . $dc . " GROUP BY date(date) ORDER BY d",
+                [':p' => $pid])->queryAll();
+            $paid = max(0.0, $billed - max(0.0, $br));   // bill amount already settled
+            $prevCost = 0.0;
+            foreach ($bills as $bl) {
+                $costNow = $this->_cfFlowGroups($pid, $bl['d'], true)['wip_cost'];
+                $moved = max(0.0, $costNow - $prevCost);
+                $prevCost = $costNow;
+                $amt = (float)$bl['amt'];
+                $settle = min($amt, $paid); $paid -= $settle;
+                // Never more than the client still owes on the bill (a bill raised below cost).
+                if ($amt > 0) $g['br_cost'] += min($amt - $settle, $moved * ($amt - $settle) / $amt);
+            }
+        }
+        // Total Investment = Advances and Deposits + current WIP + Bills Receivable at cost.
+        $g['ti'] = $g['adv'] + $g['wip'] + $g['br_cost'];
         $g['br']  = max(0, $br);
         return $g;
     }
@@ -3513,7 +3535,7 @@ class ProjectsmainController extends Controller
                          'end_label' => $c['end_label'] ?? '', 'current' => $k === $cur,
                          'actual' => $g ? round($g['ti'], 2) : null,
                          'actual_adv' => $g ? round($g['adv'], 2) : null, 'actual_wip' => $g ? round($g['wip'], 2) : null,
-                         'actual_br' => $g ? round($g['br'], 2) : null];
+                         'actual_br' => $g ? round($g['br'], 2) : null, 'actual_br_cost' => $g ? round($g['br_cost'], 2) : null];
         }
         $avg = $this->_cfAverageInvestment($pid);
         // How today's Total Investment is funded: the bank overdraft, cash received
