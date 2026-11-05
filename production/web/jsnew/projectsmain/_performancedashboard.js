@@ -378,9 +378,21 @@ function _cfBuildC2cDiagram(){
     body.style.display = 'block';
     body.style.paddingTop = '0';
     body.appendChild(dia);
+    // The four boxes on the ring (Bank, Bills Receivable, Advances & Deposits, Work in
+    // Progress) keep the same height, whatever lines each one shows (same width: equal columns).
+    if (window.ResizeObserver) {
+        var ring = ['c2c-bank', 'c2c-br', 'c2c-adv', 'c2c-wip'].map(function(c){ return dia.querySelector('.' + c); }).filter(Boolean);
+        var eq = function(){
+            ring.forEach(function(n){ n.style.minHeight = ''; });
+            var h = Math.max.apply(null, ring.map(function(n){ return n.offsetHeight; })) + 'px';
+            ring.forEach(function(n){ n.style.minHeight = h; });
+        };
+        var ro = new ResizeObserver(eq);
+        ring.forEach(function(n){ ro.observe(n); });
+    }
     if (!document.getElementById('c2c-dia-css')) {
         $('head').append('<style id="c2c-dia-css">'
-            + '.c2c-dia{position:relative;display:grid;grid-template-columns:1fr 1.15fr 1fr;grid-template-rows:1fr 1fr 1fr;gap:10px 10px;padding:12px 12px 8px;height:100%;box-sizing:border-box;font-family:Barlow Condensed,Arial;}'
+            + '.c2c-dia{position:relative;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;gap:10px 10px;padding:12px 12px 8px;height:100%;box-sizing:border-box;font-family:Barlow Condensed,Arial;}'
             + '.c2c-ring{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}'
             + '.c2c-node{position:relative;z-index:1;align-self:center;background:#fff;border:2px solid #081142;border-radius:8px;text-align:center;padding:5px 6px 6px;box-shadow:0 2px 8px rgba(8,17,66,.12);overflow:hidden;}'
             + '.c2c-node::before{content:"";position:absolute;top:0;bottom:0;left:calc(50% - 1px);width:2px;background:#fbe9a6;}'
