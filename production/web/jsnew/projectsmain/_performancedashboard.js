@@ -393,7 +393,7 @@ function _cfBuildC2cDiagram(){
             + '.c2c-node .gp > div[style*="space-between"] > span:first-child{font-size:12px !important;}'
             + '.c2c-node .gp > div[style*="space-between"] > span:first-child > span:last-child{display:block;font-size:26px !important;line-height:1.05;}'
             + '.c2c-bank{grid-area:1/2;} .c2c-adv{grid-area:2/3;} .c2c-wip{grid-area:3/2;} .c2c-br{grid-area:2/1;}'
-            + '.c2c-ti{grid-area:3/1;align-self:end;background:transparent;border:none;box-shadow:none;} .c2c-ti::before{display:none;}'
+            + '.c2c-ti{grid-area:1/1;align-self:start;background:transparent;border:none;box-shadow:none;} .c2c-ti::before{display:none;}'
             + '.c2c-mid{grid-area:2/2;background:transparent;border:none;box-shadow:none;} .c2c-mid::before{display:none;}'
             + '.c2c-mid .gp > div[style*="space-between"] > span:first-child{font-size:24px !important;line-height:1.1;color:#081142 !important;}'
             + '.c2c-midlbl{font:700 13px Nunito,Arial,sans-serif;color:#081142;}'
