@@ -87,6 +87,13 @@ class ProjectsmainController extends Controller
                         'roles' => ['?'],
                     ],
                     [
+                        // A note's phone notification opens without login through its signed link
+                        // (checked in the action; anything else still needs login).
+                        'allow' => true,
+                        'actions' => ['notifview', 'notifviewact'],
+                        'roles' => ['?'],
+                    ],
+                    [
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -4961,11 +4968,31 @@ class ProjectsmainController extends Controller
 
     // Light page a phone notification opens: one message / alert / action plan
     // as a card (views/projectsmain/notifview.php), without loading the dashboard.
+    // Signed link for a note's phone notification: opens that one note (and its
+    // Done button) without login. Bound to the note kind, id and its owner.
+    public static function nvToken($kind, $id, $uid)
+    {
+        return substr(hash_hmac('sha256', 'nv|' . $kind . '|' . (int)$id . '|' . (int)$uid, Yii::$app->request->cookieValidationKey), 0, 32);
+    }
+
+    // The user the notification page acts for: the logged-in user, else the owner
+    // named in a valid signed note link; null = needs login.
+    private static function _nvUser($kind, $id, $src)
+    {
+        if (!Yii::$app->user->isGuest) return (int)Yii::$app->user->Id;
+        $u = (int)($src['u'] ?? 0); $t = (string)($src['t'] ?? '');
+        if (in_array($kind, ['gn', 'en'], true) && $u && $t !== '' && hash_equals(self::nvToken($kind, $id, $u), $t)) return $u;
+        return null;
+    }
+
     public function actionNotifview()
     {
-        $kind = (string)($_GET['k'] ?? '');
-        $item = self::_notifItem($kind, (int)($_GET['id'] ?? 0), (int)Yii::$app->user->Id);
-        return $this->renderPartial('notifview', ['kind' => $kind, 'item' => $item]);
+        $kind = (string)($_GET['k'] ?? ''); $id = (int)($_GET['id'] ?? 0);
+        $uid = self::_nvUser($kind, $id, $_GET);
+        if ($uid === null) return Yii::$app->user->loginRequired();
+        $item = self::_notifItem($kind, $id, $uid);
+        $tok = Yii::$app->user->isGuest ? ['u' => $uid, 't' => (string)$_GET['t']] : null;
+        return $this->renderPartial('notifview', ['kind' => $kind, 'item' => $item, 'tok' => $tok]);
     }
 
     // Buttons on the notification page: archive / restore / delete a message or
@@ -4974,7 +5001,8 @@ class ProjectsmainController extends Controller
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $kind = (string)($_POST['k'] ?? ''); $id = (int)($_POST['id'] ?? 0); $do = (string)($_POST['do'] ?? '');
-        $uid = (int)Yii::$app->user->Id;
+        $uid = self::_nvUser($kind, $id, $_POST);
+        if ($uid === null) return ['error' => 'Yes', 'errortext' => 'Please log in to Opiam.'];
         if (!self::_notifItem($kind, $id, $uid)) return ['error' => 'Yes', 'errortext' => 'This item no longer exists.'];
         $db = Yii::$app->db;
         if ($kind === 'msg') {
@@ -5095,7 +5123,7 @@ class ProjectsmainController extends Controller
         $sent = \app\components\WebPush::sendToUser($uid, [
             'title' => $est ? 'Estimate note' : 'Gantt note',
             'body' => ($n['project_name'] ? $n['project_name'] . ' — ' : '') . mb_substr($n['note_text'], 0, 1000),
-            'tag' => 'opiam-' . $k . '-' . $id, 'url' => '/projectsmain/notifview?k=' . $k . '&id=' . $id, 'badge' => self::_apDueCount($uid),
+            'tag' => 'opiam-' . $k . '-' . $id, 'url' => '/projectsmain/notifview?k=' . $k . '&id=' . $id . '&u=' . $uid . '&t=' . self::nvToken($k, $id, $uid), 'badge' => self::_apDueCount($uid),
         ]);
         if (!$sent) return ['error' => 'Yes', 'errortext' => 'No phone has notifications turned on for you. On your phone, open Opiam > Notifications and tap the bell (+) to turn them on.'];
         return ['error' => 'No', 'sent' => $sent];

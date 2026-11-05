@@ -97,6 +97,7 @@ $dot = $done ? '#9aa3b2' : ($overdue ? '#d84a30' : '#2ba899');
     if (act === 'delete' && !confirm('Delete this ' + (kind === 'msg' ? 'message' : 'alert') + '?')) return;
     b.disabled = true;
     var fd = new FormData(); fd.append('k', kind); fd.append('id', id); fd.append('do', act);
+    var tok = <?= json_encode($tok ?? null) ?>; if (tok) { fd.append('u', tok.u); fd.append('t', tok.t); }
     fetch(<?= json_encode($actUrl) ?>, { method:'POST', body:fd, credentials:'same-origin' }).then(function(r){ return r.json(); }).then(function(d){
       b.disabled = false;
       if (d.error !== 'No') { document.getElementById('msg').textContent = d.errortext || 'Could not save.'; return; }
