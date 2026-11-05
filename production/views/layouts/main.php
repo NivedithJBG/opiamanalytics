@@ -5609,7 +5609,7 @@ $(document).on('click', '#gantt-win-min', function(e){
      Gantt or the Project Estimate (draggable, resizable). Each window has its own
      notes. Each note is a strip; the tick removes it. -->
 <div id="gn-win" class="gn-win">
-  <div class="gn-hdr"><span>Notes</span><button type="button" class="gn-close" title="Close">&times;</button></div>
+  <div class="gn-hdr"><span>Notes</span><span class="gn-hdr-r"><button type="button" class="gn-sendall" title="Send all notes to my phone">&#128276; Send all</button><button type="button" class="gn-close" title="Close">&times;</button></span></div>
   <div class="gn-form">
     <textarea class="gn-text" rows="2" placeholder="Write a note&hellip;"></textarea>
     <button type="button" class="gn-add">Add</button>
@@ -5617,7 +5617,7 @@ $(document).on('click', '#gantt-win-min', function(e){
   <div class="gn-list"></div>
 </div>
 <div id="en-win" class="gn-win">
-  <div class="gn-hdr"><span>Estimate Notes</span><button type="button" class="gn-close" title="Close">&times;</button></div>
+  <div class="gn-hdr"><span>Estimate Notes</span><span class="gn-hdr-r"><button type="button" class="gn-sendall" title="Send all notes to my phone">&#128276; Send all</button><button type="button" class="gn-close" title="Close">&times;</button></span></div>
   <div class="gn-form">
     <textarea class="gn-text" rows="2" placeholder="Write a note&hellip;"></textarea>
     <button type="button" class="gn-add">Add</button>
@@ -5635,6 +5635,9 @@ $(document).on('click', '#gantt-win-min', function(e){
 .gn-hdr { flex:none; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg,#37475a,#26313f); color:#fff;
   padding:8px 12px; font-weight:700; font-size:14px; cursor:move; user-select:none; touch-action:none; }
 .gn-close { background:none; border:none; color:#fff; font-size:20px; line-height:1; cursor:pointer; }
+.gn-hdr-r { display:flex; align-items:center; gap:8px; }
+.gn-sendall { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.45); color:#fff; border-radius:12px; padding:2px 10px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap; }
+.gn-sendall:hover { background:rgba(255,255,255,.25); }
 .gn-form { flex:none; display:flex; gap:6px; padding:8px 10px; border-bottom:1px solid #e3e7ee; }
 .gn-text { flex:1; resize:none; min-height:40px; max-height:220px; overflow-y:auto; border:1px solid #bcc6d4; border-radius:5px; padding:5px 7px; font:inherit; font-size:13px; }
 .gn-add { flex:none; border:none; background:#0f5c52; color:#fff; border-radius:5px; padding:0 14px; font-weight:700; cursor:pointer; }
@@ -5713,6 +5716,22 @@ function gnSetup(cfg){
     var w = 520, h = Math.min(760, screen.availHeight - 80);
     window.open('https://web.whatsapp.com/send?text=' + encodeURIComponent(msg), 'opiam_whatsapp', 'width=' + w + ',height=' + h + ',left=' + (screen.availWidth - w - 20) + ',top=40');
   });
+  function toast(t){
+    $('<div>').text(t).css({ position:'fixed', left:'50%', top:'30%', transform:'translate(-50%,-50%)', background:'#0f5c52', color:'#fff', padding:'12px 22px', borderRadius:'8px', fontSize:'15px', fontWeight:700, zIndex:300000, boxShadow:'0 8px 24px rgba(0,0,0,.3)' })
+      .appendTo('body').delay(1800).fadeOut(400, function(){ $(this).remove(); });
+  }
+  // Send all open notes of this window to the phone at once (one notification each).
+  $w.on('click', '.gn-sendall', function(){
+    var n = $list.find('.gn-strip').length;
+    if (!n) { alert('There are no notes to send.'); return; }
+    if (!confirm('Send all ' + n + ' note' + (n > 1 ? 's' : '') + ' to your phone?')) return;
+    var b = $(this).prop('disabled', true);
+    post('ganttnotesendall', {}, {
+      success:function(d){ b.prop('disabled', false);
+        if (!d || d.error !== 'No') { alert((d && d.errortext) || 'Could not send.'); return; }
+        toast(d.notes + ' note' + (d.notes > 1 ? 's' : '') + ' sent to your phone.'); },
+      error:function(){ b.prop('disabled', false); alert('Could not send.'); } });
+  });
   // Send a note to the user's own phone as a notification (same format as an action plan).
   $w.on('click', '.gn-push', function(){
     var b = $(this).prop('disabled', true);
@@ -5750,7 +5769,7 @@ function gnSetup(cfg){
   // Drag by the header (mouse and touch).
   var drag = null;
   window.bindDragTouch(hdr, 'mousedown', function(e){
-    if ($(e.target).closest('.gn-close').length) return;
+    if ($(e.target).closest('.gn-close, .gn-sendall').length) return;
     var r = win.getBoundingClientRect(); drag = { sx:e.clientX, sy:e.clientY, ox:r.left, oy:r.top };
     win.style.right = 'auto'; win.style.left = r.left + 'px'; e.preventDefault();
   });

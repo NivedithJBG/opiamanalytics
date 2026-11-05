@@ -5177,6 +5177,25 @@ class ProjectsmainController extends Controller
         return ['error' => 'No', 'sent' => $sent];
     }
 
+    // Send every open note of this project (this Notes window) to the user's phone,
+    // one notification per note, each with its own Done / Snooze.
+    public function actionGanttnotesendall()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        if (!$pid) return ['error' => 'Yes', 'errortext' => 'No project selected.'];
+        self::_gnEnsure();
+        $uid = (int)Yii::$app->user->Id;
+        $k = self::_gnTable() === 'estimate_notes' ? 'en' : 'gn';
+        $ids = Yii::$app->db->createCommand("SELECT id FROM " . self::_gnTable() . " WHERE project_id = :p AND user_id = :u AND done = 0 ORDER BY id",
+            [':p' => $pid, ':u' => $uid])->queryColumn();
+        if (!$ids) return ['error' => 'Yes', 'errortext' => 'There are no notes to send.'];
+        $notes = 0;
+        foreach ($ids as $id) { if (self::_gnPush($k, (int)$id, $uid) > 0) $notes++; }
+        if (!$notes) return ['error' => 'Yes', 'errortext' => 'No phone has notifications turned on for you. On your phone, open Opiam > Notifications and tap the bell (+) to turn them on.'];
+        return ['error' => 'No', 'notes' => $notes];
+    }
+
     public function actionNotifarchive()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
