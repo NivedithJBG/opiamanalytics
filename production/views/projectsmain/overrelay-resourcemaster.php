@@ -502,14 +502,16 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
 
   /* Whenever #reslib-win itself is brought to front, re-raise any of its
      sub-popups that are still open so they stay above it. */
-  if(typeof window.registerSubPopupReraise === 'function'){
+  /* Registered once the page has loaded: the focus manager that defines
+     registerSubPopupReraise is further down the page than this script. */
+  $(function(){ if(typeof window.registerSubPopupReraise === 'function'){
     window.registerSubPopupReraise('reslib-win', function(){
       _rlSubIds.forEach(function(id){
         var el = document.getElementById(id);
         if(el && el.classList.contains('rl-sw-open')) el.style.zIndex = _rlNextSwZ();
       });
     });
-  }
+  } });
 
   /* bring sub-popup to front on click */
   ['rlResTypePopup','rlResGroupPopup','rlResourcePopup'].forEach(function(id){

@@ -455,14 +455,16 @@
      Sub-popup open helpers — only rel-live-popup uses these now
   ═══════════════════════════════════════════════════════════════ */
   var _rel2SubIds = ['rel-live-popup'];
-  if(typeof window.registerSubPopupReraise === 'function'){
+  /* Registered once the page has loaded: the focus manager that defines
+     registerSubPopupReraise is further down the page than this script. */
+  $(function(){ if(typeof window.registerSubPopupReraise === 'function'){
     window.registerSubPopupReraise('rel-win', function(){
       _rel2SubIds.forEach(function(id){
         var el = document.getElementById(id);
         if(el && el.classList.contains('rl2-sw-open')) _bringToFront(el);
       });
     });
-  }
+  } });
   function openSub(id){
     var el=document.getElementById(id); el.classList.add('rl2-sw-open'); _bringToFront(el);
     if(typeof window.cascadeSubWindow === 'function') window.cascadeSubWindow(el, 'rel', _rel2SubIds);
