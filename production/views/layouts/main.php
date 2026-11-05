@@ -5724,12 +5724,12 @@ function gnSetup(cfg){
   $w.on('click', '.gn-sendall', function(){
     var n = $list.find('.gn-strip').length;
     if (!n) { alert('There are no notes to send.'); return; }
-    if (!confirm('Send all ' + n + ' note' + (n > 1 ? 's' : '') + ' to your phone?')) return;
+    if (!confirm('Send all ' + n + ' note' + (n > 1 ? 's' : '') + ' to your phone as one notification?')) return;
     var b = $(this).prop('disabled', true);
     post('ganttnotesendall', {}, {
       success:function(d){ b.prop('disabled', false);
         if (!d || d.error !== 'No') { alert((d && d.errortext) || 'Could not send.'); return; }
-        toast(d.notes + ' note' + (d.notes > 1 ? 's' : '') + ' sent to your phone.'); },
+        toast(d.notes + ' note' + (d.notes > 1 ? 's' : '') + ' sent to your phone in one notification.'); },
       error:function(){ b.prop('disabled', false); alert('Could not send.'); } });
   });
   // Send a note to the user's own phone as a notification (same format as an action plan).

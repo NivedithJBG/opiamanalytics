@@ -90,7 +90,7 @@ class ProjectsmainController extends Controller
                         // A note's phone notification opens without login through its signed link
                         // (checked in the action; anything else still needs login).
                         'allow' => true,
-                        'actions' => ['notifview', 'notifviewact'],
+                        'actions' => ['notifview', 'notifviewact', 'notesview'],
                         'roles' => ['?'],
                     ],
                     [
@@ -4986,6 +4986,28 @@ class ProjectsmainController extends Controller
         return null;
     }
 
+    // All open notes of one project as panels (from the "Send all" notification).
+    // Opens without login through its signed link; each panel's Done / Snooze is
+    // signed for that note.
+    public function actionNotesview()
+    {
+        $k = ($_GET['k'] ?? '') === 'en' ? 'en' : 'gn'; $pid = (int)($_GET['p'] ?? 0);
+        if (!Yii::$app->user->isGuest) $uid = (int)Yii::$app->user->Id;
+        else {
+            $u = (int)($_GET['u'] ?? 0); $t = (string)($_GET['t'] ?? '');
+            if (!$u || $t === '' || !hash_equals(self::nvToken($k . 'all', $pid, $u), $t)) return Yii::$app->user->loginRequired();
+            $uid = $u;
+        }
+        $_POST['kind'] = $k === 'en' ? 'estimate' : 'gantt'; self::_gnEnsure();
+        $db = Yii::$app->db;
+        $notes = $db->createCommand("SELECT id, note_text AS text, created_at, snooze_until FROM " . self::_gnTable() . "
+            WHERE project_id = :p AND user_id = :u AND done = 0 ORDER BY id DESC", [':p' => $pid, ':u' => $uid])->queryAll();
+        foreach ($notes as &$n) $n['t'] = self::nvToken($k, $n['id'], $uid);
+        unset($n);
+        $project = (string)$db->createCommand("SELECT Name FROM projects WHERE Project_Id = :p", [':p' => $pid])->queryScalar();
+        return $this->renderPartial('notesview', ['kind' => $k, 'notes' => $notes, 'project' => $project, 'uid' => $uid, 'guest' => Yii::$app->user->isGuest]);
+    }
+
     public function actionNotifview()
     {
         $kind = (string)($_GET['k'] ?? ''); $id = (int)($_GET['id'] ?? 0);
@@ -5177,8 +5199,9 @@ class ProjectsmainController extends Controller
         return ['error' => 'No', 'sent' => $sent];
     }
 
-    // Send every open note of this project (this Notes window) to the user's phone,
-    // one notification per note, each with its own Done / Snooze.
+    // Send every open note of this project (this Notes window) to the user's phone as
+    // ONE notification; tapping it opens all the notes as panels (actionNotesview),
+    // each with its own Done / Snooze.
     public function actionGanttnotesendall()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -5187,12 +5210,23 @@ class ProjectsmainController extends Controller
         self::_gnEnsure();
         $uid = (int)Yii::$app->user->Id;
         $k = self::_gnTable() === 'estimate_notes' ? 'en' : 'gn';
-        $ids = Yii::$app->db->createCommand("SELECT id FROM " . self::_gnTable() . " WHERE project_id = :p AND user_id = :u AND done = 0 ORDER BY id",
+        $db = Yii::$app->db;
+        $rows = $db->createCommand("SELECT note_text FROM " . self::_gnTable() . " WHERE project_id = :p AND user_id = :u AND done = 0 ORDER BY id DESC",
             [':p' => $pid, ':u' => $uid])->queryColumn();
-        if (!$ids) return ['error' => 'Yes', 'errortext' => 'There are no notes to send.'];
-        $notes = 0;
-        foreach ($ids as $id) { if (self::_gnPush($k, (int)$id, $uid) > 0) $notes++; }
-        if (!$notes) return ['error' => 'Yes', 'errortext' => 'No phone has notifications turned on for you. On your phone, open Opiam > Notifications and tap the bell (+) to turn them on.'];
+        if (!$rows) return ['error' => 'Yes', 'errortext' => 'There are no notes to send.'];
+        $notes = count($rows);
+        $pname = (string)$db->createCommand("SELECT Name FROM projects WHERE Project_Id = :p", [':p' => $pid])->queryScalar();
+        $body = ($pname ? $pname . "\n" : '') . implode("\n", array_map(function ($t) {
+            $t = preg_replace('/\s+/', ' ', trim($t)); return '• ' . (mb_strlen($t) > 80 ? mb_substr($t, 0, 79) . '…' : $t); }, array_slice($rows, 0, 8)))
+            . ($notes > 8 ? "\n+ " . ($notes - 8) . ' more' : '');
+        $sent = \app\components\WebPush::sendToUser($uid, [
+            'title' => ($k === 'en' ? 'Estimate notes' : 'Gantt notes') . ' (' . $notes . ')',
+            'body' => $body,
+            'tag' => 'opiam-' . $k . 'all-' . $pid,
+            'url' => '/projectsmain/notesview?k=' . $k . '&p=' . $pid . '&u=' . $uid . '&t=' . self::nvToken($k . 'all', $pid, $uid),
+            'badge' => self::_apDueCount($uid),
+        ]);
+        if (!$sent) return ['error' => 'Yes', 'errortext' => 'No phone has notifications turned on for you. On your phone, open Opiam > Notifications and tap the bell (+) to turn them on.'];
         return ['error' => 'No', 'notes' => $notes];
     }
 
