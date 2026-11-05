@@ -9,7 +9,7 @@ $actUrl = $url->createUrl(['/projectsmain/notifviewact']);
 $homeUrl = $url->createUrl(['/projectsmain/index', 'notif' => 1]);
 $today = (new DateTime('now', new DateTimeZone('Asia/Kolkata')))->format('Y-m-d');
 
-$label = ['msg' => 'Message', 'alert' => 'Alert', 'ap' => 'Action plan'][$kind] ?? 'Notification';
+$label = ['msg' => 'Message', 'alert' => 'Alert', 'ap' => 'Action plan', 'gn' => 'Gantt note', 'en' => 'Estimate note'][$kind] ?? 'Notification';
 $title = ''; $meta = []; $done = false; $overdue = false;
 if ($item) {
     if ($kind === 'msg') { $title = $item['title'] ?: $item['sender']; if ($item['sender']) $meta[] = 'From ' . $item['sender']; $done = (int)$item['archived'] === 1; }
@@ -21,6 +21,12 @@ if ($item) {
         if ($item['target_date']) $meta[] = 'Due ' . date('j M Y', strtotime($item['target_date']));
         $done = (int)$item['status'] === 1;
         $overdue = !$done && $item['target_date'] && substr($item['target_date'], 0, 10) < $today;
+    }
+    if ($kind === 'gn' || $kind === 'en') {
+        $title = 'Note';
+        if ($item['project']) $meta[] = $item['project'];
+        if ($item['created_at']) $meta[] = 'Written ' . date('j M Y', strtotime($item['created_at']));
+        $done = (int)$item['status'] === 1;
     }
 }
 $dot = $done ? '#9aa3b2' : ($overdue ? '#d84a30' : '#2ba899');
@@ -58,7 +64,7 @@ $dot = $done ? '#9aa3b2' : ($overdue ? '#d84a30' : '#2ba899');
 <body>
 <div class="card">
   <div class="hdr"><img src="/icons/opiam-192.png" alt=""><span class="k"><?= $h($label) ?></span>
-    <span class="st"><i></i><span id="st"><?= $done ? ($kind === 'ap' ? 'Done' : 'Archived') : ($overdue ? 'Overdue' : 'Pending') ?></span></span></div>
+    <span class="st"><i></i><span id="st"><?= $done ? (in_array($kind, ['ap', 'gn', 'en']) ? 'Done' : 'Archived') : ($overdue ? 'Overdue' : 'Pending') ?></span></span></div>
 <?php if (!$item): ?>
   <div class="body"><h1>Not found</h1><div class="text">This item has been deleted or is not addressed to you.</div></div>
   <div class="btns"><a class="btn pri" href="<?= $h($homeUrl) ?>">Open Opiam</a></div>
@@ -69,7 +75,7 @@ $dot = $done ? '#9aa3b2' : ($overdue ? '#d84a30' : '#2ba899');
     <div class="text"><?= $h($kind === 'msg' ? strip_tags((string)$item['text']) : $item['text']) ?></div>
   </div>
   <div class="btns" id="btns">
-<?php if ($kind === 'ap'): ?>
+<?php if (in_array($kind, ['ap', 'gn', 'en'])): ?>
     <button type="button" data-do="<?= $done ? 'open' : 'done' ?>"><?= $done ? '&#8634; Reopen' : '&#10003; Done' ?></button>
 <?php else: ?>
     <button type="button" data-do="<?= $done ? 'restore' : 'archive' ?>"><?= $done ? '&#8634; Restore' : 'Archive' ?></button>

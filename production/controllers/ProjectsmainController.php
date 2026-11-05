@@ -4985,6 +4985,9 @@ class ProjectsmainController extends Controller
             else $db->createCommand()->update('notifications', ['status' => $do === 'archive' ? 1 : 0], ['notf_id' => $id])->execute();
         } elseif ($kind === 'ap') {
             $db->createCommand()->update('action_plans', ['status' => $do === 'done' ? 1 : 0, 'updated_at' => date('Y-m-d H:i:s')], ['id' => $id])->execute();
+        } elseif ($kind === 'gn' || $kind === 'en') {
+            $db->createCommand()->update($kind === 'en' ? 'estimate_notes' : 'gantt_notes',
+                ['done' => $do === 'done' ? 1 : 0, 'done_at' => $do === 'done' ? date('Y-m-d H:i:s') : null], ['id' => $id, 'user_id' => $uid])->execute();
         }
         return ['error' => 'No'];
     }
@@ -4998,6 +5001,13 @@ class ProjectsmainController extends Controller
         if ($kind === 'alert') return $db->createCommand(
             "SELECT n.notf_id AS id, n.type AS title, n.remarks AS text, n.status AS archived, p.Name AS project
              FROM notifications n LEFT JOIN projects p ON p.Project_Id = n.itemid WHERE n.notf_id = :i", [':i' => $id])->queryOne() ?: null;
+        if ($kind === 'gn' || $kind === 'en') {
+            $_POST['kind'] = $kind === 'en' ? 'estimate' : 'gantt'; self::_gnEnsure();
+            return $db->createCommand(
+                "SELECT n.id, n.note_text AS text, n.done AS status, n.created_at, p.Name AS project
+                 FROM " . self::_gnTable() . " n LEFT JOIN projects p ON p.Project_Id = n.project_id
+                 WHERE n.id = :i AND n.user_id = :u", [':i' => $id, ':u' => $uid])->queryOne() ?: null;
+        }
         if ($kind === 'ap') return $db->createCommand(
             "SELECT ap.id, ap.plan_text AS text, ap.target_date, ap.status, p.Name AS project, ru.username AS responsible, cu.username AS created_by
              FROM action_plans ap LEFT JOIN projects p ON p.Project_Id = ap.project_id
@@ -5069,6 +5079,26 @@ class ProjectsmainController extends Controller
         Yii::$app->db->createCommand()->update(self::_gnTable(), ['done' => 1, 'done_at' => date('Y-m-d H:i:s')],
             ['id' => (int)($_POST['id'] ?? 0), 'user_id' => (int)Yii::$app->user->Id])->execute();
         return ['error' => 'No'];
+    }
+
+    public function actionGanttnotesend()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        self::_gnEnsure();
+        $db = Yii::$app->db; $uid = (int)Yii::$app->user->Id; $id = (int)($_POST['id'] ?? 0);
+        $est = self::_gnTable() === 'estimate_notes';
+        $n = $db->createCommand(
+            "SELECT n.id, n.note_text, p.Name AS project_name FROM " . self::_gnTable() . " n
+             LEFT JOIN projects p ON p.Project_Id = n.project_id WHERE n.id = :i AND n.user_id = :u", [':i' => $id, ':u' => $uid])->queryOne();
+        if (!$n) return ['error' => 'Yes', 'errortext' => 'This note no longer exists.'];
+        $k = $est ? 'en' : 'gn';
+        $sent = \app\components\WebPush::sendToUser($uid, [
+            'title' => $est ? 'Estimate note' : 'Gantt note',
+            'body' => ($n['project_name'] ? $n['project_name'] . ' — ' : '') . mb_substr($n['note_text'], 0, 1000),
+            'tag' => 'opiam-' . $k . '-' . $id, 'url' => '/projectsmain/notifview?k=' . $k . '&id=' . $id, 'badge' => self::_apDueCount($uid),
+        ]);
+        if (!$sent) return ['error' => 'Yes', 'errortext' => 'No phone has notifications turned on for you. On your phone, open Opiam > Notifications and tap the bell (+) to turn them on.'];
+        return ['error' => 'No', 'sent' => $sent];
     }
 
     public function actionNotifarchive()
