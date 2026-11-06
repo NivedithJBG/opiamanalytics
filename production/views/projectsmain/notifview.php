@@ -62,8 +62,11 @@ $dot = $done ? '#9aa3b2' : ($overdue ? '#d84a30' : '#2ba899');
                   padding:10px 12px; font-size:15px; text-align:center; text-decoration:none; cursor:pointer; }
   .pri { background:#3d6a8f; border-color:#3d6a8f; color:#fff; }
   .del { color:#d84a30; }
-  .pics { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-  .pics img { width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid var(--line); display:block; }
+  .pics { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+  .pics img { width:100%; height:auto; max-height:75vh; object-fit:contain; border-radius:8px; border:1px solid var(--line); display:block; background:var(--bg); cursor:zoom-in; }
+  #zoom { display:none; position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:10; align-items:center; justify-content:center; overflow:auto; }
+  #zoom.on { display:flex; } #zoom img { max-width:100vw; max-height:100vh; }
+  #zoom b { position:fixed; top:calc(10px + env(safe-area-inset-top)); right:12px; color:#fff; font-size:30px; line-height:1; padding:4px 10px; background:rgba(255,255,255,.15); border-radius:50%; }
   .files { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
   .files a { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:8px; padding:8px 10px; color:var(--ink); text-decoration:none; font-size:14px; word-break:break-all; }
   .files .fx { flex:none; background:#3d6a8f; color:#fff; font-size:10px; font-weight:700; border-radius:4px; padding:2px 5px; }
@@ -84,7 +87,7 @@ $dot = $done ? '#9aa3b2' : ($overdue ? '#d84a30' : '#2ba899');
     <?php if ($meta): ?><div class="meta"><?= $h(implode(' · ', $meta)) ?></div><?php endif; ?>
     <div class="text"><?= $h($kind === 'msg' ? strip_tags((string)$item['text']) : $item['text']) ?></div>
 <?php if (($kind === 'gn' || $kind === 'en') && ($pics = \app\controllers\ProjectsmainController::gnImgUrls($item['images'] ?? ''))): ?>
-    <div class="pics"><?php foreach ($pics as $p): ?><a href="<?= $h($p) ?>" target="_blank"><img src="<?= $h($p) ?>" alt=""></a><?php endforeach; ?></div>
+    <div class="pics"><?php foreach ($pics as $p): ?><img src="<?= $h($p) ?>" alt=""><?php endforeach; ?></div>
 <?php endif; ?>
 <?php if (($kind === 'gn' || $kind === 'en') && ($FL = \app\controllers\ProjectsmainController::gnFileList($item['files'] ?? ''))): ?>
     <div class="files"><?php foreach ($FL as $f): ?><a href="<?= $h($f['u']) ?>" target="_blank" download><span class="fx"><?= $h(strtoupper($f['ext'])) ?></span><?= $h($f['name']) ?><small><?= $h($f['s'] >= 1048576 ? round($f['s'] / 1048576, 1) . ' MB' : max(1, round($f['s'] / 1024)) . ' KB') ?></small></a><?php endforeach; ?></div>
@@ -150,6 +153,16 @@ $dot = $done ? '#9aa3b2' : ($overdue ? '#d84a30' : '#2ba899');
       var c = l[2] === 'Pending' ? '#2ba899' : '#9aa3b2';
       document.querySelector('.card').style.borderLeftColor = c; document.querySelector('.hdr .st i').style.background = c;
     }).catch(function(){ b.disabled = false; document.getElementById('msg').textContent = 'No connection. Try again.'; });
+  });
+})();
+</script>
+<div id="zoom"><img alt=""><b>&times;</b></div>
+<script>
+(function(){
+  var z = document.getElementById('zoom');
+  document.addEventListener('click', function(e){
+    if (e.target.matches('.pics img')) { z.querySelector('img').src = e.target.src; z.classList.add('on'); return; }
+    if (z.classList.contains('on') && (e.target === z || e.target.tagName === 'B')) z.classList.remove('on');
   });
 })();
 </script>

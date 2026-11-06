@@ -5668,6 +5668,9 @@ $(document).on('click', '#gantt-win-min', function(e){
 .gn-th .gn-th-x { position:absolute; top:1px; right:1px; width:18px; height:18px; border-radius:50%; border:none; background:rgba(0,0,0,.6); color:#fff; font-size:12px; line-height:18px; padding:0; cursor:pointer; }
 .gn-th.gn-off { opacity:.35; }
 .gn-imgs { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.gn-strip-text > .gn-imgs:not(.gn-edit-pics) { flex-direction:column; }
+.gn-strip-text > .gn-imgs:not(.gn-edit-pics) .gn-th { width:100%; height:auto; background:#fff; }
+.gn-strip-text > .gn-imgs:not(.gn-edit-pics) .gn-th img { height:auto; max-height:320px; object-fit:contain; }
 .gn-files { display:flex; flex-direction:column; gap:4px; margin-top:6px; }
 .gn-pend .gn-files { flex-basis:100%; margin-top:0; }
 .gn-chip { display:flex; align-items:center; gap:6px; background:#fff; border:1px solid #cfd6e0; border-radius:5px; padding:3px 6px; font-size:12px; color:#1f2733; text-decoration:none; min-width:0; }
