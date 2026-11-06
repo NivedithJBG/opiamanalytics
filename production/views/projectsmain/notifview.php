@@ -62,6 +62,8 @@ $dot = $done ? '#9aa3b2' : ($overdue ? '#d84a30' : '#2ba899');
                   padding:10px 12px; font-size:15px; text-align:center; text-decoration:none; cursor:pointer; }
   .pri { background:#3d6a8f; border-color:#3d6a8f; color:#fff; }
   .del { color:#d84a30; }
+  .pics { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .pics img { width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid var(--line); display:block; }
   .msg { text-align:center; color:var(--muted); font-size:13px; min-height:18px; margin-top:10px; }
 </style>
 </head>
@@ -77,6 +79,9 @@ $dot = $done ? '#9aa3b2' : ($overdue ? '#d84a30' : '#2ba899');
     <h1><?= $h($title) ?></h1>
     <?php if ($meta): ?><div class="meta"><?= $h(implode(' · ', $meta)) ?></div><?php endif; ?>
     <div class="text"><?= $h($kind === 'msg' ? strip_tags((string)$item['text']) : $item['text']) ?></div>
+<?php if (($kind === 'gn' || $kind === 'en') && ($pics = \app\controllers\ProjectsmainController::gnImgUrls($item['images'] ?? ''))): ?>
+    <div class="pics"><?php foreach ($pics as $p): ?><a href="<?= $h($p) ?>" target="_blank"><img src="<?= $h($p) ?>" alt=""></a><?php endforeach; ?></div>
+<?php endif; ?>
   </div>
   <div class="btns" id="btns">
 <?php if ($kind === 'gn' || $kind === 'en'): ?>

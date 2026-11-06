@@ -37,6 +37,8 @@ $ist = new DateTimeZone('Asia/Kolkata');
   button, a.btn { flex:1 1 auto; min-width:90px; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:9px;
                   padding:9px 12px; font-size:15px; text-align:center; text-decoration:none; cursor:pointer; }
   .pri { background:#3d6a8f; border-color:#3d6a8f; color:#fff; }
+  .pics { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .pics img { width:84px; height:84px; object-fit:cover; border-radius:8px; border:1px solid var(--line); display:block; }
   .msg { color:var(--muted); font-size:13px; padding:0 16px 12px; }
   .foot { max-width:600px; margin:0 auto; display:flex; }
   .empty { max-width:600px; margin:0 auto 12px; background:var(--card); border-radius:14px; padding:24px 16px; text-align:center; color:var(--muted); }
@@ -56,6 +58,9 @@ $ist = new DateTimeZone('Asia/Kolkata');
   <div class="body">
     <div class="meta"><span>Written <?= $h(date('j M Y', strtotime($n['created_at']))) ?></span><span class="st"><?= $h($snz ?: 'Pending') ?></span></div>
     <div class="text"><?= $h($n['text']) ?></div>
+<?php if (!empty($n['imgs'])): ?>
+    <div class="pics"><?php foreach ($n['imgs'] as $p): ?><a href="<?= $h($p) ?>" target="_blank"><img src="<?= $h($p) ?>" alt=""></a><?php endforeach; ?></div>
+<?php endif; ?>
   </div>
   <div class="btns">
     <button type="button" class="pri" data-do="done">&#10003; Done</button>

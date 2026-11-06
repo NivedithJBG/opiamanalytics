@@ -5000,9 +5000,9 @@ class ProjectsmainController extends Controller
         }
         $_POST['kind'] = $k === 'en' ? 'estimate' : 'gantt'; self::_gnEnsure();
         $db = Yii::$app->db;
-        $notes = $db->createCommand("SELECT id, note_text AS text, created_at, snooze_until FROM " . self::_gnTable() . "
+        $notes = $db->createCommand("SELECT id, note_text AS text, created_at, snooze_until, images FROM " . self::_gnTable() . "
             WHERE project_id = :p AND user_id = :u AND done = 0 ORDER BY id DESC", [':p' => $pid, ':u' => $uid])->queryAll();
-        foreach ($notes as &$n) $n['t'] = self::nvToken($k, $n['id'], $uid);
+        foreach ($notes as &$n) { $n['t'] = self::nvToken($k, $n['id'], $uid); $n['imgs'] = self::gnImgUrls($n['images']); }
         unset($n);
         $project = (string)$db->createCommand("SELECT Name FROM projects WHERE Project_Id = :p", [':p' => $pid])->queryScalar();
         return $this->renderPartial('notesview', ['kind' => $k, 'notes' => $notes, 'project' => $project, 'uid' => $uid, 'guest' => Yii::$app->user->isGuest]);
@@ -5068,7 +5068,7 @@ class ProjectsmainController extends Controller
         if ($kind === 'gn' || $kind === 'en') {
             $_POST['kind'] = $kind === 'en' ? 'estimate' : 'gantt'; self::_gnEnsure();
             return $db->createCommand(
-                "SELECT n.id, n.note_text AS text, n.done AS status, n.created_at, n.snooze_until, p.Name AS project
+                "SELECT n.id, n.note_text AS text, n.done AS status, n.created_at, n.snooze_until, n.images, p.Name AS project
                  FROM " . self::_gnTable() . " n LEFT JOIN projects p ON p.Project_Id = n.project_id
                  WHERE n.id = :i AND n.user_id = :u", [':i' => $id, ':u' => $uid])->queryOne() ?: null;
         }
@@ -5103,8 +5103,62 @@ class ProjectsmainController extends Controller
             $db = Yii::$app->db;
             if (!$db->createCommand("SHOW COLUMNS FROM $tb LIKE 'snooze_until'")->queryOne())
                 $db->createCommand("ALTER TABLE $tb ADD COLUMN snooze_until DATETIME NULL")->execute();
+            // Pictures of the note: JSON list of file names in web/uploads/notes/.
+            if (!$db->createCommand("SHOW COLUMNS FROM $tb LIKE 'images'")->queryOne())
+                $db->createCommand("ALTER TABLE $tb ADD COLUMN images TEXT NULL")->execute();
             $cols[$tb] = true;
         }
+    }
+
+    // ── Note pictures: kept in web/uploads/notes/ under random names, re-encoded
+    // as JPEG (longest side 1600 px) so only real pictures are stored.
+    const GN_MAX_IMAGES = 8;
+    private static function _gnImgDir()
+    {
+        $d = Yii::getAlias('@webroot') . '/uploads/notes';
+        if (!is_dir($d)) @mkdir($d, 0755, true);
+        return $d;
+    }
+    public static function gnImgList($json)
+    {
+        $a = json_decode((string)$json, true);
+        return is_array($a) ? array_values(array_filter($a, function ($n) { return is_string($n) && preg_match('/^[a-f0-9]{32}\.jpg$/', $n); })) : [];
+    }
+    public static function gnImgUrls($json)
+    {
+        $base = rtrim(Yii::$app->request->baseUrl, '/') . '/uploads/notes/';
+        return array_map(function ($n) use ($base) { return $base . $n; }, self::gnImgList($json));
+    }
+    // Saves the pictures uploaded as img[]; returns their file names.
+    private static function _gnSaveImages($room)
+    {
+        $out = [];
+        $f = $_FILES['img'] ?? null;
+        if (!$f || !is_array($f['tmp_name'])) return $out;
+        foreach ($f['tmp_name'] as $i => $tmp) {
+            if (count($out) >= $room) break;
+            if (($f['error'][$i] ?? 1) !== UPLOAD_ERR_OK || !is_uploaded_file($tmp) || filesize($tmp) > 20 * 1024 * 1024) continue;
+            $im = @imagecreatefromstring(file_get_contents($tmp));
+            if (!$im) continue;
+            // A photo not resized by the browser may still carry its camera orientation.
+            if (function_exists('exif_read_data') && ($ex = @exif_read_data($tmp)) && !empty($ex['Orientation'])) {
+                $deg = [3 => 180, 6 => -90, 8 => 90][(int)$ex['Orientation']] ?? 0;
+                if ($deg) { $r = imagerotate($im, $deg, 0); if ($r) { imagedestroy($im); $im = $r; } }
+            }
+            $w = imagesx($im); $h = imagesy($im); $s = min(1, 1600 / max($w, $h));
+            $nw = max(1, (int)round($w * $s)); $nh = max(1, (int)round($h * $s));
+            $dst = imagecreatetruecolor($nw, $nh);
+            imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
+            imagecopyresampled($dst, $im, 0, 0, 0, 0, $nw, $nh, $w, $h);
+            $name = bin2hex(random_bytes(16)) . '.jpg';
+            if (imagejpeg($dst, self::_gnImgDir() . '/' . $name, 82)) $out[] = $name;
+            imagedestroy($im); imagedestroy($dst);
+        }
+        return $out;
+    }
+    private static function _gnDeleteImages(array $names)
+    {
+        foreach ($names as $n) if (preg_match('/^[a-f0-9]{32}\.jpg$/', $n)) @unlink(self::_gnImgDir() . '/' . $n);
     }
 
     // Push one note to its owner's phone(s), as on the action plan notification.
@@ -5112,12 +5166,14 @@ class ProjectsmainController extends Controller
     {
         $_POST['kind'] = $k === 'en' ? 'estimate' : 'gantt';
         $n = Yii::$app->db->createCommand(
-            "SELECT n.id, n.note_text, p.Name AS project_name FROM " . self::_gnTable() . " n
+            "SELECT n.id, n.note_text, n.images, p.Name AS project_name FROM " . self::_gnTable() . " n
              LEFT JOIN projects p ON p.Project_Id = n.project_id WHERE n.id = :i AND n.user_id = :u", [':i' => $id, ':u' => $uid])->queryOne();
         if (!$n) return -1;
+        $pics = count(self::gnImgList($n['images']));
         return \app\components\WebPush::sendToUser($uid, [
             'title' => $title ?: ($k === 'en' ? 'Estimate note' : 'Gantt note'),
-            'body' => ($n['project_name'] ? $n['project_name'] . ' — ' : '') . mb_substr($n['note_text'], 0, 1000),
+            'body' => ($n['project_name'] ? $n['project_name'] . ' — ' : '') . mb_substr($n['note_text'], 0, 1000)
+                . ($pics ? "\n📷 " . $pics . ' picture' . ($pics > 1 ? 's' : '') : ''),
             'tag' => 'opiam-' . $k . '-' . $id, 'url' => '/projectsmain/notifview?k=' . $k . '&id=' . $id . '&u=' . $uid . '&t=' . self::nvToken($k, $id, $uid), 'badge' => self::_apDueCount($uid),
         ]);
     }
@@ -5148,9 +5204,11 @@ class ProjectsmainController extends Controller
         if (!$pid) return ['error' => 'Yes', 'errortext' => 'No project selected.'];
         self::_gnEnsure();
         $rows = Yii::$app->db->createCommand(
-            "SELECT id, note_text AS text, created_at FROM " . self::_gnTable() . "
+            "SELECT id, note_text AS text, created_at, images FROM " . self::_gnTable() . "
              WHERE project_id = :p AND user_id = :u AND done = 0 ORDER BY id DESC",
             [':p' => $pid, ':u' => (int)Yii::$app->user->Id])->queryAll();
+        foreach ($rows as &$r) { $r['imgs'] = array_map(function ($n, $u) { return ['n' => $n, 'u' => $u]; }, self::gnImgList($r['images']), self::gnImgUrls($r['images'])); unset($r['images']); }
+        unset($r);
         return ['error' => 'No', 'notes' => $rows];
     }
 
@@ -5160,11 +5218,12 @@ class ProjectsmainController extends Controller
         $pid = $this->_cfPid();
         $text = trim((string)($_POST['text'] ?? ''));
         if (!$pid) return ['error' => 'Yes', 'errortext' => 'No project selected.'];
-        if ($text === '') return ['error' => 'Yes', 'errortext' => 'Please write the note.'];
         self::_gnEnsure();
+        $imgs = self::_gnSaveImages(self::GN_MAX_IMAGES);
+        if ($text === '' && !$imgs) return ['error' => 'Yes', 'errortext' => 'Please write the note or add a picture.'];
         $db = Yii::$app->db;
         $db->createCommand()->insert(self::_gnTable(), ['project_id' => $pid, 'user_id' => (int)Yii::$app->user->Id,
-            'note_text' => $text, 'done' => 0, 'created_at' => date('Y-m-d H:i:s')])->execute();
+            'note_text' => $text, 'done' => 0, 'created_at' => date('Y-m-d H:i:s'), 'images' => $imgs ? json_encode($imgs) : null])->execute();
         return ['error' => 'No', 'id' => (int)$db->getLastInsertID()];
     }
 
@@ -5172,10 +5231,19 @@ class ProjectsmainController extends Controller
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $text = trim((string)($_POST['text'] ?? ''));
-        if ($text === '') return ['error' => 'Yes', 'errortext' => 'Please write the note.'];
         self::_gnEnsure();
-        Yii::$app->db->createCommand()->update(self::_gnTable(), ['note_text' => $text],
-            ['id' => (int)($_POST['id'] ?? 0), 'user_id' => (int)Yii::$app->user->Id])->execute();
+        $db = Yii::$app->db; $id = (int)($_POST['id'] ?? 0); $uid = (int)Yii::$app->user->Id;
+        $old = $db->createCommand("SELECT images FROM " . self::_gnTable() . " WHERE id = :i AND user_id = :u", [':i' => $id, ':u' => $uid])->queryOne();
+        if (!$old) return ['error' => 'Yes', 'errortext' => 'This note no longer exists.'];
+        $had = self::gnImgList($old['images']);
+        // keep = the existing pictures still on the note (others are removed).
+        $keep = isset($_POST['keep']) ? array_values(array_intersect($had, self::gnImgList($_POST['keep']))) : $had;
+        $new = self::_gnSaveImages(max(0, self::GN_MAX_IMAGES - count($keep)));
+        $imgs = array_merge($keep, $new);
+        if ($text === '' && !$imgs) { self::_gnDeleteImages($new); return ['error' => 'Yes', 'errortext' => 'Please write the note or add a picture.']; }
+        $db->createCommand()->update(self::_gnTable(), ['note_text' => $text, 'images' => $imgs ? json_encode($imgs) : null],
+            ['id' => $id, 'user_id' => $uid])->execute();
+        self::_gnDeleteImages(array_diff($had, $keep));
         return ['error' => 'No'];
     }
 

@@ -5612,18 +5612,29 @@ $(document).on('click', '#gantt-win-min', function(e){
   <div class="gn-hdr"><span>Notes</span><span class="gn-hdr-r"><button type="button" class="gn-sendall" title="Send all notes to my phone">&#128276; Send all</button><button type="button" class="gn-close" title="Close">&times;</button></span></div>
   <div class="gn-form">
     <textarea class="gn-text" rows="2" placeholder="Write a note&hellip;"></textarea>
-    <button type="button" class="gn-add">Add</button>
+    <div class="gn-form-btns">
+      <button type="button" class="gn-pic" title="Add pictures from the gallery or camera">&#128247; Photo</button>
+      <button type="button" class="gn-add">Add</button>
+    </div>
+    <input type="file" class="gn-file" accept="image/*" multiple hidden>
   </div>
+  <div class="gn-pend"></div>
   <div class="gn-list"></div>
 </div>
 <div id="en-win" class="gn-win">
   <div class="gn-hdr"><span>Estimate Notes</span><span class="gn-hdr-r"><button type="button" class="gn-sendall" title="Send all notes to my phone">&#128276; Send all</button><button type="button" class="gn-close" title="Close">&times;</button></span></div>
   <div class="gn-form">
     <textarea class="gn-text" rows="2" placeholder="Write a note&hellip;"></textarea>
-    <button type="button" class="gn-add">Add</button>
+    <div class="gn-form-btns">
+      <button type="button" class="gn-pic" title="Add pictures from the gallery or camera">&#128247; Photo</button>
+      <button type="button" class="gn-add">Add</button>
+    </div>
+    <input type="file" class="gn-file" accept="image/*" multiple hidden>
   </div>
+  <div class="gn-pend"></div>
   <div class="gn-list"></div>
 </div>
+<div id="gn-lb"><img alt=""><button type="button" class="lb-p" title="Previous">&#8249;</button><button type="button" class="lb-n" title="Next">&#8250;</button><button type="button" class="lb-x" title="Close">&times;</button></div>
 <style>
 .gn-fab { position:absolute; right:18px; bottom:16px; width:42px; height:42px; border-radius:50%; border:none;
   background:#0f5c52; color:#fff; font-size:19px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.3); z-index:30; }
@@ -5640,7 +5651,23 @@ $(document).on('click', '#gantt-win-min', function(e){
 .gn-sendall:hover { background:rgba(255,255,255,.25); }
 .gn-form { flex:none; display:flex; gap:6px; padding:8px 10px; border-bottom:1px solid #e3e7ee; }
 .gn-text { flex:1; resize:none; min-height:40px; max-height:220px; overflow-y:auto; border:1px solid #bcc6d4; border-radius:5px; padding:5px 7px; font:inherit; font-size:13px; }
-.gn-add { flex:none; border:none; background:#0f5c52; color:#fff; border-radius:5px; padding:0 14px; font-weight:700; cursor:pointer; }
+.gn-add { flex:1; border:none; background:#0f5c52; color:#fff; border-radius:5px; padding:0 14px; font-weight:700; cursor:pointer; min-height:22px; }
+.gn-form-btns { flex:none; display:flex; flex-direction:column; gap:4px; }
+.gn-pic { flex:none; border:1px solid #0f5c52; background:#fff; color:#0f5c52; border-radius:5px; padding:2px 8px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
+.gn-pic:hover { background:#e6f2f0; }
+.gn-pend { flex:none; display:none; flex-wrap:wrap; gap:6px; padding:0 10px 8px; border-bottom:1px solid #e3e7ee; }
+.gn-pend.on { display:flex; }
+.gn-th { position:relative; width:52px; height:52px; border-radius:5px; overflow:hidden; border:1px solid #cfd6e0; background:#eef1f5; flex:none; }
+.gn-th img { width:100%; height:100%; object-fit:cover; display:block; cursor:zoom-in; }
+.gn-th .gn-th-x { position:absolute; top:1px; right:1px; width:18px; height:18px; border-radius:50%; border:none; background:rgba(0,0,0,.6); color:#fff; font-size:12px; line-height:18px; padding:0; cursor:pointer; }
+.gn-th.gn-off { opacity:.35; }
+.gn-imgs { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.gn-busy { font-size:11px; color:#8a94a3; align-self:center; }
+#gn-lb { display:none; position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:2147483000; align-items:center; justify-content:center; cursor:zoom-out; }
+#gn-lb.on { display:flex; }
+#gn-lb img { max-width:94vw; max-height:90vh; border-radius:4px; box-shadow:0 6px 30px rgba(0,0,0,.6); }
+#gn-lb button { position:absolute; border:none; background:rgba(255,255,255,.15); color:#fff; font-size:28px; width:48px; height:48px; border-radius:50%; cursor:pointer; }
+#gn-lb .lb-x { top:14px; right:14px; } #gn-lb .lb-p { left:14px; top:50%; } #gn-lb .lb-n { right:14px; top:50%; }
 .gn-list { flex:1; overflow-y:auto; padding:8px 10px; }
 .gn-strip { display:flex; align-items:flex-start; gap:8px; background:#f4f6fa; border-left:4px solid #2ba899;
   border-radius:5px; padding:7px 8px; margin-bottom:7px; font-size:13px; color:#111; }
@@ -5656,6 +5683,33 @@ $(document).on('click', '#gantt-win-min', function(e){
 <script>
 // One Notes window per owner window: the same features, each with its own notes
 // (kind = 'gantt' or 'estimate' on the server).
+// Pictures for notes: shrunk in the browser (longest side 1600 px, JPEG) before upload.
+function gnShrink(file){
+  return new Promise(function(res){
+    var url = URL.createObjectURL(file), img = new Image();
+    img.onload = function(){
+      var s = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+      var c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+      var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(function(b){ res(b || file); }, 'image/jpeg', 0.82);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); res(file); };   // e.g. HEIC the browser cannot draw: the server converts it
+    img.src = url;
+  });
+}
+// Full-size viewer: gnLightbox(urls, index).
+var gnLightbox = (function(){
+  var lb = document.getElementById('gn-lb'), im = lb.querySelector('img'), list = [], i = 0;
+  function show(){ im.src = list[i]; lb.querySelector('.lb-p').style.display = lb.querySelector('.lb-n').style.display = list.length > 1 ? '' : 'none'; }
+  lb.addEventListener('click', function(e){
+    if (e.target.classList.contains('lb-p')) { i = (i - 1 + list.length) % list.length; show(); return; }
+    if (e.target.classList.contains('lb-n')) { i = (i + 1) % list.length; show(); return; }
+    if (e.target !== im) lb.classList.remove('on');
+  });
+  document.addEventListener('keydown', function(e){ if (lb.classList.contains('on')) { if (e.key === 'Escape') lb.classList.remove('on'); if (e.key === 'ArrowLeft') lb.querySelector('.lb-p').click(); if (e.key === 'ArrowRight') lb.querySelector('.lb-n').click(); } });
+  return function(urls, k){ list = urls; i = k || 0; show(); lb.classList.add('on'); };
+})();
 function gnSetup(cfg){
   var win = document.getElementById(cfg.win), $w = $(win), hdr = win.querySelector('.gn-hdr');
   var $list = $w.find('.gn-list'), $text = $w.find('.gn-text'), $add = $w.find('.gn-add');
@@ -5668,6 +5722,7 @@ function gnSetup(cfg){
       var n = (d && d.notes) || [];
       $list.html(n.length ? n.map(function(x){
         return '<div class="gn-strip" data-id="' + x.id + '"><div class="gn-strip-text"><span class="gn-t">' + esc(x.text) + '</span>'
+          + ((x.imgs || []).length ? '<div class="gn-imgs">' + x.imgs.map(function(p, k){ return '<div class="gn-th" data-n="' + esc(p.n) + '"><img src="' + esc(p.u) + '" data-k="' + k + '" alt=""></div>'; }).join('') + '</div>' : '')
           + '<span class="gn-strip-date">' + esc((x.created_at || '').slice(0, 16)) + '</span></div>'
           + '<button type="button" class="gn-tick gn-wa" title="Send on WhatsApp"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21c5.46 0 9.91-4.45 9.91-9.91A9.85 9.85 0 0 0 12.04 2zm4.52 11.99c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.24 3.74 1.48.64 2.07.69 2.82.58.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.16-.47-.28z"/></svg></button>'
           + '<button type="button" class="gn-tick gn-push" title="Send to my phone">&#128276;</button>'
@@ -5678,13 +5733,44 @@ function gnSetup(cfg){
   }
   // The note box grows with the text, so the whole note is visible while typing.
   function fit(){ var t = $text[0]; t.style.height = 'auto'; t.style.height = Math.min(220, t.scrollHeight + 2) + 'px'; }
-  function add(){
-    var t = $.trim($text.val()); if (!t) return;
-    $add.prop('disabled', true);
-    post('ganttnoteadd', { text:t }, {
-      success:function(d){ $add.prop('disabled', false); if (d && d.error === 'No') { $text.val('').focus(); fit(); load(); } else alert((d && d.errortext) || 'Could not save.'); },
-      error:function(){ $add.prop('disabled', false); alert('Could not save.'); } });
+  // Pictures waiting to be added with the next note.
+  var pend = [], $pend = $w.find('.gn-pend'), $file = $w.find('.gn-file'), fileFor = null;
+  function drawPend(){
+    $pend.toggleClass('on', pend.length > 0).html(pend.map(function(p, k){
+      return '<div class="gn-th"><img src="' + p.url + '" data-k="' + k + '" alt=""><button type="button" class="gn-th-x" data-k="' + k + '" title="Remove">&times;</button></div>'; }).join(''));
   }
+  function takeFiles(files, into, done){
+    var arr = [].slice.call(files || []);
+    if (!arr.length) return;
+    Promise.all(arr.map(gnShrink)).then(function(bs){ bs.forEach(function(b){ into.push({ blob:b, url:URL.createObjectURL(b) }); }); done(); });
+  }
+  function send(act, fields, pics, cb, $btn){
+    var fd = new FormData(); fd.append('kind', cfg.kind);
+    $.each(fields, function(k, v){ fd.append(k, v); });
+    pics.forEach(function(p, k){ fd.append('img[]', p.blob, 'photo' + k + '.jpg'); });
+    $btn.prop('disabled', true);
+    var $busy = pics.length ? $('<span class="gn-busy">Uploading&hellip;</span>').insertAfter($btn) : $();
+    $.ajax({ type:'POST', url:'../projectsmain/' + act, data:fd, processData:false, contentType:false, dataType:'json',
+      success:function(d){ $btn.prop('disabled', false); $busy.remove(); if (d && d.error === 'No') cb(); else alert((d && d.errortext) || 'Could not save.'); },
+      error:function(){ $btn.prop('disabled', false); $busy.remove(); alert('Could not save. Check the connection and try again.'); } });
+  }
+  function add(){
+    var t = $.trim($text.val()); if (!t && !pend.length) return;
+    if (pend.length > 8) { alert('Up to 8 pictures per note.'); return; }
+    send('ganttnoteadd', { text:t }, pend, function(){ $text.val('').focus(); fit(); pend = []; drawPend(); load(); }, $add);
+  }
+  $w.on('click', '.gn-pic', function(){ fileFor = null; $file.val('').trigger('click'); });
+  $file.on('change', function(){
+    var into = fileFor ? fileFor.data('newpics') : pend;
+    takeFiles(this.files, into, function(){ if (fileFor) drawEditPics(fileFor); else drawPend(); });
+  });
+  $pend.on('click', '.gn-th-x', function(e){ e.stopPropagation(); pend.splice(+$(this).data('k'), 1); drawPend(); });
+  $pend.on('click', 'img', function(){ gnLightbox(pend.map(function(p){ return p.url; }), +$(this).data('k')); });
+  // Tap a thumbnail on a note: full size, with the note's other pictures.
+  $w.on('click', '.gn-strip .gn-imgs img', function(){
+    var all = $(this).closest('.gn-imgs').find('img').map(function(){ return this.src; }).get();
+    gnLightbox(all, +$(this).data('k'));
+  });
   // Keep Notes above its owner window (which raises itself on tap, e.g. on iPad).
   function toTop(){ var g = document.getElementById(cfg.owner); var z = g ? (parseInt(window.getComputedStyle(g).zIndex, 10) || 100000) : 100000; win.style.zIndex = Math.max(z, 100000) + 50; }
   $(document).on('click', '#' + cfg.btn, function(e){ e.stopPropagation(); if (win.classList.contains('gn-open')) { win.classList.remove('gn-open'); return; } toTop(); win.classList.add('gn-open'); load(); $text.focus(); });
@@ -5704,7 +5790,8 @@ function gnSetup(cfg){
   $w.on('click', '.gn-wa', function(){
     var strip = $(this).closest('.gn-strip');
     var proj = $.trim($('#' + cfg.projName).text());
-    var msg = (proj ? cfg.label + ' - ' + proj + '\n' : '') + strip.find('.gn-t').text();
+    var msg = (proj ? cfg.label + ' - ' + proj + '\n' : '') + strip.find('.gn-t').text()
+      + strip.find('.gn-imgs img').map(function(){ return '\n' + this.src; }).get().join('');
     var touch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
     if (touch) { window.location.href = 'whatsapp://send?text=' + encodeURIComponent(msg); return; }
     // PC: WhatsApp Web only fills in the text when it knows the number, so the note
@@ -5747,22 +5834,39 @@ function gnSetup(cfg){
     var strip = $(this).closest('.gn-strip'), box = strip.find('.gn-strip-text');
     if (box.find('textarea').length) return;
     var old = strip.find('.gn-t').text();
+    var had = strip.find('.gn-imgs .gn-th').map(function(){ return { n:$(this).data('n'), url:$(this).find('img').attr('src') }; }).get();
     box.data('html', box.html());
+    strip.data('oldpics', had).data('drop', {}).data('newpics', []);
     box.html('<textarea class="gn-edit-text" style="width:100%;box-sizing:border-box;min-height:50px;border:1px solid #bcc6d4;border-radius:5px;padding:5px 7px;font:inherit;font-size:13px;resize:vertical;"></textarea>'
+      + '<div class="gn-imgs gn-edit-pics"></div>'
       + '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:5px;">'
+      + '<button type="button" class="gn-pic gn-edit-pic" title="Add pictures">&#128247; Photo</button>'
       + '<button type="button" class="gn-edit-cancel" style="border:1px solid #bcc6d4;background:#fff;border-radius:4px;padding:3px 10px;cursor:pointer;">Cancel</button>'
       + '<button type="button" class="gn-edit-save" style="border:none;background:#0f5c52;color:#fff;border-radius:4px;padding:3px 12px;font-weight:700;cursor:pointer;">Save</button></div>');
     var ta = box.find('textarea').val(old).focus()[0];
     ta.style.height = 'auto'; ta.style.height = Math.min(220, ta.scrollHeight + 2) + 'px';
+    drawEditPics(strip);
   });
+  // Edit box pictures: existing ones can be removed (x toggles), new ones added.
+  function drawEditPics(strip){
+    var drop = strip.data('drop');
+    strip.find('.gn-edit-pics').html(strip.data('oldpics').map(function(p){
+        return '<div class="gn-th' + (drop[p.n] ? ' gn-off' : '') + '"><img src="' + p.url + '" alt=""><button type="button" class="gn-th-x gn-ed-old" data-n="' + p.n + '" title="' + (drop[p.n] ? 'Keep' : 'Remove') + '">' + (drop[p.n] ? '&#8634;' : '&times;') + '</button></div>'; }).join('')
+      + strip.data('newpics').map(function(p, k){
+        return '<div class="gn-th"><img src="' + p.url + '" alt=""><button type="button" class="gn-th-x gn-ed-new" data-k="' + k + '" title="Remove">&times;</button></div>'; }).join(''));
+  }
+  $w.on('click', '.gn-ed-old', function(){ var s = $(this).closest('.gn-strip'), d = s.data('drop'), n = $(this).data('n'); d[n] = !d[n]; drawEditPics(s); });
+  $w.on('click', '.gn-ed-new', function(){ var s = $(this).closest('.gn-strip'); s.data('newpics').splice(+$(this).data('k'), 1); drawEditPics(s); });
+  $w.on('click', '.gn-edit-pic', function(){ fileFor = $(this).closest('.gn-strip'); $file.val('').trigger('click'); });
+  $w.on('click', '.gn-edit-pics img', function(){ gnLightbox([this.src], 0); });
   $w.on('click', '.gn-edit-cancel', function(){ var box = $(this).closest('.gn-strip-text'); box.html(box.data('html')); });
   $w.on('click', '.gn-edit-save', function(){
     var strip = $(this).closest('.gn-strip'), t = $.trim(strip.find('.gn-edit-text').val());
-    if (!t) return;
-    $(this).prop('disabled', true);
-    post('ganttnoteedit', { id:strip.data('id'), text:t }, {
-      success:function(d){ if (d && d.error === 'No') load(); else alert((d && d.errortext) || 'Could not save.'); },
-      error:function(){ alert('Could not save.'); } });
+    var drop = strip.data('drop') || {}, keep = (strip.data('oldpics') || []).filter(function(p){ return !drop[p.n]; }).map(function(p){ return p.n; });
+    var add = strip.data('newpics') || [];
+    if (!t && !keep.length && !add.length) return;
+    if (keep.length + add.length > 8) { alert('Up to 8 pictures per note.'); return; }
+    send('ganttnoteedit', { id:strip.data('id'), text:t, keep:JSON.stringify(keep) }, add, load, $(this));
   });
   // Close with the owner window.
   $(document).on('click', '#' + cfg.ownerClose, function(){ win.classList.remove('gn-open'); });
