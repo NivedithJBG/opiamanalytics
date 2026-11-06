@@ -5614,9 +5614,11 @@ $(document).on('click', '#gantt-win-min', function(e){
     <textarea class="gn-text" rows="2" placeholder="Write a note&hellip;"></textarea>
     <div class="gn-form-btns">
       <button type="button" class="gn-pic" title="Add pictures from the gallery or camera">&#128247; Photo</button>
+      <button type="button" class="gn-pic gn-att" title="Attach files: PDF, Word, Excel, PowerPoint, CSV, text, ZIP, drawings">&#128206; File</button>
       <button type="button" class="gn-add">Add</button>
     </div>
     <input type="file" class="gn-file" accept="image/*" multiple hidden>
+    <input type="file" class="gn-file gn-afile" accept=".pdf,.doc,.docx,.xls,.xlsx,.xlsm,.ppt,.pptx,.csv,.txt,.zip,.rar,.7z,.dwg,.dxf" multiple hidden>
   </div>
   <div class="gn-pend"></div>
   <div class="gn-list"></div>
@@ -5627,9 +5629,11 @@ $(document).on('click', '#gantt-win-min', function(e){
     <textarea class="gn-text" rows="2" placeholder="Write a note&hellip;"></textarea>
     <div class="gn-form-btns">
       <button type="button" class="gn-pic" title="Add pictures from the gallery or camera">&#128247; Photo</button>
+      <button type="button" class="gn-pic gn-att" title="Attach files: PDF, Word, Excel, PowerPoint, CSV, text, ZIP, drawings">&#128206; File</button>
       <button type="button" class="gn-add">Add</button>
     </div>
     <input type="file" class="gn-file" accept="image/*" multiple hidden>
+    <input type="file" class="gn-file gn-afile" accept=".pdf,.doc,.docx,.xls,.xlsx,.xlsm,.ppt,.pptx,.csv,.txt,.zip,.rar,.7z,.dwg,.dxf" multiple hidden>
   </div>
   <div class="gn-pend"></div>
   <div class="gn-list"></div>
@@ -5639,7 +5643,7 @@ $(document).on('click', '#gantt-win-min', function(e){
 .gn-fab { position:absolute; right:18px; bottom:16px; width:42px; height:42px; border-radius:50%; border:none;
   background:#0f5c52; color:#fff; font-size:19px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.3); z-index:30; }
 .gn-fab:hover { background:#0d4c44; }
-.gn-win { display:none; position:fixed; right:40px; top:120px; width:340px; height:420px; min-width:260px; min-height:200px;
+.gn-win { display:none; position:fixed; right:40px; top:120px; width:420px; max-width:calc(100vw - 20px); height:460px; min-width:260px; min-height:200px;
   background:#fff; border-radius:8px; box-shadow:0 8px 28px rgba(0,0,0,.35); z-index:100050; flex-direction:column;
   overflow:hidden; resize:both; font-family:Nunito,Arial,sans-serif; }
 .gn-win.gn-open { display:flex; }
@@ -5664,6 +5668,15 @@ $(document).on('click', '#gantt-win-min', function(e){
 .gn-th .gn-th-x { position:absolute; top:1px; right:1px; width:18px; height:18px; border-radius:50%; border:none; background:rgba(0,0,0,.6); color:#fff; font-size:12px; line-height:18px; padding:0; cursor:pointer; }
 .gn-th.gn-off { opacity:.35; }
 .gn-imgs { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.gn-files { display:flex; flex-direction:column; gap:4px; margin-top:6px; }
+.gn-pend .gn-files { flex-basis:100%; margin-top:0; }
+.gn-chip { display:flex; align-items:center; gap:6px; background:#fff; border:1px solid #cfd6e0; border-radius:5px; padding:3px 6px; font-size:12px; color:#1f2733; text-decoration:none; min-width:0; }
+a.gn-chip:hover { border-color:#0f5c52; color:#0f5c52; text-decoration:none; }
+.gn-chip .gn-fx { flex:none; background:#3d6a8f; color:#fff; font-size:9px; font-weight:700; border-radius:3px; padding:1px 4px; }
+.gn-chip .gn-fn { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.gn-chip .gn-fs { flex:none; color:#8a94a3; font-size:10px; }
+.gn-chip .gn-fx-x { flex:none; border:none; background:none; color:#8a94a3; font-size:14px; line-height:1; cursor:pointer; padding:0 2px; }
+.gn-chip.gn-off { opacity:.4; text-decoration:line-through; }
 .gn-busy { font-size:11px; color:#8a94a3; align-self:center; }
 #gn-lb { display:none; position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:2147483000; align-items:center; justify-content:center; cursor:zoom-out; }
 #gn-lb.on { display:flex; }
@@ -5725,6 +5738,7 @@ function gnSetup(cfg){
       $list.html(n.length ? n.map(function(x){
         return '<div class="gn-strip" data-id="' + x.id + '"><div class="gn-strip-text"><span class="gn-t">' + esc(x.text) + '</span>'
           + ((x.imgs || []).length ? '<div class="gn-imgs">' + x.imgs.map(function(p, k){ return '<div class="gn-th" data-n="' + esc(p.n) + '"><img src="' + esc(p.u) + '" data-k="' + k + '" alt=""></div>'; }).join('') + '</div>' : '')
+          + ((x.files || []).length ? '<div class="gn-files">' + x.files.map(function(f){ return chip(f.name, f.s, f.u).replace('<a class="gn-chip"', '<a class="gn-chip" data-p="' + esc(f.p) + '" data-s="' + f.s + '"'); }).join('') + '</div>' : '')
           + '<span class="gn-strip-date">' + esc((x.created_at || '').slice(0, 16)) + '</span></div>'
           + '<button type="button" class="gn-tick gn-wa" title="Send on WhatsApp"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21c5.46 0 9.91-4.45 9.91-9.91A9.85 9.85 0 0 0 12.04 2zm4.52 11.99c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.24 3.74 1.48.64 2.07.69 2.82.58.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.16-.47-.28z"/></svg></button>'
           + '<button type="button" class="gn-tick gn-push" title="Send to my phone">&#128276;</button>'
@@ -5735,32 +5749,58 @@ function gnSetup(cfg){
   }
   // The note box grows with the text, so the whole note is visible while typing.
   function fit(){ var t = $text[0]; t.style.height = 'auto'; t.style.height = Math.min(220, t.scrollHeight + 2) + 'px'; }
-  // Pictures waiting to be added with the next note.
-  var pend = [], $pend = $w.find('.gn-pend'), $file = $w.find('.gn-file'), fileFor = null;
-  function drawPend(){
-    $pend.toggleClass('on', pend.length > 0).html(pend.map(function(p, k){
-      return '<div class="gn-th"><img src="' + p.url + '" data-k="' + k + '" alt=""><button type="button" class="gn-th-x" data-k="' + k + '" title="Remove">&times;</button></div>'; }).join(''));
+  // Pictures and files waiting to be added with the next note.
+  var pend = [], pendF = [], $pend = $w.find('.gn-pend'), $file = $w.find('.gn-file').not('.gn-afile'), $afile = $w.find('.gn-afile'), fileFor = null;
+  function fsize(s){ return s >= 1048576 ? (s / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(s / 1024)) + ' KB'; }
+  function fext(n){ var m = /\.([a-z0-9]+)$/i.exec(n || ''); return m ? m[1].toUpperCase() : 'FILE'; }
+  function chip(name, size, url, xCls, xData, off){
+    var inner = '<span class="gn-fx">' + esc(fext(name)) + '</span><span class="gn-fn">' + esc(name) + '</span><span class="gn-fs">' + fsize(size) + '</span>';
+    var x = xCls ? '<button type="button" class="gn-fx-x ' + xCls + '" ' + xData + ' title="' + (off ? 'Keep' : 'Remove') + '">' + (off ? '&#8634;' : '&times;') + '</button>' : '';
+    return url && !xCls ? '<a class="gn-chip" href="' + esc(url) + '" target="_blank" download>' + inner + '</a>'
+                        : '<div class="gn-chip' + (off ? ' gn-off' : '') + '">' + inner + x + '</div>';
+  }
+  var OKEXT = /\.(pdf|docx?|xlsx?|xlsm|pptx?|csv|txt|zip|rar|7z|dwg|dxf)$/i;
+  function takeAtt(files, into){
+    var bad = [];
+    [].slice.call(files || []).forEach(function(f){
+      if (!OKEXT.test(f.name)) bad.push(f.name + ' (type not allowed)');
+      else if (f.size > 20 * 1024 * 1024) bad.push(f.name + ' (over 20 MB)');
+      else into.push({ file:f });
+    });
+    if (bad.length) alert('Not added:\n' + bad.join('\n') + '\n\nAllowed: PDF, Word, Excel, PowerPoint, CSV, text, ZIP/RAR/7z, DWG/DXF, up to 20 MB each.');
+  }  function drawPend(){
+    $pend.toggleClass('on', pend.length + pendF.length > 0).html(pend.map(function(p, k){
+      return '<div class="gn-th"><img src="' + p.url + '" data-k="' + k + '" alt=""><button type="button" class="gn-th-x" data-k="' + k + '" title="Remove">&times;</button></div>'; }).join('')
+      + (pendF.length ? '<div class="gn-files">' + pendF.map(function(f, k){ return chip(f.file.name, f.file.size, null, 'gn-pf-x', 'data-k="' + k + '"'); }).join('') + '</div>' : ''));
   }
   function takeFiles(files, into, done){
     var arr = [].slice.call(files || []);
     if (!arr.length) return;
     Promise.all(arr.map(gnShrink)).then(function(bs){ bs.forEach(function(b){ into.push({ blob:b, url:URL.createObjectURL(b) }); }); done(); });
   }
-  function send(act, fields, pics, cb, $btn){
+  function send(act, fields, pics, cb, $btn, atts){
     var fd = new FormData(); fd.append('kind', cfg.kind);
     $.each(fields, function(k, v){ fd.append(k, v); });
     pics.forEach(function(p, k){ fd.append('img[]', p.blob, 'photo' + k + '.jpg'); });
+    (atts || []).forEach(function(f){ fd.append('att[]', f.file, f.file.name); });
     $btn.prop('disabled', true);
-    var $busy = pics.length ? $('<span class="gn-busy">Uploading&hellip;</span>').insertAfter($btn) : $();
+    var $busy = pics.length || (atts || []).length ? $('<span class="gn-busy">Uploading&hellip;</span>').insertAfter($btn) : $();
     $.ajax({ type:'POST', url:'../projectsmain/' + act, data:fd, processData:false, contentType:false, dataType:'json',
       success:function(d){ $btn.prop('disabled', false); $busy.remove(); if (d && d.error === 'No') cb(); else alert((d && d.errortext) || 'Could not save.'); },
       error:function(){ $btn.prop('disabled', false); $busy.remove(); alert('Could not save. Check the connection and try again.'); } });
   }
   function add(){
-    var t = $.trim($text.val()); if (!t && !pend.length) return;
+    var t = $.trim($text.val()); if (!t && !pend.length && !pendF.length) return;
     if (pend.length > 8) { alert('Up to 8 pictures per note.'); return; }
-    send('ganttnoteadd', { text:t }, pend, function(){ $text.val('').focus(); fit(); pend = []; drawPend(); load(); }, $add);
+    if (pendF.length > 8) { alert('Up to 8 files per note.'); return; }
+    send('ganttnoteadd', { text:t }, pend, function(){ $text.val('').focus(); fit(); pend = []; pendF = []; drawPend(); load(); }, $add, pendF);
   }
+  $w.on('click', '.gn-att', function(){ fileFor = null; $afile.val('').trigger('click'); });
+  $afile.on('change', function(){
+    if (fileFor) { takeAtt(this.files, fileFor.data('newfiles')); drawEditPics(fileFor); }
+    else { takeAtt(this.files, pendF); drawPend(); }
+  });
+  $pend.on('click', '.gn-pf-x', function(e){ e.stopPropagation(); pendF.splice(+$(this).data('k'), 1); drawPend(); });
   $w.on('click', '.gn-pic', function(){ fileFor = null; $file.val('').trigger('click'); });
   $file.on('change', function(){
     var into = fileFor ? fileFor.data('newpics') : pend;
@@ -5793,7 +5833,8 @@ function gnSetup(cfg){
     var strip = $(this).closest('.gn-strip');
     var proj = $.trim($('#' + cfg.projName).text());
     var msg = (proj ? cfg.label + ' - ' + proj + '\n' : '') + strip.find('.gn-t').text()
-      + strip.find('.gn-imgs img').map(function(){ return '\n' + this.src; }).get().join('');
+      + strip.find('.gn-imgs img').map(function(){ return '\n' + this.src; }).get().join('')
+      + strip.find('.gn-files a.gn-chip').map(function(){ return '\n' + this.href; }).get().join('');
     var touch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
     if (touch) { window.location.href = 'whatsapp://send?text=' + encodeURIComponent(msg); return; }
     // PC: WhatsApp Web only fills in the text when it knows the number, so the note
@@ -5838,11 +5879,13 @@ function gnSetup(cfg){
     var old = strip.find('.gn-t').text();
     var had = strip.find('.gn-imgs .gn-th').map(function(){ return { n:$(this).data('n'), url:$(this).find('img').attr('src') }; }).get();
     box.data('html', box.html());
-    strip.data('oldpics', had).data('drop', {}).data('newpics', []);
+    var hadF = strip.find('.gn-strip-text > .gn-files a.gn-chip').map(function(){ return { p:$(this).data('p'), s:+$(this).data('s'), name:$(this).find('.gn-fn').text() }; }).get();
+    strip.data('oldpics', had).data('drop', {}).data('newpics', []).data('oldfiles', hadF).data('dropf', {}).data('newfiles', []);
     box.html('<textarea class="gn-edit-text" style="width:100%;box-sizing:border-box;min-height:50px;border:1px solid #bcc6d4;border-radius:5px;padding:5px 7px;font:inherit;font-size:13px;resize:vertical;"></textarea>'
-      + '<div class="gn-imgs gn-edit-pics"></div>'
+      + '<div class="gn-imgs gn-edit-pics"></div><div class="gn-files gn-edit-files"></div>'
       + '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:5px;">'
       + '<button type="button" class="gn-pic gn-edit-pic" title="Add pictures">&#128247; Photo</button>'
+      + '<button type="button" class="gn-pic gn-edit-att" title="Attach files">&#128206; File</button>'
       + '<button type="button" class="gn-edit-cancel" style="border:1px solid #bcc6d4;background:#fff;border-radius:4px;padding:3px 10px;cursor:pointer;">Cancel</button>'
       + '<button type="button" class="gn-edit-save" style="border:none;background:#0f5c52;color:#fff;border-radius:4px;padding:3px 12px;font-weight:700;cursor:pointer;">Save</button></div>');
     var ta = box.find('textarea').val(old).focus()[0];
@@ -5856,7 +5899,13 @@ function gnSetup(cfg){
         return '<div class="gn-th' + (drop[p.n] ? ' gn-off' : '') + '"><img src="' + p.url + '" alt=""><button type="button" class="gn-th-x gn-ed-old" data-n="' + p.n + '" title="' + (drop[p.n] ? 'Keep' : 'Remove') + '">' + (drop[p.n] ? '&#8634;' : '&times;') + '</button></div>'; }).join('')
       + strip.data('newpics').map(function(p, k){
         return '<div class="gn-th"><img src="' + p.url + '" alt=""><button type="button" class="gn-th-x gn-ed-new" data-k="' + k + '" title="Remove">&times;</button></div>'; }).join(''));
+    var dropf = strip.data('dropf');
+    strip.find('.gn-edit-files').html(strip.data('oldfiles').map(function(f){ return chip(f.name, f.s, null, 'gn-edf-old', 'data-p="' + esc(f.p) + '"', dropf[f.p]); }).join('')
+      + strip.data('newfiles').map(function(f, k){ return chip(f.file.name, f.file.size, null, 'gn-edf-new', 'data-k="' + k + '"'); }).join(''));
   }
+  $w.on('click', '.gn-edf-old', function(){ var s = $(this).closest('.gn-strip'), d = s.data('dropf'), p = $(this).data('p'); d[p] = !d[p]; drawEditPics(s); });
+  $w.on('click', '.gn-edf-new', function(){ var s = $(this).closest('.gn-strip'); s.data('newfiles').splice(+$(this).data('k'), 1); drawEditPics(s); });
+  $w.on('click', '.gn-edit-att', function(){ fileFor = $(this).closest('.gn-strip'); $afile.val('').trigger('click'); });
   $w.on('click', '.gn-ed-old', function(){ var s = $(this).closest('.gn-strip'), d = s.data('drop'), n = $(this).data('n'); d[n] = !d[n]; drawEditPics(s); });
   $w.on('click', '.gn-ed-new', function(){ var s = $(this).closest('.gn-strip'); s.data('newpics').splice(+$(this).data('k'), 1); drawEditPics(s); });
   $w.on('click', '.gn-edit-pic', function(){ fileFor = $(this).closest('.gn-strip'); $file.val('').trigger('click'); });
@@ -5866,9 +5915,12 @@ function gnSetup(cfg){
     var strip = $(this).closest('.gn-strip'), t = $.trim(strip.find('.gn-edit-text').val());
     var drop = strip.data('drop') || {}, keep = (strip.data('oldpics') || []).filter(function(p){ return !drop[p.n]; }).map(function(p){ return p.n; });
     var add = strip.data('newpics') || [];
-    if (!t && !keep.length && !add.length) return;
+    var dropf = strip.data('dropf') || {}, keepf = (strip.data('oldfiles') || []).filter(function(f){ return !dropf[f.p]; }).map(function(f){ return f.p; });
+    var addf = strip.data('newfiles') || [];
+    if (!t && !keep.length && !add.length && !keepf.length && !addf.length) return;
     if (keep.length + add.length > 8) { alert('Up to 8 pictures per note.'); return; }
-    send('ganttnoteedit', { id:strip.data('id'), text:t, keep:JSON.stringify(keep) }, add, load, $(this));
+    if (keepf.length + addf.length > 8) { alert('Up to 8 files per note.'); return; }
+    send('ganttnoteedit', { id:strip.data('id'), text:t, keep:JSON.stringify(keep), keepf:JSON.stringify(keepf) }, add, load, $(this), addf);
   });
   // Close with the owner window.
   $(document).on('click', '#' + cfg.ownerClose, function(){ win.classList.remove('gn-open'); });

@@ -39,6 +39,10 @@ $ist = new DateTimeZone('Asia/Kolkata');
   .pri { background:#3d6a8f; border-color:#3d6a8f; color:#fff; }
   .pics { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
   .pics img { width:84px; height:84px; object-fit:cover; border-radius:8px; border:1px solid var(--line); display:block; }
+  .files { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+  .files a { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:8px; padding:8px 10px; color:var(--ink); text-decoration:none; font-size:14px; word-break:break-all; }
+  .files .fx { flex:none; background:#3d6a8f; color:#fff; font-size:10px; font-weight:700; border-radius:4px; padding:2px 5px; }
+  .files small { margin-left:auto; color:var(--muted); flex:none; padding-left:6px; }
   .msg { color:var(--muted); font-size:13px; padding:0 16px 12px; }
   .foot { max-width:600px; margin:0 auto; display:flex; }
   .empty { max-width:600px; margin:0 auto 12px; background:var(--card); border-radius:14px; padding:24px 16px; text-align:center; color:var(--muted); }
@@ -60,6 +64,9 @@ $ist = new DateTimeZone('Asia/Kolkata');
     <div class="text"><?= $h($n['text']) ?></div>
 <?php if (!empty($n['imgs'])): ?>
     <div class="pics"><?php foreach ($n['imgs'] as $p): ?><a href="<?= $h($p) ?>" target="_blank"><img src="<?= $h($p) ?>" alt=""></a><?php endforeach; ?></div>
+<?php endif; ?>
+<?php if ($FL = ($n['flist'] ?? [])): ?>
+    <div class="files"><?php foreach ($FL as $f): ?><a href="<?= $h($f['u']) ?>" target="_blank" download><span class="fx"><?= $h(strtoupper($f['ext'])) ?></span><?= $h($f['name']) ?><small><?= $h($f['s'] >= 1048576 ? round($f['s'] / 1048576, 1) . ' MB' : max(1, round($f['s'] / 1024)) . ' KB') ?></small></a><?php endforeach; ?></div>
 <?php endif; ?>
   </div>
   <div class="btns">

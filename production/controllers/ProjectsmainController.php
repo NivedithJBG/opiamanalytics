@@ -5000,9 +5000,9 @@ class ProjectsmainController extends Controller
         }
         $_POST['kind'] = $k === 'en' ? 'estimate' : 'gantt'; self::_gnEnsure();
         $db = Yii::$app->db;
-        $notes = $db->createCommand("SELECT id, note_text AS text, created_at, snooze_until, images FROM " . self::_gnTable() . "
+        $notes = $db->createCommand("SELECT id, note_text AS text, created_at, snooze_until, images, files FROM " . self::_gnTable() . "
             WHERE project_id = :p AND user_id = :u AND done = 0 ORDER BY id DESC", [':p' => $pid, ':u' => $uid])->queryAll();
-        foreach ($notes as &$n) { $n['t'] = self::nvToken($k, $n['id'], $uid); $n['imgs'] = self::gnImgUrls($n['images']); }
+        foreach ($notes as &$n) { $n['t'] = self::nvToken($k, $n['id'], $uid); $n['imgs'] = self::gnImgUrls($n['images']); $n['flist'] = self::gnFileList($n['files']); }
         unset($n);
         $project = (string)$db->createCommand("SELECT Name FROM projects WHERE Project_Id = :p", [':p' => $pid])->queryScalar();
         return $this->renderPartial('notesview', ['kind' => $k, 'notes' => $notes, 'project' => $project, 'uid' => $uid, 'guest' => Yii::$app->user->isGuest]);
@@ -5068,7 +5068,7 @@ class ProjectsmainController extends Controller
         if ($kind === 'gn' || $kind === 'en') {
             $_POST['kind'] = $kind === 'en' ? 'estimate' : 'gantt'; self::_gnEnsure();
             return $db->createCommand(
-                "SELECT n.id, n.note_text AS text, n.done AS status, n.created_at, n.snooze_until, n.images, p.Name AS project
+                "SELECT n.id, n.note_text AS text, n.done AS status, n.created_at, n.snooze_until, n.images, n.files, p.Name AS project
                  FROM " . self::_gnTable() . " n LEFT JOIN projects p ON p.Project_Id = n.project_id
                  WHERE n.id = :i AND n.user_id = :u", [':i' => $id, ':u' => $uid])->queryOne() ?: null;
         }
@@ -5106,6 +5106,9 @@ class ProjectsmainController extends Controller
             // Pictures of the note: JSON list of file names in web/uploads/notes/.
             if (!$db->createCommand("SHOW COLUMNS FROM $tb LIKE 'images'")->queryOne())
                 $db->createCommand("ALTER TABLE $tb ADD COLUMN images TEXT NULL")->execute();
+            // Attached files: JSON list of {p: "<folder>/<name>", s: bytes} in web/uploads/notes/files/.
+            if (!$db->createCommand("SHOW COLUMNS FROM $tb LIKE 'files'")->queryOne())
+                $db->createCommand("ALTER TABLE $tb ADD COLUMN files TEXT NULL")->execute();
             $cols[$tb] = true;
         }
     }
@@ -5161,19 +5164,74 @@ class ProjectsmainController extends Controller
         foreach ($names as $n) if (preg_match('/^[a-f0-9]{32}\.jpg$/', $n)) @unlink(self::_gnImgDir() . '/' . $n);
     }
 
+    // ── Note files (PDF, Office, CSV, text, ZIP, drawings): each in its own random
+    // folder under web/uploads/notes/files/, keeping its own name for download.
+    const GN_MAX_FILES = 8;
+    const GN_FILE_EXT = ['pdf','doc','docx','xls','xlsx','xlsm','ppt','pptx','csv','txt','zip','rar','7z','dwg','dxf'];
+    private static function _gnFileDir()
+    {
+        $d = Yii::getAlias('@webroot') . '/uploads/notes/files';
+        if (!is_dir($d)) @mkdir($d, 0755, true);
+        // Nothing in here is ever run as a script.
+        if (!is_file($d . '/.htaccess')) @file_put_contents($d . '/.htaccess', "<FilesMatch \"\\.(php\\d?|phtml|phar|phps|cgi|pl|py|sh)$\">\nRequire all denied\n</FilesMatch>\nOptions -Indexes\n");
+        return $d;
+    }
+    public static function gnFileList($json)
+    {
+        $a = json_decode((string)$json, true); $out = [];
+        if (!is_array($a)) return $out;
+        $base = rtrim(Yii::$app->request->baseUrl, '/') . '/uploads/notes/files/';
+        foreach ($a as $f) {
+            if (!is_array($f) || !preg_match('#^[a-f0-9]{24}/[^/\\\\]+$#', (string)($f['p'] ?? ''))) continue;
+            $dir = substr($f['p'], 0, 24); $name = substr($f['p'], 25);
+            $out[] = ['p' => $f['p'], 'name' => $name, 's' => (int)($f['s'] ?? 0), 'u' => $base . $dir . '/' . rawurlencode($name),
+                      'ext' => strtolower(pathinfo($name, PATHINFO_EXTENSION))];
+        }
+        return $out;
+    }
+    // Saves the files uploaded as att[]; returns their {p, s} entries.
+    private static function _gnSaveFiles($room)
+    {
+        $out = []; $f = $_FILES['att'] ?? null;
+        if (!$f || !is_array($f['tmp_name'])) return $out;
+        foreach ($f['tmp_name'] as $i => $tmp) {
+            if (count($out) >= $room) break;
+            if (($f['error'][$i] ?? 1) !== UPLOAD_ERR_OK || !is_uploaded_file($tmp) || filesize($tmp) > 20 * 1024 * 1024) continue;
+            $name = preg_replace('/[^\w\-. ()&+,]+/u', '_', basename((string)$f['name'][$i]));
+            $name = trim(preg_replace('/_+/', '_', $name), ' ._');
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            if (!in_array($ext, self::GN_FILE_EXT, true)) continue;
+            if (mb_strlen($name) > 120) $name = mb_substr(pathinfo($name, PATHINFO_FILENAME), 0, 110) . '.' . $ext;
+            $dir = bin2hex(random_bytes(12));
+            $full = self::_gnFileDir() . '/' . $dir;
+            if (!@mkdir($full, 0755) || !move_uploaded_file($tmp, $full . '/' . $name)) continue;
+            $out[] = ['p' => $dir . '/' . $name, 's' => (int)filesize($full . '/' . $name)];
+        }
+        return $out;
+    }
+    private static function _gnDeleteFiles(array $paths)
+    {
+        foreach ($paths as $p) {
+            if (!preg_match('#^([a-f0-9]{24})/([^/\\\\]+)$#', $p, $m)) continue;
+            $d = self::_gnFileDir() . '/' . $m[1];
+            @unlink($d . '/' . $m[2]); @rmdir($d);
+        }
+    }
+
     // Push one note to its owner's phone(s), as on the action plan notification.
     private static function _gnPush($k, $id, $uid, $title = null)
     {
         $_POST['kind'] = $k === 'en' ? 'estimate' : 'gantt';
         $n = Yii::$app->db->createCommand(
-            "SELECT n.id, n.note_text, n.images, p.Name AS project_name FROM " . self::_gnTable() . " n
+            "SELECT n.id, n.note_text, n.images, n.files, p.Name AS project_name FROM " . self::_gnTable() . " n
              LEFT JOIN projects p ON p.Project_Id = n.project_id WHERE n.id = :i AND n.user_id = :u", [':i' => $id, ':u' => $uid])->queryOne();
         if (!$n) return -1;
-        $pics = count(self::gnImgList($n['images']));
+        $pics = count(self::gnImgList($n['images'])); $nf = count(self::gnFileList($n['files']));
         return \app\components\WebPush::sendToUser($uid, [
             'title' => $title ?: ($k === 'en' ? 'Estimate note' : 'Gantt note'),
             'body' => ($n['project_name'] ? $n['project_name'] . ' — ' : '') . mb_substr($n['note_text'], 0, 1000)
-                . ($pics ? "\n📷 " . $pics . ' picture' . ($pics > 1 ? 's' : '') : ''),
+                . ($pics ? "\n📷 " . $pics . ' picture' . ($pics > 1 ? 's' : '') : '')
+                . ($nf ? "\n📎 " . $nf . ' file' . ($nf > 1 ? 's' : '') : ''),
             'tag' => 'opiam-' . $k . '-' . $id, 'url' => '/projectsmain/notifview?k=' . $k . '&id=' . $id . '&u=' . $uid . '&t=' . self::nvToken($k, $id, $uid), 'badge' => self::_apDueCount($uid),
         ]);
     }
@@ -5204,10 +5262,10 @@ class ProjectsmainController extends Controller
         if (!$pid) return ['error' => 'Yes', 'errortext' => 'No project selected.'];
         self::_gnEnsure();
         $rows = Yii::$app->db->createCommand(
-            "SELECT id, note_text AS text, created_at, images FROM " . self::_gnTable() . "
+            "SELECT id, note_text AS text, created_at, images, files FROM " . self::_gnTable() . "
              WHERE project_id = :p AND user_id = :u AND done = 0 ORDER BY id DESC",
             [':p' => $pid, ':u' => (int)Yii::$app->user->Id])->queryAll();
-        foreach ($rows as &$r) { $r['imgs'] = array_map(function ($n, $u) { return ['n' => $n, 'u' => $u]; }, self::gnImgList($r['images']), self::gnImgUrls($r['images'])); unset($r['images']); }
+        foreach ($rows as &$r) { $r['imgs'] = array_map(function ($n, $u) { return ['n' => $n, 'u' => $u]; }, self::gnImgList($r['images']), self::gnImgUrls($r['images'])); $r['files'] = self::gnFileList($r['files']); unset($r['images']); }
         unset($r);
         return ['error' => 'No', 'notes' => $rows];
     }
@@ -5220,10 +5278,16 @@ class ProjectsmainController extends Controller
         if (!$pid) return ['error' => 'Yes', 'errortext' => 'No project selected.'];
         self::_gnEnsure();
         $imgs = self::_gnSaveImages(self::GN_MAX_IMAGES);
-        if ($text === '' && !$imgs) return ['error' => 'Yes', 'errortext' => 'Please write the note or add a picture.'];
+        $files = self::_gnSaveFiles(self::GN_MAX_FILES);
+        if (!empty($_FILES['att']['name']) && count($files) < count(array_filter((array)$_FILES['att']['name']))) {
+            self::_gnDeleteImages($imgs); self::_gnDeleteFiles(array_column($files, 'p'));
+            return ['error' => 'Yes', 'errortext' => 'A file could not be saved. Allowed: ' . strtoupper(implode(', ', self::GN_FILE_EXT)) . ', up to 20 MB each, 8 per note.'];
+        }
+        if ($text === '' && !$imgs && !$files) return ['error' => 'Yes', 'errortext' => 'Please write the note or add a picture or file.'];
         $db = Yii::$app->db;
         $db->createCommand()->insert(self::_gnTable(), ['project_id' => $pid, 'user_id' => (int)Yii::$app->user->Id,
-            'note_text' => $text, 'done' => 0, 'created_at' => date('Y-m-d H:i:s'), 'images' => $imgs ? json_encode($imgs) : null])->execute();
+            'note_text' => $text, 'done' => 0, 'created_at' => date('Y-m-d H:i:s'), 'images' => $imgs ? json_encode($imgs) : null,
+            'files' => $files ? json_encode($files) : null])->execute();
         return ['error' => 'No', 'id' => (int)$db->getLastInsertID()];
     }
 
@@ -5233,17 +5297,28 @@ class ProjectsmainController extends Controller
         $text = trim((string)($_POST['text'] ?? ''));
         self::_gnEnsure();
         $db = Yii::$app->db; $id = (int)($_POST['id'] ?? 0); $uid = (int)Yii::$app->user->Id;
-        $old = $db->createCommand("SELECT images FROM " . self::_gnTable() . " WHERE id = :i AND user_id = :u", [':i' => $id, ':u' => $uid])->queryOne();
+        $old = $db->createCommand("SELECT images, files FROM " . self::_gnTable() . " WHERE id = :i AND user_id = :u", [':i' => $id, ':u' => $uid])->queryOne();
         if (!$old) return ['error' => 'Yes', 'errortext' => 'This note no longer exists.'];
         $had = self::gnImgList($old['images']);
         // keep = the existing pictures still on the note (others are removed).
         $keep = isset($_POST['keep']) ? array_values(array_intersect($had, self::gnImgList($_POST['keep']))) : $had;
         $new = self::_gnSaveImages(max(0, self::GN_MAX_IMAGES - count($keep)));
         $imgs = array_merge($keep, $new);
-        if ($text === '' && !$imgs) { self::_gnDeleteImages($new); return ['error' => 'Yes', 'errortext' => 'Please write the note or add a picture.']; }
-        $db->createCommand()->update(self::_gnTable(), ['note_text' => $text, 'images' => $imgs ? json_encode($imgs) : null],
-            ['id' => $id, 'user_id' => $uid])->execute();
+        // Files: keepf = paths of the existing files still on the note.
+        $hadF = json_decode((string)$old['files'], true) ?: [];
+        $keepP = isset($_POST['keepf']) ? (json_decode((string)$_POST['keepf'], true) ?: []) : array_column($hadF, 'p');
+        $keepF = array_values(array_filter($hadF, function ($f) use ($keepP) { return in_array($f['p'] ?? '', $keepP, true); }));
+        $newF = self::_gnSaveFiles(max(0, self::GN_MAX_FILES - count($keepF)));
+        if (!empty($_FILES['att']['name']) && count($newF) < count(array_filter((array)$_FILES['att']['name']))) {
+            self::_gnDeleteImages($new); self::_gnDeleteFiles(array_column($newF, 'p'));
+            return ['error' => 'Yes', 'errortext' => 'A file could not be saved. Allowed: ' . strtoupper(implode(', ', self::GN_FILE_EXT)) . ', up to 20 MB each, 8 per note.'];
+        }
+        $files = array_merge($keepF, $newF);
+        if ($text === '' && !$imgs && !$files) { self::_gnDeleteImages($new); return ['error' => 'Yes', 'errortext' => 'Please write the note or add a picture or file.']; }
+        $db->createCommand()->update(self::_gnTable(), ['note_text' => $text, 'images' => $imgs ? json_encode($imgs) : null,
+            'files' => $files ? json_encode($files) : null], ['id' => $id, 'user_id' => $uid])->execute();
         self::_gnDeleteImages(array_diff($had, $keep));
+        self::_gnDeleteFiles(array_diff(array_column($hadF, 'p'), array_column($keepF, 'p')));
         return ['error' => 'No'];
     }
 
