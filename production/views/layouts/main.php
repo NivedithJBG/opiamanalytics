@@ -5653,6 +5653,8 @@ $(document).on('click', '#gantt-win-min', function(e){
 .gn-text { flex:1; resize:none; min-height:40px; max-height:220px; overflow-y:auto; border:1px solid #bcc6d4; border-radius:5px; padding:5px 7px; font:inherit; font-size:13px; }
 .gn-add { flex:1; border:none; background:#0f5c52; color:#fff; border-radius:5px; padding:0 14px; font-weight:700; cursor:pointer; min-height:22px; }
 .gn-form-btns { flex:none; display:flex; flex-direction:column; gap:4px; }
+.gn-form .gn-file { display:none !important; }   /* app CSS shows file inputs even when hidden */
+.gn-form .gn-text { min-width:0; }
 .gn-pic { flex:none; border:1px solid #0f5c52; background:#fff; color:#0f5c52; border-radius:5px; padding:2px 8px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
 .gn-pic:hover { background:#e6f2f0; }
 .gn-pend { flex:none; display:none; flex-wrap:wrap; gap:6px; padding:0 10px 8px; border-bottom:1px solid #e3e7ee; }
