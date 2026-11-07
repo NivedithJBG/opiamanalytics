@@ -2124,7 +2124,6 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
 
   // ── Move a Sub Group — press-and-hold drag ──────────────────────────────────
   // Drop on another Sub Group row: placed just before it. Drop on an IOW Group row: end of that group. Drop on an activity row: into its IOW Group, after the activity's Sub Group.
-  // Group). Drop on an IOW Group row: moved to the end of that IOW Group.
   // Its activities go with it.
   (function(){
     var $ghost = $('#gact-drag-ghost');
