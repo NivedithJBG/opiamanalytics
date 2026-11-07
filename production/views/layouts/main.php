@@ -4850,7 +4850,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
 #apt-hdr{
   background:linear-gradient(135deg,#37475a,#26313f);color:#fff;padding:12px 20px;display:flex;justify-content:space-between;
   align-items:center;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;
-  text-transform:uppercase;flex-shrink:0;
+  text-transform:uppercase;flex-shrink:0;cursor:move;user-select:none;touch-action:none;
 }
 #apt-close{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1}
 #apt-body{padding:16px 20px;overflow-y:auto;flex:1;}
@@ -4893,6 +4893,24 @@ window.loadIowGroupOptions = function(selectEl, cb){
     <button id="apt-btn-done">Done</button>
   </div>
 </div>
+<script>
+// Tasks window: drag by its header (mouse and touch); stays where it is left.
+(function(){
+  var m = document.getElementById('apt-modal'), hdr = document.getElementById('apt-hdr'), d = null;
+  window.bindDragTouch(hdr, 'mousedown', function(e){
+    if (e.target.id === 'apt-close') return;
+    var r = m.getBoundingClientRect();
+    m.style.transform = 'none'; m.style.left = r.left + 'px'; m.style.top = r.top + 'px';
+    d = { sx:e.clientX, sy:e.clientY, ox:r.left, oy:r.top }; e.preventDefault();
+  });
+  window.bindDragTouch(document, 'mousemove', function(e){
+    if (!d) return;
+    m.style.left = Math.max(0, Math.min(d.ox + e.clientX - d.sx, window.innerWidth - 80)) + 'px';
+    m.style.top = Math.max(0, Math.min(d.oy + e.clientY - d.sy, window.innerHeight - 40)) + 'px';
+  }, { passive:false });
+  window.bindDragTouch(document, 'mouseup', function(){ d = null; });
+})();
+</script>
 
 <script>
 (function(){
