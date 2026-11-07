@@ -6023,10 +6023,17 @@ gnSetup({ win:'en-win', btn:'en-btn', kind:'estimate', owner:'estreport-win', ow
         });
         window._ganttScrollKeep = _sk;
       }
+      _loadGanttWin._retried = false;
       $('#gantt-win-body').html(html);
       _reparentGcmPopup();
-    }, error: function(){
-      $('#gantt-win-body').html('<div style="padding:30px;color:red;">Failed to load Gantt.</div>');
+    }, error: function(xhr, status, err){
+      // One automatic retry (a brief server hiccup), then show what the server answered.
+      if (!_loadGanttWin._retried) { _loadGanttWin._retried = true; setTimeout(function(){ _loadGanttWin(pid, keep); }, 1500); return; }
+      _loadGanttWin._retried = false;
+      var body = String(xhr.responseText || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+      $('#gantt-win-body').html($('<div style="padding:30px;color:red;">').append(
+        $('<div>').text('Failed to load Gantt.'),
+        $('<div style="margin-top:8px;font-size:12px;color:#555;">').text('Server answer: ' + (xhr.status || 'no response') + ' ' + (err || status || '') + (body ? ' — ' + body : ''))));
     }});
   }
 
