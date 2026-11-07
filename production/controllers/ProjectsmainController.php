@@ -13389,17 +13389,9 @@ class ProjectsmainController extends Controller
         if ($layout === 'false') {
             $this->layout = false;
         }
-        // TEMP diagnostics (Gantt 503 on GOSPL, 2026-11-07): how far the web request gets.
-        $t0 = microtime(true);
-        $gd = function($m) use ($t0) { @file_put_contents(Yii::getAlias('@runtime') . '/logs/ganttdiag.log', date('H:i:s') . ' ' . $m . ' t=' . round(microtime(true) - $t0, 2) . 's mem=' . round(memory_get_usage() / 1048576) . 'MB queries=' . (Yii::getLogger()->getDbProfiling()[0] ?? 0) . "
-", FILE_APPEND); };
-        $gd("start id=$id php=" . PHP_VERSION . ' audit=' . (Yii::$app->hasModule('audit') ? 'on' : 'off'));
         Yii::$app->helper->GetRelationcorrect($id);
-        $gd('relations done');
         $project = Projects::findOne($id);
-        $out = $this->render('newganttview', ['projectId' => $id, 'project' => $project, 'embedMode' => ($layout === 'false')]);
-        $gd('rendered ' . strlen($out) . ' bytes peak=' . round(memory_get_peak_usage() / 1048576) . 'MB');
-        return $out;
+        return $this->render('newganttview', ['projectId' => $id, 'project' => $project, 'embedMode' => ($layout === 'false')]);
     }
 
     /* Experimental "Dependency view" — same Gantt rendering engine as

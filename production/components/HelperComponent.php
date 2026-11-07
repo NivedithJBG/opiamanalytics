@@ -968,20 +968,19 @@ class HelperComponent extends Component
         return $this->getWorkingDay($date, $holiday_dates, $holiday_weeks, $duration, $direction);
     }
 
+    // Steps day by day, skipping holidays / week-offs, until $duration working days
+    // are counted. A loop, not recursion: one call per day overflowed the PHP stack
+    // (crash, 503 on the Gantt) once an activity ran to tens of thousands of days.
     function getWorkingDay($dateToCheck, $datesArr, $weeksArr, $duration, $direction){
-        if($direction == 'next')         $nextDate = date('j-n-Y', strtotime($dateToCheck. ' +1 day'));
-        elseif($direction == 'previous') $nextDate = date('j-n-Y', strtotime($dateToCheck. ' -1 day'));
-        
-        if(($datesArr && in_array($dateToCheck, $datesArr)) || ($weeksArr && in_array(date('w', strtotime($dateToCheck)), $weeksArr))){
-            return $this->getWorkingDay($nextDate, $datesArr, $weeksArr, $duration, $direction);
+        $step = $direction == 'previous' ? ' -1 day' : ' +1 day';
+        $t = strtotime($dateToCheck);
+        for ($guard = 0; $guard < 400000; $guard++) {
+            $d = date('j-n-Y', $t);
+            if (($datesArr && in_array($d, $datesArr)) || ($weeksArr && in_array(date('w', $t), $weeksArr))) { $t = strtotime($d . $step); continue; }
+            if ($duration > $this->durationCnt) { $this->durationCnt++; $t = strtotime($d . $step); continue; }
+            break;
         }
-        else if($duration > $this->durationCnt){
-            $this->durationCnt++;
-            return $this->getWorkingDay($nextDate, $datesArr, $weeksArr, $duration, $direction);
-        }
-        else{
-            $this->finalDate = $dateToCheck;
-        }
+        $this->finalDate = date('j-n-Y', $t);
         return $this->finalDate;
     }
 
