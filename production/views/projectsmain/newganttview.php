@@ -1905,7 +1905,10 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
         // Any other leaf-activity row is a valid drop target now — same
         // WBS item reorders in place, a different WBS item/IOW moves the
         // activity there (see mouseup below).
-        if (rowDb) {
+        // A Sub Group or IOW Group header row is a target too (an empty Sub Group has no
+        // activity rows to drop on).
+        var _hdr = (window._ganttSgRows || {})[rowTid] || (window._ganttWbsBareRowWgId || {})[rowTid];
+        if (rowDb || _hdr) {
           _dropRow = row;
           $(row).addClass('gact-drop-target');
         }
@@ -1925,7 +1928,23 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var cells = window._ganttActCells || {};
       var dropTid = dropRow.id.slice(dropRow.id.indexOf('child_') + 'child_'.length);
       var dropDb = cells[dropTid];
-      if (!dropDb) return;
+      if (!dropDb) {
+        // Dropped on a header: a Sub Group row puts the activity into that Sub Group (at its
+        // end); an IOW Group row puts it directly under that IOW Group (no Sub Group).
+        var hSg = (window._ganttSgRows || {})[dropTid], hIow = (window._ganttWbsBareRowWgId || {})[dropTid];
+        if (!cells[dragTid] || (!hSg && !(hIow && hIow.iowGroupId))) return;
+        var tGid = String(hSg ? hSg.iowGroupId : hIow.iowGroupId), tSg = hSg ? String(hSg.sgId) : '0';
+        var setSg = function(){ $.ajax({ type: 'POST', url: _base + '/wbsactivitysubgroup', dataType: 'json',
+          data: { wan_id: cells[dragTid].wanId, subgroup_id: tSg },
+          success: function(r){ if (!r || r.error !== 'No') { alert((r && r.errortext) || 'Could not move — please try again.'); return; } if (typeof window.loadGantt === 'function') window.loadGantt(); },
+          error: function(){ alert('Network error — could not save the move.'); } }); };
+        if (String(cells[dragTid].iowGroupId) === tGid) { if (String(cells[dragTid].subgroupId || '0') !== tSg) setSg(); return; }
+        $.ajax({ type: 'POST', url: _base + '/moveactivitytoiow', dataType: 'json',
+          data: { wan_id: cells[dragTid].wanId, target_iow_group_id: tGid, drop_after_wan_id: 0 },
+          success: function(r){ if (!r || r.error !== 'No') { alert((r && r.errortext) || 'Could not move — please try again.'); return; } setSg(); },
+          error: function(){ alert('Network error — could not save the move.'); } });
+        return;
+      }
 
       var _dragSg = cells[dragTid] ? cells[dragTid].subgroupId : '0', _dropSg = dropDb.subgroupId || '0';
       var _setSg = function(done){
