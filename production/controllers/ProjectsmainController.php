@@ -13389,9 +13389,15 @@ class ProjectsmainController extends Controller
         if ($layout === 'false') {
             $this->layout = false;
         }
+        // TEMP diagnostics (Gantt 503 on GOSPL, 2026-11-07): how far the web request gets.
+        $t0 = microtime(true);
+        Yii::warning("GANTTDIAG start id=$id php=" . PHP_VERSION, 'gantt');
         Yii::$app->helper->GetRelationcorrect($id);
+        Yii::warning('GANTTDIAG relations done ' . round(microtime(true) - $t0, 2) . 's', 'gantt');
         $project = Projects::findOne($id);
-        return $this->render('newganttview', ['projectId' => $id, 'project' => $project, 'embedMode' => ($layout === 'false')]);
+        $out = $this->render('newganttview', ['projectId' => $id, 'project' => $project, 'embedMode' => ($layout === 'false')]);
+        Yii::warning('GANTTDIAG rendered ' . strlen($out) . ' bytes ' . round(microtime(true) - $t0, 2) . 's mem ' . round(memory_get_peak_usage() / 1048576) . 'MB', 'gantt');
+        return $out;
     }
 
     /* Experimental "Dependency view" — same Gantt rendering engine as
