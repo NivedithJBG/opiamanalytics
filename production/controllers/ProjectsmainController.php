@@ -580,6 +580,28 @@ class ProjectsmainController extends Controller
      * WBS values (kept in sync with the Progress Report screen, which
      * reads tasks from schedule_task_new, not activity_tasks).
      */
+    // Guard against a wrong task Qty / Productivity giving an impossible duration
+    // (e.g. 28,000 days, which pushed linked activities out to the year 3122).
+    // Limit = the project duration (contract window); 3650 days if none is set.
+    public static function durationLimit($pid)
+    {
+        $d = (int)Yii::$app->db->createCommand("SELECT duration FROM projects WHERE Project_Id = :p", [':p' => (int)$pid])->queryScalar();
+        return $d > 0 ? $d : 3650;
+    }
+    public static function durationLimitError($pid, $days)
+    {
+        $lim = self::durationLimit($pid);
+        if ((int)$days <= $lim) return null;
+        return 'The duration works out to ' . number_format((int)$days) . ' days, longer than the project duration of ' . number_format($lim)
+             . ' days. Please check the task Qty/Unit and Productivity/day (and the activity quantity). Not saved.';
+    }
+    // Duration limit for the screens (Tasks window warns before saving).
+    public function actionDurationlimit()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        return ['error' => 'No', 'limit' => self::durationLimit($this->_cfPid())];
+    }
+
     public function actionWbsactivityupdate()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -622,6 +644,7 @@ class ProjectsmainController extends Controller
             if ($tProd > 0) $sumDurPerUnit += ($tQty / $tProd);
         }
         $duration = ($qty > 0 && $sumDurPerUnit > 0) ? (int)ceil(($qty * $sumDurPerUnit) / $rUnit) : 1;
+        if ($msg = self::durationLimitError($pid, $duration)) return ['error' => $msg];
 
         $saStart = $sa['start_date'] ?: date('Y-m-d');
         $saEnd   = date('Y-m-d', strtotime($saStart . ' + ' . ($duration - 1) . ' days'));
@@ -717,6 +740,7 @@ class ProjectsmainController extends Controller
         $qty          = (float)($p['qty']           ?? 0);
         $schQty       = (float)($p['sch_qty']       ?? 0);
         $duration     = max(1, (int)($p['duration'] ?? 1));
+        if ($msg = self::durationLimitError($pid, $duration)) return ['error' => $msg];
         $tasks        = $p['tasks']     ?? [];
         $resources    = $p['resources'] ?? [];
         $projTypeId   = (int)($p['proj_type_id']   ?? 0);
@@ -1503,6 +1527,7 @@ class ProjectsmainController extends Controller
         $qty          = (float)($p['qty']            ?? 0);
         $schQty       = (float)($p['sch_qty']        ?? 0);
         $duration     = max(1, (int)($p['duration']  ?? 1));
+        if ($msg = self::durationLimitError($pid, $duration)) return ['error' => $msg];
         $rUnit        = (float)($p['r_unit']         ?? 1) ?: 1.0;
         $tasks        = $p['tasks']     ?? [];
         $resources    = $p['resources'] ?? [];

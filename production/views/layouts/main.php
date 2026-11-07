@@ -4054,7 +4054,9 @@ document.addEventListener('click', function(e){
                     $.ajax({
                         type:'POST', url:'../projectsmain/wbsadd', dataType:'json',
                         data:{ payload: JSON.stringify(payload) },
-                        success:function(){ if (window.cwbsEdits) delete window.cwbsEdits[act.id]; addOne(i + 1); },
+                        success:function(d){
+                            if (d && d.error && d.error !== 'No') { $('#cwbs-msg').css('color','#c00').text('"' + act.name + '": ' + d.error); alert('"' + act.name + '": ' + d.error); $btn.prop('disabled', false); return; }
+                            if (window.cwbsEdits) delete window.cwbsEdits[act.id]; addOne(i + 1); },
                         error:function(){
                             $('#cwbs-msg').css('color','#c00').text('Failed to add "' + act.name + '". Stopped.');
                             $btn.prop('disabled', false);
@@ -4889,7 +4891,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
     <button type="button" id="apt-add-row-btn">&#43; Add Task</button>
   </div>
   <div id="apt-footer">
-    <div id="apt-dur-display">Duration: <span id="apt-dur-val">—</span></div>
+    <div id="apt-dur-display">Duration: <span id="apt-dur-val">—</span><div id="apt-dur-warn" style="display:none;color:#c0392b;font-weight:700;font-size:12px;margin-top:4px;max-width:420px;"></div></div>
     <button id="apt-btn-done">Done</button>
   </div>
 </div>
@@ -4938,6 +4940,10 @@ window.loadIowGroupOptions = function(selectEl, cb){
     document.querySelectorAll('#apt-task-body tr').forEach(function(tr){ sum += apRecalcTaskRow(tr); });
     var dur = (schQty > 0 && sum > 0) ? Math.ceil((schQty * sum) / rUnit) : 0;
     document.getElementById('apt-dur-val').textContent = dur > 0 ? dur : '—';
+    // Over the project duration: almost always a wrong Qty/Unit or Productivity/day.
+    var lim = window._aptDurLimit || 0, w = document.getElementById('apt-dur-warn');
+    if (w) { var over = lim && dur > lim; w.style.display = over ? '' : 'none';
+      if (over) w.textContent = 'Too long: ' + dur.toLocaleString() + ' days is more than the project duration of ' + lim.toLocaleString() + ' days. Check Qty/Unit and Productivity/day. It will not be saved.'; }
     return dur;
   }
 
@@ -4977,6 +4983,8 @@ window.loadIowGroupOptions = function(selectEl, cb){
 
     document.getElementById('apt-bk').classList.add('apt-open');
     document.getElementById('apt-modal').classList.add('apt-open');
+    // Project duration limit for the Too-long warning (fetched once).
+    $.ajax({ type:'POST', url:'../projectsmain/durationlimit', dataType:'json', success:function(d){ if (d && d.limit) { window._aptDurLimit = +d.limit; apRecalcDuration(); } } });
   };
 
   function closeTaskPopup(){
