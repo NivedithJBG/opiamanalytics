@@ -681,6 +681,10 @@ class ProjectsmainController extends Controller
             // Project edits stay in the project: the Activity Library is not updated.
         }
 
+        // A changed duration/quantity moves the Planned dates of everything linked after
+        // it (both ways: a shorter duration pulls successors back).
+        Yii::$app->helper->RecalculatePlannedDates($pid);
+
         return ['error' => 'No', 'sa_id' => $saId, 'duration' => $duration, 'duration_is_fallback' => ($sumDurPerUnit <= 0)];
     }
 
