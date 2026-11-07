@@ -2123,7 +2123,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
   })();
 
   // ── Move a Sub Group — press-and-hold drag ──────────────────────────────────
-  // Drop on another Sub Group row: placed just before it (in that row's IOW
+  // Drop on another Sub Group row: placed just before it. Drop on an IOW Group row: end of that group. Drop on an activity row: into its IOW Group, after the activity's Sub Group.
   // Group). Drop on an IOW Group row: moved to the end of that IOW Group.
   // Its activities go with it.
   (function(){
@@ -2157,7 +2157,11 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var row = _rowAt(e.clientY);
       if (row && row !== _dragRow) {
         var t = _tidOf(row);
-        if ((window._ganttSgRows || {})[t] || _isIowRow(t)) { _dropRow = row; $(row).addClass('giow-drop-target'); }
+        var _ac = (window._ganttActCells || {})[t], _own = (window._ganttSgRows || {})[_dragTid];
+        // Any row of an IOW Group is a target: its header, a Sub Group, or one of its activities
+        // (not the dragged Sub Group's own activities).
+        var _okAct = _ac && _ac.iowGroupId && !(_own && String(_ac.subgroupId) === String(_own.sgId));
+        if ((window._ganttSgRows || {})[t] || _isIowRow(t) || _okAct) { _dropRow = row; $(row).addClass('giow-drop-target'); }
       }
     });
     $(document).off('mouseup.gsgdrag').on('mouseup.gsgdrag', function() {
@@ -2171,6 +2175,20 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var t = _tidOf(dropRow), sgDrop = (window._ganttSgRows || {})[t], data;
       if (sgDrop) data = { id: drag.sgId, iow_group_id: sgDrop.iowGroupId, before_id: sgDrop.sgId };
       else if (_isIowRow(t)) data = { id: drag.sgId, iow_group_id: window._ganttWbsBareRowWgId[t].iowGroupId, before_id: 0 };
+      else if ((window._ganttActCells || {})[t]) {
+        // Dropped on an activity: into that activity's IOW Group, just after the Sub Group the
+        // activity sits in (first, if the activity is directly under the IOW Group).
+        var ac = window._ganttActCells[t], gid = String(ac.iowGroupId), sgs = [];
+        $('#gantt-container .gtasktablewrapper tr[id*="child_"]').each(function(){
+          if (this.id.indexOf('childrow_') !== -1) return;
+          var s = (window._ganttSgRows || {})[_tidOf(this)];
+          if (s && String(s.iowGroupId) === gid && String(s.sgId) !== String(drag.sgId)) sgs.push(String(s.sgId));
+        });
+        var at = String(ac.subgroupId || '0'), before;
+        if (at === '0') before = sgs.length ? sgs[0] : 0;
+        else { var k = sgs.indexOf(at); before = (k !== -1 && k + 1 < sgs.length) ? sgs[k + 1] : 0; }
+        data = { id: drag.sgId, iow_group_id: gid, before_id: before };
+      }
       else return;
       if (sgDrop && sgDrop.sgId === drag.sgId) return;
       $.ajax({ type: 'POST', url: _base + '/wbssubgroupplace', dataType: 'json', data: data,
