@@ -5172,17 +5172,19 @@ window.loadIowGroupOptions = function(selectEl, cb){
     document.getElementById('eam-iow-name').textContent = _eamIowName;
   }
 
+  // Quantities shown with two decimals (as in the Gantt).
+  function eamQ2(v){ var n = parseFloat(v); return isFinite(n) ? n.toFixed(2) : (v == null ? '' : v); }
   function eamViewCellsHtml(it){
     return '<td class="eam-col-name">' + $('<div>').text(it.name).html() + '</td>'
       + '<td>' + $('<div>').text(it.unit).html() + '</td>'
-      + '<td id="eam-col-qty">' + it.quantity + '</td>'
+      + '<td id="eam-col-qty">' + eamQ2(it.quantity) + '</td>'
       + '<td id="eam-col-runit">' + (it.r_unit != null ? it.r_unit : 1) + '</td>';
   }
 
   function eamEditCellsHtml(it){
     return '<td class="eam-col-name"><input type="text" class="eam-name-input" value="' + $('<div>').text(it.name).html() + '"></td>'
       + '<td><input type="text" class="eam-unit-input" value="' + $('<div>').text(it.unit).html() + '"></td>'
-      + '<td id="eam-col-qty"><input type="number" class="eam-qty-input" value="' + it.quantity + '" step="0.01" min="0"></td>'
+      + '<td id="eam-col-qty"><input type="number" class="eam-qty-input" value="' + eamQ2(it.quantity) + '" step="0.01" min="0"></td>'
       + '<td id="eam-col-runit"><input type="number" class="eam-runit-input" value="' + (it.r_unit != null ? it.r_unit : 1) + '" step="0.01" min="0.01"></td>';
   }
 
@@ -5335,7 +5337,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
           cells = row.cells;
           cells[2].outerHTML = '<td>' + $('<div>').text(unit).html() + '</td>';
           cells = row.cells;
-          cells[3].outerHTML = '<td id="eam-col-qty">' + qty + '</td>';
+          cells[3].outerHTML = '<td id="eam-col-qty">' + eamQ2(qty) + '</td>';
           cells = row.cells;
           cells[4].outerHTML = '<td id="eam-col-runit">' + rUnit + '</td>';
         }
