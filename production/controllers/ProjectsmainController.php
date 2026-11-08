@@ -1617,13 +1617,9 @@ class ProjectsmainController extends Controller
             // until $wanId is known.
 
             if ($iowActId && $iowGroupId) {
-                // Reuse a project copy of this library activity only if it has no Gantt bar yet
-                // (estimate-only). One already on the Gantt is never overwritten: adding the same
-                // library activity again creates a second project activity.
                 $wanRow2 = $db->createCommand(
-                    "SELECT wa.id FROM workgroup_activities_new wa WHERE wa.project_Id=:p AND wa.activity_Id=:a AND wa.iow_group_id=:g
-                       AND NOT EXISTS (SELECT 1 FROM scheduleactivities sa WHERE sa.activity_id = wa.id AND sa.projectId = :p2 AND sa.status = 0) LIMIT 1",
-                    [':p' => $pid, ':a' => $iowActId, ':g' => $iowGroupId, ':p2' => $pid]
+                    "SELECT id FROM workgroup_activities_new WHERE project_Id=:p AND activity_Id=:a AND iow_group_id=:g LIMIT 1",
+                    [':p' => $pid, ':a' => $iowActId, ':g' => $iowGroupId]
                 )->queryOne();
                 if ($wanRow2) {
                     $wanId = (int)$wanRow2['id'];
