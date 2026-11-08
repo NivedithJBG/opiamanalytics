@@ -3905,9 +3905,43 @@ document.addEventListener('click', function(e){
         if (a === 'del') {
             if (!window.confirm(k === 'g' ? 'Remove IOW Group "' + name + '" from this project\'s Gantt?'
                                           : 'Delete Sub Group "' + name + '"? Its activities stay, directly under the IOW Group.')) return;
+            if (k === 'g') { cwbsIowDelete(id, name, $msg); return; }
             cwbsPost(base + 'delete', { id: id }, $msg, k === 'g' ? 'IOW Group removed' : 'Sub Group deleted');
         }
     });
+    // Remove an IOW Group from the Gantt. If it still has activities, they (and its Sub
+    // Groups) move to another IOW Group chosen here; nothing is deleted.
+    function cwbsIowDelete(id, name, $msg){
+        $.ajax({ type:'POST', url:'../projectsmain/wbsheadingdelete', dataType:'json', data:{ id:id },
+            success:function(d){
+                if (d && d.error === 'No') { $msg.css('color','#0a7a3a').text('IOW Group removed'); cwbsAfterHeadingChange(); return; }
+                if (!d || d.error !== 'Move') { $msg.css('color','#c00').text((d && d.errortext) || 'Could not remove.'); return; }
+                if (!(d.groups || []).length) { alert('"' + name + '" has ' + d.count + ' activities and there is no other IOW Group to move them to. Add another IOW Group first.'); return; }
+                $('#cwbs-iowmove').remove();
+                var opts = d.groups.map(function(g){ return '<option value="' + g.id + '">' + $('<div>').text(g.name).html() + '</option>'; }).join('');
+                var $dlg = $('<div id="cwbs-iowmove" style="position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:2147482000;display:flex;align-items:center;justify-content:center;">'
+                    + '<div style="background:#fff;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.4);width:420px;max-width:92vw;font-family:Nunito,Arial,sans-serif;overflow:hidden;">'
+                    + '<div style="background:linear-gradient(135deg,#37475a,#26313f);color:#fff;padding:10px 14px;font-weight:700;">Remove IOW Group</div>'
+                    + '<div style="padding:14px;font-size:13px;color:#222;"><p style="margin:0 0 10px;"></p>'
+                    + '<label style="font-weight:700;font-size:12px;">Move them to</label><select style="width:100%;margin-top:4px;padding:6px;border:1px solid #bcc6d4;border-radius:4px;">' + opts + '</select>'
+                    + '<p style="margin:10px 0 0;color:#666;font-size:12px;">Its Sub Groups go along. Estimate, progress and procurement stay unchanged. Activities that sit directly under the group go directly under the new one.</p></div>'
+                    + '<div style="display:flex;justify-content:flex-end;gap:8px;padding:10px 14px;border-top:1px solid #e3e7ee;">'
+                    + '<button type="button" class="iowm-cancel" style="border:1px solid #bcc6d4;background:#fff;border-radius:4px;padding:6px 14px;cursor:pointer;">Cancel</button>'
+                    + '<button type="button" class="iowm-ok" style="border:none;background:#0f5c52;color:#fff;border-radius:4px;padding:6px 14px;font-weight:700;cursor:pointer;">Move and remove</button></div></div></div>');
+                $dlg.find('p').first().text('"' + name + '" has ' + d.count + ' activit' + (d.count === 1 ? 'y' : 'ies') + '. They are not deleted.');
+                $dlg.appendTo('body');
+                $dlg.on('click', '.iowm-cancel', function(){ $dlg.remove(); });
+                $dlg.on('click', '.iowm-ok', function(){
+                    var to = $dlg.find('select').val(), $b = $(this).prop('disabled', true);
+                    $.ajax({ type:'POST', url:'../projectsmain/wbsheadingdelete', dataType:'json', data:{ id:id, move_to:to },
+                        success:function(r){ $dlg.remove();
+                            if (r && r.error === 'No') { $msg.css('color','#0a7a3a').text('IOW Group removed; ' + r.moved + ' activities moved.'); cwbsAfterHeadingChange(); }
+                            else $msg.css('color','#c00').text((r && r.errortext) || 'Could not remove.'); },
+                        error:function(){ $b.prop('disabled', false); alert('Could not remove. Please try again.'); } });
+                });
+            },
+            error:function(){ $msg.css('color','#c00').text('Could not remove. Please try again.'); } });
+    }
     $(document).on('change','#cwbs-proj-type', function(){ cwbsLoadIowGroups(); });
     // Choosing the IOW Group no longer reloads the list (it only sets where to add).
     $(document).on('change','#cwbs-iow-group', function(){ if(!$('#cwbs-tbody tr').length) cwbsLoadActivities(); cwbsAddState(); });

@@ -1308,7 +1308,34 @@ class ProjectsmainController extends Controller
         $this->_sgEnsure();
         $db = Yii::$app->db;
         $n = (int)$db->createCommand("SELECT COUNT(*) FROM scheduleactivities WHERE projectId=:p AND iow_group_id=:g AND status=0", [':p' => $pid, ':g' => $gid])->queryScalar();
-        if ($n) return ['error' => 'Yes', 'errortext' => 'This IOW Group has ' . $n . ' activities in the Gantt. Remove them first.'];
+        $to = (int)($_POST['move_to'] ?? 0);
+        if ($n && !$to) {
+            // Not removed yet: its activities need a new home. Offer the project's other IOW Groups.
+            $others = $db->createCommand("SELECT o.iow_group_id AS id, g.name FROM iow_group_order o JOIN iow_groups g ON g.id = o.iow_group_id
+                WHERE o.project_id = :p AND o.iow_group_id <> :g ORDER BY o.sortorder, o.iow_group_id", [':p' => $pid, ':g' => $gid])->queryAll();
+            return ['error' => 'Move', 'count' => $n, 'groups' => $others,
+                    'errortext' => 'This IOW Group has ' . $n . ' activities. Choose the IOW Group to move them to.'];
+        }
+        if ($n) {
+            // Move everything to IOW Group $to: its Sub Groups (after the target's own) and its
+            // activities (after the target's own). Estimate, progress and procurement stay as they are.
+            if ($to === $gid || !$db->createCommand("SELECT 1 FROM iow_group_order WHERE project_id=:p AND iow_group_id=:g", [':p' => $pid, ':g' => $to])->queryScalar())
+                return ['error' => 'Yes', 'errortext' => 'Choose another IOW Group of this project.'];
+            $tx = $db->beginTransaction();
+            try {
+                $sgNext = (int)$db->createCommand("SELECT COALESCE(MAX(sortorder),0) FROM wbs_subgroups WHERE project_id=:p AND iow_group_id=:g AND status=0", [':p' => $pid, ':g' => $to])->queryScalar();
+                foreach ($db->createCommand("SELECT id FROM wbs_subgroups WHERE project_id=:p AND iow_group_id=:g AND status=0 ORDER BY sortorder, id", [':p' => $pid, ':g' => $gid])->queryColumn() as $sid)
+                    $db->createCommand("UPDATE wbs_subgroups SET iow_group_id=:t, sortorder=:s WHERE id=:i", [':t' => $to, ':s' => ++$sgNext, ':i' => $sid])->execute();
+                $waNext = (int)$db->createCommand("SELECT COALESCE(MAX(sortorder),0) FROM workgroup_activities_new WHERE project_Id=:p AND iow_group_id=:g", [':p' => $pid, ':g' => $to])->queryScalar();
+                foreach ($db->createCommand("SELECT id FROM workgroup_activities_new WHERE project_Id=:p AND iow_group_id=:g ORDER BY sortorder, id", [':p' => $pid, ':g' => $gid])->queryColumn() as $wid)
+                    $db->createCommand("UPDATE workgroup_activities_new SET iow_group_id=:t, sortorder=:s WHERE id=:i", [':t' => $to, ':s' => ++$waNext, ':i' => $wid])->execute();
+                $db->createCommand("UPDATE scheduleactivities SET iow_group_id=:t WHERE projectId=:p AND iow_group_id=:g", [':t' => $to, ':p' => $pid, ':g' => $gid])->execute();
+                $db->createCommand()->delete('iow_group_order', ['project_id' => $pid, 'iow_group_id' => $gid])->execute();
+                $tx->commit();
+            } catch (\Exception $e) { $tx->rollBack(); return ['error' => 'Yes', 'errortext' => 'Could not move the activities.']; }
+            $this->_sgRenumberGroups($pid);
+            return ['error' => 'No', 'moved' => $n];
+        }
         $db->createCommand()->delete('iow_group_order', ['project_id' => $pid, 'iow_group_id' => $gid])->execute();
         $db->createCommand("UPDATE wbs_subgroups SET status=1 WHERE project_id=:p AND iow_group_id=:g", [':p' => $pid, ':g' => $gid])->execute();
         $this->_sgRenumberGroups($pid);
