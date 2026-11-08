@@ -3903,7 +3903,7 @@ document.addEventListener('click', function(e){
             return;
         }
         if (a === 'del') {
-            if (!window.confirm(k === 'g' ? 'Remove IOW Group "' + name + '" from this project\'s Gantt?'
+            if (!window.confirm(k === 'g' ? 'Remove IOW Group "' + name + '" from this project\'s Gantt? Its activities and Sub Groups move into the IOW Group above it.'
                                           : 'Delete Sub Group "' + name + '"? Its activities stay, directly under the IOW Group.')) return;
             if (k === 'g') { cwbsIowDelete(id, name, $msg); return; }
             cwbsPost(base + 'delete', { id: id }, $msg, k === 'g' ? 'IOW Group removed' : 'Sub Group deleted');
@@ -3914,7 +3914,7 @@ document.addEventListener('click', function(e){
     function cwbsIowDelete(id, name, $msg){
         $.ajax({ type:'POST', url:'../projectsmain/wbsheadingdelete', dataType:'json', data:{ id:id },
             success:function(d){
-                if (d && d.error === 'No') { $msg.css('color','#0a7a3a').text('IOW Group removed'); cwbsAfterHeadingChange(); return; }
+                if (d && d.error === 'No') { $msg.css('color','#0a7a3a').text(d.moved ? 'IOW Group removed; its ' + d.moved + ' activities moved to "' + d.to_name + '".' : 'IOW Group removed'); cwbsAfterHeadingChange(); return; }
                 if (!d || d.error !== 'Move') { $msg.css('color','#c00').text((d && d.errortext) || 'Could not remove.'); return; }
                 if (!(d.groups || []).length) { alert('"' + name + '" has ' + d.count + ' activities and there is no other IOW Group to move them to. Add another IOW Group first.'); return; }
                 $('#cwbs-iowmove').remove();

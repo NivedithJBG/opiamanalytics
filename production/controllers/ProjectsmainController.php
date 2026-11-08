@@ -1309,12 +1309,24 @@ class ProjectsmainController extends Controller
         $db = Yii::$app->db;
         $n = (int)$db->createCommand("SELECT COUNT(*) FROM scheduleactivities WHERE projectId=:p AND iow_group_id=:g AND status=0", [':p' => $pid, ':g' => $gid])->queryScalar();
         $to = (int)($_POST['move_to'] ?? 0);
+        $toName = '';
         if ($n && !$to) {
-            // Not removed yet: its activities need a new home. Offer the project's other IOW Groups.
-            $others = $db->createCommand("SELECT o.iow_group_id AS id, g.name FROM iow_group_order o JOIN iow_groups g ON g.id = o.iow_group_id
-                WHERE o.project_id = :p AND o.iow_group_id <> :g ORDER BY o.sortorder, o.iow_group_id", [':p' => $pid, ':g' => $gid])->queryAll();
-            return ['error' => 'Move', 'count' => $n, 'groups' => $others,
-                    'errortext' => 'This IOW Group has ' . $n . ' activities. Choose the IOW Group to move them to.'];
+            // Its activities and Sub Groups go automatically into the IOW Group just above it in
+            // the Gantt (the one below if it is the first), never into Support Activities unless
+            // that is the only other group.
+            $order = $db->createCommand("SELECT o.iow_group_id AS id, g.name FROM iow_group_order o JOIN iow_groups g ON g.id = o.iow_group_id
+                WHERE o.project_id = :p ORDER BY o.sortorder, o.iow_group_id", [':p' => $pid])->queryAll();
+            $pos = array_search((string)$gid, array_map('strval', array_column($order, 'id')), true);
+            $cands = [];
+            if ($pos !== false) {
+                for ($i = $pos - 1; $i >= 0; $i--) $cands[] = $order[$i];
+                for ($i = $pos + 1; $i < count($order); $i++) $cands[] = $order[$i];
+            }
+            $pick = null;
+            foreach ($cands as $c) if (strcasecmp(trim($c['name']), 'Support Activities') !== 0) { $pick = $c; break; }
+            if (!$pick && $cands) $pick = $cands[0];
+            if (!$pick) return ['error' => 'Yes', 'errortext' => 'This IOW Group has ' . $n . ' activities and there is no other IOW Group to move them into. Add another IOW Group first.'];
+            $to = (int)$pick['id']; $toName = $pick['name'];
         }
         if ($n) {
             // Move everything to IOW Group $to: its Sub Groups (after the target's own) and its
@@ -1334,7 +1346,7 @@ class ProjectsmainController extends Controller
                 $tx->commit();
             } catch (\Exception $e) { $tx->rollBack(); return ['error' => 'Yes', 'errortext' => 'Could not move the activities.']; }
             $this->_sgRenumberGroups($pid);
-            return ['error' => 'No', 'moved' => $n];
+            return ['error' => 'No', 'moved' => $n, 'to_name' => $toName];
         }
         $db->createCommand()->delete('iow_group_order', ['project_id' => $pid, 'iow_group_id' => $gid])->execute();
         $db->createCommand("UPDATE wbs_subgroups SET status=1 WHERE project_id=:p AND iow_group_id=:g", [':p' => $pid, ':g' => $gid])->execute();
