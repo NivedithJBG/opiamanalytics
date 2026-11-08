@@ -588,7 +588,10 @@ $('#searchestworktypelist, #searchestactivityname, #estactivitysearch').removeCl
 $('#searchestworktypelist').css({ display: 'inline-block', marginLeft: 0 });
 $('#searchestactivityname').css('display', 'inline-block');
 $('#estactivitysearch').css('display', 'inline-flex');
-/ + Activity sits in the white bar with the filter and search (not the header)./n/$(/x27#addestactivity/x27).css({ float: /x27none/x27, marginLeft: /x2710px/x27, marginRight: 0, marginTop: 0, fontSize: /x2713px/x27, fontWeight: 700, padding: /x276px 16px/x27,/n    background: /x27#26313f/x27, color: /x27#fff/x27, border: /x271px solid #26313f/x27, borderRadius: /x2720px/x27 })/n    .appendTo(/x27#alListBar/x27);
+// + Activity sits in the white bar with the filter and search (not the header).
+$('#addestactivity').css({ float: 'none', marginLeft: '10px', marginRight: 0, marginTop: 0, fontSize: '13px', fontWeight: 700, padding: '6px 16px',
+    background: '#26313f', color: '#fff', border: '1px solid #26313f', borderRadius: '20px' })
+    .appendTo('#alListBar');
 $('#estactivity .content-wrpr').first().appendTo('#alListBody');
 // The resource panel sits outside .content-wrpr in the markup; move it too or it opens in the hidden library window.
 $('#estactivity .allocation-cntnt-wrpr').first().appendTo('#alListBody');
@@ -907,24 +910,34 @@ $(document).on('change', '#estworktypelistss1', function(){
     window.alRefreshActIowGroupDropdown('');
 });
 
-// The first task copies the activity name and unit, until it's typed into by hand.
-// Its Qty/Unit defaults to 1.
-$(document).on('input', '#estactivityname1', function(){
-    var t = $('#alAddActivityPopup .task-name').first();
-    if (!t.val() || t.data('auto')) { t.val(this.value).data('auto', true); }
-});
-$(document).on('input', '#estactivityunit1', function(){
-    var t = $('#alAddActivityPopup .task-unit').first();
-    if (!t.val() || t.data('auto')) { t.val(this.value).data('auto', true); }
-});
+// The first task copies the activity name and unit, and its Qty/Unit defaults to 1.
+// It keeps copying unless the task box was changed by hand to something else; an empty
+// task box (new window, after a save) always takes the activity's value again.
+function alTaskSync(){
+    var $p = $('#alAddActivityPopup');
+    [['#estactivityname1', '.task-name'], ['#estactivityunit1', '.task-unit']].forEach(function(m){
+        var src = $p.find(m[0]), t = $p.find(m[1]).first();
+        if (!src.length || !t.length) return;
+        var v = src.val() || '', prev = src.data('prev') || '';
+        if (!t.val() || t.val() === prev || t.data('auto') !== false) { t.val(v); t.data('auto', true); }
+        src.data('prev', v);
+    });
+    var q = $p.find('.task-qty').first();
+    if (q.length && !q.val() && ($p.find('#estactivityname1').val() || '').trim()) q.val(1);
+}
+$(document).on('input change', '#alAddActivityPopup #estactivityname1, #alAddActivityPopup #estactivityunit1', alTaskSync);
 $(document).on('input', '#alAddActivityPopup .task-name, #alAddActivityPopup .task-unit', function(){
-    $(this).data('auto', false);
+    // Typed by hand: stop copying, unless it was cleared or matches the activity again.
+    var src = $('#alAddActivityPopup ' + ($(this).hasClass('task-name') ? '#estactivityname1' : '#estactivityunit1'));
+    $(this).data('auto', !this.value || this.value === src.val());
 });
 $(document).on('shown.bs.modal', '#alAddActivityPopup', function(){
-    var q = $('#alAddActivityPopup .task-qty').first();
-    if (!q.val()) { q.val(1); }
+    var $p = $(this);
+    $p.find('.task-name').first().data('auto', null);
+    $p.find('.task-unit').first().data('auto', null);
+    var q = $p.find('.task-qty').first(); if (!q.val()) q.val(1);
+    alTaskSync();
 });
-
 /* Edit handler is in estactivity.js alongside the delete handler */;
 
 /* The window opens with the tabs only. The Project Type filter, search and the
