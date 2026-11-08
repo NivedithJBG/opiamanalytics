@@ -2001,7 +2001,6 @@ class ProjectsmainController extends Controller
         return [
             'error'           => 'No',
             'sa_id'           => $saId,
-            'scheduleitem_id' => $scheduleItemId,
             'duration'        => $savedDur,
             'act_name'        => $savedName,
         ];
