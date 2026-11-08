@@ -1284,7 +1284,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
                     act.depends || null,
                     '', '', g, null,
                     null, null, null, '',
-                    { unit: act.unit || '', qty: (act.quantity != null ? act.quantity : '') }
+                    { unit: act.unit || '', qty: (act.quantity != null && act.quantity !== '' && isFinite(+act.quantity) ? (+act.quantity).toFixed(2) : (act.quantity != null ? act.quantity : '')) }
                   );
                   window._ganttActRealId[_ti.getID()] = act.id;
                   if (_cycQty !== null) window._ganttCycleQty[_ti.getID()] = { qty: _cycQty, unit: act.unit || '' };
@@ -1627,7 +1627,7 @@ tr.gcm-row-highlight td { background: #fff8e1 !important; outline: 2px solid #e8
       var _qbar = document.getElementById('gantt-container' + 'bardiv_' + _tid);
       if (!_qbar) continue;
       var _qw = parseInt(_qbar.style.width) || 0;
-      var _qtxt = (Math.round(_cq.qty * 100) / 100).toLocaleString('en-IN') + (_cq.unit ? ' ' + _cq.unit : '');
+      var _qtxt = (+_cq.qty).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + (_cq.unit ? ' ' + _cq.unit : '');
       // Edge markers: ◂ started before this cycle, ▸ continues after it (red when
       // the activity finishes late).
       var _cc = (_actCells[_tid] || {}).cyc, _qoff = 4;
