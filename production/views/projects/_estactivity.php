@@ -588,8 +588,7 @@ $('#searchestworktypelist, #searchestactivityname, #estactivitysearch').removeCl
 $('#searchestworktypelist').css({ display: 'inline-block', marginLeft: 0 });
 $('#searchestactivityname').css('display', 'inline-block');
 $('#estactivitysearch').css('display', 'inline-flex');
-$('#addestactivity').css({ float: 'right', marginRight: '14px', marginTop: '2px', fontSize: '13px', fontWeight: 700, padding: '4px 14px' })
-    .insertAfter('#alListPopup .modal-header .close');
+/ + Activity sits in the white bar with the filter and search (not the header)./n/$(/x27#addestactivity/x27).css({ float: /x27none/x27, marginLeft: /x2710px/x27, marginRight: 0, marginTop: 0, fontSize: /x2713px/x27, fontWeight: 700, padding: /x276px 16px/x27,/n    background: /x27#26313f/x27, color: /x27#fff/x27, border: /x271px solid #26313f/x27, borderRadius: /x2720px/x27 })/n    .appendTo(/x27#alListBar/x27);
 $('#estactivity .content-wrpr').first().appendTo('#alListBody');
 // The resource panel sits outside .content-wrpr in the markup; move it too or it opens in the hidden library window.
 $('#estactivity .allocation-cntnt-wrpr').first().appendTo('#alListBody');
