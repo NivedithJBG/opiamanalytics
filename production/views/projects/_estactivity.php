@@ -600,7 +600,11 @@ $('#estactivity .allocation-cntnt-wrpr').first().appendTo('#alListBody');
    than the screen (the body scrolls instead), so the whole window is visible. */
 $('<style>#alIowGroupPopup .modal-dialog, #alIowPopup .modal-dialog { margin-top:3vh; }'
   + '#alIowGroupPopup .modal-content, #alIowPopup .modal-content { max-height:94vh; display:flex; flex-direction:column; }'
-  + '#alIowGroupPopup .modal-body, #alIowPopup .modal-body { overflow-y:auto; flex:1 1 auto; min-height:0; }</style>').appendTo('head');
+  + '#alIowGroupPopup .modal-body, #alIowPopup .modal-body { overflow-y:auto; flex:1 1 auto; min-height:0; }'
+  // Activity List: a slimmer title bar.
+  + '#alListPopup .modal-header { padding:8px 18px !important; min-height:0 !important; }'
+  + '#alListPopup .modal-header .modal-title { font-size:19px !important; line-height:1.3 !important; margin:0 !important; }'
+  + '#alListPopup .modal-header .close { font-size:24px !important; line-height:1 !important; margin-top:0 !important; }</style>').appendTo('head');
 
 /* These are plain Bootstrap-markup modals with no drag support at all —
    Bootstrap's own modal() JS plugin isn't active on this page (confirmed:

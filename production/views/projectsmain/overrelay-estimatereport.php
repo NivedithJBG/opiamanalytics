@@ -234,7 +234,7 @@
 #erra-bk.erra-open{display:block}
 #erra-popup{
   display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-  width:1220px;height:720px;max-width:97vw;max-height:92vh;min-width:600px;min-height:360px;
+  width:1220px;height:92vh;max-width:97vw;max-height:92vh;min-width:600px;min-height:360px;
   background:#fff;border-radius:8px;
   box-shadow:0 8px 32px rgba(0,0,0,.35);z-index:200401;flex-direction:column;overflow:hidden;
   font-family:'Nunito',sans-serif;
@@ -271,7 +271,9 @@
    screen without any re-skinning here. Only structural/scroll rules for
    fitting this content into a floating popup instead of an in-page tab
    are added. */
-.allocated-list-cntnt-wrpr{flex-shrink:0;max-height:170px;overflow-y:auto;}
+/* The allocated-resources list grows with the resources (up to half the screen,
+   then it scrolls) so every allocated resource can be seen. */
+#erra-popup .allocated-list-cntnt-wrpr{flex-shrink:0;max-height:50vh;overflow-y:auto;}
 .resources-from-selected-item-wrpr{max-height:none;}
 #erra-tabs{width:100%;overflow-y:auto;}
 #erra-accordion{overflow-y:visible;}
