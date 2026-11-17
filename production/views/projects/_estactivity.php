@@ -918,6 +918,7 @@ $(document).on('change', '#estworktypelistss1', function(){
 // It keeps copying unless the task box was changed by hand to something else; an empty
 // task box (new window, after a save) always takes the activity's value again.
 function alTaskSync(){
+    if (window._alEditMode || $('#editingActivityId').val()) return;   // editing an existing activity: leave its tasks alone
     var $p = $('#alAddActivityPopup');
     [['#estactivityname1', '.task-name'], ['#estactivityunit1', '.task-unit']].forEach(function(m){
         var src = $p.find(m[0]), t = $p.find(m[1]).first();

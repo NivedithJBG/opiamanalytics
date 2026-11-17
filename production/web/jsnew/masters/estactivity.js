@@ -109,7 +109,7 @@ $(function() {
             error = 1;
         }
         // IOW Group is no longer part of an activity (activities belong to a Project Type only).
-        $('.estactivityname').each(function(){
+        $('#alAddActivityPopup .estactivityname').each(function(){   // only the Add/Edit window's own field
             var id=$(this).attr('data-id');
             if($(this).val()=='')
             {
@@ -117,7 +117,7 @@ $(function() {
                 error=1;
             }
         });
-        $('.estactivityunit').each(function(){
+        $('#alAddActivityPopup .estactivityunit').each(function(){   // only the Add/Edit window's own field
             var id=$(this).attr('data-id');
             if($(this).val()=='')
             {
@@ -145,6 +145,14 @@ $(function() {
                 $row.find('.task-name, .task-unit, .task-qty, .task-productivity').css('border-color', '');
             }
         });
+        if(error){
+            var miss = [];
+            if(!$('#estworktypelistss1').val() || $('#estworktypelistss1').val() === '0') miss.push('Project Type');
+            if(!$('#alAddActivityPopup #estactivityname1').val()) miss.push('Activity Name');
+            if(!$('#alAddActivityPopup #estactivityunit1').val()) miss.push('Activity Unit');
+            if(taskError) miss.push('Task Name, Unit, Qty/Unit and Productivity/day in every task row');
+            alert('Not saved. Please fill in: ' + (miss.length ? miss.join('; ') : 'the fields marked in red') + '.');
+        }
         if(taskError && !$('#task-rows-error').length){
             $('#task-rows-container').after('<div id="task-rows-error" style="color:red;font-size:12px;margin-top:4px;">Please fill in Task Name, Unit, Qty/Unit and Productivity/day for every task row (or remove the empty row).</div>');
         }
@@ -168,8 +176,8 @@ $(function() {
                 worktypeid:           $('#estworktypelistss1').val() || 0,
                 iow_group_id:         $('#actIowGroupId').val() || 0,
                 working_hours:        $('#est_working_hours').val(),
-                'estactivityname[]':  [$('#estactivityname1').val()],
-                'estactivityunit[]':  [$('#estactivityunit1').val()],
+                'estactivityname[]':  [$('#alAddActivityPopup #estactivityname1').val()],
+                'estactivityunit[]':  [$('#alAddActivityPopup #estactivityunit1').val()],
                 'task_id[]':          taskIds,
                 'task_name[]':        taskNames,
                 'task_unit[]':        taskUnits,
@@ -218,7 +226,7 @@ $(function() {
                                 $('#al-add-activity-saved-msg').show();
                             }
                             setTimeout(function(){ $('#al-add-activity-saved-msg').fadeOut(400); }, 2000);
-                            $('#estactivityname1').focus();
+                            $('#alAddActivityPopup #estactivityname1').focus();
                         }
                     } else {
                         alert('Save failed: ' + (data.msg || 'Unknown error'));
@@ -347,8 +355,8 @@ $(document).on('click', '.al-edit-activity-btn', function(){
             setTimeout(function(){
                 $('#estworktypelistss1').val(act.work_type || 0);
                 $('#estactivitytypeid').val(act.activity_type);
-                $('#estactivityname1').val(act.activity_name);
-                $('#estactivityunit1').val(act.activity_unit);
+                $('#alAddActivityPopup #estactivityname1').val(act.activity_name);
+                $('#alAddActivityPopup #estactivityunit1').val(act.activity_unit);
                 $('#est_working_hours').val(act.working_hours);
                 $('#editingActivityId').val(idval);
                 $('#saveestactivity').html('<span class="icon-check"></span> Update Activity');
@@ -372,7 +380,7 @@ $(document).on('click', '.al-edit-activity-btn', function(){
                             '<input type="hidden" class="task-id" name="task_id[]" value="'+(task.id||0)+'">' +
                             '<div class="col-md-1"></div>' +
                             '<div class="col-md-3"><input type="text" class="form-control task-name" name="task_name[]" placeholder="Task Name" value="'+$('<div/>').text(task.task_name).html()+'"></div>' +
-                            '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit" value="'+$('<div/>').text(task.task_unit||'').html()+'" oninput="this.value=this.value.replace(/[0-9]/g,\'\')"></div>' +
+                            '<div class="col-md-2"><input type="text" class="form-control task-unit" name="task_unit[]" placeholder="Unit" value="'+$('<div/>').text(task.task_unit||act.activity_unit||'').html()+'" oninput="this.value=this.value.replace(/[0-9]/g,\'\')"></div>' +
                             '<div class="col-md-2"><input type="number" step="0.001" min="0" class="form-control task-qty" name="task_qty[]" placeholder="Qty/Unit" value="'+parseFloat(task.task_qty||0).toFixed(3)+'"></div>' +
                             '<div class="col-md-3"><input type="number" step="0.001" min="0" class="form-control task-productivity" name="task_productivity[]" placeholder="Productivity/day" value="'+parseFloat(task.productivity||0).toFixed(3)+'"></div>' +
                             '<div class="col-md-1">'+btnHtml+'</div></div>'
