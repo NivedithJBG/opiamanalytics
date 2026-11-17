@@ -1549,8 +1549,9 @@ function _cfNetInvCycleBarsHtml(cyc){
     cyc = _cfTrimZeroTail(cyc, function(c){ return [tot(c), has(c) ? c.actual : 0]; });
     var maxV = 0;
     cyc.forEach(function(c){ maxV = Math.max(maxV, tot(c), has(c) ? +c.actual || 0 : 0); });
-    var W = 600, H = 300, base = 262, top = 40, pad = 20;
-    W = _cfChartW(W, 2 * pad, cyc.length);
+    // Compact (half size): narrower cycle slots and a lower chart.
+    var W = 300, H = 180, base = 150, top = 24, pad = 14;
+    W = _cfChartW(W, 2 * pad, cyc.length, 46);
     var slot = (W - 2 * pad) / cyc.length;
     var barW = Math.min(slot * 0.5, 90);
     var hOf = function(v){ return maxV > 0 ? Math.max(0, Math.round((v / maxV) * (base - top))) : 0; };
@@ -1569,9 +1570,9 @@ function _cfNetInvCycleBarsHtml(cyc){
     if (aPts.length > 1) g += '<polyline points="' + aPts.map(function(p){ return p.x.toFixed(1) + ',' + p.y; }).join(' ') + '" fill="none" stroke="#7a8799" stroke-width="2" stroke-dasharray="5 4"/>';
     cyc.forEach(function(c, i){
         var v = tot(c), cx = X(i), cy = Y(v), cur = !!c.current;
-        g += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy + '" r="4.5" fill="#3a4a5f"><title>Target Total Investment ' + L(v) + ' L (WIP ' + L(+c.wip || 0) + ' + Advances ' + L(+c.adv || 0) + ')</title></circle>'
-            + '<text x="' + cx.toFixed(1) + '" y="' + (cy - 9) + '" text-anchor="middle" font-size="11" fill="#555">' + L(v) + '</text>'
-            + '<text x="' + cx.toFixed(1) + '" y="' + (base + 22) + '" text-anchor="middle" font-size="13" fill="#111"' + (cur ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
+        g += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy + '" r="3.5" fill="#3a4a5f"><title>Target Total Investment ' + L(v) + ' L (WIP ' + L(+c.wip || 0) + ' + Advances ' + L(+c.adv || 0) + ')</title></circle>'
+            + '<text x="' + cx.toFixed(1) + '" y="' + (cy - 8) + '" text-anchor="middle" font-size="10" fill="#555">' + L(v) + '</text>'
+            + '<text x="' + cx.toFixed(1) + '" y="' + (base + 16) + '" text-anchor="middle" font-size="11" fill="#111"' + (cur ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
     aPts.forEach(function(p){
         var a = +p.c.actual || 0, v = tot(p.c), col = a >= v ? GB : RO;
@@ -1585,7 +1586,7 @@ function _cfNetInvCycleBarsHtml(cyc){
 function _cfShowNetInvCycles(cycles, info){
     $('#cf-netinv-breakdown-win').remove();
     window._cfNetInvCycles = cycles;
-    var winW = 840, winH = 480, MIN_W = 520, MIN_H = 260;
+    var winW = 560, winH = 330, MIN_W = 420, MIN_H = 240;
     var left = Math.max(10, (window.innerWidth - winW) / 2);
     var topP = Math.max(10, (window.innerHeight - winH) / 2);
     var rsHtml = '';
@@ -1623,7 +1624,7 @@ function _cfShowNetInvCycles(cycles, info){
     function statBox(title, v, note){
         return '<div style="border:1px solid #dde2e9;border-radius:6px;padding:8px 10px;text-align:center;">'
             + '<div style="font-size:12px;font-weight:700;color:#081142;text-transform:uppercase;letter-spacing:.3px;">' + title + '</div>'
-            + '<div style="font-size:22px;font-weight:700;color:#000;line-height:1.2;margin-top:4px;">' + (v === null ? '-' : (v / 100000).toFixed(2) + ' L') + '</div>'
+            + '<div style="font-size:18px;font-weight:700;color:#000;line-height:1.2;margin-top:2px;">' + (v === null ? '-' : (v / 100000).toFixed(2) + ' L') + '</div>'
             + '<div style="font-size:11px;color:#5a6e8c;">' + note + '</div></div>';
     }
     var html = '<div id="cf-netinv-breakdown-win" style="position:fixed;left:' + left + 'px;top:' + topP + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:' + MIN_W + 'px;min-height:' + MIN_H + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
@@ -1639,7 +1640,7 @@ function _cfShowNetInvCycles(cycles, info){
         + '</div>'
         + '<div style="flex:1;min-width:0;min-height:0;display:flex;gap:12px;overflow:hidden;padding:10px 16px 16px;box-sizing:border-box;">'
         + '<div id="cf-ni-chart" style="flex:1;min-width:0;overflow-y:auto;">' + _cfNetInvCycleBarsHtml(cycles) + '</div>'
-        + '<div style="flex:none;width:190px;display:flex;flex-direction:column;justify-content:center;gap:10px;font-family:Barlow Condensed,Arial;overflow-y:auto;">'
+        + '<div style="flex:none;width:160px;display:flex;flex-direction:column;justify-content:center;gap:6px;font-family:Barlow Condensed,Arial;overflow-y:auto;">'
         + statBox('Total Investment', curAct, 'actual, today')
         + statBox('Average Investment', avgAct, 'weighted by days' + (avgFrom ? ', ' + avgFrom + ' to today' : ''))
         + fundBox()
