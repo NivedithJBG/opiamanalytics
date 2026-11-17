@@ -472,7 +472,7 @@ function cfBuildSegmentWindows(){
     var panels = $('#cf-grid > .panel').toArray();
     _cfSegWins.forEach(function(w){
         $('body').append(
-            '<div id="' + w.id + '" class="cf-seg-win" style="display:none;position:fixed;top:12vh;left:' + w.left + ';width:' + w.width + ';height:68vh;color:#fff;background:#f0f2f7;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.7);flex-direction:column;overflow:hidden;z-index:100200;">'
+            '<div id="' + w.id + '" class="cf-seg-win" style="display:none;position:fixed;top:12vh;left:' + w.left + ';width:' + w.width + ';height:68vh;color:#fff;background:#fff;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.7);flex-direction:column;overflow:hidden;z-index:100200;">'
             + '<div class="cf-seg-hdr" style="flex:none;display:flex;align-items:center;justify-content:space-between;background:' + w.head + ';color:#fff;padding:6px 10px;cursor:move;user-select:none;font-family:Nunito,Arial,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;">'
             + '<span style="' + (w.center ? 'flex:1;text-align:center;' : '') + '">' + w.title + '</span>'
             + '<button type="button" class="cf-seg-close" data-win="' + w.id + '" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;padding:0 3px;">&times;</button>'

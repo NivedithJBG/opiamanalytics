@@ -4719,6 +4719,8 @@ document.addEventListener('click', function(e){
 #cf-modal .ph,.cf-seg-win .ph{background:#5a5a5a;font-size:11px;}
 #cf-modal .panel,.cf-seg-win .panel{border-right:3px solid #a0aec0}
 .cf-seg-win.cf-seg-on{display:flex}
+/* Project Management windows: pure white background everywhere (no grey tints). */
+.cf-seg-win,.cf-seg-win .cf-seg-body,.cf-seg-win #cf-body,.cf-seg-win .panel,.cf-seg-win .pb,.cf-seg-win .gp,.cf-seg-win .dbody,.cf-seg-win .c2c-dia{background:#fff !important}
 .cf-seg-hdr{touch-action:none}
 .cf-seg-win button,.cf-seg-win .gp{touch-action:manipulation}
 
