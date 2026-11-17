@@ -1557,30 +1557,30 @@ function _cfNetInvCycleBarsHtml(cyc){
     var L = function(v){ return (v / 100000).toFixed(1); };
     var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     var lbl = function(c){ var m = /^(\d{2})(\d{2})-(\d{2})/.exec(c.end_date || ''); return m ? mon[+m[3] - 1] + ' ' + m[2] : (c.end_label || c.name); };
-    var bars = '';
+    // Line chart: the target Total Investment per cycle as a dark line with points;
+    // the actual (where reached) as points joined by a line, green-blue at or above
+    // the target, red-orange below it.
+    var X = function(i){ return pad + (i + 0.5) * slot; }, Y = function(v){ return base - hOf(v); };
+    var g = '', tPts = [], aPts = [];
+    cyc.forEach(function(c, i){ tPts.push(X(i).toFixed(1) + ',' + Y(tot(c))); if (has(c)) aPts.push({ x: X(i), y: Y(+c.actual || 0), c: c, i: i }); });
+    // Light horizontal guide lines.
+    for (var k = 1; k <= 4; k++) { var gy = base - (base - top) * k / 4; g += '<line x1="' + pad + '" y1="' + gy.toFixed(1) + '" x2="' + (W - pad) + '" y2="' + gy.toFixed(1) + '" stroke="#eef1f5"/>'; }
+    if (tPts.length > 1) g += '<polyline points="' + tPts.join(' ') + '" fill="none" stroke="#3a4a5f" stroke-width="2.5" stroke-linejoin="round"/>';
+    if (aPts.length > 1) g += '<polyline points="' + aPts.map(function(p){ return p.x.toFixed(1) + ',' + p.y; }).join(' ') + '" fill="none" stroke="#7a8799" stroke-width="2" stroke-dasharray="5 4"/>';
     cyc.forEach(function(c, i){
-        var v = tot(c), h = hOf(v), cx = pad + (i + 0.5) * slot, cur = !!c.current;
-        bars += '<rect x="' + (cx - barW / 2).toFixed(1) + '" y="' + (base - h) + '" width="' + barW.toFixed(1) + '" height="' + h + '" fill="#3a4a5f"><title>Target Total Investment ' + L(v) + ' L (WIP ' + L(+c.wip || 0) + ' + Advances ' + L(+c.adv || 0) + ')</title></rect>';
-        // Target value at the top of the target bar: above it, or just inside it
-        // (white) when the exceeded part sits on top.
-        var tgtY = base - h - 6, tgtFill = '#555';
-        if (has(c)) {
-            var a = +c.actual || 0, hA = hOf(a);
-            // Same width as the target bar: the part above the target (exceeded) green-blue,
-            // the part of the target not reached (short) red-orange.
-            var tip = 'Actual Total Investment ' + L(a) + ' L (WIP ' + L(+c.actual_wip || 0) + ' + Advances ' + L(+c.actual_adv || 0) + ' + Bills Receivable at cost ' + L(+c.actual_br_cost || 0) + '), target ' + L(v) + ' L';
-            if (hA > h) bars += '<rect x="' + (cx - barW / 2).toFixed(1) + '" y="' + (base - hA) + '" width="' + barW.toFixed(1) + '" height="' + (hA - h) + '" fill="' + GB + '"><title>' + tip + '</title></rect>';
-            else if (h > hA) bars += '<rect x="' + (cx - barW / 2).toFixed(1) + '" y="' + (base - h) + '" width="' + barW.toFixed(1) + '" height="' + (h - hA) + '" fill="' + RO + '"><title>' + tip + '</title></rect>';
-            // Actual value at the top of the actual: above the bar when exceeded,
-            // just inside the reached part (white) when short.
-            if (hA >= h) { bars += '<text x="' + cx.toFixed(1) + '" y="' + (base - hA - 5) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#000">' + L(a) + '</text>'; tgtY = base - h + 14; tgtFill = '#fff'; }
-            else bars += '<text x="' + cx.toFixed(1) + '" y="' + (hA > 18 ? base - hA + 15 : base - hA - 5) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">' + L(a) + '</text>';
-        }
-        bars += '<text x="' + cx.toFixed(1) + '" y="' + tgtY + '" text-anchor="middle" font-size="11" fill="' + tgtFill + '">' + L(v) + '</text>'
+        var v = tot(c), cx = X(i), cy = Y(v), cur = !!c.current;
+        g += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy + '" r="4.5" fill="#3a4a5f"><title>Target Total Investment ' + L(v) + ' L (WIP ' + L(+c.wip || 0) + ' + Advances ' + L(+c.adv || 0) + ')</title></circle>'
+            + '<text x="' + cx.toFixed(1) + '" y="' + (cy - 9) + '" text-anchor="middle" font-size="11" fill="#555">' + L(v) + '</text>'
             + '<text x="' + cx.toFixed(1) + '" y="' + (base + 22) + '" text-anchor="middle" font-size="13" fill="#111"' + (cur ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
+    aPts.forEach(function(p){
+        var a = +p.c.actual || 0, v = tot(p.c), col = a >= v ? GB : RO;
+        var tip = 'Actual Total Investment ' + L(a) + ' L (WIP ' + L(+p.c.actual_wip || 0) + ' + Advances ' + L(+p.c.actual_adv || 0) + ' + Bills Receivable at cost ' + L(+p.c.actual_br_cost || 0) + '), target ' + L(v) + ' L';
+        g += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y + '" r="6" fill="' + col + '" stroke="#fff" stroke-width="1.5"><title>' + tip + '</title></circle>'
+            + '<text x="' + (p.x + 9).toFixed(1) + '" y="' + (p.y + 4) + '" font-size="12" font-weight="700" fill="' + col + '">' + L(a) + '</text>';
+    });
     return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg"' + _cfChartAttr(W) + ' style="display:block;">'
-        + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + bars + '</svg>';
+        + '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="#999"/>' + g + '</svg>';
 }
 function _cfShowNetInvCycles(cycles, info){
     $('#cf-netinv-breakdown-win').remove();
@@ -1633,9 +1633,9 @@ function _cfShowNetInvCycles(cycles, info){
         + '<button id="cf-netinv-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
-        + '<span><span style="display:inline-block;width:14px;height:10px;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Target</span>'
-        + '<span><span style="display:inline-block;width:14px;height:10px;background:#2ba899;margin-right:5px;vertical-align:middle;"></span>Exceeded target</span>'
-        + '<span><span style="display:inline-block;width:14px;height:10px;background:#d84a30;margin-right:5px;vertical-align:middle;"></span>Short of target</span>'
+        + '<span><span style="display:inline-block;width:18px;height:3px;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Target</span>'
+        + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2ba899;margin-right:5px;vertical-align:middle;"></span>Actual, at or above target</span>'
+        + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#d84a30;margin-right:5px;vertical-align:middle;"></span>Actual, short of target</span>'
         + '</div>'
         + '<div style="flex:1;min-width:0;min-height:0;display:flex;gap:12px;overflow:hidden;padding:10px 16px 16px;box-sizing:border-box;">'
         + '<div id="cf-ni-chart" style="flex:1;min-width:0;overflow-y:auto;">' + _cfNetInvCycleBarsHtml(cycles) + '</div>'
