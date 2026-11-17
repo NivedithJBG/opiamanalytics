@@ -296,7 +296,9 @@ function cfFitLayout(){
     // and keep the windows a little flatter, so the panels are not tall and narrow.
     var touch = (navigator.maxTouchPoints || 0) > 1;
     var maxS = (touch && !portrait) ? 1.15 : 1;
-    var s = Math.min(maxS, (vw - (portrait ? 12 : 24)) / GROUP_W);
+    // iPad: leave a clear margin at both ends (about 5% of the screen width each side).
+    var sideGap = touch ? Math.max(40, Math.round(vw * 0.05)) : (portrait ? 6 : 12);
+    var s = Math.min(maxS, (vw - 2 * sideGap) / GROUP_W);
     var top = Math.max(64, Math.round(vh * 0.10));          // windows start below the toolbar
     var winH = Math.min(vh * (touch && !portrait ? 0.74 : 0.68), vh - top - 16, GROUP_W * s * (portrait ? 0.50 : (touch ? 0.48 : 0.72)));   // iPad: wider than tall
     // Desktop: the whole dashboard drawn 7% smaller, then the size the user set with
