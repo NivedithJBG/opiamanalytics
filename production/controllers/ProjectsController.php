@@ -21407,6 +21407,8 @@ public function actionActivitymusterprocess()
     public function actionUpdateactivity()
     {
         $connection = $connection = \Yii::$app->db;
+        $oldUnitL = (string)\Yii::$app->db->createCommand("SELECT activity_unit FROM estimateactivities WHERE activity_id = :i", [':i' => (int)$_POST['activityid']])->queryScalar();
+        self::applyLibraryUnit((int)$_POST['activityid'], $oldUnitL, (string)$_POST['activityunit']);
         $sql = "UPDATE `estimateactivities` SET `activity_name`='".$_POST['activityname']."', activity_unit='".$_POST['activityunit']."'  WHERE `activity_id`=".$_POST['activityid']." ";
         //echo $sql;exit;
         $command=$connection->createCommand($sql);
@@ -21435,6 +21437,7 @@ public function actionActivitymusterprocess()
         $connection = \Yii::$app->db;
         $activityId = (int)$_POST['activity_id'];
         $workingHours = (int)($_POST['working_hours'] ?? 8);
+        $oldUnit = (string)$connection->createCommand("SELECT activity_unit FROM estimateactivities WHERE activity_id = :i", [':i' => $activityId])->queryScalar();
         $connection->createCommand()->update('estimateactivities', [
             'activity_type' => (int)($_POST['activitytypeid'] ?? 0),
             'work_type'     => (int)($_POST['worktypeid'] ?? 0),
@@ -21487,7 +21490,23 @@ public function actionActivitymusterprocess()
             $connection->createCommand("DELETE FROM activity_tasks WHERE activity_id = $activityId")->execute();
         }
         $updated = $prodChanged ? $this->_applyLibraryProductivity($activityId, $prodChanged) : 0;
-        return json_encode(['error' => 'No', 'gantt_updated' => $updated]);
+        $unitUpdated = self::applyLibraryUnit($activityId, $oldUnit, (string)($_POST['estactivityunit'][0] ?? ''));
+        return json_encode(['error' => 'No', 'gantt_updated' => $updated, 'unit_updated' => $unitUpdated]);
+    }
+
+    // The activity Unit is universal: a change in the Activity Library goes to every
+    // project's copy of that activity (Estimate: workgroup_activities_new; Gantt:
+    // scheduleactivities). Returns the number of project copies updated.
+    public static function applyLibraryUnit($libActivityId, $oldUnit, $newUnit)
+    {
+        $newUnit = trim($newUnit);
+        if ($newUnit === '' || $newUnit === trim((string)$oldUnit)) return 0;
+        $db = \Yii::$app->db;
+        $n = $db->createCommand("UPDATE workgroup_activities_new SET activity_Unit = :u, cycle_Unit = :u2 WHERE activity_Id = :a",
+            [':u' => $newUnit, ':u2' => $newUnit, ':a' => (int)$libActivityId])->execute();
+        $db->createCommand("UPDATE scheduleactivities sa JOIN workgroup_activities_new wa ON wa.id = sa.activity_id SET sa.unit = :u WHERE wa.activity_Id = :a",
+            [':u' => $newUnit, ':a' => (int)$libActivityId])->execute();
+        return $n;
     }
 
     // A productivity change in the Activity Library goes to every project that
