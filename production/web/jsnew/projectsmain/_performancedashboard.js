@@ -4273,7 +4273,7 @@ function _cfBankTiLinesSvg(cyc, ser){
     var tick = [1, 2, 2.5, 5, 10].map(function(m){ return m * mag; }).filter(function(t){ return t >= rawStep; })[0] * 100000;
     minV = Math.floor(minV / tick) * tick; maxV = Math.ceil(maxV / tick) * tick;
     if (maxV === minV) maxV = minV + tick;
-    W = _cfChartW(W, padL + padR, cyc.length, bank ? 46 : 96);
+    W = _cfChartW(W, padL + padR, cyc.length, bank ? 72 : 96);   // bank: a little wider
     var slot = (W - padL - padR) / cyc.length;
     var xOf = function(i){ return padL + (i + 0.5) * slot; };
     var yOf = function(v){ return base - ((v - minV) / (maxV - minV)) * (base - top); };
@@ -4384,11 +4384,11 @@ function _cfShowBankTiLines(cycles, note, d){
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">Bank &mdash; Projected Bank Balance per Cycle (Lakhs)</span>'
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
-        + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#d84a30;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Bank balance (red = negative, green = surplus)</span>'
-        + '<span style="color:#5a6e8c;">Opening = bank today ' + ((+d.bank_now || 0) / 100000).toFixed(2) + ' L</span>'
-        + '<span style="color:#5a6e8c;">Each cycle: + Receivable &minus; Cost/cycle; first cycle also &minus; Advances &amp; Deposits still to pay ' + ((+d.adv_due || 0) / 100000).toFixed(2) + ' L (target ' + ((+d.adv_target || 0) / 100000).toFixed(2) + ' L, the rest already paid)</span></div>'
+        // One dot: green when the bank balance is positive, red when negative.
+        + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:' + ((+d.bank_now || 0) >= 0 ? '#1e8073' : '#d84a30') + ';margin-right:5px;vertical-align:middle;"></span>Bank Balance</span>'
+        + '</div>'
         + '<div style="flex:1;min-height:0;display:flex;gap:12px;padding:8px 16px 16px;">'
-        + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Bank balance after each cycle</div>'
+        + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;">'
         + '<div style="flex:1;min-height:0;overflow:auto;">' + _cfBankTiLinesSvg(cycles) + '</div></div>'
         // (Overdraft-per-cycle bar chart removed on request: only the bank balance line.)
         + '</div></div>';
