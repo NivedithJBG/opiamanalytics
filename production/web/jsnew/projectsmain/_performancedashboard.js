@@ -4267,6 +4267,8 @@ function _cfBankTiLinesSvg(cyc, ser){
         cyc.forEach(function(c){ SER.forEach(function(s){ lo = Math.min(lo, +c[s.key] || 0); }); });
         maxV = Math.max(maxV * 1.15, lo + maxV);
     }
+    // Bank popup: zero line in the middle, surplus above, overdraft below (axis symmetric about 0).
+    if (bank) { var M = Math.max(Math.abs(minV), Math.abs(maxV)) || 100000; minV = -M; maxV = M; }
     // X axis = period (billing cycles), Y axis = value in Lakhs, with tick marks.
     var W = 660, H = 362, base = 270, top = 30, padL = bank ? 56 : 70, padR = bank ? 14 : 24;
     var rawStep = Math.max(1, (maxV - minV) / 100000 / 5), mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
