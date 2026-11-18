@@ -1646,13 +1646,16 @@ function _cfShowNetInvCycles(cycles, info){
         + '</div>'
         + '<div style="flex:1;min-width:0;min-height:0;display:flex;gap:12px;overflow:hidden;padding:10px 16px 16px;box-sizing:border-box;">'
         + '<div id="cf-ni-chart" style="flex:1;min-width:0;overflow-y:auto;">' + _cfNetInvCycleBarsHtml(cycles) + '</div>'
-        + '<div style="flex:none;width:160px;display:flex;flex-direction:column;justify-content:center;gap:6px;font-family:Barlow Condensed,Arial;overflow-y:auto;">'
+        + '<div id="cf-ni-side" style="flex:none;width:210px;display:flex;flex-direction:column;justify-content:flex-start;gap:6px;font-family:Barlow Condensed,Arial;overflow-y:auto;">'
         + statBox('Total Investment', curAct, 'actual, today')
         + statBox('Average Investment', avgAct, 'weighted by days' + (avgFrom ? ', ' + avgFrom + ' to today' : ''))
         + fundBox()
         + '</div>'
         + '</div></div>';
     $('body').append(html);
+    // Tall enough to show the whole right-hand column (Funded by box) without scrolling.
+    (function(){ var w = document.getElementById('cf-netinv-breakdown-win'), sd = document.getElementById('cf-ni-side'); if (!w || !sd) return;
+        var extra = sd.scrollHeight - sd.clientHeight; if (extra > 0) { var h = Math.min(w.offsetHeight + extra + 8, window.innerHeight - 20); w.style.height = h + 'px'; w.style.top = Math.max(10, (window.innerHeight - h) / 2) + 'px'; } })();
     var win = document.getElementById('cf-netinv-breakdown-win'), hdr = document.getElementById('cf-ni-hdr');
     var act = null, sx = 0, sy = 0, ox = 0, oy = 0, ow = 0, oh = 0;
     function onDown(e, dir){ var r = win.getBoundingClientRect(); act = dir; sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top; ow = r.width; oh = r.height; e.preventDefault(); if (dir !== 'drag') e.stopPropagation(); }
