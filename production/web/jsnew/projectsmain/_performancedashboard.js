@@ -2480,9 +2480,9 @@ function _cfShowAccountTxns(d){
     $('#cf-acctxn-win').remove();
     var esc = function(v){ return $('<div>').text(v == null ? '' : v).html(); };
     var f = function(v){ return v ? _cfIndianComma(v) : ''; };
-    var fb = function(v){ return _cfIndianComma(Math.abs(v)) + (v < 0 ? ' Cr' : v > 0 ? ' Dr' : ''); };
-    var th = 'padding:6px 8px;font-size:12px;color:#fff;background:#37475a;position:sticky;top:0;text-align:left;white-space:nowrap;';
-    var td = 'padding:5px 8px;font-size:12px;color:#222;border-bottom:1px solid #e6e9ef;vertical-align:top;';
+    var fb = function(v){ return _cfIndianComma(Math.abs(v)) + (v < 0 ? ' Credit' : v > 0 ? ' Debit' : ''); };
+    var th = 'padding:6px 8px;font-size:12px;color:#fff;background:#37475a;position:sticky;top:0;text-align:left;white-space:nowrap;border:1px solid #5a6878;';
+    var td = 'padding:5px 8px;font-size:12px;color:#222;border:1px solid #cfd6e0;vertical-align:top;';
     var rows = (d.rows || []).map(function(r){
         return '<tr' + (r.deleted ? ' style="opacity:.5;" title="Deleted voucher"' : '') + '>'
             + '<td style="' + td + 'white-space:nowrap;">' + esc(r.date) + '</td>'
@@ -2493,12 +2493,13 @@ function _cfShowAccountTxns(d){
             + '<td style="' + td + 'text-align:right;white-space:nowrap;">' + f(r.cr) + '</td>'
             + '<td style="' + td + 'text-align:right;white-space:nowrap;font-weight:700;">' + fb(r.bal) + '</td></tr>';
     }).join('');
-    var w = Math.min(980, window.innerWidth - 20), h = Math.min(560, window.innerHeight - 20);
+    var w = Math.min(980, window.innerWidth - 20), h = Math.min(560, window.innerHeight - 20, 130 + 46 * Math.max(1, (d.rows || []).length));
     var html = '<div id="cf-acctxn-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - w) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - h) / 2) + 'px;width:' + w + 'px;height:' + h + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.4);z-index:200700;display:flex;flex-direction:column;overflow:hidden;resize:both;min-width:420px;min-height:220px;">'
         + '<div id="cf-acctxn-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;touch-action:none;">'
         + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">' + esc(d.name) + ' &mdash; Transactions</span>'
         + '<button type="button" id="cf-acctxn-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
-        + '<div style="flex:1;min-height:0;overflow:auto;">'
+        + '<div style="flex:none;padding:6px 12px;font-size:12px;color:#5a6e8c;font-family:Nunito,Arial,sans-serif;">Amounts in &#8377;. Balance: ' + fb(d.bal) + ' = ' + (Math.abs(d.bal) / 100000).toFixed(2) + ' lakhs' + (d.bal < 0 ? ' (credit, owed by the project)' : d.bal > 0 ? ' (debit)' : '') + '</div>'
+        + '<div style="flex:1;min-height:0;overflow:auto;padding:0 12px 12px;">'
         + (rows ? '<table style="width:100%;border-collapse:collapse;font-family:Nunito,Arial,sans-serif;"><thead><tr>'
             + '<th style="' + th + '">Date</th><th style="' + th + '">Voucher</th><th style="' + th + '">Other account</th><th style="' + th + '">Narration</th>'
             + '<th style="' + th + 'text-align:right;">Debit</th><th style="' + th + 'text-align:right;">Credit</th><th style="' + th + 'text-align:right;">Balance</th></tr></thead><tbody>' + rows + '</tbody>'
