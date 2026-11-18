@@ -2486,7 +2486,7 @@ function _cfShowAccountTxns(d){
     var rows = (d.rows || []).map(function(r){
         return '<tr' + (r.deleted ? ' style="opacity:.5;" title="Deleted voucher"' : '') + '>'
             + '<td style="' + td + 'white-space:nowrap;">' + esc(r.date) + '</td>'
-            + '<td style="' + td + 'white-space:nowrap;">' + esc(r.src) + (r.type ? ' / ' + esc(r.type) : '') + '<br><span style="color:#6b7686;">' + esc(r.no) + '</span></td>'
+            + '<td style="' + td + 'white-space:nowrap;">' + esc(r.src) + (r.type && !/^\d+$/.test(r.type) ? ' / ' + esc(r.type) : '') + '<br><span style="color:#6b7686;">' + esc(r.no) + '</span></td>'
             + '<td style="' + td + '">' + esc(r.other) + '</td>'
             + '<td style="' + td + 'max-width:260px;">' + esc(r.narration) + '</td>'
             + '<td style="' + td + 'text-align:right;white-space:nowrap;">' + f(r.dr) + '</td>'
