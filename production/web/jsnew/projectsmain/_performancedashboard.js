@@ -3797,13 +3797,15 @@ function _cfRedrawBillsRecvBreakdown(){
     // Actual first (hollow dots: the balance after each past bill, then today), then the
     // projected Bills Receivable of each cycle still to come (solid dots).
     var today = new Date().toISOString().slice(0, 10);
-    var cyc = (s.history || []).map(function(h){ return { end_date: h.end_date, br: +h.br || 0, actual: true }; });
-    cyc.push({ end_date: today, br: +s.brNow || 0, actual: true, current: true });
-    (s.cycles || []).forEach(function(c){ if ((c.end_date || '') > today) cyc.push({ cycle: c.cycle, end_date: c.end_date, br: +c.target || 0 }); });
-    $('#cf-billsrecv-breakdown-chart').html(_cfBankTiLinesSvg(cyc, [ { key: 'br', col: '#1e8073', name: 'Bills Receivable' } ])
+    var cyc = (s.history || []).map(function(h){ return { end_date: h.end_date, act: +h.br || 0 }; });
+    // Today: the last actual point and the start of the projected line.
+    cyc.push({ end_date: today, act: +s.brNow || 0, prj: +s.brNow || 0, current: true });
+    (s.cycles || []).forEach(function(c){ if ((c.end_date || '') > today) cyc.push({ cycle: c.cycle, end_date: c.end_date, prj: +c.target || 0 }); });
+    var AC = '#3a4a5f', PC = '#1e8073';
+    $('#cf-billsrecv-breakdown-chart').html(_cfBankTiLinesSvg(cyc, [ { key: 'act', col: AC, name: 'Actual Bills Receivable' }, { key: 'prj', col: PC, name: 'Projected Bills Receivable' } ])
         + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;">'
-        + '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;border:2.5px solid #1e8073;background:#fff;margin-right:5px;vertical-align:middle;box-sizing:border-box;"></span>Actual (after each bill, and today) &nbsp; '
-        + '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Projected</div>');
+        + '<span style="display:inline-block;width:18px;height:3px;background:' + AC + ';margin-right:5px;vertical-align:middle;"></span>Actual Bills Receivable &nbsp; &nbsp; '
+        + '<span style="display:inline-block;width:18px;height:3px;background:' + PC + ';margin-right:5px;vertical-align:middle;"></span>Projected Bills Receivable</div>');
 }
 
 function _cfShowBillsRecvBreakdown(){
@@ -4297,7 +4299,7 @@ function _cfBankTiLinesSvg(cyc, ser){
         + '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="#081142" font-weight="700">Billing cycle (period)</text>';
     SER.forEach(function(s, si){
         var pts = [];
-        cyc.forEach(function(c, i){ if (has(c)) pts.push([xOf(i), yOf(+c[s.key] || 0), +c[s.key] || 0, c]); });
+        cyc.forEach(function(c, i){ if (has(c) && c[s.key] !== undefined && c[s.key] !== null) pts.push([xOf(i), yOf(+c[s.key] || 0), +c[s.key] || 0, c]); });
         if (bank && s.key === 'bal') {
             // Segment by segment, split where the two lines cross so each part takes its own colour.
             var seg = function(x1, y1, x2, y2, col){ out += '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="' + col + '" stroke-width="3" stroke-linecap="round"/>'; };
