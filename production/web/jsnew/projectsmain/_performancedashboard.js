@@ -1643,7 +1643,8 @@ function _cfShowNetInvCycles(cycles, info){
         + '</div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
         + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Target Average Investment</span>'
-        + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2ba899;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#d84a30;margin-right:5px;vertical-align:middle;"></span>Actual Average Investment</span>'
+        // One dot for the actual, in its present colour: green below the target average, red otherwise.
+        + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + (function(){ var c = cycles.filter(function(x){ return x.avg_actual !== null && x.avg_actual !== undefined; })[0]; return c && +c.avg_actual < +c.tavg ? '#2ba899' : '#d84a30'; })() + ';margin-right:5px;vertical-align:middle;"></span>Actual Average Investment</span>'
         + '</div>'
         + '<div style="flex:1;min-width:0;min-height:0;display:flex;gap:12px;overflow:hidden;padding:10px 16px 16px;box-sizing:border-box;">'
         + '<div id="cf-ni-chart" style="flex:1;min-width:0;overflow-y:auto;">' + _cfNetInvCycleBarsHtml(cycles) + '</div>'
