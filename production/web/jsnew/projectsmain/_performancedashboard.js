@@ -3789,10 +3789,11 @@ function _cfBillsRecvBarsHtml(){
 function _cfRedrawBillsRecvBreakdown(){
     var s = window._cfBillsRecvBreakdownState;
     if (!s) return;
-    var tot = (s.cycles || []).reduce(function(sum, c){ return sum + (+c.target || 0); }, 0);
+    // Top: only the two-line legend, as dots.
+    var AC = '#3a4a5f', PC = '#1e8073';
     $('#cf-billsrecv-breakdown-unit').html(
-        '<span style="font-weight:700;color:#251840;">Bills Receivable per billing cycle = Revenue/Cycle &minus; TDS &minus; Retention (Lakhs)</span>'
-        + '<span style="float:right;font-weight:700;color:#251840;">Bills Receivable Total: ' + (tot / 100000).toFixed(2) + ' Lakhs</span>'
+        '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + AC + ';margin-right:5px;vertical-align:middle;"></span>Actual Bills Receivable &nbsp; &nbsp; '
+        + '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + PC + ';margin-right:5px;vertical-align:middle;"></span>Projected Bills Receivable'
     );
     // Actual first (hollow dots: the balance after each past bill, then today), then the
     // projected Bills Receivable of each cycle still to come (solid dots).
@@ -3801,11 +3802,7 @@ function _cfRedrawBillsRecvBreakdown(){
     // Today: the last actual point and the start of the projected line.
     cyc.push({ end_date: today, act: +s.brNow || 0, prj: +s.brNow || 0, current: true });
     (s.cycles || []).forEach(function(c){ if ((c.end_date || '') > today) cyc.push({ cycle: c.cycle, end_date: c.end_date, prj: +c.target || 0 }); });
-    var AC = '#3a4a5f', PC = '#1e8073';
-    $('#cf-billsrecv-breakdown-chart').html(_cfBankTiLinesSvg(cyc, [ { key: 'act', col: AC, name: 'Actual Bills Receivable' }, { key: 'prj', col: PC, name: 'Projected Bills Receivable' } ])
-        + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;">'
-        + '<span style="display:inline-block;width:18px;height:3px;background:' + AC + ';margin-right:5px;vertical-align:middle;"></span>Actual Bills Receivable &nbsp; &nbsp; '
-        + '<span style="display:inline-block;width:18px;height:3px;background:' + PC + ';margin-right:5px;vertical-align:middle;"></span>Projected Bills Receivable</div>');
+    $('#cf-billsrecv-breakdown-chart').html(_cfBankTiLinesSvg(cyc, [ { key: 'act', col: AC, name: 'Actual Bills Receivable' }, { key: 'prj', col: PC, name: 'Projected Bills Receivable' } ]));
 }
 
 function _cfShowBillsRecvBreakdown(){
