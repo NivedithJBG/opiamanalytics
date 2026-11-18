@@ -1882,7 +1882,7 @@ function _cfInvestBreakdownChartHtml(accounts, chartH, unitMode, compact){
         + '</div>'
         // X-axis line + the account names as its value labels.
         + '<div style="margin-left:' + (axisW + 4) + 'px;border-top:2px solid #251840;"></div>'
-        + '<div style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;gap:6px;margin-top:6px;">' + labelsHtml + '</div>';
+        + '<div style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;gap:' + GAP + 'px;margin-top:6px;">' + labelsHtml + '</div>';
     return { unit: unit, total: totalDisp, body: body };
 }
 
