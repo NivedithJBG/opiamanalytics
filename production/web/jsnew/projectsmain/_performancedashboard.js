@@ -1568,11 +1568,11 @@ function _cfNetInvCycleBarsHtml(cyc){
     cyc.forEach(function(c, i){ tPts.push(X(i).toFixed(1) + ',' + Y(tot(c))); if (has(c)) aPts.push({ x: X(i), y: Y(+c.avg_actual || 0), c: c, i: i }); });
     // Light horizontal guide lines.
     for (var k = 1; k <= 4; k++) { var gy = base - (base - top) * k / 4; g += '<line x1="' + pad + '" y1="' + gy.toFixed(1) + '" x2="' + (W - pad) + '" y2="' + gy.toFixed(1) + '" stroke="#eef1f5"/>'; }
-    if (tPts.length > 1) g += '<polyline points="' + tPts.join(' ') + '" fill="none" stroke="#3a4a5f" stroke-width="2.5" stroke-linejoin="round"/>';
+    // Target: dots only (no line).
     if (aPts.length > 1) g += '<polyline points="' + aPts.map(function(p){ return p.x.toFixed(1) + ',' + p.y; }).join(' ') + '" fill="none" stroke="#7a8799" stroke-width="2" stroke-dasharray="5 4"/>';
     cyc.forEach(function(c, i){
         var v = tot(c), cx = X(i), cy = Y(v), cur = !!c.current;
-        g += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy + '" r="3.5" fill="#3a4a5f"><title>Target Average Investment ' + L(v) + ' L (running average; this cycle ' + L(+c.tavg_cycle || 0) + ' L = Advances & Deposits target ' + L(+c.adv || 0) + ' + cycle cost ' + L(+c.wip || 0) + ' x (1/2 + collection days / ' + (c.days || '-') + ' days))</title></circle>'
+        g += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy + '" r="5" fill="#3a4a5f"><title>Target Average Investment ' + L(v) + ' L (running average; this cycle ' + L(+c.tavg_cycle || 0) + ' L = Advances & Deposits target ' + L(+c.adv || 0) + ' + cycle cost ' + L(+c.wip || 0) + ' x (1/2 + collection days / ' + (c.days || '-') + ' days))</title></circle>'
             + '<text x="' + cx.toFixed(1) + '" y="' + (cy - 8) + '" text-anchor="middle" font-size="10" fill="#555">' + L(v) + '</text>'
             + '<text x="' + cx.toFixed(1) + '" y="' + (base + 16) + '" text-anchor="middle" font-size="11" fill="#111"' + (cur ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
@@ -1642,8 +1642,8 @@ function _cfShowNetInvCycles(cycles, info){
         + '<button id="cf-netinv-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
-        + '<span><span style="display:inline-block;width:18px;height:3px;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Target Average Investment</span>'
-        + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2ba899;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#d84a30;margin-right:5px;vertical-align:middle;"></span>Actual Average Investment (green = within target, red = above)</span>'
+        + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Target Average Investment</span>'
+        + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2ba899;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#d84a30;margin-right:5px;vertical-align:middle;"></span>Actual Average Investment</span>'
         + '</div>'
         + '<div style="flex:1;min-width:0;min-height:0;display:flex;gap:12px;overflow:hidden;padding:10px 16px 16px;box-sizing:border-box;">'
         + '<div id="cf-ni-chart" style="flex:1;min-width:0;overflow-y:auto;">' + _cfNetInvCycleBarsHtml(cycles) + '</div>'
