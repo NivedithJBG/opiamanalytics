@@ -2462,6 +2462,66 @@ function _cfRedrawCurrLiabBreakdown(){
         + '<span style="float:right;font-weight:700;color:#251840;">Total: ' + r.total + ' ' + r.unit + '</span>'
     );
     $('#cf-currliab-breakdown-chart').html(r.body);
+    // Bars of a single account head open its transactions on click.
+    $('#cf-currliab-breakdown-chart .cf-breakdown-bar-col').each(function(){
+        var a = s.accounts[+this.dataset.idx];
+        if (a && a.id) { this.style.cursor = 'pointer'; this.title = 'Click to see the transactions of ' + a.name; }
+    });
+}
+// Transactions of one account head (opened from a breakdown bar).
+$(document).on('click', '#cf-currliab-breakdown-win .cf-breakdown-bar-col', function(){
+    var s = window._cfCurrLiabBreakdownState, a = s && s.accounts[+this.dataset.idx];
+    if (!a || !a.id || (a.members && a.members.length)) return;
+    $.ajax({ type: 'POST', url: '../projectsmain/cfaccounttxns', dataType: 'json', data: { account_id: a.id },
+        success: function(d){ if (d && d.error === 'No') _cfShowAccountTxns(d); else alert((d && d.errortext) || 'Could not load the transactions.'); },
+        error: function(){ alert('Could not load the transactions.'); } });
+});
+function _cfShowAccountTxns(d){
+    $('#cf-acctxn-win').remove();
+    var esc = function(v){ return $('<div>').text(v == null ? '' : v).html(); };
+    var f = function(v){ return v ? _cfIndianComma(v) : ''; };
+    var fb = function(v){ return _cfIndianComma(Math.abs(v)) + (v < 0 ? ' Cr' : v > 0 ? ' Dr' : ''); };
+    var th = 'padding:6px 8px;font-size:12px;color:#fff;background:#37475a;position:sticky;top:0;text-align:left;white-space:nowrap;';
+    var td = 'padding:5px 8px;font-size:12px;color:#222;border-bottom:1px solid #e6e9ef;vertical-align:top;';
+    var rows = (d.rows || []).map(function(r){
+        return '<tr' + (r.deleted ? ' style="opacity:.5;" title="Deleted voucher"' : '') + '>'
+            + '<td style="' + td + 'white-space:nowrap;">' + esc(r.date) + '</td>'
+            + '<td style="' + td + 'white-space:nowrap;">' + esc(r.src) + (r.type ? ' / ' + esc(r.type) : '') + '<br><span style="color:#6b7686;">' + esc(r.no) + '</span></td>'
+            + '<td style="' + td + '">' + esc(r.other) + '</td>'
+            + '<td style="' + td + 'max-width:260px;">' + esc(r.narration) + '</td>'
+            + '<td style="' + td + 'text-align:right;white-space:nowrap;">' + f(r.dr) + '</td>'
+            + '<td style="' + td + 'text-align:right;white-space:nowrap;">' + f(r.cr) + '</td>'
+            + '<td style="' + td + 'text-align:right;white-space:nowrap;font-weight:700;">' + fb(r.bal) + '</td></tr>';
+    }).join('');
+    var w = Math.min(980, window.innerWidth - 20), h = Math.min(560, window.innerHeight - 20);
+    var html = '<div id="cf-acctxn-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - w) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - h) / 2) + 'px;width:' + w + 'px;height:' + h + 'px;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.4);z-index:200700;display:flex;flex-direction:column;overflow:hidden;resize:both;min-width:420px;min-height:220px;">'
+        + '<div id="cf-acctxn-hdr" style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:linear-gradient(135deg,#37475a,#26313f);cursor:move;user-select:none;touch-action:none;">'
+        + '<span style="font-family:Barlow Condensed,Arial;font-size:15px;font-weight:700;color:#fff;">' + esc(d.name) + ' &mdash; Transactions</span>'
+        + '<button type="button" id="cf-acctxn-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
+        + '<div style="flex:1;min-height:0;overflow:auto;">'
+        + (rows ? '<table style="width:100%;border-collapse:collapse;font-family:Nunito,Arial,sans-serif;"><thead><tr>'
+            + '<th style="' + th + '">Date</th><th style="' + th + '">Voucher</th><th style="' + th + '">Other account</th><th style="' + th + '">Narration</th>'
+            + '<th style="' + th + 'text-align:right;">Debit</th><th style="' + th + 'text-align:right;">Credit</th><th style="' + th + 'text-align:right;">Balance</th></tr></thead><tbody>' + rows + '</tbody>'
+            + '<tfoot><tr><td colspan="4" style="' + td + 'font-weight:700;background:#f4f6fa;">Total</td>'
+            + '<td style="' + td + 'text-align:right;font-weight:700;background:#f4f6fa;">' + _cfIndianComma(d.dr) + '</td>'
+            + '<td style="' + td + 'text-align:right;font-weight:700;background:#f4f6fa;">' + _cfIndianComma(d.cr) + '</td>'
+            + '<td style="' + td + 'text-align:right;font-weight:700;background:#f4f6fa;">' + fb(d.bal) + '</td></tr></tfoot></table>'
+          : '<div style="padding:20px;color:#6b7686;font-size:13px;">No transactions for this project.</div>')
+        + '</div></div>';
+    $('body').append(html);
+    var win = document.getElementById('cf-acctxn-win'), drag = null;
+    if (window.popupBringToFront) window.popupBringToFront('cf-acctxn-win');
+    $('#cf-acctxn-close').on('click', function(){ $('#cf-acctxn-win').remove(); });
+    bindDragTouch(document.getElementById('cf-acctxn-hdr'), 'mousedown', function(e){
+        if (e.target.id === 'cf-acctxn-close') return;
+        var r = win.getBoundingClientRect(); drag = { sx: e.clientX, sy: e.clientY, ox: r.left, oy: r.top }; e.preventDefault();
+    });
+    bindDragTouch(document, 'mousemove', function(e){
+        if (!drag) return;
+        win.style.left = Math.max(0, Math.min(drag.ox + e.clientX - drag.sx, window.innerWidth - 80)) + 'px';
+        win.style.top = Math.max(0, Math.min(drag.oy + e.clientY - drag.sy, window.innerHeight - 40)) + 'px';
+    }, { passive: false });
+    bindDragTouch(document, 'mouseup', function(){ drag = null; });
 }
 
 function _cfShowCurrLiabBreakdown(accounts, title){   // title: also used for the Current Assets list

@@ -4390,7 +4390,7 @@ class ProjectsmainController extends Controller
         // every head except Bank, Income and Expense with a CREDIT main-account balance.
         $p = [];
         for ($i = 1; $i <= 6; $i++) { $p[':p' . $i] = $pid; }
-        $clRows = Yii::$app->db->createCommand("SELECT ai.name, -SUM(t.x) amt FROM (
+        $clRows = Yii::$app->db->createCommand("SELECT t.a AS id, ai.name, -SUM(t.x) amt FROM (
                 SELECT account_id a, amount x FROM voucher WHERE contra=0 AND project_id=:p1
                 UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=0 AND project_id=:p2
                 UNION ALL SELECT account_id, amount FROM voucher WHERE contra=1 AND type='Receipt' AND project_id=:p3
@@ -4401,7 +4401,7 @@ class ProjectsmainController extends Controller
              WHERE ai.account_type NOT IN (4, 8)   -- bank included (agreed 2026-10-23): overdraft in CL, debit in CA
              GROUP BY t.a, ai.name HAVING SUM(t.x) < 0 ORDER BY amt DESC", $p)->queryAll();
         $out = [];
-        foreach ($clRows as $r) { $out[] = ['name' => $r['name'], 'amount' => round((float)$r['amt'], 2)]; }
+        foreach ($clRows as $r) { $out[] = ['id' => (int)$r['id'], 'name' => $r['name'], 'amount' => round((float)$r['amt'], 2)]; }
         return json_encode(['error' => 'No', 'accounts' => $out]);
 
         $gstPairedIds = $this->_cfGstPairedAccountIds();
@@ -4810,6 +4810,38 @@ class ProjectsmainController extends Controller
     // suppliers/contractors for the part not treated as an advance), since the last
     // bill (cost up to the last bill date is cleared from WIP). Other money received
     // reduces WIP and is returned separately.
+    // Breakdown bar clicked: every transaction of that account head for this project
+    // (the same six voucher/journal sources the breakdown balances use), oldest first,
+    // with a running balance (Debit - Credit; negative = credit balance).
+    public function actionCfaccounttxns()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $pid = $this->_cfPid();
+        $a = (int)($_POST['account_id'] ?? 0);
+        if (!$pid || !$a) return ['error' => 'Yes', 'errortext' => 'Invalid request.'];
+        $db = Yii::$app->db;
+        $q = [':a1' => $a, ':a2' => $a, ':a3' => $a, ':a4' => $a, ':a5' => $a, ':a6' => $a,
+              ':p1' => $pid, ':p2' => $pid, ':p3' => $pid, ':p4' => $pid, ':p5' => $pid, ':p6' => $pid];
+        $rows = $db->createCommand("SELECT t.*, o.name AS other FROM (
+              SELECT date, voucher_no, type, narration, amount AS dr, 0 AS cr, creditacnt AS oth, 'Voucher' src, delete_status FROM voucher WHERE contra=0 AND project_id=:p1 AND account_id=:a1
+              UNION ALL SELECT date, voucher_no, type, narration, 0, amount, account_id, 'Voucher', delete_status FROM voucher WHERE contra=0 AND project_id=:p2 AND creditacnt=:a2
+              UNION ALL SELECT date, voucher_no, type, narration, amount, 0, creditacnt, 'Voucher', delete_status FROM voucher WHERE contra=1 AND type='Receipt' AND project_id=:p3 AND account_id=:a3
+              UNION ALL SELECT date, voucher_no, type, narration, 0, amount, account_id, 'Voucher', delete_status FROM voucher WHERE contra=1 AND type='Payment' AND project_id=:p4 AND creditacnt=:a4
+              UNION ALL SELECT date, voucher_no, type, narration, amount, 0, creditacnt, 'Journal', delete_status FROM journalvoucher WHERE project_id=:p5 AND debitacnt=:a5
+              UNION ALL SELECT date, voucher_no, type, narration, 0, amount, debitacnt, 'Journal', delete_status FROM journalvoucher WHERE project_id=:p6 AND creditacnt=:a6
+            ) t LEFT JOIN accounts_item o ON o.id = t.oth ORDER BY t.date, t.voucher_no", $q)->queryAll();
+        $bal = 0.0; $out = [];
+        foreach ($rows as $r) {
+            $bal += (float)$r['dr'] - (float)$r['cr'];
+            $out[] = ['date' => substr((string)$r['date'], 0, 10), 'no' => (string)$r['voucher_no'], 'src' => $r['src'], 'type' => (string)$r['type'],
+                      'other' => (string)$r['other'], 'narration' => (string)$r['narration'], 'dr' => round((float)$r['dr'], 2), 'cr' => round((float)$r['cr'], 2),
+                      'bal' => round($bal, 2), 'deleted' => (int)$r['delete_status'] === 1];
+        }
+        $name = (string)$db->createCommand("SELECT name FROM accounts_item WHERE id = :a", [':a' => $a])->queryScalar();
+        return ['error' => 'No', 'name' => $name, 'rows' => $out,
+                'dr' => round(array_sum(array_column($out, 'dr')), 2), 'cr' => round(array_sum(array_column($out, 'cr')), 2), 'bal' => round($bal, 2)];
+    }
+
     public function actionCfwipaccounts()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
@@ -4821,7 +4853,7 @@ class ProjectsmainController extends Controller
         $rows = [];
         foreach ($g['wip_acc'] as $id => $v) {
             $amt = round((float)$v - (float)($at[$id] ?? 0), 2);
-            if (abs($amt) >= 0.01) $rows[] = ['name' => $names[$id] ?? ('Account ' . $id), 'amount' => $amt];
+            if (abs($amt) >= 0.01) $rows[] = ['id' => (int)$id, 'name' => $names[$id] ?? ('Account ' . $id), 'amount' => $amt];
         }
         usort($rows, function($a, $b){ return $b['amount'] <=> $a['amount']; });
         return ['error' => 'No', 'accounts' => $rows, 'wip' => round($g['wip'], 2), 'last_bill' => $g['last_bill'],
@@ -4862,7 +4894,7 @@ class ProjectsmainController extends Controller
             // Current Assets share (debit main balance, not Income/Expense; bank included).
             $ca = (!in_array($t, [4, 8], true) && $m > 0) ? $m : 0.0;
             $advTotal += $adv;
-            if (abs($ca - $adv) >= 0.01) $diffs[] = ['name' => $names[$id] ?? ('Account ' . $id), 'amount' => round($ca - $adv, 2)];
+            if (abs($ca - $adv) >= 0.01) $diffs[] = ['id' => (int)$id, 'name' => $names[$id] ?? ('Account ' . $id), 'amount' => round($ca - $adv, 2)];
         }
         usort($diffs, function($a, $b){ return $b['amount'] <=> $a['amount']; });
         $rows = array_merge([['name' => 'Advances and Deposits', 'amount' => round($advTotal, 2)],
