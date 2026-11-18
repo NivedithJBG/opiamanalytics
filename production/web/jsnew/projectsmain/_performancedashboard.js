@@ -1804,7 +1804,9 @@ function _cfShortLabel(name){
 // Renders just the chart markup (called both on first open and on
 // every resize, since the bar heights/gridlines are pixel-computed
 // against the current chart area size).
-function _cfInvestBreakdownChartHtml(accounts, chartH, unitMode){
+function _cfInvestBreakdownChartHtml(accounts, chartH, unitMode, compact){
+    // compact: narrower bar columns (Current Liabilities / Current Assets / WIP window).
+    var CW = compact ? 40 : 56, GAP = compact ? 4 : 6, FS = compact ? 10 : 11;
     // unitMode: 'money' (default) formats via _cfFmtMoney (Lakhs/Crores,
     // auto-scaled) — 'days' shows the raw day-count values as-is, no
     // unit conversion (used by the Cash-to-Cash Cycle breakdown, whose
@@ -1856,14 +1858,14 @@ function _cfInvestBreakdownChartHtml(accounts, chartH, unitMode){
         var barPx = Math.max(2, (fmt.value / niceMax) * chartH);
         var col = _cfInvestBarColours[j % _cfInvestBarColours.length];
         var hasMembers = acct.members && acct.members.length;
-        barsHtml += '<div class="cf-breakdown-bar-col" data-idx="' + j + '" style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + chartH + 'px;flex:0 0 56px;min-width:56px;position:relative;' + (hasMembers ? 'cursor:pointer;' : '') + '">'
-            + '<div style="font-size:11px;font-weight:700;color:#251840;margin-bottom:4px;white-space:nowrap;">' + fmt.value.toFixed(2) + '</div>'
+        barsHtml += '<div class="cf-breakdown-bar-col" data-idx="' + j + '" style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + chartH + 'px;flex:0 0 ' + CW + 'px;min-width:' + CW + 'px;position:relative;' + (hasMembers ? 'cursor:pointer;' : '') + '">'
+            + '<div style="font-size:' + FS + 'px;font-weight:700;color:#251840;margin-bottom:4px;white-space:nowrap;">' + fmt.value.toFixed(2) + '</div>'
             + '<div style="width:70%;max-width:34px;height:' + barPx.toFixed(1) + 'px;background:' + col + ';border-radius:2px 2px 0 0;"></div>'
             + '</div>';
     }
     var labelsHtml = '';
     for (var k = 0; k < accounts.length; k++) {
-        labelsHtml += '<div style="flex:0 0 56px;min-width:56px;font-size:11px;color:#333;text-align:center;line-height:1.2;padding:0 3px;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;">' + _cfShortLabel(accounts[k].name) + '</div>';
+        labelsHtml += '<div style="flex:0 0 ' + CW + 'px;min-width:' + CW + 'px;font-size:' + FS + 'px;color:#333;text-align:center;line-height:1.2;padding:0 3px;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;">' + _cfShortLabel(accounts[k].name) + '</div>';
     }
 
     // Always render the gridlines/axis frame, even with zero bars — an
@@ -1871,8 +1873,8 @@ function _cfInvestBreakdownChartHtml(accounts, chartH, unitMode){
     // bars themselves are conditional, plus a centered placeholder
     // message when there's nothing to plot yet.
     var emptyMsgHtml = accounts.length ? '' : '<div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;color:#8a94a3;font-size:12px;font-family:Barlow Condensed,Arial;">No data yet</div>';
-    var body = '<div' + _cfChartAttr(axisW + 4 + accounts.length * 62) + ' style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;">'
-        + '<div class="cf-breakdown-chart-area" style="position:relative;flex:1;min-width:0;display:flex;align-items:flex-end;gap:6px;height:' + chartH + 'px;background-image:' + gridBg + ';">'
+    var body = '<div' + _cfChartAttr(axisW + 4 + accounts.length * (CW + GAP)) + ' style="display:flex;margin-left:' + (axisW + 4) + 'px;min-width:0;box-sizing:border-box;">'
+        + '<div class="cf-breakdown-chart-area" style="position:relative;flex:1;min-width:0;display:flex;align-items:flex-end;gap:' + GAP + 'px;height:' + chartH + 'px;background-image:' + gridBg + ';">'
         + gridLabelsHtml
         + barsHtml
         + emptyMsgHtml
@@ -2456,7 +2458,7 @@ function _cfRedrawCurrLiabBreakdown(){
     var s = window._cfCurrLiabBreakdownState;
     if (!s) return;
     var chartH = Math.max(120, $('#cf-currliab-breakdown-win').height() - 130);
-    var r = _cfInvestBreakdownChartHtml(s.accounts, chartH);
+    var r = _cfInvestBreakdownChartHtml(s.accounts, chartH, undefined, true);
     $('#cf-currliab-breakdown-unit').html(
         '<span style="font-weight:700;color:#251840;">Amount in ' + r.unit + '</span>'
         + '<span style="float:right;font-weight:700;color:#251840;">Total: ' + r.total + ' ' + r.unit + '</span>'
@@ -2531,7 +2533,7 @@ function _cfShowCurrLiabBreakdown(accounts, title){   // title: also used for th
     window._cfCurrLiabBreakdownState = { accounts: accounts };
 
     // Width grows with the number of accounts (about 95px per bar) so the names stay legible.
-    var winW = Math.round(Math.max(720, Math.min(window.innerWidth - 40, accounts.length * 95 + 80)) * 2 / 3), winH = 440, MIN_W = 340, MIN_H = 240;   // reduced by a third
+    var winW = Math.round(Math.max(720, Math.min(window.innerWidth - 40, accounts.length * 95 + 80)) * 2 / 3), winH = 340, MIN_W = 340, MIN_H = 240;   // reduced by a third
     var left = Math.max(10, (window.innerWidth - winW) / 2);
     var top = Math.max(10, (window.innerHeight - winH) / 2);
 
