@@ -6020,10 +6020,22 @@ class ProjectsmainController extends Controller
             ];
         }
 
+        // Actual history: the Bills Receivable balance (owed by the client) right after each
+        // past bill, and today's balance.
+        $history = [];
+        if ($contractIncomeId) {
+            $billDates = $db->createCommand(
+                "SELECT DISTINCT date(date) FROM journalvoucher WHERE creditacnt = :cid AND project_id = :pid AND COALESCE(delete_status, 0) = 0 AND date(date) <= CURDATE() ORDER BY 1",
+                [':cid' => (int)$contractIncomeId, ':pid' => $pid])->queryColumn();
+            foreach ($billDates as $bd) $history[] = ['end_date' => $bd, 'br' => round((float)$this->_cfFlowGroups($pid, $bd)['br'], 2)];
+        }
+        $brNow = round((float)$this->_cfFlowGroups($pid)['br'], 2);
         $current = 1;   // the open cycle is the first of the grid
         return [
             'error'          => 'No',
             'cycles'         => $cycles,
+            'history'        => $history,
+            'br_now'         => $brNow,
             'current_cycle'  => (int)$wip['current_cycle'],
             'current_target' => $cycles[$current - 1]['target'],
         ];

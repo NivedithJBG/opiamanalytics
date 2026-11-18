@@ -3794,13 +3794,22 @@ function _cfRedrawBillsRecvBreakdown(){
         '<span style="font-weight:700;color:#251840;">Bills Receivable per billing cycle = Revenue/Cycle &minus; TDS &minus; Retention (Lakhs)</span>'
         + '<span style="float:right;font-weight:700;color:#251840;">Bills Receivable Total: ' + (tot / 100000).toFixed(2) + ' Lakhs</span>'
     );
-    var cyc = (s.cycles || []).map(function(c){ return { cycle: c.cycle, end_label: c.end_label, end_date: c.end_date, current: +c.cycle === +s.currentCycle, br: +c.target || 0 }; });
-    $('#cf-billsrecv-breakdown-chart').html(_cfBankTiLinesSvg(cyc, [ { key: 'br', col: '#1e8073', name: 'Bills Receivable' } ]));
+    // Actual first (hollow dots: the balance after each past bill, then today), then the
+    // projected Bills Receivable of each cycle still to come (solid dots).
+    var today = new Date().toISOString().slice(0, 10);
+    var cyc = (s.history || []).map(function(h){ return { end_date: h.end_date, br: +h.br || 0, actual: true }; });
+    cyc.push({ end_date: today, br: +s.brNow || 0, actual: true, current: true });
+    (s.cycles || []).forEach(function(c){ if ((c.end_date || '') > today) cyc.push({ cycle: c.cycle, end_date: c.end_date, br: +c.target || 0 }); });
+    $('#cf-billsrecv-breakdown-chart').html(_cfBankTiLinesSvg(cyc, [ { key: 'br', col: '#1e8073', name: 'Bills Receivable' } ])
+        + '<div style="font-size:12px;color:#5a6e8c;padding:4px 6px 0;">'
+        + '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;border:2.5px solid #1e8073;background:#fff;margin-right:5px;vertical-align:middle;box-sizing:border-box;"></span>Actual (after each bill, and today) &nbsp; '
+        + '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Projected</div>');
 }
 
 function _cfShowBillsRecvBreakdown(){
     $('#cf-billsrecv-breakdown-win').remove();
-    window._cfBillsRecvBreakdownState = { cycles: _cfBillsRecvState.cycles || [], currentCycle: _cfBillsRecvState.currentCycle || 0 };
+    window._cfBillsRecvBreakdownState = { cycles: _cfBillsRecvState.cycles || [], currentCycle: _cfBillsRecvState.currentCycle || 0,
+                                          history: _cfBillsRecvState.history || [], brNow: _cfBillsRecvState.brNow || 0 };
 
     var winW = 640, winH = 380, MIN_W = 340, MIN_H = 240;
     var left = Math.max(10, (window.innerWidth - winW) / 2);
@@ -3893,6 +3902,8 @@ $(document).on('click', '#cf-contract-income', function(e){
             if (d && d.error === 'No') {
                 _cfBillsRecvState.cycles = d.cycles || [];
                 _cfBillsRecvState.currentCycle = +d.current_cycle || 0;
+                _cfBillsRecvState.history = d.history || [];
+                _cfBillsRecvState.brNow = +d.br_now || 0;
                 _cfShowBillsRecvBreakdown();
             }
         }
