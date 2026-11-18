@@ -4301,7 +4301,7 @@ function _cfShowBankTiLines(cycles, note, d){
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
         + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#d84a30;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#1e8073;margin-right:5px;vertical-align:middle;"></span>Bank balance (red = negative, green = surplus)</span>'
         + '<span style="color:#5a6e8c;">Opening = bank today ' + ((+d.bank_now || 0) / 100000).toFixed(2) + ' L</span>'
-        + '<span style="color:#5a6e8c;">Each cycle: + Receivable &minus; Cost/cycle; first cycle also &minus; Advances &amp; Deposits target ' + ((+d.adv_target || 0) / 100000).toFixed(2) + ' L</span></div>'
+        + '<span style="color:#5a6e8c;">Each cycle: + Receivable &minus; Cost/cycle; first cycle also &minus; Advances &amp; Deposits still to pay ' + ((+d.adv_due || 0) / 100000).toFixed(2) + ' L (target ' + ((+d.adv_target || 0) / 100000).toFixed(2) + ' L, the rest already paid)</span></div>'
         + '<div style="flex:1;min-height:0;display:flex;gap:12px;padding:8px 16px 16px;">'
         + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;"><div style="flex:none;text-align:center;font-family:Barlow Condensed,Arial;font-size:13px;font-weight:700;color:#081142;">Bank balance after each cycle</div>'
         + '<div style="flex:1;min-height:0;overflow:auto;">' + _cfBankTiLinesSvg(cycles) + '</div></div>'

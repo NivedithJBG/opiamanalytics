@@ -2561,6 +2561,9 @@ class ProjectsmainController extends Controller
             "SELECT target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key = 'investments_target'", [':p' => $pid])->queryScalar();
         $g = $this->_cfFlowGroups($pid);
         $bankNow = (float)$g['bank'];
+        // Advances & Deposits already paid are already out of today's bank balance: only the part
+        // of the target not yet paid is still to go out (never below zero).
+        $advDue = max(0.0, $advTarget - max(0.0, (float)$g['adv']));
 
         $ci = $db->createCommand("SELECT id FROM accounts_item WHERE name='Contract Income' AND Status=0 LIMIT 1")->queryScalar();
         $billedOpen = $ci ? (float)$db->createCommand(
@@ -2573,13 +2576,13 @@ class ProjectsmainController extends Controller
             $isOpen = $k === (int)$cur['cycle'];
             $recv = ($isOpen && $billedOpen > 0) ? $billedOpen : (float)($c['revenue'] ?? 0);
             $cost = (float)$c['target'];
-            $adv = $out ? 0.0 : $advTarget;   // first projected cycle only
+            $adv = $out ? 0.0 : $advDue;      // first projected cycle only: the unpaid part of the target
             $bal += $recv - $cost - $adv;
             $out[] = ['cycle' => $k, 'end_date' => ($isOpen && !empty($cur['overdue'])) ? date('Y-m-d') : $c['end_date'],
                       'current' => $isOpen, 'overdue' => $isOpen && !empty($cur['overdue']),
                       'receivable' => round($recv, 2), 'cost' => round($cost, 2), 'adv' => round($adv, 2), 'bal' => round($bal, 2)];
         }
-        return ['error' => 'No', 'cycles' => $out, 'bank_now' => round($bankNow, 2), 'adv_target' => round($advTarget, 2)];
+        return ['error' => 'No', 'cycles' => $out, 'bank_now' => round($bankNow, 2), 'adv_target' => round($advTarget, 2), 'adv_due' => round($advDue, 2)];
     }
 
     // Bank/Working Capital panel breakdown (Cashflow Dashboard popup):
