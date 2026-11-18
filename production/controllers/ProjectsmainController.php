@@ -2582,7 +2582,15 @@ class ProjectsmainController extends Controller
                       'current' => $isOpen, 'overdue' => $isOpen && !empty($cur['overdue']),
                       'receivable' => round($recv, 2), 'cost' => round($cost, 2), 'adv' => round($adv, 2), 'bal' => round($bal, 2)];
         }
-        return ['error' => 'No', 'cycles' => $out, 'bank_now' => round($bankNow, 2), 'adv_target' => round($advTarget, 2), 'adv_due' => round($advDue, 2)];
+        // Actual bank balance at the end of each past cycle: a cycle ends on each date the
+        // client's payment came in (Bills Receivable credited by a bank/cash voucher).
+        $history = [];
+        foreach ($db->createCommand(
+            "SELECT DISTINCT date(v.date) FROM voucher v JOIN accounts_item ai ON ai.id = v.creditacnt
+             WHERE v.contra = 0 AND v.project_id = :p AND ai.name = 'Bills Receivable' AND date(v.date) < CURDATE() ORDER BY 1", [':p' => $pid])->queryColumn() as $e) {
+            $history[] = ['end_date' => $e, 'bal' => round((float)$this->_cfFlowGroups($pid, $e)['bank'], 2)];
+        }
+        return ['error' => 'No', 'cycles' => $out, 'history' => $history, 'bank_now' => round($bankNow, 2), 'adv_target' => round($advTarget, 2), 'adv_due' => round($advDue, 2)];
     }
 
     // Bank/Working Capital panel breakdown (Cashflow Dashboard popup):

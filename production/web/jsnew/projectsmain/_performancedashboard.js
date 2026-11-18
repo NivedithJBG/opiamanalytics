@@ -4377,6 +4377,12 @@ function _cfBankNetBarsSvg(cyc, bankNow){
 }
 function _cfShowBankTiLines(cycles, note, d){
     d = d || {};
+    // Actual balances first (hollow dots: end of each past cycle, then today), then the
+    // projected balance after each cycle still to come (solid dots).
+    var today = new Date().toISOString().slice(0, 10);
+    cycles = (d.history || []).map(function(h){ return { end_date: h.end_date, bal: +h.bal || 0, actual: true }; })
+        .concat([{ end_date: today, bal: +d.bank_now || 0, actual: true, current: true }])
+        .concat((cycles || []).map(function(c){ var o = $.extend({}, c); o.current = false; return o; }));
     $('#cf-bank-ti-win').remove();
     var winW = Math.min(860, window.innerWidth - 20), winH = 470;
     var html = '<div id="cf-bank-ti-win" style="position:fixed;left:' + Math.max(10, (window.innerWidth - winW) / 2) + 'px;top:' + Math.max(10, (window.innerHeight - winH) / 2) + 'px;width:' + winW + 'px;height:' + winH + 'px;min-width:360px;min-height:260px;max-width:98vw;resize:both;background:#fff;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:200600;display:flex;flex-direction:column;overflow:hidden;">'
@@ -4385,7 +4391,8 @@ function _cfShowBankTiLines(cycles, note, d){
         + '<button type="button" id="cf-bank-ti-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button></div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
         // One dot: green when the bank balance is positive, red when negative.
-        + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:' + ((+d.bank_now || 0) >= 0 ? '#1e8073' : '#d84a30') + ';margin-right:5px;vertical-align:middle;"></span>Bank Balance</span>'
+        + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;box-sizing:border-box;border:2.5px solid ' + ((+d.bank_now || 0) >= 0 ? '#1e8073' : '#d84a30') + ';background:#fff;margin-right:5px;vertical-align:middle;"></span>Actual Bank Balance</span>'
+        + '<span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:' + ((+d.bank_now || 0) >= 0 ? '#1e8073' : '#d84a30') + ';margin-right:5px;vertical-align:middle;"></span>Projected Bank Balance</span>'
         + '</div>'
         + '<div style="flex:1;min-height:0;display:flex;gap:12px;padding:8px 16px 16px;">'
         + '<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;">'
