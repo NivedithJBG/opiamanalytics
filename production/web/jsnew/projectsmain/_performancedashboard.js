@@ -1618,7 +1618,13 @@ function _cfShowNetInvCycles(cycles, info){
         var row = function(lbl, v, b){ return '<div style="display:flex;justify-content:space-between;gap:6px;' + (b ? 'border-top:1px solid #b8c2d3;margin-top:3px;padding-top:3px;font-weight:700;' : '') + '"><span>' + lbl + '</span><span>' + L(v) + '</span></div>'; };
         return '<div style="border:1px solid #dde2e9;border-radius:6px;padding:8px 10px;font-size:12px;color:#111;">'
             + '<div style="font-size:12px;font-weight:700;color:#081142;text-transform:uppercase;letter-spacing:.3px;text-align:center;margin-bottom:4px;">Funded by (L)</div>'
-            + row('Bank overdraft', f.bank) + row('GST + margin received, net of withheld', f.received)
+            + row('Bank overdraft', f.bank)
+            + (f.gst !== undefined
+                ? row('GST collected, net of input GST', f.gst)
+                  + row('<span title="' + $('<div>').text(Object.keys(f.party_names || {}).map(function(k){ return k + ': ' + ((f.party_names[k] || 0) / 100000).toFixed(2); }).join('\n')).html() + '">Parties not yet paid / advances received</span>', f.parties)
+                  + row('Withheld by client (retention, TDS)', f.withheld)
+                  + row('Margin and other', f.margin)
+                : row('GST + margin received, net of withheld', f.received))
             + row('Total Investment', f.total, true) + '</div>';
     }
     function statBox(title, v, note){

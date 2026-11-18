@@ -3622,6 +3622,33 @@ class ProjectsmainController extends Controller
         $fundBank = -$g0['bank'];
         $funding = ['bank' => round($fundBank, 2),
                     'received' => round($g0['ti'] - $fundBank, 2), 'total' => round($g0['ti'], 2)];
+        // The money beyond the bank overdraft, split by the project's account balances:
+        //   GST collected, net of input GST (output GST credit less input GST debit);
+        //   parties not yet paid / advances received (credit balances of party heads);
+        //   withheld by the client (retention, TDS, GST TDS: debit balances, a reduction);
+        //   margin and other = the rest, so the lines add up to Total Investment.
+        $p = []; for ($i = 1; $i <= 6; $i++) $p[':p' . $i] = $pid;
+        $bals = Yii::$app->db->createCommand("SELECT ai.name, ai.account_type ty, SUM(t.x) bal FROM (
+                SELECT account_id a, amount x FROM voucher WHERE contra=0 AND project_id=:p1
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=0 AND project_id=:p2
+                UNION ALL SELECT account_id, amount FROM voucher WHERE contra=1 AND type='Receipt' AND project_id=:p3
+                UNION ALL SELECT creditacnt, -amount FROM voucher WHERE contra=1 AND type='Payment' AND project_id=:p4
+                UNION ALL SELECT debitacnt, amount FROM journalvoucher WHERE project_id=:p5
+                UNION ALL SELECT creditacnt, -amount FROM journalvoucher WHERE project_id=:p6) t
+            JOIN accounts_item ai ON ai.id = t.a WHERE ai.account_type NOT IN (2, 4, 8) GROUP BY t.a, ai.name, ai.account_type", $p)->queryAll();
+        $gst = 0.0; $withheld = 0.0; $parties = 0.0; $partyNames = [];
+        foreach ($bals as $b) {
+            $v = (float)$b['bal']; $n = (string)$b['name'];
+            if (preg_match('/\b(input|output)\b.*gst|\b[csi]gst\b/i', $n) && !preg_match('/tds/i', $n)) { $gst -= $v; continue; }
+            if (preg_match('/retention|\btds\b|tax deducted/i', $n)) { if ($v > 0) $withheld += $v; continue; }
+            if ($v < 0) { $parties -= $v; $partyNames[$n] = round(-$v, 2); }
+        }
+        arsort($partyNames);
+        $funding['gst'] = round($gst, 2);
+        $funding['parties'] = round($parties, 2);
+        $funding['party_names'] = array_slice($partyNames, 0, 6, true);
+        $funding['withheld'] = round(-$withheld, 2);
+        $funding['margin'] = round($funding['received'] - $funding['gst'] - $funding['parties'] - $funding['withheld'], 2);
         return json_encode(['error' => 'No', 'cycles' => $cycles, 'adv_target' => $advTarget, 'current_cycle' => $cur,
                             'avg_ti' => $avg['avg'], 'avg_from' => $avg['from'], 'funding' => $funding]);
 
