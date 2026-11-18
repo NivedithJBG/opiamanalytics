@@ -1568,7 +1568,7 @@ function _cfNetInvCycleBarsHtml(cyc){
     cyc.forEach(function(c, i){ tPts.push(X(i).toFixed(1) + ',' + Y(tot(c))); if (has(c)) aPts.push({ x: X(i), y: Y(+c.avg_actual || 0), c: c, i: i }); });
     // Light horizontal guide lines.
     for (var k = 1; k <= 4; k++) { var gy = base - (base - top) * k / 4; g += '<line x1="' + pad + '" y1="' + gy.toFixed(1) + '" x2="' + (W - pad) + '" y2="' + gy.toFixed(1) + '" stroke="#eef1f5"/>'; }
-    // Target: dots only (no line).
+    if (tPts.length > 1) g += '<polyline points="' + tPts.join(' ') + '" fill="none" stroke="#3a4a5f" stroke-width="2.5" stroke-linejoin="round"/>';
     if (aPts.length > 1) g += '<polyline points="' + aPts.map(function(p){ return p.x.toFixed(1) + ',' + p.y; }).join(' ') + '" fill="none" stroke="#7a8799" stroke-width="2" stroke-dasharray="5 4"/>';
     cyc.forEach(function(c, i){
         var v = tot(c), cx = X(i), cy = Y(v), cur = !!c.current;
