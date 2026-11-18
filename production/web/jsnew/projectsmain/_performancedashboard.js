@@ -1795,7 +1795,8 @@ $(document).on('click', '#cf-netinv-breakdown-close', function(){ $('#cf-netinv-
 // modal's own bounds; closes on backdrop click or its own close button.
 // Distinct colour per bar — cycled if there are more accounts than
 // colours.
-var _cfInvestBarColours = ['#0d3f7a', '#b5540a', '#2e9e44', '#7a2e8a', '#c62828', '#00838f', '#8a6d00', '#455a64'];
+var _cfInvestBarColours = ['#0d3f7a', '#b5540a', '#2e9e44', '#7a2e8a', '#c62828', '#00838f', '#8a6d00', '#455a64',
+    '#d81b60', '#5e35b1', '#f57c00', '#00897b', '#6d4c41', '#1e88e5', '#7cb342', '#8e24aa'];   // 16, so bars rarely repeat a colour
 
 // Shortens a full account name to a short chart-axis label — takes the
 // first 1-2 significant words, dropping generic trailing words like
@@ -1867,7 +1868,7 @@ function _cfInvestBreakdownChartHtml(accounts, chartH, unitMode, compact){
         var acct = accounts[j];
         var fmt = fmtVal(acct.amount);
         var barPx = Math.max(2, (fmt.value / niceMax) * chartH);
-        var col = _cfInvestBarColours[j % _cfInvestBarColours.length];
+        var col = acct.color || _cfInvestBarColours[j % _cfInvestBarColours.length];
         var hasMembers = acct.members && acct.members.length;
         barsHtml += '<div class="cf-breakdown-bar-col" data-idx="' + j + '" style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:' + chartH + 'px;flex:0 0 ' + CW + 'px;min-width:' + CW + 'px;position:relative;' + (hasMembers ? 'cursor:pointer;' : '') + '">'
             + '<div style="font-size:' + FS + 'px;font-weight:700;color:#251840;margin-bottom:4px;white-space:nowrap;">' + fmt.value.toFixed(2) + '</div>'
@@ -4731,7 +4732,11 @@ $(document).on('click', '#cf-curassets', function(){
     $.ajax({
         type: 'POST', url: '../projectsmain/cfcurrentassetsdiff', dataType: 'json',
         success: function(d){
-            if (d && d.error === 'No') { _cfShowCurrLiabBreakdown(d.accounts || [], 'Current Assets = Advances and Deposits + the heads booked beyond it'); }
+            if (d && d.error === 'No') {
+                // Advances and Deposits and Work In Progress in their own colours, unlike the account bars.
+                (d.accounts || []).forEach(function(a){ if (a.name === 'Advances and Deposits') a.color = '#1e8073'; else if (a.name === 'Work In Progress') a.color = '#e0a100'; });
+                _cfShowCurrLiabBreakdown(d.accounts || [], 'Current Assets = Advances and Deposits + the heads booked beyond it');
+            }
         }
     });
 });
