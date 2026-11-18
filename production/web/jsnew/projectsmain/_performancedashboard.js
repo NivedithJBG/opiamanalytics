@@ -1534,6 +1534,21 @@ function _cfFitChartWins(){
         win.style.left = left + 'px'; win.style.transform = 'none'; win.style.top = top + 'px';
     });
 }
+// Average investment chart with X and Y axes: the actual average investment at the end of
+// each past cycle and today (hollow points), and the Target Average Investment of today's
+// and each future cycle.
+function _cfNetInvAvgLinesHtml(cycles, info){
+    info = info || {};
+    var today = new Date().toISOString().slice(0, 10), pts = [];
+    (info.history || []).forEach(function(h){ pts.push({ end_date: h.end_date, act: +h.avg || 0, actual: true }); });
+    var cur = (cycles || []).filter(function(c){ return c.current; })[0];
+    var nowAct = info.avg_ti !== null && info.avg_ti !== undefined ? +info.avg_ti : null;
+    pts.push({ end_date: today, act: nowAct, tgt: cur && cur.tavg !== undefined ? +cur.tavg : undefined, actual: true, current: true });
+    (cycles || []).forEach(function(c){ if (!c.current && (c.end_date || '') > today && c.tavg !== undefined) pts.push({ end_date: c.end_date, tgt: +c.tavg }); });
+    var over = cur && nowAct !== null && nowAct >= (+cur.tavg || 0);
+    return _cfBankTiLinesSvg(pts, [ { key: 'tgt', col: '#3a4a5f', name: 'Target Average Investment' },
+                                     { key: 'act', col: over ? '#d84a30' : '#2ba899', name: 'Actual Average Investment' } ], { slot: 64 });
+}
 function _cfNetInvCycleBarsHtml(cyc){
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycle targets.</div>';
     // One bar per billing cycle, the current one and those still to come: the
@@ -1647,7 +1662,7 @@ function _cfShowNetInvCycles(cycles, info){
         + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + (function(){ var c = cycles.filter(function(x){ return x.avg_actual !== null && x.avg_actual !== undefined; })[0]; return c && +c.avg_actual < +c.tavg ? '#2ba899' : '#d84a30'; })() + ';margin-right:5px;vertical-align:middle;"></span>Actual Average Investment</span>'
         + '</div>'
         + '<div style="flex:1;min-width:0;min-height:0;display:flex;gap:12px;overflow:hidden;padding:10px 16px 16px;box-sizing:border-box;">'
-        + '<div id="cf-ni-chart" style="flex:1;min-width:0;overflow-y:auto;">' + _cfNetInvCycleBarsHtml(cycles) + '</div>'
+        + '<div id="cf-ni-chart" style="flex:1;min-width:0;overflow-y:auto;">' + _cfNetInvAvgLinesHtml(cycles, info) + '</div>'
         + '<div id="cf-ni-side" style="flex:none;width:210px;display:flex;flex-direction:column;justify-content:flex-start;gap:6px;font-family:Barlow Condensed,Arial;overflow-y:auto;">'
         + statBox('Total Investment', curAct, 'actual, today')
         + statBox('Average Investment', avgAct, 'weighted by days' + (avgFrom ? ', ' + avgFrom + ' to today' : ''))
@@ -4247,7 +4262,8 @@ function _cfShowBankBreakdown(points){
 // (cycle target = WIP target + Advances and Deposits target) and actual (Total
 // Investment at each cycle end, today for the current cycle), from
 // cfnetinvestmentbreakdown (same cycles as the Total Investment popup).
-function _cfBankTiLinesSvg(cyc, ser){
+function _cfBankTiLinesSvg(cyc, ser, opts){
+    opts = opts || {};
     if (!cyc.length) return '<div style="padding:8px 10px;font-size:12px;color:#5a6e8c;">Set Project Duration and Billing Cycle to see the cycles.</div>';
     // One line: lowest projected bank balance in each billing cycle (fund requirement) — negative = overdraft, positive = surplus
     // (from cfbankprojection).
@@ -4276,7 +4292,7 @@ function _cfBankTiLinesSvg(cyc, ser){
     var tick = [1, 2, 2.5, 5, 10].map(function(m){ return m * mag; }).filter(function(t){ return t >= rawStep; })[0] * 100000;
     minV = Math.floor(minV / tick) * tick; maxV = Math.ceil(maxV / tick) * tick;
     if (maxV === minV) maxV = minV + tick;
-    W = _cfChartW(W, padL + padR, cyc.length, bank ? 72 : 96);   // bank: a little wider
+    W = _cfChartW(W, padL + padR, cyc.length, opts.slot || (bank ? 72 : 96));   // bank: a little wider
     var slot = (W - padL - padR) / cyc.length;
     var xOf = function(i){ return padL + (i + 0.5) * slot; };
     var yOf = function(v){ return base - ((v - minV) / (maxV - minV)) * (base - top); };

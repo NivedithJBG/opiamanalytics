@@ -3079,16 +3079,17 @@ class ProjectsmainController extends Controller
     // Average investment in the project from its first transaction to today: the
     // Total Investment after each transaction date, weighted by the number of days
     // it stayed at that value (until the next transaction date, or today).
-    private function _cfAverageInvestment($pid)
+    private function _cfAverageInvestment($pid, $asOf = null)
     {
+        $asOf = $asOf ?: date('Y-m-d');
         $dates = Yii::$app->db->createCommand(
             "SELECT DISTINCT d FROM (SELECT date(date) d FROM voucher WHERE project_id=:p1
                UNION SELECT date(date) FROM journalvoucher WHERE project_id=:p2) t
-             WHERE d IS NOT NULL AND d > '1900-01-01' AND d <= CURDATE() ORDER BY d", [':p1' => $pid, ':p2' => $pid]
+             WHERE d IS NOT NULL AND d > '1900-01-01' AND d <= :to ORDER BY d", [':p1' => $pid, ':p2' => $pid, ':to' => $asOf]
         )->queryColumn();
         if (!$dates) return ['avg' => null, 'from' => null];
         $sum = 0.0; $days = 0;
-        $end = strtotime(date('Y-m-d')) + 86400;   // today counts as a full day
+        $end = strtotime($asOf) + 86400;   // the last day counts as a full day
         foreach ($dates as $i => $d) {
             $next = isset($dates[$i + 1]) ? strtotime($dates[$i + 1]) : $end;
             $w = max(0, (int)round(($next - strtotime($d)) / 86400));
@@ -3644,6 +3645,15 @@ class ProjectsmainController extends Controller
                 $cycles[$i]['avg_actual'] = $cycles[$i]['current'] && $avg['avg'] !== null ? round((float)$avg['avg'], 2) : null;
             }
         }
+        // Past cycles: the actual average investment up to the end of each (a cycle ends on
+        // each date the client's payment came in).
+        $history = [];
+        foreach (Yii::$app->db->createCommand(
+            "SELECT DISTINCT date(v.date) FROM voucher v JOIN accounts_item ai ON ai.id = v.creditacnt
+             WHERE v.contra = 0 AND v.project_id = :p AND ai.name = 'Bills Receivable' AND date(v.date) < CURDATE() ORDER BY 1", [':p' => $pid])->queryColumn() as $e) {
+            $a = $this->_cfAverageInvestment($pid, $e);
+            if ($a['avg'] !== null) $history[] = ['end_date' => $e, 'avg' => round((float)$a['avg'], 2)];
+        }
         // How today's Total Investment is funded: the bank overdraft, cash received
         // beyond the cost cleared at bills (GST collected + margin, net of amounts the
         // client withheld) that is temporarily in use.
@@ -3679,7 +3689,7 @@ class ProjectsmainController extends Controller
         $funding['withheld'] = round(-$withheld, 2);
         $funding['margin'] = round($funding['received'] - $funding['gst'] - $funding['parties'] - $funding['withheld'], 2);
         return json_encode(['error' => 'No', 'cycles' => $cycles, 'adv_target' => $advTarget, 'current_cycle' => $cur,
-                            'avg_ti' => $avg['avg'], 'avg_from' => $avg['from'], 'funding' => $funding]);
+                            'avg_ti' => $avg['avg'], 'avg_from' => $avg['from'], 'funding' => $funding, 'history' => $history]);
 
         $allRows = $this->_cfNetInvestmentPerCycleRows($pid);
         $rows = array_values(array_filter($allRows, function($r) { return $r['name'] !== 'Current'; }));
