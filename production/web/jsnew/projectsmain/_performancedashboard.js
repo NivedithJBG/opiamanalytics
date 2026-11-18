@@ -1577,7 +1577,7 @@ function _cfNetInvCycleBarsHtml(cyc){
             + '<text x="' + cx.toFixed(1) + '" y="' + (base + 16) + '" text-anchor="middle" font-size="11" fill="#111"' + (cur ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
     aPts.forEach(function(p){
-        var a = +p.c.avg_actual || 0, v = tot(p.c), col = a <= v ? GB : RO;   // below the target average = less money tied up
+        var a = +p.c.avg_actual || 0, v = tot(p.c), col = a < v ? GB : RO;   // green only when below the target average (less money tied up)
         var tip = 'Actual Average Investment ' + L(a) + ' L (Total Investment averaged by days since the first transaction), target average ' + L(v) + ' L';
         g += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y + '" r="6" fill="' + col + '" stroke="#fff" stroke-width="1.5"><title>' + tip + '</title></circle>'
             + '<text x="' + (p.x + 9).toFixed(1) + '" y="' + (p.y + 4) + '" font-size="12" font-weight="700" fill="' + col + '">' + L(a) + '</text>';
