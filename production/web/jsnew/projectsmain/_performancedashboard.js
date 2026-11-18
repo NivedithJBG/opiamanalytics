@@ -1543,12 +1543,14 @@ function _cfNetInvCycleBarsHtml(cyc){
     if (ci > 0) cyc = cyc.slice(ci);
     // The actual Total Investment (Advances + WIP, today for the current cycle) is
     // overlaid as a narrower bar: green-blue at or above the target, red-orange below.
-    var tot = function(c){ return (+c.wip || 0) + (+c.adv || 0); };
-    var has = function(c){ return c.actual !== null && c.actual !== undefined; };
+    // Target Average Investment per cycle (running, day-weighted) and the Actual
+    // Average Investment so far (current cycle).
+    var tot = function(c){ return c.tavg !== undefined ? +c.tavg || 0 : (+c.wip || 0) + (+c.adv || 0); };
+    var has = function(c){ return c.avg_actual !== null && c.avg_actual !== undefined; };
     var GB = '#2ba899', RO = '#d84a30';
-    cyc = _cfTrimZeroTail(cyc, function(c){ return [tot(c), has(c) ? c.actual : 0]; });
+    cyc = _cfTrimZeroTail(cyc, function(c){ return [tot(c), has(c) ? c.avg_actual : 0]; });
     var maxV = 0;
-    cyc.forEach(function(c){ maxV = Math.max(maxV, tot(c), has(c) ? +c.actual || 0 : 0); });
+    cyc.forEach(function(c){ maxV = Math.max(maxV, tot(c), has(c) ? +c.avg_actual || 0 : 0); });
     // Compact (half size): narrower cycle slots and a lower chart.
     var W = 300, H = 180, base = 150, top = 24, pad = 14;
     W = _cfChartW(W, 2 * pad, cyc.length, 46);
@@ -1563,20 +1565,20 @@ function _cfNetInvCycleBarsHtml(cyc){
     // the target, red-orange below it.
     var X = function(i){ return pad + (i + 0.5) * slot; }, Y = function(v){ return base - hOf(v); };
     var g = '', tPts = [], aPts = [];
-    cyc.forEach(function(c, i){ tPts.push(X(i).toFixed(1) + ',' + Y(tot(c))); if (has(c)) aPts.push({ x: X(i), y: Y(+c.actual || 0), c: c, i: i }); });
+    cyc.forEach(function(c, i){ tPts.push(X(i).toFixed(1) + ',' + Y(tot(c))); if (has(c)) aPts.push({ x: X(i), y: Y(+c.avg_actual || 0), c: c, i: i }); });
     // Light horizontal guide lines.
     for (var k = 1; k <= 4; k++) { var gy = base - (base - top) * k / 4; g += '<line x1="' + pad + '" y1="' + gy.toFixed(1) + '" x2="' + (W - pad) + '" y2="' + gy.toFixed(1) + '" stroke="#eef1f5"/>'; }
     if (tPts.length > 1) g += '<polyline points="' + tPts.join(' ') + '" fill="none" stroke="#3a4a5f" stroke-width="2.5" stroke-linejoin="round"/>';
     if (aPts.length > 1) g += '<polyline points="' + aPts.map(function(p){ return p.x.toFixed(1) + ',' + p.y; }).join(' ') + '" fill="none" stroke="#7a8799" stroke-width="2" stroke-dasharray="5 4"/>';
     cyc.forEach(function(c, i){
         var v = tot(c), cx = X(i), cy = Y(v), cur = !!c.current;
-        g += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy + '" r="3.5" fill="#3a4a5f"><title>Target Total Investment ' + L(v) + ' L (WIP ' + L(+c.wip || 0) + ' + Advances ' + L(+c.adv || 0) + ')</title></circle>'
+        g += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy + '" r="3.5" fill="#3a4a5f"><title>Target Average Investment ' + L(v) + ' L (running average; this cycle ' + L(+c.tavg_cycle || 0) + ' L = Advances & Deposits target ' + L(+c.adv || 0) + ' + cycle cost ' + L(+c.wip || 0) + ' x (1/2 + collection days / ' + (c.days || '-') + ' days))</title></circle>'
             + '<text x="' + cx.toFixed(1) + '" y="' + (cy - 8) + '" text-anchor="middle" font-size="10" fill="#555">' + L(v) + '</text>'
             + '<text x="' + cx.toFixed(1) + '" y="' + (base + 16) + '" text-anchor="middle" font-size="11" fill="#111"' + (cur ? ' font-weight="700"' : '') + '>' + lbl(c) + '</text>';
     });
     aPts.forEach(function(p){
-        var a = +p.c.actual || 0, v = tot(p.c), col = a >= v ? GB : RO;
-        var tip = 'Actual Total Investment ' + L(a) + ' L (WIP ' + L(+p.c.actual_wip || 0) + ' + Advances ' + L(+p.c.actual_adv || 0) + ' + Bills Receivable at cost ' + L(+p.c.actual_br_cost || 0) + '), target ' + L(v) + ' L';
+        var a = +p.c.avg_actual || 0, v = tot(p.c), col = a <= v ? GB : RO;   // below the target average = less money tied up
+        var tip = 'Actual Average Investment ' + L(a) + ' L (Total Investment averaged by days since the first transaction), target average ' + L(v) + ' L';
         g += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y + '" r="6" fill="' + col + '" stroke="#fff" stroke-width="1.5"><title>' + tip + '</title></circle>'
             + '<text x="' + (p.x + 9).toFixed(1) + '" y="' + (p.y + 4) + '" font-size="12" font-weight="700" fill="' + col + '">' + L(a) + '</text>';
     });
@@ -1640,9 +1642,8 @@ function _cfShowNetInvCycles(cycles, info){
         + '<button id="cf-netinv-breakdown-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#fff;line-height:1;">&times;</button>'
         + '</div>'
         + '<div style="flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;padding:8px 16px 0;font-family:Barlow Condensed,Arial;font-size:12px;color:#111;">'
-        + '<span><span style="display:inline-block;width:18px;height:3px;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Target</span>'
-        + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2ba899;margin-right:5px;vertical-align:middle;"></span>Actual, at or above target</span>'
-        + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#d84a30;margin-right:5px;vertical-align:middle;"></span>Actual, short of target</span>'
+        + '<span><span style="display:inline-block;width:18px;height:3px;background:#3a4a5f;margin-right:5px;vertical-align:middle;"></span>Target Average Investment</span>'
+        + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#2ba899;margin-right:3px;vertical-align:middle;"></span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#d84a30;margin-right:5px;vertical-align:middle;"></span>Actual Average Investment (green = within target, red = above)</span>'
         + '</div>'
         + '<div style="flex:1;min-width:0;min-height:0;display:flex;gap:12px;overflow:hidden;padding:10px 16px 16px;box-sizing:border-box;">'
         + '<div id="cf-ni-chart" style="flex:1;min-width:0;overflow-y:auto;">' + _cfNetInvCycleBarsHtml(cycles) + '</div>'

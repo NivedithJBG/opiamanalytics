@@ -3615,6 +3615,27 @@ class ProjectsmainController extends Controller
                          'actual_br' => $g ? round($g['br'], 2) : null, 'actual_br_cost' => $g ? round($g['br_cost'], 2) : null];
         }
         $avg = $this->_cfAverageInvestment($pid);
+        // Target Average Investment (agreed 2026-11-18), per cycle:
+        //   A&D target (tied up all the time)
+        //   + cycle cost x 1/2 (WIP builds up evenly from 0 to the cycle cost, cleared at the bill)
+        //   + cycle cost x collection days / cycle days (billed cost waits for the client's payment);
+        // plotted as the day-weighted running average from the first shown cycle.
+        // Actual Average Investment = the day-weighted average of the actual Total
+        // Investment so far (current cycle point).
+        $coll = (int)(self::cfCycleGrid($pid)['collection'] ?? 0);
+        $sumW = 0.0; $sumD = 0;
+        foreach (($w['cycles'] ?? []) as $i => $c) {
+            $days = max(1, (int)round((strtotime($c['end_date']) - strtotime($c['start_date'] ?? $c['end_date'])) / 86400) + 1);
+            $cost = (float)$c['target'];
+            $ta = $advTarget + $cost * (0.5 + min(1.0, $coll / $days));
+            $sumW += $ta * $days; $sumD += $days;
+            if (isset($cycles[$i])) {
+                $cycles[$i]['tavg_cycle'] = round($ta, 2);
+                $cycles[$i]['tavg'] = round($sumW / $sumD, 2);
+                $cycles[$i]['days'] = $days;
+                $cycles[$i]['avg_actual'] = $cycles[$i]['current'] && $avg['avg'] !== null ? round((float)$avg['avg'], 2) : null;
+            }
+        }
         // How today's Total Investment is funded: the bank overdraft, cash received
         // beyond the cost cleared at bills (GST collected + margin, net of amounts the
         // client withheld) that is temporarily in use.
