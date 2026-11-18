@@ -4279,7 +4279,8 @@ function _cfBankTiLinesSvg(cyc, ser){
     var yOf = function(v){ return base - ((v - minV) / (maxV - minV)) * (base - top); };
     var L = function(v){ return (v / 100000).toFixed(2); };
     var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    var lbl = function(c){ var m = /^(\d{2})(\d{2})-(\d{2})/.exec(c.end_date || ''); return m ? mon[+m[3] - 1] + ' ' + m[2] : (c.end_label || c.name); };
+    // Actual points: day and month (two past cycles can end in the same month); today: "Today".
+    var lbl = function(c){ if (c.actual && c.current) return 'Today'; if (c.actual) { var a = /^\d{4}-(\d{2})-(\d{2})/.exec(c.end_date || ''); if (a) return (+a[2]) + ' ' + mon[+a[1] - 1]; } var m = /^(\d{2})(\d{2})-(\d{2})/.exec(c.end_date || ''); return m ? mon[+m[3] - 1] + ' ' + m[2] : (c.end_label || c.name); };
     var out = '';
     for (var tv = minV; tv <= maxV + 1; tv += tick) {
         var ty = yOf(tv).toFixed(1);
