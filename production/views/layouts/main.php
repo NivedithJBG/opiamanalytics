@@ -4919,7 +4919,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
   <div id="apt-body">
     <table>
       <thead><tr>
-        <th>Task</th><th id="apt-qty-hdr" style="width:70px;">Qnty/Unit</th><th style="width:80px;">Productivity/day</th>
+        <th>Task</th><th style="width:70px;">Unit</th><th id="apt-qty-hdr" style="width:70px;">Qnty/Unit</th><th style="width:80px;">Productivity/day</th>
         <th style="width:75px;">Dur/Unit</th><th style="width:30px;"></th>
       </tr></thead>
       <tbody id="apt-task-body"></tbody>
@@ -4955,6 +4955,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
   function taskRowHtml(t){
     t = t || {};
     return '<td data-taskid="' + (t.id != null ? t.id : '') + '"><input type="text" class="apt-task-name" value="' + (t.name||'').replace(/"/g,'&quot;') + '" placeholder="Task name"></td>'
+      + '<td><input type="text" class="apt-task-unit" value="' + String(t.unit != null && t.unit !== '' ? t.unit : (window._aptActUnit || '')).replace(/"/g,'&quot;') + '" placeholder="Unit" oninput="this.value=this.value.replace(/[0-9]/g,\'\')"></td>'
       + '<td><input type="number" class="apt-task-qty" value="' + (t.qty!=null?t.qty:1) + '" step="0.01" min="0"></td>'
       + '<td><input type="number" class="apt-task-prod" value="' + (t.productivity!=null?t.productivity:'') + '" step="0.01" min="0"></td>'
       + '<td><input type="text" class="apt-task-durunit" readonly></td>'
@@ -5007,6 +5008,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
   window.openTaskPopupFor = function(id, label, tasks, onSave, getQty, unit, getRUnit){
     document.getElementById('apt-hdr-act').textContent = label ? ('— ' + label) : '';
     document.getElementById('apt-qty-hdr').textContent = unit ? ('Qty/' + unit) : 'Qnty/Unit';
+    window._aptActUnit = unit || '';
     _apTaskOnSave = onSave;
     _apTaskGetQty = getQty || function(){ return 0; };
     _apTaskGetRUnit = getRUnit || function(){ return 1; };
@@ -5033,6 +5035,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
       tasks.push({
         id: idAttr ? parseInt(idAttr, 10) : null,
         name: name,
+        unit: (tr.querySelector('.apt-task-unit') || {}).value || '',
         qty: parseFloat(tr.querySelector('.apt-task-qty').value) || 0,
         productivity: parseFloat(tr.querySelector('.apt-task-prod').value) || 0,
         resunits: 1
@@ -5359,7 +5362,7 @@ window.loadIowGroupOptions = function(selectEl, cb){
       type: 'POST', url: '../projectsmain/wbsactivityupdate', dataType: 'json',
       data: { payload: JSON.stringify({
         sa_id: saId, name: name, unit: unit, qty: qty, r_unit: rUnit,
-        tasks: tasks.map(function(t){ return { id: t.id, name: t.name, qty: t.qty, productivity: t.productivity, resunits: t.resunits }; })
+        tasks: tasks.map(function(t){ return { id: t.id, name: t.name, unit: t.unit || '', qty: t.qty, productivity: t.productivity, resunits: t.resunits }; })
       }) },
       success: function(d){
         if (editBtn) editBtn.disabled = false;
