@@ -527,7 +527,7 @@ class ProjectsmainController extends Controller
         $items = [];
         foreach ($rows as $r) {
             $tasks = $db->createCommand(
-                "SELECT stn.task_Id AS id, COALESCE(stn.task_name, at.task_name) AS name, COALESCE(stn.task_unit, at.task_unit) AS unit,
+                "SELECT stn.task_Id AS id, COALESCE(stn.task_name, at.task_name) AS name, COALESCE(NULLIF(stn.task_unit, ''), at.task_unit) AS unit,
                         stn.task_qty AS qty, stn.task_productivity AS productivity, stn.task_resource_units AS resunits
                  FROM schedule_task_new stn
                  LEFT JOIN activity_tasks at ON at.id = stn.task_Id
