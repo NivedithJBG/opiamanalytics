@@ -188,7 +188,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
           <input class="form-control" id="editresourcename" placeholder="Enter resource name" type="text">
           <span class="error" style="display:none;color:red;"></span></div></div>
         <div class="col-md-1"><div class="form-group"><label>Unit</label>
-          <input class="form-control" id="editresourceunit" placeholder="e.g. kg, m, nos" type="text"></div></div>
+          <input class="form-control" id="editresourceunit" placeholder="e.g. kg, m, nos" type="text" oninput="this.value=this.value.replace(/[0-9]/g,'')"></div></div>
         <div class="col-md-2"><div class="form-group"><label>Rate</label>
           <input class="form-control" id="editresourcerate" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"></div></div>
         <div class="col-md-3 text-left"><label>&nbsp;</label><br>
@@ -318,7 +318,7 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
       </div>
       <div class="row" style="margin-top:12px;">
         <div class="col-md-6"><div class="form-group"><label>Unit</label>
-          <input id="resourceunit1" type="text" class="form-control" placeholder="e.g. kg, m, nos">
+          <input id="resourceunit1" type="text" class="form-control" placeholder="e.g. kg, m, nos" oninput="this.value=this.value.replace(/[0-9]/g,'')">
           </div></div>
         <div class="col-md-6"><div class="form-group"><label>Rate</label>
           <input id="resourcerate1" type="text" inputmode="decimal" autocomplete="off" class="form-control" placeholder="0.00">
