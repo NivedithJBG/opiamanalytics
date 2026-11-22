@@ -518,9 +518,9 @@ class ProjectsmainController extends Controller
         if ($sgId) $this->_sgEnsure();
         $rows = $db->createCommand(
             "SELECT sa.id, sa.name, sa.unit, sa.quantity, sa.duration, sa.activity_id AS wan_id, sa.resource_units AS r_unit
-             FROM scheduleactivities sa" . ($sgId ? " JOIN wbs_subgroup_activities m ON m.wan_id = sa.activity_id AND m.subgroup_id = " . $sgId : '') . "
+             FROM scheduleactivities sa LEFT JOIN workgroup_activities_new wa ON wa.id = sa.activity_id" . ($sgId ? " JOIN wbs_subgroup_activities m ON m.wan_id = sa.activity_id AND m.subgroup_id = " . $sgId : '') . "
              WHERE sa.iow_group_id=:g AND sa.projectId=:p AND sa.status=0
-             ORDER BY sa.sortorder ASC, sa.id ASC",
+             ORDER BY COALESCE(wa.sortorder, 999999) ASC, sa.id ASC",
             [':g' => $iowGroupId, ':p' => $pid]
         )->queryAll();
 
@@ -559,7 +559,7 @@ class ProjectsmainController extends Controller
                 'r_unit'   => (float)$r['r_unit'] ?: 1.0,
                 'tasks'    => array_map(function ($t) {
                     return [
-                        'id' => (int)$t['id'], 'name' => $t['name'], 'qty' => (float)$t['qty'],
+                        'id' => (int)$t['id'], 'name' => $t['name'], 'unit' => (string)($t['unit'] ?? ''), 'qty' => (float)$t['qty'],
                         'productivity' => (float)$t['productivity'], 'resunits' => (float)$t['resunits'],
                     ];
                 }, $tasks),
