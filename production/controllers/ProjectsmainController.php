@@ -6055,13 +6055,14 @@ class ProjectsmainController extends Controller
             ];
         }
 
-        // Actual history: Bills Receivable = the Contract Income balance right after each
-        // bill (no GST, no TDS / retention deductions), and today's balance.
+        // Popup actual (agreed 2026-11-23): the amount credited to Contract Income in each
+        // cycle's bill (no GST, no deductions), NOT cumulative. The Bills Receivable metric
+        // itself stays the balance of the Bills Receivable account.
         $history = [];
         if ($contractIncomeId) {
             foreach ($db->createCommand(
-                "SELECT DISTINCT date(date) FROM journalvoucher WHERE creditacnt = :cid AND project_id = :pid AND COALESCE(delete_status, 0) = 0 AND date(date) <= CURDATE() ORDER BY 1",
-                [':cid' => (int)$contractIncomeId, ':pid' => $pid])->queryColumn() as $bd) $history[] = ['end_date' => $bd, 'br' => round($this->_cfContractIncomeBalance($pid, $bd), 2)];
+                "SELECT date(date) d, SUM(amount) amt FROM journalvoucher WHERE creditacnt = :cid AND project_id = :pid AND COALESCE(delete_status, 0) = 0 AND date(date) <= CURDATE() GROUP BY date(date) ORDER BY 1",
+                [':cid' => (int)$contractIncomeId, ':pid' => $pid])->queryAll() as $b) $history[] = ['end_date' => $b['d'], 'br' => round((float)$b['amt'], 2)];
         }
         $brNow = round($this->_cfContractIncomeBalance($pid), 2);
         $current = 1;   // the open cycle is the first of the grid
