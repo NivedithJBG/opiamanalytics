@@ -3814,9 +3814,9 @@ function _cfRedrawBillsRecvBreakdown(){
     // Actual first (hollow dots: the balance after each past bill, then today), then the
     // projected Bills Receivable of each cycle still to come (solid dots).
     var today = new Date().toISOString().slice(0, 10);
+    // Actual: the Contract Income credited by each bill. The projected line starts at the last bill.
     var cyc = (s.history || []).map(function(h){ return { end_date: h.end_date, act: +h.br || 0 }; });
-    // Today: the last actual point and the start of the projected line.
-    cyc.push({ end_date: today, act: +s.brNow || 0, prj: +s.brNow || 0, current: true });
+    if (cyc.length) cyc[cyc.length - 1].prj = cyc[cyc.length - 1].act;
     (s.cycles || []).forEach(function(c){ if ((c.end_date || '') > today) cyc.push({ cycle: c.cycle, end_date: c.end_date, prj: +c.target || 0 }); });
     $('#cf-billsrecv-breakdown-chart').html(_cfBankTiLinesSvg(cyc, [ { key: 'act', col: AC, name: 'Actual Bills Receivable' }, { key: 'prj', col: PC, name: 'Projected Bills Receivable' } ]));
 }

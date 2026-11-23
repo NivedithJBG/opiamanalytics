@@ -6033,19 +6033,18 @@ class ProjectsmainController extends Controller
                 'cycle'     => $k,
                 'end_label' => $c['end_label'],
                 'end_date'  => $c['end_date'] ?? '',
-                'target'    => round((float)($c['revenue'] ?? 0) * $net, 2),   // (quoted rate x estimated quantity of the cycle) less TDS and Retention
+                'target'    => round((float)($c['revenue'] ?? 0), 2),   // quoted rate x estimated quantity of the cycle (the Contract Income it should bill)
                 'actual'    => round($actual, 2),
             ];
         }
 
-        // Actual history: the Bills Receivable balance (owed by the client) right after each
-        // past bill, and today's balance.
+        // Actual history: the amount credited to Contract Income by each bill (no GST, no
+        // TDS / retention deductions), one point per bill date.
         $history = [];
         if ($contractIncomeId) {
-            $billDates = $db->createCommand(
-                "SELECT DISTINCT date(date) FROM journalvoucher WHERE creditacnt = :cid AND project_id = :pid AND COALESCE(delete_status, 0) = 0 AND date(date) <= CURDATE() ORDER BY 1",
-                [':cid' => (int)$contractIncomeId, ':pid' => $pid])->queryColumn();
-            foreach ($billDates as $bd) $history[] = ['end_date' => $bd, 'br' => round((float)$this->_cfFlowGroups($pid, $bd)['br'], 2)];
+            foreach ($db->createCommand(
+                "SELECT date(date) d, SUM(amount) amt FROM journalvoucher WHERE creditacnt = :cid AND project_id = :pid AND COALESCE(delete_status, 0) = 0 AND date(date) <= CURDATE() GROUP BY date(date) ORDER BY 1",
+                [':cid' => (int)$contractIncomeId, ':pid' => $pid])->queryAll() as $b) $history[] = ['end_date' => $b['d'], 'br' => round((float)$b['amt'], 2)];
         }
         $brNow = round((float)$this->_cfFlowGroups($pid)['br'], 2);
         $current = 1;   // the open cycle is the first of the grid
