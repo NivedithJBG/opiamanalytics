@@ -3810,7 +3810,7 @@ function _cfRedrawBillsRecvBreakdown(){
     $('#cf-billsrecv-breakdown-unit').html(
         '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + AC + ';margin-right:5px;vertical-align:middle;"></span>Actual Bills Receivable &nbsp; &nbsp; '
         + '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + PC + ';margin-right:5px;vertical-align:middle;"></span>Projected Bills Receivable'
-        + '<span style="float:right;font-weight:700;color:#251840;">Contract Income Balance: ' + ((+s.brNow || 0) / 100000).toFixed(2) + ' Lakhs</span>'
+        + '<span style="float:right;font-weight:700;color:#251840;">Contract Income till Today: ' + ((+s.brNow || 0) / 100000).toFixed(2) + ' Lakhs</span>'
     );
     // Actual first (hollow dots: the balance after each past bill, then today), then the
     // projected Bills Receivable of each cycle still to come (solid dots).
