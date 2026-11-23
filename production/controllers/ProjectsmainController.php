@@ -4038,9 +4038,9 @@ class ProjectsmainController extends Controller
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
-        // Bills Receivable = the current balance of Contract Income (agreed 2026-11-23):
-        // the bill values credited to it, no GST, no TDS / retention deductions.
-        return json_encode(['error' => 'No', 'total' => round($this->_cfContractIncomeBalance($pid), 2)]);
+        // Agreed cashflow rules: Bills Receivable = balance of the Bills Receivable head (0 if credit).
+        // (The Bills Receivable popup alone charts the Contract Income balance.)
+        return json_encode(['error' => 'No', 'total' => round($this->_cfFlowGroups($pid)['br'], 2)]);
 
         return json_encode([
             'error' => 'No',
