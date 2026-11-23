@@ -2975,6 +2975,22 @@ class ProjectsmainController extends Controller
     //    actually moved to Bills Receivable by bills not yet paid; see below).
     //  - Bills Receivable = balance of the "Bills Receivable" head (0 if credit).
     // $uptoDate (Y-m-d) limits every balance to that date; null = today.
+    // Balance of the Contract Income head (credits less debits, voucher + journal), up to a date.
+    private function _cfContractIncomeBalance($pid, $uptoDate = null)
+    {
+        $db = Yii::$app->db;
+        $ids = $db->createCommand("SELECT id FROM accounts_item WHERE name='Contract Income'")->queryColumn();
+        if (!$ids) return 0.0;
+        $in = implode(',', array_map('intval', $ids));
+        $dc = $uptoDate ? " AND date(date) <= " . $db->quoteValue($uptoDate) : '';
+        return (float)$db->createCommand("SELECT COALESCE(SUM(x), 0) FROM (
+                SELECT amount x FROM voucher WHERE contra=0 AND project_id=:p1 AND creditacnt IN ($in) $dc
+                UNION ALL SELECT -amount FROM voucher WHERE contra=0 AND project_id=:p2 AND account_id IN ($in) $dc
+                UNION ALL SELECT amount FROM journalvoucher WHERE project_id=:p3 AND creditacnt IN ($in) $dc
+                UNION ALL SELECT -amount FROM journalvoucher WHERE project_id=:p4 AND debitacnt IN ($in) $dc) t",
+            [':p1' => $pid, ':p2' => $pid, ':p3' => $pid, ':p4' => $pid])->queryScalar();
+    }
+
     private function _cfFlowGroups($pid, $uptoDate = null, $costOnly = false)
     {
         $db = Yii::$app->db;
@@ -4022,8 +4038,9 @@ class ProjectsmainController extends Controller
         $projuser = ProjuserSelection::find()->where(['userid' => $uid])->one();
         if (!$projuser) { return json_encode(['error' => 'No project selected']); }
         $pid = (int)$projuser->projectid;
-        // Agreed cashflow rules: Bills Receivable = balance of the Bills Receivable head (0 if credit).
-        return json_encode(['error' => 'No', 'total' => round($this->_cfFlowGroups($pid)['br'], 2)]);
+        // Bills Receivable = the current balance of Contract Income (agreed 2026-11-23):
+        // the bill values credited to it, no GST, no TDS / retention deductions.
+        return json_encode(['error' => 'No', 'total' => round($this->_cfContractIncomeBalance($pid), 2)]);
 
         return json_encode([
             'error' => 'No',
@@ -6038,15 +6055,15 @@ class ProjectsmainController extends Controller
             ];
         }
 
-        // Actual history: the amount credited to Contract Income by each bill (no GST, no
-        // TDS / retention deductions), one point per bill date.
+        // Actual history: Bills Receivable = the Contract Income balance right after each
+        // bill (no GST, no TDS / retention deductions), and today's balance.
         $history = [];
         if ($contractIncomeId) {
             foreach ($db->createCommand(
-                "SELECT date(date) d, SUM(amount) amt FROM journalvoucher WHERE creditacnt = :cid AND project_id = :pid AND COALESCE(delete_status, 0) = 0 AND date(date) <= CURDATE() GROUP BY date(date) ORDER BY 1",
-                [':cid' => (int)$contractIncomeId, ':pid' => $pid])->queryAll() as $b) $history[] = ['end_date' => $b['d'], 'br' => round((float)$b['amt'], 2)];
+                "SELECT DISTINCT date(date) FROM journalvoucher WHERE creditacnt = :cid AND project_id = :pid AND COALESCE(delete_status, 0) = 0 AND date(date) <= CURDATE() ORDER BY 1",
+                [':cid' => (int)$contractIncomeId, ':pid' => $pid])->queryColumn() as $bd) $history[] = ['end_date' => $bd, 'br' => round($this->_cfContractIncomeBalance($pid, $bd), 2)];
         }
-        $brNow = round((float)$this->_cfFlowGroups($pid)['br'], 2);
+        $brNow = round($this->_cfContractIncomeBalance($pid), 2);
         $current = 1;   // the open cycle is the first of the grid
         return [
             'error'          => 'No',
