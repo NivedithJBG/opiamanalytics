@@ -336,7 +336,7 @@
       <span id="estreport-win-proj-name" style="font-size:12px;font-weight:500;color:#c9c9c9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
     </div>
     <div id="estreport-win-hdr-btns">
-      <a class="icon-chart" id="btn-estcost-summary" title="Project Cost Summary" href="#" style="width:24px;height:24px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#2878c0;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.2);">&#128176;</a>
+      <a class="icon-chart" id="btn-estcost-summary" title="Project Cost Summary" href="#" style="display:none !important;width:24px;height:24px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#2878c0;color:#fff;cursor:pointer;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.2);">&#128176;</a>
       <button id="estreport-win-close" title="Close">&times;</button>
     </div>
   </div>
@@ -634,7 +634,7 @@
       + '<th class="er-num">Quantity</th>'
       + '<th class="er-num">Rate</th>'
       + '<th class="er-num">Cost</th>'
-      + '<th class="er-num">Actual Qty</th>'
+      + '<th class="er-num">Work Done Qnty</th>'
       + '<th class="er-num">Actual Rate</th>'
       + '<th class="er-num">Actual Cost</th>'
       + '</tr></thead><tbody>';
