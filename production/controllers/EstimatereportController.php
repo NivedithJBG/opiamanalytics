@@ -82,6 +82,22 @@ class EstimatereportController extends Controller
         // rather than recomputing a different approximation here.
         $origPost = $_POST;
 
+        // Resource View: every resource allocated to the project's activities, summed
+        // over the whole project (same figures as the Activity View, split by resource).
+        $resByAct = [];
+        foreach ($db->createCommand(
+            "SELECT pern.activity_id, pern.resource_Id AS rid, pern.rate, pern.quantity,
+                    COALESCE(NULLIF(r.Name, ''), pern.display_name, '') AS name, COALESCE(r.Unit, '') AS unit,
+                    pern.resourcetype_Id AS tid, COALESCE(rt.Name, 'Other') AS tname, COALESCE(rt.sortorder, 999) AS tsort
+             FROM pricing_estimate_resources_new pern
+             LEFT JOIN resources r ON r.Resource_Id = pern.resource_Id
+             LEFT JOIN resourcetype rt ON rt.ResourceType_Id = pern.resourcetype_Id
+             WHERE pern.project_id = :pid AND pern.pricing_status = 0", [':pid' => $projectId])->queryAll() as $pr) {
+            $resByAct[(int)$pr['activity_id']][] = $pr;
+        }
+        $rv = [];   // resource key => totals
+        $rvKey = function ($rid, $name) { return $rid ? 'r' . (int)$rid : 'n' . strtolower(trim((string)$name)); };
+
         /* Group into IOW Group sections with subtotal, plus a grand total.
            Each section is keyed by iow_group_id, now the sole grouping
            tier (no per-project IOW-item name to split/merge across). */
@@ -110,6 +126,13 @@ class EstimatereportController extends Controller
             $qty    = (float)$r['quantity'];
             $rate   = (float)$r['rate'];
             $amount = $qty * $rate;
+            foreach ($resByAct[(int)$r['activity_row_id']] ?? [] as $pr) {
+                $k = $rvKey($pr['rid'], $pr['name']);
+                if (!isset($rv[$k])) $rv[$k] = ['name' => $pr['name'], 'unit' => $pr['unit'], 'type' => $pr['tname'], 'tsort' => (int)$pr['tsort'],
+                                                 'quantity' => 0.0, 'amount' => 0.0, 'work_done_qty' => 0.0, 'a_amount' => 0.0];
+                $rv[$k]['quantity'] += (float)$pr['quantity'] * $qty;
+                $rv[$k]['amount']   += (float)$pr['rate'] * (float)$pr['quantity'] * $qty;
+            }
 
             // Cost of work done — same formula as the Cost Dashboard's
             // "Cost of Activity" panel: Σ(unit-rate × consumption) × qty done.
@@ -160,6 +183,18 @@ class EstimatereportController extends Controller
                         'act_amount'  => $actUC * $actualCons,
                         'has_actual'  => $hasAct,
                     ];
+                }
+                $mult = $r['sched_id'] ? $workDoneQty : $qty;
+                foreach (($cd['items'] ?? []) as $it) {
+                    $k = $rvKey($it['resource_id'] ?? 0, $it['name'] ?? '');
+                    if (!isset($rv[$k])) $rv[$k] = ['name' => $it['name'] ?? '', 'unit' => $it['unit'] ?? '', 'type' => ($it['type_name'] ?? '') ?: 'Other', 'tsort' => 999,
+                                                     'quantity' => 0.0, 'amount' => 0.0, 'work_done_qty' => 0.0, 'a_amount' => 0.0];
+                    $estUC = (float)($it['rate'] ?? 0);
+                    $hasAct = isset($it['actual_unit_cost']) && $it['actual_unit_cost'] !== null;
+                    if ($hasActual) { $cons = (float)($it['actual_consumption'] ?? 0); $uc = $hasAct ? (float)$it['actual_unit_cost'] : $estUC; }
+                    else            { $cons = (float)($it['planned_consumption'] ?? 0); $uc = $estUC; }
+                    $rv[$k]['work_done_qty'] += $cons * $mult;
+                    $rv[$k]['a_amount']      += $uc * $cons * $mult;
                 }
                 if ($r['sched_id']) {
                     // Scheduled activity: Amount scales with work actually
@@ -235,7 +270,29 @@ class EstimatereportController extends Controller
             'sections'           => $sections,
             'grand_total'        => $grandTotal,
             'grand_total_actual' => $grandTotalActual,
+            'resource_view'      => $this->_resourceView($rv),
         ]);
+    }
+
+    // Resource View sections: one per resource type (in the type order), resources by name.
+    private function _resourceView($rv)
+    {
+        $byType = [];
+        foreach ($rv as $x) {
+            if (abs($x['amount']) < 0.005 && abs($x['a_amount']) < 0.005 && abs($x['quantity']) < 0.0005) continue;
+            $t = $x['type'];
+            if (!isset($byType[$t])) $byType[$t] = ['type' => $t, 'tsort' => $x['tsort'], 'items' => [], 'subtotal' => 0.0, 'subtotal_actual' => 0.0];
+            $byType[$t]['tsort'] = min($byType[$t]['tsort'], $x['tsort']);
+            $x['rate']        = $x['quantity'] > 0 ? $x['amount'] / $x['quantity'] : 0.0;
+            $x['actual_rate'] = $x['work_done_qty'] > 0 ? $x['a_amount'] / $x['work_done_qty'] : $x['rate'];
+            unset($x['tsort']);
+            $byType[$t]['items'][] = $x;
+            $byType[$t]['subtotal'] += $x['amount'];
+            $byType[$t]['subtotal_actual'] += $x['a_amount'];
+        }
+        usort($byType, function ($a, $b) { return $a['tsort'] <=> $b['tsort'] ?: strcmp($a['type'], $b['type']); });
+        foreach ($byType as &$t) { usort($t['items'], function ($a, $b) { return strcasecmp($a['name'], $b['name']); }); unset($t['tsort']); }
+        return array_values($byType);
     }
 
     /* Edits Unit/Quantity from the Project Estimate popup's IOW row-list

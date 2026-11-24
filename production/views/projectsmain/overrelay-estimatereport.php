@@ -46,6 +46,12 @@
   cursor:pointer; border:none; background:#37475a; color:#fff;
 }
 #estreport-print-btn:hover { background:#26313f; }
+#er-view-tabs { margin-left:auto; display:flex; gap:6px; }
+.er-view-tab { border-radius:20px; padding:6px 16px; font-size:12px; font-weight:600; cursor:pointer;
+  border:1px solid #37475a; background:#fff; color:#37475a; }
+.er-view-tab.er-on { background:#37475a; color:#fff; }
+.er-table tr.er-rv-type td { background:#e4e7eb; font-weight:700; color:#37475a; }
+#estreport-win .er-table tr.er-rv-type td { font-size:11.5px; padding:4px 7px; }
 
 #estreport-body { flex:1; min-height:0; min-width:0; overflow-y:auto; overflow-x:hidden; padding:16px 22px; background:#f4f5f6; box-sizing:border-box; }
 
@@ -343,6 +349,10 @@
 
   <div id="estreport-action-bar">
     <button id="estreport-print-btn">&#x1F5A8; Print</button>
+    <div id="er-view-tabs">
+      <button type="button" class="er-view-tab er-on" data-view="act">Activity View</button>
+      <button type="button" class="er-view-tab" data-view="res">Resource View</button>
+    </div>
   </div>
 
   <div id="estreport-body">
@@ -610,7 +620,63 @@
     return btn ? (btn.getAttribute('data-projectid') || '') : '';
   }
 
+  // Activity View (default) / Resource View tabs: same data, same column heads.
+  var _erView = 'act', _erLast = null;
+  $(document).on('click', '.er-view-tab', function(){
+    _erView = $(this).data('view');
+    $('.er-view-tab').removeClass('er-on'); $(this).addClass('er-on');
+    if (_erLast) renderReport(_erLast);
+  });
+  function renderResourceView(d){
+    var $sheet = $('#estreport-sheet');
+    var secs = d.resource_view || [];
+    var html = '<div class="er-sheet-hdr">'
+      + '<h2>' + esc(d.project_name || 'Project') + '</h2>'
+      + '<div class="er-sheet-sub">Project Estimate &mdash; Resource View</div>'
+      + '</div>';
+    html += '<table class="er-table"><thead><tr>'
+      + '<th class="er-sl">#</th><th>Resource</th><th>Unit</th>'
+      + '<th class="er-num">Quantity</th><th class="er-num">Rate</th><th class="er-num">Cost</th>'
+      + '<th class="er-num">Work Done Qnty</th><th class="er-num">Actual Rate</th><th class="er-num">Actual Cost</th>'
+      + '</tr></thead><tbody>';
+    var sl = 1, tot = 0, totA = 0;
+    if (!secs.length) html += '<tr><td colspan="9" style="text-align:center;color:#888;padding:18px;">No resources allocated to this project\'s activities yet.</td></tr>';
+    secs.forEach(function(sec){
+      html += '<tr class="er-rv-type"><td colspan="9">' + esc(sec.type) + '</td></tr>';
+      (sec.items || []).forEach(function(it){
+        html += '<tr>'
+          + '<td class="er-sl">' + (sl++) + '</td>'
+          + '<td>' + esc(it.name) + '</td>'
+          + '<td>' + esc(it.unit) + '</td>'
+          + '<td class="er-num">' + fmtNum(it.quantity) + '</td>'
+          + '<td class="er-num">' + fmtNum(it.rate) + '</td>'
+          + '<td class="er-num">' + fmtNum(it.amount) + '</td>'
+          + '<td class="er-num">' + fmtNum(it.work_done_qty) + '</td>'
+          + '<td class="er-num">' + fmtNum(it.actual_rate) + '</td>'
+          + '<td class="er-num">' + fmtNum(it.a_amount) + '</td>'
+          + '</tr>';
+      });
+      html += '<tr class="er-subtotal-row">'
+        + '<td colspan="5" style="text-align:right;">Subtotal — ' + esc(sec.type) + '</td>'
+        + '<td class="er-num">' + fmtNum(sec.subtotal) + '</td><td></td><td></td>'
+        + '<td class="er-num">' + fmtNum(sec.subtotal_actual) + '</td></tr>';
+      tot += +sec.subtotal || 0; totA += +sec.subtotal_actual || 0;
+    });
+    html += '<tr class="er-grand-row"><td colspan="5" style="text-align:right;">Grand Total</td>'
+      + '<td class="er-num">' + fmtNum(tot) + '</td><td></td><td></td>'
+      + '<td class="er-num">' + fmtNum(totA) + '</td></tr>';
+    html += '</tbody></table>';
+    $sheet.html(html).show();
+    $('#estreport-empty').hide();
+  }
+
   function renderReport(d){
+    _erLast = d;
+    if (_erView === 'res' && d && d.error === 'No') {
+      document.getElementById('estreport-win-proj-name').textContent = d.project_name || '';
+      renderResourceView(d);
+      return;
+    }
     var $sheet = $('#estreport-sheet');
     var $empty = $('#estreport-empty');
 
@@ -1027,7 +1093,7 @@
       + '.er-table th.er-num, .er-table td.er-num { text-align:right; }'
       + '.er-table th.er-sl, .er-table td.er-sl { text-align:center; width:44px; }'
       + '.er-table td { padding:6px 9px; border:1px solid #ddd; }'
-      + '.er-table tr.er-iow-row td { background:#e4e7eb; font-weight:700; color:#37475a; }'
+      + '.er-table tr.er-iow-row td, .er-table tr.er-rv-type td { background:#e4e7eb; font-weight:700; color:#37475a; }'
       + '.er-table tr.er-subtotal-row td { background:#f0f2f4; font-weight:700; color:#37475a; }'
       + '.er-table tr.er-grand-row td { background:#6b7c93; color:#fff; font-weight:700; font-size:13px; }'
       + '@media print { body { margin:0; } }</style></head><body>'
