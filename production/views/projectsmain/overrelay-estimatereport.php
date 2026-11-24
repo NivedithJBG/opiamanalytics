@@ -55,15 +55,16 @@
 .er-table tr.er-rv-type { cursor:pointer; }
 .er-table tr.er-rv-type:hover td { background:#d8dce1 !important; }
 #errv-pie { display:none; position:fixed; z-index:200600; background:#fff; border-radius:10px; overflow:hidden;
-  box-shadow:0 8px 32px rgba(0,0,0,.35); width:640px; max-width:calc(100vw - 24px); font-family:inherit; }
+  box-shadow:0 8px 32px rgba(0,0,0,.35); width:900px; max-width:calc(100vw - 24px); font-family:inherit; }
 #errv-pie-hdr { background:#2d3a4a; color:#fff; padding:10px 14px; font-weight:700; font-size:14px; display:flex;
   align-items:center; justify-content:space-between; cursor:move; user-select:none; }
 #errv-pie-x { background:none; border:none; color:#fff; font-size:20px; line-height:1; cursor:pointer; }
 #errv-pie-body { display:flex; gap:18px; align-items:center; padding:14px 18px 16px; flex-wrap:wrap; }
-#errv-pie-legend { flex:1; min-width:220px; max-height:340px; overflow-y:auto; font-size:12.5px; }
-.errv-lg { display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #eef1f4; }
+#errv-pie-legend { flex:1; min-width:260px; max-height:calc(100vh - 120px); overflow-y:auto; font-size:11px; line-height:1.25; }
+.errv-lg { display:flex; align-items:center; gap:7px; padding:2px 0; border-bottom:1px solid #eef1f4; }
+.errv-lg i { width:9px !important; height:9px !important; }
 .errv-lg i { width:11px; height:11px; border-radius:50%; flex:none; }
-.errv-lg span { flex:1; color:#37475a; }
+.errv-lg span { flex:1; color:#37475a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .errv-lg b { color:#251840; white-space:nowrap; }
 #errv-pie-total { text-align:right; font-weight:700; color:#251840; padding-top:6px; }
 
@@ -692,7 +693,8 @@
   var _RV_COLS = ['#2b6cb0','#2ba899','#e8a33d','#d84a30','#6b46c1','#38a169','#dd6b20','#3182ce','#b83280','#718096',
                   '#0f766e','#c05621','#4c51bf','#9c4221','#2c7a7b','#805ad5'];
   function _rvPieSvg(items, total){
-    var R = 120, cx = 150, cy = 150, a0 = -Math.PI / 2, svg = '', lbl = '';
+    var R = 120, cx = 170, cy = 170, a0 = -Math.PI / 2, svg = '', lbl = '';
+    var _rvOut = 0;
     if (items.length === 1) {
       svg = '<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="' + _RV_COLS[0] + '"/>';
       lbl = '<text x="' + cx + '" y="' + (cy + 5) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">100%</text>';
@@ -701,13 +703,13 @@
       var x0 = cx + R * Math.cos(a0), y0 = cy + R * Math.sin(a0), x1 = cx + R * Math.cos(a1), y1 = cy + R * Math.sin(a1);
       svg += '<path d="M' + cx + ',' + cy + ' L' + x0.toFixed(2) + ',' + y0.toFixed(2) + ' A' + R + ',' + R + ' 0 ' + (f > 0.5 ? 1 : 0) + ' 1 '
            + x1.toFixed(2) + ',' + y1.toFixed(2) + ' Z" fill="' + col + '" stroke="#fff" stroke-width="1.5"><title>' + esc(it.name) + '</title></path>';
-      var am = (a0 + a1) / 2, pct = f * 100, inside = pct >= 6, rr2 = inside ? R * 0.66 : R + 16;
-      if (pct >= 0.5) lbl += '<text x="' + (cx + rr2 * Math.cos(am)).toFixed(1) + '" y="' + (cy + rr2 * Math.sin(am) + 4).toFixed(1)
+      var am = (a0 + a1) / 2, pct = f * 100, inside = pct >= 6, rr2 = inside ? R * 0.66 : R + ((_rvOut = (_rvOut || 0) + 1) % 2 ? 14 : 30);
+      if (inside || pct >= 1) lbl += '<text x="' + (cx + rr2 * Math.cos(am)).toFixed(1) + '" y="' + (cy + rr2 * Math.sin(am) + 4).toFixed(1)
            + '" text-anchor="middle" font-size="' + (inside ? 12 : 10.5) + '" font-weight="700" fill="' + (inside ? '#fff' : '#37475a') + '">'
            + (pct >= 10 ? pct.toFixed(0) : pct.toFixed(1)) + '%</text>';
       a0 = a1;
     });
-    return '<svg width="300" height="300" viewBox="0 0 300 300">' + svg + lbl + '</svg>';
+    return '<svg width="340" height="340" viewBox="0 0 340 340">' + svg + lbl + '</svg>';
   }
   function _rvShowPie(sec){
     var items = (sec.items || []).map(function(it){ return { name: it.name, v: +it.amount || 0 }; })
