@@ -637,7 +637,7 @@
     html += '<table class="er-table"><thead><tr>'
       + '<th class="er-sl">#</th><th>Resource</th><th>Unit</th>'
       + '<th class="er-num">Quantity</th><th class="er-num">Rate</th><th class="er-num">Cost</th>'
-      + '<th class="er-num">Work Done Qnty</th><th class="er-num">Actual Rate</th><th class="er-num">Actual Cost</th>'
+      + '<th class="er-num">Consumed Qnty</th><th class="er-num">Actual Rate</th><th class="er-num">Actual Cost</th>'
       + '</tr></thead><tbody>';
     var sl = 1, tot = 0, totA = 0;
     if (!secs.length) html += '<tr><td colspan="9" style="text-align:center;color:#888;padding:18px;">No resources allocated to this project\'s activities yet.</td></tr>';
