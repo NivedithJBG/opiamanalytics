@@ -61,12 +61,15 @@
 #errv-pie-x { background:none; border:none; color:#fff; font-size:20px; line-height:1; cursor:pointer; }
 #errv-pie-body { display:flex; gap:18px; align-items:center; padding:14px 18px 16px; flex-wrap:wrap; }
 #errv-pie-legend { flex:1; min-width:260px; max-height:calc(100vh - 120px); overflow-y:auto; font-size:11px; line-height:1.25; }
-.errv-lg { display:flex; align-items:center; gap:7px; padding:2px 0; border-bottom:1px solid #eef1f4; }
+#errv-pie-legend { border:1px solid #cfd6de; }
+.errv-lg { display:flex; align-items:stretch; border-bottom:1px solid #cfd6de; }
+.errv-lg i { align-self:center; margin:0 6px 0 7px; }
+.errv-lg span { padding:3px 6px 3px 0; }
 .errv-lg i { width:9px !important; height:9px !important; }
 .errv-lg i { width:11px; height:11px; border-radius:50%; flex:none; }
 .errv-lg span { flex:1; color:#37475a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.errv-lg b { color:#251840; white-space:nowrap; }
-#errv-pie-total { text-align:right; font-weight:700; color:#251840; padding-top:6px; }
+.errv-lg b { color:#251840; white-space:nowrap; font-weight:400; padding:3px 8px; border-left:1px solid #cfd6de; min-width:120px; text-align:right; }
+#errv-pie-total { text-align:right; font-weight:400; color:#251840; padding:3px 8px; background:#f4f6f8; }
 
 #estreport-body { flex:1; min-height:0; min-width:0; overflow-y:auto; overflow-x:hidden; padding:16px 22px; background:#f4f5f6; box-sizing:border-box; }
 
