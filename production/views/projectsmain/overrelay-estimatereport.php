@@ -52,6 +52,20 @@
 .er-view-tab.er-on { background:#37475a; color:#fff; }
 .er-table tr.er-rv-type td { background:#e4e7eb; font-weight:700; color:#37475a; }
 #estreport-win .er-table tr.er-rv-type td { font-size:11.5px; padding:4px 7px; }
+.er-table tr.er-rv-type { cursor:pointer; }
+.er-table tr.er-rv-type:hover td { background:#d8dce1 !important; }
+#errv-pie { display:none; position:fixed; z-index:200600; background:#fff; border-radius:10px; overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,.35); width:640px; max-width:calc(100vw - 24px); font-family:inherit; }
+#errv-pie-hdr { background:#2d3a4a; color:#fff; padding:10px 14px; font-weight:700; font-size:14px; display:flex;
+  align-items:center; justify-content:space-between; cursor:move; user-select:none; }
+#errv-pie-x { background:none; border:none; color:#fff; font-size:20px; line-height:1; cursor:pointer; }
+#errv-pie-body { display:flex; gap:18px; align-items:center; padding:14px 18px 16px; flex-wrap:wrap; }
+#errv-pie-legend { flex:1; min-width:220px; max-height:340px; overflow-y:auto; font-size:12.5px; }
+.errv-lg { display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #eef1f4; }
+.errv-lg i { width:11px; height:11px; border-radius:50%; flex:none; }
+.errv-lg span { flex:1; color:#37475a; }
+.errv-lg b { color:#251840; white-space:nowrap; }
+#errv-pie-total { text-align:right; font-weight:700; color:#251840; padding-top:6px; }
 
 #estreport-body { flex:1; min-height:0; min-width:0; overflow-y:auto; overflow-x:hidden; padding:16px 22px; background:#f4f5f6; box-sizing:border-box; }
 
@@ -363,6 +377,10 @@
 </div>
 
 <div id="er-restip"></div>
+<div id="errv-pie">
+  <div id="errv-pie-hdr"><span id="errv-pie-title"></span><button type="button" id="errv-pie-x" title="Close">&times;</button></div>
+  <div id="errv-pie-body"><div id="errv-pie-chart"></div><div id="errv-pie-legend"></div></div>
+</div>
 
 <!-- Project Cost Summary popup — independent, own trigger, own data.
      Same compact card style as the Gantt window's Project Duration panel. -->
@@ -642,7 +660,7 @@
     var sl = 1, tot = 0, totA = 0;
     if (!secs.length) html += '<tr><td colspan="9" style="text-align:center;color:#888;padding:18px;">No resources allocated to this project\'s activities yet.</td></tr>';
     secs.forEach(function(sec){
-      html += '<tr class="er-rv-type"><td colspan="9">' + esc(sec.type) + '</td></tr>';
+      html += '<tr class="er-rv-type" data-rvidx="' + secs.indexOf(sec) + '" title="Click for a pie chart of this group"><td colspan="9">' + esc(sec.type) + '</td></tr>';
       (sec.items || []).forEach(function(it){
         html += '<tr>'
           + '<td class="er-sl">' + (sl++) + '</td>'
@@ -669,6 +687,59 @@
     $sheet.html(html).show();
     $('#estreport-empty').hide();
   }
+
+  // Resource group bar: pie chart of its resources, % on each slice, values in the legend.
+  var _RV_COLS = ['#2b6cb0','#2ba899','#e8a33d','#d84a30','#6b46c1','#38a169','#dd6b20','#3182ce','#b83280','#718096',
+                  '#0f766e','#c05621','#4c51bf','#9c4221','#2c7a7b','#805ad5'];
+  function _rvPieSvg(items, total){
+    var R = 120, cx = 150, cy = 150, a0 = -Math.PI / 2, svg = '', lbl = '';
+    if (items.length === 1) {
+      svg = '<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="' + _RV_COLS[0] + '"/>';
+      lbl = '<text x="' + cx + '" y="' + (cy + 5) + '" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">100%</text>';
+    } else items.forEach(function(it, i){
+      var f = it.v / total, a1 = a0 + f * 2 * Math.PI, col = _RV_COLS[i % _RV_COLS.length];
+      var x0 = cx + R * Math.cos(a0), y0 = cy + R * Math.sin(a0), x1 = cx + R * Math.cos(a1), y1 = cy + R * Math.sin(a1);
+      svg += '<path d="M' + cx + ',' + cy + ' L' + x0.toFixed(2) + ',' + y0.toFixed(2) + ' A' + R + ',' + R + ' 0 ' + (f > 0.5 ? 1 : 0) + ' 1 '
+           + x1.toFixed(2) + ',' + y1.toFixed(2) + ' Z" fill="' + col + '" stroke="#fff" stroke-width="1.5"><title>' + esc(it.name) + '</title></path>';
+      var am = (a0 + a1) / 2, pct = f * 100, inside = pct >= 6, rr2 = inside ? R * 0.66 : R + 16;
+      if (pct >= 0.5) lbl += '<text x="' + (cx + rr2 * Math.cos(am)).toFixed(1) + '" y="' + (cy + rr2 * Math.sin(am) + 4).toFixed(1)
+           + '" text-anchor="middle" font-size="' + (inside ? 12 : 10.5) + '" font-weight="700" fill="' + (inside ? '#fff' : '#37475a') + '">'
+           + (pct >= 10 ? pct.toFixed(0) : pct.toFixed(1)) + '%</text>';
+      a0 = a1;
+    });
+    return '<svg width="300" height="300" viewBox="0 0 300 300">' + svg + lbl + '</svg>';
+  }
+  function _rvShowPie(sec){
+    var items = (sec.items || []).map(function(it){ return { name: it.name, v: +it.amount || 0 }; })
+                                 .filter(function(x){ return x.v > 0; }).sort(function(a, b){ return b.v - a.v; });
+    var total = items.reduce(function(s, x){ return s + x.v; }, 0);
+    $('#errv-pie-title').text(sec.type + ' — Cost of Resources');
+    $('#errv-pie-chart').html(total > 0 ? _rvPieSvg(items, total) : '<div style="width:300px;text-align:center;color:#888;">No cost in this group</div>');
+    $('#errv-pie-legend').html(items.map(function(x, i){
+        return '<div class="errv-lg"><i style="background:' + _RV_COLS[i % _RV_COLS.length] + '"></i><span>' + esc(x.name) + '</span><b>&#8377; ' + fmtNum(x.v) + '</b></div>';
+      }).join('') + '<div id="errv-pie-total">Total: &#8377; ' + fmtNum(total) + '</div>');
+    var p = document.getElementById('errv-pie');
+    p.style.display = 'block';
+    p.style.left = Math.max(8, (window.innerWidth - p.offsetWidth) / 2) + 'px';
+    p.style.top = Math.max(8, (window.innerHeight - p.offsetHeight) / 2) + 'px';
+  }
+  $(document).on('click', '.er-rv-type', function(){
+    var sec = ((_erLast && _erLast.resource_view) || [])[+$(this).data('rvidx')];
+    if (sec) _rvShowPie(sec);
+  });
+  $(document).on('click', '#errv-pie-x', function(){ $('#errv-pie').hide(); });
+  (function(){
+    var drag = null, p = document.getElementById('errv-pie');
+    bindDragTouch(document.getElementById('errv-pie-hdr'), 'mousedown', function(e){
+      if (e.target.id === 'errv-pie-x') return;
+      drag = { x: e.clientX, y: e.clientY, l: p.offsetLeft, t: p.offsetTop }; e.preventDefault();
+    });
+    bindDragTouch(document, 'mousemove', function(e){
+      if (!drag) return;
+      p.style.left = Math.max(0, drag.l + e.clientX - drag.x) + 'px'; p.style.top = Math.max(0, drag.t + e.clientY - drag.y) + 'px';
+    });
+    bindDragTouch(document, 'mouseup', function(){ drag = null; });
+  })();
 
   function renderReport(d){
     _erLast = d;
