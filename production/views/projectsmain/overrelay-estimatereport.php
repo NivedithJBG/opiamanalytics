@@ -13,8 +13,8 @@
 /* ── Main Estimate Report window ──────────────────────────────── */
 #estreport-win {
   display:none; position:fixed;
-  top:50px; left:max(2vw, calc(50% - 590px));
-  width:1180px; max-width:96vw; height:calc(100vh - 90px);
+  top:50px; left:max(2vw, calc(50% - 920px));
+  width:1840px; max-width:96vw; height:calc(100vh - 90px);
   min-width:480px; min-height:320px;
   background:#fff; border-radius:8px;
   box-shadow:0 8px 32px rgba(0,0,0,.35);
@@ -95,18 +95,10 @@
 .er-table th:nth-child(8), .er-table td:nth-child(8),
 .er-table th:nth-child(9), .er-table td:nth-child(9) { width:11.66%; }
 /* Activity View: 12 columns (Qtd Rate / Revenue / Margin after Cost). */
-.er-table.er-av th.er-sl, .er-table.er-av td.er-sl { width:3.5%; }
-.er-table.er-av th:nth-child(2), .er-table.er-av td:nth-child(2) { width:17%; }
-.er-table.er-av th:nth-child(3), .er-table.er-av td:nth-child(3) { width:4.5%; }
-.er-table.er-av th:nth-child(4), .er-table.er-av td:nth-child(4),
-.er-table.er-av th:nth-child(5), .er-table.er-av td:nth-child(5),
-.er-table.er-av th:nth-child(11), .er-table.er-av td:nth-child(11) { width:7%; }
-.er-table.er-av th:nth-child(6), .er-table.er-av td:nth-child(6),
-.er-table.er-av th:nth-child(8), .er-table.er-av td:nth-child(8),
-.er-table.er-av th:nth-child(9), .er-table.er-av td:nth-child(9) { width:11%; }
-.er-table.er-av th:nth-child(7), .er-table.er-av td:nth-child(7) { width:6%; }
-.er-table.er-av th:nth-child(10), .er-table.er-av td:nth-child(10) { width:6.5%; }
-.er-table.er-av th:nth-child(12), .er-table.er-av td:nth-child(12) { width:8.5%; }
+.er-table.er-av th.er-sl, .er-table.er-av td.er-sl { width:2.5%; }
+.er-table.er-av th:nth-child(2), .er-table.er-av td:nth-child(2) { width:16%; }
+.er-table.er-av th:nth-child(3), .er-table.er-av td:nth-child(3) { width:3.5%; }
+.er-table.er-av th:nth-child(n+4), .er-table.er-av td:nth-child(n+4) { width:8.666%; }
 .er-table td.er-neg { color:#c0392b; }
 .er-table td {
   padding:6px 9px; border:1px solid #ddd; vertical-align:middle; color:#222;
