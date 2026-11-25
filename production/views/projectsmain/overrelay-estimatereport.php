@@ -842,7 +842,7 @@
           + '<td class="er-num er-editable er-qty-cell" title="Click to edit">' + fmtNum(it.quantity) + '</td>'
           + '<td class="er-num">' + fmtNum(it.rate) + '</td>'
           + '<td class="er-num">' + fmtNum(it.amount) + '</td>'
-          + '<td class="er-num">' + fmtNum(it.qtd_rate) + '</td>'
+          + '<td class="er-num er-editable er-qtd-cell" title="Click to enter the quoted rate">' + fmtNum(it.qtd_rate) + '</td>'
           + '<td class="er-num">' + fmtNum(it.revenue) + '</td>'
           + _erMarginTd(it.revenue, it.amount)
           + '<td class="er-num">' + fmtNum(it.work_done_qty) + '</td>'
@@ -891,6 +891,28 @@
     var wanId = row.getAttribute('data-wanid');
     if (!wanId) return;
     var value = $td.text().trim();
+    // Quoted rate: same store as the Project Cost popup's Qtd Rate (cf_dashboard_targets
+    // qtd_rate_<wan_id>); Revenue = Qty x Qtd Rate, Margin = Revenue - Cost on reload.
+    if ($td.hasClass('er-qtd-cell')) {
+      $td.html('<input type="number" step="0.01" min="0" value="' + esc(value.replace(/,/g, '')) + '">');
+      var $q = $td.find('input').focus().select(), done = false;
+      var saveQtd = function(){
+        if (done) return; done = true;
+        var v = parseFloat($q.val()) || 0;
+        $.ajax({
+          type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json',
+          data: { metric_key: 'qtd_rate_' + wanId, target_value: v },
+          success: function(d){ if (!d || d.error !== 'No') alert((d && d.error) || 'Failed to save.'); loadReport(); },
+          error: function(){ alert('Failed to save. Please try again.'); loadReport(); }
+        });
+      };
+      $q.on('blur', saveQtd);
+      $q.on('keydown', function(e){
+        if (e.which === 13){ e.preventDefault(); $q.blur(); }
+        if (e.which === 27){ e.preventDefault(); done = true; loadReport(); }
+      });
+      return;
+    }
     var isQty = $td.hasClass('er-qty-cell');
     $td.html('<input type="' + (isQty ? 'number' : 'text') + '" ' + (isQty ? 'step="0.01" min="0"' : '') + ' value="' + esc(value) + '">');
     var $input = $td.find('input').focus().select();
