@@ -123,6 +123,7 @@
 /* Smaller type throughout the estimate sheet (beats the app's global td/th sizes). */
 #estreport-win .er-table th, #estreport-win .er-table td { font-size:11px; line-height:1.3; }
 #estreport-win .er-table th { padding:5px 7px; }
+#estreport-win .er-table thead th { position:sticky; top:-16px; z-index:3; box-shadow:0 1px 0 #55647a; }
 #estreport-win .er-table td { padding:4px 7px; }
 #estreport-win .er-table tr.er-iow-row td, #estreport-win .er-table tr.er-sub-row td { font-size:11.5px; padding:4px 7px; }
 #estreport-win .er-table tr.er-grand-row td { font-size:12px; padding:4px 7px; }
