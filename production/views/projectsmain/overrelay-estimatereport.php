@@ -96,9 +96,9 @@
 .er-table th:nth-child(9), .er-table td:nth-child(9) { width:11.66%; }
 /* Activity View: 12 columns (Qtd Rate / Revenue / Margin after Cost). */
 .er-table.er-av th.er-sl, .er-table.er-av td.er-sl { width:2.5%; }
-.er-table.er-av th:nth-child(2), .er-table.er-av td:nth-child(2) { width:16%; }
+.er-table.er-av th:nth-child(2), .er-table.er-av td:nth-child(2) { width:20%; }
 .er-table.er-av th:nth-child(3), .er-table.er-av td:nth-child(3) { width:3.5%; }
-.er-table.er-av th:nth-child(n+4), .er-table.er-av td:nth-child(n+4) { width:8.666%; }
+.er-table.er-av th:nth-child(n+4), .er-table.er-av td:nth-child(n+4) { width:8.222%; }
 .er-table td.er-neg { color:#c0392b; }
 .er-table td {
   padding:6px 9px; border:1px solid #ddd; vertical-align:middle; color:#222;
