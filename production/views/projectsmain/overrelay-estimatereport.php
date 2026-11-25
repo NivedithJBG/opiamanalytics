@@ -836,7 +836,7 @@
           + '<td class="er-num">' + fmtNum(it.rate) + '</td>'
           + '<td class="er-num">' + fmtNum(it.amount) + '</td>'
           + '<td class="er-num er-editable er-qtd-cell" title="Click to enter the quoted rate">' + fmtNum(it.qtd_rate) + '</td>'
-          + '<td class="er-num">' + fmtNum(it.revenue) + '</td>'
+          + '<td class="er-num er-editable er-rev-cell" title="Click to enter the revenue (sets Qtd Rate = Revenue / Quantity)">' + fmtNum(it.revenue) + '</td>'
           + _erMarginTd(it.revenue, it.amount)
           + '<td class="er-num">' + fmtNum(it.work_done_qty) + '</td>'
           + '<td class="er-num">' + fmtNum(it.actual_rate) + '</td>'
@@ -886,12 +886,19 @@
     var value = $td.text().trim();
     // Quoted rate: same store as the Project Cost popup's Qtd Rate (cf_dashboard_targets
     // qtd_rate_<wan_id>); Revenue = Qty x Qtd Rate, Margin = Revenue - Cost on reload.
-    if ($td.hasClass('er-qtd-cell')) {
+    if ($td.hasClass('er-qtd-cell') || $td.hasClass('er-rev-cell')) {
+      var isRev = $td.hasClass('er-rev-cell');
       $td.html('<input type="number" step="0.01" min="0" value="' + esc(value.replace(/,/g, '')) + '">');
       var $q = $td.find('input').focus().select(), done = false;
       var saveQtd = function(){
         if (done) return; done = true;
         var v = parseFloat($q.val()) || 0;
+        if (isRev) {
+          // Revenue entered -> Qtd Rate = Revenue / Quantity (Revenue stays Qty x Qtd Rate).
+          var qn = parseFloat((row.querySelector('.er-qty-cell').textContent || '').replace(/,/g, '')) || 0;
+          if (!qn) { alert('Please enter a Quantity before entering Revenue.'); loadReport(); return; }
+          v = v / qn;
+        }
         $.ajax({
           type: 'POST', url: '../projectsmain/cfsavetarget', dataType: 'json',
           data: { metric_key: 'qtd_rate_' + wanId, target_value: v },
