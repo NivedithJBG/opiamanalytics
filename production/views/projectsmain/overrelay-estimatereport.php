@@ -94,6 +94,20 @@
 .er-table th:nth-child(7), .er-table td:nth-child(7),
 .er-table th:nth-child(8), .er-table td:nth-child(8),
 .er-table th:nth-child(9), .er-table td:nth-child(9) { width:11.66%; }
+/* Activity View: 12 columns (Qtd Rate / Revenue / Margin after Cost). */
+.er-table.er-av th:nth-child(2), .er-table.er-av td:nth-child(2) { width:20.5%; }
+.er-table.er-av th:nth-child(3), .er-table.er-av td:nth-child(3) { width:5%; }
+.er-table.er-av th:nth-child(4), .er-table.er-av td:nth-child(4),
+.er-table.er-av th:nth-child(5), .er-table.er-av td:nth-child(5),
+.er-table.er-av th:nth-child(7), .er-table.er-av td:nth-child(7),
+.er-table.er-av th:nth-child(11), .er-table.er-av td:nth-child(11) { width:7%; }
+.er-table.er-av th:nth-child(6), .er-table.er-av td:nth-child(6),
+.er-table.er-av th:nth-child(8), .er-table.er-av td:nth-child(8),
+.er-table.er-av th:nth-child(9), .er-table.er-av td:nth-child(9),
+.er-table.er-av th:nth-child(12), .er-table.er-av td:nth-child(12) { width:8.5%; }
+.er-table.er-av th:nth-child(10), .er-table.er-av td:nth-child(10) { width:7.5%; }
+.er-table.er-av th.er-sl, .er-table.er-av td.er-sl { width:4%; }
+.er-table td.er-neg { color:#c0392b; }
 .er-table td {
   padding:6px 9px; border:1px solid #ddd; vertical-align:middle; color:#222;
   white-space:normal; word-break:break-word;
@@ -746,6 +760,11 @@
     bindDragTouch(document, 'mouseup', function(){ drag = null; });
   })();
 
+  // Margin = Revenue (Qty x Qtd Rate) - Cost; negative in red.
+  function _erMarginTd(rev, cost){
+    var m = (+rev || 0) - (+cost || 0);
+    return '<td class="er-num' + (m < 0 ? ' er-neg' : '') + '">' + fmtNum(m) + '</td>';
+  }
   function renderReport(d){
     _erLast = d;
     if (_erView === 'res' && d && d.error === 'No') {
@@ -769,13 +788,16 @@
       + '<div class="er-sheet-sub">Project Estimate</div>'
       + '</div>';
 
-    html += '<table class="er-table"><thead><tr>'
+    html += '<table class="er-table er-av"><thead><tr>'
       + '<th class="er-sl">#</th>'
       + '<th>Activity</th>'
       + '<th>Unit</th>'
       + '<th class="er-num">Quantity</th>'
       + '<th class="er-num">Rate</th>'
       + '<th class="er-num">Cost</th>'
+      + '<th class="er-num">Qtd Rate</th>'
+      + '<th class="er-num">Revenue</th>'
+      + '<th class="er-num">Margin</th>'
       + '<th class="er-num">Work Done Qnty</th>'
       + '<th class="er-num">Actual Rate</th>'
       + '<th class="er-num">Actual Cost</th>'
@@ -787,7 +809,7 @@
     _erSectionsData = d.sections;
     var sl = 1;
     d.sections.forEach(function(sec, secIdx){
-      html += '<tr class="er-iow-row" data-secidx="' + secIdx + '"><td colspan="8">' + esc(sec.iow_name || 'IOW') + '</td></tr>';
+      html += '<tr class="er-iow-row" data-secidx="' + secIdx + '"><td colspan="12">' + esc(sec.iow_name || 'IOW') + '</td></tr>';
       var _subName = {}, _subTot = {};
       (sec.subgroups || []).forEach(function(sg){ _subName[sg.id] = sg.name; _subTot[sg.id] = sg; });
       var _curSub = 0, _shownSubs = {};
@@ -796,6 +818,7 @@
         return '<tr class="er-subtotal-row er-sub-subtotal">'
           + '<td colspan="5" style="text-align:right;">Subtotal — ' + esc(sg.name) + '</td>'
           + '<td class="er-num">' + fmtNum(sg.subtotal) + '</td>'
+          + '<td></td><td class="er-num">' + fmtNum(sg.subtotal_revenue) + '</td>' + _erMarginTd(sg.subtotal_revenue, sg.subtotal)
           + '<td></td><td></td>'
           + '<td class="er-num">' + fmtNum(sg.subtotal_actual) + '</td>'
           + '</tr>';
@@ -806,7 +829,7 @@
         if (_sid !== _curSub) {
           if (_curSub) html += _subTotalRow(_curSub);
           _curSub = _sid;
-          if (_sid) { _shownSubs[_sid] = 1; html += '<tr class="er-sub-row" data-secidx="' + secIdx + '" data-sgid="' + _sid + '"><td></td><td colspan="8">' + esc(_subName[_sid] || 'Sub Group') + '</td></tr>'; }
+          if (_sid) { _shownSubs[_sid] = 1; html += '<tr class="er-sub-row" data-secidx="' + secIdx + '" data-sgid="' + _sid + '"><td></td><td colspan="11">' + esc(_subName[_sid] || 'Sub Group') + '</td></tr>'; }
         }
         var rowIdx = _erResourcesByRow.length;
         _erResourcesByRow.push(it.resources || []);
@@ -819,6 +842,9 @@
           + '<td class="er-num er-editable er-qty-cell" title="Click to edit">' + fmtNum(it.quantity) + '</td>'
           + '<td class="er-num">' + fmtNum(it.rate) + '</td>'
           + '<td class="er-num">' + fmtNum(it.amount) + '</td>'
+          + '<td class="er-num">' + fmtNum(it.qtd_rate) + '</td>'
+          + '<td class="er-num">' + fmtNum(it.revenue) + '</td>'
+          + _erMarginTd(it.revenue, it.amount)
           + '<td class="er-num">' + fmtNum(it.work_done_qty) + '</td>'
           + '<td class="er-num">' + fmtNum(it.actual_rate) + '</td>'
           + '<td class="er-num">' + fmtNum(it.a_amount) + '</td>'
@@ -827,11 +853,12 @@
       if (_curSub) html += _subTotalRow(_curSub);
       // Sub Groups with no activities yet still show as headings.
       (sec.subgroups || []).forEach(function(sg){
-        if (!_shownSubs[sg.id]) html += '<tr class="er-sub-row" data-secidx="' + secIdx + '" data-sgid="' + sg.id + '"><td></td><td colspan="8">' + esc(sg.name) + '</td></tr>';
+        if (!_shownSubs[sg.id]) html += '<tr class="er-sub-row" data-secidx="' + secIdx + '" data-sgid="' + sg.id + '"><td></td><td colspan="11">' + esc(sg.name) + '</td></tr>';
       });
       html += '<tr class="er-subtotal-row">'
         + '<td colspan="5" style="text-align:right;">Subtotal — ' + esc(sec.iow_name || 'IOW') + '</td>'
         + '<td class="er-num">' + fmtNum(sec.subtotal) + '</td>'
+        + '<td></td><td class="er-num">' + fmtNum(sec.subtotal_revenue) + '</td>' + _erMarginTd(sec.subtotal_revenue, sec.subtotal)
         + '<td></td><td></td>'
         + '<td class="er-num">' + fmtNum(sec.subtotal_actual) + '</td>'
         + '</tr>';
@@ -840,6 +867,7 @@
     html += '<tr class="er-grand-row">'
       + '<td colspan="5" style="text-align:right;">Grand Total</td>'
       + '<td class="er-num">' + fmtNum(d.grand_total) + '</td>'
+      + '<td></td><td class="er-num">' + fmtNum(d.grand_revenue) + '</td>' + _erMarginTd(d.grand_revenue, d.grand_total)
       + '<td></td><td></td>'
       + '<td class="er-num">' + fmtNum(d.grand_total_actual) + '</td>'
       + '</tr>';

@@ -105,6 +105,11 @@ class EstimatereportController extends Controller
         $byIow    = [];
         $grandTotal = 0.0;
         $grandTotalActual = 0.0;
+        $grandRevenue = 0.0;
+        // Quoted rate per activity (Project Cost popup's Qtd Rate, cf_dashboard_targets).
+        $qtd = $db->createCommand(
+            "SELECT metric_key, target_value FROM cf_dashboard_targets WHERE project_id = :p AND metric_key LIKE 'qtd\\_rate\\_%'", [':p' => $projectId]
+        )->queryAll(\PDO::FETCH_KEY_PAIR);
         foreach ($rows as $r) {
             $iowKey = (int)$r['iow_id'];
             if (!isset($byIow[$iowKey])) {
@@ -114,6 +119,7 @@ class EstimatereportController extends Controller
                     'items'            => [],
                     'subtotal'         => 0.0,
                     'subtotal_actual'  => 0.0,
+                    'subtotal_revenue' => 0.0,
                 ];
                 $groups[] = $iowKey;
             }
@@ -213,6 +219,8 @@ class EstimatereportController extends Controller
                 }
             }
 
+            $qRate   = (float)($qtd['qtd_rate_' . (int)$r['activity_row_id']] ?? 0);
+            $revenue = $qty * $qRate;
             $byIow[$iowKey]['items'][] = [
                 'subgroup_id'     => (int)$r['subgroup_id'],
                 'sched_id'        => (int)$r['sched_id'],
@@ -227,8 +235,13 @@ class EstimatereportController extends Controller
                 'e_amount'        => $eAmount,
                 'a_amount'        => $aAmount,
                 'actual_rate'     => $actualRate,
+                'qtd_rate'        => $qRate,
+                'revenue'         => $revenue,
+                'margin'          => $revenue - $amount,
                 'resources'       => $resources,
             ];
+            $byIow[$iowKey]['subtotal_revenue'] += $revenue;
+            $grandRevenue += $revenue;
             $byIow[$iowKey]['subtotal'] += $amount;
             $byIow[$iowKey]['subtotal_actual'] += $aAmount;
             $grandTotal += $amount;
@@ -243,7 +256,7 @@ class EstimatereportController extends Controller
             $sec = $byIow[$iowKey];
             $subs = [];
             foreach ($subRows as $sr) {
-                if ((int)$sr['iow_group_id'] === $iowKey) $subs[(int)$sr['id']] = ['id' => (int)$sr['id'], 'name' => $sr['name'], 'subtotal' => 0.0, 'subtotal_actual' => 0.0];
+                if ((int)$sr['iow_group_id'] === $iowKey) $subs[(int)$sr['id']] = ['id' => (int)$sr['id'], 'name' => $sr['name'], 'subtotal' => 0.0, 'subtotal_actual' => 0.0, 'subtotal_revenue' => 0.0];
             }
             $direct = []; $bySub = [];
             foreach ($sec['items'] as $it) {
@@ -252,6 +265,7 @@ class EstimatereportController extends Controller
                     $bySub[$sid][] = $it;
                     $subs[$sid]['subtotal'] += $it['amount'];
                     $subs[$sid]['subtotal_actual'] += $it['a_amount'];
+                    $subs[$sid]['subtotal_revenue'] += $it['revenue'];
                 } else {
                     $it['subgroup_id'] = 0;
                     $direct[] = $it;
@@ -270,6 +284,7 @@ class EstimatereportController extends Controller
             'sections'           => $sections,
             'grand_total'        => $grandTotal,
             'grand_total_actual' => $grandTotalActual,
+            'grand_revenue'      => $grandRevenue,
             'resource_view'      => $this->_resourceView($rv),
         ]);
     }
