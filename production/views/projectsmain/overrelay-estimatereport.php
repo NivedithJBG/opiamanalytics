@@ -95,16 +95,15 @@
 .er-table th:nth-child(8), .er-table td:nth-child(8),
 .er-table th:nth-child(9), .er-table td:nth-child(9) { width:11.66%; }
 /* Activity View: 12 columns (Qtd Rate / Revenue / Margin after Cost). */
-.er-table.er-av th:nth-child(2), .er-table.er-av td:nth-child(2) { width:20.5%; }
+.er-table.er-av th:nth-child(2), .er-table.er-av td:nth-child(2) { width:19%; }
 .er-table.er-av th:nth-child(3), .er-table.er-av td:nth-child(3) { width:5%; }
 .er-table.er-av th:nth-child(4), .er-table.er-av td:nth-child(4),
 .er-table.er-av th:nth-child(5), .er-table.er-av td:nth-child(5),
 .er-table.er-av th:nth-child(7), .er-table.er-av td:nth-child(7),
 .er-table.er-av th:nth-child(11), .er-table.er-av td:nth-child(11) { width:7%; }
-.er-table.er-av th:nth-child(6), .er-table.er-av td:nth-child(6),
-.er-table.er-av th:nth-child(8), .er-table.er-av td:nth-child(8),
-.er-table.er-av th:nth-child(9), .er-table.er-av td:nth-child(9),
+.er-table.er-av th:nth-child(6), .er-table.er-av td:nth-child(6), .er-table.er-av th:nth-child(9), .er-table.er-av td:nth-child(9),
 .er-table.er-av th:nth-child(12), .er-table.er-av td:nth-child(12) { width:8.5%; }
+.er-table.er-av th:nth-child(8), .er-table.er-av td:nth-child(8) { width:11%; }
 .er-table.er-av th:nth-child(10), .er-table.er-av td:nth-child(10) { width:7.5%; }
 .er-table.er-av th.er-sl, .er-table.er-av td.er-sl { width:4%; }
 .er-table td.er-neg { color:#c0392b; }
