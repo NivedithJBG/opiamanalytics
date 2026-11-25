@@ -630,6 +630,20 @@ $resourceGroups = ResourceGroup::find()->where(['status' => 0])->orderBy(['RG_so
             $('#resgroupname1').val('').focus();
             $('#addresgrouptype').val('0');
             rlLoadResGroupList();
+            // The new group shows at once in the Resource Group lists (Add / Edit Resource,
+            // list filter) for the Resource Type selected there, keeping what was picked.
+            [['#addresourcetype', '#addresourcegroup', '-- Select Group --'], ['#editresourcetype', '#editresourcegroup', '-- Select Group --'],
+             ['#searchresourcetype', '#searchresourcegroup', 'All Groups']].forEach(function(p){
+              var tid = $(p[0]).val(), $g = $(p[1]);
+              if (!$g.length || !tid || tid === '0') return;
+              var cur = $g.val();
+              $.ajax({ type:'POST', url:'../resourcegroup/getbytype', dataType:'json', data:{ restypeid: tid }, success:function(r){
+                if (!r || r.error !== 'No') return;
+                var o = '<option value="0">' + p[2] + '</option>';
+                (r.groups || []).forEach(function(g){ o += '<option value="' + g.Resource_group_Id + '">' + $('<div>').text(g.Resource_group_Name).html() + '</option>'; });
+                $g.html(o).val(cur && $g.find('option[value="' + cur + '"]').length ? cur : '0');
+              }});
+            });
           } else { alert(d && d.errortext ? d.errortext : 'Could not save.'); }
         },
         error:function(){ $btn.attr('disabled', false); alert('Server error. Please try again.'); }
