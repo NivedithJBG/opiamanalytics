@@ -1662,16 +1662,10 @@ class ProjectsmainController extends Controller
                     // reuse the copy already in the chosen Sub Group (none = directly
                     // under the IOW Group); otherwise a new copy is created, so adding it
                     // to another Sub Group never moves it out of the first.
-                    $this->_sgEnsure();
-                    $sgWant = (int)$p['subgroup_id'];
-                    $wanRow2 = $db->createCommand(
-                        "SELECT wa.id FROM workgroup_activities_new wa
-                         LEFT JOIN wbs_subgroup_activities m ON m.wan_id = wa.id
-                         WHERE wa.project_Id=:p AND wa.activity_Id=:a AND wa.iow_group_id=:g AND wa.pr_status=0
-                           AND COALESCE(m.subgroup_id, 0) = :sg
-                         ORDER BY wa.id LIMIT 1",
-                        [':p' => $pid, ':a' => $iowActId, ':g' => $iowGroupId, ':sg' => $sgWant]
-                    )->queryOne();
+                    // Every Create WBS add is a NEW project copy, even when the same
+                    // library activity is already in that Sub Group: an existing copy is
+                    // changed only in Edit Activities, never replaced by a fresh add.
+                    $wanRow2 = false;
                 } else
                 $wanRow2 = $db->createCommand(
                     "SELECT id FROM workgroup_activities_new WHERE project_Id=:p AND activity_Id=:a AND iow_group_id=:g LIMIT 1",
