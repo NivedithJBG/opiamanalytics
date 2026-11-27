@@ -55,7 +55,9 @@ class EstimatereportController extends Controller
                 wa.activity_Name                              AS activity_name,
                 wa.activity_Unit                               AS unit,
                 wa.sortorder                                  AS act_sortorder,
-                COALESCE(pe.activity_qty, 0)                  AS quantity,
+                -- Quantity = the Gantt quantity (scheduleactivities) when the activity is on
+                -- the Gantt; the estimate's own copy only for estimate-only rows (overheads).
+                COALESCE(MAX(sa.quantity), MAX(pe.activity_qty), 0) AS quantity,
                 -- Rate = the project's own resource allocation (Resource Allocation
                 -- popup: sum of rate x quantity). No resources allocated in the
                 -- project = 0 until they are added there (never the library rate).
@@ -362,6 +364,14 @@ class EstimatereportController extends Controller
             ])->execute();
         }
 
+        // The Estimate shows the Gantt quantity, so a quantity entered here always
+        // goes to the activity's Gantt bar too (found by activity when not sent).
+        if (!$schedId) {
+            $schedId = (int)$db->createCommand(
+                "SELECT id FROM scheduleactivities WHERE activity_id=:w AND projectId=:p AND status=0 LIMIT 1",
+                [':w' => $wanId, ':p' => $projectId]
+            )->queryScalar();
+        }
         if ($schedId) {
             $db->createCommand(
                 "UPDATE scheduleactivities SET unit=:u, quantity=:q WHERE id=:id AND projectId=:p AND status=0",
