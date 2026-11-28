@@ -2626,6 +2626,26 @@ document.addEventListener('click', function(e){
               </div>
             </div>
           </div>
+          <div class="row">
+            <div class="col-md-2">
+              <div class="form-group">
+                <label>Retention %</label>
+                <input type="number" min="0" max="100" step="0.01" id="gpm_retention" class="form-control" placeholder="e.g. 5">
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="form-group">
+                <label>TDS %</label>
+                <input type="number" min="0" max="100" step="0.01" id="gpm_tds" class="form-control" placeholder="e.g. 2">
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="form-group">
+                <label>GST %</label>
+                <input type="number" min="0" max="100" step="0.01" id="gpm_gst" class="form-control" placeholder="e.g. 18">
+              </div>
+            </div>
+          </div>
           <div style="text-align:right;margin-top:12px;">
             <button type="button" id="gpm-form-cancel" class="btn btn-default" style="border-radius:20px;margin-right:6px;"><span class="icon-close"></span> Cancel</button>
             <button type="button" id="gpm-form-save" class="btn btn-primary" style="border-radius:20px;"><span class="icon-check"></span> Save Project</button>
@@ -2846,6 +2866,9 @@ document.addEventListener('click', function(e){
                 $('#gpm_bankaccount').val(d.bank_account_id || '');
                 $('#gpm_billingcycle').val(d.billing_cycle || '');
                 $('#gpm_collectionperiod').val(d.collection_period === undefined ? '' : d.collection_period);
+                $('#gpm_retention').val(d.retention_pct === undefined ? '' : d.retention_pct);
+                $('#gpm_tds').val(d.tds_pct === undefined ? '' : d.tds_pct);
+                $('#gpm_gst').val(d.gst_pct === undefined ? '' : d.gst_pct);
                 $('.gpm-err').hide();
                 gpmShowFormPanel(true);
                 gpmLoadFiles(d.Project_Id);
@@ -2906,6 +2929,9 @@ document.addEventListener('click', function(e){
         fd.append('bankaccount', $('#gpm_bankaccount').val());
         fd.append('billingcycle', $('#gpm_billingcycle').val());
         fd.append('collectionperiod', $('#gpm_collectionperiod').val());
+        fd.append('retentionpct', $('#gpm_retention').val());
+        fd.append('tdspct', $('#gpm_tds').val());
+        fd.append('gstpct', $('#gpm_gst').val());
         if(isEdit) fd.append('project_id', pid);
 
         var btn=$('#gpm-form-save').prop('disabled',true).text('Saving…');

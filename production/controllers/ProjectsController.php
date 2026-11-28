@@ -698,6 +698,9 @@ class ProjectsController extends Controller
             'bank_account_id' => $bankAccount ? $bankAccount->id : '',
             'billing_cycle'   => $this->_billingCycleTarget($id),
             'collection_period' => $this->_billingCycleTarget($id, 'collection_period'),
+            'retention_pct' => $this->_pctTarget($id, 'retention_pct'),
+            'tds_pct'       => $this->_pctTarget($id, 'tds_pct'),
+            'gst_pct'       => $this->_pctTarget($id, 'gst_pct'),
         ]);
     }
 
@@ -712,11 +715,22 @@ class ProjectsController extends Controller
         return ($v === false || $v === null) ? '' : (int)round((float)$v);
     }
 
+    /* Retention / TDS / GST % (cf_dashboard_targets). Returns '' when unset. */
+    private function _pctTarget($pid, $key)
+    {
+        $v = \Yii::$app->db->createCommand(
+            "SELECT target_value FROM cf_dashboard_targets WHERE project_id=:pid AND metric_key=:k",
+            [':pid' => $pid, ':k' => $key]
+        )->queryScalar();
+        return ($v === false || $v === null) ? '' : 0 + round((float)$v, 2);
+    }
+
     // Billing Period (days per bill, key billing_cycle) and Collection Period (days from bill to payment).
     private function _saveCycleDays($pid)
     {
         $db = \Yii::$app->db;
-        foreach (['billingcycle' => 'billing_cycle', 'collectionperiod' => 'collection_period'] as $post => $key) {
+        foreach (['billingcycle' => 'billing_cycle', 'collectionperiod' => 'collection_period',
+                  'retentionpct' => 'retention_pct', 'tdspct' => 'tds_pct', 'gstpct' => 'gst_pct'] as $post => $key) {
             if (!array_key_exists($post, $_POST)) continue;
             $v = trim((string)$_POST[$post]);
             if ($v === '') {
