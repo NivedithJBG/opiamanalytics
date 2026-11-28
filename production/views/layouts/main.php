@@ -3718,7 +3718,7 @@ document.addEventListener('click', function(e){
         $('#cwbs-tbody').empty();
         $('#cwbs-table').hide();
         $('#cwbs-loading').hide();
-        $('#cwbs-empty').text(msg || 'Select a Project Type to list activities.').show();
+        $('#cwbs-empty').text(msg || 'Select a Project Type, or type a keyword to search all activities.').show();
         $('#cwbs-msg').text('');
         cwbsAddState();
     }
@@ -3732,15 +3732,18 @@ document.addEventListener('click', function(e){
     function cwbsLoadActivities(){
         // All activities of the Project Type (not filtered by IOW Group); the chosen
         // IOW Group is where the selected activities are added in the Gantt.
+        // No Project Type chosen: search the whole Activity Library by the keyword typed.
         var typeId = $('#cwbs-proj-type').val();
-        if(!typeId){ cwbsResetList(); return; }
+        var kw = $.trim($('#cwbs-act-search').val() || '');
+        if(!typeId && kw.length < 2){ cwbsResetList(kw ? 'Type at least 2 letters to search the Activity Library.' : 'Select a Project Type, or type a keyword to search all activities.'); return; }
         $('#cwbs-empty').hide();
         $('#cwbs-table').hide();
         $('#cwbs-loading').show();
         $.ajax({
             type:'POST', url:'../projectsmain/getactivitiesbytypeandgroup', dataType:'json',
-            data:{ typeId:typeId },
+            data:{ typeId:typeId, q: typeId ? '' : kw },
             success:function(d){
+                if(!typeId && $.trim($('#cwbs-act-search').val() || '') !== kw) return;   // a newer keyword is on its way
                 $('#cwbs-loading').hide();
                 // Keep what's already entered (Qty, R.Unit, ticks) across the refresh.
                 var keepQty = {}, keepRun = {}, keepSel = cwbsSelected;
@@ -3749,7 +3752,7 @@ document.addEventListener('click', function(e){
                 cwbsSelected = {};
                 cwbsAddState();
                 var items = d.items || [];
-                if(!items.length){ cwbsResetList('No activities found for this Project Type.'); return; }
+                if(!items.length){ cwbsResetList(typeId ? 'No activities found for this Project Type.' : 'No activity matches "' + kw + '".'); return; }
                 var rows = '';
                 items.forEach(function(it, idx){
                     rows += '<tr data-actid="'+it.id+'">'
@@ -3785,7 +3788,7 @@ document.addEventListener('click', function(e){
     // IOW Groups to add under = this project's Gantt headings (made in the IOW Group tab).
     function cwbsLoadIowGroups(){
         cwbsLoadHeadings(function(){
-            if($('#cwbs-proj-type').val()) cwbsLoadActivities(); else cwbsResetList();
+            cwbsLoadActivities();
         });
     }
     var cwbsHeads = { groups: [], subgroups: [] };
@@ -3993,7 +3996,11 @@ document.addEventListener('click', function(e){
         });
         $('#cwbs-msg').css('color','#555').text(q && !n ? 'No activity matches "' + q + '".' : '');
     }
-    $(document).on('input','#cwbs-act-search', cwbsFilterActs);
+    var cwbsKwTimer = null;
+    $(document).on('input','#cwbs-act-search', function(){
+        if ($('#cwbs-proj-type').val()) { cwbsFilterActs(); return; }
+        clearTimeout(cwbsKwTimer); cwbsKwTimer = setTimeout(cwbsLoadActivities, 300);
+    });
     // IOW Group search: type to filter the groups, pick one from the list. The
     // hidden select stays the source of the value, so the rest works unchanged.
     function cwbsSearchable(selId){

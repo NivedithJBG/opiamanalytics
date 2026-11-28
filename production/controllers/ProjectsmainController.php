@@ -327,6 +327,19 @@ class ProjectsmainController extends Controller
         $typeId    = (int)\Yii::$app->request->post('typeId');
         $groupId   = (int)\Yii::$app->request->post('groupId');
         $iowGroupId = (int)\Yii::$app->request->post('iowGroupId');
+        $q = trim((string)\Yii::$app->request->post('q'));
+        // Keyword search over the whole Activity Library (no Project Type chosen).
+        if (!$typeId && !$groupId && !$iowGroupId && mb_strlen($q) >= 2) {
+            $rows = \Yii::$app->db->createCommand(
+                "SELECT MIN(ea.activity_id) AS id, MIN(ea.activity_name) AS name, ea.activity_unit AS unit
+                 FROM estimateactivities ea
+                 WHERE ea.activity_status = 0 AND ea.activity_name LIKE :q
+                 GROUP BY LOWER(TRIM(ea.activity_name)), ea.activity_unit
+                 ORDER BY name ASC LIMIT 300",
+                [':q' => '%' . addcslashes($q, '%_\\') . '%']
+            )->queryAll();
+            return ['items' => $rows];
+        }
         if (!$typeId && !$groupId && !$iowGroupId) return ['items' => []];
         $sql  = "SELECT ea.activity_id AS id, ea.activity_name AS name, ea.activity_unit AS unit
                  FROM estimateactivities ea
