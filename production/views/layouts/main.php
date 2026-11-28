@@ -2579,8 +2579,9 @@ document.addEventListener('click', function(e){
             </div>
             <div class="col-md-4">
               <div class="form-group">
-                <label>Location</label>
+                <label>Location <span style="color:red">*</span></label>
                 <input id="gpm_location" type="text" class="form-control" placeholder="Site Location">
+                <span class="text-danger gpm-err" id="gpm_location_err" style="display:none;font-size:12px;"></span>
               </div>
             </div>
           </div>
@@ -2600,7 +2601,7 @@ document.addEventListener('click', function(e){
             </div>
             <div class="col-md-4">
               <div class="form-group">
-                <label>Bank Account</label>
+                <label>Bank Account <span style="color:red">*</span></label>
                 <select id="gpm_bankaccount" class="form-control">
                   <option value="">-- Select --</option>
                   <?php
@@ -2610,39 +2611,44 @@ document.addEventListener('click', function(e){
                   <option value="<?php echo $gpmBank->id; ?>"><?php echo htmlspecialchars($gpmBank->name); ?></option>
                   <?php endforeach; ?>
                 </select>
+                <span class="text-danger gpm-err" id="gpm_bankaccount_err" style="display:none;font-size:12px;"></span>
               </div>
             </div>
             <div class="col-md-2">
               <div class="form-group">
-                <label>Billing Period (days) <span class="text-danger">*</span></label>
+                <label>Billing Days <span style="color:red">*</span></label>
                 <input type="number" min="1" step="1" id="gpm_billingcycle" class="form-control" placeholder="e.g. 30">
                 <span class="text-danger gpm-err" id="gpm_billingcycle_err" style="display:none;font-size:12px;"></span>
               </div>
             </div>
             <div class="col-md-2">
               <div class="form-group">
-                <label>Collection Period (days)</label>
+                <label>Collection Days <span style="color:red">*</span></label>
                 <input type="number" min="0" step="1" id="gpm_collectionperiod" class="form-control" placeholder="e.g. 15">
+                <span class="text-danger gpm-err" id="gpm_collectionperiod_err" style="display:none;font-size:12px;"></span>
               </div>
             </div>
           </div>
           <div class="row">
             <div class="col-md-2">
               <div class="form-group">
-                <label>Retention %</label>
+                <label>Retention % <span style="color:red">*</span></label>
                 <input type="number" min="0" max="100" step="0.01" id="gpm_retention" class="form-control" placeholder="e.g. 5">
+                <span class="text-danger gpm-err" id="gpm_retention_err" style="display:none;font-size:12px;"></span>
               </div>
             </div>
             <div class="col-md-2">
               <div class="form-group">
-                <label>TDS %</label>
+                <label>TDS % <span style="color:red">*</span></label>
                 <input type="number" min="0" max="100" step="0.01" id="gpm_tds" class="form-control" placeholder="e.g. 2">
+                <span class="text-danger gpm-err" id="gpm_tds_err" style="display:none;font-size:12px;"></span>
               </div>
             </div>
             <div class="col-md-2">
               <div class="form-group">
-                <label>GST %</label>
+                <label>GST % <span style="color:red">*</span></label>
                 <input type="number" min="0" max="100" step="0.01" id="gpm_gst" class="form-control" placeholder="e.g. 18">
+                <span class="text-danger gpm-err" id="gpm_gst_err" style="display:none;font-size:12px;"></span>
               </div>
             </div>
           </div>
@@ -2913,7 +2919,14 @@ document.addEventListener('click', function(e){
         if(!val)    { $('#gpm_value_err').text('Enter project value').show(); err=1; }
         if(!client) { $('#gpm_client_err').text('Enter client name').show(); err=1; }
         if(!hrs)    { $('#gpm_wrkhrs_err').text('Select work hours').show(); err=1; }
-        if(!(parseInt($('#gpm_billingcycle').val(), 10) > 0)) { $('#gpm_billingcycle_err').text('Enter billing period (days)').show(); err=1; }
+        if(!(parseInt($('#gpm_billingcycle').val(), 10) > 0)) { $('#gpm_billingcycle_err').text('Enter billing days').show(); err=1; }
+        if(!$.trim($('#gpm_location').val())) { $('#gpm_location_err').text('Enter location').show(); err=1; }
+        if(!$('#gpm_bankaccount').val()) { $('#gpm_bankaccount_err').text('Select bank account').show(); err=1; }
+        var gpmNum = function(id, msg, max){ var v = $.trim($('#'+id).val()); if(v === '' || isNaN(v) || +v < 0 || (max && +v > max)) { $('#'+id+'_err').text(msg).show(); err=1; } };
+        gpmNum('gpm_collectionperiod', 'Enter collection days');
+        gpmNum('gpm_retention', 'Enter retention % (0-100)', 100);
+        gpmNum('gpm_tds', 'Enter TDS % (0-100)', 100);
+        gpmNum('gpm_gst', 'Enter GST % (0-100)', 100);
         if(err) return;
 
         var isEdit = pid ? true : false;
