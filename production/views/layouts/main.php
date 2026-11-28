@@ -2453,7 +2453,8 @@ document.addEventListener('click', function(e){
 <!-- ── Projects Manager Overlay ───────────────────────────────────────── -->
 <style>
 #gpm-overlay { display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55); }
-#gpm-dialog  { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:8px;width:900px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.4); }
+#gpm-dialog  { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:8px;width:1000px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.4); }
+#gpm-form label { white-space:nowrap; }
 #gpm-header  { padding:14px 20px;border-bottom:1px solid #e5e5e5;display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
 #gpm-header h4 { margin:0;font-size:17px;font-weight:700;color:#333; }
 #gpm-close-x { background:none;border:none;font-size:28px;line-height:1;cursor:pointer;color:#999;padding:0; }
